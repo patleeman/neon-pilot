@@ -1,6 +1,7 @@
-import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
+import React, { type ComponentType, lazy, type ReactNode, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
+import { renderMarkdownText } from '../components/chat/MarkdownMessage.js';
 import { stripAnsiForTranscript } from '../components/chat/toolPresentation';
 import { addNotification } from '../components/notifications/notificationStore';
 import { cx, LoadingState, Pill, SurfacePanel } from '../components/ui';
@@ -41,7 +42,7 @@ type ExtensionTranscriptBlockComponent = ComponentType<{
   pa: ReturnType<typeof createNativeExtensionClient>;
   block: ExtensionTranscriptBlock;
   renderer: ExtensionTranscriptBlockContribution;
-  context: { messageIndex?: number };
+  context: { messageIndex?: number; renderMarkdown?: (markdown: string) => ReactNode };
 }>;
 
 const BUILTIN_CHECKPOINT_RENDERER: {
@@ -219,6 +220,13 @@ export function NativeExtensionTranscriptBlockHost({
 }) {
   useExtensionStyles(extension.id, extension.manifest.frontend?.styles);
   const pa = useMemo(() => createNativeExtensionClient(extension.id), [extension.id]);
+  const blockContext = useMemo(
+    () => ({
+      ...context,
+      renderMarkdown: (markdown: string) => renderMarkdownText(markdown),
+    }),
+    [context],
+  );
   const moduleKey = extensionModuleKey(extension);
   const Component = useMemo(
     () => lazyTranscriptBlockComponent(extension, renderer, getExtensionRegistryRevision()),
@@ -227,7 +235,7 @@ export function NativeExtensionTranscriptBlockHost({
   return (
     <Suspense fallback={<LoadingState label="Loading transcript block…" className="py-3" />}>
       <ExtensionToolBlockErrorBoundary extensionId={extension.id}>
-        <Component pa={pa} block={block} renderer={renderer} context={context} />
+        <Component pa={pa} block={block} renderer={renderer} context={blockContext} />
       </ExtensionToolBlockErrorBoundary>
     </Suspense>
   );

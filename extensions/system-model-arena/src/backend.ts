@@ -171,6 +171,80 @@ async function updateBlock(ctx: ExtensionBackendContext, duel: Duel) {
   });
 }
 
+async function reconcileDuelAnswers(
+  ctx: ExtensionBackendContext,
+  duel: Duel,
+  options: { terminalConversationId?: string; runError?: string } = {},
+) {
+  let changed = false;
+  const terminalConversationId = options.terminalConversationId;
+  const runError = options.runError ?? '';
+
+  if (!duel.primaryText) {
+    const primaryText = await latestAssistantText(ctx, duel.conversationId);
+    if (primaryText) {
+      duel.primaryText = primaryText;
+      changed = true;
+    }
+  }
+
+  if (!duel.challengerText) {
+    const challengerText = await latestAssistantText(ctx, duel.childConversationId);
+    if (challengerText) {
+      duel.challengerText = challengerText;
+      changed = true;
+    }
+  }
+
+  if (!duel.primaryText && duel.status !== 'failed') {
+    const primaryError = await latestConversationError(ctx, duel.conversationId);
+    if (primaryError) {
+      duel.error = primaryError;
+      duel.status = 'failed';
+      changed = true;
+    }
+  }
+
+  if (!duel.challengerText && duel.status !== 'failed') {
+    const challengerError = await latestConversationError(ctx, duel.childConversationId);
+    if (challengerError) {
+      duel.error = challengerError;
+      duel.status = 'failed';
+      changed = true;
+    }
+  }
+
+  if (terminalConversationId === duel.conversationId && (runError || !duel.primaryText)) {
+    duel.error = runError || 'Primary model ended without an answer.';
+    duel.status = 'failed';
+    changed = true;
+  }
+
+  if (terminalConversationId === duel.childConversationId) {
+    if (runError || !duel.challengerText) {
+      duel.error = runError || 'Challenger model ended without an answer.';
+      duel.status = 'failed';
+      changed = true;
+    }
+    if (await cleanupParallelJob(ctx, duel)) {
+      changed = true;
+    }
+  }
+
+  if (duel.primaryText && duel.challengerText && duel.status !== 'ready' && duel.status !== 'failed' && duel.status !== 'voted') {
+    duel.status = 'ready';
+    changed = true;
+  }
+
+  if (changed) {
+    duel.updatedAt = new Date().toISOString();
+    await saveDuel(ctx, duel);
+    await updateBlock(ctx, duel).catch(() => undefined);
+  }
+
+  return changed;
+}
+
 function readBlocks(value: unknown): Array<Record<string, unknown>> {
   if (isRecord(value) && Array.isArray(value.blocks)) return value.blocks.filter(isRecord);
   if (isRecord(value) && isRecord(value.detail) && Array.isArray(value.detail.blocks)) return value.detail.blocks.filter(isRecord);
@@ -196,13 +270,27 @@ function promptBeforeBlock(blocks: Array<Record<string, unknown>>, selectedBlock
 }
 
 async function latestAssistantText(ctx: ExtensionBackendContext, conversationId: string) {
-  const blocks = readBlocks(await ctx.conversations.getBlocks(conversationId, { tailBlocks: 100 }));
+  const blocks = readBlocks(await ctx.conversations.getBlocks(conversationId, { tailBlocks: 100 }).catch(() => ({ blocks: [] })));
   for (let i = blocks.length - 1; i >= 0; i -= 1) {
     const block = blocks[i];
     if (block?.type === 'text') {
       const text = asString(block.text);
       if (text) return text;
     }
+  }
+  return '';
+}
+
+async function latestConversationError(ctx: ExtensionBackendContext, conversationId: string) {
+  const result = await ctx.conversations.getBlocks(conversationId, { tailBlocks: 100 }).catch((error) => ({
+    blocks: [{ type: 'error', message: error instanceof Error ? error.message : String(error) }],
+  }));
+  const blocks = readBlocks(result);
+  for (let i = blocks.length - 1; i >= 0; i -= 1) {
+    const block = blocks[i];
+    if (block?.type !== 'error' && block?.status !== 'error' && block?.error !== true) continue;
+    const message = asString(block.message) || asString(block.text) || asString(block.output) || asString(block.error);
+    if (message) return message;
   }
   return '';
 }
@@ -374,44 +462,21 @@ export async function onConversationRunEnded(input: { payload?: unknown }, ctx: 
   for (const entry of await ctx.storage.list<Duel>(DUEL_PREFIX)) {
     const duel = entry.value;
     if (!isRecord(duel) || duel.status === 'voted') continue;
-    let changed = false;
-    if (duel.conversationId === conversationId) {
-      if (!duel.primaryText) {
-        duel.primaryText = await latestAssistantText(ctx, duel.conversationId);
-        changed = Boolean(duel.primaryText);
-      }
-      if (runError || !duel.primaryText) {
-        duel.error = runError || 'Primary model ended without an answer.';
-        duel.status = 'failed';
-        changed = true;
-      }
-    }
-    if (duel.childConversationId === conversationId) {
-      if (!duel.challengerText) {
-        duel.challengerText = await latestAssistantText(ctx, duel.childConversationId);
-        changed = Boolean(duel.challengerText);
-      }
-      if (runError || !duel.challengerText) {
-        duel.error = runError || 'Challenger model ended without an answer.';
-        duel.status = 'failed';
-        changed = true;
-      }
-      if (await cleanupParallelJob(ctx, duel)) {
-        changed = true;
-      }
-    }
-    if (duel.primaryText && duel.challengerText && duel.status !== 'ready' && duel.status !== 'failed') {
-      duel.status = 'ready';
-      changed = true;
-    }
-    if (changed) {
-      duel.updatedAt = new Date().toISOString();
-      await saveDuel(ctx, duel);
-      await updateBlock(ctx, duel).catch(() => undefined);
+    if (duel.conversationId !== conversationId && duel.childConversationId !== conversationId) continue;
+    if (await reconcileDuelAnswers(ctx, duel, { terminalConversationId: conversationId, runError })) {
       updated += 1;
     }
   }
   return { updated };
+}
+
+export async function refreshDuel(input: unknown, ctx: ExtensionBackendContext) {
+  const record = isRecord(input) ? input : {};
+  const duelId = asString(record.duelId);
+  const duel = (await ctx.storage.get(`${DUEL_PREFIX}${duelId}`)) as Duel | null;
+  if (!duel || !isRecord(duel)) throw new Error('Duel not found.');
+  if (duel.status !== 'voted') await reconcileDuelAnswers(ctx, duel);
+  return { ok: true, duel: blockData(duel) };
 }
 
 export async function startManualDuel(input: unknown, ctx: ExtensionBackendContext) {

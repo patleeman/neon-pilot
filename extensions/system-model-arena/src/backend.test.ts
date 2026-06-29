@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getArenaState, listArenaModels, onConversationRunEnded, saveArenaSettings, startManualDuel, voteDuel } from './backend.js';
+import {
+  getArenaState,
+  listArenaModels,
+  onConversationRunEnded,
+  refreshDuel,
+  saveArenaSettings,
+  startManualDuel,
+  voteDuel,
+} from './backend.js';
 
 type StorageEntry = { key: string; value: unknown };
 
@@ -276,6 +284,127 @@ describe('Model Arena backend', () => {
       models: {
         'openrouter/deepseek-v4-flash': { wins: 1, byTask: { frontend: { wins: 1 } } },
         'ds4/deepseek-v4-flash': { losses: 1, byTask: { frontend: { losses: 1 } } },
+      },
+    });
+  });
+
+  it('refreshes a running duel from the child conversation answer', async () => {
+    const duel = {
+      id: 'duel-1',
+      conversationId: 'parent-1',
+      blockId: 'model_arena_duel:duel-1',
+      prompt: 'Compare this markdown answer',
+      taskType: 'general',
+      primaryModel: 'openai/gpt-5',
+      challengerModel: 'anthropic/claude-sonnet',
+      childConversationId: 'child-1',
+      jobId: 'job-1',
+      sideA: 'primary',
+      sideB: 'challenger',
+      status: 'running',
+      createdAt: '2026-06-29T12:00:00.000Z',
+      updatedAt: '2026-06-29T12:00:00.000Z',
+      primaryText: '**Primary** answer',
+    };
+    const harness = createContext({ 'duels/duel-1': duel });
+    harness.getBlocks.mockImplementation(async (conversationId: string) => ({
+      blocks:
+        conversationId === 'child-1'
+          ? [{ type: 'text', id: 'assistant-child', text: '## Challenger answer\n\n- better markdown' }]
+          : [{ type: 'text', id: 'assistant-parent', text: '**Primary** answer' }],
+    }));
+
+    await expect(refreshDuel({ duelId: 'duel-1' }, harness.ctx as never)).resolves.toMatchObject({
+      ok: true,
+      duel: {
+        status: 'ready',
+        sideA: { text: '**Primary** answer' },
+        sideB: { text: '## Challenger answer\n\n- better markdown' },
+      },
+    });
+
+    expect(harness.updateTranscriptBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'parent-1',
+        blockId: 'model_arena_duel:duel-1',
+        data: expect.objectContaining({ status: 'ready', sideB: { text: '## Challenger answer\n\n- better markdown' } }),
+      }),
+    );
+  });
+
+  it('refreshes a running duel from the child conversation error', async () => {
+    const duel = {
+      id: 'duel-1',
+      conversationId: 'parent-1',
+      blockId: 'model_arena_duel:duel-1',
+      prompt: 'Compare this failed challenger',
+      taskType: 'debugging',
+      primaryModel: 'openai/gpt-5',
+      challengerModel: 'openai-codex/gpt-5.3-codex-spark',
+      childConversationId: 'child-1',
+      jobId: 'job-1',
+      sideA: 'primary',
+      sideB: 'challenger',
+      status: 'running',
+      createdAt: '2026-06-29T12:00:00.000Z',
+      updatedAt: '2026-06-29T12:00:00.000Z',
+      primaryText: 'Primary answer',
+    };
+    const harness = createContext({ 'duels/duel-1': duel });
+    harness.getBlocks.mockImplementation(async (conversationId: string) => ({
+      blocks:
+        conversationId === 'child-1'
+          ? [{ type: 'error', id: 'error-child', message: 'No API key for provider: openai-codex' }]
+          : [{ type: 'text', id: 'assistant-parent', text: 'Primary answer' }],
+    }));
+
+    await expect(refreshDuel({ duelId: 'duel-1' }, harness.ctx as never)).resolves.toMatchObject({
+      ok: true,
+      duel: {
+        status: 'failed',
+        sideA: { text: 'Primary answer' },
+        sideB: { text: '' },
+        error: 'No API key for provider: openai-codex',
+      },
+    });
+
+    expect(harness.updateTranscriptBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'parent-1',
+        blockId: 'model_arena_duel:duel-1',
+        data: expect.objectContaining({ status: 'failed', error: 'No API key for provider: openai-codex' }),
+      }),
+    );
+  });
+
+  it('turns child conversation read failures into duel errors on refresh', async () => {
+    const duel = {
+      id: 'duel-1',
+      conversationId: 'parent-1',
+      blockId: 'model_arena_duel:duel-1',
+      prompt: 'Compare this failed challenger',
+      taskType: 'debugging',
+      primaryModel: 'openai/gpt-5',
+      challengerModel: 'openai-codex/gpt-5.3-codex-spark',
+      childConversationId: 'child-1',
+      jobId: 'job-1',
+      sideA: 'primary',
+      sideB: 'challenger',
+      status: 'running',
+      createdAt: '2026-06-29T12:00:00.000Z',
+      updatedAt: '2026-06-29T12:00:00.000Z',
+      primaryText: 'Primary answer',
+    };
+    const harness = createContext({ 'duels/duel-1': duel });
+    harness.getBlocks.mockImplementation(async (conversationId: string) => {
+      if (conversationId === 'child-1') throw new Error('No API key for provider: openai-codex');
+      return { blocks: [{ type: 'text', id: 'assistant-parent', text: 'Primary answer' }] };
+    });
+
+    await expect(refreshDuel({ duelId: 'duel-1' }, harness.ctx as never)).resolves.toMatchObject({
+      duel: {
+        status: 'failed',
+        error: 'No API key for provider: openai-codex',
       },
     });
   });

@@ -1,6 +1,6 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { AppPageIntro, AppPageLayout, Button, ErrorState, Select, StatusDot, Switch, TextInput } from '@neon-pilot/extensions/ui';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 type ArenaSettings = {
   automaticDuels: boolean;
@@ -416,11 +416,12 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
 export function ModelArenaDuelBlock({
   pa,
   block,
+  context,
 }: {
   pa: { extension: { invoke(actionId: string, input?: unknown): Promise<unknown> } };
   block: { details?: unknown };
   renderer?: unknown;
-  context?: unknown;
+  context?: { renderMarkdown?: (markdown: string) => ReactNode };
 }) {
   const data = isRecord(block.details) ? (block.details as DuelBlockData) : null;
   const [local, setLocal] = useState<DuelBlockData | null>(data);
@@ -431,9 +432,11 @@ export function ModelArenaDuelBlock({
 
   if (!local) return null;
   const ready = local.status === 'ready' || local.status === 'voted';
-  const failed = local.status === 'failed';
-  const sideA = local.sideA?.text?.trim() || (ready || failed ? 'No answer captured.' : 'Waiting for answer...');
-  const sideB = local.sideB?.text?.trim() || (ready || failed ? 'No answer captured.' : 'Waiting for answer...');
+  const visibleError = local.error || error;
+  const failed = local.status === 'failed' || Boolean(error);
+  const missingAnswerText = failed ? visibleError || 'Run ended without an answer.' : 'No answer captured.';
+  const sideA = local.sideA?.text?.trim() || (ready || failed ? missingAnswerText : 'Waiting for answer...');
+  const sideB = local.sideB?.text?.trim() || (ready || failed ? missingAnswerText : 'Waiting for answer...');
 
   const vote = async (choice: 'a' | 'b' | 'tie' | 'neither') => {
     if (voting || !ready) return;
@@ -449,8 +452,33 @@ export function ModelArenaDuelBlock({
     }
   };
 
+  useEffect(() => {
+    if (!local || local.status !== 'running') return;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const result = (await pa.extension.invoke('refreshDuel', { duelId: local.duelId })) as { duel?: DuelBlockData };
+        if (!cancelled && result.duel) {
+          setLocal(result.duel);
+          setError('');
+        }
+      } catch (refreshError) {
+        if (!cancelled) setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [local?.duelId, local?.status, pa.extension]);
+
   return (
-    <section className="w-full rounded-md border border-border-subtle bg-panel/80 text-[12px]" data-model-arena-duel={local.duelId}>
+    <section
+      className="w-full min-w-full rounded-md border border-border-subtle bg-panel/80 text-[12px]"
+      data-model-arena-duel={local.duelId}
+    >
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <StatusDot tone={ready ? 'success' : local.status === 'failed' ? 'danger' : 'warning'} />
@@ -463,17 +491,43 @@ export function ModelArenaDuelBlock({
           </span>
         ) : null}
       </div>
-      <div className="grid gap-0 md:grid-cols-2">
-        <DuelAnswer label="A" text={sideA} />
-        <DuelAnswer label="B" text={sideB} />
+      <div className="grid w-full min-w-0 grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <DuelAnswer
+          label="A"
+          text={sideA}
+          waiting={!local.sideA?.text?.trim() && !ready && !failed}
+          failed={!local.sideA?.text?.trim() && failed}
+          renderMarkdown={context?.renderMarkdown}
+          action={
+            <Button
+              variant="secondary"
+              disabled={!ready || Boolean(local.vote)}
+              onClick={() => void vote('a')}
+              className="w-full justify-center"
+            >
+              Prefer A
+            </Button>
+          }
+        />
+        <DuelAnswer
+          label="B"
+          text={sideB}
+          waiting={!local.sideB?.text?.trim() && !ready && !failed}
+          failed={!local.sideB?.text?.trim() && failed}
+          renderMarkdown={context?.renderMarkdown}
+          action={
+            <Button
+              variant="secondary"
+              disabled={!ready || Boolean(local.vote)}
+              onClick={() => void vote('b')}
+              className="w-full justify-center"
+            >
+              Prefer B
+            </Button>
+          }
+        />
       </div>
-      <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle px-3 py-2">
-        <Button variant="secondary" disabled={!ready || Boolean(local.vote)} onClick={() => void vote('a')}>
-          Prefer A
-        </Button>
-        <Button variant="secondary" disabled={!ready || Boolean(local.vote)} onClick={() => void vote('b')}>
-          Prefer B
-        </Button>
+      <div className="flex flex-wrap items-center justify-center gap-2 border-t border-border-subtle px-3 py-2">
         <Button variant="ghost" disabled={!ready || Boolean(local.vote)} onClick={() => void vote('tie')}>
           Tie
         </Button>
@@ -489,11 +543,36 @@ export function ModelArenaDuelBlock({
   );
 }
 
-function DuelAnswer({ label, text }: { label: string; text: string }) {
+function DuelAnswer({
+  label,
+  text,
+  waiting,
+  failed,
+  action,
+  renderMarkdown,
+}: {
+  label: string;
+  text: string;
+  waiting: boolean;
+  failed: boolean;
+  action: ReactNode;
+  renderMarkdown?: (markdown: string) => ReactNode;
+}) {
   return (
-    <article className="min-w-0 border-b border-border-subtle p-3 md:border-b-0 md:border-r md:last:border-r-0">
-      <div className="mb-2 text-[11px] font-medium uppercase text-dim">{label}</div>
-      <div className="max-h-[32rem] overflow-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-primary">{text}</div>
+    <article className="flex min-w-0 flex-col border-b border-border-subtle md:border-b-0 md:border-r md:last:border-r-0">
+      <div className="border-b border-border-subtle px-3 py-2 text-[11px] font-medium uppercase text-dim">{label}</div>
+      <div className="min-h-[18rem] min-w-0 flex-1 overflow-auto px-3 py-3 text-[13px] leading-relaxed text-primary">
+        {waiting ? (
+          <div className="text-dim">Waiting for answer...</div>
+        ) : failed ? (
+          <div className="whitespace-pre-wrap break-words text-danger">{text}</div>
+        ) : renderMarkdown ? (
+          renderMarkdown(text)
+        ) : (
+          <div className="whitespace-pre-wrap break-words">{text}</div>
+        )}
+      </div>
+      <div className="border-t border-border-subtle px-3 py-2">{action}</div>
     </article>
   );
 }
