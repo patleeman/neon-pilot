@@ -234,6 +234,28 @@ interface ExtensionBackendCapabilityConversations {
       onEvent?: (event: unknown) => void;
     },
   ): Promise<unknown> | unknown;
+  startParallelPrompt?(
+    extensionId: string,
+    conversationId: string,
+    input: {
+      text: string;
+      images?: Array<{ data: string; mimeType: string; name?: string }>;
+      videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      attachmentRefs?: unknown;
+      contextMessages?: unknown;
+      relatedConversationIds?: unknown;
+      surfaceId?: string;
+      model?: string | null;
+      thinkingLevel?: string | null;
+      serviceTier?: string | null;
+      purpose?: string;
+      metadata?: Record<string, unknown>;
+    },
+  ): Promise<unknown> | unknown;
+  manageParallelJob?(
+    extensionId: string,
+    input: { conversationId: string; jobId: string; action: 'importNow' | 'skip' | 'cancel' },
+  ): Promise<unknown> | unknown;
   abort?(extensionId: string, conversationId: string): Promise<unknown> | unknown;
   compact?(extensionId: string, conversationId: string, customInstructions?: string): Promise<unknown> | unknown;
   fork?(

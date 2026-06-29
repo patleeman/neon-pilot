@@ -95,6 +95,27 @@ export interface ExtensionConversationBlocksOptions {
   tailBlocks?: number;
 }
 
+export interface ExtensionConversationStartParallelPromptOptions {
+  text: string;
+  images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  attachmentRefs?: unknown;
+  contextMessages?: unknown;
+  relatedConversationIds?: unknown;
+  surfaceId?: string;
+  model?: string | null;
+  thinkingLevel?: string | null;
+  serviceTier?: string | null;
+  purpose?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ExtensionConversationManageParallelJobOptions {
+  conversationId: string;
+  jobId: string;
+  action: 'importNow' | 'skip' | 'cancel';
+}
+
 export interface ExtensionConversationSubscriptionHandler {
   (event: unknown): void;
 }

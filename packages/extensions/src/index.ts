@@ -1537,6 +1537,38 @@ export interface ExtensionBackendContext {
         onEvent?: (event: unknown) => void;
       },
     ): Promise<{ accepted: boolean }>;
+    startParallelPrompt(
+      conversationId: string,
+      input: {
+        text: string;
+        images?: Array<{ data: string; mimeType: string; name?: string }>;
+        videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+        attachmentRefs?: unknown;
+        contextMessages?: unknown;
+        relatedConversationIds?: unknown;
+        surfaceId?: string;
+        model?: string | null;
+        thinkingLevel?: string | null;
+        serviceTier?: string | null;
+        purpose?: string;
+        metadata?: Record<string, unknown>;
+      },
+    ): Promise<{
+      ok: true;
+      accepted: true;
+      jobId: string;
+      childConversationId: string;
+      referencedTaskIds: string[];
+      referencedMemoryDocIds: string[];
+      referencedKnowledgeFileIds: string[];
+      referencedAttachmentIds: string[];
+      relatedConversationPointerWarnings?: string[];
+    }>;
+    manageParallelJob(input: {
+      conversationId: string;
+      jobId: string;
+      action: 'importNow' | 'skip' | 'cancel';
+    }): Promise<{ ok: true; status: string }>;
     setTitle(conversationId: string, title: string): Promise<unknown>;
     compact(conversationId: string, customInstructions?: string): Promise<unknown>;
     abort(conversationId: string): Promise<{ ok: true }>;
