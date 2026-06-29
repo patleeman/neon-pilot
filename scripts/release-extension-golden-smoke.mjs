@@ -461,7 +461,7 @@ async function assertAgentTools(cdp, child, matrix) {
     const conversationPath = `/conversations/${encodeURIComponent(conversationId)}`;
     await cdp.send('Page.navigate', { url: `neon-pilot://app${conversationPath}` });
     await suppressOnboardingTour(cdp, child, conversationPath);
-    await waitForBodyText(cdp, child, `context tool conversation ${conversationId}`, ['Release smoke context todo']);
+    await waitForBodyText(cdp, child, `context tool conversation ${conversationId}`, ['Todos', '1 open']);
     console.log(`  context agent tool conversation ok: ${conversationId}`);
   }
 }
