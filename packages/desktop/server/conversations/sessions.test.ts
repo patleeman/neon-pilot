@@ -1590,6 +1590,52 @@ describe('sessions', () => {
     expect(detail?.blocks.filter((block) => block.type === 'text').map((block) => block.text)).toContain('Imported summary note.');
   });
 
+  it('keeps visible extension transcript custom messages as typed context blocks', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const dir = join(sessionsDir, '--tmp-project--');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, '2026-03-11T12-00-00-000Z_session-extension-block.jsonl'),
+      [
+        JSON.stringify({ type: 'session', id: 'session-extension-block', timestamp: '2026-03-11T12:00:00.000Z', cwd: '/tmp/project' }),
+        JSON.stringify({ type: 'model_change', modelId: 'test-model' }),
+        JSON.stringify({
+          type: 'custom_message',
+          id: 'session-extension-block-duel-1',
+          parentId: null,
+          timestamp: '2026-03-11T12:00:01.000Z',
+          customType: 'model_arena_duel',
+          content: 'Model Arena duel',
+          display: true,
+          details: { duelId: 'duel-1', status: 'ready', extensionBlockId: 'model_arena_duel:duel-1' },
+        }),
+      ].join('\n') + '\n',
+    );
+
+    const detail = readSessionBlocks('session-extension-block');
+    expect(detail?.blocks).toEqual([
+      expect.objectContaining({
+        type: 'context',
+        customType: 'model_arena_duel',
+        text: 'Model Arena duel',
+        details: expect.objectContaining({ duelId: 'duel-1', extensionBlockId: 'model_arena_duel:duel-1' }),
+      }),
+    ]);
+    expect(detail?.renderItems).toEqual([
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [
+          expect.objectContaining({
+            customType: 'model_arena_duel',
+            details: expect.objectContaining({ duelId: 'duel-1', extensionBlockId: 'model_arena_duel:duel-1' }),
+          }),
+        ],
+      }),
+    ]);
+  });
+
   it('updates stored visible custom messages by extension block id', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);

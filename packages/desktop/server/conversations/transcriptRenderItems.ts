@@ -27,7 +27,7 @@ type TranscriptMessageBlock =
       images?: DisplayUserImages;
     }
   | { type: 'text'; id?: string; ts: string; text: string; streaming?: boolean }
-  | { type: 'context'; id?: string; ts: string; text: string; customType?: string }
+  | { type: 'context'; id?: string; ts: string; text: string; customType?: string; details?: unknown }
   | { type: 'summary'; id?: string; ts: string; kind: 'compaction' | 'branch' | 'related'; title: string; text: string; detail?: string }
   | { type: 'thinking'; id?: string; ts: string; text: string }
   | {
@@ -122,7 +122,7 @@ function displayBlockToTranscriptMessageBlock(block: DisplayBlock): TranscriptMe
     case 'text':
       return { type: 'text', id: block.id, text: block.text, ts: block.ts };
     case 'context':
-      return { type: 'context', id: block.id, text: block.text, customType: block.customType, ts: block.ts };
+      return { type: 'context', id: block.id, text: block.text, customType: block.customType, details: block.details, ts: block.ts };
     case 'thinking':
       return { type: 'thinking', id: block.id, text: block.text, ts: block.ts };
     case 'summary':

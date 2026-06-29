@@ -243,10 +243,12 @@ export function markConversationCatalogComplete(): void {
     .run(new Date().toISOString());
 }
 
+const DETAIL_CACHE_PROJECTION_VERSION = 'v2';
+
 function detailCacheKey(options?: { tailBlocks?: number }): string {
   return Number.isSafeInteger(options?.tailBlocks) && typeof options?.tailBlocks === 'number' && options.tailBlocks > 0
-    ? `tail:${options.tailBlocks}`
-    : 'full';
+    ? `${DETAIL_CACHE_PROJECTION_VERSION}:tail:${options.tailBlocks}`
+    : `${DETAIL_CACHE_PROJECTION_VERSION}:full`;
 }
 
 export function readConversationDetailCache(

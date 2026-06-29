@@ -982,7 +982,7 @@ export function createExtensionConversationsCapability(
           content,
           details,
           blockId: input.blockId,
-          display: false,
+          display: true,
         });
         invalidateAppTopics('sessions');
         return { blockId: blockId ?? input.blockId ?? `${input.blockType}:${Date.now()}` };

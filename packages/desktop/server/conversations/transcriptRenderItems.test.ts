@@ -42,6 +42,32 @@ describe('transcript render items', () => {
     expect(items[2]).toMatchObject({ type: 'message', index: 4, block: { type: 'text', id: 'a1' } });
   });
 
+  it('preserves extension transcript block details in context clusters', () => {
+    const blocks: DisplayBlock[] = [
+      {
+        type: 'context',
+        id: 'model_arena_duel:test',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: { duelId: 'test-duel', status: 'ready' },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [
+          expect.objectContaining({
+            type: 'context',
+            customType: 'model_arena_duel',
+            details: { duelId: 'test-duel', status: 'ready' },
+          }),
+        ],
+      }),
+    ]);
+  });
+
   it('keeps terminal bash blocks as visible messages instead of trace clusters', () => {
     const blocks: DisplayBlock[] = [
       {

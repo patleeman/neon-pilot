@@ -893,6 +893,12 @@ function isInjectedContextMessage(message: DisplayMessageEntryLike['message']): 
   return isInjectedContextMessageValue(message);
 }
 
+function isExtensionTranscriptBlockMessage(message: DisplayMessageEntryLike['message']): boolean {
+  if (message.role !== 'custom' || typeof message.customType !== 'string' || !message.customType.trim()) return false;
+  const details = isRecord(message.details) ? message.details : null;
+  return typeof details?.extensionBlockId === 'string' && details.extensionBlockId.trim().length > 0;
+}
+
 function extractSearchTextFromMessage(message: { role: string; content?: unknown }): string {
   return extractSearchTextFromMessageValue(message);
 }
@@ -1040,6 +1046,43 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
             id: `${baseId}-i${blocks.length}`,
             ts,
             alt: 'Injected context image',
+            src,
+            mimeType,
+            ...(typeof block.name === 'string' && block.name.trim().length > 0 ? { caption: block.name.trim() } : {}),
+          });
+        }
+      }
+      continue;
+    }
+
+    if (isExtensionTranscriptBlockMessage(msg.message)) {
+      for (const block of contentBlocks) {
+        if (block.type === 'text' && block.text?.trim()) {
+          recordAnchor();
+          pushBlock({
+            type: 'context',
+            id: `${baseId}-m${blocks.length}`,
+            ts,
+            text: block.text,
+            customType: msg.message.customType,
+            ...(msg.message.details !== undefined ? { details: msg.message.details } : {}),
+          });
+          continue;
+        }
+
+        if (block.type === 'image') {
+          const src = imageSrc(block);
+          const mimeType = imageMimeType(block);
+          if (!src || !mimeType) {
+            continue;
+          }
+
+          recordAnchor();
+          pushBlock({
+            type: 'image',
+            id: `${baseId}-i${blocks.length}`,
+            ts,
+            alt: 'Extension transcript image',
             src,
             mimeType,
             ...(typeof block.name === 'string' && block.name.trim().length > 0 ? { caption: block.name.trim() } : {}),
@@ -2508,13 +2551,14 @@ function resolveTailBlockLimit(tailBlocks: number | undefined, totalBlocks: numb
 }
 
 const MAX_SESSION_DETAIL_TAIL_BLOCKS = 10000;
+const SESSION_DETAIL_PROJECTION_VERSION = 'v2';
 
 function normalizeTailBlockRequest(tailBlocks: number | undefined): number | undefined {
   return normalizeTailBlockRequestValue({ tailBlocks, maxTailBlocks: MAX_SESSION_DETAIL_TAIL_BLOCKS });
 }
 
 function buildSessionDetailCacheKey(filePath: string, tailBlocks?: number): string {
-  return buildSessionDetailCacheKeyValue(filePath, tailBlocks);
+  return `${SESSION_DETAIL_PROJECTION_VERSION}:${buildSessionDetailCacheKeyValue(filePath, tailBlocks)}`;
 }
 
 function trimSessionDetailCache(): void {

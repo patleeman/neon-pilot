@@ -405,7 +405,7 @@ describe('extensionConversations', () => {
       content: 'Hello',
       details: { ok: true, ownerExtensionId: 'extension' },
       blockId: undefined,
-      display: false,
+      display: true,
     });
     expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
       type: 'session.created',
