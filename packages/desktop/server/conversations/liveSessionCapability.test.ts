@@ -27,6 +27,7 @@ vi.mock('@neon-pilot/core', async (importOriginal) => {
 });
 
 const extensionHostClient = vi.hoisted(() => ({
+  publishEvent: vi.fn(async () => undefined),
   resolvePromptReferences: vi.fn(async () => ({ contextBlocks: [], references: [] })),
 }));
 
@@ -138,6 +139,8 @@ beforeEach(() => {
   queuePromptContextMock.mockReset();
   submitLocalPromptSessionMock.mockReset();
   syncWebLiveConversationRunMock.mockReset();
+  extensionHostClient.publishEvent.mockReset();
+  extensionHostClient.publishEvent.mockResolvedValue(undefined);
   extensionHostClient.resolvePromptReferences.mockReset();
   extensionHostClient.resolvePromptReferences.mockResolvedValue({ contextBlocks: [], references: [] });
   syncWebLiveConversationRunMock.mockResolvedValue({ runId: 'run-1' });

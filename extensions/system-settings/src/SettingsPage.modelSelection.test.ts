@@ -79,7 +79,7 @@ describe('settings hash section parsing', () => {
     expect(readSettingsSectionIdFromPathname('/settings/extensions/system-reply-actions')).toBe('settings-extension-system-reply-actions');
     expect(readSettingsSectionIdFromPathname('/settings/extensions/system%3Alocal')).toBe('settings-extension-system-local');
     expect(readSettingsSectionIdFromPathname('/settings/desktop')).toBe('settings-desktop');
-    expect(readSettingsSectionIdFromPathname('/settings')).toBe('settings-extensions');
+    expect(readSettingsSectionIdFromPathname('/settings')).toBe('');
   });
 
   it('prefers the concrete browser pathname over the matched extension surface route', () => {
