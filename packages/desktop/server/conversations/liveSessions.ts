@@ -906,6 +906,13 @@ export async function startParallelPromptSession(
     videos?: PromptVideoAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
+    model?: string | null;
+    thinkingLevel?: string | null;
+    serviceTier?: string | null;
+    ownerExtensionId?: string;
+    purpose?: string;
+    metadata?: Record<string, unknown>;
+    autoImport?: boolean;
   },
   options: LiveSessionLoaderOptions = {},
 ): Promise<{ jobId: string; childConversationId: string }> {

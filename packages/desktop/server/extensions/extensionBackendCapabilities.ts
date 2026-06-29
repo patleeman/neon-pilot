@@ -204,6 +204,24 @@ interface ExtensionBackendCapabilityConversations {
     text: string,
     options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
   ): Promise<unknown> | unknown;
+  startParallelPrompt?(
+    extensionId: string,
+    conversationId: string,
+    input: {
+      text: string;
+      images?: Array<{ data: string; mimeType: string; name?: string }>;
+      model?: string | null;
+      thinkingLevel?: string | null;
+      serviceTier?: string | null;
+      purpose?: string;
+      metadata?: Record<string, unknown>;
+      autoImport?: boolean;
+    },
+  ): Promise<unknown> | unknown;
+  manageParallelJob?(
+    extensionId: string,
+    input: { conversationId: string; jobId: string; action: 'importNow' | 'skip' | 'cancel' },
+  ): Promise<unknown> | unknown;
   runTurn?(
     extensionId: string,
     conversationId: string,
@@ -602,6 +620,8 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
       'rollback',
       'ensureLive',
       'sendMessage',
+      'startParallelPrompt',
+      'manageParallelJob',
       'runTurn',
       'abort',
       'compact',
@@ -1051,6 +1071,52 @@ function dispatchConversationsCapability(
       requireString(input.text, 'Conversation message text'),
       normalizeConversationSendOptions(input),
     );
+  }
+
+  if (request.operation === 'startParallelPrompt') {
+    if (!conversations.startParallelPrompt) {
+      throw new Error('Conversation startParallelPrompt capability is unavailable.');
+    }
+    const metadata = input.metadata !== undefined ? optionalRecord(input.metadata, 'Conversation parallel prompt metadata') : undefined;
+    return conversations.startParallelPrompt(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
+      text: requireString(input.text, 'Conversation parallel prompt text'),
+      ...normalizeConversationSendOptions(input),
+      ...(input.model === null
+        ? { model: null }
+        : input.model !== undefined
+          ? { model: optionalString(input.model, 'Conversation parallel prompt model') }
+          : {}),
+      ...(input.thinkingLevel === null
+        ? { thinkingLevel: null }
+        : input.thinkingLevel !== undefined
+          ? { thinkingLevel: optionalString(input.thinkingLevel, 'Conversation parallel prompt thinkingLevel') }
+          : {}),
+      ...(input.serviceTier === null
+        ? { serviceTier: null }
+        : input.serviceTier !== undefined
+          ? { serviceTier: optionalString(input.serviceTier, 'Conversation parallel prompt serviceTier') }
+          : {}),
+      ...(input.purpose !== undefined ? { purpose: optionalString(input.purpose, 'Conversation parallel prompt purpose') } : {}),
+      ...(metadata ? { metadata } : {}),
+      ...(input.autoImport !== undefined
+        ? { autoImport: optionalBoolean(input.autoImport, 'Conversation parallel prompt autoImport') }
+        : {}),
+    });
+  }
+
+  if (request.operation === 'manageParallelJob') {
+    if (!conversations.manageParallelJob) {
+      throw new Error('Conversation manageParallelJob capability is unavailable.');
+    }
+    const action = requireString(input.action, 'Conversation parallel job action');
+    if (action !== 'importNow' && action !== 'skip' && action !== 'cancel') {
+      throw new Error('Conversation parallel job action must be importNow, skip, or cancel.');
+    }
+    return conversations.manageParallelJob(request.extensionId, {
+      conversationId: requireString(input.conversationId, 'Conversation id'),
+      jobId: requireString(input.jobId, 'Conversation parallel job id'),
+      action,
+    });
   }
 
   if (request.operation === 'runTurn') {
@@ -2300,6 +2366,15 @@ export function createExtensionBackendCapabilityDispatcher(
       text: string,
       options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
     ) => createExtensionConversationsCapability().sendMessage(conversationId, text, options),
+    startParallelPrompt: (
+      extensionId: string,
+      conversationId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['startParallelPrompt']>[1],
+    ) => createExtensionConversationsCapability(undefined, extensionId).startParallelPrompt(conversationId, input),
+    manageParallelJob: (
+      _extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['manageParallelJob']>[0],
+    ) => createExtensionConversationsCapability().manageParallelJob(input),
     runTurn: (
       _extensionId: string,
       conversationId: string,

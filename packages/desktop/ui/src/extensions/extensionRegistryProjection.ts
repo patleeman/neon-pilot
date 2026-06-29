@@ -133,6 +133,15 @@ export interface ExtensionConversationLifecycleRegistration {
   frontendEntry?: string;
 }
 
+export interface ExtensionTranscriptBlockRegistration {
+  extensionId: string;
+  id: string;
+  component: string;
+  title?: string;
+  schemaVersion?: number;
+  frontendEntry?: string;
+}
+
 export interface ExtensionComposerAttachmentProviderRegistration {
   extensionId: string;
   id: string;
@@ -237,6 +246,7 @@ export const EMPTY_EXTENSION_REGISTRY_STATE: ExtensionRegistryState = {
   activityTreeItemElements: [],
   activityTreeItemStyles: [],
   conversationLifecycle: [],
+  transcriptBlocks: [],
   composerAttachmentProviders: [],
   composerAttachmentRenderers: [],
   composerAttachmentResolvers: [],
@@ -272,6 +282,7 @@ export interface ExtensionRegistryState {
   activityTreeItemElements: ExtensionActivityTreeItemElementRegistration[];
   activityTreeItemStyles: ExtensionActivityTreeItemStyleRegistration[];
   conversationLifecycle: ExtensionConversationLifecycleRegistration[];
+  transcriptBlocks: ExtensionTranscriptBlockRegistration[];
   composerAttachmentProviders: ExtensionComposerAttachmentProviderRegistration[];
   composerAttachmentRenderers: ExtensionComposerAttachmentRendererRegistration[];
   composerAttachmentResolvers: ExtensionComposerAttachmentResolverRegistration[];
@@ -540,6 +551,25 @@ function normalizeConversationLifecycle(extensions: ExtensionManifest[]): Extens
   return result;
 }
 
+function normalizeTranscriptBlocks(extensions: ExtensionManifest[]): ExtensionTranscriptBlockRegistration[] {
+  const result: ExtensionTranscriptBlockRegistration[] = [];
+  for (const extension of extensions) {
+    const blocks = extension.contributes?.transcriptBlocks;
+    if (!blocks?.length) continue;
+    for (const block of blocks) {
+      result.push({
+        extensionId: extension.id,
+        id: block.id,
+        component: block.component,
+        ...(block.title ? { title: block.title } : {}),
+        ...(typeof block.schemaVersion === 'number' ? { schemaVersion: block.schemaVersion } : {}),
+        frontendEntry: extension.frontend?.entry,
+      });
+    }
+  }
+  return result.sort((a, b) => a.extensionId.localeCompare(b.extensionId) || a.id.localeCompare(b.id));
+}
+
 function normalizeComposerAttachmentProviders(extensions: ExtensionManifest[]): ExtensionComposerAttachmentProviderRegistration[] {
   const result: ExtensionComposerAttachmentProviderRegistration[] = [];
   for (const extension of extensions)
@@ -775,6 +805,7 @@ export function normalizeExtensionRegistryState(
     activityTreeItemElements: normalizeActivityTreeItemElements(enabledRegistryExtensions),
     activityTreeItemStyles: normalizeActivityTreeItemStyles(enabledRegistryExtensions),
     conversationLifecycle: normalizeConversationLifecycle(enabledRegistryExtensions),
+    transcriptBlocks: normalizeTranscriptBlocks(enabledRegistryExtensions),
     composerAttachmentProviders: normalizeComposerAttachmentProviders(enabledRegistryExtensions),
     composerAttachmentRenderers: normalizeComposerAttachmentRenderers(enabledRegistryExtensions),
     composerAttachmentResolvers: normalizeComposerAttachmentResolvers(enabledRegistryExtensions),

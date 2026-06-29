@@ -9,7 +9,12 @@ import {
 } from '../conversations/conversationService.js';
 import { readConversationSessionsCapability } from '../conversations/conversationSessionCapability.js';
 import { broadcastTitle } from '../conversations/liveSessionBroadcasts.js';
-import { type LiveSessionCapabilityContext, submitLiveSessionPromptCapability } from '../conversations/liveSessionCapability.js';
+import {
+  type LiveSessionCapabilityContext,
+  manageLiveSessionParallelJobCapability,
+  submitLiveSessionParallelPromptCapability,
+  submitLiveSessionPromptCapability,
+} from '../conversations/liveSessionCapability.js';
 import {
   abortSession as abortLiveSession,
   appendVisibleCustomMessage as appendVisibleLiveSessionCustomMessage,
@@ -46,6 +51,15 @@ export interface ExtensionConversationSendOptions {
 export interface ExtensionConversationSendResult {
   accepted: true;
   delivery: 'started' | 'queued';
+}
+
+export interface ExtensionConversationStartParallelPromptOptions extends ExtensionConversationSendOptions {
+  model?: string | null;
+  thinkingLevel?: string | null;
+  serviceTier?: string | null;
+  purpose?: string;
+  metadata?: Record<string, unknown>;
+  autoImport?: boolean;
 }
 
 export interface ExtensionConversationRunTurnOptions extends ExtensionConversationSendOptions {
@@ -710,6 +724,42 @@ export function createExtensionConversationsCapability(
       } catch (error) {
         throw new Error(`Failed to send message: ${(error as Error).message}`);
       }
+    },
+
+    async startParallelPrompt(
+      conversationId: string,
+      input: { text: string } & ExtensionConversationStartParallelPromptOptions,
+    ): Promise<{ ok: true; accepted: true; jobId: string; childConversationId: string }> {
+      assertConversationPermission('write', 'conversations.startParallelPrompt');
+      try {
+        const result = await submitLiveSessionParallelPromptCapability(
+          {
+            conversationId,
+            text: input.text,
+            ...(input.images ? { images: input.images } : {}),
+            ...(input.model !== undefined ? { model: input.model } : {}),
+            ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
+            ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
+            ownerExtensionId: extensionId,
+            ...(input.purpose ? { purpose: input.purpose } : {}),
+            ...(input.metadata ? { metadata: input.metadata } : {}),
+            autoImport: input.autoImport ?? false,
+          },
+          buildLiveSessionCapabilityContext(),
+        );
+        return { ok: true, accepted: true, jobId: result.jobId, childConversationId: result.childConversationId };
+      } catch (error) {
+        throw new Error(`Failed to start parallel prompt: ${(error as Error).message}`);
+      }
+    },
+
+    async manageParallelJob(input: {
+      conversationId: string;
+      jobId: string;
+      action: 'importNow' | 'skip' | 'cancel';
+    }): Promise<{ ok: true; status: 'imported' | 'queued' | 'skipped' | 'cancelled' }> {
+      assertConversationPermission('write', 'conversations.manageParallelJob');
+      return manageLiveSessionParallelJobCapability(input);
     },
 
     /**

@@ -36,6 +36,7 @@ export type {
   ExtensionThreadHeaderActionRegistration,
   ExtensionToolbarActionRegistration,
   ExtensionTopBarElementRegistration,
+  ExtensionTranscriptBlockRegistration,
 } from './extensionRegistryProjection';
 
 const ExtensionRegistryContext = createContext<ExtensionRegistryState>(EMPTY_EXTENSION_REGISTRY_STATE);

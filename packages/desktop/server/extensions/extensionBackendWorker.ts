@@ -354,6 +354,21 @@ function createWorkerBackendContext(
         text: string,
         options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
       ) => callHostCapability(extensionId, 'conversations', 'sendMessage', { conversationId, text, ...(options ?? {}) }),
+      startParallelPrompt: (
+        conversationId: string,
+        input: {
+          text: string;
+          images?: Array<{ data: string; mimeType: string; name?: string }>;
+          model?: string | null;
+          thinkingLevel?: string | null;
+          serviceTier?: string | null;
+          purpose?: string;
+          metadata?: Record<string, unknown>;
+          autoImport?: boolean;
+        },
+      ) => callHostCapability(extensionId, 'conversations', 'startParallelPrompt', { conversationId, ...input }),
+      manageParallelJob: (input: { conversationId: string; jobId: string; action: 'importNow' | 'skip' | 'cancel' }) =>
+        callHostCapability(extensionId, 'conversations', 'manageParallelJob', input),
       runTurn: (
         conversationId: string,
         text: string,

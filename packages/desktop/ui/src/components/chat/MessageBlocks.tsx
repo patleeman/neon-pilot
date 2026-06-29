@@ -1,6 +1,8 @@
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { setExtensionCommandContext } from '../../extensions/commands.js';
+import { NativeExtensionTranscriptBlockHost } from '../../extensions/NativeExtensionToolBlockHost.js';
+import { useExtensionRegistry } from '../../extensions/useExtensionRegistry.js';
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
@@ -377,6 +379,7 @@ export const ContextShelf = memo(function ContextShelf({
   const toolDefinitionsText = formatToolDefinitions(toolDefinitions);
   const hasSystemPrompt = normalizedSystemPrompt.length > 0 || toolDefinitionsText.length > 0;
   const systemPromptTokenCount = estimateTextTokens([normalizedSystemPrompt, toolDefinitionsText].filter(Boolean).join('\n\n'));
+  const extensionRegistry = useExtensionRegistry();
 
   if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isQuietLifecycleContext)) {
     const marker = blocks.every(isAutoResumeLifecycleContext) ? 'auto-resume' : 'workspace-change';
@@ -473,6 +476,25 @@ export const ContextShelf = memo(function ContextShelf({
               validatedFilePathTargets={validatedFilePathTargets}
             />
           );
+        }
+
+        if (block.type === 'context' && block.customType) {
+          const renderer = (extensionRegistry.transcriptBlocks ?? []).find((candidate) => candidate.id === block.customType);
+          const extension = renderer
+            ? (extensionRegistry.extensions ?? []).find((candidate) => candidate.id === renderer.extensionId && candidate.enabled)
+            : null;
+          if (renderer && extension) {
+            return (
+              <div key={block.id ?? index} className="my-4 w-full">
+                <NativeExtensionTranscriptBlockHost
+                  extension={extension}
+                  renderer={renderer}
+                  block={block}
+                  context={{ messageIndex: typeof messageIndexOffset === 'number' ? messageIndexOffset + index : undefined }}
+                />
+              </div>
+            );
+          }
         }
 
         return (

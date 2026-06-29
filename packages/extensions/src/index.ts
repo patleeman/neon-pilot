@@ -1506,6 +1506,24 @@ export interface ExtensionBackendContext {
       text: string,
       options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
     ): Promise<{ accepted: boolean; delivery?: 'started' | 'queued' }>;
+    startParallelPrompt(
+      conversationId: string,
+      input: {
+        text: string;
+        images?: Array<{ data: string; mimeType: string; name?: string }>;
+        model?: string | null;
+        thinkingLevel?: string | null;
+        serviceTier?: string | null;
+        purpose?: string;
+        metadata?: Record<string, unknown>;
+        autoImport?: boolean;
+      },
+    ): Promise<{ ok: true; accepted: true; jobId: string; childConversationId: string }>;
+    manageParallelJob(input: {
+      conversationId: string;
+      jobId: string;
+      action: 'importNow' | 'skip' | 'cancel';
+    }): Promise<{ ok: true; status: 'imported' | 'queued' | 'skipped' | 'cancelled' }>;
     setActiveTools(conversationId: string, toolNames: string[]): Promise<{ conversationId: string; toolNames: string[] }>;
     appendCustomEntry(conversationId: string, customType: string, data?: unknown): Promise<{ ok: true }>;
     runTurn(

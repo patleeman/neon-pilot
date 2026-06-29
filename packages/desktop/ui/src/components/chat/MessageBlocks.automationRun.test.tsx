@@ -3,8 +3,23 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const registryState = vi.hoisted(() => ({
+  value: {
+    extensions: [] as Array<{ id: string; enabled: boolean }>,
+    transcriptBlocks: [] as Array<{ id: string; extensionId: string; component: string }>,
+    messageActions: [],
+  },
+}));
+
 vi.mock('../../extensions/commands.js', () => ({ setExtensionCommandContext: vi.fn() }));
-vi.mock('../../extensions/useExtensionRegistry', () => ({ useExtensionRegistry: () => ({ messageActions: [] }) }));
+vi.mock('../../extensions/useExtensionRegistry', () => ({ useExtensionRegistry: () => registryState.value }));
+vi.mock('../../extensions/NativeExtensionToolBlockHost.js', () => ({
+  NativeExtensionTranscriptBlockHost: ({ block }: { block: { customType?: string; details?: unknown } }) => (
+    <div data-extension-transcript-block="true">
+      {block.customType}:{JSON.stringify(block.details)}
+    </div>
+  ),
+}));
 vi.mock('../../extensions/nativePaClient', () => ({ createNativeExtensionClient: () => ({ extension: { invoke: async () => ({}) } }) }));
 vi.mock('../../client/apiBase', () => ({}));
 
@@ -17,6 +32,7 @@ const mountedRoots: Root[] = [];
 afterEach(() => {
   for (const root of mountedRoots) act(() => root.unmount());
   mountedRoots.length = 0;
+  registryState.value = { extensions: [], transcriptBlocks: [], messageActions: [] };
 });
 
 describe('automation run transcript context', () => {
@@ -49,5 +65,39 @@ describe('automation run transcript context', () => {
     expect(container.textContent).toContain('Automation completed');
     expect(container.textContent).toContain('test-heartbeat');
     expect(container.textContent).not.toContain('This is the agent output.');
+  });
+
+  it('renders extension-owned transcript blocks inline through the registered renderer', async () => {
+    registryState.value = {
+      extensions: [{ id: 'system-model-arena', enabled: true }],
+      transcriptBlocks: [{ id: 'model_arena_duel', extensionId: 'system-model-arena', component: 'ModelArenaDuelBlock' }],
+      messageActions: [],
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(
+        <ContextShelf
+          blocks={[
+            {
+              type: 'context',
+              id: 'model_arena_duel:test',
+              ts: '2026-06-29T12:00:00.000Z',
+              customType: 'model_arena_duel',
+              text: 'Model Arena duel',
+              details: { duelId: 'test-duel', status: 'ready' },
+            },
+          ]}
+        />,
+      );
+    });
+
+    expect(container.querySelector('[data-extension-transcript-block="true"]')).not.toBeNull();
+    expect(container.textContent).toContain('model_arena_duel');
+    expect(container.textContent).toContain('test-duel');
+    expect(container.querySelector('.ui-disclosure')).toBeNull();
   });
 });

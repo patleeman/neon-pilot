@@ -173,6 +173,13 @@ export interface SubmitLiveSessionParallelPromptCapabilityInput {
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
   surfaceId?: string;
+  model?: string | null;
+  thinkingLevel?: string | null;
+  serviceTier?: string | null;
+  ownerExtensionId?: string;
+  purpose?: string;
+  metadata?: Record<string, unknown>;
+  autoImport?: boolean;
 }
 
 export interface ManageLiveSessionParallelJobCapabilityInput {
@@ -1061,6 +1068,35 @@ export async function submitLiveSessionPromptCapability(
     prepared.surfaceId,
   );
   const submittedAtMs = performance.now();
+  void getExtensionHostClient()
+    .publishEvent('conversationPrompt', {
+      type: 'submitted',
+      conversationId: liveConversationId,
+      prompt: prepared.text,
+      behavior,
+      delivery: submittedPrompt.acceptedAs,
+      imageCount: prepared.promptImages?.length ?? 0,
+      videoCount: prepared.promptVideos?.length ?? 0,
+      contextMessageCount: promptContextMessages.length,
+      relatedConversationCount: Array.isArray(input.relatedConversationIds) ? input.relatedConversationIds.length : 0,
+      referencedTaskIds: prepared.promptReferences.taskIds,
+      referencedMemoryDocIds: prepared.promptReferences.memoryDocIds,
+      referencedKnowledgeFileIds: prepared.referencedKnowledgeFiles.map((file) => file.id),
+      referencedAttachmentIds: prepared.referencedAttachments.map((attachment) => attachment.attachmentId),
+      cwd: recoveredLiveEntry?.cwd ?? readConversationSessionMeta(liveConversationId)?.cwd ?? null,
+      currentModel: recoveredLiveEntry?.session.model?.id ?? null,
+      currentProvider: recoveredLiveEntry?.session.model?.provider ?? null,
+      thinkingLevel: recoveredLiveEntry?.session.thinkingLevel ?? null,
+      surfaceId: prepared.surfaceId ?? null,
+      submittedAt: new Date().toISOString(),
+    })
+    .catch((error) => {
+      logWarn('conversation prompt submitted event failed', {
+        sessionId: liveConversationId,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    });
   const promptPromise = submittedPrompt.completion;
   const daemonRunsRoot = resolveDurableRunsRoot(resolveDaemonRoot());
 
@@ -1175,6 +1211,13 @@ export async function submitLiveSessionParallelPromptCapability(
       videos: prepared.promptVideos,
       attachmentRefs: prepared.referencedAttachments.map((attachment) => `${attachment.attachmentId} (rev ${attachment.revision})`),
       contextMessages: promptContextMessages,
+      ...(input.model !== undefined ? { model: input.model } : {}),
+      ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
+      ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
+      ...(input.ownerExtensionId ? { ownerExtensionId: input.ownerExtensionId } : {}),
+      ...(input.purpose ? { purpose: input.purpose } : {}),
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+      ...(input.autoImport !== undefined ? { autoImport: input.autoImport } : {}),
     },
     await buildLiveSessionOptionsAsync(context),
   );

@@ -285,7 +285,7 @@ interface ExtensionSelectionActionSettingItemsContribution {
   icon?: 'firstToken' | 'none';
 }
 
-interface ExtensionTranscriptBlockContribution {
+export interface ExtensionTranscriptBlockContribution {
   id: string;
   component: string;
   title?: string;

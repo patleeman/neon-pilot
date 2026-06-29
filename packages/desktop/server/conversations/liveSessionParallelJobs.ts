@@ -7,6 +7,9 @@ export interface ParallelPromptPreview {
   prompt: string;
   childConversationId: string;
   status: ParallelPromptJobStatus;
+  ownerExtensionId?: string;
+  purpose?: string;
+  modelRef?: string;
   imageCount: number;
   attachmentRefs: string[];
   touchedFiles: string[];
@@ -23,6 +26,11 @@ export interface ParallelPromptJob {
   childConversationId: string;
   childSessionFile?: string;
   status: ParallelPromptJobStatus;
+  ownerExtensionId?: string;
+  purpose?: string;
+  modelRef?: string;
+  metadata?: Record<string, unknown>;
+  autoImport?: boolean;
   createdAt: string;
   updatedAt: string;
   imageCount: number;
@@ -102,6 +110,14 @@ function normalizeParallelPromptJob(candidate: unknown): ParallelPromptJob | nul
     typeof job.childSessionFile === 'string' && job.childSessionFile.trim().length > 0 ? job.childSessionFile.trim() : undefined;
   const forkEntryId = typeof job.forkEntryId === 'string' && job.forkEntryId.trim().length > 0 ? job.forkEntryId.trim() : undefined;
   const repoRoot = typeof job.repoRoot === 'string' && job.repoRoot.trim().length > 0 ? job.repoRoot.trim() : undefined;
+  const ownerExtensionId =
+    typeof job.ownerExtensionId === 'string' && job.ownerExtensionId.trim().length > 0 ? job.ownerExtensionId.trim() : undefined;
+  const purpose = typeof job.purpose === 'string' && job.purpose.trim().length > 0 ? job.purpose.trim() : undefined;
+  const modelRef = typeof job.modelRef === 'string' && job.modelRef.trim().length > 0 ? job.modelRef.trim() : undefined;
+  const metadata =
+    job.metadata && typeof job.metadata === 'object' && !Array.isArray(job.metadata)
+      ? (job.metadata as Record<string, unknown>)
+      : undefined;
 
   return {
     id,
@@ -109,6 +125,11 @@ function normalizeParallelPromptJob(candidate: unknown): ParallelPromptJob | nul
     childConversationId,
     ...(childSessionFile ? { childSessionFile } : {}),
     status: normalizeParallelPromptJobStatus(job.status),
+    ...(ownerExtensionId ? { ownerExtensionId } : {}),
+    ...(purpose ? { purpose } : {}),
+    ...(modelRef ? { modelRef } : {}),
+    ...(metadata ? { metadata } : {}),
+    autoImport: job.autoImport === false ? false : true,
     createdAt,
     updatedAt,
     imageCount: normalizeParallelPromptImageCount(job.imageCount),
@@ -178,6 +199,9 @@ function buildParallelPromptPreview(job: ParallelPromptJob): ParallelPromptPrevi
     prompt: truncateParallelPreviewText(job.prompt),
     childConversationId: job.childConversationId,
     status: job.status,
+    ...(job.ownerExtensionId ? { ownerExtensionId: job.ownerExtensionId } : {}),
+    ...(job.purpose ? { purpose: job.purpose } : {}),
+    ...(job.modelRef ? { modelRef: job.modelRef } : {}),
     imageCount: normalizeParallelPromptImageCount(job.imageCount),
     attachmentRefs: attachmentRefs.slice(0, PARALLEL_PREVIEW_ATTACHMENT_LIMIT),
     touchedFiles: touchedFiles.slice(0, PARALLEL_PREVIEW_PATH_LIMIT),

@@ -363,7 +363,7 @@ interface DisplayImage {
 export type DisplayBlock =
   | { type: 'user'; id: string; ts: string; text: string; images?: DisplayImage[] }
   | { type: 'text'; id: string; ts: string; text: string }
-  | { type: 'context'; id: string; ts: string; text: string; customType?: string }
+  | { type: 'context'; id: string; ts: string; text: string; customType?: string; details?: unknown }
   | { type: 'summary'; id: string; ts: string; kind: 'compaction' | 'branch' | 'related'; title: string; text: string; detail?: string }
   | { type: 'thinking'; id: string; ts: string; text: string }
   | {
@@ -1017,6 +1017,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
             ts,
             text: block.text,
             ...(msg.message.customType ? { customType: msg.message.customType } : {}),
+            ...(msg.message.details !== undefined ? { details: msg.message.details } : {}),
           });
           continue;
         }
@@ -1053,6 +1054,7 @@ function buildDisplayBlocksInternal(messages: DisplayMessageEntryLike[], entryAn
             ts,
             text: block.text,
             ...(msg.message.customType ? { customType: msg.message.customType } : {}),
+            ...(msg.message.details !== undefined ? { details: msg.message.details } : {}),
           });
           continue;
         }

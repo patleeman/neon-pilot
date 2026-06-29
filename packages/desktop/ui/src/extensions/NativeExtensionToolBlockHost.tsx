@@ -8,8 +8,9 @@ import type { MessageBlock } from '../shared/types';
 import type { AskUserQuestionAnswers, AskUserQuestionPresentation } from '../transcript/askUserQuestions';
 import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlobals';
 import { getExtensionRegistryRevision } from './extensionRegistryEvents';
+import { createNativeExtensionClient } from './nativePaClient';
 import { systemExtensionModules } from './systemExtensionModules';
-import type { ExtensionInstallSummary, ExtensionTranscriptRendererContribution } from './types';
+import type { ExtensionInstallSummary, ExtensionTranscriptBlockContribution, ExtensionTranscriptRendererContribution } from './types';
 import { useExtensionStyles } from './useExtensionStyles';
 
 type ToolBlock = Extract<MessageBlock, { type: 'tool_use' }>;
@@ -32,6 +33,15 @@ type ExtensionToolBlockComponent = ComponentType<{
   block: ToolBlock;
   renderer: ExtensionTranscriptRendererContribution;
   context: ExtensionToolBlockContext;
+}>;
+
+type ExtensionTranscriptBlock = Extract<MessageBlock, { type: 'context' }>;
+
+type ExtensionTranscriptBlockComponent = ComponentType<{
+  pa: ReturnType<typeof createNativeExtensionClient>;
+  block: ExtensionTranscriptBlock;
+  renderer: ExtensionTranscriptBlockContribution;
+  context: { messageIndex?: number };
 }>;
 
 const BUILTIN_CHECKPOINT_RENDERER: {
@@ -86,6 +96,19 @@ function lazyRendererComponent(extension: ExtensionInstallSummary, renderer: Ext
     const component = module[renderer.component];
     if (typeof component !== 'function') throw new Error(`Extension transcript renderer not found: ${renderer.component}`);
     return { default: component as ExtensionToolBlockComponent };
+  });
+}
+
+function lazyTranscriptBlockComponent(
+  extension: ExtensionInstallSummary,
+  renderer: ExtensionTranscriptBlockContribution,
+  revision: number,
+) {
+  return lazy(async () => {
+    const module = await loadExtensionModule(extension, revision);
+    const component = module[renderer.component];
+    if (typeof component !== 'function') throw new Error(`Extension transcript block renderer not found: ${renderer.component}`);
+    return { default: component as ExtensionTranscriptBlockComponent };
   });
 }
 
@@ -182,4 +205,31 @@ class ExtensionToolBlockErrorBoundary extends React.Component<
   render() {
     return this.state.message ? <ErrorState message={this.state.message} /> : this.props.children;
   }
+}
+
+export function NativeExtensionTranscriptBlockHost({
+  extension,
+  renderer,
+  block,
+  context,
+}: {
+  extension: ExtensionInstallSummary;
+  renderer: ExtensionTranscriptBlockContribution;
+  block: ExtensionTranscriptBlock;
+  context: { messageIndex?: number };
+}) {
+  useExtensionStyles(extension.id, extension.manifest.frontend?.styles);
+  const pa = useMemo(() => createNativeExtensionClient(extension.id), [extension.id]);
+  const moduleKey = extensionModuleKey(extension);
+  const Component = useMemo(
+    () => lazyTranscriptBlockComponent(extension, renderer, getExtensionRegistryRevision()),
+    [extension, renderer, moduleKey],
+  );
+  return (
+    <Suspense fallback={<LoadingState label="Loading transcript block…" className="py-3" />}>
+      <ExtensionToolBlockErrorBoundary extensionId={extension.id}>
+        <Component pa={pa} block={block} renderer={renderer} context={context} />
+      </ExtensionToolBlockErrorBoundary>
+    </Suspense>
+  );
 }

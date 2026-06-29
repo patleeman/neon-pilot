@@ -59,6 +59,13 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     videos?: PromptVideoAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
+    model?: string | null;
+    thinkingLevel?: string | null;
+    serviceTier?: string | null;
+    ownerExtensionId?: string;
+    purpose?: string;
+    metadata?: Record<string, unknown>;
+    autoImport?: boolean;
   },
   options: LiveSessionLoaderOptions,
   callbacks: {
@@ -107,14 +114,19 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     ? await callbacks.forkSession(entry.sessionId, stableEntryId, {
         preserveSource: true,
         ...options,
+        ...(input.model !== undefined ? { initialModel: input.model } : {}),
+        ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
+        ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
       })
     : await callbacks.createSession(entry.cwd, {
         ...options,
-        initialModel: options.initialModel === undefined ? (entry.session.model?.id ?? null) : options.initialModel,
+        initialModel: input.model ?? (options.initialModel === undefined ? (entry.session.model?.id ?? null) : options.initialModel),
         initialThinkingLevel:
-          options.initialThinkingLevel === undefined ? (entry.session.thinkingLevel ?? null) : options.initialThinkingLevel,
+          input.thinkingLevel ??
+          (options.initialThinkingLevel === undefined ? (entry.session.thinkingLevel ?? null) : options.initialThinkingLevel),
         initialServiceTier:
-          options.initialServiceTier === undefined ? callbacks.resolveDefaultServiceTier(entry) : options.initialServiceTier,
+          input.serviceTier ??
+          (options.initialServiceTier === undefined ? callbacks.resolveDefaultServiceTier(entry) : options.initialServiceTier),
       });
 
   const childConversationId = 'id' in forked ? forked.id : forked.newSessionId;
@@ -128,6 +140,11 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     forkEntryId: stableEntryId ?? undefined,
     repoRoot: parallelRepoRoot,
     cwd: entry.cwd,
+    ownerExtensionId: input.ownerExtensionId,
+    purpose: input.purpose,
+    modelRef: input.model ?? undefined,
+    metadata: input.metadata,
+    autoImport: input.autoImport,
   });
   entry.parallelJobs ??= [];
   entry.parallelJobs.push(job);
@@ -177,6 +194,11 @@ export function createRunningParallelPromptJob(input: {
   forkEntryId?: string;
   repoRoot?: string;
   cwd: string;
+  ownerExtensionId?: string;
+  purpose?: string;
+  modelRef?: string;
+  metadata?: Record<string, unknown>;
+  autoImport?: boolean;
 }): ParallelPromptJob {
   const now = new Date().toISOString();
   return {
@@ -185,6 +207,11 @@ export function createRunningParallelPromptJob(input: {
     childConversationId: input.childConversationId,
     childSessionFile: input.childSessionFile,
     status: 'running',
+    ...(input.ownerExtensionId ? { ownerExtensionId: input.ownerExtensionId } : {}),
+    ...(input.purpose ? { purpose: input.purpose } : {}),
+    ...(input.modelRef ? { modelRef: input.modelRef } : {}),
+    ...(input.metadata ? { metadata: input.metadata } : {}),
+    autoImport: input.autoImport === false ? false : true,
     createdAt: now,
     updatedAt: now,
     imageCount: input.imageCount ?? 0,
@@ -316,6 +343,9 @@ export async function tryImportReadyParallelJobs<TEntry extends LiveSessionParal
     while (!entry.session.isStreaming && !callbacks.hasQueuedOrActiveStaleTurn(entry)) {
       const currentJob = entry.parallelJobs[0];
       if (!currentJob || (currentJob.status !== 'ready' && currentJob.status !== 'failed')) {
+        break;
+      }
+      if (currentJob.autoImport === false) {
         break;
       }
 
