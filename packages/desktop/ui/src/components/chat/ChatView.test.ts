@@ -1034,10 +1034,14 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('⎘ copy');
-    expect(html).toContain('✎ edit');
-    expect(html).toContain('↩ rewind');
-    expect(html).toContain('⑂ fork');
+    expect(html).toContain('aria-label="Copy this prompt to the clipboard"');
+    expect(html).toContain('aria-label="Edit this prompt and rerun the conversation from here"');
+    expect(html).toContain('aria-label="Rewind into a new conversation from this prompt"');
+    expect(html).toContain('aria-label="Fork into a new conversation with this prompt in the input"');
+    expect(html).not.toContain('⎘ copy');
+    expect(html).not.toContain('✎ edit');
+    expect(html).not.toContain('↩ rewind');
+    expect(html).not.toContain('⑂ fork');
   });
 
   it('renders copy rewind and fork actions for assistant messages when available', () => {
@@ -1055,9 +1059,12 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('⎘ copy');
-    expect(html).toContain('↩ rewind');
-    expect(html).toContain('⑂ fork');
+    expect(html).toContain('aria-label="Copy this assistant message to the clipboard"');
+    expect(html).toContain('aria-label="Rewind into a new conversation from the prompt that led here"');
+    expect(html).toContain('aria-label="Fork into a new conversation from here"');
+    expect(html).not.toContain('⎘ copy');
+    expect(html).not.toContain('↩ rewind');
+    expect(html).not.toContain('⑂ fork');
   });
 
   it('renders a copy action for assistant messages', () => {
@@ -1073,7 +1080,8 @@ describe('chat view streaming disclosure', () => {
       }),
     );
 
-    expect(html).toContain('⎘ copy');
+    expect(html).toContain('aria-label="Copy this assistant message to the clipboard"');
+    expect(html).not.toContain('⎘ copy');
   });
 
   it('uses absolute message ids when a transcript window starts mid-conversation', () => {

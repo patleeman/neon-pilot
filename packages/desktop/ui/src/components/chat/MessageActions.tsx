@@ -40,6 +40,18 @@ function matchMessageActionWhen(
   return true;
 }
 
+const iconButtonClassName = 'ui-message-action-button-icon';
+
+function extensionActionIcon(action: ExtensionMessageActionRegistration): string {
+  const title = action.title.trim().toLowerCase();
+  if (title.includes('compare') || title.includes('model')) return '⇄';
+  if (title.includes('copy')) return '⎘';
+  if (title.includes('fork')) return '⑂';
+  if (title.includes('rewind')) return '↩';
+  if (title.includes('edit')) return '✎';
+  return action.title.trim().charAt(0).toUpperCase() || '•';
+}
+
 export function MessageActions({
   isUser,
   blockText,
@@ -197,13 +209,21 @@ export function MessageActions({
           }}
           tone={copyState === 'copied' ? 'accent' : copyState === 'failed' ? 'danger' : 'default'}
           title={copyState === 'failed' ? 'Copy to clipboard failed' : copyTitle}
+          aria-label={copyState === 'failed' ? 'Copy to clipboard failed' : copyTitle}
+          className={iconButtonClassName}
         >
-          {copyState === 'copied' ? '⎘ copied' : copyState === 'failed' ? '⎘ copy failed' : '⎘ copy'}
+          {copyState === 'copied' ? '✓' : copyState === 'failed' ? '!' : '⎘'}
         </MessageActionButton>
       )}
       {onEdit && (
-        <MessageActionButton type="button" onClick={onEdit} title="Edit this prompt and rerun the conversation from here">
-          ✎ edit
+        <MessageActionButton
+          type="button"
+          onClick={onEdit}
+          title="Edit this prompt and rerun the conversation from here"
+          aria-label="Edit this prompt and rerun the conversation from here"
+          className={iconButtonClassName}
+        >
+          ✎
         </MessageActionButton>
       )}
       {onRewind && (
@@ -216,9 +236,13 @@ export function MessageActions({
           title={
             isUser ? 'Rewind into a new conversation from this prompt' : 'Rewind into a new conversation from the prompt that led here'
           }
+          aria-label={
+            isUser ? 'Rewind into a new conversation from this prompt' : 'Rewind into a new conversation from the prompt that led here'
+          }
           disabled={isRewinding}
+          className={iconButtonClassName}
         >
-          {isRewinding ? '↩ rewinding…' : '↩ rewind'}
+          {isRewinding ? '…' : '↩'}
         </MessageActionButton>
       )}
       {onFork && (
@@ -229,15 +253,18 @@ export function MessageActions({
           }}
           tone={isForking ? 'accent' : 'default'}
           title={isUser ? 'Fork into a new conversation with this prompt in the input' : 'Fork into a new conversation from here'}
+          aria-label={isUser ? 'Fork into a new conversation with this prompt in the input' : 'Fork into a new conversation from here'}
           disabled={isForking}
+          className={iconButtonClassName}
         >
-          {isForking ? '⑂ forking…' : '⑂ fork'}
+          {isForking ? '…' : '⑂'}
         </MessageActionButton>
       )}
       {messageActions.map((action) => {
         if (!matchMessageActionWhen(action, isUser, blockText)) return null;
         const busy = busyActionIds.has(action.id);
         const actionError = actionErrors.get(action.id);
+        const title = actionError ? `${action.title} failed: ${actionError}` : action.title;
         return (
           <MessageActionButton
             key={action.id}
@@ -273,10 +300,12 @@ export function MessageActions({
               })();
             }}
             tone={actionError ? 'danger' : busy ? 'accent' : 'default'}
-            title={actionError ? `${action.title} failed: ${actionError}` : action.title}
+            title={title}
+            aria-label={title}
             disabled={busy}
+            className={iconButtonClassName}
           >
-            {actionError ? `${action.title} failed` : action.title}
+            {actionError ? '!' : busy ? '…' : extensionActionIcon(action)}
           </MessageActionButton>
         );
       })}

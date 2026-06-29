@@ -5,15 +5,20 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { writeClipboardText } from '../../desktop/clipboard';
+import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './messageActionCommands';
 import { MessageActions } from './MessageActions';
+
+const mockRegistry = vi.hoisted(() => ({
+  messageActions: [] as ExtensionMessageActionRegistration[],
+}));
 
 vi.mock('../../desktop/clipboard', () => ({
   writeClipboardText: vi.fn(),
 }));
 
 vi.mock('../../extensions/useExtensionRegistry', () => ({
-  useExtensionRegistry: () => ({ messageActions: [] }),
+  useExtensionRegistry: () => ({ messageActions: mockRegistry.messageActions }),
 }));
 
 vi.mock('../../extensions/nativePaClient', () => ({
@@ -34,6 +39,7 @@ async function dispatchMessageAction(command: MessageActionCommandDetail['comman
 describe('MessageActions commands', () => {
   afterEach(() => {
     vi.clearAllMocks();
+    mockRegistry.messageActions = [];
     document.body.innerHTML = '';
   });
 
@@ -41,11 +47,33 @@ describe('MessageActions commands', () => {
     const { rerender } = render(<MessageActions isUser blockText="Prompt" copyText="Prompt to copy" />);
 
     expect(document.querySelector('button[title="Copy this prompt to the clipboard"]')).not.toBeNull();
-    expect(document.body.textContent).toContain('⎘ copy');
+    expect(document.querySelector('button[aria-label="Copy this prompt to the clipboard"]')?.textContent).toBe('⎘');
+    expect(document.body.textContent).not.toContain('copy');
 
     rerender(<MessageActions blockText="Reply" copyText="Reply to copy" />);
 
     expect(document.querySelector('button[title="Copy this assistant message to the clipboard"]')).not.toBeNull();
+    expect(document.querySelector('button[aria-label="Copy this assistant message to the clipboard"]')?.textContent).toBe('⎘');
+  });
+
+  it('renders extension message actions as icon-only controls with tooltip labels', () => {
+    mockRegistry.messageActions = [
+      {
+        extensionId: 'system-model-arena',
+        id: 'compare-message',
+        title: 'Compare models',
+        action: 'startManualDuel',
+        when: 'role:assistant && hasText',
+      },
+    ];
+
+    render(<MessageActions blockText="Assistant response" copyText="Assistant response" />);
+
+    const compareButton = document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]');
+    expect(compareButton).not.toBeNull();
+    expect(compareButton?.getAttribute('title')).toBe('Compare models');
+    expect(compareButton?.textContent).toBe('⇄');
+    expect(document.body.textContent).not.toContain('Compare models');
   });
 
   it('handles shared first message action commands', async () => {
