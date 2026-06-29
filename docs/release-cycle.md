@@ -4,17 +4,17 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.31** — stable release being prepared locally.
+**v0.11.32** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.31
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.32
 
 Highlights in this train:
 
-- Makes Computer Use setup more reliable by finding the installed Cua Driver app bundle directly, even when shell PATH updates are not visible to Neon Pilot yet.
-- Warns users on startup when Computer Use is enabled but Cua Driver is missing or macOS Accessibility/Screen Recording permissions still need setup.
-- Improves Computer Use setup guidance in command notifications, extension docs, and agent instructions so users know to install Cua Driver, run doctor, and grant permissions.
-- Hardens Telegram Gateway polling and reply delivery so local duplicate pollers are blocked and mobile replies reach the selected thread more reliably.
-- Polishes recent workflow seams around model preference errors, dictation insertion visibility, command palette styling, gateway controls, and completed todo persistence.
+- Removes the managed Memory product surface while preserving existing Knowledge/reference flows.
+- Improves transcript resilience with repaired dangling tool tails, aborted-tool markers, progressive Markdown streaming, and more deliberate history pagination.
+- Hardens Telegram Gateway delivery with richer previews, thread switching controls, slash commands, and mirrored desktop turns.
+- Adds Agent Plugins and system-extension CLI administration workflows.
+- Polishes composer labels, todo shelf defaults, model-switch auth, and release/automation documentation.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

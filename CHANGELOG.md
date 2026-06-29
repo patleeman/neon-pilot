@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.32 — 2026-06-29
+
+### Highlights
+
+- Removes the managed Memory product surface, including the sidebar route, hidden prompt injection, reflection jobs, eval harness, and extra memory-skill discovery path, while keeping the existing Knowledge/reference flows intact.
+- Improves transcript resilience by repairing dangling tool-call tails with clearer aborted-tool markers and broader regression coverage.
+- Streams assistant Markdown progressively and makes transcript history pagination more deliberate with larger click targets and click-only loading.
+- Hardens Telegram Gateway conversation delivery with richer previews, thread switching controls, structured slash commands, and mirrored desktop turns.
+- Adds the Agent Plugins CLI workflow and system-extension CLI commands for easier local administration.
+- Polishes composer command/thinking labels, todo shelf defaults, secure-store auth during model switches, and release/automation documentation.
+
+### Notes
+
+- 30 commits since the previous release.
+
 ## 0.11.31 — 2026-06-28
 
 ### Highlights
