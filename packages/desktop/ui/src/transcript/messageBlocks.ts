@@ -56,7 +56,7 @@ export function displayBlockToMessageBlock(block: DisplayBlock): MessageBlock {
     case 'text':
       return { type: 'text', id: block.id, text: block.text, ts: block.ts };
     case 'context':
-      return { type: 'context', id: block.id, text: block.text, customType: block.customType, ts: block.ts };
+      return { type: 'context', id: block.id, text: block.text, customType: block.customType, details: block.details, ts: block.ts };
     case 'thinking':
       return { type: 'thinking', id: block.id, text: block.text, ts: block.ts };
     case 'summary':
