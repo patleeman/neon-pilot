@@ -4,17 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.35** — stable release being prepared locally.
+**v0.11.36** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.35
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.36
 
 Highlights in this train:
 
-- Promotes Model Arena duel flows with transcript blocks, clearer duel rendering, manual compare fixes, and validation docs for the GA path.
-- Shows routine activity in transcripts so users can inspect routine progress from the conversation where it runs.
-- Hardens local dictation packaging with native Whisper and ffmpeg runtime checks for packaged releases.
-- Adds dictation runtime status reporting in Settings and composer controls so missing native runtime failures are clear.
-- Polishes model preference flyouts and clears stale speed overrides when the default model changes.
+- Runs Model Arena challenger agents in isolated speculative workspaces so tool/file changes stay separate until the user chooses the challenger response.
+- Applies challenger workspace changes only when the challenger wins and cleans up speculative workspaces for primary wins, ties, neither votes, cancelled duels, and failures.
+- Hardens manual Compare Models on existing conversations with live-session recovery, restart-safe workspace apply/dispose fallbacks, and stalled-duel/model-list timeouts.
+- Expands regression coverage for speculative workspace cloning, diff application, cleanup guardrails, parallel prompt cwd propagation, and Model Arena vote/cancel/recovery flows.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

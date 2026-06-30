@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.36 — 2026-06-30
+
+### Highlights
+
+- Runs Model Arena challenger agents in isolated speculative workspaces so file edits and tool-side effects stay separate until the user chooses the challenger response.
+- Applies challenger workspace changes only when the challenger wins, while cancelled duels, primary wins, ties, failures, and neither votes clean up their speculative workspace.
+- Hardens Model Arena manual compare on existing conversations with live-session recovery, restart-safe workspace apply/dispose fallbacks, and stalled-duel/model-list timeouts.
+- Expands regression coverage for speculative workspace cloning, diff application, cleanup guardrails, parallel prompt cwd propagation, and Model Arena vote/cancel/recovery flows.
+
+### Notes
+
+- 3 commits since the previous release.
+
 ## 0.11.35 — 2026-06-30
 
 ### Highlights
