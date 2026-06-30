@@ -6371,6 +6371,25 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     }
   }
 
+  async function flushActiveDictationBeforeSubmit() {
+    const pendingFlushes: Promise<unknown>[] = [];
+    window.dispatchEvent(
+      new CustomEvent('neon-pilot:dictation-flush-active', {
+        detail: {
+          waitUntil: (promise: Promise<unknown>) => {
+            pendingFlushes.push(promise);
+          },
+        },
+      }),
+    );
+
+    if (pendingFlushes.length === 0) {
+      return;
+    }
+
+    await Promise.allSettled(pendingFlushes);
+  }
+
   useEffect(() => {
     if (draft || !id || conversationRunningForPage || drainingPostBashPromptSessionIdRef.current === id) {
       return;
@@ -6552,6 +6571,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         meta: { phase, draft, hasConversationId: Boolean(id), ...(meta ?? {}) },
       });
     };
+    const dictationFlushStartedAtMs = performance.now();
+    await flushActiveDictationBeforeSubmit();
+    recordSubmitPhase('dictationFlush', dictationFlushStartedAtMs);
     const inputSnapshot = textareaRef.current?.value ?? input;
     const pendingImageAttachments = attachments;
     const pendingVideoAttachments = videoAttachments;

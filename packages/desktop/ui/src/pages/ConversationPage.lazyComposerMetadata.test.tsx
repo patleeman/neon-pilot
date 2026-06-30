@@ -1249,6 +1249,92 @@ describe('ConversationPage lazy composer metadata', () => {
     });
   });
 
+  it('waits for active dictation to finish before sending the composer draft', async () => {
+    desktopConversationState.mode = 'local';
+    desktopConversationState.active = true;
+    desktopConversationState.surfaceId = 'surface-test';
+    desktopConversationState.state = {
+      conversationId: 'conv-regression',
+      sessionDetail: regressionBootstrapData.sessionDetail,
+      liveSession: {
+        live: true,
+        id: 'conv-regression',
+        cwd: '/tmp/project',
+        sessionFile: '/tmp/conv-regression.jsonl',
+        isStreaming: false,
+        hasStaleTurnState: false,
+      },
+      stream: {
+        blocks: regressionBootstrapData.sessionDetail.blocks,
+        blockOffset: 0,
+        totalBlocks: 2,
+        hasSnapshot: true,
+        isStreaming: false,
+        isCompacting: false,
+        error: null,
+        title: null,
+        tokens: null,
+        cost: null,
+        contextUsage: null,
+        pendingQueue: { steering: [], followUp: [] },
+        presence: {
+          surfaces: [],
+          controllerSurfaceId: null,
+          controllerSurfaceType: null,
+          controllerAcquiredAt: null,
+        },
+        goalState: null,
+        systemPrompt: null,
+        toolDefinitions: [],
+        cwdChange: null,
+      },
+    };
+    desktopConversationState.send.mockResolvedValue({
+      ok: true,
+      accepted: true,
+      delivery: 'started',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
+    const handleDictationFlush = (event: Event) => {
+      const detail = event instanceof CustomEvent && event.detail && typeof event.detail === 'object' ? event.detail : {};
+      if (typeof (detail as { waitUntil?: unknown }).waitUntil !== 'function') return;
+      (detail as { waitUntil: (promise: Promise<unknown>) => void }).waitUntil(
+        Promise.resolve().then(() => {
+          const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+          fireEvent.change(textarea, { target: { value: 'stale draft dictated transcript' } });
+        }),
+      );
+    };
+    window.addEventListener('neon-pilot:dictation-flush-active', handleDictationFlush);
+
+    try {
+      renderConversationPage();
+
+      await act(async () => {
+        vi.advanceTimersByTime(700);
+      });
+
+      const textarea = screen.getByPlaceholderText(/Message Neon Pilot/i);
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'stale draft' } });
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(desktopConversationState.send).toHaveBeenCalledWith('stale draft dictated transcript', undefined, [], [], [], undefined);
+    } finally {
+      window.removeEventListener('neon-pilot:dictation-flush-active', handleDictationFlush);
+    }
+  });
+
   it('clears queued prompts before aborting on Escape so they restore instead of draining', async () => {
     vi.useRealTimers();
     const callOrder: string[] = [];

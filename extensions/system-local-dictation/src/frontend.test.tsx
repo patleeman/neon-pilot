@@ -322,6 +322,60 @@ describe('DictationButton', () => {
     expect(activeAppendText).toHaveBeenCalledWith('active transcript');
     expect(inactiveAppendText).not.toHaveBeenCalled();
   });
+
+  it('flushes active dictation for composer submit before resolving the host wait', async () => {
+    const setContext = vi.fn();
+    const appendText = vi.fn();
+    const activeActivateComposer = vi.fn();
+    const invoke = vi.fn(async (action: string) =>
+      action === 'runtimeStatus'
+        ? { available: true, provider: 'local-whisper', dependencies: [] }
+        : action === 'modelStatus'
+          ? { installed: true, model: 'base.en' }
+          : { text: ' send this transcript ' },
+    );
+    const stop = vi.fn(async () => ({
+      audio: new Uint8Array([7, 8, 9]),
+      durationMs: 500,
+      mimeType: 'audio/pcm',
+      fileName: 'dictation.pcm',
+    }));
+    startCaptureMock.mockResolvedValueOnce({ stop });
+
+    renderDictationButton({
+      composerDisabled: false,
+      composerId: 'active-composer',
+      composerActive: true,
+      activateComposer: activeActivateComposer,
+      setContext,
+      invoke,
+      appendText,
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('neon-pilot:dictation-toggle'));
+      await flushMicrotasks();
+    });
+
+    const pendingFlushes: Promise<unknown>[] = [];
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot:dictation-flush-active', {
+          detail: {
+            waitUntil: (promise: Promise<unknown>) => pendingFlushes.push(promise),
+          },
+        }),
+      );
+      expect(pendingFlushes).toHaveLength(1);
+      await pendingFlushes[0];
+      await flushMicrotasks();
+    });
+
+    expect(activeActivateComposer).toHaveBeenCalledTimes(2);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(appendText).toHaveBeenCalledWith('send this transcript');
+  });
+
   it('installs the selected model while recording and waits before first transcription', async () => {
     const setContext = vi.fn();
     const appendText = vi.fn();

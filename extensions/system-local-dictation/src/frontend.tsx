@@ -47,6 +47,11 @@ interface DictationRuntimeStatus {
   dependencies: Array<{ id: string; label: string; available: boolean; error?: string }>;
 }
 
+interface DictationComposerEventDetail {
+  composerId?: unknown;
+  waitUntil?: unknown;
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${Math.round(bytes / (1024 * 1024))} MB`;
@@ -286,6 +291,29 @@ export function DictationButton({
     window.addEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
     return () => window.removeEventListener('neon-pilot:dictation-toggle', handleDictationToggleCommand);
   }, [controlContext, start, stop]);
+
+  useEffect(() => {
+    const handleDictationFlushCommand = (event: Event) => {
+      const detail: DictationComposerEventDetail =
+        event instanceof CustomEvent && event.detail && typeof event.detail === 'object' ? event.detail : {};
+      const targetComposerId = detail.composerId;
+      if (typeof targetComposerId === 'string') {
+        if (controlContext.composerId !== targetComposerId) return;
+      } else if (controlContext.composerActive === false) {
+        return;
+      }
+      if (!captureRef.current && !pendingStartRef.current) return;
+      controlContext.activateComposer?.();
+      if (typeof detail.waitUntil === 'function') {
+        detail.waitUntil(stop());
+      } else {
+        void stop();
+      }
+    };
+
+    window.addEventListener('neon-pilot:dictation-flush-active', handleDictationFlushCommand);
+    return () => window.removeEventListener('neon-pilot:dictation-flush-active', handleDictationFlushCommand);
+  }, [controlContext, stop]);
 
   return (
     <>
