@@ -11,7 +11,7 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 | `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.                   |
 | `skill_install` | Install a chosen candidate id, then vet, approve when required, and save.                                      |
 
-The user-facing marketplace is owned by `system-skills` at `/skills` and calls `browseSkills`/`installSkill` through the extension boundary.
+The user-facing marketplace is owned by `system-skills` at `/skills` and calls `browseSkills`/`installSkill` through the extension boundary. `system-skill-search` intentionally does not contribute a Settings panel so users have one place to browse, install, and manage skills.
 
 For agent task execution, agents should not show users a list of candidates or ask them which skill to install. The intended agent flow is:
 
@@ -37,6 +37,6 @@ Hermes Skills Index community entries are returned as community candidates and a
 ## Validation
 
 ```bash
-pnpm exec vitest run extensions/system-skill-search/src/backend.test.ts extensions/system-skill-search/src/frontend.test.tsx
+pnpm exec vitest run extensions/system-skill-search/src/backend.test.ts extensions/system-skill-search/src/manifest.test.ts
 pnpm run extension:build -- extensions/system-skill-search
 ```

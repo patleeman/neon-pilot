@@ -1,8 +1,8 @@
 # Prompt Assembly Extension
 
-This extension owns internal prompt assembly actions for editing the system prompt template and inspecting the capabilities that shape an agent run: instruction layers, prompt templates, runtime context blocks, skills, tools, MCP servers, and diagnostics.
+This extension owns internal prompt assembly actions for editing the system prompt template and inspecting non-skill capabilities that shape an agent run: instruction layers, prompt templates, runtime context blocks, tools, MCP servers, and diagnostics.
 
-The product surface is **Settings → Prompt Assembly**. Prompt assembly should not contribute its own left-navigation item or standalone route; expose user-facing controls through its Settings panel.
+The product surface is **Settings → Prompt Assembly**. Prompt assembly should not contribute its own left-navigation item or standalone route; expose user-facing controls through its Settings panel. Skill browsing, installation, and enablement belong only in **Skills** at `/skills`.
 
 App-control configuration does not belong here. Commands, keyboard shortcuts, and extensions live in **Settings → Commands** and **Settings → Extensions**.
 
@@ -12,7 +12,7 @@ Prompt Assembly edits the generated system prompt template through the host sett
 
 Capability rows expose:
 
-- kind: instruction, skill, tool, MCP server, prompt template, or context
+- kind: instruction, tool, MCP server, prompt template, or context
 - owner/source/scope
 - enabled/status
 - provider metadata and diagnostics

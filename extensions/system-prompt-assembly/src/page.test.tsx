@@ -93,50 +93,36 @@ describe('PromptAssemblyPage', () => {
     expect(screen.queryByText(/\/repo\/one/)).toBeNull();
   });
 
-  it('toggles skill capabilities through the Prompt Assembly action bridge and reloads', async () => {
-    const callAction = vi
-      .fn()
-      .mockResolvedValueOnce(
-        runtimeResult('/repo', [
-          {
-            id: 'skill-a',
-            kind: 'skill',
-            title: 'Skill A',
-            description: 'Useful skill',
-            enabled: true,
-            status: 'active',
-            source: { label: 'system-skills' },
-          },
-        ]),
-      )
-      .mockResolvedValueOnce({ ok: true, id: 'skill-a', kind: 'skill', enabled: false })
-      .mockResolvedValueOnce(
-        runtimeResult('/repo', [
-          {
-            id: 'skill-a',
-            kind: 'skill',
-            title: 'Skill A',
-            description: 'Useful skill',
-            enabled: false,
-            status: 'disabled',
-            source: { label: 'system-skills' },
-          },
-        ]),
-      );
+  it('does not render or toggle skills from Prompt Assembly settings', async () => {
+    const callAction = vi.fn().mockResolvedValue(
+      runtimeResult('/repo', [
+        {
+          id: 'skill-a',
+          kind: 'skill',
+          title: 'Skill A',
+          description: 'Useful skill',
+          enabled: true,
+          status: 'active',
+          source: { label: 'system-skills' },
+        },
+        {
+          id: 'tool-a',
+          kind: 'tool',
+          title: 'Tool A',
+          description: 'Useful tool',
+          enabled: true,
+          status: 'active',
+          source: { label: 'system-tools' },
+        },
+      ]),
+    );
 
     render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction }));
 
-    fireEvent.click(await screen.findByRole('switch', { name: 'Disable Skill A' }));
-
-    await waitFor(() =>
-      expect(callAction).toHaveBeenCalledWith('system-prompt-assembly', 'updateRuntimeCapability', {
-        id: 'skill-a',
-        kind: 'skill',
-        enabled: false,
-      }),
-    );
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Enable Skill A' })).toBeTruthy());
-    expect(callAction).toHaveBeenNthCalledWith(3, 'system-prompt-assembly', 'inspectAgentRuntime', { cwd: '/repo' });
+    expect(await screen.findByText('Tool A')).toBeTruthy();
+    expect(screen.queryByText('Skill A')).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Disable Skill A' })).toBeNull();
+    expect(callAction).toHaveBeenCalledTimes(1);
   });
 
   it('does not render raw local paths in Prompt Assembly labels', async () => {
@@ -186,7 +172,8 @@ describe('PromptAssemblyPage', () => {
     expect(await screen.findByText('config.json')).toBeTruthy();
     expect(screen.getByText('Working directory: .')).toBeTruthy();
     expect(screen.getByText('./AGENTS.md')).toBeTruthy();
-    expect(screen.getByText('skills/twitter-bird-cli')).toBeTruthy();
+    expect(screen.queryByText('Twitter Bird CLI')).toBeNull();
+    expect(screen.queryByText('skills/twitter-bird-cli')).toBeNull();
     expect(screen.getAllByText('MCP config').length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toContain('/Users/patrick');
     expect(document.body.textContent).not.toContain('/tmp/neon-pilot-qa');

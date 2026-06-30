@@ -26,4 +26,13 @@ describe('system-skill-search manifest', () => {
       }),
     );
   });
+
+  it('does not expose a duplicate Settings UI for skill browsing or management', () => {
+    expect(manifest.contributes.settingsComponent).toBeUndefined();
+    expect(manifest.contributes.commands ?? []).not.toContainEqual(
+      expect.objectContaining({
+        args: expect.objectContaining({ to: expect.stringContaining('/settings#settings-skill') }),
+      }),
+    );
+  });
 });

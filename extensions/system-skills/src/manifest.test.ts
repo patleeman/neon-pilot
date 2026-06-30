@@ -28,4 +28,10 @@ describe('system-skills manifest', () => {
       }),
     );
   });
+
+  it('is the only user-facing Skills management surface for this extension', () => {
+    expect(manifest.contributes.settingsComponent).toBeUndefined();
+    expect(manifest.contributes.views).toHaveLength(1);
+    expect(manifest.contributes.views?.[0]?.route).toBe('/skills');
+  });
 });

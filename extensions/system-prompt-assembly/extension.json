@@ -3,7 +3,7 @@
   "id": "system-prompt-assembly",
   "name": "Prompt Assembly",
   "packageType": "system",
-  "description": "Internal prompt assembly inspection and controls used by the Extensions surface.",
+  "description": "Internal prompt assembly inspection and controls used by the Settings surface.",
   "version": "0.1.0",
   "frontend": { "entry": "dist/frontend.js", "styles": [] },
   "backend": {
@@ -58,7 +58,7 @@
       "component": "PromptAssemblySettingsPanel",
       "sectionId": "settings-prompt-assembly",
       "label": "Prompt Assembly",
-      "description": "Inspect instruction layers, skills, tools, MCP servers, templates, and runtime prompt diagnostics.",
+      "description": "Inspect instruction layers, tools, MCP servers, templates, and runtime prompt diagnostics.",
       "order": 45
     },
     "commands": [

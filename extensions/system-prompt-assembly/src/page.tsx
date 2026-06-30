@@ -27,7 +27,7 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type CapabilityKind = 'extension' | 'instruction' | 'skill' | 'tool' | 'mcp-server' | 'prompt-template' | 'context';
-type RuntimeSectionId = 'system-prompt' | 'instructions' | 'skills' | 'tools' | 'mcp' | 'issues';
+type RuntimeSectionId = 'system-prompt' | 'instructions' | 'tools' | 'mcp' | 'issues';
 
 const INTERNAL_ERROR_PATTERNS = [
   /Local API route did not complete/i,
@@ -44,7 +44,6 @@ const INTERNAL_ERROR_PATTERNS = [
 const RUNTIME_SECTIONS = [
   { id: 'system-prompt', label: 'System Prompt', summary: 'Generated template' },
   { id: 'instructions', label: 'Instructions', summary: 'Instruction files and layers' },
-  { id: 'skills', label: 'Skills', summary: 'Agent-selectable procedures' },
   { id: 'tools', label: 'Tools', summary: 'Injected callable tools' },
   { id: 'mcp', label: 'MCP', summary: 'Server connections' },
   { id: 'issues', label: 'Issues', summary: 'Diagnostics and invalid entries' },
@@ -202,16 +201,15 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     });
   }, [data?.capabilities, query]);
 
-  const visibleAgentCapabilities = useMemo(() => visible.filter((capability) => capability.kind !== 'extension'), [visible]);
+  const visibleAgentCapabilities = useMemo(
+    () => visible.filter((capability) => capability.kind !== 'extension' && capability.kind !== 'skill'),
+    [visible],
+  );
   const instructionCapabilities = useMemo(
     () =>
       visibleAgentCapabilities.filter(
         (capability) => capability.kind === 'instruction' || capability.kind === 'prompt-template' || capability.kind === 'context',
       ),
-    [visibleAgentCapabilities],
-  );
-  const skillCapabilities = useMemo(
-    () => visibleAgentCapabilities.filter((capability) => capability.kind === 'skill'),
     [visibleAgentCapabilities],
   );
   const toolCapabilities = useMemo(
@@ -322,7 +320,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
       >
         <AppPageIntro
           title="Prompt Assembly"
-          summary="Review the instructions, skills, tools, MCP servers, templates, and context available to the agent."
+          summary="Review the instructions, tools, MCP servers, templates, and context available to the agent."
           actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
         />
 
@@ -386,7 +384,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           title="Agent Context"
           description={
             <>
-              {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, skills, tools, MCP, templates, and context.
+              {formatCount(visibleAgentCapabilities.length, 'capability')} shown: instructions, tools, MCP, templates, and context.
               <span className="block text-[12px] text-dim">
                 Working directory: {formatPromptAssemblyDisplayPath(data.cwd ?? data.repoRoot, data)}
               </span>
@@ -412,16 +410,6 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           busyId={busyId}
           onToggle={toggleCapability}
           emptyTitle="No instructions found"
-        />
-        <CapabilitySection
-          id="skills"
-          title="Skills"
-          description="Agent-selectable procedures that add local workflow instructions and supporting assets."
-          rows={skillCapabilities}
-          runtime={data}
-          busyId={busyId}
-          onToggle={toggleCapability}
-          emptyTitle="No skills found"
         />
         <CapabilitySection
           id="tools"
@@ -651,7 +639,7 @@ function compactMetadata(metadata: Record<string, unknown> | undefined): string[
 }
 
 function canToggle(row: RuntimeCapability): boolean {
-  return row.kind === 'extension' || row.kind === 'skill';
+  return row.kind === 'extension';
 }
 
 function statusClass(row: RuntimeCapability): string {
