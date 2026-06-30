@@ -1112,6 +1112,41 @@ describe('Sidebar', () => {
     expect(html).toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
   });
 
+  it('orders bottom utility nav as Skills, Extensions, then Settings', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'system-settings',
+        name: 'Settings',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'settings-nav', label: 'Settings', route: '/settings', icon: 'gear', section: 'settings' }],
+        },
+      },
+      {
+        id: 'system-extension-manager',
+        name: 'Extensions',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'extensions-nav', label: 'Extensions', route: '/extensions', icon: 'sparkle', section: 'settings' }],
+        },
+      },
+      {
+        id: 'system-skills',
+        name: 'Skills',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'skills-nav', label: 'Skills', route: '/skills', icon: 'sparkle', section: 'settings' }],
+        },
+      },
+    ];
+    extensionRegistryMock.state.routes = [{ route: '/settings' }, { route: '/extensions' }, { route: '/skills' }];
+
+    const html = renderSidebar('/settings');
+
+    expect(html.indexOf('data-route="/skills"')).toBeLessThan(html.indexOf('data-route="/extensions"'));
+    expect(html.indexOf('data-route="/extensions"')).toBeLessThan(html.indexOf('data-route="/settings"'));
+  });
+
   describe('visual state indicators', () => {
     it('renders no status indicator for an idle conversation', () => {
       storage.setItem(OPEN_SESSION_IDS_STORAGE_KEY, JSON.stringify(['conv-idle']));

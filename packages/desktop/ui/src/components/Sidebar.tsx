@@ -302,6 +302,16 @@ type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
   attentionSeverity?: 'warning' | 'error';
 };
 
+const SETTINGS_NAV_ROUTE_ORDER = new Map([
+  ['/skills', 0],
+  ['/extensions', 1],
+  ['/settings', 2],
+]);
+
+function settingsNavItemOrder(item: SidebarExtensionNavItem): number {
+  return SETTINGS_NAV_ROUTE_ORDER.get(item.route) ?? 100;
+}
+
 function isRegisteredExtensionNavItem(
   item: { extensionId?: string; route: string; sidebarView?: string },
   registeredRoutes: ReadonlySet<string>,
@@ -3799,7 +3809,15 @@ export function Sidebar() {
     return [...legacy, ...native];
   }, [extensionRegistry.extensions, extensionRegistry.routes, extensionRegistry.surfaces]);
   const primaryNavItems = useMemo(() => extensionNavItems.filter((item) => (item.section ?? 'primary') === 'primary'), [extensionNavItems]);
-  const settingsNavItems = useMemo(() => extensionNavItems.filter((item) => item.section === 'settings'), [extensionNavItems]);
+  const settingsNavItems = useMemo(
+    () =>
+      extensionNavItems
+        .filter((item) => item.section === 'settings')
+        .map((item, index) => ({ item, index }))
+        .sort((left, right) => settingsNavItemOrder(left.item) - settingsNavItemOrder(right.item) || left.index - right.index)
+        .map(({ item }) => item),
+    [extensionNavItems],
+  );
   const activeSidebarSurface = useMemo(() => {
     const activeNavItem = extensionNavItems.find(
       (item) => item.sidebarView && routeMatchesPrefix(location.pathname, item.route) && item.extensionId,
