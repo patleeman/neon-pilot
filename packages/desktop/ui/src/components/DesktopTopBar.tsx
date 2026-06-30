@@ -40,25 +40,6 @@ function UpdateReadyIcon() {
   );
 }
 
-function NeonPilotMarkIcon() {
-  return (
-    <svg className="h-[18px] w-[18px] text-accent" viewBox="0 0 240 240" aria-hidden="true">
-      <g fill="none" stroke="currentColor">
-        <circle
-          cx="120"
-          cy="120"
-          r="78"
-          strokeWidth="16"
-          strokeDasharray="380 110"
-          strokeDashoffset="-58"
-          transform="rotate(-90 120 120)"
-        />
-      </g>
-      <polygon points="120,26 142,58 98,58" fill="currentColor" />
-    </svg>
-  );
-}
-
 const MAX_BROWSER_NAVIGATION_INDEX = 10_000;
 export const APP_NAVIGATION_COMMAND_EVENT = 'neon-pilot-app-navigation-command';
 
@@ -354,10 +335,6 @@ export function DesktopTopBar({
           >
             →
           </ToolbarButton>
-        </div>
-        <div className="ui-desktop-top-bar__brand">
-          <NeonPilotMarkIcon />
-          <span className="ui-desktop-top-bar__brand-label">Neon Pilot</span>
         </div>
         {environmentBadgeLabel ? (
           <Pill tone="muted" className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>

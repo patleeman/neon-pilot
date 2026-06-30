@@ -81,14 +81,6 @@
     @apply relative z-10 flex min-w-0 items-center justify-end gap-1 justify-self-end overflow-hidden;
   }
 
-  .ui-desktop-top-bar__brand {
-    @apply ml-1 flex h-6 min-w-0 items-center gap-1.5 border-l border-border-subtle/70 pl-2;
-  }
-
-  .ui-desktop-top-bar__brand-label {
-    @apply inline-block truncate text-[12.5px] font-semibold leading-none tracking-normal text-primary;
-  }
-
   .ui-command-search-trigger.ui-desktop-top-bar__search {
     height: 1.625rem;
     border-color: transparent;

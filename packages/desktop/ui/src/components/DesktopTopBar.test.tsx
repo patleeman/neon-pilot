@@ -195,7 +195,8 @@ describe('DesktopTopBar', () => {
     expect(html).toContain('class="ui-desktop-top-bar" style="-webkit-app-region:drag"');
     expect(html).toContain('class="ui-desktop-top-bar__controls" style="-webkit-app-region:no-drag"');
     expect(html).toContain('ui-command-search-trigger ui-desktop-top-bar__search" style="-webkit-app-region:no-drag"');
-    expect(html).not.toContain('class="ui-desktop-top-bar__brand" style="-webkit-app-region:no-drag"');
+    expect(html).not.toContain('ui-desktop-top-bar__brand');
+    expect(html).not.toContain('ui-desktop-top-bar__brand-label');
   });
 
   it('keeps the right sidebar toggle disabled when no right sidebar is available', () => {
