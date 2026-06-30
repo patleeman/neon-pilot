@@ -38,6 +38,20 @@ The wrapper receives `{ command, args, cwd, env, shell, wrappers }` and returns 
 
 Process wrappers should eventually receive the Filesystem Authority grants for the subject they are launching for. That lets a sandbox wrapper mount or expose the same roots that direct file APIs would allow: workspace read/write, extension private storage, artifact output, temp workspaces, knowledge access, or secrets. The process launcher remains the execution boundary; the Filesystem Authority owns root identity, grants, policy decisions, and audit vocabulary.
 
+## Speculative workspaces
+
+Speculative agent runs, including Model Arena challenger runs, should not write directly into the user's active workspace. Use the host-owned speculative workspace boundary instead:
+
+1. create a temporary workspace from the source directory;
+2. prefer APFS clone copies on macOS and fall back to a normal recursive copy when clone support is unavailable;
+3. run the challenger command in the temporary workspace;
+4. use the generated macOS `sandbox-exec` profile when available to deny writes outside the temporary workspace and explicit writable temp roots;
+5. collect a file-tree diff against the source workspace;
+6. apply the selected change set back to the source workspace only after the user chooses that run;
+7. dispose of the temporary workspace on cancel, rejection, or completion.
+
+The first implementation lives in `packages/desktop/server/filesystem/speculativeWorkspace.ts`. It intentionally does not depend on AgentFS, Treebeard, git worktrees, or an external filesystem daemon. AgentFS-style systems can be tested later as alternative adapters behind the same boundary, but Model Arena should target Neon Pilot's speculative workspace contract rather than a third-party command shape.
+
 ## Extension process API policy
 
 Extension backend code must use `ctx.shell` for process execution. Direct Node process APIs are blocked during backend builds and bundle loading for normal extension code:

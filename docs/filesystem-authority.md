@@ -271,8 +271,9 @@ The implementation can land in slices, but each slice should preserve the final 
 3. Wire extension backend `ctx.filesystem`; reimplement `ctx.workspace` on top of it.
 4. Move server workspace/file-explorer APIs onto the authority.
 5. Move artifact/temp/archive/knowledge file operations onto dedicated root kinds.
-6. Feed file audit events into the host event bus and workspace file subscriptions.
-7. Connect process wrappers/sandboxing to authority grants.
-8. Add build/lint guards against new direct scoped-path `node:fs` usage outside low-level backends.
+6. Use host-owned speculative workspaces for challenger/what-if agent runs: APFS clone or copy the source workspace, run inside the temp root, diff the clone, and apply selected changes explicitly.
+7. Feed file audit events into the host event bus and workspace file subscriptions.
+8. Connect process wrappers/sandboxing to authority grants.
+9. Add build/lint guards against new direct scoped-path `node:fs` usage outside low-level backends.
 
 The target is boring: one boundary, one policy vocabulary, one audit trail. Boring is good. Boring means the ogre is cooked all the way through.
