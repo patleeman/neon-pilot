@@ -1,9 +1,9 @@
-import { spawn } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { constants, existsSync } from 'node:fs';
 import { copyFile, cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, posix, relative, resolve, sep } from 'node:path';
 
 export type SpeculativeWorkspaceStrategy = 'apfs-clone' | 'copy';
 export type SpeculativeChangeType = 'added' | 'modified' | 'deleted';
@@ -108,6 +108,19 @@ function resolveContained(root: string, relativePath: string): string {
   return target;
 }
 
+function normalizeRelativeSelection(path: string): string {
+  const normalized = posix.normalize(path.replace(/\\/g, '/'));
+  if (normalized === '.' || normalized.startsWith('../') || normalized === '..' || posix.isAbsolute(normalized)) {
+    throw new Error(`Speculative workspace selected path escapes root: ${path}`);
+  }
+  return normalized;
+}
+
+function normalizeSelectedPaths(paths?: string[]): Set<string> | null {
+  if (!paths) return null;
+  return new Set(paths.map((path) => normalizeRelativeSelection(path)));
+}
+
 function relativePath(root: string, absolutePath: string): string {
   return relative(root, absolutePath).replace(/\\/g, '/');
 }
@@ -128,6 +141,26 @@ export function createMacWriteSandboxProfile(input: { writablePaths: string[] })
   ].join('\n');
 }
 
+function terminateProcessTree(child: ChildProcess): void {
+  if (!child.pid) {
+    child.kill('SIGTERM');
+    return;
+  }
+  const pid = child.pid;
+  try {
+    process.kill(-pid, 'SIGTERM');
+    setTimeout(() => {
+      try {
+        process.kill(-pid, 'SIGKILL');
+      } catch {
+        // Process group already exited.
+      }
+    }, 2_000).unref();
+  } catch {
+    child.kill('SIGTERM');
+  }
+}
+
 async function defaultCommandRunner(
   command: string,
   args: string[],
@@ -136,6 +169,7 @@ async function defaultCommandRunner(
   return await new Promise((resolveResult, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
+      detached: true,
       env: options.env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -161,7 +195,7 @@ async function defaultCommandRunner(
       if (stream === 'stdout') stdout += chunk.toString('utf8');
       else stderr += chunk.toString('utf8');
       if (stdout.length + stderr.length > maxBuffer) {
-        child.kill('SIGTERM');
+        terminateProcessTree(child);
         fail(new Error(`Command output exceeded maxBuffer of ${maxBuffer} bytes.`));
       }
     };
@@ -171,7 +205,7 @@ async function defaultCommandRunner(
     child.on('close', (exitCode, signal) => finish({ exitCode, signal, stdout, stderr }));
     if (options.timeoutMs && options.timeoutMs > 0) {
       timeout = setTimeout(() => {
-        child.kill('SIGTERM');
+        terminateProcessTree(child);
         fail(new Error(`Command timed out after ${options.timeoutMs}ms.`));
       }, options.timeoutMs);
     }
@@ -193,6 +227,11 @@ async function copyWorkspace(sourcePath: string, rootPath: string): Promise<void
     preserveTimestamps: true,
     verbatimSymlinks: true,
   });
+}
+
+async function resetDirectory(path: string): Promise<void> {
+  await rm(path, { recursive: true, force: true });
+  await mkdir(path, { recursive: true });
 }
 
 async function hashFile(path: string): Promise<string> {
@@ -276,7 +315,7 @@ export async function applySpeculativeWorkspaceChanges(input: {
   options?: SpeculativeWorkspaceDiffOptions;
 }): Promise<SpeculativeWorkspaceDiff> {
   const diff = await collectSpeculativeWorkspaceDiff(input.sourcePath, input.workspacePath, input.options);
-  const selected = input.paths ? new Set(input.paths) : null;
+  const selected = normalizeSelectedPaths(input.paths);
   for (const change of diff.changes) {
     if (selected && !selected.has(change.path)) continue;
     const target = resolveContained(input.sourcePath, change.path);
@@ -371,6 +410,7 @@ export async function createSpeculativeWorkspace(input: CreateSpeculativeWorkspa
       await cloneWithApfsCp(sourcePath, rootPath, runner);
       strategy = 'apfs-clone';
     } catch {
+      await resetDirectory(rootPath);
       await copyWorkspace(sourcePath, rootPath);
     }
   } else {
@@ -380,8 +420,16 @@ export async function createSpeculativeWorkspace(input: CreateSpeculativeWorkspa
   await mkdir(scratchPath, { recursive: true });
   const sandboxProfilePath = platform === 'darwin' ? join(tempPath, 'write-sandbox.sb') : null;
   if (sandboxProfilePath) {
+    const extraWritablePaths: string[] = [];
+    for (const writablePath of input.writablePaths ?? []) {
+      const resolvedWritablePath = resolve(writablePath);
+      extraWritablePaths.push(resolvedWritablePath);
+      if (existsSync(resolvedWritablePath)) {
+        extraWritablePaths.push(await realpath(resolvedWritablePath));
+      }
+    }
     const writablePaths = [
-      ...new Set([rootPath, await realpath(rootPath), scratchPath, await realpath(scratchPath), ...(input.writablePaths ?? [])]),
+      ...new Set([rootPath, await realpath(rootPath), scratchPath, await realpath(scratchPath), ...extraWritablePaths]),
     ];
     await writeFile(sandboxProfilePath, createMacWriteSandboxProfile({ writablePaths }), 'utf8');
   }

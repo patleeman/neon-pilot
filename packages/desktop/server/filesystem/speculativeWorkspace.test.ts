@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
-import { mkdir, rm } from 'node:fs/promises';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFile, mkdir, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -74,6 +74,40 @@ describe('speculative workspace', () => {
     expect(existsSync(workspace.rootPath)).toBe(false);
   });
 
+  it('applies deletes and symlink changes when all changes are accepted', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({ sourcePath: source, cloneStrategy: 'copy', platform: 'linux' });
+
+    await rm(join(workspace.rootPath, 'delete.txt'));
+    await rm(join(workspace.rootPath, 'link.txt'));
+    symlinkSync('nested/file.txt', join(workspace.rootPath, 'link.txt'));
+
+    const diff = await workspace.apply();
+
+    expect(diff.changes).toEqual([
+      { path: 'delete.txt', type: 'deleted', kind: 'file' },
+      { path: 'link.txt', type: 'modified', kind: 'symlink' },
+    ]);
+    expect(existsSync(join(source, 'delete.txt'))).toBe(false);
+    expect(readlinkSync(join(source, 'link.txt'))).toBe('nested/file.txt');
+    await workspace.dispose();
+  });
+
+  it('normalizes selected paths and rejects selected paths that escape the source root', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({ sourcePath: source, cloneStrategy: 'copy', platform: 'linux' });
+
+    writeFileSync(join(workspace.rootPath, 'edit.txt'), 'after');
+    writeFileSync(join(workspace.rootPath, 'new.txt'), 'new');
+
+    await workspace.apply({ paths: ['./nested/../edit.txt', 'missing.txt'] });
+
+    expect(readFileSync(join(source, 'edit.txt'), 'utf8')).toBe('after');
+    expect(existsSync(join(source, 'new.txt'))).toBe(false);
+    await expect(workspace.apply({ paths: ['../escape.txt'] })).rejects.toThrow(/escapes root/);
+    await workspace.dispose();
+  });
+
   it('uses APFS clone on macOS when available and falls back to copy when clone fails', async () => {
     const source = makeSource();
     const calls: Array<{ command: string; args: string[] }> = [];
@@ -91,6 +125,39 @@ describe('speculative workspace', () => {
     expect(calls).toEqual([{ command: '/bin/cp', args: ['-cR', `${source}/.`, `${workspace.rootPath}/`] }]);
     expect(workspace.strategy).toBe('copy');
     expect(workspace.sandboxProfilePath).toEqual(expect.stringContaining('write-sandbox.sb'));
+    expect(readFileSync(join(workspace.rootPath, 'keep.txt'), 'utf8')).toBe('same');
+    await workspace.dispose();
+  });
+
+  it('records APFS clone strategy on macOS when clone copy succeeds', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({
+      sourcePath: source,
+      platform: 'darwin',
+      commandRunner: async (_command, args) => {
+        await copyFile(join(source, 'keep.txt'), join(args[2], 'keep.txt'));
+        return { exitCode: 0, signal: null, stdout: '', stderr: '' };
+      },
+    });
+
+    expect(workspace.strategy).toBe('apfs-clone');
+    expect(readFileSync(join(workspace.rootPath, 'keep.txt'), 'utf8')).toBe('same');
+    await workspace.dispose();
+  });
+
+  it('cleans partial APFS clone output before falling back to copy', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({
+      sourcePath: source,
+      platform: 'darwin',
+      commandRunner: async (_command, args) => {
+        writeFileSync(join(args[2], 'partial.txt'), 'partial clone output');
+        return { exitCode: 1, signal: null, stdout: '', stderr: 'clone failed' };
+      },
+    });
+
+    expect(workspace.strategy).toBe('copy');
+    expect(existsSync(join(workspace.rootPath, 'partial.txt'))).toBe(false);
     expect(readFileSync(join(workspace.rootPath, 'keep.txt'), 'utf8')).toBe('same');
     await workspace.dispose();
   });
@@ -130,6 +197,53 @@ describe('speculative workspace', () => {
     await workspace.dispose();
   });
 
+  it('captures nonzero command results without throwing', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({ sourcePath: source, cloneStrategy: 'copy', platform: 'linux' });
+
+    const result = await workspace.run({ command: '/bin/sh', args: ['-lc', 'echo out; echo err >&2; exit 7'] });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        command: '/bin/sh',
+        args: ['-lc', 'echo out; echo err >&2; exit 7'],
+        cwd: workspace.rootPath,
+        exitCode: 7,
+        signal: null,
+        stdout: 'out\n',
+        stderr: 'err\n',
+        sandboxed: false,
+      }),
+    );
+    await workspace.dispose();
+  });
+
+  it('rejects command runs that exceed the output buffer', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({ sourcePath: source, cloneStrategy: 'copy', platform: 'linux' });
+
+    await expect(workspace.run({ command: '/bin/sh', args: ['-lc', 'printf 1234567890'], maxBuffer: 4 })).rejects.toThrow(/maxBuffer/);
+    await workspace.dispose();
+  });
+
+  it('rejects command runs that exceed the timeout', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({ sourcePath: source, cloneStrategy: 'copy', platform: 'linux' });
+
+    await expect(workspace.run({ command: '/bin/sh', args: ['-lc', 'sleep 5'], timeoutMs: 50 })).rejects.toThrow(/timed out/);
+    await workspace.dispose();
+  });
+
+  it('removes temporary files when disposed more than once', async () => {
+    const source = makeSource();
+    const workspace = await createSpeculativeWorkspace({ sourcePath: source, cloneStrategy: 'copy', platform: 'linux' });
+
+    await workspace.dispose();
+    await workspace.dispose();
+
+    expect(existsSync(workspace.rootPath)).toBe(false);
+  });
+
   it('builds a deny-write sandbox profile with explicit writable roots', () => {
     const profile = createMacWriteSandboxProfile({ writablePaths: ['/tmp/speculative "quoted"', '/repo'] });
 
@@ -138,6 +252,23 @@ describe('speculative workspace', () => {
     expect(profile).toContain('(allow file-write* (literal "/dev/null"))');
     expect(profile).toContain('(allow file-write* (subpath "/repo"))');
     expect(profile).toContain('(allow file-write* (subpath "/tmp/speculative \\"quoted\\""))');
+  });
+
+  it('writes macOS sandbox profiles with writable input realpaths', async () => {
+    const source = makeSource();
+    const writable = tempDir('speculative-writable-');
+    const workspace = await createSpeculativeWorkspace({
+      sourcePath: source,
+      platform: 'darwin',
+      cloneStrategy: 'copy',
+      writablePaths: [writable],
+    });
+
+    const profile = await readFile(workspace.sandboxProfilePath!, 'utf8');
+
+    expect(profile).toContain(`(allow file-write* (subpath "${writable}"))`);
+    expect(profile).toContain(`(allow file-write* (subpath "${await realpath(writable)}"))`);
+    await workspace.dispose();
   });
 
   it('can diff and apply without constructing a workspace instance', async () => {
