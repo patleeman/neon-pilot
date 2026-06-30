@@ -69,8 +69,8 @@ describe('automation run transcript context', () => {
 
   it('renders extension-owned transcript blocks inline through the registered renderer', async () => {
     registryState.value = {
-      extensions: [{ id: 'system-model-arena', enabled: true }],
-      transcriptBlocks: [{ id: 'model_arena_duel', extensionId: 'system-model-arena', component: 'ModelArenaDuelBlock' }],
+      extensions: [{ id: 'system-test-blocks', enabled: true }],
+      transcriptBlocks: [{ id: 'test_extension_block', extensionId: 'system-test-blocks', component: 'TestExtensionBlock' }],
       messageActions: [],
     };
     const container = document.createElement('div');
@@ -84,11 +84,11 @@ describe('automation run transcript context', () => {
           blocks={[
             {
               type: 'context',
-              id: 'model_arena_duel:test',
+              id: 'test_extension_block:test',
               ts: '2026-06-29T12:00:00.000Z',
-              customType: 'model_arena_duel',
-              text: 'Model Arena duel',
-              details: { duelId: 'test-duel', status: 'ready' },
+              customType: 'test_extension_block',
+              text: 'Extension block',
+              details: { itemId: 'test-block', status: 'ready' },
             },
           ]}
         />,
@@ -96,8 +96,8 @@ describe('automation run transcript context', () => {
     });
 
     expect(container.querySelector('[data-extension-transcript-block="true"]')).not.toBeNull();
-    expect(container.textContent).toContain('model_arena_duel');
-    expect(container.textContent).toContain('test-duel');
+    expect(container.textContent).toContain('test_extension_block');
+    expect(container.textContent).toContain('test-block');
     expect(container.querySelector('.ui-disclosure')).toBeNull();
   });
 });

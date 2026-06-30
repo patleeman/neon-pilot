@@ -23,13 +23,15 @@ function isHiddenCustomBranchEntry(entry: unknown): boolean {
 }
 
 function moveLeafToVisibleCustomParent(entry: LiveSessionMessageAppendHost): void {
-  const manager = entry.session.sessionManager as {
-    getLeafEntry?: () => unknown;
-    getEntry?: (id: string) => unknown;
-    branch?: (id: string) => void;
-    resetLeaf?: () => void;
-  };
-  if (typeof manager.getLeafEntry !== 'function') return;
+  const manager = entry.session.sessionManager as
+    | {
+        getLeafEntry?: () => unknown;
+        getEntry?: (id: string) => unknown;
+        branch?: (id: string) => void;
+        resetLeaf?: () => void;
+      }
+    | undefined;
+  if (typeof manager?.getLeafEntry !== 'function') return;
 
   let leafEntry = manager.getLeafEntry();
   if (!isHiddenCustomBranchEntry(leafEntry)) return;

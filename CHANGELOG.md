@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.35 — 2026-06-30
+
+### Highlights
+
+- Promotes Model Arena duel flows with transcript blocks, clearer duel rendering, manual compare fixes, and validation docs for the GA path.
+- Shows routine activity in transcripts so users can inspect routine progress from the conversation where it runs.
+- Hardens local dictation packaging by shipping the native Whisper and ffmpeg runtime as unpacked app resources and checking them during packaged release validation.
+- Adds dictation runtime status reporting in Settings and the composer mic path so missing native runtime failures surface as clear user-facing messages instead of silent transcription failures.
+- Polishes the model preference menu with bounded flyouts and resets stale speed overrides when the default model changes.
+
+### Notes
+
+- 8 commits since the previous release.
+
 ## 0.11.34 — 2026-06-29
 
 ### Highlights

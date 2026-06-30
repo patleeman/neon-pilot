@@ -4,8 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
-import { MESSAGE_EDIT_COMMAND_EVENT } from './messageEditCommands';
 import { UserMessage } from './MessageBlocks';
+import { MESSAGE_EDIT_COMMAND_EVENT } from './messageEditCommands';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -45,7 +45,7 @@ describe('UserMessage edit commands', () => {
     roots.push(rendered.root);
 
     const editButton = rendered.container.querySelector<HTMLButtonElement>(
-      'button[title="Edit this prompt and rerun the conversation from here"]',
+      'button[aria-label="Edit this prompt and rerun the conversation from here"]',
     );
     expect(editButton).toBeInstanceOf(HTMLButtonElement);
 
@@ -67,7 +67,7 @@ describe('UserMessage edit commands', () => {
     roots.push(rendered.root);
 
     const editButton = rendered.container.querySelector<HTMLButtonElement>(
-      'button[title="Edit this prompt and rerun the conversation from here"]',
+      'button[aria-label="Edit this prompt and rerun the conversation from here"]',
     );
     expect(editButton).toBeInstanceOf(HTMLButtonElement);
 

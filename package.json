@@ -1,6 +1,6 @@
 {
   "name": "neon-pilot",
-  "version": "0.11.34",
+  "version": "0.11.35",
   "private": false,
   "license": "MIT",
   "description": "Neon Pilot monorepo",
@@ -91,7 +91,7 @@
   },
   "devDependencies": {
     "@electron/asar": "3.4.1",
-    "@neon-pilot/core": "workspace:0.11.34",
+    "@neon-pilot/core": "workspace:0.11.35",
     "@playwright/test": "^1.61.1",
     "@types/jsdom": "28.0.1",
     "@types/node": "20.19.35",
@@ -122,8 +122,8 @@
     "@earendil-works/pi-ai": "^0.80.2",
     "@earendil-works/pi-coding-agent": "^0.80.2",
     "@excalidraw/excalidraw": "0.18.1",
-    "@neon-pilot/desktop": "workspace:0.11.34",
-    "@neon-pilot/ui": "workspace:0.11.34",
+    "@neon-pilot/desktop": "workspace:0.11.35",
+    "@neon-pilot/ui": "workspace:0.11.35",
     "@pierre/trees": "1.0.0-beta.3",
     "@sinclair/typebox": "0.34.49",
     "@tiptap/core": "3.21.0",
