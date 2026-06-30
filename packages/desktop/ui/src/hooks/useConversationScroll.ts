@@ -124,9 +124,6 @@ export function useConversationScroll({
     const el = scrollRef.current;
     const nextAtBottom = el ? readAtBottom(el) : true;
     pinnedToBottomRef.current = nextAtBottom;
-    if (nextAtBottom) {
-      tailFollowingRef.current = true;
-    }
     setAtBottom(nextAtBottom);
   }, [scrollRef]);
 

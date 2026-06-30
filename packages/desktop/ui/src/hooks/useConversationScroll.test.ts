@@ -184,6 +184,62 @@ describe('useConversationScroll', () => {
     expect(result.current.atBottom).toBe(false);
   });
 
+  it('does not treat the submitted user prompt bottom sync as consent to follow a long streaming reply', () => {
+    const scrollEl = document.createElement('div');
+    const scrollIntoView = vi.fn();
+    setScrollMetrics(scrollEl, { scrollHeight: 1000, clientHeight: 400, scrollTop: 600 });
+    scrollEl.querySelector = vi.fn((selector: string) =>
+      selector === '[data-message-index="4"]'
+        ? {
+            scrollIntoView,
+          }
+        : null,
+    );
+    const scrollRef = { current: scrollEl };
+    const earlierReply = { type: 'text' as const, ts: '1', text: 'Earlier answer.' };
+    const userMessage = { type: 'user' as const, ts: '2', text: 'Write the long version.' };
+
+    const { result, rerender } = renderHook(
+      ({ messages, isStreaming }) =>
+        useConversationScroll({
+          conversationId: 'conversation-1',
+          messages,
+          scrollRef,
+          sessionLoading: false,
+          isStreaming,
+          initialScrollKey: null,
+          messageIndexOffset: 3,
+        }),
+      {
+        initialProps: {
+          isStreaming: false,
+          messages: [earlierReply],
+        },
+      },
+    );
+
+    rerender({
+      isStreaming: true,
+      messages: [earlierReply, userMessage],
+    });
+
+    act(() => {
+      scrollEl.dispatchEvent(new Event('scroll'));
+    });
+    expect(result.current.atBottom).toBe(true);
+
+    rerender({
+      isStreaming: true,
+      messages: [earlierReply, userMessage, { type: 'text' as const, ts: '3', text: 'Long answer starts.' }],
+    });
+
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      block: 'start',
+      inline: 'nearest',
+    });
+    expect(result.current.atBottom).toBe(false);
+  });
+
   it('resumes following streaming tail growth after an explicit jump to latest', async () => {
     const scrollEl = document.createElement('div');
     setScrollMetrics(scrollEl, { scrollHeight: 1000, clientHeight: 400, scrollTop: 600 });
