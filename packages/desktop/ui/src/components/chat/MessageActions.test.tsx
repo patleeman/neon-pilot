@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { writeClipboardText } from '../../desktop/clipboard';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
+import { notifyDesktopConversationStateRefresh } from '../../hooks/useDesktopConversationState';
 import { addNotification } from '../notifications/notificationStore';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './messageActionCommands';
 import { MessageActions } from './MessageActions';
@@ -29,6 +30,10 @@ vi.mock('../../extensions/nativePaClient', () => ({
 
 vi.mock('../notifications/notificationStore', () => ({
   addNotification: vi.fn(),
+}));
+
+vi.mock('../../hooks/useDesktopConversationState', () => ({
+  notifyDesktopConversationStateRefresh: vi.fn(),
 }));
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -116,6 +121,30 @@ describe('MessageActions commands', () => {
       blockId: 'assistant-1',
       conversationId: 'conv-1',
     });
+  });
+
+  it('refreshes the active conversation when an extension action asks for it', async () => {
+    const invoke = vi.fn(async () => ({
+      text: 'Started model duel duel-1.',
+      duelId: 'duel-1',
+      refreshConversationId: 'conv-1',
+    }));
+    vi.mocked(createNativeExtensionClient).mockReturnValue({ extension: { invoke } } as never);
+    mockRegistry.messageActions = [
+      {
+        extensionId: 'system-model-arena',
+        id: 'compare-message',
+        title: 'Compare models',
+        action: 'startManualDuel',
+        when: 'role:assistant && hasText',
+      },
+    ];
+
+    render(<MessageActions blockText="Assistant response" blockId="assistant-1" conversationId="conv-1" copyText="Assistant response" />);
+
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]')!);
+
+    await waitFor(() => expect(notifyDesktopConversationStateRefresh).toHaveBeenCalledWith('conv-1'));
   });
 
   it('shows extension action failures as notifications instead of long gutter tooltips', async () => {

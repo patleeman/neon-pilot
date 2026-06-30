@@ -14,6 +14,22 @@ import {
 
 type StorageEntry = { key: string; value: unknown };
 
+async function waitForCondition(assertion: () => void, timeoutMs = 1_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+  assertion();
+  throw lastError;
+}
+
 function createContext(initial: Record<string, unknown> = {}) {
   const store = new Map<string, unknown>(Object.entries(initial));
   const manageParallelJob = vi.fn(async () => ({ ok: true, status: 'skipped' as const }));
@@ -670,6 +686,21 @@ describe('Model Arena backend', () => {
     );
 
     expect(result).toMatchObject({ text: expect.stringContaining('Started model duel'), duelId: expect.any(String) });
+    expect(harness.appendTranscriptBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        blockId: `model_arena_duel:${result.duelId}`,
+        data: expect.objectContaining({
+          status: 'running',
+          sideA: expect.objectContaining({ text: expect.any(String) }),
+          sideB: expect.objectContaining({ text: expect.any(String) }),
+        }),
+      }),
+    );
+    expect(harness.appendTranscriptBlock.mock.invocationCallOrder[0]).toBeLessThan(harness.fork.mock.invocationCallOrder[0] ?? Infinity);
+    await waitForCondition(() => {
+      expect(harness.runTurn).toHaveBeenCalledWith('forked-child-1', 'Compare this completed answer', { timeoutMs: 900000 });
+    });
     expect(harness.fork).toHaveBeenCalledWith(
       expect.objectContaining({
         conversationId: 'conv-1',
@@ -680,7 +711,6 @@ describe('Model Arena backend', () => {
         model: 'anthropic/claude-sonnet',
       }),
     );
-    expect(harness.runTurn).toHaveBeenCalledWith('forked-child-1', 'Compare this completed answer');
     expect(harness.create).not.toHaveBeenCalled();
     expect(harness.store.get(`duels/${result.duelId}`)).toMatchObject({
       childConversationId: 'forked-child-1',
@@ -693,6 +723,111 @@ describe('Model Arena backend', () => {
       },
       parallelJobCleared: true,
     });
+  });
+
+  it('returns and renders the manual duel before a forked challenger run finishes', async () => {
+    const harness = createContext({ settings: { challengerModels: ['anthropic/claude-sonnet'] } });
+    harness.startParallelPrompt.mockRejectedValue(
+      new Error('Failed to start parallel prompt: Parallel prompts are only available while the conversation is busy.'),
+    );
+    harness.runTurn.mockImplementation(() => new Promise(() => undefined));
+    harness.getBlocks.mockResolvedValue({
+      blocks: [
+        { type: 'user', id: 'user-1', text: 'Compare this completed answer' },
+        { type: 'text', id: 'assistant-1', text: 'Completed answer' },
+      ],
+    });
+
+    const result = await Promise.race([
+      startManualDuel({ conversationId: 'conv-1', blockId: 'assistant-1', messageText: 'Completed answer' }, harness.ctx as never),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('startManualDuel did not return before challenger finished')), 50)),
+    ]);
+
+    expect(result).toMatchObject({ text: expect.stringContaining('Started model duel'), duelId: expect.any(String) });
+    expect(harness.appendTranscriptBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        data: expect.objectContaining({
+          status: 'running',
+          sideA: expect.objectContaining({ text: expect.any(String) }),
+          sideB: expect.objectContaining({ text: expect.any(String) }),
+        }),
+      }),
+    );
+    expect(harness.appendTranscriptBlock.mock.invocationCallOrder[0]).toBeLessThan(harness.fork.mock.invocationCallOrder[0] ?? Infinity);
+    await waitForCondition(() => {
+      expect(harness.runTurn).toHaveBeenCalledWith('forked-child-1', 'Compare this completed answer', { timeoutMs: 900000 });
+    });
+    expect(harness.store.get(`duels/${(result as { duelId: string }).duelId}`)).toMatchObject({
+      sourceBlockId: 'assistant-1',
+      childConversationId: 'forked-child-1',
+      status: 'running',
+      blockAppended: true,
+    });
+  });
+
+  it('reuses a visible in-flight manual duel while the forked challenger is still running', async () => {
+    const harness = createContext({ settings: { challengerModels: ['anthropic/claude-sonnet'] } });
+    harness.startParallelPrompt.mockRejectedValue(
+      new Error('Failed to start parallel prompt: Parallel prompts are only available while the conversation is busy.'),
+    );
+    harness.runTurn.mockImplementation(() => new Promise(() => undefined));
+    harness.getBlocks.mockResolvedValue({
+      blocks: [
+        { type: 'user', id: 'user-1', text: 'Compare this completed answer' },
+        { type: 'text', id: 'assistant-1', text: 'Completed answer' },
+      ],
+    });
+
+    const first = (await startManualDuel(
+      { conversationId: 'conv-1', blockId: 'assistant-1', messageText: 'Completed answer' },
+      harness.ctx as never,
+    )) as { duelId: string };
+    const second = await startManualDuel(
+      { conversationId: 'conv-1', blockId: 'assistant-1', messageText: 'Completed answer' },
+      harness.ctx as never,
+    );
+
+    expect(second).toMatchObject({ duelId: first.duelId, existing: true });
+    expect(harness.fork).toHaveBeenCalledTimes(1);
+    expect(harness.runTurn).toHaveBeenCalledTimes(1);
+    expect(harness.appendTranscriptBlock).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks a manual forked challenger failure in the existing duel block', async () => {
+    const harness = createContext({ settings: { challengerModels: ['anthropic/claude-sonnet'] } });
+    harness.startParallelPrompt.mockRejectedValue(
+      new Error('Failed to start parallel prompt: Parallel prompts are only available while the conversation is busy.'),
+    );
+    harness.runTurn.mockRejectedValue(new Error('Challenger exploded'));
+    harness.getBlocks.mockResolvedValue({
+      blocks: [
+        { type: 'user', id: 'user-1', text: 'Compare this completed answer' },
+        { type: 'text', id: 'assistant-1', text: 'Completed answer' },
+      ],
+    });
+
+    const result = (await startManualDuel(
+      { conversationId: 'conv-1', blockId: 'assistant-1', messageText: 'Completed answer' },
+      harness.ctx as never,
+    )) as { duelId: string };
+
+    await waitForCondition(() => {
+      expect(harness.store.get(`duels/${result.duelId}`)).toMatchObject({
+        status: 'failed',
+        error: 'Challenger exploded',
+      });
+    });
+    expect(harness.disposeSpeculativeWorkspace).toHaveBeenCalledWith({
+      id: 'workspace-1',
+      rootPath: '/tmp/model-arena-workspace',
+    });
+    expect(harness.updateTranscriptBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blockId: `model_arena_duel:${result.duelId}`,
+        data: expect.objectContaining({ status: 'failed', error: 'Challenger exploded' }),
+      }),
+    );
   });
 
   it('applies isolated challenger workspace changes only when the challenger wins', async () => {

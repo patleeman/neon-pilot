@@ -8,6 +8,7 @@ const UNSUPPORTED_CHALLENGER_PROVIDERS = new Set(['openai-codex']);
 const STALE_RUNNING_DUEL_MS = 6 * 60 * 60 * 1000;
 const ARENA_STATE_RECOVERY_TIMEOUT_MS = 1_500;
 const ARENA_MODEL_LIST_TIMEOUT_MS = 2_500;
+const MANUAL_CHALLENGER_RUN_TIMEOUT_MS = 15 * 60 * 1000;
 
 type Choice = 'a' | 'b' | 'tie' | 'neither';
 type DuelStatus = 'running' | 'ready' | 'failed' | 'voted' | 'cancelled';
@@ -59,6 +60,7 @@ interface StartedChallengerRun {
   jobId: string;
   speculativeWorkspace?: Duel['speculativeWorkspace'];
   parallelJobCleared?: boolean;
+  runAfterDuelSaved?: (duel: Duel) => void;
 }
 
 interface PromptReplay {
@@ -66,6 +68,20 @@ interface PromptReplay {
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
+}
+
+interface CreateDuelInput {
+  conversationId: string;
+  prompt: string;
+  primaryModel: string;
+  challengerModel: string;
+  primaryText?: string;
+  primaryProvider?: string | null;
+  sourceBlockId?: string;
+  sourcePromptBlockId?: string;
+  allowFallbackChallenger?: boolean;
+  deferTranscriptBlock?: boolean;
+  replay?: PromptReplay;
 }
 
 interface ModelStat {
@@ -293,7 +309,7 @@ async function reconcileDuelAnswers(
     }
   }
 
-  if (!duel.challengerText) {
+  if (!duel.challengerText && duel.childConversationId) {
     const challengerAnswer = await latestAssistantAnswer(ctx, duel.childConversationId);
     if (challengerAnswer) {
       duel.challengerText = challengerAnswer.text;
@@ -313,7 +329,7 @@ async function reconcileDuelAnswers(
     }
   }
 
-  if (!duel.challengerText && duel.status !== 'failed') {
+  if (!duel.challengerText && duel.status !== 'failed' && duel.childConversationId) {
     const challengerError = await latestConversationError(ctx, duel.childConversationId);
     if (challengerError) {
       duel.error = challengerError;
@@ -562,35 +578,10 @@ async function applySpeculativeWorkspace(ctx: ExtensionBackendContext, duel: Due
   return true;
 }
 
-async function createDuel(
-  ctx: ExtensionBackendContext,
-  input: {
-    conversationId: string;
-    prompt: string;
-    primaryModel: string;
-    challengerModel: string;
-    primaryText?: string;
-    primaryProvider?: string | null;
-    sourceBlockId?: string;
-    sourcePromptBlockId?: string;
-    allowFallbackChallenger?: boolean;
-    deferTranscriptBlock?: boolean;
-    replay?: PromptReplay;
-  },
-) {
+async function createDuel(ctx: ExtensionBackendContext, input: CreateDuelInput) {
   const id = crypto.randomUUID();
   const sideA: Side = Math.random() < 0.5 ? 'primary' : 'challenger';
   const taskType = classify(input.prompt);
-  const started = await startChallengerRun(ctx, {
-    parentConversationId: input.conversationId,
-    prompt: input.prompt,
-    sourcePromptBlockId: input.sourcePromptBlockId,
-    challengerModel: input.challengerModel,
-    duelId: id,
-    taskType,
-    allowFallback: input.allowFallbackChallenger !== false,
-    replay: input.replay,
-  });
   const now = new Date().toISOString();
   const duel: Duel = {
     id,
@@ -602,11 +593,9 @@ async function createDuel(
     primaryProvider: input.primaryProvider,
     sourceBlockId: input.sourceBlockId,
     challengerModel: input.challengerModel,
-    childConversationId: started.childConversationId,
-    jobId: started.jobId,
-    speculativeWorkspace: started.speculativeWorkspace,
-    parallelJobCleared: started.parallelJobCleared,
-    blockAppended: !input.deferTranscriptBlock,
+    childConversationId: '',
+    jobId: `pending:${id}`,
+    blockAppended: false,
     sideA,
     sideB: sideA === 'primary' ? 'challenger' : 'primary',
     status: 'running',
@@ -614,17 +603,113 @@ async function createDuel(
     updatedAt: now,
     primaryText: input.primaryText,
   };
-  if (!input.deferTranscriptBlock) {
-    await ctx.conversations.appendTranscriptBlock({
-      conversationId: duel.conversationId,
-      blockId: duel.blockId,
-      blockType: BLOCK_TYPE,
-      title: 'Model Arena duel',
-      data: blockData(duel),
+
+  if (input.deferTranscriptBlock) {
+    const started = await startChallengerRun(ctx, {
+      parentConversationId: input.conversationId,
+      prompt: input.prompt,
+      sourcePromptBlockId: input.sourcePromptBlockId,
+      challengerModel: input.challengerModel,
+      duelId: id,
+      taskType,
+      allowFallback: input.allowFallbackChallenger !== false,
+      replay: input.replay,
     });
+    duel.childConversationId = started.childConversationId;
+    duel.jobId = started.jobId;
+    duel.speculativeWorkspace = started.speculativeWorkspace;
+    duel.parallelJobCleared = started.parallelJobCleared;
+    await saveDuel(ctx, duel);
+    started.runAfterDuelSaved?.(duel);
+    return duel;
   }
+
   await saveDuel(ctx, duel);
+  await ctx.conversations.appendTranscriptBlock({
+    conversationId: duel.conversationId,
+    blockId: duel.blockId,
+    blockType: BLOCK_TYPE,
+    title: 'Model Arena duel',
+    data: blockData(duel),
+  });
+  duel.blockAppended = true;
+  await saveDuel(ctx, duel);
+  startChallengerRunAfterDuelSaved(ctx, duel, input);
   return duel;
+}
+
+function startChallengerRunAfterDuelSaved(ctx: ExtensionBackendContext, duel: Duel, input: CreateDuelInput) {
+  void (async () => {
+    try {
+      const started = await startChallengerRun(ctx, {
+        parentConversationId: input.conversationId,
+        prompt: input.prompt,
+        sourcePromptBlockId: input.sourcePromptBlockId,
+        challengerModel: input.challengerModel,
+        duelId: duel.id,
+        taskType: duel.taskType,
+        allowFallback: input.allowFallbackChallenger !== false,
+        replay: input.replay,
+      });
+      const latest = (await ctx.storage.get(`${DUEL_PREFIX}${duel.id}`).catch(() => null)) as Duel | null;
+      const current = latest && isRecord(latest) ? latest : duel;
+      if (current.status === 'voted' || current.status === 'cancelled') {
+        const workspaceId = started.speculativeWorkspace?.id?.trim();
+        if (workspaceId) {
+          await ctx.conversations
+            .disposeSpeculativeWorkspace({
+              id: workspaceId,
+              rootPath: started.speculativeWorkspace?.rootPath,
+            })
+            .catch(() => undefined);
+        }
+        return;
+      }
+      current.childConversationId = started.childConversationId;
+      current.jobId = started.jobId;
+      current.speculativeWorkspace = started.speculativeWorkspace;
+      current.parallelJobCleared = started.parallelJobCleared;
+      current.updatedAt = new Date().toISOString();
+      await saveDuel(ctx, current);
+      await updateBlock(ctx, current).catch(() => undefined);
+      started.runAfterDuelSaved?.(current);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const latest = (await ctx.storage.get(`${DUEL_PREFIX}${duel.id}`).catch(() => null)) as Duel | null;
+      const current = latest && isRecord(latest) ? latest : duel;
+      if (current.status === 'voted' || current.status === 'cancelled') return;
+      current.error = message || 'Challenger model failed before it could start.';
+      current.status = 'failed';
+      current.updatedAt = new Date().toISOString();
+      await saveDuel(ctx, current).catch(() => undefined);
+      await updateBlock(ctx, current).catch(() => undefined);
+    }
+  })();
+}
+
+function runManualForkedChallengerInBackground(ctx: ExtensionBackendContext, duel: Duel, prompt: string) {
+  void (async () => {
+    try {
+      if (!duel.childConversationId) {
+        throw new Error('Challenger conversation was not created.');
+      }
+      await ctx.conversations.runTurn(duel.childConversationId, prompt, { timeoutMs: MANUAL_CHALLENGER_RUN_TIMEOUT_MS });
+      await reconcileDuelAnswers(ctx, duel, { terminalConversationId: duel.childConversationId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const latest = (await ctx.storage.get(`${DUEL_PREFIX}${duel.id}`).catch(() => null)) as Duel | null;
+      const current = latest && isRecord(latest) ? latest : duel;
+      if (current.status === 'voted' || current.status === 'cancelled') return;
+      current.error = message || 'Challenger model failed before producing an answer.';
+      current.status = 'failed';
+      current.updatedAt = new Date().toISOString();
+      if (await disposeSpeculativeWorkspace(ctx, current).catch(() => false)) {
+        current.updatedAt = new Date().toISOString();
+      }
+      await saveDuel(ctx, current).catch(() => undefined);
+      await updateBlock(ctx, current).catch(() => undefined);
+    }
+  })();
 }
 
 async function startChallengerRun(
@@ -681,17 +766,12 @@ async function startChallengerRun(
       await ctx.conversations.disposeSpeculativeWorkspace(workspace.id).catch(() => undefined);
       throw new Error('Failed to fork challenger conversation.');
     }
-    try {
-      await ctx.conversations.runTurn(forkedConversationId, input.prompt);
-    } catch (error) {
-      await ctx.conversations.disposeSpeculativeWorkspace(workspace.id).catch(() => undefined);
-      throw error;
-    }
     return {
       childConversationId: forkedConversationId,
       jobId: `conversation:${forkedConversationId}`,
       speculativeWorkspace: workspace,
       parallelJobCleared: true,
+      runAfterDuelSaved: (duel) => runManualForkedChallengerInBackground(ctx, duel, input.prompt),
     };
   }
 
@@ -818,7 +898,12 @@ export async function startManualDuel(input: unknown, ctx: ExtensionBackendConte
     if (!sameSource) continue;
     await reconcileDuelAnswers(ctx, existing as Duel).catch(() => undefined);
     await updateBlock(ctx, existing as Duel).catch(() => undefined);
-    return { text: `Model duel ${existing.id} already exists for this answer.`, duelId: existing.id, existing: true };
+    return {
+      text: `Model duel ${existing.id} already exists for this answer.`,
+      duelId: existing.id,
+      existing: true,
+      refreshConversationId: conversationId,
+    };
   }
   await ctx.conversations.ensureLive(conversationId);
   const duel = await createDuel(ctx, {
@@ -830,7 +915,7 @@ export async function startManualDuel(input: unknown, ctx: ExtensionBackendConte
     sourceBlockId: selectedBlockId,
     sourcePromptBlockId: promptSource?.id,
   });
-  return { text: `Started model duel ${duel.id}.`, duelId: duel.id };
+  return { text: `Started model duel ${duel.id}.`, duelId: duel.id, refreshConversationId: conversationId };
 }
 
 function stat(current: Stats, modelRef: string): ModelStat {

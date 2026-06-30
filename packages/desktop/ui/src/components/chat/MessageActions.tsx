@@ -4,6 +4,7 @@ import { writeClipboardText } from '../../desktop/clipboard';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import { notifyDesktopConversationStateRefresh } from '../../hooks/useDesktopConversationState';
 import { addNotification } from '../notifications/notificationStore';
 import { MessageActionButton, Tooltip } from '../ui';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail, registerMessageActionCapability } from './messageActionCommands';
@@ -99,6 +100,14 @@ function cleanExtensionActionErrorMessage(action: ExtensionMessageActionRegistra
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function readRefreshConversationId(result: unknown): string {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    return '';
+  }
+  const value = (result as { refreshConversationId?: unknown }).refreshConversationId;
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 export function MessageActions({
@@ -352,6 +361,10 @@ export function MessageActions({
                       blockId: blockId ?? '',
                       conversationId: conversationId ?? '',
                     });
+                    const refreshConversationId = readRefreshConversationId(result);
+                    if (refreshConversationId) {
+                      notifyDesktopConversationStateRefresh(refreshConversationId);
+                    }
                     const statusText =
                       result && typeof result === 'object' && 'text' in result && typeof result.text === 'string' ? result.text.trim() : '';
                     if (statusText) {
