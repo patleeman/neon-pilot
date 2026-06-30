@@ -1,13 +1,19 @@
 import type { ComposerControlContext } from '@neon-pilot/extensions/composer';
 import { cx, MenuGroupLabel, MenuItem, MenuSeparator, PositionedMenu, StatusDot } from '@neon-pilot/extensions/ui';
 import React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export const MODEL_PICKER_MENU_STYLE = {
-  maxHeight: 'min(20rem, calc(100vh - 7rem))',
+  maxHeight: 'calc(min(20rem, calc(100vh - 4rem)) - 0.75rem)',
   overflowY: 'auto',
   overscrollBehavior: 'contain',
 } as const;
+
+const FLYOUT_WIDTH_PX = 272;
+const FLYOUT_GAP_PX = 4;
+const FLYOUT_VIEWPORT_MARGIN_PX = 8;
+const FLYOUT_MAX_HEIGHT_PX = 320;
+const FLYOUT_MIN_HEIGHT_PX = 96;
 
 type Model = ComposerControlContext['models'][number];
 
@@ -302,10 +308,10 @@ function thinkingOptions(model: Model | null): Array<{ value: string; label: str
   const all = [
     { value: '', label: 'Default' },
     { value: 'off', label: 'Off' },
-    { value: 'low', label: 'Light' },
+    { value: 'low', label: 'Low' },
     { value: 'medium', label: 'Medium' },
     { value: 'high', label: 'High' },
-    { value: 'xhigh', label: 'Extra High' },
+    { value: 'xhigh', label: 'X High' },
   ];
   return model?.reasoning ? all : all.filter((option) => option.value === '' || option.value === 'off');
 }
@@ -638,18 +644,42 @@ function ModelPreferencePicker({ context, variant }: { context: ComposerControlC
   const selectedSpeedLabel = formatSpeedTriggerLabel(context.currentServiceTier);
   const disabled = context.savingPreference !== null;
   const speedAvailable = speedOptions.length > 0 || Boolean(context.currentServiceTier);
-  const [activePane, setActivePane] = useState<PreferencePane>('model');
+  const [activePane, setActivePane] = useState<PreferencePane | null>(null);
+  const menuAnchorRef = useRef<HTMLDivElement | null>(null);
+  const [flyoutLayout, setFlyoutLayout] = useState<{ side: 'left' | 'right'; maxHeight: number }>({
+    side: 'right',
+    maxHeight: FLYOUT_MAX_HEIGHT_PX,
+  });
   const flyoutPosition =
-    activePane === 'thinking'
-      ? { left: 'calc(100% + 0.25rem)', top: '2.75rem' }
-      : activePane === 'model' && context.models.length === 0
-        ? { left: 'calc(100% + 0.25rem)', top: 0 }
-        : { left: 'calc(100% + 0.25rem)', bottom: 0 };
+    flyoutLayout.side === 'right' ? { left: 'calc(100% + 0.25rem)', bottom: 0 } : { right: 'calc(100% + 0.25rem)', bottom: 0 };
   const triggerSummary = `${selectedModelLabel} · ${selectedThinkingLabel}${speedAvailable ? ` · ${selectedSpeedLabel}` : ''}`;
   const triggerClass =
     variant === 'menu'
       ? 'ui-menu-trigger-block min-w-0 truncate disabled:cursor-default disabled:opacity-40'
       : 'ui-menu-trigger-inline min-w-[9.5rem] max-w-[13.5rem] truncate disabled:cursor-default disabled:opacity-40';
+
+  const updateFlyoutLayout = useCallback(() => {
+    const anchor = menuAnchorRef.current;
+    if (!anchor) return;
+    const bounds = anchor.getBoundingClientRect();
+    const availableAbove = Math.max(FLYOUT_MIN_HEIGHT_PX, bounds.bottom - FLYOUT_VIEWPORT_MARGIN_PX);
+    const availableRight = window.innerWidth - bounds.right - FLYOUT_GAP_PX - FLYOUT_VIEWPORT_MARGIN_PX;
+    setFlyoutLayout({
+      side: availableRight >= FLYOUT_WIDTH_PX ? 'right' : 'left',
+      maxHeight: Math.min(FLYOUT_MAX_HEIGHT_PX, availableAbove),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!activePane) return;
+    updateFlyoutLayout();
+  }, [activePane, updateFlyoutLayout]);
+
+  useEffect(() => {
+    if (!activePane) return;
+    window.addEventListener('resize', updateFlyoutLayout);
+    return () => window.removeEventListener('resize', updateFlyoutLayout);
+  }, [activePane, updateFlyoutLayout]);
 
   return (
     <>
@@ -675,6 +705,7 @@ function ModelPreferencePicker({ context, variant }: { context: ComposerControlC
           <Chevron className="static shrink-0" />
         </summary>
         <div
+          ref={menuAnchorRef}
           className={cx(
             'absolute bottom-full left-0 z-50 mb-2 overflow-visible',
             variant === 'menu' ? 'w-full min-w-[12.5rem]' : 'w-[12.5rem]',
@@ -699,65 +730,75 @@ function ModelPreferencePicker({ context, variant }: { context: ComposerControlC
               ) : null}
             </div>
           </PositionedMenu>
-          <PositionedMenu placement="absolute" position={flyoutPosition} className="w-[17rem] overflow-hidden bg-base p-1.5">
-            {activePane === 'model' ? (
-              <div style={MODEL_PICKER_MENU_STYLE}>
-                {context.models.length === 0 ? (
-                  <div className="px-2 py-2 text-[11px] text-dim">Model list loading</div>
-                ) : (
-                  groupModels(context.models).map(([provider, providerModels], _index, groups) => (
-                    <div key={provider} className="py-1">
-                      <MenuGroupLabel className="pb-1">
-                        {formatModelProviderGroupLabel(
-                          provider,
-                          groups.map(([groupProvider]) => groupProvider),
-                        )}
-                      </MenuGroupLabel>
-                      {providerModels.map((providerModel) => {
-                        const value = modelSelectionValue(providerModel, context.models);
-                        const checked = model?.provider === providerModel.provider && model.id === providerModel.id;
-                        return (
-                          <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
-                            <span className="min-w-0 truncate">{providerModel.name}</span>
-                          </MenuButton>
-                        );
-                      })}
-                    </div>
-                  ))
-                )}
-              </div>
-            ) : null}
-            {activePane === 'thinking' ? (
-              <div className="py-1">
-                <MenuGroupLabel className="pb-1">Thinking</MenuGroupLabel>
-                {options.map((option) => (
-                  <MenuButton
-                    key={option.value || 'default'}
-                    onClick={() => context.selectThinkingLevel(option.value)}
-                    checked={option.value === context.currentThinkingLevel}
-                  >
-                    {option.label}
+          {activePane ? (
+            <PositionedMenu
+              placement="absolute"
+              position={flyoutPosition}
+              className="w-[17rem] max-w-[calc(100vw-1rem)] overflow-hidden bg-base p-1.5"
+              style={{ maxHeight: flyoutLayout.maxHeight }}
+            >
+              {activePane === 'model' ? (
+                <div style={{ ...MODEL_PICKER_MENU_STYLE, maxHeight: Math.max(FLYOUT_MIN_HEIGHT_PX, flyoutLayout.maxHeight - 12) }}>
+                  {context.models.length === 0 ? (
+                    <div className="px-2 py-2 text-[11px] text-dim">Model list loading</div>
+                  ) : (
+                    groupModels(context.models).map(([provider, providerModels], _index, groups) => (
+                      <div key={provider} className="py-1">
+                        <MenuGroupLabel className="pb-1">
+                          {formatModelProviderGroupLabel(
+                            provider,
+                            groups.map(([groupProvider]) => groupProvider),
+                          )}
+                        </MenuGroupLabel>
+                        {providerModels.map((providerModel) => {
+                          const value = modelSelectionValue(providerModel, context.models);
+                          const checked = model?.provider === providerModel.provider && model.id === providerModel.id;
+                          return (
+                            <MenuButton key={value} onClick={() => context.selectModel(value)} checked={checked}>
+                              <span className="min-w-0 truncate">{providerModel.name}</span>
+                            </MenuButton>
+                          );
+                        })}
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : null}
+              {activePane === 'thinking' ? (
+                <div
+                  className="py-1"
+                  style={{ ...MODEL_PICKER_MENU_STYLE, maxHeight: Math.max(FLYOUT_MIN_HEIGHT_PX, flyoutLayout.maxHeight - 12) }}
+                >
+                  <MenuGroupLabel className="pb-1">Thinking</MenuGroupLabel>
+                  {options.map((option) => (
+                    <MenuButton
+                      key={option.value || 'default'}
+                      onClick={() => context.selectThinkingLevel(option.value)}
+                      checked={option.value === context.currentThinkingLevel}
+                    >
+                      {option.label}
+                    </MenuButton>
+                  ))}
+                </div>
+              ) : null}
+              {activePane === 'speed' ? (
+                <div
+                  className="py-1"
+                  style={{ ...MODEL_PICKER_MENU_STYLE, maxHeight: Math.max(FLYOUT_MIN_HEIGHT_PX, flyoutLayout.maxHeight - 12) }}
+                >
+                  <MenuGroupLabel className="pb-1">Speed</MenuGroupLabel>
+                  <MenuButton onClick={() => context.selectServiceTier('')} checked={!context.currentServiceTier}>
+                    Standard
                   </MenuButton>
-                ))}
-              </div>
-            ) : null}
-            {activePane === 'speed' ? (
-              <div className="py-1">
-                <MenuGroupLabel className="pb-1">Speed</MenuGroupLabel>
-                <MenuButton onClick={() => context.selectServiceTier('')} checked={!context.currentServiceTier}>
-                  <span className="min-w-0">
-                    <span className="block truncate">Standard</span>
-                    <span className="block truncate text-[11px] text-dim">Default speed</span>
-                  </span>
-                </MenuButton>
-                {speedOptions.map((tier) => (
-                  <MenuButton key={tier} onClick={() => context.selectServiceTier(tier)} checked={tier === context.currentServiceTier}>
-                    <span className="min-w-0 truncate">{formatServiceTierLabel(tier)}</span>
-                  </MenuButton>
-                ))}
-              </div>
-            ) : null}
-          </PositionedMenu>
+                  {speedOptions.map((tier) => (
+                    <MenuButton key={tier} onClick={() => context.selectServiceTier(tier)} checked={tier === context.currentServiceTier}>
+                      <span className="min-w-0 truncate">{formatServiceTierLabel(tier)}</span>
+                    </MenuButton>
+                  ))}
+                </div>
+              ) : null}
+            </PositionedMenu>
+          ) : null}
         </div>
       </details>
     </>

@@ -4,6 +4,7 @@ const buildDictationSettingsState = vi.fn();
 const readDictationSettings = vi.fn();
 const writeDictationSettings = vi.fn();
 const readTranscriptionModelStatus = vi.fn();
+const readTranscriptionRuntimeStatus = vi.fn();
 const installTranscriptionModel = vi.fn();
 const transcribeAudio = vi.fn();
 
@@ -11,10 +12,18 @@ vi.mock('./settings.js', () => ({ buildDictationSettingsState, readDictationSett
 vi.mock('@neon-pilot/extensions/backend/transcription', () => ({
   installTranscriptionModel,
   readTranscriptionModelStatus,
+  readTranscriptionRuntimeStatus,
   transcribeAudio,
 }));
 
-const { installModel: installModelAction, modelStatus, readSettings, transcribeFile, updateSettings } = await import('./backend.js');
+const {
+  installModel: installModelAction,
+  modelStatus,
+  readSettings,
+  runtimeStatus,
+  transcribeFile,
+  updateSettings,
+} = await import('./backend.js');
 
 describe('local dictation backend', () => {
   const ctx = { runtimeDir: '/runtime', runtimeSettingsFilePath: '/runtime-settings.json' } as never;
@@ -24,6 +33,7 @@ describe('local dictation backend', () => {
     readDictationSettings.mockReset().mockReturnValue({ model: 'base.en' });
     writeDictationSettings.mockReset();
     readTranscriptionModelStatus.mockReset().mockResolvedValue({ installed: true });
+    readTranscriptionRuntimeStatus.mockReset().mockResolvedValue({ available: true });
     installTranscriptionModel.mockReset().mockResolvedValue({ installed: true });
     transcribeAudio.mockReset().mockResolvedValue({ text: 'hello' });
   });
@@ -50,6 +60,12 @@ describe('local dictation backend', () => {
 
     await expect(installModelAction({}, ctx)).resolves.toEqual({ installed: true });
     expect(installTranscriptionModel).toHaveBeenLastCalledWith({ model: 'base.en' });
+  });
+
+  it('reports host transcription runtime status', async () => {
+    await expect(runtimeStatus()).resolves.toEqual({ available: true });
+
+    expect(readTranscriptionRuntimeStatus).toHaveBeenCalledWith();
   });
 
   it('transcribes base64 audio', async () => {

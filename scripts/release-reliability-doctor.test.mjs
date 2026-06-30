@@ -137,6 +137,23 @@ describe('release reliability doctor', () => {
       expect(result.failures.join('\n')).toContain("'node_modules/orphan-pkg' is in asarUnpack but not electron-builder files");
     });
 
+    it('requires createRequire native runtime packages even when static analysis cannot see them', () => {
+      const result = checkPackagingExternalsConsistency({
+        filesShipped: [],
+        asarUnpacked: [],
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.failures.join('\n')).toContain(
+        "Runtime bare specifier '@ffmpeg-installer/darwin-arm64' is not in electron-builder files",
+      );
+      expect(result.failures.join('\n')).toContain("Runtime bare specifier '@ffmpeg-installer/ffmpeg' is not in electron-builder files");
+      expect(result.failures.join('\n')).toContain("Runtime bare specifier 'whisper-cpp-node' is not in electron-builder files");
+      expect(result.failures.join('\n')).toContain(
+        "Runtime bare specifier '@whisper-cpp-node/darwin-arm64' is not in electron-builder files",
+      );
+    });
+
     it('exempts Node/Electron built-ins from the on-disk requirement', () => {
       const result = checkPackagingExternalsConsistency({
         filesShipped: [],

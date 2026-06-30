@@ -178,6 +178,10 @@ export function writeSavedModelPreferences(
     const modelValue = input.model ?? '';
     const normalizedModel = readNonEmptyString(modelValue);
 
+    if (input.serviceTier === undefined) {
+      delete settings.defaultServiceTier;
+    }
+
     if (!normalizedModel) {
       delete settings.defaultModel;
       delete settings.defaultProvider;

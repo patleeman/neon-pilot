@@ -17,6 +17,7 @@ describe('backendApi/transcription', () => {
     await transcription.transcribeAudio({ dataBase64: 'AAE=', mimeType: 'audio/ogg' });
     await transcription.installTranscriptionModel({ model: 'base.en' });
     await transcription.readTranscriptionModelStatus({ model: 'small.en' });
+    await transcription.readTranscriptionRuntimeStatus();
 
     expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(1, '../../transcription/transcriptionService.js', 'transcribeAudio', {
       dataBase64: 'AAE=',
@@ -33,6 +34,11 @@ describe('backendApi/transcription', () => {
       '../../transcription/transcriptionService.js',
       'readTranscriptionModelStatus',
       { model: 'small.en' },
+    );
+    expect(resolver.callServerModuleExport).toHaveBeenNthCalledWith(
+      4,
+      '../../transcription/transcriptionService.js',
+      'readTranscriptionRuntimeStatus',
     );
   });
 });

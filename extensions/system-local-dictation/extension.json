@@ -14,6 +14,7 @@
     "actions": [
       { "id": "readSettings", "handler": "readSettings", "title": "Read dictation settings", "worker": { "enabled": true } },
       { "id": "updateSettings", "handler": "updateSettings", "title": "Update dictation settings", "worker": { "enabled": true } },
+      { "id": "runtimeStatus", "handler": "runtimeStatus", "title": "Check dictation runtime", "worker": { "enabled": true } },
       { "id": "modelStatus", "handler": "modelStatus", "title": "Read dictation model status", "worker": { "enabled": true } },
       { "id": "installModel", "handler": "installModel", "title": "Install dictation model", "worker": { "enabled": true } },
       { "id": "transcribeFile", "handler": "transcribeFile", "title": "Transcribe dictation audio", "worker": { "enabled": true } },
@@ -21,7 +22,10 @@
         "id": "dictationCli",
         "handler": "dictationCli",
         "title": "Dictation CLI",
-        "worker": { "enabled": true, "inputActions": ["settings", "settings-set", "model-status", "model-install", "transcribe"] }
+        "worker": {
+          "enabled": true,
+          "inputActions": ["settings", "settings-set", "runtime-status", "model-status", "model-install", "transcribe"]
+        }
       }
     ]
   },

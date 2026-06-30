@@ -64,12 +64,19 @@ function renderDictationButton(input: {
   roots.push(root);
 
   act(() => {
+    const invoke =
+      input.invoke ??
+      vi.fn(async (action: string) =>
+        action === 'runtimeStatus'
+          ? { available: true, provider: 'local-whisper', dependencies: [] }
+          : { installed: true, model: 'base.en' },
+      );
     root.render(
       <DictationButton
         pa={
           {
             commands: { setContext: input.setContext },
-            extension: { invoke: input.invoke ?? vi.fn() },
+            extension: { invoke },
             ui: { toast: vi.fn() },
           } as never
         }
@@ -184,11 +191,56 @@ describe('DictationButton', () => {
     expect(container.querySelector('rect')).not.toBeNull();
   });
 
+  it('does not start recording when the native runtime is unavailable', async () => {
+    const setContext = vi.fn();
+    const toast = vi.fn();
+    const invoke = vi.fn(async (action: string) =>
+      action === 'runtimeStatus'
+        ? { available: false, provider: 'local-whisper', error: 'Native runtime missing.', dependencies: [] }
+        : { installed: true, model: 'base.en' },
+    );
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    roots.push(root);
+
+    act(() => {
+      root.render(
+        <DictationButton
+          pa={
+            {
+              commands: { setContext },
+              extension: { invoke },
+              ui: { toast },
+            } as never
+          }
+          controlContext={{
+            composerDisabled: false,
+            insertText: vi.fn(),
+          }}
+        />,
+      );
+    });
+
+    await act(async () => {
+      dispatchPointerDown(container.querySelector('button')!);
+      await flushMicrotasks();
+    });
+
+    expect(startCaptureMock).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith('Native runtime missing.');
+    expect(container.querySelector('button')?.getAttribute('aria-label')).toBe('Start dictation');
+  });
+
   it('inserts transcribed text through the composer append API', async () => {
     const setContext = vi.fn();
     const appendText = vi.fn();
     const invoke = vi.fn(async (action: string) =>
-      action === 'modelStatus' ? { installed: true, model: 'base.en' } : { text: ' hello world ' },
+      action === 'runtimeStatus'
+        ? { available: true, provider: 'local-whisper', dependencies: [] }
+        : action === 'modelStatus'
+          ? { installed: true, model: 'base.en' }
+          : { text: ' hello world ' },
     );
     const stop = vi.fn(async () => ({
       audio: new Uint8Array([1, 2, 3]),
@@ -220,7 +272,11 @@ describe('DictationButton', () => {
     const activeActivateComposer = vi.fn();
     const inactiveInvoke = vi.fn(async () => ({ installed: true, model: 'base.en' }));
     const activeInvoke = vi.fn(async (action: string) =>
-      action === 'modelStatus' ? { installed: true, model: 'base.en' } : { text: ' active transcript ' },
+      action === 'runtimeStatus'
+        ? { available: true, provider: 'local-whisper', dependencies: [] }
+        : action === 'modelStatus'
+          ? { installed: true, model: 'base.en' }
+          : { text: ' active transcript ' },
     );
     const activeStop = vi.fn(async () => ({
       audio: new Uint8Array([4, 5, 6]),
@@ -271,6 +327,7 @@ describe('DictationButton', () => {
     const appendText = vi.fn();
     const installDeferred = createDeferred<{ model: string; cacheDir: string }>();
     const invoke = vi.fn(async (action: string) => {
+      if (action === 'runtimeStatus') return { available: true, provider: 'local-whisper', dependencies: [] };
       if (action === 'modelStatus') return { installed: false, model: 'base.en' };
       if (action === 'installModel') return installDeferred.promise;
       return { text: ' first run works ' };

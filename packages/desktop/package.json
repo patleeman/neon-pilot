@@ -36,6 +36,10 @@
     "node-pty": "^1.0.0",
     "whisper-cpp-node": "0.2.12"
   },
+  "optionalDependencies": {
+    "@ffmpeg-installer/darwin-arm64": "4.1.5",
+    "@whisper-cpp-node/darwin-arm64": "0.2.12"
+  },
   "devDependencies": {
     "@codemirror/lang-css": "6.3.1",
     "@codemirror/lang-html": "6.4.11",

@@ -5,6 +5,7 @@ import type {
   TranscriptionModelStatus,
   TranscriptionModelStatusInput,
   TranscriptionResult,
+  TranscriptionRuntimeStatus,
 } from '@neon-pilot/extensions/backend/transcription';
 
 import { callServerModuleExport } from './serverModuleResolver.js';
@@ -18,6 +19,7 @@ export type {
   TranscriptionModelStatus,
   TranscriptionModelStatusInput,
   TranscriptionResult,
+  TranscriptionRuntimeStatus,
 } from '@neon-pilot/extensions/backend/transcription';
 
 export function transcribeAudio(input: TranscriptionAudioInput): Promise<TranscriptionResult> {
@@ -30,4 +32,8 @@ export function installTranscriptionModel(input?: TranscriptionInstallInput): Pr
 
 export function readTranscriptionModelStatus(input?: TranscriptionModelStatusInput): Promise<TranscriptionModelStatus> {
   return callServerModuleExport(TRANSCRIPTION_SERVICE, 'readTranscriptionModelStatus', input);
+}
+
+export function readTranscriptionRuntimeStatus(): Promise<TranscriptionRuntimeStatus> {
+  return callServerModuleExport(TRANSCRIPTION_SERVICE, 'readTranscriptionRuntimeStatus');
 }

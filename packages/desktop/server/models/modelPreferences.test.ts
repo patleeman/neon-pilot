@@ -202,6 +202,53 @@ describe('writeSavedModelPreferences', () => {
     });
   });
 
+  it('resets the saved service tier when the default model changes', () => {
+    const dir = createTempDir();
+    const file = join(dir, 'settings.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        defaultProvider: 'openai-codex',
+        defaultModel: 'gpt-5.5',
+        defaultServiceTier: 'priority',
+        theme: 'cobalt2',
+      }),
+    );
+
+    writeSavedModelPreferences({ model: 'opencode-go/deepseek-v4-flash' }, file, [
+      { id: 'gpt-5.5', provider: 'openai-codex' },
+      { id: 'deepseek-v4-flash', provider: 'opencode-go' },
+    ]);
+
+    expect(readSavedModelPreferences(file)).toEqual({
+      currentModel: 'deepseek-v4-flash',
+      currentVisionModel: '',
+      currentThinkingLevel: '',
+      currentServiceTier: '',
+      currentPresetId: '',
+    });
+    expect(JSON.parse(readFileSync(file, 'utf-8'))).toEqual({
+      defaultProvider: 'opencode-go',
+      defaultModel: 'deepseek-v4-flash',
+      theme: 'cobalt2',
+    });
+  });
+
+  it('keeps an explicitly supplied service tier when changing the default model', () => {
+    const dir = createTempDir();
+    const file = join(dir, 'settings.json');
+
+    writeSavedModelPreferences({ model: 'openai-codex/gpt-5.5', serviceTier: 'priority' }, file, [
+      { id: 'gpt-5.5', provider: 'openai-codex' },
+    ]);
+
+    expect(JSON.parse(readFileSync(file, 'utf-8'))).toEqual({
+      defaultProvider: 'openai-codex',
+      defaultModel: 'gpt-5.5',
+      defaultServiceTier: 'priority',
+    });
+  });
+
   it('writes and reads the preferred vision model separately from the default model', () => {
     const dir = createTempDir();
     const file = join(dir, 'settings.json');

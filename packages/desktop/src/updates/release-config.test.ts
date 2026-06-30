@@ -42,8 +42,10 @@ describe('desktop release config', () => {
   });
 
   it('packages and unpacks native backend dependencies together', () => {
+    expect(typeof electronBuilderConfig.afterPack).toBe('function');
     expect(electronBuilderConfig.files).toEqual(
       expect.arrayContaining([
+        'node_modules/@ffmpeg-installer/darwin-arm64{,/**/*}',
         'node_modules/@ffmpeg-installer/ffmpeg{,/**/*}',
         'node_modules/better-sqlite3{,/**/*}',
         'node_modules/@silvia-odwyer/photon-node{,/**/*}',
@@ -54,6 +56,7 @@ describe('desktop release config', () => {
     );
     expect(electronBuilderConfig.asarUnpack).toEqual(
       expect.arrayContaining([
+        'node_modules/@ffmpeg-installer/darwin-arm64/**/*',
         'node_modules/@ffmpeg-installer/ffmpeg/**/*',
         'node_modules/better-sqlite3/**/*',
         'node_modules/@silvia-odwyer/photon-node/**/*',

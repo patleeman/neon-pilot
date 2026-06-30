@@ -8,6 +8,7 @@ import type {
   TranscriptionModelStatus,
   TranscriptionModelStatusInput,
   TranscriptionResult,
+  TranscriptionRuntimeStatus,
 } from '@neon-pilot/extensions/backend/transcription';
 
 import { convertAudioWithFfmpeg } from './audioConversion.js';
@@ -51,6 +52,10 @@ async function ensureProviderModelInstalled(provider: LocalWhisperTranscriptionP
 
 export async function readTranscriptionModelStatus(input: TranscriptionModelStatusInput = {}): Promise<TranscriptionModelStatus> {
   return createLocalProvider(input.model).getModelStatus();
+}
+
+export async function readTranscriptionRuntimeStatus(): Promise<TranscriptionRuntimeStatus> {
+  return createLocalProvider(undefined).getRuntimeStatus();
 }
 
 export async function installTranscriptionModel(input: TranscriptionInstallInput = {}): Promise<TranscriptionInstallResult> {

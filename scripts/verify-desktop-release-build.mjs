@@ -100,6 +100,9 @@ validatePackagedAutoUpdateConfig(appPath);
 console.log('Validating packaged extensions against the built app...');
 run('node', ['scripts/check-packaged-extensions.mjs', appPath]);
 
+console.log('Validating packaged native runtime files...');
+run('node', ['scripts/check-packaged-native-runtime.mjs', appPath]);
+
 console.log('Running extension golden release smoke against the built app...');
 run('node', ['scripts/release-extension-golden-smoke.mjs', appPath]);
 

@@ -2,7 +2,12 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import { installTranscriptionModel, readTranscriptionModelStatus, transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
+import {
+  installTranscriptionModel,
+  readTranscriptionModelStatus,
+  readTranscriptionRuntimeStatus,
+  transcribeAudio,
+} from '@neon-pilot/extensions/backend/transcription';
 
 import { buildDictationSettingsState, readDictationSettings, writeDictationSettings } from './settings.js';
 
@@ -50,6 +55,10 @@ export async function modelStatus(input: { model?: unknown }, ctx: ExtensionBack
   return readTranscriptionModelStatus({ model });
 }
 
+export async function runtimeStatus() {
+  return readTranscriptionRuntimeStatus();
+}
+
 export async function installModel(input: { model?: unknown }, ctx: ExtensionBackendContext) {
   const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
   const model = readOptionalString(input.model) ?? settings.model;
@@ -79,6 +88,7 @@ export async function dictationCli(input: unknown, ctx: ExtensionBackendContext)
   const action = typeof body.action === 'string' ? body.action : 'settings';
   if (action === 'settings') return readSettings(body, ctx);
   if (action === 'settings-set') return updateSettings({ model: flags.model }, ctx);
+  if (action === 'runtime-status') return runtimeStatus();
   if (action === 'model-status') return modelStatus({ model: flags.model ?? args[0] }, ctx);
   if (action === 'model-install') return installModel({ model: flags.model ?? args[0] }, ctx);
   if (action === 'transcribe') {

@@ -9,7 +9,7 @@ import { formatModelTriggerLabel, MODEL_PICKER_MENU_STYLE, ModelPreferencesCompo
 describe('formatModelTriggerLabel', () => {
   it('keeps the model menu scrollable when shared menu chrome clips overflow', () => {
     expect(MODEL_PICKER_MENU_STYLE).toEqual({
-      maxHeight: 'min(20rem, calc(100vh - 7rem))',
+      maxHeight: 'calc(min(20rem, calc(100vh - 4rem)) - 0.75rem)',
       overflowY: 'auto',
       overscrollBehavior: 'contain',
     });
@@ -101,11 +101,15 @@ describe('formatModelTriggerLabel', () => {
     );
 
     expect(screen.getByLabelText('Conversation model preferences')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Conversation model preferences'));
+    expect(screen.queryByText('Priority')).toBeNull();
+
     fireEvent.pointerEnter(screen.getByText('Speed'));
 
     expect(screen.getAllByText('Standard').length).toBeGreaterThan(0);
     expect(screen.getByText('Automatic')).toBeTruthy();
     expect(screen.getByText('Priority')).toBeTruthy();
+    expect(screen.queryByText('Default speed')).toBeNull();
 
     fireEvent.click(screen.getByText('Priority'));
     expect(selectServiceTier).toHaveBeenCalledWith('priority');
@@ -147,6 +151,7 @@ describe('formatModelTriggerLabel', () => {
     );
 
     fireEvent.click(screen.getByLabelText('Conversation model preferences'));
+    expect(screen.queryByText('X High')).toBeNull();
 
     const parentRows = screen
       .getAllByRole('menuitem')
@@ -156,7 +161,8 @@ describe('formatModelTriggerLabel', () => {
     expect(parentRows.map((item) => item.textContent)).toEqual(['ModelGPT-5.5', 'ThinkingMedium', 'SpeedStandard']);
 
     fireEvent.pointerEnter(screen.getByText('Thinking'));
-    expect(screen.getByText('Extra High')).toBeTruthy();
+    expect(screen.getByText('Low')).toBeTruthy();
+    expect(screen.getByText('X High')).toBeTruthy();
   });
 
   it('labels an inherited visible service tier instead of the default placeholder', () => {
@@ -224,6 +230,8 @@ describe('formatModelTriggerLabel', () => {
     );
 
     fireEvent.click(screen.getByLabelText('Conversation model preferences'));
+    expect(screen.queryByText('OpenAI Codex')).toBeNull();
+    fireEvent.pointerEnter(screen.getByText('Model'));
     expect(screen.getByText('OpenAI Codex')).toBeTruthy();
     expect(screen.queryByText('openai-codex')).toBeNull();
 

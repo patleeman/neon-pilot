@@ -47,8 +47,24 @@ export interface TranscriptionModelStatus {
   cacheDir: string;
   installed: boolean;
   sizeBytes?: number;
+  runtime?: TranscriptionRuntimeStatus;
+}
+
+export interface TranscriptionRuntimeDependencyStatus {
+  id: string;
+  label: string;
+  available: boolean;
+  error?: string;
+}
+
+export interface TranscriptionRuntimeStatus {
+  provider: TranscriptionProviderId;
+  available: boolean;
+  dependencies: TranscriptionRuntimeDependencyStatus[];
+  error?: string;
 }
 
 export const transcribeAudio = (_input: TranscriptionAudioInput): Promise<TranscriptionResult> => hostResolved();
 export const installTranscriptionModel = (_input?: TranscriptionInstallInput): Promise<TranscriptionInstallResult> => hostResolved();
 export const readTranscriptionModelStatus = (_input?: TranscriptionModelStatusInput): Promise<TranscriptionModelStatus> => hostResolved();
+export const readTranscriptionRuntimeStatus = (): Promise<TranscriptionRuntimeStatus> => hostResolved();

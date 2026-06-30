@@ -38,6 +38,13 @@ interface DictationModelStatus {
   model: string;
   installed: boolean;
   sizeBytes?: number;
+  runtime?: DictationRuntimeStatus;
+}
+interface DictationRuntimeStatus {
+  provider: string;
+  available: boolean;
+  error?: string;
+  dependencies: Array<{ id: string; label: string; available: boolean; error?: string }>;
 }
 
 function formatBytes(bytes: number): string {
@@ -132,6 +139,13 @@ export function DictationButton({
   const busy = state === 'preparing' || state === 'transcribing';
   const toggleAvailable = !controlContext.composerDisabled && !busy;
 
+  const ensureRuntimeAvailable = useCallback(async () => {
+    const status = (await pa.extension.invoke('runtimeStatus')) as DictationRuntimeStatus;
+    if (!status.available) {
+      throw new Error(status.error ?? 'Local dictation is missing its native transcription runtime.');
+    }
+  }, [pa]);
+
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -148,6 +162,9 @@ export function DictationButton({
     if (!pendingModelInstallRef.current) {
       pendingModelInstallRef.current = (async () => {
         const status = (await pa.extension.invoke('modelStatus')) as DictationModelStatus;
+        if (status.runtime && !status.runtime.available) {
+          throw new Error(status.runtime.error ?? 'Local dictation is missing its native transcription runtime.');
+        }
         if (!status.installed) {
           if (mountedRef.current) {
             pa.ui.toast('Installing dictation model while you speak…');
@@ -221,6 +238,7 @@ export function DictationButton({
     if (controlContext.composerDisabled || captureRef.current || pendingStartRef.current || busy) return;
     const pendingStart = (async () => {
       try {
+        await ensureRuntimeAvailable();
         setSamples([]);
         setStartedAt(performance.now());
         setState('recording');
@@ -249,7 +267,7 @@ export function DictationButton({
     })();
     pendingStartRef.current = pendingStart;
     await pendingStart;
-  }, [busy, controlContext.composerDisabled, ensureModelInstalled, pa]);
+  }, [busy, controlContext.composerDisabled, ensureModelInstalled, ensureRuntimeAvailable, pa]);
 
   useEffect(() => {
     const handleDictationToggleCommand = (event: Event) => {
@@ -327,6 +345,7 @@ export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; sett
   const [model, setModel] = useState('base.en');
   const [customModelUrl, setCustomModelUrl] = useState('');
   const [status, setStatus] = useState<DictationModelStatus | null>(null);
+  const [runtime, setRuntime] = useState<DictationRuntimeStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -335,6 +354,7 @@ export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; sett
     setSettings(state.settings);
     setModel(state.settings.model);
     setCustomModelUrl(TRANSCRIPTION_MODEL_IDS.has(state.settings.model) ? '' : state.settings.model);
+    setRuntime((await pa.extension.invoke('runtimeStatus')) as DictationRuntimeStatus);
   }, [pa]);
 
   useEffect(() => {
@@ -350,7 +370,11 @@ export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; sett
     void pa.extension
       .invoke('modelStatus', { model: model.trim() })
       .then((value) => {
-        if (!cancelled) setStatus(value as DictationModelStatus);
+        if (!cancelled) {
+          const nextStatus = value as DictationModelStatus;
+          setStatus(nextStatus);
+          if (nextStatus.runtime) setRuntime(nextStatus.runtime);
+        }
       })
       .catch(() => {
         if (!cancelled) setStatus(null);
@@ -394,6 +418,21 @@ export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; sett
     }
   }
 
+  async function checkRuntime() {
+    setBusy('Checking…');
+    setMessage(null);
+    try {
+      const nextRuntime = (await pa.extension.invoke('runtimeStatus')) as DictationRuntimeStatus;
+      setRuntime(nextRuntime);
+      setMessage(nextRuntime.available ? 'Dictation runtime is ready.' : (nextRuntime.error ?? 'Dictation runtime is unavailable.'));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const runtimeAvailable = runtime?.available !== false;
   const statusLabel = model.trim()
     ? status?.installed
       ? `Installed locally${status.sizeBytes ? ` · ${formatBytes(status.sizeBytes)}` : ''}`
@@ -405,6 +444,16 @@ export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; sett
       {!settings ? <LoadingState label="Loading dictation settings..." /> : null}
       {settings ? (
         <div className="space-y-3">
+          {runtime && !runtime.available ? (
+            <Notice>
+              <div className="space-y-2">
+                <p>{runtime.error ?? 'Local dictation is missing its native transcription runtime.'}</p>
+                <ToolbarButton type="button" disabled={Boolean(busy)} onClick={() => void checkRuntime()}>
+                  {busy === 'Checking…' ? 'Checking…' : 'Check again'}
+                </ToolbarButton>
+              </div>
+            </Notice>
+          ) : null}
           <SettingsRow title="Model" description={statusLabel} actionsClassName="min-w-0 max-w-none">
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               <Select
@@ -433,7 +482,7 @@ export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; sett
               <ToolbarButton
                 type="button"
                 className="whitespace-nowrap"
-                disabled={Boolean(busy) || !model.trim()}
+                disabled={Boolean(busy) || !model.trim() || !runtimeAvailable}
                 onClick={() => void install()}
               >
                 {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}

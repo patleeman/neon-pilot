@@ -395,6 +395,12 @@ function listBuiltBundleBareSpecifiers(basedir) {
 // packageEntryCandidates in serverModuleResolver.ts) rather than real node_modules
 // copies. They never need to be shipped to app.asar.unpacked.
 const RESOLVER_REDIRECTED_PACKAGES = new Set(['@neon-pilot/core', '@neon-pilot/daemon']);
+const REQUIRED_PACKAGED_RUNTIME_SPECIFIERS = [
+  '@ffmpeg-installer/darwin-arm64',
+  '@ffmpeg-installer/ffmpeg',
+  'whisper-cpp-node',
+  '@whisper-cpp-node/darwin-arm64',
+];
 
 // Bare specifiers that appear in built bundles as dynamic imports but are
 // intentionally NOT shipped to app.asar.unpacked. Each entry must have a
@@ -433,7 +439,11 @@ export function checkPackagingExternalsConsistency({ filesShipped = null, asarUn
     return { ok: false, failures: ['electron-builder files/asarUnpack lists could not be read.'] };
   }
   const specifiers = new Set(
-    runtimeSpecifiers ?? [...listServerModuleResolverSpecifiers(), ...DESKTOP_DIST_DIRS.flatMap(listBuiltBundleBareSpecifiers)],
+    runtimeSpecifiers ?? [
+      ...listServerModuleResolverSpecifiers(),
+      ...DESKTOP_DIST_DIRS.flatMap(listBuiltBundleBareSpecifiers),
+      ...REQUIRED_PACKAGED_RUNTIME_SPECIFIERS,
+    ],
   );
 
   const failures = [];

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { checkPackagedNativeRuntime } from './scripts/check-packaged-native-runtime.mjs';
 import { defaultInstallableBundleNames } from './scripts/default-installable-extensions.mjs';
 
 const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/neon-pilot';
@@ -72,6 +73,18 @@ export const desktopReleasePublishConfig = {
 const electronBuilderConfig = {
   appId: desktopReleaseIdentity.appId,
   productName: desktopReleaseIdentity.productName,
+  async afterPack(context) {
+    if (context.electronPlatformName !== 'darwin') {
+      return;
+    }
+
+    const appName = `${context.packager.appInfo.productFilename}.app`;
+    const appPath = resolve(context.appOutDir, appName);
+    const result = await checkPackagedNativeRuntime(appPath);
+    if (!result.ok) {
+      throw new Error(`Packaged native runtime check failed:\n${result.failures.join('\n')}`);
+    }
+  },
   directories: {
     app: 'packages/desktop',
     output: 'dist/release',
@@ -102,12 +115,15 @@ const electronBuilderConfig = {
     'node_modules/ajv{,/**/*}',
     'node_modules/ajv-formats{,/**/*}',
     // Native modules and their loader helpers (must remain on-disk, handled by asarUnpack).
+    'node_modules/@ffmpeg-installer/darwin-arm64{,/**/*}',
     'node_modules/@ffmpeg-installer/ffmpeg{,/**/*}',
     'node_modules/@silvia-odwyer/photon-node{,/**/*}',
+    'node_modules/@whisper-cpp-node/darwin-arm64{,/**/*}',
     'node_modules/better-sqlite3{,/**/*}',
     'node_modules/bindings{,/**/*}',
     'node_modules/file-uri-to-path{,/**/*}',
     'node_modules/node-pty{,/**/*}',
+    'node_modules/whisper-cpp-node{,/**/*}',
     'node_modules/fsevents{,/**/*}',
     // @earendil-works/pi-coding-agent is imported dynamically at runtime by the
     // extension host child (serverModuleResolver resolves the bare specifier to
@@ -130,12 +146,15 @@ const electronBuilderConfig = {
     'server/dist/extensions/**/*.js',
     // Shared chunks may be imported by the unpacked conversationInspectWorker thread.
     'server/dist/chunks/**/*',
+    'node_modules/@ffmpeg-installer/darwin-arm64/**/*',
     'node_modules/@ffmpeg-installer/ffmpeg/**/*',
     'node_modules/@silvia-odwyer/photon-node/**/*',
+    'node_modules/@whisper-cpp-node/darwin-arm64/**/*',
     'node_modules/better-sqlite3/**/*',
     'node_modules/bindings/**/*',
     'node_modules/file-uri-to-path/**/*',
     'node_modules/node-pty/**/*',
+    'node_modules/whisper-cpp-node/**/*',
     // Extract the @earendil-works scope so the extension host's dynamic
     // import('@earendil-works/pi-coding-agent') resolves from real files.
     // See the matching `files` entries above for why this is required.
@@ -177,14 +196,6 @@ const electronBuilderConfig = {
     ...optionalExtraResource({
       from: 'prompt-catalog',
       to: 'prompt-catalog',
-    }),
-    ...optionalExtraResource({
-      from: 'node_modules/whisper-cpp-node',
-      to: 'node_modules/whisper-cpp-node',
-    }),
-    ...optionalExtraResource({
-      from: 'node_modules/@whisper-cpp-node',
-      to: 'node_modules/@whisper-cpp-node',
     }),
   ],
   mac: {

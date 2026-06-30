@@ -8,6 +8,7 @@ import type {
   TranscriptionInstallResult,
   TranscriptionModelStatus,
   TranscriptionResult,
+  TranscriptionRuntimeStatus,
   TranscriptionSegment,
 } from '@neon-pilot/extensions/backend/transcription';
 
@@ -74,6 +75,11 @@ export type AudioConverter = (input: TranscriptionFileInput, options?: { signal?
 
 const contextCache = new Map<string, { ctx: WhisperContext; module: WhisperCppNodeModule }>();
 
+function readElectronResourcesPath(): string | undefined {
+  const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
+  return typeof resourcesPath === 'string' && resourcesPath.trim() ? resourcesPath : undefined;
+}
+
 export function normalizeLocalWhisperModel(value: string | undefined): string {
   const model = value?.trim() || DEFAULT_LOCAL_WHISPER_MODEL;
   return MODEL_ALIASES[model] ?? model;
@@ -137,9 +143,15 @@ export function pcm16ToFloat32(data: Buffer): Float32Array {
   return output;
 }
 
-export function buildWhisperRequireCandidatePaths(moduleUrl: string, cwd: string): string[] {
+export function buildWhisperRequireCandidatePaths(moduleUrl: string, cwd: string, resourcesPath = readElectronResourcesPath()): string[] {
   const moduleFile = fileURLToPath(moduleUrl);
   const candidates = [join(cwd, 'package.json'), moduleFile];
+
+  if (resourcesPath) {
+    candidates.push(join(resourcesPath, 'package.json'));
+    candidates.push(join(resourcesPath, 'app.asar', 'package.json'));
+    candidates.push(join(resourcesPath, 'app.asar.unpacked', 'package.json'));
+  }
 
   let current = dirname(moduleFile);
   for (let depth = 0; depth < 8; depth += 1) {
@@ -155,6 +167,45 @@ export function buildWhisperRequireCandidatePaths(moduleUrl: string, cwd: string
 
 let whisperCppModule: WhisperCppNodeModule | undefined;
 
+function buildUnavailableWhisperMessage(): string {
+  return 'Local dictation is missing its native Whisper runtime. Reinstall or update Neon Pilot. In development, run pnpm install from the repo.';
+}
+
+export function readWhisperCppRuntimeStatus(): TranscriptionRuntimeStatus {
+  const candidates = buildWhisperRequireCandidatePaths(import.meta.url, process.cwd());
+  const errors: string[] = [];
+  let available = false;
+
+  if (whisperCppModule) {
+    available = true;
+  } else {
+    for (const candidate of candidates) {
+      try {
+        whisperCppModule = createRequire(candidate)('whisper-cpp-node') as WhisperCppNodeModule;
+        available = true;
+        break;
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+  }
+
+  const error = available ? undefined : buildUnavailableWhisperMessage();
+  return {
+    provider: 'local-whisper',
+    available,
+    ...(error ? { error } : {}),
+    dependencies: [
+      {
+        id: 'whisper-cpp-node',
+        label: 'Native Whisper runtime',
+        available,
+        ...(error ? { error } : {}),
+      },
+    ],
+  };
+}
+
 function loadWhisperCpp(): WhisperCppNodeModule {
   if (!whisperCppModule) {
     const errors: string[] = [];
@@ -168,9 +219,7 @@ function loadWhisperCpp(): WhisperCppNodeModule {
     }
 
     if (!whisperCppModule) {
-      throw new Error(
-        `Cannot load whisper-cpp-node. Install desktop dependencies with pnpm install. Tried ${errors.length} resolution paths.`,
-      );
+      throw new Error(`${buildUnavailableWhisperMessage()} Tried ${errors.length} resolution paths.`);
     }
   }
   return whisperCppModule;
@@ -303,7 +352,11 @@ export class LocalWhisperTranscriptionProvider {
   }
 
   async isAvailable(): Promise<boolean> {
-    return true;
+    return readWhisperCppRuntimeStatus().available;
+  }
+
+  async getRuntimeStatus(): Promise<TranscriptionRuntimeStatus> {
+    return readWhisperCppRuntimeStatus();
   }
 
   async installModel(): Promise<TranscriptionInstallResult> {
@@ -317,11 +370,13 @@ export class LocalWhisperTranscriptionProvider {
 
   async getModelStatus(): Promise<TranscriptionModelStatus> {
     const sizeBytes = await getModelFileSize(this.modelRootPath, this.model);
+    const runtime = await this.getRuntimeStatus();
     return {
       provider: this.provider,
       model: this.model,
       cacheDir: this.modelRootPath,
       installed: sizeBytes !== null && sizeBytes > 0,
+      runtime,
       ...(sizeBytes !== null ? { sizeBytes } : {}),
     };
   }

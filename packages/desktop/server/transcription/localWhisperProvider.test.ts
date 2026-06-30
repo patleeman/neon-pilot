@@ -15,9 +15,12 @@ describe('local whisper provider', () => {
     const candidates = buildWhisperRequireCandidatePaths(
       'file:///repo/packages/desktop/server/dist/transcription/transcriptionService.js',
       '/tmp/not-the-repo-root',
+      '/Applications/Neon Pilot.app/Contents/Resources',
     );
 
     expect(candidates).toContain('/repo/packages/desktop/package.json');
+    expect(candidates).toContain('/Applications/Neon Pilot.app/Contents/Resources/package.json');
+    expect(candidates).toContain('/Applications/Neon Pilot.app/Contents/Resources/app.asar.unpacked/package.json');
   });
 
   it('resolves curated and custom Hugging Face model downloads', () => {
