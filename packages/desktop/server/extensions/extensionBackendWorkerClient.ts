@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
@@ -49,6 +50,8 @@ function getDefaultExtensionBackendWorkerUrl(): URL {
   if (configured) return configured;
 
   const candidates = [
+    pathToFileURL(join(process.cwd(), 'server/dist/extensions/extensionBackendWorker.js')),
+    pathToFileURL(join(process.cwd(), 'packages/desktop/server/dist/extensions/extensionBackendWorker.js')),
     new URL('./extensionBackendWorker.js', import.meta.url),
     new URL('../extensions/extensionBackendWorker.js', import.meta.url),
   ];

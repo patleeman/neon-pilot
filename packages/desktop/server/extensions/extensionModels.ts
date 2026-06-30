@@ -1,5 +1,6 @@
-import { readModelState } from '../models/modelState.js';
-import { invalidateModelDefinitionsCache } from '../models/modelState.js';
+import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
+import { invalidateModelDefinitionsCache, readModelState } from '../models/modelState.js';
+import { readProviderAuthState } from '../models/providerAuth.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { assertExtensionPermission } from './extensionPermissions.js';
@@ -12,6 +13,26 @@ type ProviderDesktopCapabilityContext = {
   getAuthFile: () => string;
   getStateRoot?: () => string;
 };
+
+const PROVIDERS_REQUIRING_CREDENTIAL = new Set([
+  'anthropic',
+  'azure-openai-responses',
+  'cerebras',
+  'google',
+  'groq',
+  'huggingface',
+  'kimi-coding',
+  'minimax',
+  'minimax-cn',
+  'mistral',
+  'openai',
+  'openai-codex',
+  'openrouter',
+  'vercel-ai-gateway',
+  'xai',
+  'zai',
+]);
+const PROVIDERS_REQUIRING_API_KEY_AUTH_TYPE = new Set(['openai-codex']);
 
 async function importProviderDesktopCapability(): Promise<ProviderDesktopCapabilityModule> {
   return import('../models/providerDesktopCapability.js');
@@ -35,6 +56,56 @@ async function afterProviderWrite(): Promise<void> {
   invalidateAppTopics('models');
 }
 
+function hasResolvedCredential(result: unknown): boolean {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    return false;
+  }
+  const record = result as { apiKey?: unknown; headers?: unknown };
+  if (typeof record.apiKey === 'string' && record.apiKey.trim()) {
+    return true;
+  }
+  if (record.headers && typeof record.headers === 'object' && !Array.isArray(record.headers)) {
+    return Object.keys(record.headers).length > 0;
+  }
+  return false;
+}
+
+async function modelAuthConfiguredKeys(serverContext?: ExtensionBackendServerContext): Promise<Set<string> | null> {
+  const authFile = serverContext?.getAuthFile?.();
+  if (!authFile) {
+    return null;
+  }
+
+  try {
+    const registry = createModelRegistryForAuthFile(authFile);
+    const authState = readProviderAuthState(authFile, serverContext?.getStateRoot?.());
+    const providerAuthTypes = new Map(
+      authState.providers
+        .filter((provider) => provider.hasStoredCredential || provider.authType === 'environment')
+        .map((provider) => [provider.id, provider.authType]),
+    );
+    const models = registry.getAll();
+    const keys = new Set<string>();
+    await Promise.all(
+      models.map(async (model) => {
+        const provider = typeof model.provider === 'string' ? model.provider : '';
+        const id = typeof model.id === 'string' ? model.id : '';
+        if (!provider || !id) return;
+        const authType = providerAuthTypes.get(provider);
+        if (PROVIDERS_REQUIRING_CREDENTIAL.has(provider) && !authType) return;
+        if (PROVIDERS_REQUIRING_API_KEY_AUTH_TYPE.has(provider) && authType !== 'api_key') return;
+        const result = await registry.getApiKeyAndHeaders(model);
+        if (!result.ok) return;
+        if (PROVIDERS_REQUIRING_CREDENTIAL.has(provider) && !hasResolvedCredential(result)) return;
+        keys.add(`${provider}\0${id}`);
+      }),
+    );
+    return keys;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Models capability for extensions.
  */
@@ -53,6 +124,7 @@ export function createExtensionModelsCapability(serverContext?: ExtensionBackend
         if (!settingsFile) return [];
 
         const state = await readModelState(settingsFile);
+        const authConfiguredKeys = await modelAuthConfiguredKeys(serverContext);
         return (state.models ?? []).map(
           (m: {
             id?: string;
@@ -68,6 +140,7 @@ export function createExtensionModelsCapability(serverContext?: ExtensionBackend
             contextWindow: m.contextWindow ?? 0,
             reasoning: m.reasoning ?? false,
             input: m.input ?? ['text'],
+            authConfigured: authConfiguredKeys ? authConfiguredKeys.has(`${m.provider ?? ''}\0${m.id ?? ''}`) : true,
           }),
         );
       } catch {

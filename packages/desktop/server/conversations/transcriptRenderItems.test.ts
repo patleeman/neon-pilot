@@ -68,6 +68,584 @@ describe('transcript render items', () => {
     ]);
   });
 
+  it('replaces source assistant messages with active Model Arena duels in precomputed render items', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ customType: 'model_arena_duel', id: 'model_arena_duel:duel-1' })],
+      }),
+    ]);
+  });
+
+  it('keeps source assistant messages while active Model Arena duels are missing an answer', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Tell me a funny story' },
+      { type: 'text', id: 'assistant-1-x5', ts, text: 'Primary story answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1-x5',
+          status: 'running',
+          sideA: { role: 'primary', text: 'Primary story answer' },
+          sideB: { role: 'challenger', text: '' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1-x5', text: 'Primary story answer' }),
+        arenaVariationSet: undefined,
+      }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ customType: 'model_arena_duel', id: 'model_arena_duel:duel-1' })],
+      }),
+    ]);
+  });
+
+  it('replaces nearest matching assistant messages for legacy active Model Arena duels', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-legacy',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          status: 'ready',
+          sideA: { text: 'Original answer' },
+          sideB: { text: 'Waiting for answer...' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ id: 'model_arena_duel:duel-legacy' })],
+      }),
+    ]);
+  });
+
+  it('keeps active Model Arena duels out of the preceding precomputed trace cluster', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'thinking', id: 't1', ts, text: 'Checking queue docs' },
+      { type: 'tool_use', id: 'tool-1', ts, tool: 'read', input: { path: 'queue.md' }, output: '...', status: 'ok' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({ type: 'trace_cluster', startIndex: 1, endIndex: 2 }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        startIndex: 4,
+        endIndex: 4,
+        blocks: [expect.objectContaining({ customType: 'model_arena_duel' })],
+      }),
+    ]);
+  });
+
+  it('precomputes only the newest active Model Arena duel for the same assistant response', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:old',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Older challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:new',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Newer challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ id: 'model_arena_duel:new' })],
+      }),
+    ]);
+  });
+
+  it('precomputes cancelled Model Arena duels as the source assistant message only', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1', text: 'Original answer' }),
+      }),
+    ]);
+  });
+
+  it('precomputes Model Arena source ids across split display block aliases', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1-x20',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('precomputes later voted Model Arena duels over older active duplicates', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:old',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Older challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Voted challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Voted challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('precomputes later cancelled Model Arena duels over older active duplicates', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:old',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Older challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:cancelled',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Cancelled challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1', text: 'Original answer' }),
+      }),
+    ]);
+  });
+
+  it('keeps precomputed voted Model Arena variations when a later duplicate duel is cancelled', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Voted challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:cancelled',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Cancelled challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          duelBlockId: 'model_arena_duel:voted',
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Voted challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('precomputes newer active Model Arena duels after older voted duplicates', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Old challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:new',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'New challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ id: 'model_arena_duel:new' })],
+      }),
+    ]);
+  });
+
+  it('keeps precomputed voted Model Arena variations when a newer duplicate duel is still missing an answer', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'a',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Voted challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:running',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'running',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: '' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          duelBlockId: 'model_arena_duel:voted',
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Voted challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('precomputes newer active Model Arena duels after older cancelled duplicates', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:cancelled',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Cancelled challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:new',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'New challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ id: 'model_arena_duel:new' })],
+      }),
+    ]);
+  });
+
+  it('precomputes legacy automatic voted Model Arena duels that appear before the assistant answer', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:auto',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Automatic challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          variations: [
+            expect.objectContaining({ text: 'Original answer' }),
+            expect.objectContaining({ text: 'Automatic challenger answer' }),
+          ],
+        }),
+      }),
+    ]);
+  });
+
+  it('collapses voted Model Arena duels into precomputed assistant variations', () => {
+    const blocks: DisplayBlock[] = [
+      { type: 'user', id: 'u1', ts, text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts, text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts,
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+    ];
+
+    expect(buildTranscriptRenderItemsFromDisplayBlocks(blocks)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          sourceBlockId: 'assistant-1',
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
   it('keeps terminal bash blocks as visible messages instead of trace clusters', () => {
     const blocks: DisplayBlock[] = [
       {

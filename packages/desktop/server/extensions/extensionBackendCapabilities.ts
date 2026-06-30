@@ -252,6 +252,7 @@ interface ExtensionBackendCapabilityConversations {
       serviceTier?: string | null;
       purpose?: string;
       metadata?: Record<string, unknown>;
+      autoImport?: boolean;
     },
   ): Promise<unknown> | unknown;
   manageParallelJob?(
@@ -308,7 +309,7 @@ function isHostCommandAction(action: string): boolean {
 }
 
 interface ExtensionBackendCapabilityModels {
-  list(): Promise<unknown> | unknown;
+  list(context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
   saveProvider?(input: unknown, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
   saveProviderModel?(input: unknown, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
   deleteProvider?(provider: string, context?: ExtensionBackendModelWriteContext): Promise<unknown> | unknown;
@@ -321,6 +322,8 @@ interface ExtensionBackendCapabilityModels {
 interface ExtensionBackendModelWriteContext {
   runtimeScope?: string;
   repoRoot?: string;
+  runtimeDir?: string;
+  runtimeSettingsFilePath?: string;
   authFile?: string;
   stateRoot?: string;
 }
@@ -1288,9 +1291,26 @@ function dispatchConversationsCapability(
     }
     return conversations.fork(request.extensionId, {
       conversationId: requireString(input.conversationId, 'Conversation id'),
+      ...(input.atBlockId !== undefined ? { atBlockId: optionalString(input.atBlockId, 'Conversation fork block id') } : {}),
+      ...(input.beforeEntry !== undefined ? { beforeEntry: optionalBoolean(input.beforeEntry, 'Conversation fork beforeEntry') } : {}),
       ...(input.targetCwd !== undefined ? { targetCwd: optionalString(input.targetCwd, 'Conversation fork target cwd') } : {}),
       ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Conversation fork cwd') } : {}),
       ...(input.title !== undefined ? { title: optionalString(input.title, 'Conversation fork title') } : {}),
+      ...(input.model === null
+        ? { model: null }
+        : input.model !== undefined
+          ? { model: optionalString(input.model, 'Conversation fork model') }
+          : {}),
+      ...(input.thinkingLevel === null
+        ? { thinkingLevel: null }
+        : input.thinkingLevel !== undefined
+          ? { thinkingLevel: optionalString(input.thinkingLevel, 'Conversation fork thinking level') }
+          : {}),
+      ...(input.serviceTier === null
+        ? { serviceTier: null }
+        : input.serviceTier !== undefined
+          ? { serviceTier: optionalString(input.serviceTier, 'Conversation fork service tier') }
+          : {}),
     });
   }
 
@@ -1417,7 +1437,7 @@ function dispatchExtensionsCapability(
 
 function dispatchModelsCapability(models: ExtensionBackendCapabilityModels, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   if (request.operation === 'list') {
-    return models.list();
+    return models.list(request.context);
   }
 
   const input = normalizeRecordInput(request.input, 'Models');
@@ -1527,10 +1547,17 @@ function normalizeModelWriteContext(input: Record<string, unknown>): ExtensionBa
 function createModelsCapabilityForWriteContext(
   context?: ExtensionBackendModelWriteContext,
 ): ReturnType<typeof createExtensionModelsCapability> {
+  const runtimeDir = context?.runtimeDir?.trim();
+  const authFile = context?.authFile?.trim() || (runtimeDir ? join(runtimeDir, 'auth.json') : undefined);
+  const settingsFile = context?.runtimeSettingsFilePath?.trim();
   return createExtensionModelsCapability(
-    createExtensionBackendServerContextFromSnapshot(
-      context?.runtimeScope ? { runtimeScope: context.runtimeScope, ...context } : undefined,
-    ) as never,
+    createExtensionBackendServerContextFromSnapshot({
+      runtimeScope: context?.runtimeScope ?? 'shared',
+      ...(context?.repoRoot ? { repoRoot: context.repoRoot } : {}),
+      ...(settingsFile ? { settingsFile } : {}),
+      ...(authFile ? { authFile } : {}),
+      ...(context?.stateRoot ? { stateRoot: context.stateRoot } : {}),
+    }) as never,
   );
 }
 
@@ -2611,7 +2638,7 @@ export function createExtensionBackendCapabilityDispatcher(
     } satisfies ExtensionBackendCapabilityVideo);
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const models = options.models ?? {
-    list: () => createExtensionModelsCapability().list(),
+    list: (context?: ExtensionBackendModelWriteContext) => createModelsCapabilityForWriteContext(context).list(),
     saveProvider: (input: unknown, context?: ExtensionBackendModelWriteContext) =>
       createModelsCapabilityForWriteContext(context).saveProvider(input as never),
     saveProviderModel: (input: unknown, context?: ExtensionBackendModelWriteContext) =>

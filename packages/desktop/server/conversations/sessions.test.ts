@@ -1667,6 +1667,69 @@ describe('sessions', () => {
     expect(block).toMatchObject({ details: { status: 'voted', extensionBlockId: 'duel-1' } });
   });
 
+  it('parents stored visible custom messages to the visible branch when hidden metadata is the latest entry', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const dir = join(sessionsDir, '--tmp-project--');
+    mkdirSync(dir, { recursive: true });
+    const sessionFile = join(dir, '2026-03-11T12-00-00-000Z_session-custom-visible-parent.jsonl');
+    writeFileSync(
+      sessionFile,
+      [
+        JSON.stringify({
+          type: 'session',
+          id: 'session-custom-visible-parent',
+          timestamp: '2026-03-11T12:00:00.000Z',
+          cwd: '/tmp/project',
+        }),
+        JSON.stringify({
+          type: 'message',
+          id: 'user-1',
+          parentId: null,
+          timestamp: '2026-03-11T12:00:00.000Z',
+          message: { role: 'user', content: [{ type: 'text', text: 'Prompt' }] },
+        }),
+        JSON.stringify({
+          type: 'message',
+          id: 'assistant-1',
+          parentId: 'user-1',
+          timestamp: '2026-03-11T12:00:01.000Z',
+          message: { role: 'assistant', content: [{ type: 'text', text: 'Answer' }] },
+        }),
+        JSON.stringify({
+          type: 'custom_message',
+          id: 'hidden-1',
+          parentId: 'assistant-1',
+          timestamp: '2026-03-11T12:00:02.000Z',
+          customType: 'child_conversation_topology',
+          content: 'Hidden fork metadata',
+        }),
+      ].join('\n') + '\n',
+    );
+
+    appendStoredVisibleCustomMessage({
+      sessionFile,
+      customType: 'model_arena_duel',
+      content: 'Model Arena duel',
+      details: { status: 'ready' },
+      blockId: 'duel-1',
+      display: true,
+    });
+
+    const appended = readFileSync(sessionFile, 'utf-8')
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
+      .find((line) => line.customType === 'model_arena_duel');
+    expect(appended).toMatchObject({
+      type: 'custom_message',
+      parentId: 'assistant-1',
+      details: { status: 'ready', extensionBlockId: 'duel-1' },
+    });
+    expect(readSessionBlocks('session-custom-visible-parent')?.blocks.map((block) => block.type)).toContain('context');
+  });
+
   it('renders persisted automation run custom messages as collapsed transcript context', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);

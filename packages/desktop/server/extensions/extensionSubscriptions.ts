@@ -26,6 +26,7 @@ const installedSubscriptions = new Map<string, InstalledSubscription>();
 const sourceEventName = (source: string) => (source.includes(':') ? source : `host:${source}`);
 
 export async function publishExtensionHostEvent(source: string, payload: unknown): Promise<void> {
+  await installExtensionSubscriptions();
   await publishExtensionEvent('host', sourceEventName(source), payload);
   if (!source.includes(':') && payload && typeof payload === 'object') {
     const type = (payload as { type?: unknown }).type;

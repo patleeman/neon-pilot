@@ -177,6 +177,7 @@ export function ChatRenderItemView({
         return (
           <AssistantMessage
             block={block}
+            variationSet={item.arenaVariationSet}
             conversationId={conversationId ?? undefined}
             messageIndex={absoluteIndex}
             showCursor={showStreamingCursor}

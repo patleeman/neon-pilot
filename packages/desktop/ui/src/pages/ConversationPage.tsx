@@ -1604,7 +1604,11 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
             return [];
           }
 
-          if (visibleSessionDetail.renderItems?.length) {
+          const hasModelArenaBlocks = visibleSessionDetail.blocks.some(
+            (block) => block.type === 'context' && block.customType === 'model_arena_duel',
+          );
+
+          if (visibleSessionDetail.renderItems?.length && !hasModelArenaBlocks) {
             return transcriptRenderItemsToMessageBlocks(
               visibleSessionDetail.renderItems,
               hydratedHistoricalBlocks,

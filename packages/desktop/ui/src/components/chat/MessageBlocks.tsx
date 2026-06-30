@@ -2,12 +2,13 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 
 
 import { setExtensionCommandContext } from '../../extensions/commands.js';
 import { NativeExtensionTranscriptBlockHost } from '../../extensions/NativeExtensionToolBlockHost.js';
+import { createNativeExtensionClient } from '../../extensions/nativePaClient.js';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry.js';
 import { parseSkillBlock } from '../../markdown/markdownExtensions';
-import type { LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
+import type { AssistantMessageVariationSet, LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx, Disclosure, MessageActionButton, MessageCard, MessageMeta, StatusDot, Textarea, TextButton } from '../ui.js';
+import { cx, Disclosure, MessageActionButton, MessageCard, MessageMeta, StatusDot, Textarea, TextButton, Tooltip } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -59,6 +60,79 @@ function formatSystemEventLabel(customType?: string): string {
       return normalized.charAt(0).toUpperCase() + normalized.slice(1);
     }
   }
+}
+
+function modelArenaTranscriptBlockKey(block: Extract<MessageBlock, { type: 'context' }>, fallback: number): string {
+  const details =
+    block.details && typeof block.details === 'object' && !Array.isArray(block.details) ? (block.details as Record<string, unknown>) : {};
+  const duelId = typeof details.duelId === 'string' ? details.duelId.trim() : '';
+  const sourceBlockId = typeof details.sourceBlockId === 'string' ? details.sourceBlockId.trim() : '';
+  const stableId = duelId || sourceBlockId || block.id || String(fallback);
+  return `model-arena:${stableId}`;
+}
+
+type ModelArenaDuelBlockData = {
+  duelId: string;
+  status: 'running' | 'ready' | 'failed' | 'voted' | 'cancelled';
+  taskType?: string;
+  sideA?: { text?: string };
+  sideB?: { text?: string };
+  revealed?: boolean;
+  vote?: 'a' | 'b' | 'tie' | 'neither' | null;
+  error?: string | null;
+  models?: { primary?: string; challenger?: string; a?: string; b?: string } | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readModelArenaDuelBlockData(details: unknown): ModelArenaDuelBlockData | null {
+  if (!isRecord(details) || typeof details.duelId !== 'string') return null;
+  const status = typeof details.status === 'string' ? details.status : 'running';
+  if (!['running', 'ready', 'failed', 'voted', 'cancelled'].includes(status)) return null;
+  return details as ModelArenaDuelBlockData;
+}
+
+function modelArenaSideText(side?: { text?: string } | null): string {
+  return side?.text?.trim() ?? '';
+}
+
+function modelArenaHasBothAnswers(duel: Pick<ModelArenaDuelBlockData, 'sideA' | 'sideB'>): boolean {
+  return Boolean(modelArenaSideText(duel.sideA) && modelArenaSideText(duel.sideB));
+}
+
+function mergeModelArenaSide(
+  current: ModelArenaDuelBlockData['sideA'] | undefined,
+  incoming: ModelArenaDuelBlockData['sideA'] | undefined,
+): ModelArenaDuelBlockData['sideA'] {
+  const currentText = modelArenaSideText(current);
+  const incomingText = modelArenaSideText(incoming);
+  return {
+    ...current,
+    ...incoming,
+    text: incomingText ? incoming?.text : currentText ? current?.text : incoming?.text,
+  };
+}
+
+function mergeModelArenaDuelBlockData(
+  current: ModelArenaDuelBlockData | null,
+  incoming: ModelArenaDuelBlockData | null,
+): ModelArenaDuelBlockData | null {
+  if (!incoming) return current;
+  if (!current || current.duelId !== incoming.duelId) return incoming;
+  if ((current.status === 'cancelled' || current.status === 'voted') && incoming.status !== current.status) return current;
+  const merged: ModelArenaDuelBlockData = {
+    ...current,
+    ...incoming,
+    sideA: mergeModelArenaSide(current.sideA, incoming.sideA),
+    sideB: mergeModelArenaSide(current.sideB, incoming.sideB),
+    vote: incoming.vote ?? current.vote,
+    error: incoming.error ?? current.error,
+    models: incoming.models ?? current.models,
+  };
+  if (merged.status === 'running' && modelArenaHasBothAnswers(merged)) merged.status = 'ready';
+  return merged;
 }
 
 function optionalTrimmedString(value: unknown): string | undefined {
@@ -349,6 +423,161 @@ function LazyDetails({
   );
 }
 
+function ModelArenaDuelContextBlock({ block }: { block: Extract<MessageBlock, { type: 'context' }> }) {
+  const data = readModelArenaDuelBlockData(block.details);
+  const [local, setLocal] = useState<ModelArenaDuelBlockData | null>(data);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const client = useMemo(() => createNativeExtensionClient('system-model-arena'), []);
+
+  useEffect(() => {
+    setLocal((current) => mergeModelArenaDuelBlockData(current, data));
+  }, [data]);
+
+  useEffect(() => {
+    if (!local || local.status !== 'running' || modelArenaHasBothAnswers(local)) return undefined;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const result = (await client.extension.invoke('refreshDuel', { duelId: local.duelId })) as { duel?: ModelArenaDuelBlockData };
+        if (!cancelled && result.duel) {
+          setLocal((current) => mergeModelArenaDuelBlockData(current, result.duel ?? null));
+          setError('');
+        }
+      } catch (refreshError) {
+        if (!cancelled) setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [client.extension, local?.duelId, local?.status]);
+
+  if (!local || local.status === 'voted' || local.status === 'cancelled') return null;
+
+  const complete = modelArenaHasBothAnswers(local);
+  const ready = complete && (local.status === 'ready' || local.status === 'running');
+  const failed = local.status === 'failed' || Boolean(error);
+  const visibleError = local.error || error;
+  const missingAnswerText = failed ? visibleError || 'Run ended without an answer.' : 'No answer captured.';
+  const sideA = modelArenaSideText(local.sideA) || (ready || failed ? missingAnswerText : 'Waiting for answer...');
+  const sideB = modelArenaSideText(local.sideB) || (ready || failed ? missingAnswerText : 'Waiting for answer...');
+
+  const vote = async (choice: 'a' | 'b' | 'tie' | 'neither') => {
+    if (busy || !ready) return;
+    setBusy(choice);
+    try {
+      const result = (await client.extension.invoke('voteDuel', { duelId: local.duelId, choice })) as { duel?: ModelArenaDuelBlockData };
+      if (!result.duel || result.duel.status !== 'voted') {
+        throw new Error('Vote was not recorded. The duel is still open.');
+      }
+      setLocal(result.duel);
+      setError('');
+    } catch (voteError) {
+      setError(voteError instanceof Error ? voteError.message : String(voteError));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const close = async () => {
+    if (busy) return;
+    setBusy('close');
+    try {
+      const result = (await client.extension.invoke('cancelDuel', { duelId: local.duelId })) as { duel?: ModelArenaDuelBlockData };
+      if (!result.duel || result.duel.status !== 'cancelled') {
+        throw new Error('Duel was not closed.');
+      }
+      setLocal(result.duel);
+      setError('');
+    } catch (closeError) {
+      setError(closeError instanceof Error ? closeError.message : String(closeError));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <section className="w-full min-w-full py-2 text-[12px]" data-model-arena-duel={local.duelId}>
+      <div className="mb-4 text-center">
+        <div className="font-medium text-primary">Model Arena duel</div>
+        <div className="mt-1 min-h-4 text-[11px] text-dim">{busy === 'close' ? 'Closing...' : busy ? 'Saving...' : null}</div>
+      </div>
+      <div className="grid w-full min-w-0 grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-0">
+        <ModelArenaDuelAnswer
+          label="A"
+          text={sideA}
+          waiting={!modelArenaSideText(local.sideA) && !ready && !failed}
+          failed={!modelArenaSideText(local.sideA) && failed}
+          disabled={!ready || Boolean(busy)}
+          onPrefer={() => void vote('a')}
+        />
+        <ModelArenaDuelAnswer
+          label="B"
+          text={sideB}
+          waiting={!modelArenaSideText(local.sideB) && !ready && !failed}
+          failed={!modelArenaSideText(local.sideB) && failed}
+          disabled={!ready || Boolean(busy)}
+          onPrefer={() => void vote('b')}
+        />
+      </div>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <MessageActionButton className="min-h-8 min-w-16 px-3 py-1.5" disabled={!ready || Boolean(busy)} onClick={() => void vote('tie')}>
+          Tie
+        </MessageActionButton>
+        <MessageActionButton
+          className="min-h-8 min-w-16 px-3 py-1.5"
+          disabled={!ready || Boolean(busy)}
+          onClick={() => void vote('neither')}
+        >
+          Neither
+        </MessageActionButton>
+        <MessageActionButton className="min-h-8 min-w-16 px-3 py-1.5" disabled={Boolean(busy)} onClick={() => void close()}>
+          Close
+        </MessageActionButton>
+      </div>
+      {visibleError ? <div className="mt-2 text-center text-danger">{visibleError}</div> : null}
+    </section>
+  );
+}
+
+function ModelArenaDuelAnswer({
+  label,
+  text,
+  waiting,
+  failed,
+  disabled,
+  onPrefer,
+}: {
+  label: string;
+  text: string;
+  waiting: boolean;
+  failed: boolean;
+  disabled: boolean;
+  onPrefer: () => void;
+}) {
+  return (
+    <article className="flex min-w-0 flex-col md:border-r md:border-border-subtle md:pr-6 md:last:border-r-0 md:last:pl-6 md:last:pr-0">
+      <div className="mb-2 text-[11px] font-medium uppercase text-dim">{label}</div>
+      <div className="min-h-[10rem] min-w-0 flex-1 overflow-auto text-left text-[13px] leading-relaxed text-primary">
+        {waiting ? (
+          <div className="text-dim">Waiting for answer...</div>
+        ) : failed ? (
+          <div className="whitespace-pre-wrap break-words text-danger">{text}</div>
+        ) : (
+          renderMarkdownText(text)
+        )}
+      </div>
+      <MessageActionButton className="mt-3 min-h-9 w-full justify-center px-3 py-2" disabled={disabled} onClick={onPrefer}>
+        Prefer {label}
+      </MessageActionButton>
+    </article>
+  );
+}
+
 export const ContextShelf = memo(function ContextShelf({
   blocks,
   messageIndexOffset,
@@ -380,6 +609,14 @@ export const ContextShelf = memo(function ContextShelf({
   const hasSystemPrompt = normalizedSystemPrompt.length > 0 || toolDefinitionsText.length > 0;
   const systemPromptTokenCount = estimateTextTokens([normalizedSystemPrompt, toolDefinitionsText].filter(Boolean).join('\n\n'));
   const extensionRegistry = useExtensionRegistry();
+  const isWideArenaShelf =
+    !hasSystemPrompt &&
+    !remoteControlled &&
+    blocks.length > 0 &&
+    blocks.every((block) => block.type === 'context' && block.customType === 'model_arena_duel');
+  const shelfClassName = isWideArenaShelf
+    ? 'my-5 relative left-1/2 w-[min(96rem,calc(100vw_-_28rem))] min-w-full max-w-[calc(100vw_-_2rem)] -translate-x-1/2 space-y-1.5 text-dim'
+    : 'my-5 w-full max-w-[72rem] space-y-1.5 text-dim';
 
   if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isQuietLifecycleContext)) {
     const marker = blocks.every(isAutoResumeLifecycleContext) ? 'auto-resume' : 'workspace-change';
@@ -392,7 +629,7 @@ export const ContextShelf = memo(function ContextShelf({
     return parseTopologyBlockText(block.text).conversationId !== currentConversationId;
   };
   return (
-    <div className="my-5 w-full max-w-[72rem] space-y-1.5 text-dim" data-context-shelf="1">
+    <div className={shelfClassName} data-context-shelf="1" data-context-shelf-layout={isWideArenaShelf ? 'wide' : undefined}>
       {hasSystemPrompt ? (
         <LazyDetails
           className={contextShelfItemClassName}
@@ -478,6 +715,14 @@ export const ContextShelf = memo(function ContextShelf({
           );
         }
 
+        if (block.type === 'context' && block.customType === 'model_arena_duel') {
+          return (
+            <div key={modelArenaTranscriptBlockKey(block, index)} className="my-4 w-full">
+              <ModelArenaDuelContextBlock block={block} />
+            </div>
+          );
+        }
+
         if (block.type === 'context' && block.customType) {
           const renderer = (extensionRegistry.transcriptBlocks ?? []).find((candidate) => candidate.id === block.customType);
           const extension = renderer
@@ -485,7 +730,10 @@ export const ContextShelf = memo(function ContextShelf({
             : null;
           if (renderer && extension) {
             return (
-              <div key={block.id ?? index} className="my-4 w-full">
+              <div
+                key={block.customType === 'model_arena_duel' ? modelArenaTranscriptBlockKey(block, index) : (block.id ?? index)}
+                className="my-4 w-full"
+              >
                 <NativeExtensionTranscriptBlockHost
                   extension={extension}
                   renderer={renderer}
@@ -765,6 +1013,7 @@ export const UserMessage = memo(function UserMessage({
 
 export const AssistantMessage = memo(function AssistantMessage({
   block,
+  variationSet,
   conversationId,
   messageIndex,
   onForkMessage,
@@ -779,6 +1028,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   showCursor = false,
 }: {
   block: Extract<MessageBlock, { type: 'text' }>;
+  variationSet?: AssistantMessageVariationSet;
   conversationId?: string;
   messageIndex?: number;
   onForkMessage?: (messageIndex: number) => Promise<void> | void;
@@ -795,6 +1045,16 @@ export const AssistantMessage = memo(function AssistantMessage({
   const shouldShowCursor = showCursor || !!block.streaming;
   const blockId = optionalTrimmedString(block.id);
   const replySelectionScopeProps = buildReplySelectionScopeProps(messageIndex, blockId, onSelectionGesture);
+  const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
+  const variations = variationSet?.variations ?? [];
+  const selectedVariation = variations[selectedVariationIndex] ?? variations[0];
+  const displayText = selectedVariation?.text ?? block.text;
+  const hasVariations = variations.length > 1;
+
+  useEffect(() => {
+    setSelectedVariationIndex(0);
+  }, [variationSet?.duelBlockId]);
+
   const handleRewind = useCallback(() => {
     if (typeof messageIndex !== 'number') {
       return;
@@ -809,7 +1069,7 @@ export const AssistantMessage = memo(function AssistantMessage({
 
     return onForkMessage?.(messageIndex);
   }, [messageIndex, onForkMessage]);
-  const rawRunCallbackRuns = useMemo(() => readRawRunCallbackLinkedRuns(block.text), [block.text]);
+  const rawRunCallbackRuns = useMemo(() => readRawRunCallbackLinkedRuns(displayText), [displayText]);
   const showRawRunCallbackCard = rawRunCallbackRuns.length > 0;
   const renderStreamingPlainText = shouldShowCursor && !showRawRunCallbackCard;
 
@@ -831,9 +1091,9 @@ export const AssistantMessage = memo(function AssistantMessage({
               onToggleInlineRun={onToggleInlineRun}
             />
           ) : renderStreamingPlainText ? (
-            renderStreamingMarkdownText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })
+            renderStreamingMarkdownText(displayText, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })
           ) : (
-            renderText(block.text, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })
+            renderText(displayText, { onOpenFilePath, onOpenCheckpoint, validatedFilePathTargets })
           )}
           {shouldShowCursor && (
             <span
@@ -844,12 +1104,21 @@ export const AssistantMessage = memo(function AssistantMessage({
         </MessageCard>
         <div className="flex flex-wrap items-center gap-2 pt-0.5">
           <MessageMeta>{timeAgo(block.ts)}</MessageMeta>
+          {hasVariations ? (
+            <AssistantVariationPager
+              current={selectedVariationIndex}
+              total={variations.length}
+              label={selectedVariation?.label}
+              onPrevious={() => setSelectedVariationIndex((current) => (current - 1 + variations.length) % variations.length)}
+              onNext={() => setSelectedVariationIndex((current) => (current + 1) % variations.length)}
+            />
+          ) : null}
           <span className="flex-1" />
           <MessageActions
-            blockText={block.text}
+            blockText={displayText}
             blockId={blockId}
             conversationId={conversationId}
-            copyText={block.text}
+            copyText={displayText}
             onRewind={onRewindMessage && typeof messageIndex === 'number' ? handleRewind : undefined}
             onFork={onForkMessage && typeof messageIndex === 'number' ? handleFork : undefined}
           />
@@ -858,6 +1127,55 @@ export const AssistantMessage = memo(function AssistantMessage({
     </div>
   );
 });
+
+function AssistantVariationPager({
+  current,
+  total,
+  label,
+  onPrevious,
+  onNext,
+}: {
+  current: number;
+  total: number;
+  label?: string;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const displayIndex = current + 1;
+  const modelLabel = label ? ` · ${label}` : '';
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-[6px] border border-border-subtle/70 bg-surface/40 px-1.5 py-0.5 text-[11px] text-secondary"
+      data-model-arena-variation-pager="1"
+    >
+      <span className="ui-tooltip-host relative inline-flex">
+        <MessageActionButton
+          type="button"
+          className="ui-message-action-button-icon min-h-6 min-w-6 text-[14px] opacity-90"
+          aria-label="Previous model response"
+          onClick={onPrevious}
+        >
+          ←
+        </MessageActionButton>
+        <Tooltip position="top-right">Previous model response</Tooltip>
+      </span>
+      <span className="whitespace-nowrap tabular-nums" aria-label={`Model response ${displayIndex} of ${total}${modelLabel}`}>
+        Version {displayIndex} of {total}
+      </span>
+      <span className="ui-tooltip-host relative inline-flex">
+        <MessageActionButton
+          type="button"
+          className="ui-message-action-button-icon min-h-6 min-w-6 text-[14px] opacity-90"
+          aria-label="Next model response"
+          onClick={onNext}
+        >
+          →
+        </MessageActionButton>
+        <Tooltip position="top-right">Next model response</Tooltip>
+      </span>
+    </span>
+  );
+}
 
 function readRawRunCallbackLinkedRuns(text: string) {
   if (!looksLikeRawRunCallback(text)) {

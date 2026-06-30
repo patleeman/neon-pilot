@@ -1651,6 +1651,36 @@ function readCurrentSessionLeafId(filePath: string): string | null {
   return readCurrentSessionLeafIdFromFile(filePath, parseJsonLine);
 }
 
+const HIDDEN_CUSTOM_BRANCH_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
+
+function isHiddenCustomBranchEntry(entry: SessionEntry | Record<string, unknown> | undefined): boolean {
+  if (!entry || entry.type !== 'custom_message') return false;
+  const customType = typeof entry.customType === 'string' ? entry.customType : '';
+  return entry.display !== true || HIDDEN_CUSTOM_BRANCH_TYPES.has(customType);
+}
+
+function readCurrentVisibleSessionLeafId(filePath: string): string | null {
+  try {
+    const entries = new Map<string, Record<string, unknown>>();
+    for (const rawLine of readFileSync(filePath, 'utf-8').split(/\r?\n/)) {
+      if (!rawLine.trim()) continue;
+      const parsed = parseJsonLine(rawLine);
+      if (!parsed || parsed.type === 'session') continue;
+      const id = typeof parsed.id === 'string' && parsed.id.trim() ? parsed.id.trim() : '';
+      if (id) entries.set(id, parsed as unknown as Record<string, unknown>);
+    }
+    let leafId = readCurrentSessionLeafId(filePath);
+    while (leafId) {
+      const entry = entries.get(leafId);
+      if (!isHiddenCustomBranchEntry(entry)) return leafId;
+      leafId = typeof entry?.parentId === 'string' && entry.parentId.trim() ? entry.parentId.trim() : null;
+    }
+    return null;
+  } catch {
+    return readCurrentSessionLeafId(filePath);
+  }
+}
+
 function readSessionEntryPreview(filePath: string, entryId: string): string | null {
   try {
     const entry = SessionManager.open(filePath).getEntry(entryId);
@@ -1837,7 +1867,7 @@ export function appendStoredVisibleCustomMessage(input: {
     serializeSessionJsonLine(
       buildCustomMessageSessionEntry({
         id: randomUUID(),
-        parentId: readCurrentSessionLeafId(input.sessionFile),
+        parentId: readCurrentVisibleSessionLeafId(input.sessionFile),
         timestamp: new Date().toISOString(),
         customType,
         content,

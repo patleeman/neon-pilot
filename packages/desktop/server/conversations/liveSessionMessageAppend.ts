@@ -10,9 +10,44 @@ export interface LiveSessionMessageAppendHost {
 }
 
 const RELATED_CONVERSATION_POINTERS_CUSTOM_TYPE = 'related_conversation_pointers';
+const HIDDEN_CUSTOM_BRANCH_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function isHiddenCustomBranchEntry(entry: unknown): boolean {
+  if (!isRecord(entry) || entry.type !== 'custom_message') return false;
+  const customType = typeof entry.customType === 'string' ? entry.customType : '';
+  return entry.display !== true || HIDDEN_CUSTOM_BRANCH_TYPES.has(customType);
+}
+
+function moveLeafToVisibleCustomParent(entry: LiveSessionMessageAppendHost): void {
+  const manager = entry.session.sessionManager as {
+    getLeafEntry?: () => unknown;
+    getEntry?: (id: string) => unknown;
+    branch?: (id: string) => void;
+    resetLeaf?: () => void;
+  };
+  if (typeof manager.getLeafEntry !== 'function') return;
+
+  let leafEntry = manager.getLeafEntry();
+  if (!isHiddenCustomBranchEntry(leafEntry)) return;
+
+  while (isHiddenCustomBranchEntry(leafEntry)) {
+    if (!isRecord(leafEntry)) return;
+    const parentId = typeof leafEntry.parentId === 'string' && leafEntry.parentId.trim() ? leafEntry.parentId.trim() : null;
+    if (!parentId) {
+      manager.resetLeaf?.();
+      return;
+    }
+    const parentEntry = typeof manager.getEntry === 'function' ? manager.getEntry(parentId) : null;
+    if (!isHiddenCustomBranchEntry(parentEntry)) {
+      manager.branch?.(parentId);
+      return;
+    }
+    leafEntry = parentEntry;
+  }
 }
 
 function hasQueuedPromptContext(entry: LiveSessionMessageAppendHost, customType: string): boolean {
@@ -249,6 +284,7 @@ export async function appendVisibleLiveSessionCustomMessage<TEntry extends LiveS
     display: true,
     details: { ...(isRecord(details) ? details : { value: details }), extensionBlockId: blockId },
   };
+  moveLeafToVisibleCustomParent(entry);
   await entry.session.sendCustomMessage(customMessage);
   callbacks.broadcastSnapshot(entry);
   callbacks.publishSessionMetaChanged(entry.sessionId);

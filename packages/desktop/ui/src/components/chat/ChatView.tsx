@@ -140,7 +140,18 @@ function readMessageBlockStableId(block: MessageBlock): string | null {
   return typeof id === 'string' && id.trim().length > 0 ? id.trim() : null;
 }
 
+function readModelArenaBlockStableId(block: MessageBlock): string | null {
+  if (block.type !== 'context' || block.customType !== 'model_arena_duel') return null;
+  const details =
+    block.details && typeof block.details === 'object' && !Array.isArray(block.details) ? (block.details as Record<string, unknown>) : {};
+  const duelId = typeof details.duelId === 'string' ? details.duelId.trim() : '';
+  const sourceBlockId = typeof details.sourceBlockId === 'string' ? details.sourceBlockId.trim() : '';
+  return duelId || sourceBlockId || null;
+}
+
 function buildMessageRenderKey(block: MessageBlock, absoluteIndex: number): string {
+  const modelArenaId = readModelArenaBlockStableId(block);
+  if (modelArenaId) return `message:model-arena:${modelArenaId}`;
   const stableId = readMessageBlockStableId(block);
   return stableId ? `message:${block.type}:${stableId}` : `message-index:${absoluteIndex}`;
 }
@@ -150,6 +161,8 @@ function buildClusterRenderKey(
   messageIndexOffset: number,
 ): string {
   const firstBlock = item.blocks[0];
+  const modelArenaId = firstBlock ? readModelArenaBlockStableId(firstBlock) : null;
+  if (modelArenaId) return `${item.type}:model-arena:${modelArenaId}`;
   const firstBlockStableId = firstBlock ? readMessageBlockStableId(firstBlock) : null;
   return firstBlockStableId
     ? `${item.type}:${firstBlock.type}:${firstBlockStableId}`

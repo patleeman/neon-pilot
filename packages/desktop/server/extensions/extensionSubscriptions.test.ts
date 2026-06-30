@@ -72,6 +72,7 @@ describe('extensionSubscriptions', () => {
       mock.mockReset();
     }
     createBackendContext.mockReturnValue({ ctx: true });
+    listExtensionInstallSummaries.mockReturnValue([]);
     runExtensionBackendExport.mockImplementation(
       async (
         extensionId: string,
@@ -111,6 +112,28 @@ describe('extensionSubscriptions', () => {
     expect(publishExtensionEvent).toHaveBeenNthCalledWith(1, 'host', 'host:settings', { type: 'changed', ok: true });
     expect(publishExtensionEvent).toHaveBeenNthCalledWith(2, 'host', 'host:settings:changed', { type: 'changed', ok: true });
     expect(publishExtensionEvent).toHaveBeenNthCalledWith(3, 'host', 'custom:event', { type: 'ignored' });
+  });
+
+  it('bootstraps enabled extension subscriptions before publishing host events', async () => {
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        contributes: { subscriptions: [{ id: 'sub', source: 'conversationPrompt', pattern: 'submitted', handler: 'onPrompt' }] },
+      },
+    });
+
+    await publishExtensionHostEvent('conversationPrompt', { type: 'submitted', prompt: 'hello' });
+
+    expect(subscribeExtensionEvents).toHaveBeenCalledWith('ext', 'host:conversationPrompt:submitted', expect.any(Function));
+    expect(subscribeExtensionEvents.mock.invocationCallOrder[0]).toBeLessThan(publishExtensionEvent.mock.invocationCallOrder[0]);
+    expect(publishExtensionEvent).toHaveBeenNthCalledWith(1, 'host', 'host:conversationPrompt', {
+      type: 'submitted',
+      prompt: 'hello',
+    });
+    expect(publishExtensionEvent).toHaveBeenNthCalledWith(2, 'host', 'host:conversationPrompt:submitted', {
+      type: 'submitted',
+      prompt: 'hello',
+    });
   });
 
   it('installs subscriptions for enabled extensions and dispatches matching events to backend handlers', async () => {

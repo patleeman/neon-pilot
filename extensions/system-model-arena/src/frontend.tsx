@@ -1,6 +1,6 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import { AppPageIntro, AppPageLayout, Button, ErrorState, Select, StatusDot, Switch, TextInput } from '@neon-pilot/extensions/ui';
-import React, { type ReactNode, useEffect, useMemo, useState } from 'react';
+import React, { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 type ArenaSettings = {
   automaticDuels: boolean;
@@ -34,6 +34,12 @@ type ArenaModel = {
   name: string;
   provider: string;
   input?: string[];
+  authConfigured?: boolean;
+};
+
+type ProviderModelGroup = {
+  provider: string;
+  models: ArenaModel[];
 };
 
 type RankedModelRow = {
@@ -49,15 +55,71 @@ type RankedModelRow = {
 
 type DuelBlockData = {
   duelId: string;
-  status: 'running' | 'ready' | 'failed' | 'voted';
+  conversationId?: string;
+  sourceBlockId?: string | null;
+  status: 'running' | 'ready' | 'failed' | 'voted' | 'cancelled';
   taskType: string;
-  sideA: { text?: string };
-  sideB: { text?: string };
+  sideA: { role?: 'primary' | 'challenger'; text?: string };
+  sideB: { role?: 'primary' | 'challenger'; text?: string };
   revealed?: boolean;
   vote?: 'a' | 'b' | 'tie' | 'neither' | null;
   error?: string | null;
   models?: { primary: string; challenger: string; a: string; b: string } | null;
 };
+
+function sideText(side?: { text?: string } | null): string {
+  return side?.text?.trim() ?? '';
+}
+
+function hasBothAnswers(duel: Pick<DuelBlockData, 'sideA' | 'sideB'>): boolean {
+  return Boolean(sideText(duel.sideA) && sideText(duel.sideB));
+}
+
+function requestConversationRefresh(conversationId: string | undefined) {
+  const normalizedConversationId = conversationId?.trim();
+  if (!normalizedConversationId || typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('neon-pilot:desktop-conversation-state-refresh', {
+      detail: { conversationId: normalizedConversationId },
+    }),
+  );
+}
+
+function mergeDuelSide(current: DuelBlockData['sideA'] | undefined, incoming: DuelBlockData['sideA'] | undefined): DuelBlockData['sideA'] {
+  const currentText = sideText(current);
+  const incomingText = sideText(incoming);
+  return {
+    ...current,
+    ...incoming,
+    text: incomingText ? incoming?.text : currentText ? current?.text : incoming?.text,
+  };
+}
+
+function mergeDuelBlockData(current: DuelBlockData | null, incoming: DuelBlockData | null): DuelBlockData | null {
+  if (!incoming) return current;
+  if (!current || current.duelId !== incoming.duelId) return incoming;
+  if ((current.status === 'cancelled' || current.status === 'voted') && incoming.status !== current.status) return current;
+
+  const merged: DuelBlockData = {
+    ...current,
+    ...incoming,
+    sourceBlockId: incoming.sourceBlockId ?? current.sourceBlockId,
+    sideA: mergeDuelSide(current.sideA, incoming.sideA),
+    sideB: mergeDuelSide(current.sideB, incoming.sideB),
+    revealed: incoming.revealed || current.revealed,
+    vote: incoming.vote ?? current.vote,
+    error: incoming.error ?? current.error,
+    models: incoming.models ?? current.models,
+  };
+
+  if (merged.status === 'running' && hasBothAnswers(merged)) {
+    merged.status = 'ready';
+  }
+  if (current.status === 'failed' && incoming.status === 'running' && !hasBothAnswers(incoming)) {
+    merged.status = 'failed';
+  }
+  return merged;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -101,8 +163,31 @@ function modelRef(model: ArenaModel): string {
   return `${model.provider}/${model.id}`;
 }
 
+function providerLabel(provider: string): string {
+  return provider.trim() || 'Unknown provider';
+}
+
+function modelOptionLabel(model: ArenaModel): string {
+  return model.name || model.id;
+}
+
 function modelLabel(model: ArenaModel): string {
-  return `${model.name || model.id} · ${model.provider}`;
+  return `${modelOptionLabel(model)} · ${providerLabel(model.provider)}`;
+}
+
+function groupModelsByProvider(models: ArenaModel[]): ProviderModelGroup[] {
+  const groups = new Map<string, ArenaModel[]>();
+  for (const model of models) {
+    const provider = providerLabel(model.provider);
+    groups.set(provider, [...(groups.get(provider) ?? []), model]);
+  }
+
+  return [...groups.entries()]
+    .map(([provider, groupModels]) => ({
+      provider,
+      models: [...groupModels].sort((a, b) => modelOptionLabel(a).localeCompare(modelOptionLabel(b))),
+    }))
+    .sort((a, b) => a.provider.localeCompare(b.provider));
 }
 
 function firstAvailableModelRef(models: ArenaModel[], challengerModels: string[], current = ''): string {
@@ -147,6 +232,7 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
     () => (state?.models ?? []).filter((model) => !state?.settings.challengerModels.includes(modelRef(model))),
     [state?.models, state?.settings.challengerModels],
   );
+  const selectableModelGroups = useMemo(() => groupModelsByProvider(selectableModels), [selectableModels]);
   const selectedModels = useMemo(() => {
     const byRef = new Map((state?.models ?? []).map((model) => [modelRef(model), model]));
     return (state?.settings.challengerModels ?? []).map((ref) => ({ ref, model: byRef.get(ref) }));
@@ -256,11 +342,17 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
                       onChange={(event) => setSelectedModelRef(event.target.value)}
                       disabled={selectableModels.length === 0 || saving}
                     >
-                      {selectableModels.length === 0 ? <option value="">No more models available</option> : null}
-                      {selectableModels.map((model) => (
-                        <option key={modelRef(model)} value={modelRef(model)}>
-                          {modelLabel(model)}
-                        </option>
+                      {selectableModels.length === 0 ? (
+                        <option value="">{state.models.length === 0 ? 'No runnable models available' : 'No more models available'}</option>
+                      ) : null}
+                      {selectableModelGroups.map((group) => (
+                        <optgroup key={group.provider} label={group.provider}>
+                          {group.models.map((model) => (
+                            <option key={modelRef(model)} value={modelRef(model)}>
+                              {modelOptionLabel(model)}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </Select>
                     <Button variant="secondary" disabled={!selectedModelRef || saving} onClick={() => void addModel()}>
@@ -270,7 +362,9 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
                   <div className="divide-y divide-border-subtle rounded-md border border-border-subtle">
                     {selectedModels.length === 0 ? (
                       <div className="px-3 py-3 text-dim">
-                        No challenger models selected. Challengers run against the active conversation model.
+                        {state.models.length === 0
+                          ? 'No runnable challenger models available. Add a provider key in Settings, then refresh.'
+                          : 'No challenger models selected. Challengers run against the active conversation model.'}
                       </div>
                     ) : (
                       selectedModels.map(({ ref, model }) => (
@@ -426,12 +520,21 @@ export function ModelArenaDuelBlock({
   const data = isRecord(block.details) ? (block.details as DuelBlockData) : null;
   const [local, setLocal] = useState<DuelBlockData | null>(data);
   const [voting, setVoting] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => setLocal(data), [block.details]);
+  useEffect(() => {
+    setLocal((current) => {
+      return mergeDuelBlockData(current, data);
+    });
+  }, [data]);
 
   if (!local) return null;
-  const ready = local.status === 'ready' || local.status === 'voted';
+  const canonicalStatus = data?.duelId === local.duelId ? data.status : local.status;
+  const collapsed =
+    (local.status === 'voted' || local.status === 'cancelled') && (canonicalStatus === 'voted' || canonicalStatus === 'cancelled');
+  const complete = hasBothAnswers(local);
+  const ready = complete && (local.status === 'ready' || local.status === 'voted' || local.status === 'running');
   const visibleError = local.error || error;
   const failed = local.status === 'failed' || Boolean(error);
   const missingAnswerText = failed ? visibleError || 'Run ended without an answer.' : 'No answer captured.';
@@ -443,7 +546,11 @@ export function ModelArenaDuelBlock({
     setVoting(choice);
     try {
       const result = (await pa.extension.invoke('voteDuel', { duelId: local.duelId, choice })) as { duel?: DuelBlockData };
-      setLocal(result.duel ?? { ...local, status: 'voted', vote: choice, revealed: true });
+      if (!result.duel || result.duel.status !== 'voted') {
+        throw new Error('Vote was not recorded. The duel is still open.');
+      }
+      setLocal(result.duel);
+      requestConversationRefresh(result.duel.conversationId || local.conversationId);
       setError('');
     } catch (voteError) {
       setError(voteError instanceof Error ? voteError.message : String(voteError));
@@ -452,14 +559,33 @@ export function ModelArenaDuelBlock({
     }
   };
 
+  const cancel = async () => {
+    if (cancelling || local.status === 'voted' || local.status === 'cancelled') return;
+    setCancelling(true);
+    try {
+      const result = (await pa.extension.invoke('cancelDuel', { duelId: local.duelId })) as { duel?: DuelBlockData };
+      if (!result.duel || result.duel.status !== 'cancelled') {
+        throw new Error('Duel was not closed.');
+      }
+      setLocal(result.duel);
+      requestConversationRefresh(result.duel.conversationId || local.conversationId);
+      setError('');
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : String(cancelError));
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   useEffect(() => {
-    if (!local || local.status !== 'running') return;
+    if (!local || local.status !== 'running' || hasBothAnswers(local)) return;
     let cancelled = false;
     const refresh = async () => {
       try {
         const result = (await pa.extension.invoke('refreshDuel', { duelId: local.duelId })) as { duel?: DuelBlockData };
         if (!cancelled && result.duel) {
-          setLocal(result.duel);
+          setLocal((current) => mergeDuelBlockData(current, result.duel ?? null));
+          requestConversationRefresh(result.duel.conversationId || local.conversationId);
           setError('');
         }
       } catch (refreshError) {
@@ -474,40 +600,35 @@ export function ModelArenaDuelBlock({
     };
   }, [local?.duelId, local?.status, pa.extension]);
 
+  if (collapsed) {
+    return null;
+  }
+
   return (
-    <section
-      className="w-full min-w-full rounded-md border border-border-subtle bg-panel/80 text-[12px]"
-      data-model-arena-duel={local.duelId}
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <StatusDot tone={ready ? 'success' : local.status === 'failed' ? 'danger' : 'warning'} />
-          <span className="font-medium text-primary">Blind model duel</span>
-          <span className="text-dim">{local.taskType}</span>
+    <section className="w-full min-w-full py-2 text-[12px]" data-model-arena-duel={local.duelId}>
+      <div className="mb-4 text-center">
+        <div className="font-medium text-primary">Model Arena duel</div>
+        <div className="mt-1 min-h-4 text-[11px] text-dim">
+          {local.vote ? <span>Vote recorded: {local.vote}</span> : null}
+          {voting ? <span>Saving...</span> : null}
+          {cancelling ? <span>Closing...</span> : null}
+          {local.revealed && local.models ? (
+            <span className="font-mono">
+              {local.vote || voting || cancelling ? ' · ' : ''}
+              A: {local.models.a} · B: {local.models.b}
+            </span>
+          ) : null}
         </div>
-        {local.revealed && local.models ? (
-          <span className="min-w-0 truncate font-mono text-[11px] text-dim">
-            A: {local.models.a} · B: {local.models.b}
-          </span>
-        ) : null}
       </div>
-      <div className="grid w-full min-w-0 grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid w-full min-w-0 grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-0">
         <DuelAnswer
           label="A"
           text={sideA}
           waiting={!local.sideA?.text?.trim() && !ready && !failed}
           failed={!local.sideA?.text?.trim() && failed}
           renderMarkdown={context?.renderMarkdown}
-          action={
-            <Button
-              variant="secondary"
-              disabled={!ready || Boolean(local.vote)}
-              onClick={() => void vote('a')}
-              className="w-full justify-center"
-            >
-              Prefer A
-            </Button>
-          }
+          disabled={!ready || Boolean(local.vote)}
+          onPrefer={() => void vote('a')}
         />
         <DuelAnswer
           label="B"
@@ -515,27 +636,34 @@ export function ModelArenaDuelBlock({
           waiting={!local.sideB?.text?.trim() && !ready && !failed}
           failed={!local.sideB?.text?.trim() && failed}
           renderMarkdown={context?.renderMarkdown}
-          action={
-            <Button
-              variant="secondary"
-              disabled={!ready || Boolean(local.vote)}
-              onClick={() => void vote('b')}
-              className="w-full justify-center"
-            >
-              Prefer B
-            </Button>
-          }
+          disabled={!ready || Boolean(local.vote)}
+          onPrefer={() => void vote('b')}
         />
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-2 border-t border-border-subtle px-3 py-2">
-        <Button variant="ghost" disabled={!ready || Boolean(local.vote)} onClick={() => void vote('tie')}>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <ArenaActionButton
+          className="min-h-8 min-w-16 px-3 py-1.5"
+          disabled={!ready || Boolean(local.vote)}
+          onClick={() => void vote('tie')}
+        >
           Tie
-        </Button>
-        <Button variant="ghost" disabled={!ready || Boolean(local.vote)} onClick={() => void vote('neither')}>
+        </ArenaActionButton>
+        <ArenaActionButton
+          className="min-h-8 min-w-16 px-3 py-1.5"
+          disabled={!ready || Boolean(local.vote)}
+          onClick={() => void vote('neither')}
+        >
           Neither
-        </Button>
-        {local.vote ? <span className="text-dim">Vote recorded: {local.vote}</span> : null}
-        {voting ? <span className="text-dim">Saving...</span> : null}
+        </ArenaActionButton>
+        <ArenaActionButton
+          className="min-h-8 min-w-16 px-3 py-1.5"
+          disabled={cancelling || Boolean(local.vote)}
+          onClick={() => void cancel()}
+        >
+          {cancelling ? 'Closing...' : 'Close'}
+        </ArenaActionButton>
+      </div>
+      <div className="mt-2 min-h-4 text-center">
         {failed && local.error ? <span className="text-danger">{local.error}</span> : null}
         {error ? <span className="text-danger">{error}</span> : null}
       </div>
@@ -548,20 +676,22 @@ function DuelAnswer({
   text,
   waiting,
   failed,
-  action,
+  disabled,
+  onPrefer,
   renderMarkdown,
 }: {
   label: string;
   text: string;
   waiting: boolean;
   failed: boolean;
-  action: ReactNode;
+  disabled: boolean;
+  onPrefer: () => void;
   renderMarkdown?: (markdown: string) => ReactNode;
 }) {
   return (
-    <article className="flex min-w-0 flex-col border-b border-border-subtle md:border-b-0 md:border-r md:last:border-r-0">
-      <div className="border-b border-border-subtle px-3 py-2 text-[11px] font-medium uppercase text-dim">{label}</div>
-      <div className="min-h-[18rem] min-w-0 flex-1 overflow-auto px-3 py-3 text-[13px] leading-relaxed text-primary">
+    <article className="flex min-w-0 flex-col md:border-r md:border-border-subtle md:pr-6 md:last:border-r-0 md:last:pl-6 md:last:pr-0">
+      <div className="mb-2 text-[11px] font-medium uppercase text-dim">{label}</div>
+      <div className="min-h-[10rem] min-w-0 flex-1 overflow-auto text-left text-[13px] leading-relaxed text-primary">
         {waiting ? (
           <div className="text-dim">Waiting for answer...</div>
         ) : failed ? (
@@ -572,7 +702,80 @@ function DuelAnswer({
           <div className="whitespace-pre-wrap break-words">{text}</div>
         )}
       </div>
-      <div className="border-t border-border-subtle px-3 py-2">{action}</div>
+      <ArenaActionButton className="mt-3 min-h-9 w-full justify-center px-3 py-2" disabled={disabled} onClick={onPrefer}>
+        Prefer {label}
+      </ArenaActionButton>
     </article>
+  );
+}
+
+function ArenaActionButton({
+  children,
+  className = '',
+  disabled,
+  onClick,
+}: {
+  children: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const onClickRef = useRef(onClick);
+  const disabledRef = useRef(disabled);
+  const lastNativeActivationRef = useRef(0);
+
+  useEffect(() => {
+    onClickRef.current = onClick;
+    disabledRef.current = disabled;
+  }, [disabled, onClick]);
+
+  const activate = () => {
+    if (!disabled) onClick?.();
+  };
+
+  useEffect(() => {
+    const button = buttonRef.current;
+    if (!button) return undefined;
+
+    const activateNative = () => {
+      if (disabledRef.current) return;
+      lastNativeActivationRef.current = Date.now();
+      onClickRef.current?.();
+    };
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      activateNative();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      activateNative();
+    };
+
+    button.addEventListener('pointerup', handlePointerUp);
+    button.addEventListener('keydown', handleKeyDown);
+    return () => {
+      button.removeEventListener('pointerup', handlePointerUp);
+      button.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  return (
+    <Button
+      ref={buttonRef}
+      type="button"
+      variant="action"
+      className={className}
+      disabled={disabled}
+      onClick={() => {
+        if (Date.now() - lastNativeActivationRef.current < 500) {
+          return;
+        }
+        activate();
+      }}
+    >
+      {children}
+    </Button>
   );
 }

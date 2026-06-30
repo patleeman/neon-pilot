@@ -159,6 +159,689 @@ describe('chat transcript items', () => {
     });
   });
 
+  it('replaces the source assistant message with an active Model Arena duel', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+
+    const items = buildChatRenderItems(messages);
+
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ type: 'message', block: { type: 'user', id: 'u1' } });
+    expect(items[1]).toMatchObject({
+      type: 'context_cluster',
+      blocks: [expect.objectContaining({ customType: 'model_arena_duel', id: 'model_arena_duel:duel-1' })],
+    });
+  });
+
+  it('keeps the source assistant message visible while an active Model Arena duel is missing an answer', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Tell me a funny story' },
+      { type: 'text', id: 'assistant-1-x5', ts: '2026-03-12T18:00:01.000Z', text: 'Primary story answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1-x5',
+          status: 'running',
+          sideA: { role: 'primary', text: 'Primary story answer' },
+          sideB: { role: 'challenger', text: '' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1-x5', text: 'Primary story answer' }),
+        arenaVariationSet: undefined,
+      }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ customType: 'model_arena_duel', id: 'model_arena_duel:duel-1' })],
+      }),
+    ]);
+  });
+
+  it('replaces the nearest matching assistant message for legacy active Model Arena duels', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-legacy',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          status: 'ready',
+          sideA: { text: 'Original answer' },
+          sideB: { text: 'Waiting for answer...' },
+        },
+      },
+    ];
+
+    const items = buildChatRenderItems(messages);
+
+    expect(items).toHaveLength(2);
+    expect(items[1]).toMatchObject({
+      type: 'context_cluster',
+      blocks: [expect.objectContaining({ id: 'model_arena_duel:duel-legacy' })],
+    });
+  });
+
+  it('keeps active Model Arena duels out of the preceding trace cluster', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'thinking', ts: '2026-03-12T18:00:01.000Z', text: 'Checking queue docs' },
+      { type: 'tool_use', ts: '2026-03-12T18:00:02.000Z', tool: 'read', input: { path: 'queue.md' }, output: '...', status: 'ok' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:03.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:04.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({ type: 'trace_cluster', startIndex: 1, endIndex: 2 }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        startIndex: 4,
+        endIndex: 4,
+        blocks: [expect.objectContaining({ customType: 'model_arena_duel' })],
+      }),
+    ]);
+  });
+
+  it('shows only the newest active Model Arena duel for the same assistant response', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:old',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Older challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:new',
+        ts: '2026-03-12T18:00:03.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Newer challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ id: 'model_arena_duel:new' })],
+      }),
+    ]);
+  });
+
+  it('collapses a cancelled Model Arena duel back to the source assistant message', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1', text: 'Original answer' }),
+      }),
+    ]);
+  });
+
+  it('does not let older active Model Arena duels override a later voted duel', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:old',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Older challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts: '2026-03-12T18:00:03.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Voted challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Voted challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('does not let older active Model Arena duels override a later cancelled duel', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:old',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Older challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:cancelled',
+        ts: '2026-03-12T18:00:03.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Cancelled challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1', text: 'Original answer' }),
+      }),
+    ]);
+  });
+
+  it('keeps voted Model Arena variations when a later duplicate duel is cancelled', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Voted challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:cancelled',
+        ts: '2026-03-12T18:00:03.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Cancelled challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          duelBlockId: 'model_arena_duel:voted',
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Voted challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('matches Model Arena source ids across split display block aliases', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1-x20',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('incrementally restores the assistant row when an active Model Arena duel is cancelled', () => {
+    const readyMessages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+    const cancelledMessages: MessageBlock[] = [
+      readyMessages[0]!,
+      readyMessages[1]!,
+      {
+        ...readyMessages[2]!,
+        details: {
+          ...(readyMessages[2] as Extract<MessageBlock, { type: 'context' }>).details,
+          status: 'cancelled',
+        },
+      },
+    ];
+
+    const readyItems = buildChatRenderItems(readyMessages);
+    const nextItems = buildChatRenderItemsIncremental({
+      messages: cancelledMessages,
+      previousMessages: readyMessages,
+      previousRenderItems: readyItems,
+    });
+
+    expect(nextItems).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'text', id: 'assistant-1' }) }),
+    ]);
+  });
+
+  it('incrementally restores response variations when an active Model Arena duel is voted', () => {
+    const readyMessages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+        },
+      },
+    ];
+    const votedMessages: MessageBlock[] = [
+      readyMessages[0]!,
+      readyMessages[1]!,
+      {
+        ...readyMessages[2]!,
+        details: {
+          ...(readyMessages[2] as Extract<MessageBlock, { type: 'context' }>).details,
+          status: 'voted',
+          vote: 'b',
+          revealed: true,
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+    ];
+
+    const readyItems = buildChatRenderItems(readyMessages);
+    const nextItems = buildChatRenderItemsIncremental({
+      messages: votedMessages,
+      previousMessages: readyMessages,
+      previousRenderItems: readyItems,
+    });
+
+    expect(nextItems).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('shows a newer active Model Arena duel after an older voted duel for the same answer', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Old challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:new',
+        ts: '2026-03-12T18:00:03.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'New challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ id: 'model_arena_duel:new' })],
+      }),
+    ]);
+  });
+
+  it('keeps voted Model Arena variations when a newer duplicate duel is still missing an answer', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:voted',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'a',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Voted challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:running',
+        ts: '2026-03-12T18:00:03.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'running',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: '' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          duelBlockId: 'model_arena_duel:voted',
+          variations: [expect.objectContaining({ text: 'Original answer' }), expect.objectContaining({ text: 'Voted challenger answer' })],
+        }),
+      }),
+    ]);
+  });
+
+  it('shows a newer active Model Arena duel after an older cancelled duel for the same answer', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:cancelled',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'cancelled',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Cancelled challenger answer' },
+        },
+      },
+      {
+        type: 'context',
+        id: 'model_arena_duel:new',
+        ts: '2026-03-12T18:00:03.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'New challenger answer' },
+        },
+      },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'context_cluster',
+        blocks: [expect.objectContaining({ id: 'model_arena_duel:new' })],
+      }),
+    ]);
+  });
+
+  it('collapses legacy automatic voted Model Arena duels that appear before the assistant answer', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:auto',
+        ts: '2026-03-12T18:00:01.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Automatic challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:02.000Z', text: 'Original answer' },
+    ];
+
+    expect(buildChatRenderItems(messages)).toEqual([
+      expect.objectContaining({ type: 'message', block: expect.objectContaining({ type: 'user', id: 'u1' }) }),
+      expect.objectContaining({
+        type: 'message',
+        block: expect.objectContaining({ type: 'text', id: 'assistant-1' }),
+        arenaVariationSet: expect.objectContaining({
+          variations: [
+            expect.objectContaining({ text: 'Original answer' }),
+            expect.objectContaining({ text: 'Automatic challenger answer' }),
+          ],
+        }),
+      }),
+    ]);
+  });
+
+  it('collapses a voted Model Arena duel into assistant response variations', () => {
+    const messages: MessageBlock[] = [
+      { type: 'user', id: 'u1', ts: '2026-03-12T18:00:00.000Z', text: 'Explain queues' },
+      { type: 'text', id: 'assistant-1', ts: '2026-03-12T18:00:01.000Z', text: 'Original answer' },
+      {
+        type: 'context',
+        id: 'model_arena_duel:duel-1',
+        ts: '2026-03-12T18:00:02.000Z',
+        text: 'Model Arena duel',
+        customType: 'model_arena_duel',
+        details: {
+          sourceBlockId: 'assistant-1',
+          status: 'voted',
+          vote: 'b',
+          sideA: { role: 'primary', text: 'Original answer' },
+          sideB: { role: 'challenger', text: 'Challenger answer' },
+          models: {
+            primary: 'opencode-go/glm-5.2',
+            challenger: 'opencode-go/deepseek-v4-flash',
+            a: 'opencode-go/glm-5.2',
+            b: 'opencode-go/deepseek-v4-flash',
+          },
+        },
+      },
+    ];
+
+    const items = buildChatRenderItems(messages);
+
+    expect(items).toHaveLength(2);
+    expect(items[1]).toMatchObject({
+      type: 'message',
+      block: { type: 'text', id: 'assistant-1' },
+      arenaVariationSet: {
+        sourceBlockId: 'assistant-1',
+        duelBlockId: 'model_arena_duel:duel-1',
+        variations: [
+          expect.objectContaining({ label: 'Current model · opencode-go/glm-5.2', text: 'Original answer' }),
+          expect.objectContaining({ label: 'Challenger · opencode-go/deepseek-v4-flash', text: 'Challenger answer' }),
+        ],
+      },
+    });
+  });
+
   it('summarizes trace categories, duration, and running/error state inside trace clusters', () => {
     const items = buildChatRenderItems([
       { type: 'thinking', ts: '2026-03-12T18:00:00.000Z', text: 'Thinking…' },

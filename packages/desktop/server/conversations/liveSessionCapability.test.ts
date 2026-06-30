@@ -411,6 +411,63 @@ describe('liveSessionCapability input validation', () => {
     );
   });
 
+  it('publishes replayable media and context with prompt-submitted events', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-replay', {
+      cwd: '/repo',
+      title: 'Session with media',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-replay.jsonl',
+        model: { id: 'gpt-5', provider: 'openai' },
+        thinkingLevel: 'high',
+        serviceTier: 'priority',
+      },
+    });
+    vi.mocked(buildPromptContextPlan).mockImplementationOnce(async (input) => ({
+      contextMessages: [...input.contextMessages, { customType: 'related_context', content: 'Related thread summary' }],
+      diagnostics: [],
+    }));
+
+    await submitLiveSessionPromptCapability(
+      {
+        conversationId: 'session-replay',
+        text: 'Describe this screenshot and video',
+        images: [{ data: 'aW1n', mimeType: 'image/png', name: 'shot.png' }],
+        videos: [{ path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 42 }],
+        attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
+        contextMessages: [{ customType: 'manual_context', content: 'Pinned context' }],
+        relatedConversationIds: ['related-1'],
+        surfaceId: 'chat',
+      },
+      createContext(),
+    );
+
+    expect(extensionHostClient.publishEvent).toHaveBeenCalledWith(
+      'conversationPrompt',
+      expect.objectContaining({
+        type: 'submitted',
+        conversationId: 'session-replay',
+        prompt: 'Describe this screenshot and video',
+        delivery: 'started',
+        imageCount: 1,
+        videoCount: 1,
+        images: [{ type: 'image', data: 'aW1n', mimeType: 'image/png', name: 'shot.png' }],
+        videos: [{ type: 'video', path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 42 }],
+        attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
+        contextMessageCount: 2,
+        contextMessages: [
+          { customType: 'manual_context', content: 'Pinned context' },
+          { customType: 'related_context', content: 'Related thread summary' },
+        ],
+        relatedConversationCount: 1,
+        currentModel: 'gpt-5',
+        currentProvider: 'openai',
+        thinkingLevel: 'high',
+      }),
+    );
+  });
+
   it('logs live prompt failures without stack traces or local provider doc paths', async () => {
     isLocalLiveMock.mockReturnValue(true);
     liveRegistry.set('session-no-key', {

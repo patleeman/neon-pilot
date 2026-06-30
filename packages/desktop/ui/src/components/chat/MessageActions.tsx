@@ -4,6 +4,7 @@ import { writeClipboardText } from '../../desktop/clipboard';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
+import { addNotification } from '../notifications/notificationStore';
 import { MessageActionButton, Tooltip } from '../ui';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail, registerMessageActionCapability } from './messageActionCommands';
 
@@ -61,6 +62,45 @@ function extensionActionIcon(action: ExtensionMessageActionRegistration): string
   return action.title.trim().charAt(0).toUpperCase() || '•';
 }
 
+function extensionActionSource(action: ExtensionMessageActionRegistration): string {
+  const id = action.extensionId.replace(/^system-/, '').trim();
+  if (!id) return action.title;
+  return id
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function readErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function cleanExtensionActionErrorMessage(action: ExtensionMessageActionRegistration, error: unknown): string {
+  let message = readErrorMessage(error).trim();
+  const wrappers = [
+    new RegExp(`^${escapeRegExp(action.title)} failed:\\s*`, 'i'),
+    /^Extension\s+"[^"]+"\s+action\s+"[^"]+"\s+failed:\s*/i,
+    /^Extension backend action failed:\s*/i,
+  ];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const wrapper of wrappers) {
+      const next = message.replace(wrapper, '').trim();
+      if (next !== message) {
+        message = next;
+        changed = true;
+      }
+    }
+  }
+  return message || `${action.title} failed.`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function MessageActions({
   isUser,
   blockText,
@@ -84,8 +124,10 @@ export function MessageActions({
   const [isRewinding, setIsRewinding] = useState(false);
   const [busyActionIds, setBusyActionIds] = useState<Set<string>>(new Set());
   const [actionErrors, setActionErrors] = useState<Map<string, string>>(new Map());
+  const [actionStatuses, setActionStatuses] = useState<Map<string, string>>(new Map());
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const actionStatusResetTimeoutsRef = useRef<Map<string, number>>(new Map());
   const canCopy = typeof copyText === 'string' && copyText.length > 0;
   const copyTitle = isUser ? 'Copy this prompt to the clipboard' : 'Copy this assistant message to the clipboard';
   const { messageActions } = useExtensionRegistry();
@@ -105,6 +147,10 @@ export function MessageActions({
       if (copyResetTimeoutRef.current !== null) {
         window.clearTimeout(copyResetTimeoutRef.current);
       }
+      for (const timeoutId of actionStatusResetTimeoutsRef.current.values()) {
+        window.clearTimeout(timeoutId);
+      }
+      actionStatusResetTimeoutsRef.current.clear();
     },
     [],
   );
@@ -281,7 +327,12 @@ export function MessageActions({
         if (!matchMessageActionWhen(action, isUser, blockText)) return null;
         const busy = busyActionIds.has(action.id);
         const actionError = actionErrors.get(action.id);
-        const title = actionError ? `${action.title} failed: ${actionError}` : action.title;
+        const actionStatus = actionStatuses.get(action.id);
+        const title = actionError
+          ? `${action.title} failed. See notification.`
+          : actionStatus
+            ? `${action.title}: ${actionStatus}`
+            : action.title;
         return (
           <MessageActionTooltip key={action.id} label={title}>
             <MessageActionButton
@@ -295,17 +346,54 @@ export function MessageActions({
                       next.delete(action.id);
                       return next;
                     });
-                    await getPaClient(action.extensionId).extension.invoke(action.action, {
+                    const result = await getPaClient(action.extensionId).extension.invoke(action.action, {
                       messageText: blockText ?? '',
                       messageRole: isUser ? 'user' : 'assistant',
                       blockId: blockId ?? '',
                       conversationId: conversationId ?? '',
                     });
+                    const statusText =
+                      result && typeof result === 'object' && 'text' in result && typeof result.text === 'string' ? result.text.trim() : '';
+                    if (statusText) {
+                      const existingTimeoutId = actionStatusResetTimeoutsRef.current.get(action.id);
+                      if (existingTimeoutId !== undefined) window.clearTimeout(existingTimeoutId);
+                      setActionStatuses((prev) => {
+                        const next = new Map(prev);
+                        next.set(action.id, statusText);
+                        return next;
+                      });
+                      const timeoutId = window.setTimeout(() => {
+                        actionStatusResetTimeoutsRef.current.delete(action.id);
+                        setActionStatuses((prev) => {
+                          const next = new Map(prev);
+                          next.delete(action.id);
+                          return next;
+                        });
+                      }, 6000);
+                      actionStatusResetTimeoutsRef.current.set(action.id, timeoutId);
+                    }
                   } catch (error) {
+                    const cleanedMessage = cleanExtensionActionErrorMessage(action, error);
+                    const existingTimeoutId = actionStatusResetTimeoutsRef.current.get(action.id);
+                    if (existingTimeoutId !== undefined) {
+                      window.clearTimeout(existingTimeoutId);
+                      actionStatusResetTimeoutsRef.current.delete(action.id);
+                    }
+                    setActionStatuses((prev) => {
+                      const next = new Map(prev);
+                      next.delete(action.id);
+                      return next;
+                    });
                     setActionErrors((prev) => {
                       const next = new Map(prev);
-                      next.set(action.id, error instanceof Error ? error.message : String(error));
+                      next.set(action.id, cleanedMessage);
                       return next;
+                    });
+                    addNotification({
+                      type: 'error',
+                      message: `${action.title} failed.`,
+                      details: cleanedMessage,
+                      source: extensionActionSource(action),
                     });
                   } finally {
                     setBusyActionIds((prev) => {
@@ -316,7 +404,7 @@ export function MessageActions({
                   }
                 })();
               }}
-              tone={actionError ? 'danger' : busy ? 'accent' : 'default'}
+              tone={actionError ? 'danger' : busy || actionStatus ? 'accent' : 'default'}
               aria-label={title}
               disabled={busy}
               className={iconButtonClassName}

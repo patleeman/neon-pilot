@@ -22,6 +22,7 @@ import {
   createSession,
   createSessionFromExisting,
   destroySession,
+  forkSession,
   registry as liveSessionRegistry,
   requestConversationWorkingDirectoryChange,
   resumeSession,
@@ -56,6 +57,11 @@ export interface ExtensionConversationSendResult {
 }
 
 export interface ExtensionConversationStartParallelPromptOptions extends ExtensionConversationSendOptions {
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  attachmentRefs?: unknown;
+  contextMessages?: unknown;
+  relatedConversationIds?: unknown;
+  surfaceId?: string;
   model?: string | null;
   thinkingLevel?: string | null;
   serviceTier?: string | null;
@@ -351,6 +357,7 @@ export function createExtensionConversationsCapability(
         cwd: entry.cwd,
         running: entry.session.isStreaming,
         currentModel: entry.session.model?.id ?? null,
+        currentProvider: entry.session.model?.provider ?? null,
       };
     },
 
@@ -363,6 +370,7 @@ export function createExtensionConversationsCapability(
         cwd: entry.cwd,
         running: entry.session.isStreaming,
         currentModel: entry.session.model?.id ?? null,
+        currentProvider: entry.session.model?.provider ?? null,
         stats: entry.session.getSessionStats(),
         toolNames: entry.session.getActiveToolNames(),
       };
@@ -773,6 +781,11 @@ export function createExtensionConversationsCapability(
             conversationId,
             text: input.text,
             ...(input.images ? { images: input.images } : {}),
+            ...(input.videos ? { videos: input.videos } : {}),
+            ...(input.attachmentRefs !== undefined ? { attachmentRefs: input.attachmentRefs } : {}),
+            ...(input.contextMessages !== undefined ? { contextMessages: input.contextMessages } : {}),
+            ...(input.relatedConversationIds !== undefined ? { relatedConversationIds: input.relatedConversationIds } : {}),
+            ...(input.surfaceId !== undefined ? { surfaceId: input.surfaceId } : {}),
             ...(input.model !== undefined ? { model: input.model } : {}),
             ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
             ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
@@ -927,11 +940,23 @@ export function createExtensionConversationsCapability(
 
     /**
      * Fork a conversation into a new live session.
-     * Creates a new session in the specified cwd (or same cwd) with the full history.
+     * Can clone the full session or branch at a specific transcript entry with model overrides.
      * Returns the new conversation id.
      */
     async fork(
-      input: string | { conversationId: string; targetCwd?: string; cwd?: string; title?: string },
+      input:
+        | string
+        | {
+            conversationId: string;
+            atBlockId?: string;
+            beforeEntry?: boolean;
+            targetCwd?: string;
+            cwd?: string;
+            title?: string;
+            model?: string | null;
+            thinkingLevel?: string | null;
+            serviceTier?: string | null;
+          },
     ): Promise<{ id: string; conversationId: string }> {
       assertConversationPermission('write', 'conversations.fork');
       const conversationId = typeof input === 'string' ? input : input.conversationId;
@@ -942,8 +967,20 @@ export function createExtensionConversationsCapability(
 
       const targetCwd = typeof input === 'string' ? undefined : (input.targetCwd ?? input.cwd);
       const cwd = targetCwd?.trim() || entry.cwd;
-      const result = await createSessionFromExisting(sessionFile, cwd);
-      const forked = liveSessionRegistry.get(result.id);
+      const atBlockId = typeof input === 'string' ? '' : (input.atBlockId?.trim() ?? '');
+      const normalizedEntryId = atBlockId.replace(/-x\d+$/, '');
+      const result = normalizedEntryId
+        ? await forkSession(conversationId, normalizedEntryId, {
+            preserveSource: true,
+            beforeEntry: Boolean(typeof input !== 'string' && input.beforeEntry),
+            branchKind: 'fork',
+            ...(typeof input !== 'string' && input.model !== undefined ? { initialModel: input.model } : {}),
+            ...(typeof input !== 'string' && input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
+            ...(typeof input !== 'string' && input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
+          })
+        : await createSessionFromExisting(sessionFile, cwd);
+      const forkedId = 'newSessionId' in result ? result.newSessionId : result.id;
+      const forked = liveSessionRegistry.get(forkedId);
       if (forked && typeof input !== 'string' && input.title?.trim()) {
         try {
           forked.session.setSessionName(input.title.trim());
@@ -954,10 +991,10 @@ export function createExtensionConversationsCapability(
       invalidateAppTopics('sessions');
       await publishExtensionHostEvent('conversationSessions', {
         type: 'session.forked',
-        conversationId: result.id,
+        conversationId: forkedId,
         sourceConversationId: conversationId,
       });
-      return { id: result.id, conversationId: result.id };
+      return { id: forkedId, conversationId: forkedId };
     },
 
     async appendTranscriptBlock(input: {
@@ -1029,6 +1066,16 @@ export function createExtensionConversationsCapability(
         details,
       );
       if (!updated) throw new Error(`Transcript block "${input.blockId}" was not found.`);
+      const sessionFile = resolveConversationSessionFile(input.conversationId) ?? reservedConversationFiles.get(input.conversationId);
+      if (sessionFile) {
+        updateStoredVisibleCustomMessage({
+          sessionFile,
+          customType: input.blockType,
+          content: input.title ?? input.blockType,
+          details,
+          blockId: input.blockId,
+        });
+      }
       invalidateAppTopics('sessions');
       return { blockId: input.blockId };
     },

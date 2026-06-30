@@ -318,7 +318,14 @@ describe('extension backend capability dispatcher', () => {
           extensionId: 'system-conversation-tools',
           capability: 'conversations',
           operation: 'fork',
-          input: { conversationId: 'conv-1', targetCwd: '/fork', title: 'Fork' },
+          input: {
+            conversationId: 'conv-1',
+            targetCwd: '/fork',
+            atBlockId: 'user-1-x0',
+            beforeEntry: true,
+            title: 'Fork',
+            model: 'anthropic/claude-sonnet',
+          },
         }),
       ),
     ).resolves.toEqual({ id: 'conv-fork', conversationId: 'conv-fork' });
@@ -388,7 +395,10 @@ describe('extension backend capability dispatcher', () => {
     expect(conversations.fork).toHaveBeenCalledWith('system-conversation-tools', {
       conversationId: 'conv-1',
       targetCwd: '/fork',
+      atBlockId: 'user-1-x0',
+      beforeEntry: true,
       title: 'Fork',
+      model: 'anthropic/claude-sonnet',
     });
     expect(conversations.setTitle).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'New Title');
     expect(conversations.delete).toHaveBeenCalledWith('system-conversation-tools', {

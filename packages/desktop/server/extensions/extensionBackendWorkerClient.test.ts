@@ -1,4 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const workerThreads = vi.hoisted(() => {
   interface MockWorkerInstance {
@@ -49,10 +54,16 @@ async function flushPromises(): Promise<void> {
 }
 
 describe('ExtensionBackendWorkerClient', () => {
+  const originalCwd = process.cwd();
+
   beforeEach(() => {
     workerThreads.Worker.mockClear();
     workerThreads.instances.length = 0;
     setDefaultExtensionBackendWorkerUrl(undefined);
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
   });
 
   it('sends backend import requests to the worker', async () => {
@@ -81,6 +92,47 @@ describe('ExtensionBackendWorkerClient', () => {
     await load;
 
     expect(worker.url.href).toBe('file:///configured-worker.js');
+  });
+
+  it('falls back to the built worker path when running from bundled server chunks', async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-worker-url-'));
+    const workerPath = join(tempRoot, 'packages/desktop/server/dist/extensions/extensionBackendWorker.js');
+    mkdirSync(join(tempRoot, 'packages/desktop/server/dist/extensions'), { recursive: true });
+    writeFileSync(workerPath, '');
+    process.chdir(tempRoot);
+
+    try {
+      const client = new ExtensionBackendWorkerClient();
+      const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+      const worker = workerThreads.instances[0]!;
+      worker.emit('message', { id: 1, ok: true });
+      await load;
+
+      expect(worker.url.href).toBe(pathToFileURL(realpathSync(workerPath)).href);
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to the built worker path when cwd is packages/desktop', async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-worker-url-'));
+    const desktopRoot = join(tempRoot, 'packages/desktop');
+    const workerPath = join(desktopRoot, 'server/dist/extensions/extensionBackendWorker.js');
+    mkdirSync(join(desktopRoot, 'server/dist/extensions'), { recursive: true });
+    writeFileSync(workerPath, '');
+    process.chdir(desktopRoot);
+
+    try {
+      const client = new ExtensionBackendWorkerClient();
+      const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+      const worker = workerThreads.instances[0]!;
+      worker.emit('message', { id: 1, ok: true });
+      await load;
+
+      expect(worker.url.href).toBe(pathToFileURL(realpathSync(workerPath)).href);
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 
   it('returns backend export availability from the worker', async () => {

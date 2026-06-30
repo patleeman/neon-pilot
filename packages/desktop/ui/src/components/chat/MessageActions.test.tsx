@@ -5,7 +5,9 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { writeClipboardText } from '../../desktop/clipboard';
+import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import type { ExtensionMessageActionRegistration } from '../../extensions/useExtensionRegistry';
+import { addNotification } from '../notifications/notificationStore';
 import { MESSAGE_ACTION_COMMAND_EVENT, type MessageActionCommandDetail } from './messageActionCommands';
 import { MessageActions } from './MessageActions';
 
@@ -23,6 +25,10 @@ vi.mock('../../extensions/useExtensionRegistry', () => ({
 
 vi.mock('../../extensions/nativePaClient', () => ({
   createNativeExtensionClient: vi.fn(),
+}));
+
+vi.mock('../notifications/notificationStore', () => ({
+  addNotification: vi.fn(),
 }));
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
@@ -77,6 +83,74 @@ describe('MessageActions commands', () => {
     expect(compareButton?.getAttribute('title')).toBeNull();
     expect(compareButton?.textContent).toBe('⇄');
     expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain('Compare models');
+  });
+
+  it('surfaces extension action result text in the shared tooltip', async () => {
+    const invoke = vi.fn(async () => ({ text: 'Model duel duel-1 already exists for this answer.', duelId: 'duel-1', existing: true }));
+    vi.mocked(createNativeExtensionClient).mockReturnValue({ extension: { invoke } } as never);
+    mockRegistry.messageActions = [
+      {
+        extensionId: 'system-model-arena',
+        id: 'compare-message',
+        title: 'Compare models',
+        action: 'startManualDuel',
+        when: 'role:assistant && hasText',
+      },
+    ];
+
+    render(<MessageActions blockText="Assistant response" blockId="assistant-1" conversationId="conv-1" copyText="Assistant response" />);
+
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]')!);
+
+    await waitFor(() =>
+      expect(document.querySelector<HTMLButtonElement>('button[aria-label^="Compare models:"]')?.getAttribute('aria-label')).toContain(
+        'already exists',
+      ),
+    );
+    expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain(
+      'Compare models: Model duel duel-1 already exists for this answer.',
+    );
+    expect(invoke).toHaveBeenCalledWith('startManualDuel', {
+      messageText: 'Assistant response',
+      messageRole: 'assistant',
+      blockId: 'assistant-1',
+      conversationId: 'conv-1',
+    });
+  });
+
+  it('shows extension action failures as notifications instead of long gutter tooltips', async () => {
+    const invoke = vi.fn(async () => {
+      throw new Error(
+        'Extension "system-model-arena" action "startManualDuel" failed: Extension backend action failed: Add a challenger model different from the current conversation model before starting a duel.',
+      );
+    });
+    vi.mocked(createNativeExtensionClient).mockReturnValue({ extension: { invoke } } as never);
+    mockRegistry.messageActions = [
+      {
+        extensionId: 'system-model-arena',
+        id: 'compare-message',
+        title: 'Compare models',
+        action: 'startManualDuel',
+        when: 'role:assistant && hasText',
+      },
+    ];
+
+    render(<MessageActions blockText="Assistant response" blockId="assistant-1" conversationId="conv-1" copyText="Assistant response" />);
+
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]')!);
+
+    await waitFor(() =>
+      expect(addNotification).toHaveBeenCalledWith({
+        type: 'error',
+        message: 'Compare models failed.',
+        details: 'Add a challenger model different from the current conversation model before starting a duel.',
+        source: 'Model Arena',
+      }),
+    );
+    expect(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models failed. See notification."]')).not.toBeNull();
+    expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain(
+      'Compare models failed. See notification.',
+    );
   });
 
   it('handles shared first message action commands', async () => {

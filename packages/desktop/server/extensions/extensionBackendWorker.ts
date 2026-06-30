@@ -402,8 +402,17 @@ function createWorkerBackendContext(
           conversationId,
           ...(customInstructions !== undefined ? { customInstructions } : {}),
         }),
-      fork: (input: { conversationId: string; targetCwd?: string; cwd?: string; title?: string }) =>
-        callHostCapability(extensionId, 'conversations', 'fork', input),
+      fork: (input: {
+        conversationId: string;
+        atBlockId?: string;
+        beforeEntry?: boolean;
+        targetCwd?: string;
+        cwd?: string;
+        title?: string;
+        model?: string | null;
+        thinkingLevel?: string | null;
+        serviceTier?: string | null;
+      }) => callHostCapability(extensionId, 'conversations', 'fork', input),
       setTitle: (conversationId: string, title: string) =>
         callHostCapability(extensionId, 'conversations', 'setTitle', { conversationId, title }),
       delete: (input: { conversationIds: string[] }) =>

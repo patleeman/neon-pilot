@@ -14,6 +14,7 @@
       { "id": "saveArenaSettings", "handler": "saveArenaSettings", "title": "Save Model Arena settings", "worker": { "enabled": true } },
       { "id": "voteDuel", "handler": "voteDuel", "title": "Vote on Model Arena duel", "worker": { "enabled": true } },
       { "id": "refreshDuel", "handler": "refreshDuel", "title": "Refresh Model Arena duel", "worker": { "enabled": true } },
+      { "id": "cancelDuel", "handler": "cancelDuel", "title": "Cancel Model Arena duel", "worker": { "enabled": true } },
       { "id": "startManualDuel", "handler": "startManualDuel", "title": "Start model duel", "worker": { "enabled": true } }
     ]
   },

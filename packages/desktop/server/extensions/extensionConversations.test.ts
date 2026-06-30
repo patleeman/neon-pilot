@@ -5,6 +5,7 @@ const broadcasts = vi.hoisted(() => ({ broadcastTitle: vi.fn() }));
 const reservation = vi.hoisted(() => ({ reserveConversationSession: vi.fn() }));
 const liveSessionCapability = vi.hoisted(() => ({
   manageLiveSessionParallelJobCapability: vi.fn(),
+  submitLiveSessionParallelPromptCapability: vi.fn(),
   submitLiveSessionPromptCapability: vi.fn(),
 }));
 const conversationService = vi.hoisted(() => ({
@@ -23,6 +24,7 @@ const live = vi.hoisted(() => ({
   destroySession: vi.fn((conversationId: string) => {
     live.registry.delete(conversationId);
   }),
+  forkSession: vi.fn(),
   requestConversationWorkingDirectoryChange: vi.fn(),
   resumeSession: vi.fn(),
   subscribe: vi.fn(),
@@ -100,7 +102,7 @@ function liveEntry(overrides: Record<string, unknown> = {}) {
   const session = {
     name: 'Conversation One',
     isStreaming: false,
-    model: { id: 'model-1' },
+    model: { id: 'model-1', provider: 'provider-1' },
     getSessionStats: vi.fn(() => ({ turns: 2 })),
     getActiveToolNames: vi.fn(() => ['bash']),
     prompt: vi.fn(),
@@ -154,7 +156,18 @@ describe('extensionConversations', () => {
       referencedKnowledgeFileIds: [],
       referencedAttachmentIds: [],
     });
+    liveSessionCapability.submitLiveSessionParallelPromptCapability.mockResolvedValue({
+      ok: true,
+      accepted: true,
+      jobId: 'job-1',
+      childConversationId: 'child-1',
+      referencedTaskIds: [],
+      referencedMemoryDocIds: [],
+      referencedKnowledgeFileIds: [],
+      referencedAttachmentIds: [],
+    });
     liveSessionCapability.manageLiveSessionParallelJobCapability.mockResolvedValue({ ok: true, status: 'skipped' });
+    live.forkSession.mockResolvedValue({ newSessionId: 'forked-from-entry', sessionFile: '/sessions/forked-from-entry.jsonl' });
     reservation.reserveConversationSession.mockReturnValue({ id: 'reserved-1', sessionFile: '/sessions/reserved-1.jsonl', cwd: '/repo' });
     conversationService.resolveConversationSessionFile.mockReturnValue('/sessions/persisted.jsonl');
     conversationService.appendStoredVisibleCustomMessage.mockReturnValue('block-1');
@@ -189,6 +202,7 @@ describe('extensionConversations', () => {
       cwd: '/repo',
       running: false,
       currentModel: 'model-1',
+      currentProvider: 'provider-1',
       stats: { turns: 2 },
       toolNames: ['bash'],
     });
@@ -505,6 +519,79 @@ describe('extensionConversations', () => {
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
     );
     expect(entry.session.steer).not.toHaveBeenCalled();
+  });
+
+  it('forwards multimodal and context fields through the parallel prompt capability', async () => {
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'arena-ext');
+
+    await expect(
+      capability.startParallelPrompt('conv-1', {
+        text: 'Compare this screenshot',
+        images: [{ data: 'png-bytes', mimeType: 'image/png', name: 'shot.png' }],
+        videos: [{ path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 123 }],
+        attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
+        contextMessages: [{ customType: 'note', content: 'extra context' }],
+        relatedConversationIds: ['related-1'],
+        surfaceId: 'chat',
+        model: 'provider/model',
+        thinkingLevel: 'high',
+        serviceTier: 'priority',
+        purpose: 'model_arena_duel',
+        metadata: { duelId: 'duel-1' },
+        autoImport: true,
+      }),
+    ).resolves.toEqual({ ok: true, accepted: true, jobId: 'job-1', childConversationId: 'child-1' });
+
+    expect(liveSessionCapability.submitLiveSessionParallelPromptCapability).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conv-1',
+        text: 'Compare this screenshot',
+        images: [{ data: 'png-bytes', mimeType: 'image/png', name: 'shot.png' }],
+        videos: [{ path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 123 }],
+        attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
+        contextMessages: [{ customType: 'note', content: 'extra context' }],
+        relatedConversationIds: ['related-1'],
+        surfaceId: 'chat',
+        model: 'provider/model',
+        thinkingLevel: 'high',
+        serviceTier: 'priority',
+        ownerExtensionId: 'arena-ext',
+        purpose: 'model_arena_duel',
+        metadata: { duelId: 'duel-1' },
+        autoImport: true,
+      }),
+      expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
+    );
+  });
+
+  it('forks from a specific source block with model overrides', async () => {
+    live.registry.set('conv-1', liveEntry());
+    const forkedEntry = liveEntry();
+    live.registry.set('forked-from-entry', forkedEntry);
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
+
+    await expect(
+      capability.fork({
+        conversationId: 'conv-1',
+        atBlockId: 'user-1-x0',
+        beforeEntry: true,
+        title: 'Arena challenger',
+        model: 'anthropic/claude-sonnet',
+      }),
+    ).resolves.toEqual({ id: 'forked-from-entry', conversationId: 'forked-from-entry' });
+
+    expect(live.forkSession).toHaveBeenCalledWith(
+      'conv-1',
+      'user-1',
+      expect.objectContaining({
+        preserveSource: true,
+        beforeEntry: true,
+        branchKind: 'fork',
+        initialModel: 'anthropic/claude-sonnet',
+      }),
+    );
+    expect(live.createSessionFromExisting).not.toHaveBeenCalled();
+    expect(forkedEntry.session.setSessionName).toHaveBeenCalledWith('Arena challenger');
   });
 
   it('queues working directory changes through the host live session registry', async () => {

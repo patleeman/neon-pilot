@@ -273,6 +273,43 @@ describe('live session message append operations', () => {
     expect(callbacks.publishSessionMetaChanged).toHaveBeenCalledTimes(2);
   });
 
+  it('anchors visible custom messages to the visible leaf when hidden custom metadata is current', async () => {
+    const branch = vi.fn();
+    const e = entry({
+      session: {
+        ...entry().session,
+        sessionManager: {
+          appendMessage: vi.fn(),
+          branch,
+          getLeafEntry: vi.fn(() => ({
+            type: 'custom_message',
+            id: 'hidden-1',
+            parentId: 'assistant-1',
+            customType: 'child_conversation_topology',
+            display: undefined,
+          })),
+          getEntry: vi.fn((id: string) =>
+            id === 'assistant-1' ? { type: 'message', id: 'assistant-1', parentId: 'user-1', message: { role: 'assistant' } } : undefined,
+          ),
+        },
+      },
+    });
+    const callbacks = { broadcastSnapshot: vi.fn(), publishSessionMetaChanged: vi.fn() };
+
+    await appendVisibleLiveSessionCustomMessage(e as never, 'model_arena_duel', 'Model Arena duel', {}, callbacks, {
+      blockId: 'duel-1',
+    });
+
+    expect(branch).toHaveBeenCalledWith('assistant-1');
+    expect(e.session.sendCustomMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customType: 'model_arena_duel',
+        display: true,
+        details: expect.objectContaining({ extensionBlockId: 'duel-1' }),
+      }),
+    );
+  });
+
   it('updates visible custom messages by block id and broadcasts only when updated', () => {
     const e = entry({
       session: {

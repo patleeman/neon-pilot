@@ -9,6 +9,8 @@ const saveModelProviderCapability = vi.fn();
 const saveModelProviderModelCapability = vi.fn();
 const deleteModelProviderCapability = vi.fn();
 const deleteModelProviderModelCapability = vi.fn();
+const createModelRegistryForAuthFile = vi.fn();
+const readProviderAuthState = vi.fn();
 
 vi.mock('../models/modelState.js', () => ({ readModelState, invalidateModelDefinitionsCache }));
 vi.mock('@neon-pilot/core', () => ({ getPiAgentRuntimeDir, getStateRoot }));
@@ -19,6 +21,8 @@ vi.mock('../models/providerDesktopCapability.js', () => ({
   deleteModelProviderCapability,
   deleteModelProviderModelCapability,
 }));
+vi.mock('../models/modelRegistry.js', () => ({ createModelRegistryForAuthFile }));
+vi.mock('../models/providerAuth.js', () => ({ readProviderAuthState }));
 
 const { createExtensionModelsCapability } = await import('./extensionModels.js');
 
@@ -33,6 +37,8 @@ describe('extensionModels', () => {
     saveModelProviderModelCapability.mockReset().mockReturnValue({ providers: [] });
     deleteModelProviderCapability.mockReset().mockReturnValue({ providers: [] });
     deleteModelProviderModelCapability.mockReset().mockReturnValue({ providers: [] });
+    createModelRegistryForAuthFile.mockReset().mockReturnValue({ getAll: () => [], getAvailable: () => [], getApiKeyAndHeaders: vi.fn() });
+    readProviderAuthState.mockReset().mockReturnValue({ providers: [] });
   });
 
   it('lists normalized model capabilities from the runtime settings file', async () => {
@@ -44,10 +50,115 @@ describe('extensionModels', () => {
     });
 
     await expect(createExtensionModelsCapability().list()).resolves.toEqual([
-      { id: 'm1', name: 'Model One', provider: 'provider', contextWindow: 123, reasoning: true, input: ['text', 'image'] },
-      { id: 'm2', name: 'm2', provider: '', contextWindow: 0, reasoning: false, input: ['text'] },
+      {
+        id: 'm1',
+        name: 'Model One',
+        provider: 'provider',
+        contextWindow: 123,
+        reasoning: true,
+        input: ['text', 'image'],
+        authConfigured: true,
+      },
+      { id: 'm2', name: 'm2', provider: '', contextWindow: 0, reasoning: false, input: ['text'], authConfigured: true },
     ]);
     expect(readModelState).toHaveBeenCalledWith('/runtime/pi-agent/settings.json');
+  });
+
+  it('marks models without configured provider auth as unavailable to extensions', async () => {
+    readModelState.mockResolvedValue({
+      models: [
+        { id: 'ready-model', name: 'Ready Model', provider: 'ready-provider' },
+        { id: 'missing-key-model', name: 'Missing Key Model', provider: 'missing-provider' },
+      ],
+    });
+    createModelRegistryForAuthFile.mockReturnValue({
+      getAll: () => [
+        { id: 'ready-model', provider: 'ready-provider' },
+        { id: 'missing-key-model', provider: 'missing-provider' },
+      ],
+      getAvailable: () => [{ id: 'ready-model', provider: 'ready-provider' }],
+      getApiKeyAndHeaders: async (model: { provider: string }) =>
+        model.provider === 'ready-provider' ? { ok: true } : { ok: false, error: 'No API key' },
+    });
+    readProviderAuthState.mockReturnValue({ providers: [] });
+
+    await expect(
+      createExtensionModelsCapability({
+        getSettingsFile: () => '/runtime/settings.json',
+        getAuthFile: () => '/runtime/auth.json',
+      }).list(),
+    ).resolves.toEqual([
+      {
+        id: 'ready-model',
+        name: 'Ready Model',
+        provider: 'ready-provider',
+        contextWindow: 0,
+        reasoning: false,
+        input: ['text'],
+        authConfigured: true,
+      },
+      {
+        id: 'missing-key-model',
+        name: 'Missing Key Model',
+        provider: 'missing-provider',
+        contextWindow: 0,
+        reasoning: false,
+        input: ['text'],
+        authConfigured: false,
+      },
+    ]);
+    expect(createModelRegistryForAuthFile).toHaveBeenCalledWith('/runtime/auth.json');
+  });
+
+  it('requires stored credentials for credential-backed providers', async () => {
+    readModelState.mockResolvedValue({
+      models: [
+        { id: 'gpt-5', name: 'GPT-5', provider: 'openai' },
+        { id: 'claude-sonnet', name: 'Claude Sonnet', provider: 'anthropic' },
+      ],
+    });
+    createModelRegistryForAuthFile.mockReturnValue({
+      getAll: () => [
+        { id: 'gpt-5', provider: 'openai' },
+        { id: 'claude-sonnet', provider: 'anthropic' },
+      ],
+      getAvailable: () => [],
+      getApiKeyAndHeaders: async () => ({ ok: true, apiKey: 'resolved-key' }),
+    });
+    readProviderAuthState.mockReturnValue({
+      providers: [{ id: 'anthropic', hasStoredCredential: true, authType: 'api_key' }],
+    });
+
+    await expect(
+      createExtensionModelsCapability({
+        getSettingsFile: () => '/runtime/settings.json',
+        getAuthFile: () => '/runtime/auth.json',
+      }).list(),
+    ).resolves.toMatchObject([
+      { id: 'gpt-5', provider: 'openai', authConfigured: false },
+      { id: 'claude-sonnet', provider: 'anthropic', authConfigured: true },
+    ]);
+  });
+
+  it('does not expose openai-codex models for OAuth-only auth', async () => {
+    readModelState.mockResolvedValue({
+      models: [{ id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', provider: 'openai-codex' }],
+    });
+    createModelRegistryForAuthFile.mockReturnValue({
+      getAll: () => [{ id: 'gpt-5.3-codex-spark', provider: 'openai-codex' }],
+      getAvailable: () => [],
+      getApiKeyAndHeaders: async () => ({ ok: true, headers: { authorization: 'Bearer oauth-token' } }),
+    });
+    readProviderAuthState.mockReturnValue({
+      providers: [{ id: 'openai-codex', hasStoredCredential: true, authType: 'oauth' }],
+    });
+
+    await expect(
+      createExtensionModelsCapability({
+        getSettingsFile: () => '/runtime/settings.json',
+        getAuthFile: () => '/runtime/auth.json',
+      }).list(),
+    ).resolves.toMatchObject([{ id: 'gpt-5.3-codex-spark', provider: 'openai-codex', authConfigured: false }]);
   });
 
   it('returns an empty list when model state loading fails', async () => {

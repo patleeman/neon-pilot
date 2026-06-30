@@ -804,8 +804,22 @@ export interface TranscriptTraceClusterSummary {
   hasRunning: boolean;
 }
 
+export interface AssistantMessageVariation {
+  id: string;
+  label: string;
+  text: string;
+  modelRef?: string;
+}
+
+export interface AssistantMessageVariationSet {
+  sourceBlockId: string;
+  duelBlockId: string;
+  vote?: string | null;
+  variations: AssistantMessageVariation[];
+}
+
 export type TranscriptRenderItem =
-  | { type: 'message'; block: MessageBlock; index: number }
+  | { type: 'message'; block: MessageBlock; index: number; arenaVariationSet?: AssistantMessageVariationSet }
   | { type: 'context_cluster'; blocks: Array<Extract<MessageBlock, { type: 'context' | 'summary' }>>; startIndex: number; endIndex: number }
   | {
       type: 'trace_cluster';

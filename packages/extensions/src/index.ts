@@ -1190,9 +1190,13 @@ export interface ExtensionConversationCreateInput {
 export interface ExtensionConversationForkInput {
   conversationId: string;
   atBlockId?: string;
+  beforeEntry?: boolean;
   title?: string;
   cwd?: string;
   targetCwd?: string;
+  model?: string | null;
+  thinkingLevel?: string | null;
+  serviceTier?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -1552,6 +1556,7 @@ export interface ExtensionBackendContext {
         serviceTier?: string | null;
         purpose?: string;
         metadata?: Record<string, unknown>;
+        autoImport?: boolean;
       },
     ): Promise<{
       ok: true;
