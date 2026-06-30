@@ -146,6 +146,7 @@ import {
   validateDraftConversationCreateContributions,
   validateMessageActionContributions,
   validateNewConversationPanelContributions,
+  validateSetupItemContributions,
   validateToolbarActionContributions,
   validateTopBarElementContributions,
 } from './extensionUiContributionValidation.js';
@@ -1012,6 +1013,10 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     validateTopBarElementContributions(contributes.topBarElements);
   }
 
+  if (contributes.setupItems !== undefined) {
+    validateSetupItemContributions(contributes.setupItems);
+  }
+
   if (contributes.messageActions !== undefined) {
     validateMessageActionContributions(contributes.messageActions);
   }
@@ -1352,6 +1357,7 @@ export function readExtensionSchema() {
       'searchProviders',
       'themes',
       'topBarElements',
+      'setupItems',
       'messageActions',
       'composerShelves',
       'draftConversationCreate',

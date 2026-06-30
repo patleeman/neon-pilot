@@ -922,9 +922,55 @@ export type AppEventTopic =
   | 'routines'
   | 'daemon'
   | 'workspace'
-  | 'knowledgeBase';
+  | 'knowledgeBase'
+  | 'readiness';
 
 export type ConversationPlacement = 'closed' | 'open' | 'pinned' | 'archived';
+
+export type SetupReadinessStatus = 'ready' | 'needs_setup' | 'blocked' | 'not_applicable' | 'unknown';
+export type SetupReadinessSeverity = 'required' | 'recommended' | 'optional';
+export type SetupReadinessActionTone = 'default' | 'primary' | 'danger';
+
+export interface SetupReadinessAction {
+  id: string;
+  label: string;
+  tone: SetupReadinessActionTone;
+}
+
+export interface SetupReadinessItem {
+  key: string;
+  extensionId: string;
+  extensionName: string;
+  id: string;
+  title: string;
+  description?: string;
+  capability?: string;
+  severity: SetupReadinessSeverity;
+  status: SetupReadinessStatus;
+  detail?: string;
+  error?: string;
+  dismissed: boolean;
+  dismissible: boolean;
+  actions: SetupReadinessAction[];
+  checkedAt: string;
+  order: number;
+}
+
+export interface SetupReadinessCounts {
+  total: number;
+  ready: number;
+  incomplete: number;
+  actionable: number;
+  dismissed: number;
+  blocked: number;
+  unknown: number;
+}
+
+export interface SetupReadinessSnapshot {
+  checkedAt: string;
+  items: SetupReadinessItem[];
+  counts: SetupReadinessCounts;
+}
 
 export type AppEvent =
   | { type: 'connected' }

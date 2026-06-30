@@ -559,6 +559,33 @@ body {
   animation: notification-dropdown-in 150ms ease-out;
 }
 
+.ui-setup-readiness-popover {
+  position: absolute;
+  right: 0.75rem;
+  top: 2.25rem;
+  display: flex;
+  width: 420px;
+  max-width: calc(100vw - 24px);
+  max-height: min(560px, calc(100vh - 56px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgb(var(--color-border-default));
+  border-radius: 0.5rem;
+  background: rgb(var(--color-surface));
+  box-shadow:
+    0 20px 48px rgb(15 23 42 / 0.16),
+    0 0 0 1px rgb(255 255 255 / 0.18);
+  animation: setup-readiness-popover-in 150ms ease-out;
+}
+
+.ui-setup-readiness-row {
+  border: 1px solid rgb(var(--color-border-subtle));
+  border-radius: 0.5rem;
+  background: rgb(var(--color-elevated));
+  padding: 0.75rem;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.34);
+}
+
 .ui-notification-toast {
   pointer-events: auto;
   max-height: 45vh;
@@ -581,6 +608,17 @@ body {
 
 .ui-notification-row-unread:hover {
   background: rgb(var(--color-steel) / 0.12);
+}
+
+@keyframes setup-readiness-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .ui-notification-toast-info {

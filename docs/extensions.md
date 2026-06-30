@@ -209,6 +209,7 @@ The manifest declares what your extension contributes:
 | `settings`                        | Settings schema contributions                                                                 | [See below](#settings)                                                                    |
 | `settingsComponent`               | Component panel in Settings                                                                   | [See below](#settings-component-settingscomponent)                                        |
 | `topBarElements`                  | Top bar indicator icons                                                                       | [See below](#top-bar-elements-topbarelements)                                             |
+| `setupItems`                      | Host-rendered setup/readiness checks with fixed actions                                       | [See below](#setup-items-setupitems)                                                      |
 | `conversationHeaderElements`      | Badges in conversation header                                                                 | [See below](#conversation-header-elements-conversationheaderelements)                     |
 | `messageActions`                  | Hover buttons on messages                                                                     | [See below](#message-actions-messageactions)                                              |
 | `composerShelves`                 | Sections above the composer                                                                   | [See below](#composer-shelves-composershelves)                                            |
@@ -764,6 +765,31 @@ Settings components are hosted inside the shared Settings page, so they must use
 - Use text buttons only for explicit commands such as `Sync now`, `Install model`, `Test connection`, or destructive actions. Keep them aligned in the row action area.
 - Avoid nested bordered panels inside Settings. If a complex editor truly needs a nested structure, make it visually flatter than a standalone app page and verify it against the whole Settings page, not just a cropped component screenshot.
 - Validate with `/settings#<sectionId>` plus whole-page or scroll-depth screenshots when the section can extend below the first viewport.
+
+### Setup Items (`setupItems`)
+
+Use `contributes.setupItems` when an extension needs a host-rendered setup/readiness check, such as installing a shell link, downloading a model, signing in to a provider, or repairing local prerequisites. The host owns the top-bar readiness indicator, popover UI, dismissal state, and refresh behavior. Extensions provide data only: copy, severity, a status action, and optional fixed actions. Do not render arbitrary setup UI in the app shell.
+
+The `statusAction` backend action should be fast and idempotent. It returns an object such as `{ "status": "needs_setup", "detail": "Shell link is missing.", "actions": ["install"] }`. Supported statuses are `ready`, `needs_setup`, `blocked`, and `not_applicable`; failures are shown as `unknown` without breaking the whole popover. Action ids in the returned `actions` array filter the manifest-declared buttons.
+
+```json
+{
+  "contributes": {
+    "setupItems": [
+      {
+        "id": "cli-shell-link",
+        "title": "Install the Neon Pilot shell command",
+        "description": "Adds the neon-pilot command to your user shell path.",
+        "severity": "recommended",
+        "statusAction": "cliShellLinkSetupStatus",
+        "actions": [{ "id": "install", "label": "Install", "action": "installCliShellLink", "tone": "primary" }],
+        "dismissible": true,
+        "order": 10
+      }
+    ]
+  }
+}
+```
 
 ### Composer Controls (`composerControls`)
 

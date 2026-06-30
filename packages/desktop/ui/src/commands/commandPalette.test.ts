@@ -224,6 +224,18 @@ describe('command palette search', () => {
       }),
     ).toBe(false);
     expect(
+      isHostCommandDisabledInPalette('setup.close', {
+        activeConversationId: null,
+        context: { 'setup.open': false },
+      }),
+    ).toBe(true);
+    expect(
+      isHostCommandDisabledInPalette('setup.close', {
+        activeConversationId: null,
+        context: { 'setup.open': true },
+      }),
+    ).toBe(false);
+    expect(
       isHostCommandDisabledInPalette('conversation.rename', {
         activeConversationId: 'conversation-1',
         context: { 'conversation.canRename': false },

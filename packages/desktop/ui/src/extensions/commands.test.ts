@@ -800,6 +800,31 @@ describe('extension commands', () => {
     expect(dismissAllNotifications).toHaveBeenCalledTimes(1);
   });
 
+  it('includes setup readiness commands gated by drawer state', async () => {
+    expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['setup.open', 'setup.close', 'setup.refresh']));
+    const openSetupReadiness = vi.fn(() => true);
+    const closeSetupReadiness = vi.fn(() => true);
+    const refreshSetupReadiness = vi.fn(() => true);
+    const options = {
+      navigate: vi.fn(),
+      openCommandPalette: vi.fn(),
+      openRightRail: vi.fn(),
+      setLayout: vi.fn(),
+      openSetupReadiness,
+      closeSetupReadiness,
+      refreshSetupReadiness,
+    };
+
+    await expect(executeExtensionCommand('setup.open', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('setup.close', undefined, options)).resolves.toBe(false);
+    await expect(executeExtensionCommand('setup.refresh', undefined, options)).resolves.toBe(true);
+    await expect(executeExtensionCommand('setup.close', undefined, { ...options, context: { 'setup.open': true } })).resolves.toBe(true);
+
+    expect(openSetupReadiness).toHaveBeenCalledTimes(1);
+    expect(closeSetupReadiness).toHaveBeenCalledTimes(1);
+    expect(refreshSetupReadiness).toHaveBeenCalledTimes(1);
+  });
+
   it('includes browser toolbar commands gated by browser state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(
       expect.arrayContaining([

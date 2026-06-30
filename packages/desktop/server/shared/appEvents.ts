@@ -36,7 +36,8 @@ export type AppEventTopic =
   | 'daemon'
   | 'workspace'
   | 'knowledgeBase'
-  | 'notifications';
+  | 'notifications'
+  | 'readiness';
 
 export type AppEvent =
   | { type: 'connected' }
@@ -151,6 +152,7 @@ const ALL_TOPICS: AppEventTopic[] = [
   'workspace',
   'knowledgeBase',
   'notifications',
+  'readiness',
 ];
 const listeners = new Set<AppEventListener>();
 let monitorStop: WatchStop | undefined;
@@ -416,6 +418,7 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     workspace: [{ path: join(getPiAgentRuntimeDir(), 'settings.json'), kind: 'file' }],
     knowledgeBase: [],
     notifications: [],
+    readiness: [],
   };
 }
 

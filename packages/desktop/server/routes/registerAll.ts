@@ -13,6 +13,7 @@ import { registerModelRoutes } from './models.js';
 import { registerRunAppRoutes } from './runsApp.js';
 import { registerSecretRoutes } from './secrets.js';
 import { registerSettingsRoutes } from './settings.js';
+import { registerSetupReadinessRoutes } from './setupReadiness.js';
 import { registerSystemRoutes } from './system.js';
 import { registerToolsRoutes } from './tools.js';
 import { registerWorkspaceExplorerRoutes } from './workspaceExplorer.js';
@@ -29,6 +30,8 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
   registerGatewayRoutes(app, context);
 
   registerExtensionRoutes(app, context);
+
+  registerSetupReadinessRoutes(app, context);
 
   registerModelRoutes(app, context);
 

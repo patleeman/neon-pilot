@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const automations = vi.hoisted(() => ({
   applyScheduledTaskThreadBinding: vi.fn(),
@@ -9,9 +9,22 @@ const automations = vi.hoisted(() => ({
   updateStoredAutomation: vi.fn(),
 }));
 
-vi.mock('@neon-pilot/extensions/backend/automations', () => automations);
+const cli = vi.hoisted(() => ({
+  installNeonPilotUserCli: vi.fn(),
+  readNeonPilotCliInstallStatus: vi.fn(),
+}));
 
-import { controlPlaneDoctor, manageAppCommands, neonPilotAdmin, neonPilotTool } from './backend.js';
+vi.mock('@neon-pilot/extensions/backend/automations', () => automations);
+vi.mock('@neon-pilot/extensions/backend/cli', () => cli);
+
+import {
+  cliShellLinkSetupStatus,
+  controlPlaneDoctor,
+  installCliShellLink,
+  manageAppCommands,
+  neonPilotAdmin,
+  neonPilotTool,
+} from './backend.js';
 
 function ctx(overrides: Record<string, unknown> = {}) {
   const storage = new Map<string, unknown>();
@@ -52,6 +65,22 @@ describe('system-neon-pilot-admin-cli backend', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     automations.invalidateAppTopics.mockResolvedValue(undefined);
+    cli.readNeonPilotCliInstallStatus.mockResolvedValue({
+      target: '/state/neon-pilot/bin/neon-pilot',
+      binDir: '/Users/patrick/.local/bin',
+      linkPath: '/Users/patrick/.local/bin/neon-pilot',
+      globallyInstalled: true,
+      linkExists: true,
+      linkConflict: false,
+    });
+    cli.installNeonPilotUserCli.mockResolvedValue({
+      target: '/state/neon-pilot/bin/neon-pilot',
+      binDir: '/Users/patrick/.local/bin',
+      linkPath: '/Users/patrick/.local/bin/neon-pilot',
+      globallyInstalled: true,
+      linkExists: true,
+      linkConflict: false,
+    });
   });
 
   it('normalizes app command CLI list and run inputs', async () => {
@@ -70,11 +99,16 @@ describe('system-neon-pilot-admin-cli backend', () => {
   it('uses shared semantics for CLI and neon_pilot tool inputs', async () => {
     const cliContext = ctx();
     const toolContext = ctx();
-    const cliResult = await manageAppCommands({ cli: { command: 'app-commands run', args: ['cmd-1'], flags: { args: '{"value":1}' } } }, cliContext);
+    const cliResult = await manageAppCommands(
+      { cli: { command: 'app-commands run', args: ['cmd-1'], flags: { args: '{"value":1}' } } },
+      cliContext,
+    );
     const toolResult = await neonPilotAdmin({ command: 'run_app_command', commandId: 'cmd-1', args: { value: 1 } }, toolContext);
 
     expect(toolResult).toEqual(cliResult);
-    expect((toolContext as { commands: { execute: ReturnType<typeof vi.fn> } }).commands.execute).toHaveBeenCalledWith('cmd-1', { value: 1 });
+    expect((toolContext as { commands: { execute: ReturnType<typeof vi.fn> } }).commands.execute).toHaveBeenCalledWith('cmd-1', {
+      value: 1,
+    });
   });
 
   it('honors app command dry-runs without executing the command', async () => {
@@ -82,7 +116,10 @@ describe('system-neon-pilot-admin-cli backend', () => {
     const toolContext = ctx();
 
     await expect(
-      manageAppCommands({ cli: { command: 'app-commands run', args: ['cmd-1'], flags: { args: '{"value":1}', 'dry-run': true } } }, cliContext),
+      manageAppCommands(
+        { cli: { command: 'app-commands run', args: ['cmd-1'], flags: { args: '{"value":1}', 'dry-run': true } } },
+        cliContext,
+      ),
     ).resolves.toEqual({ ok: true, dryRun: true, action: 'run_app_command', commandId: 'cmd-1', args: { value: 1 }, executed: false });
     await expect(
       neonPilotAdmin({ command: 'run_app_command', commandId: 'cmd-1', args: { value: 1 }, dryRun: true }, toolContext),
@@ -112,9 +149,62 @@ describe('system-neon-pilot-admin-cli backend', () => {
     });
   });
 
+  it('reports CLI shell link setup as ready when the user link is installed', async () => {
+    await expect(cliShellLinkSetupStatus()).resolves.toMatchObject({
+      status: 'ready',
+      detail: expect.stringContaining('Shell command is linked'),
+      actions: [],
+    });
+  });
+
+  it('reports CLI shell link setup as actionable when the link is missing', async () => {
+    cli.readNeonPilotCliInstallStatus.mockResolvedValueOnce({
+      target: '/state/neon-pilot/bin/neon-pilot',
+      binDir: '/Users/patrick/.local/bin',
+      linkPath: '/Users/patrick/.local/bin/neon-pilot',
+      globallyInstalled: false,
+      linkExists: false,
+      linkConflict: false,
+    });
+
+    await expect(cliShellLinkSetupStatus()).resolves.toMatchObject({
+      status: 'needs_setup',
+      detail: expect.stringContaining('shell link is missing'),
+      actions: ['install'],
+    });
+  });
+
+  it('reports CLI shell link conflicts as blocked', async () => {
+    cli.readNeonPilotCliInstallStatus.mockResolvedValueOnce({
+      target: '/state/neon-pilot/bin/neon-pilot',
+      binDir: '/Users/patrick/.local/bin',
+      linkPath: '/Users/patrick/.local/bin/neon-pilot',
+      globallyInstalled: false,
+      linkExists: true,
+      linkConflict: true,
+      linkTarget: '/usr/local/bin/other',
+    });
+
+    await expect(cliShellLinkSetupStatus()).resolves.toMatchObject({
+      status: 'blocked',
+      detail: expect.stringContaining('/usr/local/bin/other'),
+      actions: [],
+    });
+  });
+
+  it('installs the CLI shell link through the shared host API', async () => {
+    await expect(installCliShellLink()).resolves.toMatchObject({
+      ok: true,
+      detail: expect.stringContaining('Shell command is linked'),
+    });
+    expect(cli.installNeonPilotUserCli).toHaveBeenCalledTimes(1);
+  });
+
   it('normalizes app update CLI dry-run input', async () => {
     const result = await neonPilotAdmin(
-      { cli: { command: 'app update', flags: { channel: 'rc', 'app-dir': '/Applications', repo: 'patleeman/neon-pilot', 'dry-run': true } } },
+      {
+        cli: { command: 'app update', flags: { channel: 'rc', 'app-dir': '/Applications', repo: 'patleeman/neon-pilot', 'dry-run': true } },
+      },
       ctx(),
     );
 
@@ -155,14 +245,28 @@ describe('system-neon-pilot-admin-cli backend', () => {
   it('uses shared semantics for heartbeat CLI and neon_pilot tool inputs', async () => {
     const setup = () => {
       automations.loadScheduledTasksForProfile.mockResolvedValueOnce({ tasks: [], parseErrors: [] });
-      automations.resolveScheduledTaskThreadBinding.mockResolvedValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.jsonl' });
-      automations.createStoredAutomation.mockResolvedValue({ id: 'hb-1', enabled: true, schedule: { type: 'cron', expression: '*/5 * * * *' } });
+      automations.resolveScheduledTaskThreadBinding.mockResolvedValue({
+        mode: 'existing',
+        conversationId: 'conv-1',
+        sessionFile: '/session.jsonl',
+      });
+      automations.createStoredAutomation.mockResolvedValue({
+        id: 'hb-1',
+        enabled: true,
+        schedule: { type: 'cron', expression: '*/5 * * * *' },
+      });
       automations.applyScheduledTaskThreadBinding.mockResolvedValue({ threadConversationId: 'conv-1' });
     };
 
     setup();
     const cliResult = await neonPilotAdmin(
-      { cli: { command: 'heartbeats start', args: ['hb-1'], flags: { 'interval-minutes': '5', 'conversation-id': 'conv-1', prompt: 'Check work.' } } },
+      {
+        cli: {
+          command: 'heartbeats start',
+          args: ['hb-1'],
+          flags: { 'interval-minutes': '5', 'conversation-id': 'conv-1', prompt: 'Check work.' },
+        },
+      },
       ctx(),
     );
     vi.clearAllMocks();
@@ -179,12 +283,23 @@ describe('system-neon-pilot-admin-cli backend', () => {
 
   it('starts, lists, and stops heartbeats through the shared admin schema', async () => {
     automations.loadScheduledTasksForProfile.mockResolvedValueOnce({ tasks: [], parseErrors: [] });
-    automations.resolveScheduledTaskThreadBinding.mockResolvedValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.jsonl' });
-    automations.createStoredAutomation.mockResolvedValue({ id: 'hb-1', enabled: true, schedule: { type: 'cron', expression: '*/5 * * * *' } });
+    automations.resolveScheduledTaskThreadBinding.mockResolvedValue({
+      mode: 'existing',
+      conversationId: 'conv-1',
+      sessionFile: '/session.jsonl',
+    });
+    automations.createStoredAutomation.mockResolvedValue({
+      id: 'hb-1',
+      enabled: true,
+      schedule: { type: 'cron', expression: '*/5 * * * *' },
+    });
     automations.applyScheduledTaskThreadBinding.mockResolvedValue({ threadConversationId: 'conv-1' });
 
     await expect(
-      neonPilotAdmin({ command: 'heartbeat_start', heartbeatId: 'hb-1', intervalMinutes: 5, conversationId: 'conv-1', prompt: 'Check work.' }, ctx()),
+      neonPilotAdmin(
+        { command: 'heartbeat_start', heartbeatId: 'hb-1', intervalMinutes: 5, conversationId: 'conv-1', prompt: 'Check work.' },
+        ctx(),
+      ),
     ).resolves.toMatchObject({ ok: true, heartbeat: { id: 'hb-1', intervalMinutes: 5, skipIfRunning: true, coalesce: true } });
     expect(automations.createStoredAutomation).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -229,7 +344,11 @@ describe('system-neon-pilot-admin-cli backend', () => {
       ],
       parseErrors: [],
     });
-    automations.updateStoredAutomation.mockResolvedValue({ id: 'hb-1', enabled: false, schedule: { type: 'cron', expression: '*/5 * * * *' } });
+    automations.updateStoredAutomation.mockResolvedValue({
+      id: 'hb-1',
+      enabled: false,
+      schedule: { type: 'cron', expression: '*/5 * * * *' },
+    });
     await expect(neonPilotAdmin({ command: 'heartbeat_stop', heartbeatId: 'hb-1' }, ctx())).resolves.toMatchObject({
       ok: true,
       heartbeat: { id: 'hb-1', enabled: false },

@@ -319,7 +319,8 @@ function isAppEventTopic(value: unknown): value is AppEventTopic {
     value === 'daemon' ||
     value === 'workspace' ||
     value === 'knowledgeBase' ||
-    value === 'notifications'
+    value === 'notifications' ||
+    value === 'readiness'
   );
 }
 

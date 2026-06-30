@@ -183,6 +183,28 @@ interface ExtensionTopBarElementContribution {
   label?: string;
 }
 
+type ExtensionSetupItemSeverity = 'required' | 'recommended' | 'optional';
+type ExtensionSetupItemActionTone = 'default' | 'primary' | 'danger';
+
+interface ExtensionSetupItemActionContribution {
+  id: string;
+  label: string;
+  action: string;
+  tone?: ExtensionSetupItemActionTone;
+}
+
+interface ExtensionSetupItemContribution {
+  id: string;
+  title: string;
+  description?: string;
+  capability?: string;
+  severity?: ExtensionSetupItemSeverity;
+  statusAction: string;
+  actions?: ExtensionSetupItemActionContribution[];
+  dismissible?: boolean;
+  order?: number;
+}
+
 interface ExtensionMessageActionContribution {
   id: string;
   title: string;
@@ -411,6 +433,7 @@ interface ExtensionContributions {
   searchProviders?: ExtensionSearchProviderContribution[];
   themes?: ExtensionThemeContribution[];
   topBarElements?: ExtensionTopBarElementContribution[];
+  setupItems?: ExtensionSetupItemContribution[];
   messageActions?: ExtensionMessageActionContribution[];
   composerShelves?: ExtensionComposerShelfContribution[];
   newConversationPanels?: ExtensionNewConversationPanelContribution[];

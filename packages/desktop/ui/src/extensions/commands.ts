@@ -24,6 +24,9 @@ export interface ExtensionCommandExecutorOptions {
   closeNotifications?(): boolean;
   markAllNotificationsRead?(): boolean;
   dismissAllNotifications?(): boolean;
+  openSetupReadiness?(): boolean;
+  closeSetupReadiness?(): boolean;
+  refreshSetupReadiness?(): boolean;
   openCommandPalette(scope?: string): void;
   openRightRail(target: string): boolean;
   setLayout(mode: 'compact' | 'workbench'): void;
@@ -204,6 +207,9 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'notifications.close', title: 'Close Notifications', category: 'App' },
     { id: 'notifications.markAllRead', title: 'Mark Notifications Read', category: 'App' },
     { id: 'notifications.dismissAll', title: 'Dismiss Notifications', category: 'App' },
+    { id: 'setup.open', title: 'Open Setup Readiness', category: 'App' },
+    { id: 'setup.close', title: 'Close Setup Readiness', category: 'App' },
+    { id: 'setup.refresh', title: 'Check Setup Again', category: 'App' },
     {
       id: 'palette.open',
       title: 'Open Command Palette',
@@ -446,6 +452,39 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
       },
       canExecute(_args, context) {
         return Boolean(options.dismissAllNotifications) && readContextValue(context, 'notifications.hasVisible') === true;
+      },
+    },
+    {
+      id: 'setup.open',
+      title: 'Open Setup Readiness',
+      category: 'App',
+      execute() {
+        return options.openSetupReadiness?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.openSetupReadiness);
+      },
+    },
+    {
+      id: 'setup.close',
+      title: 'Close Setup Readiness',
+      category: 'App',
+      execute() {
+        return options.closeSetupReadiness?.() ?? false;
+      },
+      canExecute(_args, context) {
+        return Boolean(options.closeSetupReadiness) && readContextValue(context, 'setup.open') === true;
+      },
+    },
+    {
+      id: 'setup.refresh',
+      title: 'Check Setup Again',
+      category: 'App',
+      execute() {
+        return options.refreshSetupReadiness?.() ?? false;
+      },
+      canExecute() {
+        return Boolean(options.refreshSetupReadiness);
       },
     },
     {

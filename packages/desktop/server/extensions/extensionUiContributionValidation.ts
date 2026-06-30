@@ -15,6 +15,31 @@ export function validateTopBarElementContributions(value: unknown): void {
   }
 }
 
+export function validateSetupItemContributions(value: unknown): void {
+  for (const [index, item] of assertRecordArray(value, 'contributes.setupItems').entries()) {
+    requireString(item.id, `contributes.setupItems[${index}].id`);
+    requireString(item.title, `contributes.setupItems[${index}].title`);
+    validateOptionalString(item.description, `contributes.setupItems[${index}].description`);
+    validateOptionalString(item.capability, `contributes.setupItems[${index}].capability`);
+    requireString(item.statusAction, `contributes.setupItems[${index}].statusAction`);
+    if (item.severity !== undefined)
+      validateEnum(item.severity, ['required', 'recommended', 'optional'], `contributes.setupItems[${index}].severity`);
+    if (item.dismissible !== undefined && typeof item.dismissible !== 'boolean') {
+      throw new Error(`Extension manifest contributes.setupItems[${index}].dismissible must be a boolean.`);
+    }
+    validateOptionalInteger(item.order, `contributes.setupItems[${index}].order`);
+    if (item.actions !== undefined) {
+      for (const [actionIndex, action] of assertRecordArray(item.actions, `contributes.setupItems[${index}].actions`).entries()) {
+        requireString(action.id, `contributes.setupItems[${index}].actions[${actionIndex}].id`);
+        requireString(action.label, `contributes.setupItems[${index}].actions[${actionIndex}].label`);
+        requireString(action.action, `contributes.setupItems[${index}].actions[${actionIndex}].action`);
+        if (action.tone !== undefined)
+          validateEnum(action.tone, ['default', 'primary', 'danger'], `contributes.setupItems[${index}].actions[${actionIndex}].tone`);
+      }
+    }
+  }
+}
+
 export function validateMessageActionContributions(value: unknown): void {
   for (const [index, action] of assertRecordArray(value, 'contributes.messageActions').entries()) {
     requireString(action.id, `contributes.messageActions[${index}].id`);

@@ -7,10 +7,16 @@ import {
   resolveScheduledTaskThreadBinding,
   updateStoredAutomation,
 } from '@neon-pilot/extensions/backend/automations';
+import { installNeonPilotUserCli, readNeonPilotCliInstallStatus } from '@neon-pilot/extensions/backend/cli';
 
 import { neonPilotAgent as runNeonPilotAgent } from './agentBackend.js';
 
 export { __setNeonPilotAgentApisForTest, neonPilotAgent, neonPilotAgentCli, readSettings, updateSettings } from './agentBackend.js';
+
+type CliApi = {
+  installNeonPilotUserCli: typeof installNeonPilotUserCli;
+  readNeonPilotCliInstallStatus: typeof readNeonPilotCliInstallStatus;
+};
 
 type AdminCommandId =
   | 'list_app_commands'
@@ -31,9 +37,14 @@ type AutomationsApi = {
 };
 
 let automationsApiOverride: Partial<AutomationsApi> | null = null;
+let cliApiOverride: Partial<CliApi> | null = null;
 
-export function __setNeonPilotAdminApisForTest(input: { automations?: Partial<AutomationsApi> | null }): void {
+export function __setNeonPilotAdminApisForTest(input: {
+  automations?: Partial<AutomationsApi> | null;
+  cli?: Partial<CliApi> | null;
+}): void {
   automationsApiOverride = input.automations ?? null;
+  cliApiOverride = input.cli ?? null;
 }
 
 function automationsApi(): AutomationsApi {
@@ -48,6 +59,14 @@ function automationsApi(): AutomationsApi {
   } as AutomationsApi;
 }
 
+function cliApi(): CliApi {
+  return {
+    installNeonPilotUserCli,
+    readNeonPilotCliInstallStatus,
+    ...cliApiOverride,
+  } as CliApi;
+}
+
 interface AdminCommandDefinition {
   id: AdminCommandId;
   description: string;
@@ -57,7 +76,8 @@ interface AdminCommandDefinition {
 const adminCommands: AdminCommandDefinition[] = [
   {
     id: 'list_app_commands',
-    description: 'List command-palette/app commands available to extensions. Advanced escape hatch; prefer first-class CLI commands when available.',
+    description:
+      'List command-palette/app commands available to extensions. Advanced escape hatch; prefer first-class CLI commands when available.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: true },
   },
   {
@@ -261,23 +281,41 @@ function readBoolean(value: unknown): boolean {
   return value === true || value === 'true' || value === '1' || value === 'yes';
 }
 
+function cliInstallDetail(status: Awaited<ReturnType<typeof readNeonPilotCliInstallStatus>>): string {
+  if (status.globallyInstalled) return `Shell command is linked at ${status.linkPath}.`;
+  if (status.linkConflict) {
+    const target = status.linkTarget ? ` It currently points to ${status.linkTarget}.` : '';
+    return `A different file already exists at ${status.linkPath}.${target}`;
+  }
+  return `The command exists at ${status.target}, but the shell link is missing at ${status.linkPath}.`;
+}
+
+export async function cliShellLinkSetupStatus() {
+  const status = await cliApi().readNeonPilotCliInstallStatus();
+  return {
+    status: status.globallyInstalled ? 'ready' : status.linkConflict ? 'blocked' : 'needs_setup',
+    detail: cliInstallDetail(status),
+    actions: status.globallyInstalled || status.linkConflict ? [] : ['install'],
+    cli: status,
+  };
+}
+
+export async function installCliShellLink() {
+  const status = await cliApi().installNeonPilotUserCli();
+  return {
+    ok: status.globallyInstalled,
+    status,
+    detail: cliInstallDetail(status),
+  };
+}
+
 function buildUpdateCommand(input: Record<string, unknown>, ctx: ExtensionBackendContext): { command: string; source: 'local' | 'remote' } {
   const channel = normalizeUpdateChannel(input.channel);
   const appDir = readString(input.appDir) ?? '/Applications';
   const repo = readString(input.repo) ?? 'patleeman/neon-pilot';
   const repoRoot = ctx.runtime.getRepoRoot();
   const localInstaller = `${repoRoot}/install.sh`;
-  const commonArgs = [
-    '--channel',
-    channel,
-    '--app-dir',
-    appDir,
-    '--repo',
-    repo,
-    '--install-cli',
-    '--bootstrap',
-    '--json',
-  ];
+  const commonArgs = ['--channel', channel, '--app-dir', appDir, '--repo', repo, '--install-cli', '--bootstrap', '--json'];
   const quotedArgs = commonArgs.map(shellQuote).join(' ');
   const localCommand = `[ -f ${shellQuote(localInstaller)} ] && bash ${shellQuote(localInstaller)} ${quotedArgs}`;
   const remoteCommand = `curl -fsSL ${shellQuote(`https://raw.githubusercontent.com/${repo}/master/install.sh`)} | bash -s -- ${quotedArgs}`;

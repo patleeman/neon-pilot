@@ -81,6 +81,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['notifications.close', 'notifications.open'],
   ['notifications.markAllRead', 'notifications.hasUnread'],
   ['notifications.dismissAll', 'notifications.hasVisible'],
+  ['setup.close', 'setup.open'],
   ['browser.newTab', 'browser.active'],
   ['browser.reopenTab', 'browser.active'],
   ['browser.closeTab', 'browser.active'],

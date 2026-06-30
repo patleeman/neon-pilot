@@ -148,6 +148,8 @@ import {
 } from './layout/workbenchRailModel';
 import { NotificationBell } from './notifications/NotificationBell';
 import { addNotification, NotificationProvider, useNotificationStore } from './notifications/notificationStore';
+import { SetupReadinessButton } from './readiness/SetupReadinessButton';
+import { useSetupReadiness } from './readiness/useSetupReadiness';
 import {
   ActionTile,
   CenteredMessage,
@@ -177,6 +179,7 @@ const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const NOTIFICATIONS_MARK_ALL_READ_EVENT = 'neon-pilot-notifications-mark-all-read';
 const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
 const NOTIFICATIONS_CLOSE_EVENT = 'neon-pilot-notifications-close';
+const SETUP_READINESS_CLOSE_EVENT = 'neon-pilot-setup-readiness-close';
 const SIDEBAR_AUTO_COLLAPSE_WIDTH = 720;
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
@@ -239,6 +242,9 @@ function NotificationCommandBridge({ open, onClose }: { open: boolean; onClose: 
 }
 const NotificationCenter = lazyRouteWithRecovery('layout-notification-center', () =>
   import('./notifications/NotificationCenter').then((module) => ({ default: module.NotificationCenter })),
+);
+const SetupReadinessPopover = lazyRouteWithRecovery('layout-setup-readiness-popover', () =>
+  import('./readiness/SetupReadinessPopover').then((module) => ({ default: module.SetupReadinessPopover })),
 );
 const NotificationToaster = lazyRouteWithRecovery('layout-notification-toaster', () =>
   import('./notifications/NotificationToaster').then((module) => ({ default: module.NotificationToaster })),
@@ -2007,8 +2013,27 @@ export function Layout() {
   const canToggleWorkbenchExplorer = Boolean(activeWorkbenchRailSurface);
   const effectiveWorkbenchExplorerOpen = workbenchExplorerOpen && activeWorkbenchRailSurface !== null;
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+  const [setupReadinessOpen, setSetupReadinessOpen] = useState(false);
+  const setupReadiness = useSetupReadiness();
   const [commandPaletteMounted, setCommandPaletteMounted] = useState(false);
   const [pendingCommandPaletteOpen, setPendingCommandPaletteOpen] = useState<OpenCommandPaletteDetail | null>(null);
+
+  useEffect(() => {
+    setExtensionCommandContext('setup.open', setupReadinessOpen);
+    setExtensionCommandContext('setup.hasIncomplete', (setupReadiness.snapshot?.counts.actionable ?? 0) > 0);
+    return () => {
+      setExtensionCommandContext('setup.open', null);
+      setExtensionCommandContext('setup.hasIncomplete', null);
+    };
+  }, [setupReadiness.snapshot?.counts.actionable, setupReadinessOpen]);
+
+  useEffect(() => {
+    function handleClose() {
+      setSetupReadinessOpen(false);
+    }
+    window.addEventListener(SETUP_READINESS_CLOSE_EVENT, handleClose);
+    return () => window.removeEventListener(SETUP_READINESS_CLOSE_EVENT, handleClose);
+  }, []);
 
   const openWorkbenchToolTab = useCallback(
     (
@@ -2359,6 +2384,18 @@ export function Layout() {
       },
       openNotifications() {
         startTransition(() => setNotificationCenterOpen(true));
+        return true;
+      },
+      openSetupReadiness() {
+        startTransition(() => setSetupReadinessOpen(true));
+        return true;
+      },
+      closeSetupReadiness() {
+        window.dispatchEvent(new CustomEvent(SETUP_READINESS_CLOSE_EVENT));
+        return true;
+      },
+      refreshSetupReadiness() {
+        void setupReadiness.refresh();
         return true;
       },
       closeNotifications() {
@@ -3389,6 +3426,7 @@ export function Layout() {
     systemBrowserExtensionSurface,
     setActiveConversationTool,
     setSearchParams,
+    setupReadiness,
   ]);
 
   return (
@@ -3404,11 +3442,19 @@ export function Layout() {
             railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
             onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
             trailingExtra={
-              <NotificationBell
-                onClick={() => {
-                  startTransition(() => setNotificationCenterOpen((open) => !open));
-                }}
-              />
+              <>
+                <SetupReadinessButton
+                  count={setupReadiness.snapshot?.counts.actionable ?? 0}
+                  onClick={() => {
+                    startTransition(() => setSetupReadinessOpen((open) => !open));
+                  }}
+                />
+                <NotificationBell
+                  onClick={() => {
+                    startTransition(() => setNotificationCenterOpen((open) => !open));
+                  }}
+                />
+              </>
             }
           />
           <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -3515,6 +3561,20 @@ export function Layout() {
       {notificationCenterOpen ? (
         <Suspense fallback={null}>
           <NotificationCenter onClose={() => setNotificationCenterOpen(false)} />
+        </Suspense>
+      ) : null}
+      {setupReadinessOpen ? (
+        <Suspense fallback={null}>
+          <SetupReadinessPopover
+            snapshot={setupReadiness.snapshot}
+            loading={setupReadiness.loading}
+            error={setupReadiness.error}
+            onClose={() => setSetupReadinessOpen(false)}
+            onRefresh={() => void setupReadiness.refresh()}
+            onRunAction={setupReadiness.runAction}
+            onDismiss={setupReadiness.dismiss}
+            onRestore={setupReadiness.restore}
+          />
         </Suspense>
       ) : null}
       <Suspense fallback={null}>

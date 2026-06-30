@@ -565,6 +565,29 @@ export interface ExtensionTopBarElementContribution {
   label?: string;
 }
 
+export type ExtensionSetupItemSeverity = 'required' | 'recommended' | 'optional';
+export type ExtensionSetupItemStatus = 'ready' | 'needs_setup' | 'blocked' | 'not_applicable';
+export type ExtensionSetupItemActionTone = 'default' | 'primary' | 'danger';
+
+export interface ExtensionSetupItemActionContribution {
+  id: string;
+  label: string;
+  action: string;
+  tone?: ExtensionSetupItemActionTone;
+}
+
+export interface ExtensionSetupItemContribution {
+  id: string;
+  title: string;
+  description?: string;
+  capability?: string;
+  severity?: ExtensionSetupItemSeverity;
+  statusAction: string;
+  actions?: ExtensionSetupItemActionContribution[];
+  dismissible?: boolean;
+  order?: number;
+}
+
 export interface ExtensionMessageActionContribution {
   id: string;
   title: string;
@@ -892,6 +915,7 @@ export interface ExtensionContributions {
   searchProviders?: ExtensionSearchProviderContribution[];
   themes?: ExtensionThemeContribution[];
   topBarElements?: ExtensionTopBarElementContribution[];
+  setupItems?: ExtensionSetupItemContribution[];
   messageActions?: ExtensionMessageActionContribution[];
   composerShelves?: ExtensionComposerShelfContribution[];
   draftConversationCreate?: ExtensionDraftConversationCreateContribution[];

@@ -664,7 +664,27 @@
       "label": "Neon Pilot CLI",
       "description": "Enable or disable Neon Pilot CLI entrypoints.",
       "order": 45
-    }
+    },
+    "setupItems": [
+      {
+        "id": "cli-shell-link",
+        "title": "Install the Neon Pilot shell command",
+        "description": "Adds the neon-pilot command to your user shell path so terminal workflows and external callers can find it.",
+        "capability": "Command line",
+        "severity": "recommended",
+        "statusAction": "cliShellLinkSetupStatus",
+        "actions": [
+          {
+            "id": "install",
+            "label": "Install",
+            "action": "installCliShellLink",
+            "tone": "primary"
+          }
+        ],
+        "dismissible": true,
+        "order": 10
+      }
+    ]
   },
   "backend": {
     "entry": "src/backend.ts",
@@ -702,6 +722,22 @@
         "worker": {
           "enabled": true,
           "inputActions": ["doctor"]
+        }
+      },
+      {
+        "id": "cliShellLinkSetupStatus",
+        "handler": "cliShellLinkSetupStatus",
+        "title": "CLI Shell Link Setup Status",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "installCliShellLink",
+        "handler": "installCliShellLink",
+        "title": "Install CLI Shell Link",
+        "worker": {
+          "enabled": true
         }
       },
       {

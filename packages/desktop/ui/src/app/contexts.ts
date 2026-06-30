@@ -45,6 +45,7 @@ export const INITIAL_APP_EVENT_VERSIONS: AppEventVersions = {
   daemon: 0,
   workspace: 0,
   knowledgeBase: 0,
+  readiness: 0,
 };
 
 interface AppEventsContextValue {

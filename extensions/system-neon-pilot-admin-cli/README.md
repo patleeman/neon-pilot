@@ -14,6 +14,7 @@ Keep product administration here unless the command is core shell behavior. Do n
 - CLI/protocol entrypoints: Neon Pilot admin and delegated-agent command handling
 - Backend exports: `neonPilotAgent`, `neonPilotAgentCli`, settings read/update helpers, and admin action handlers
 - Settings: controls whether the CLI entrypoint is enabled
+- Setup Readiness: reports and repairs the user-shell `neon-pilot` link when it is missing
 
 ## Conversation identity
 

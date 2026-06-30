@@ -181,6 +181,8 @@ neon-pilot cli install
 neon-pilot cli uninstall
 ```
 
+The desktop app also surfaces this prerequisite in the Setup Readiness popover when the user-shell link is missing or blocked. The CLI extension contributes that readiness item through the host-owned setup item registry, so users can repair or dismiss it without leaving the app.
+
 All runtime channels stay in the `neon-pilot*` namespace (`neon-pilot`, `neon-pilot-rc`, `neon-pilot-dev`, `neon-pilot-testing`), but the command users and agents run is still `neon-pilot`.
 
 ## Running App Discovery

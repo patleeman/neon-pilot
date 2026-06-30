@@ -53,6 +53,7 @@ import type {
   ProviderAuthState,
   ProviderConnectionTestResult,
   SecretsState,
+  SetupReadinessSnapshot,
   SkillFoldersState,
   SystemPromptAggregate,
   SystemPromptPoint,
@@ -1383,4 +1384,16 @@ export const api = {
     put<SecretsState>(`/secrets/${encodeURIComponent(extensionId)}/${encodeURIComponent(secretId)}`, { value }),
   deleteSecret: async (extensionId: string, secretId: string) =>
     del<SecretsState>(`/secrets/${encodeURIComponent(extensionId)}/${encodeURIComponent(secretId)}`),
+
+  // ── Setup readiness ─────────────────────────────────────────────
+
+  setupReadiness: async () => get<SetupReadinessSnapshot>('/setup/readiness'),
+  runSetupReadinessAction: async (extensionId: string, itemId: string, actionId: string) =>
+    post<SetupReadinessSnapshot>(
+      `/setup/readiness/items/${encodeURIComponent(extensionId)}/${encodeURIComponent(itemId)}/actions/${encodeURIComponent(actionId)}`,
+    ),
+  dismissSetupReadinessItem: async (extensionId: string, itemId: string) =>
+    post<SetupReadinessSnapshot>(`/setup/readiness/items/${encodeURIComponent(extensionId)}/${encodeURIComponent(itemId)}/dismiss`),
+  restoreSetupReadinessItem: async (extensionId: string, itemId: string) =>
+    post<SetupReadinessSnapshot>(`/setup/readiness/items/${encodeURIComponent(extensionId)}/${encodeURIComponent(itemId)}/restore`),
 };
