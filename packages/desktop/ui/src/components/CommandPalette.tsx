@@ -29,7 +29,12 @@ import {
   type ScopedSessionMeta,
 } from '../commands/commandPaletteItems';
 import { readConversationIdFromPathname } from '../conversation/conversationRoutes';
-import { canExecuteExtensionCommand, EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, listHostCommands } from '../extensions/commands';
+import {
+  canExecuteExtensionCommand,
+  EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT,
+  getExtensionCommandContext,
+  listHostCommands,
+} from '../extensions/commands';
 import { systemExtensionModules } from '../extensions/systemExtensionModules';
 import type {
   ExtensionCommandRegistration,
@@ -117,6 +122,7 @@ export function CommandPalette() {
   const archivedConversationItems = useMemo(() => buildConversationItems('archived', archivedSessions), [archivedSessions]);
   const commandItems = useMemo<CommandPaletteItem<CommandPaletteAction>[]>(() => {
     const activeConversationId = readConversationIdFromPathname(location.pathname);
+    const commandContext = { ...getExtensionCommandContext(), route: location.pathname };
     const commandOptions = {
       navigate,
       openCommandPalette: () => undefined,
@@ -125,7 +131,7 @@ export function CommandPalette() {
       activeConversationId,
       extensionCommands,
       invokeExtensionCommand: async () => undefined,
-      context: { route: location.pathname },
+      context: commandContext,
     };
     const hostItems = listHostCommands().map((command, index) => {
       return {
@@ -136,7 +142,7 @@ export function CommandPalette() {
         meta: command.category,
         keywords: [command.id, command.category].filter((keyword): keyword is string => typeof keyword === 'string'),
         order: index,
-        disabled: isHostCommandDisabledInPalette(command.id, { activeConversationId, context: commandOptions.context }),
+        disabled: isHostCommandDisabledInPalette(command.id, { activeConversationId, context: commandContext }),
         action: { kind: 'command' as const, command: command.id },
       };
     });

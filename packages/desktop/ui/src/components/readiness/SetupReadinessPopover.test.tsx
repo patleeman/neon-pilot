@@ -114,6 +114,7 @@ describe('SetupReadinessPopover', () => {
       fireEvent.click(screen.getByText('Restore'));
     });
     expect(props.onRestore).toHaveBeenCalledWith('ext', 'cli');
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Incomplete' }).getAttribute('aria-selected')).toBe('true'));
 
     fireEvent.click(screen.getByText('All'));
     expect(screen.getByText('Ready item')).toBeTruthy();
@@ -139,7 +140,7 @@ describe('SetupReadinessButton', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('shows the actionable count and opens the drawer', () => {
+  it('shows the actionable count and opens the popover', () => {
     const onClick = vi.fn();
     render(<SetupReadinessButton count={3} onClick={onClick} />);
     fireEvent.click(screen.getByLabelText('Setup needs attention (3 items)'));

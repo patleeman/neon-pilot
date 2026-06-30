@@ -42,6 +42,7 @@ describe('CommandPalette', () => {
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
     setExtensionCommandContext('composer.canSubmit', null);
     setExtensionCommandContext('browser.active', null);
+    setExtensionCommandContext('setup.open', null);
     conversationMocks.state.pinnedSessions = [];
     conversationMocks.state.tabs = [];
     conversationMocks.state.archivedSessions = [];

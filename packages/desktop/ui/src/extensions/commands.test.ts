@@ -7,7 +7,9 @@ import {
   createHostCommands,
   evaluateCommandEnablement,
   executeExtensionCommand,
+  getExtensionCommandContext,
   listHostCommands,
+  setExtensionCommandContext,
 } from './commands';
 
 describe('extension commands', () => {
@@ -53,6 +55,20 @@ describe('extension commands', () => {
     expect(evaluateCommandEnablement('layout.mode == workbench', context)).toBe(true);
     expect(evaluateCommandEnablement('layout.mode != compact', context)).toBe(true);
     expect(evaluateCommandEnablement('missing.context', context)).toBe(false);
+  });
+
+  it('exposes the current command context for palette enablement', () => {
+    setExtensionCommandContext('setup.open', true);
+    setExtensionCommandContext('setup.hasIncomplete', false);
+
+    expect(getExtensionCommandContext()).toMatchObject({
+      'setup.open': true,
+      'setup.hasIncomplete': false,
+    });
+
+    setExtensionCommandContext('setup.open', null);
+    setExtensionCommandContext('setup.hasIncomplete', null);
+    expect(getExtensionCommandContext()).not.toHaveProperty('setup.open');
   });
 
   it('includes app history navigation commands gated by navigation availability', async () => {
@@ -800,7 +816,7 @@ describe('extension commands', () => {
     expect(dismissAllNotifications).toHaveBeenCalledTimes(1);
   });
 
-  it('includes setup readiness commands gated by drawer state', async () => {
+  it('includes setup readiness commands gated by popover state', async () => {
     expect(listHostCommands().map((command) => command.id)).toEqual(expect.arrayContaining(['setup.open', 'setup.close', 'setup.refresh']));
     const openSetupReadiness = vi.fn(() => true);
     const closeSetupReadiness = vi.fn(() => true);

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { SetupReadinessItem, SetupReadinessSnapshot, SetupReadinessStatus } from '../../shared/types';
-import { cx, IconButton, MetaLabel, Spinner, StatusDot, type StatusDotTone, TextButton, ToolbarButton } from '../ui';
+import { cx, IconButton, MetaLabel, SegmentedControl, Spinner, StatusDot, type StatusDotTone, TextButton, ToolbarButton } from '../ui';
 
 type Filter = 'incomplete' | 'all' | 'dismissed';
 
@@ -147,9 +147,16 @@ export function SetupReadinessPopover({
     }
   };
 
+  const restoreItem = (item: SetupReadinessItem) => {
+    void runWithBusy(item.key, async () => {
+      await onRestore(item.extensionId, item.id);
+      setFilter('incomplete');
+    });
+  };
+
   return (
     <div
-      className="fixed inset-0 z-[130]"
+      className="fixed inset-0 z-[110]"
       role="dialog"
       aria-modal="false"
       aria-label="Setup readiness"
@@ -193,17 +200,17 @@ export function SetupReadinessPopover({
             </IconButton>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 border-b border-border-subtle px-4 py-2">
-          {(['incomplete', 'all', 'dismissed'] as const).map((nextFilter) => (
-            <TextButton
-              key={nextFilter}
-              type="button"
-              className={cx('rounded px-2 py-1 text-[10px]', filter === nextFilter && 'bg-steel/10 text-primary')}
-              onClick={() => setFilter(nextFilter)}
-            >
-              {nextFilter === 'incomplete' ? 'Incomplete' : nextFilter === 'dismissed' ? 'Dismissed' : 'All'}
-            </TextButton>
-          ))}
+        <div className="flex shrink-0 items-center border-b border-border-subtle px-4 py-2">
+          <SegmentedControl
+            ariaLabel="Setup readiness filter"
+            value={filter}
+            options={[
+              { value: 'incomplete', label: 'Incomplete' },
+              { value: 'all', label: 'All' },
+              { value: 'dismissed', label: 'Dismissed' },
+            ]}
+            onChange={setFilter}
+          />
           {loading ? <Spinner size="xs" className="ml-auto" /> : null}
         </div>
         {error ? (
@@ -225,7 +232,7 @@ export function SetupReadinessPopover({
                   busy={busyKey === item.key}
                   onRunAction={(row, actionId) => void runWithBusy(row.key, () => onRunAction(row.extensionId, row.id, actionId))}
                   onDismiss={(row) => void runWithBusy(row.key, () => onDismiss(row.extensionId, row.id))}
-                  onRestore={(row) => void runWithBusy(row.key, () => onRestore(row.extensionId, row.id))}
+                  onRestore={restoreItem}
                 />
               ))}
             </div>

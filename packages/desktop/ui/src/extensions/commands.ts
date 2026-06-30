@@ -178,7 +178,13 @@ export function setExtensionCommandContext(key: string, value: ExtensionCommandC
   if (!key.trim()) return;
   if (value === undefined || value === null) extensionCommandContext.delete(key);
   else extensionCommandContext.set(key, value);
-  window.dispatchEvent(new CustomEvent(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, { detail: { key, value } }));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(EXTENSION_COMMAND_CONTEXT_CHANGED_EVENT, { detail: { key, value } }));
+  }
+}
+
+export function getExtensionCommandContext(): ExtensionCommandContext {
+  return Object.fromEntries(extensionCommandContext);
 }
 
 export function evaluateCommandEnablement(expression: string | undefined, context: ExtensionCommandContext = {}): boolean {
