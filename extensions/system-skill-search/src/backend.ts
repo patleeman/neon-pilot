@@ -125,6 +125,16 @@ interface GitHubSource {
   trustLevel: TrustLevel;
 }
 
+interface MarketplaceSourceSummary {
+  id: string;
+  label: string;
+  kind: SourceKind;
+  trustLevel: TrustLevel;
+  enabled: boolean;
+  sourceIds: string[];
+  installPolicy: 'direct-after-vetting' | 'approval-after-vetting';
+}
+
 const TRUSTED_GITHUB_SOURCES: GitHubSource[] = [
   { id: 'openai-skills-curated', label: 'OpenAI Skills', repo: 'openai/skills', paths: ['skills/.curated/'], trustLevel: 'trusted' },
   { id: 'openai-skills-system', label: 'OpenAI System Skills', repo: 'openai/skills', paths: ['skills/.system/'], trustLevel: 'trusted' },
@@ -153,6 +163,83 @@ const MAX_BUNDLE_BYTES = 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 25 * 1024 * 1024;
 const MAX_ARCHIVE_UNPACKED_BYTES = 100 * 1024 * 1024;
 const COMMUNITY_APPROVAL_TIMEOUT_MS = 60_000;
+
+const MARKETPLACE_SOURCES: MarketplaceSourceSummary[] = [
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    kind: 'github',
+    trustLevel: 'trusted',
+    enabled: true,
+    sourceIds: ['openai-skills-curated', 'openai-skills-system'],
+    installPolicy: 'direct-after-vetting',
+  },
+  {
+    id: 'anthropic',
+    label: 'Anthropic',
+    kind: 'github',
+    trustLevel: 'trusted',
+    enabled: true,
+    sourceIds: ['anthropics-skills'],
+    installPolicy: 'direct-after-vetting',
+  },
+  {
+    id: 'huggingface',
+    label: 'Hugging Face',
+    kind: 'github',
+    trustLevel: 'trusted',
+    enabled: true,
+    sourceIds: ['huggingface-skills'],
+    installPolicy: 'direct-after-vetting',
+  },
+  {
+    id: 'nvidia',
+    label: 'NVIDIA',
+    kind: 'github',
+    trustLevel: 'trusted',
+    enabled: true,
+    sourceIds: ['nvidia-skills'],
+    installPolicy: 'direct-after-vetting',
+  },
+  {
+    id: 'hermes',
+    label: 'Hermes',
+    kind: 'hermes-index',
+    trustLevel: 'community',
+    enabled: true,
+    sourceIds: ['hermes-index'],
+    installPolicy: 'approval-after-vetting',
+  },
+];
+
+export async function browseSkills(input: unknown, ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const query = readString(body.query);
+  const sourceId = readString(body.sourceId) || 'openai';
+  const limit = clampInteger(body.limit, 40, 1, MAX_SEARCH_RESULTS * 4);
+  const candidates = await browseAndStoreCandidates({ query, sourceId, limit, ctx });
+  const installedRows = await ctx.storage.list<InstalledSkillRecord>(INSTALLED_KEY);
+  return {
+    ok: true,
+    query,
+    sourceId,
+    sources: marketplaceSources(),
+    candidates: candidates.map((candidate) => ({
+      candidateId: candidate.id,
+      title: candidate.title,
+      description: candidate.description,
+      sourceId: candidate.sourceId,
+      sourceLabel: candidate.sourceLabel,
+      sourceKind: candidate.sourceKind,
+      trustLevel: candidate.trustLevel,
+      identifier: candidate.identifier,
+      url: candidate.url,
+      tags: candidate.tags,
+      requiresApproval: candidate.trustLevel === 'community',
+    })),
+    installed: installedRows.map((row) => row.value),
+  };
+}
 
 export async function searchSkills(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
@@ -291,8 +378,23 @@ export async function listState(_input: unknown, ctx: ExtensionBackendContext) {
   return {
     ok: true,
     sources: [
-      { id: 'hermes-index', label: 'Hermes Skills Index', kind: 'hermes-index', trustLevel: 'community', enabled: true },
-      ...TRUSTED_GITHUB_SOURCES.map((source) => ({ ...source, kind: 'github', enabled: true })),
+      ...marketplaceSources(),
+      {
+        id: 'hermes-index',
+        label: 'Hermes Skills Index',
+        kind: 'hermes-index',
+        trustLevel: 'community',
+        enabled: true,
+        sourceIds: ['hermes-index'],
+        installPolicy: 'approval-after-vetting',
+      },
+      ...TRUSTED_GITHUB_SOURCES.map((source) => ({
+        ...source,
+        kind: 'github',
+        enabled: true,
+        sourceIds: [source.id],
+        installPolicy: 'direct-after-vetting',
+      })),
     ],
     candidates: candidateRows.map((row) => row.value),
     previews: previewRows.map((row) => ({
@@ -313,6 +415,16 @@ export async function skillSearchCli(input: unknown, ctx: ExtensionBackendContex
   const args = Array.isArray(cli.args) ? cli.args.filter((arg): arg is string => typeof arg === 'string') : [];
   const flags = asRecord(cli.flags);
   const action = typeof body.action === 'string' ? body.action : 'installed';
+  if (action === 'browse') {
+    return browseSkills(
+      {
+        query: args.join(' ') || readString(flags.query),
+        sourceId: readString(flags.source) || readString(flags.sourceId),
+        limit: readNumber(flags.limit),
+      },
+      ctx,
+    );
+  }
   if (action === 'search') {
     return searchSkills(
       {
@@ -356,6 +468,47 @@ async function searchAndStoreCandidates(query: string, limit: number, ctx: Exten
   ).slice(0, limit);
   await Promise.all(candidates.map((candidate) => ctx.storage.put(`${CANDIDATE_KEY}${candidate.id}`, candidate)));
   return candidates;
+}
+
+async function browseAndStoreCandidates({
+  query,
+  sourceId,
+  limit,
+  ctx,
+}: {
+  query: string;
+  sourceId: string;
+  limit: number;
+  ctx: ExtensionBackendContext;
+}): Promise<SkillCandidate[]> {
+  const deadline = Date.now() + SEARCH_TIMEOUT_MS;
+  const sourceIds = resolveMarketplaceSourceIds(sourceId);
+  const tasks: Array<Promise<SkillCandidate[]>> = [];
+  if (sourceIds.includes('hermes-index')) tasks.push(searchHermesIndex(query, limit, deadline).catch(() => []));
+  tasks.push(
+    ...TRUSTED_GITHUB_SOURCES.filter((source) => sourceIds.includes(source.id)).map((source) =>
+      searchGitHubSource(source, query, limit, deadline).catch(() => []),
+    ),
+  );
+  const settled = await Promise.allSettled(tasks);
+  const candidates = rankCandidatesForQuery(
+    query,
+    dedupeCandidates(settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))),
+  ).slice(0, limit);
+  await Promise.all(candidates.map((candidate) => ctx.storage.put(`${CANDIDATE_KEY}${candidate.id}`, candidate)));
+  return candidates;
+}
+
+function marketplaceSources(): MarketplaceSourceSummary[] {
+  return MARKETPLACE_SOURCES.map((source) => ({ ...source, sourceIds: [...source.sourceIds] }));
+}
+
+function resolveMarketplaceSourceIds(sourceId: string): string[] {
+  if (sourceId === 'all') return [...TRUSTED_GITHUB_SOURCES.map((source) => source.id), 'hermes-index'];
+  const source = MARKETPLACE_SOURCES.find((item) => item.id === sourceId);
+  if (source) return source.sourceIds;
+  if (sourceId === 'hermes-index' || TRUSTED_GITHUB_SOURCES.some((sourceItem) => sourceItem.id === sourceId)) return [sourceId];
+  return MARKETPLACE_SOURCES[0]?.sourceIds ?? [];
 }
 
 async function discoverSkillShortlist({
@@ -634,7 +787,7 @@ async function searchHermesIndex(query: string, limit: number, deadline: number)
     const path = readString(item.path) || parsedIdentifier?.path;
     if (!name || !repo || !path) continue;
     const searchable = `${name} ${description} ${repo} ${path} ${readString(item.source) ?? ''}`.toLowerCase();
-    if (!queryMatches(searchable, queryLower)) continue;
+    if (queryLower && !queryMatches(searchable, queryLower)) continue;
     candidates.push(
       createCandidate({
         name,
@@ -671,7 +824,7 @@ async function searchGitHubSource(source: GitHubSource, query: string, limit: nu
     const description = readString(frontmatter.description) || firstBodySentence(content) || `Skill from ${source.label}.`;
     const tags = readStringArray(asRecord(frontmatter.metadata).tags ?? frontmatter.tags);
     const searchable = `${name} ${description} ${skillDir} ${tags.join(' ')}`.toLowerCase();
-    if (!queryMatches(searchable, queryLower)) continue;
+    if (queryLower && !queryMatches(searchable, queryLower)) continue;
     candidates.push(
       createCandidate({
         name,
@@ -711,7 +864,7 @@ async function searchGitHubSourceFromArchive(
         const description = readString(frontmatter.description) || firstBodySentence(item.content) || `Skill from ${source.label}.`;
         const tags = readStringArray(asRecord(frontmatter.metadata).tags ?? frontmatter.tags);
         const searchable = `${name} ${description} ${skillDir} ${tags.join(' ')}`.toLowerCase();
-        if (!queryMatches(searchable, queryLower)) continue;
+        if (queryLower && !queryMatches(searchable, queryLower)) continue;
         candidates.push(
           createCandidate({
             name,

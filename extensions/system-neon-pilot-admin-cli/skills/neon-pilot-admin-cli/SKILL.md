@@ -181,11 +181,16 @@ neon-pilot extensions create system-example --name "Example"
 neon-pilot extensions install <catalog-id>
 neon-pilot extensions update <catalog-id>
 neon-pilot extensions install-url <bundle-url> --expected-id <id>
-neon-pilot extensions install-marketplace <source> --type skill
 neon-pilot extensions enable <id>
 neon-pilot extensions disable <id>
 neon-pilot extensions snapshot <id>
 neon-pilot extensions delete <id>
+neon-pilot skills browse --source openai --json
+neon-pilot skills search "code review" --json
+neon-pilot skills preview <candidate-id> --json
+neon-pilot skills install <candidate-id> --json
+neon-pilot skills installed --json
+neon-pilot skills search-state --json
 ```
 
 Settings are schema-backed. Read schema before writes; use JSON values for `set`:

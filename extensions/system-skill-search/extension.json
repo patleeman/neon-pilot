@@ -19,6 +19,12 @@
         "worker": { "enabled": true, "timeoutMs": 90000 }
       },
       {
+        "id": "browseSkills",
+        "handler": "browseSkills",
+        "title": "Browse upstream skills",
+        "worker": { "enabled": true, "timeoutMs": 90000 }
+      },
+      {
         "id": "previewSkill",
         "handler": "previewSkill",
         "title": "Preview upstream skill",
@@ -46,7 +52,7 @@
         "id": "skillSearchCli",
         "handler": "skillSearchCli",
         "title": "Skill Search CLI",
-        "worker": { "enabled": true, "inputActions": ["search", "preview", "install", "state", "installed"], "timeoutMs": 120000 }
+        "worker": { "enabled": true, "inputActions": ["browse", "search", "preview", "install", "state", "installed"], "timeoutMs": 120000 }
       }
     ]
   },
@@ -71,6 +77,25 @@
             "limit": { "type": "number", "description": "Maximum results, capped at 20." }
           },
           "required": ["intent"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "skill-browse",
+        "name": "skill_browse",
+        "title": "Browse Skills",
+        "description": "Browse upstream skill repositories by source and optional query without invoking the isolated ranking reviewer.",
+        "action": "browseSkills",
+        "promptGuidelines": [
+          "Use for UI or inventory-style marketplace browsing. Use skill_search when choosing a skill for a specific user task."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Optional search text." },
+            "sourceId": { "type": "string", "description": "Source group such as openai, anthropic, huggingface, nvidia, hermes, or all." },
+            "limit": { "type": "number", "description": "Maximum results, capped at 80." }
+          },
           "additionalProperties": false
         }
       },
@@ -141,6 +166,33 @@
       }
     ],
     "cliCommands": [
+      {
+        "id": "skills-browse-upstream",
+        "command": "skills browse",
+        "description": "Browse upstream skill repositories by marketplace source.",
+        "action": "skillSearchCli",
+        "inputAction": "browse",
+        "jsonDefault": true,
+        "usage": "skills browse [query] [--source <source-id>] [--limit <n>] [--json]",
+        "examples": ["neon-pilot skills browse pdf --source openai --json", "neon-pilot skills browse --source hermes --json"],
+        "argsSchema": { "type": "array", "items": { "type": "string" } },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "source": { "type": "string", "description": "Source group: openai, anthropic, huggingface, nvidia, hermes, or all." },
+            "limit": { "type": "string", "description": "Maximum browse results." }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
       {
         "id": "skills-search-upstream",
         "command": "skills search",

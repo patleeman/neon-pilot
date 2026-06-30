@@ -4,13 +4,16 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 
 ## Agent tools
 
-| Tool            | Purpose                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------ |
-| `skill_search`  | Search upstream catalogs and repositories, then return a ranked shortlist from a no-tool discovery reviewer. |
-| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.                 |
-| `skill_install` | Install a chosen candidate id, then vet, approve when required, and save.                                    |
+| Tool            | Purpose                                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| `skill_browse`  | Browse upstream sources by source/query for marketplace-style inventory without invoking the ranking reviewer. |
+| `skill_search`  | Search upstream catalogs and repositories, then return a ranked shortlist from a no-tool discovery reviewer.   |
+| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.                   |
+| `skill_install` | Install a chosen candidate id, then vet, approve when required, and save.                                      |
 
-Agents should not show users a list of candidates or ask them which skill to install. The intended flow is:
+The user-facing marketplace is owned by `system-skills` at `/skills` and calls `browseSkills`/`installSkill` through the extension boundary.
+
+For agent task execution, agents should not show users a list of candidates or ask them which skill to install. The intended agent flow is:
 
 1. Search for the needed capability.
 2. Read the returned shortlist and choose the best fit as the agent.

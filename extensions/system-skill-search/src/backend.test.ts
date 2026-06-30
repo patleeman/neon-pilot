@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { runAgentTaskMock } = vi.hoisted(() => ({ runAgentTaskMock: vi.fn() }));
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
 
-import { installSkill, listInstalledSkillContributions, previewSkill, searchSkills } from './backend.js';
+import { browseSkills, installSkill, listInstalledSkillContributions, previewSkill, searchSkills } from './backend.js';
 
 interface StoredRow<T = unknown> {
   key: string;
@@ -148,6 +148,84 @@ beforeEach(() => {
 });
 
 describe('system-skill-search backend', () => {
+  it('browses marketplace skills by source without invoking the discovery reviewer', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const textUrl = String(url);
+        if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+        if (textUrl.includes('/repos/openai/skills/git/trees/main')) {
+          return jsonResponse({
+            tree: [
+              { path: 'skills/.curated/pdf/SKILL.md', type: 'blob' },
+              { path: 'skills/.system/documents/SKILL.md', type: 'blob' },
+            ],
+          });
+        }
+        if (textUrl.includes('/repos/openai/skills/contents/skills/.curated/pdf/SKILL.md')) {
+          return textResponse('---\nname: pdf\ndescription: Read, inspect, and verify PDF files.\n---\nUse for PDFs.');
+        }
+        if (textUrl.includes('/repos/openai/skills/contents/skills/.system/documents/SKILL.md')) {
+          return textResponse('---\nname: documents\ndescription: Create and edit documents.\n---\nUse for docs.');
+        }
+        if (textUrl.includes('/repos/openai/skills')) return jsonResponse({ default_branch: 'main' });
+        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+        return jsonResponse({});
+      }),
+    );
+    const { ctx, store } = createCtx();
+
+    const result = (await browseSkills({ sourceId: 'openai', query: 'pdf', limit: 10 }, ctx as never)) as {
+      sources: Array<{ id: string; label: string; installPolicy: string }>;
+      candidates: Array<{ candidateId: string; title: string; sourceLabel: string; trustLevel: string; requiresApproval: boolean }>;
+    };
+
+    expect(result.sources).toContainEqual(
+      expect.objectContaining({ id: 'openai', label: 'OpenAI', installPolicy: 'direct-after-vetting' }),
+    );
+    expect(result.candidates).toEqual([
+      expect.objectContaining({ title: 'Pdf', sourceLabel: 'OpenAI Skills', trustLevel: 'trusted', requiresApproval: false }),
+    ]);
+    expect(runAgentTaskMock).not.toHaveBeenCalled();
+    expect([...store.keys()].filter((key) => key.startsWith('candidates/'))).toHaveLength(1);
+  });
+
+  it('browses community marketplace records with approval metadata', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const textUrl = String(url);
+        if (textUrl.includes('skills-index.json')) {
+          return jsonResponse({
+            skills: [
+              {
+                name: 'release-qa',
+                description: 'Run a release QA checklist.',
+                trust_level: 'community',
+                repo: 'community/skills',
+                path: 'skills/release-qa',
+              },
+            ],
+          });
+        }
+        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+        return jsonResponse({});
+      }),
+    );
+    const { ctx } = createCtx();
+
+    const result = (await browseSkills({ sourceId: 'hermes', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ title: string; sourceLabel: string; requiresApproval: boolean }>;
+      sources: Array<{ id: string; installPolicy: string }>;
+    };
+
+    expect(result.sources).toContainEqual(expect.objectContaining({ id: 'hermes', installPolicy: 'approval-after-vetting' }));
+    expect(result.candidates).toContainEqual(
+      expect.objectContaining({ title: 'Release Qa', sourceLabel: 'Hermes Skills Index', requiresApproval: true }),
+    );
+    expect(runAgentTaskMock).not.toHaveBeenCalled();
+  });
+
   it('searches trusted and community upstream records and stores candidates', async () => {
     vi.stubGlobal(
       'fetch',

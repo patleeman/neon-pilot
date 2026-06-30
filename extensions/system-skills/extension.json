@@ -40,6 +40,38 @@
     ]
   },
   "contributes": {
+    "nav": [
+      {
+        "id": "skills-nav",
+        "label": "Skills",
+        "route": "/skills",
+        "icon": "sparkle",
+        "section": "settings"
+      }
+    ],
+    "views": [
+      {
+        "id": "skills-page",
+        "title": "Skills",
+        "location": "main",
+        "route": "/skills",
+        "component": "SkillsPage",
+        "placement": "primary",
+        "scope": "global",
+        "activation": "on-route"
+      }
+    ],
+    "commands": [
+      {
+        "id": "skills.open",
+        "title": "Open Skills",
+        "category": "Skills",
+        "description": "Open the Skills marketplace and installed skill manager.",
+        "action": "app.navigate",
+        "args": { "to": "/skills" },
+        "icon": "sparkle"
+      }
+    ],
     "cliCommands": [
       {
         "id": "skills-list",
