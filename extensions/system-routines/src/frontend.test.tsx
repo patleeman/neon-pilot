@@ -138,6 +138,61 @@ describe('RoutinesPage', () => {
     vi.useRealTimers();
   });
 
+  it('keeps the initial routines loading state silent', async () => {
+    let resolveState: (value: typeof baseState) => void = () => {};
+    const statePromise = new Promise<typeof baseState>((resolve) => {
+      resolveState = resolve;
+    });
+    const pa = {
+      extension: {
+        invoke: vi.fn(async (action: string) => {
+          if (action === 'listSkills') return { skills: [] };
+          return statePromise;
+        }),
+      },
+      models: vi.fn(async () => []),
+      ui: {
+        toast: vi.fn(),
+        confirm: vi.fn(async () => true),
+        subscribeInvalidations: vi.fn(() => ({ unsubscribe: vi.fn() })),
+      },
+    } as never;
+
+    render(<RoutinesPage {...props(pa)} />);
+
+    expect(screen.queryByText(/Loading routines/i)).toBeNull();
+    expect(screen.getByRole('status', { name: 'Loading routines' })).toBeTruthy();
+
+    await act(async () => {
+      resolveState(cloneState());
+      await statePromise;
+    });
+    expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
+  });
+
+  it('keeps the routines sidebar loading state silent', async () => {
+    let resolveState: (value: typeof baseState) => void = () => {};
+    const statePromise = new Promise<typeof baseState>((resolve) => {
+      resolveState = resolve;
+    });
+    const pa = {
+      extension: {
+        invoke: vi.fn(async () => statePromise),
+      },
+    } as never;
+
+    render(<RoutinesSidebar {...propsWithContext(pa, { surfaceId: 'routines-sidebar' })} />);
+
+    expect(screen.queryByText(/Loading routines/i)).toBeNull();
+    expect(screen.getByRole('status', { name: 'Loading routines' })).toBeTruthy();
+
+    await act(async () => {
+      resolveState(cloneState());
+      await statePromise;
+    });
+    expect(await screen.findByRole('searchbox')).toBeTruthy();
+  });
+
   it('renders the timeline with inline route lanes', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...props(pa)} />);

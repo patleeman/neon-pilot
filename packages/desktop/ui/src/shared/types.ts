@@ -146,6 +146,30 @@ export interface ConversationCheckpointToolDetails {
   checkpointCount?: number;
   checkpointIds?: string[];
   paths?: string[];
+  routineHooks?: ConversationRoutineActivityRun[];
+}
+
+export interface ConversationRoutineActivityStep {
+  routineId: string;
+  routineName: string;
+  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
+  outcome?: string;
+  message?: string;
+  skillRefs?: string[];
+  model?: string;
+  provider?: string;
+  fallbackUsed?: boolean;
+}
+
+export interface ConversationRoutineActivityRun {
+  id: string;
+  hookId: string;
+  position: 'before' | 'after';
+  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
+  message?: string;
+  startedAt?: string;
+  completedAt?: string;
+  steps: ConversationRoutineActivityStep[];
 }
 
 interface ConversationCheckpointGithubInfo {

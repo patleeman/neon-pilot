@@ -31,12 +31,44 @@ interface RoutineHookResult {
   blocked?: boolean;
   status?: string;
   message?: string;
+  run?: RoutineActivityRun;
 }
 
 function formatAfterRoutineNotice(result: RoutineHookResult | null): string {
   if (!result?.status || result.status === 'passed' || result.status === 'skipped') return '';
   const label = result.status === 'warned' ? 'warning' : result.status;
   return ` Routine ${label}: ${result.message ?? 'A post-checkpoint routine needs attention.'}`;
+}
+
+interface RoutineActivityStep {
+  routineId: string;
+  routineName: string;
+  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
+  outcome?: string;
+  message?: string;
+  skillRefs?: string[];
+  model?: string;
+  provider?: string;
+  fallbackUsed?: boolean;
+}
+
+interface RoutineActivityRun {
+  id: string;
+  hookId: string;
+  position: 'before' | 'after';
+  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
+  startedAt?: string;
+  completedAt?: string;
+  steps: RoutineActivityStep[];
+}
+
+function readRoutineActivityRun(result: RoutineHookResult | null): RoutineActivityRun | null {
+  if (!result?.run || !Array.isArray(result.run.steps) || result.run.steps.length === 0) return null;
+  return result.run;
+}
+
+function routineActivityRuns(...results: Array<RoutineHookResult | null>): RoutineActivityRun[] {
+  return results.map(readRoutineActivityRun).filter((run): run is RoutineActivityRun => Boolean(run));
 }
 
 async function runCheckpointRoutineHook(
@@ -321,6 +353,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
       const paths = readPathInputs(cwd, input.paths);
       const beforeRoutine = await runCheckpointRoutineHook(ctx, { position: 'before', cwd, conversationId, message, paths });
       if (beforeRoutine?.blocked) {
+        const routineHooks = routineActivityRuns(beforeRoutine);
         return {
           text: beforeRoutine.message ?? 'Checkpoint blocked by a routine.',
           isError: true,
@@ -329,6 +362,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
           cwd,
           paths,
           routineStatus: beforeRoutine.status,
+          ...(routineHooks.length > 0 ? { routineHooks } : {}),
         };
       }
       const created = await createCheckpointCommit(ctx, { cwd, message, paths }).catch((error: unknown) => ({
@@ -382,6 +416,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
         },
       });
       const afterRoutineNotice = formatAfterRoutineNotice(afterRoutine);
+      const routineHooks = routineActivityRuns(beforeRoutine, afterRoutine);
       return {
         text: `Saved checkpoint ${record.shortSha} ${record.subject} (${record.fileCount} files, +${record.linesAdded} -${record.linesDeleted}).${afterRoutineNotice}`,
         action: 'save',
@@ -398,6 +433,7 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
         updatedAt: record.updatedAt,
         paths,
         ...(afterRoutineNotice ? { routineStatus: afterRoutine?.status } : {}),
+        ...(routineHooks.length > 0 ? { routineHooks } : {}),
       };
     }
     default:

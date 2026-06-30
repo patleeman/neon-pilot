@@ -64,6 +64,29 @@ interface RoutineHookResult {
   blocked?: boolean;
   message?: string;
   status?: string;
+  run?: RoutineActivityRun;
+}
+
+interface RoutineActivityStep {
+  routineId: string;
+  routineName: string;
+  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
+  outcome?: string;
+  message?: string;
+  skillRefs?: string[];
+  model?: string;
+  provider?: string;
+  fallbackUsed?: boolean;
+}
+
+interface RoutineActivityRun {
+  id: string;
+  hookId: string;
+  position: 'before' | 'after';
+  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
+  startedAt?: string;
+  completedAt?: string;
+  steps: RoutineActivityStep[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -415,6 +438,11 @@ function isRoutineHookUnavailable(error: unknown): boolean {
   return /not found|disabled|requires permission/i.test(message);
 }
 
+function readRoutineActivityRun(result: RoutineHookResult | null): RoutineActivityRun | null {
+  if (!result?.run || !Array.isArray(result.run.steps) || result.run.steps.length === 0) return null;
+  return result.run;
+}
+
 async function runBackgroundCommandRoutineHook(
   ctx: NativeBackendContext,
   input: { command: string; cwd: string; taskSlug: string },
@@ -469,6 +497,7 @@ async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext)
   if (routineHook?.blocked) {
     throw new Error(routineHook.message ?? 'A routine blocked this background command.');
   }
+  const routineActivityRun = readRoutineActivityRun(routineHook);
 
   const result = await startBackgroundRun({
     taskSlug,
@@ -511,6 +540,7 @@ async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext)
       cwd,
       logPath: result.logPath,
       deliverResultToConversation,
+      ...(routineActivityRun ? { routineHooks: [routineActivityRun] } : {}),
     },
   };
 }

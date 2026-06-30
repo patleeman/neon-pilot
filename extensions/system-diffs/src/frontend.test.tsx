@@ -79,6 +79,7 @@ describe('CheckpointTranscriptRenderer', () => {
       shortSha: 'abc1234',
       title: 'fix: checkpoint cards',
       subject: 'fix: checkpoint cards',
+      routineHooks: [],
     });
 
     const html = renderToStaticMarkup(<CheckpointTranscriptRenderer block={{ status: 'ok', input: { action: 'save' } }} context={{}} />);
@@ -86,6 +87,48 @@ describe('CheckpointTranscriptRenderer', () => {
     expect(html).toContain('fix: checkpoint cards');
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('inline diff abc1234');
+  });
+
+  it('renders routine activity attached to the checkpoint card', () => {
+    readCheckpointPresentationMock.mockReturnValueOnce({
+      action: 'save',
+      conversationId: 'conv-1',
+      checkpointId: 'abc1234',
+      commitSha: 'abc123456789',
+      shortSha: 'abc1234',
+      title: 'fix: checkpoint cards',
+      subject: 'fix: checkpoint cards',
+      routineHooks: [
+        {
+          id: 'before-run',
+          hookId: 'checkpoint',
+          position: 'before',
+          status: 'passed',
+          steps: [
+            { routineId: 'review', routineName: 'Review smoke changes', status: 'passed', outcome: 'pass' },
+            { routineId: 'smoke', routineName: 'Smoke temporary routine', status: 'warned', message: 'Needs QA.' },
+          ],
+        },
+        {
+          id: 'after-run',
+          hookId: 'checkpoint',
+          position: 'after',
+          status: 'passed',
+          steps: [{ routineId: 'report', routineName: 'Report checkpoint', status: 'passed' }],
+        },
+      ],
+    });
+
+    const html = renderToStaticMarkup(<CheckpointTranscriptRenderer block={{ status: 'ok', input: { action: 'save' } }} context={{}} />);
+
+    expect(html).toContain('Routine activity');
+    expect(html).toContain('Before checkpoint');
+    expect(html).toContain('After checkpoint');
+    expect(html).toContain('Review smoke changes');
+    expect(html).toContain('Report checkpoint');
+    expect(html).toContain('p-0');
+    expect(html).not.toContain('Before checkpoint routines');
+    expect(html).not.toContain('routines</span>');
   });
 
   it('treats semantic checkpoint failures as danger cards even when the tool status is ok', () => {

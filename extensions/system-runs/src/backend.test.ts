@@ -190,9 +190,24 @@ describe('system-runs backend', () => {
 
     it('runs background command routines before starting daemon work', async () => {
       mocks.startBackgroundRun.mockResolvedValue({ accepted: true, runId: 'run-123', logPath: '/tmp/run.log' });
-      const callAction = vi.fn().mockResolvedValue({ blocked: false, status: 'passed' });
+      const callAction = vi.fn().mockResolvedValue({
+        blocked: false,
+        status: 'passed',
+        run: {
+          id: 'background-routine-run',
+          hookId: 'background.command',
+          position: 'before',
+          status: 'passed',
+          startedAt: '2026-06-30T10:00:00.000Z',
+          completedAt: '2026-06-30T10:00:01.000Z',
+          steps: [{ routineId: 'approve-command', routineName: 'Approve background command', status: 'passed', skillRefs: [] }],
+        },
+      });
 
-      await bash({ command: 'sleep 1', background: true, taskSlug: 'sleep-check' }, createCtx({ extensions: { callAction } }));
+      const result = await bash(
+        { command: 'sleep 1', background: true, taskSlug: 'sleep-check' },
+        createCtx({ extensions: { callAction } }),
+      );
 
       expect(callAction).toHaveBeenCalledWith('system-routines', 'runHook', {
         hookId: 'background.command',
@@ -205,6 +220,9 @@ describe('system-runs backend', () => {
         },
       });
       expect(mocks.startBackgroundRun).toHaveBeenCalled();
+      expect(result.details).toMatchObject({
+        routineHooks: [expect.objectContaining({ id: 'background-routine-run', hookId: 'background.command', position: 'before' })],
+      });
     });
 
     it('runs background command routines through worker invokeAction contexts', async () => {

@@ -8,7 +8,6 @@ import {
   cx,
   ErrorState,
   IconButton,
-  LoadingState,
   MenuItem,
   MenuShell,
   PositionedMenu,
@@ -58,6 +57,10 @@ const DEFAULT_OUTCOMES: RoutineOutcome[] = [
   { id: 'path_a', label: 'Path A', target: 'Describe the first path', behavior: 'continue' },
   { id: 'path_b', label: 'Path B', target: 'Describe the second path', behavior: 'continue' },
 ];
+
+function RoutinesLoadingState() {
+  return <div role="status" aria-label="Loading routines" />;
+}
 
 function replaceLastSkillReference(instruction: string, skillId: string): string {
   const matches = Array.from(instruction.matchAll(/\/skill:([A-Za-z0-9._-]*)/g));
@@ -331,7 +334,7 @@ export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
   }, []);
 
   if (error) return <div className="p-3 text-[12px] text-danger">{error}</div>;
-  if (!data) return <LoadingState label="Loading routines…" />;
+  if (!data) return <RoutinesLoadingState />;
 
   return (
     <RoutineHookList
@@ -819,7 +822,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     setSkillQuery(null);
   }, []);
 
-  if (loading) return <LoadingState label="Loading routines…" />;
+  if (loading) return <RoutinesLoadingState />;
   if (error) return <ErrorState title="Failed to load routines" message={error} />;
   if (!data || !selectedHook) return <ErrorState title="No routine hooks" message="No lifecycle hooks are available." />;
 

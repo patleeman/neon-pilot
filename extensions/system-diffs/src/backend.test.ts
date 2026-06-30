@@ -127,12 +127,28 @@ describe('system-diffs backend', () => {
     it('returns a tool error when a before-checkpoint routine blocks the save', async () => {
       const shell = { exec: vi.fn() };
       const extensions = {
-        callAction: vi.fn(async () => ({ blocked: true, status: 'blocked', message: 'Review found blocking issues.' })),
+        callAction: vi.fn(async () => ({
+          blocked: true,
+          status: 'blocked',
+          message: 'Review found blocking issues.',
+          run: {
+            id: 'run-before',
+            hookId: 'checkpoint',
+            position: 'before',
+            status: 'blocked',
+            startedAt: '2026-06-30T10:00:00.000Z',
+            completedAt: '2026-06-30T10:00:01.000Z',
+            steps: [
+              { routineId: 'review', routineName: 'Review code changes', status: 'blocked', message: 'Needs changes.', skillRefs: [] },
+            ],
+          },
+        })),
       };
 
       const result = await checkpoint({ action: 'save', message: 'msg', paths: ['src/file.ts'] }, createCtx({ shell, extensions }));
 
       expect(result).toMatchObject({ isError: true, action: 'save', text: 'Review found blocking issues.', routineStatus: 'blocked' });
+      expect(result.routineHooks).toEqual([expect.objectContaining({ id: 'run-before', position: 'before', status: 'blocked' })]);
       expect(shell.exec).not.toHaveBeenCalled();
       expect(extensions.callAction).toHaveBeenCalledWith(
         'system-routines',
@@ -166,8 +182,35 @@ describe('system-diffs backend', () => {
       const extensions = {
         callAction: vi.fn(async (_extensionId: string, _actionId: string, input: { position: string }) =>
           input.position === 'before'
-            ? { blocked: false, status: 'passed' }
-            : { blocked: true, status: 'blocked', message: 'Report failed.' },
+            ? {
+                blocked: false,
+                status: 'passed',
+                run: {
+                  id: 'run-before',
+                  hookId: 'checkpoint',
+                  position: 'before',
+                  status: 'passed',
+                  startedAt: '2026-06-30T10:00:00.000Z',
+                  completedAt: '2026-06-30T10:00:01.000Z',
+                  steps: [{ routineId: 'review', routineName: 'Review code changes', status: 'passed', outcome: 'pass', skillRefs: [] }],
+                },
+              }
+            : {
+                blocked: true,
+                status: 'blocked',
+                message: 'Report failed.',
+                run: {
+                  id: 'run-after',
+                  hookId: 'checkpoint',
+                  position: 'after',
+                  status: 'blocked',
+                  startedAt: '2026-06-30T10:00:02.000Z',
+                  completedAt: '2026-06-30T10:00:03.000Z',
+                  steps: [
+                    { routineId: 'report', routineName: 'Report checkpoint', status: 'failed', message: 'Report failed.', skillRefs: [] },
+                  ],
+                },
+              },
         ),
       };
       mockSaveCheckpoint.mockReturnValue({
@@ -188,6 +231,10 @@ describe('system-diffs backend', () => {
       expect(result).toMatchObject({ routineStatus: 'blocked' });
       expect(result.text).toContain('Saved checkpoint abc1234 msg');
       expect(result.text).toContain('Routine blocked: Report failed.');
+      expect(result.routineHooks).toEqual([
+        expect.objectContaining({ id: 'run-before', position: 'before', status: 'passed' }),
+        expect.objectContaining({ id: 'run-after', position: 'after', status: 'blocked' }),
+      ]);
     });
 
     it('does not fail when UI invalidation is unavailable', async () => {

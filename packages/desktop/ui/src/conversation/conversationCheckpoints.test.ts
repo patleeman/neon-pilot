@@ -104,6 +104,32 @@ describe('conversationCheckpoints', () => {
             linesAdded: 8,
             linesDeleted: 1,
             updatedAt: '2026-05-01T00:00:00.000Z',
+            routineHooks: [
+              {
+                id: 'routine-run-before',
+                hookId: 'checkpoint',
+                position: 'before',
+                status: 'passed',
+                startedAt: '2026-06-30T10:00:00.000Z',
+                completedAt: '2026-06-30T10:00:01.000Z',
+                steps: [
+                  {
+                    routineId: 'review',
+                    routineName: 'Review smoke changes',
+                    status: 'passed',
+                    outcome: 'pass',
+                    skillRefs: ['/skill:autoreview'],
+                  },
+                ],
+              },
+              {
+                id: 'empty-run',
+                hookId: 'checkpoint',
+                position: 'after',
+                status: 'skipped',
+                steps: [],
+              },
+            ],
           },
         },
       } as unknown as Extract<MessageBlock, { type: 'tool_use' }>;
@@ -119,6 +145,14 @@ describe('conversationCheckpoints', () => {
         linesAdded: 8,
         linesDeleted: 1,
       });
+      expect(result!.routineHooks).toEqual([
+        expect.objectContaining({
+          id: 'routine-run-before',
+          hookId: 'checkpoint',
+          position: 'before',
+          steps: [expect.objectContaining({ routineName: 'Review smoke changes', outcome: 'pass' })],
+        }),
+      ]);
     });
 
     it('returns null for empty object details', () => {

@@ -114,4 +114,43 @@ describe('ToolBlock commands', () => {
     expect(container.textContent).toContain('Showing all 6 executions returned by the tool.');
     expect(container.textContent).toContain('Zeta check');
   });
+
+  it('renders routine activity as attached tool context instead of a separate tool call', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <ToolBlock
+          block={toolBlock({
+            tool: 'background_bash',
+            input: { action: 'start', command: 'sleep 1' },
+            details: {
+              action: 'start',
+              routineHooks: [
+                {
+                  id: 'routine-before',
+                  hookId: 'background.command',
+                  position: 'before',
+                  status: 'passed',
+                  steps: [
+                    { routineId: 'review', routineName: 'Review command', status: 'passed', outcome: 'continue' },
+                    { routineId: 'qa', routineName: 'Check permissions', status: 'warned', message: 'Needs QA.' },
+                  ],
+                },
+              ],
+            },
+          })}
+          autoOpen={false}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain('Routine activity');
+    expect(container.textContent).toContain('Before background command');
+    expect(container.textContent).toContain('Review command');
+    expect(container.textContent).toContain('Check permissions');
+    expect(container.textContent).not.toContain('routines');
+  });
 });

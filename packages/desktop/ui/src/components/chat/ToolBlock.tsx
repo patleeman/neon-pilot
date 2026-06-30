@@ -5,7 +5,7 @@ import { getRunConnections, isRunActive, type RunPresentationLookups } from '../
 import { NativeExtensionToolBlockHost } from '../../extensions/NativeExtensionToolBlockHost';
 import type { ExtensionInstallSummary, ExtensionTranscriptRendererContribution } from '../../extensions/types';
 import { useExtensionRegistry } from '../../extensions/useExtensionRegistry';
-import type { DurableRunRecord, MessageBlock } from '../../shared/types';
+import type { ConversationRoutineActivityRun, ConversationRoutineActivityStep, DurableRunRecord, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { useAllRuns, useAllSessions, useAllTasks } from '../../store';
 import { transcriptTargetAttributes } from '../../transcript/spotlight';
@@ -133,6 +133,53 @@ function readToolDetailString(details: unknown, key: string): string | undefined
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function isRoutineActivityStatus(value: unknown): value is ConversationRoutineActivityStep['status'] {
+  return value === 'passed' || value === 'warned' || value === 'blocked' || value === 'failed' || value === 'skipped';
+}
+
+function normalizeRoutineActivityStep(value: unknown): ConversationRoutineActivityStep | null {
+  if (!value || typeof value !== 'object') return null;
+  const source = value as Record<string, unknown>;
+  const routineId = typeof source.routineId === 'string' ? source.routineId.trim() : '';
+  const routineName = typeof source.routineName === 'string' ? source.routineName.trim() : '';
+  if (!routineId || !routineName || !isRoutineActivityStatus(source.status)) return null;
+
+  return {
+    routineId,
+    routineName,
+    status: source.status,
+    ...(typeof source.outcome === 'string' && source.outcome.trim().length > 0 ? { outcome: source.outcome.trim() } : {}),
+    ...(typeof source.message === 'string' && source.message.trim().length > 0 ? { message: source.message.trim() } : {}),
+    ...(typeof source.fallbackUsed === 'boolean' ? { fallbackUsed: source.fallbackUsed } : {}),
+    ...(typeof source.provider === 'string' && source.provider.trim().length > 0 ? { provider: source.provider.trim() } : {}),
+  };
+}
+
+function normalizeRoutineActivityRun(value: unknown): ConversationRoutineActivityRun | null {
+  if (!value || typeof value !== 'object') return null;
+  const source = value as Record<string, unknown>;
+  const id = typeof source.id === 'string' ? source.id.trim() : '';
+  const hookId = typeof source.hookId === 'string' ? source.hookId.trim() : '';
+  const position = source.position === 'before' || source.position === 'after' ? source.position : null;
+  const steps = Array.isArray(source.steps)
+    ? source.steps.map(normalizeRoutineActivityStep).filter((step): step is ConversationRoutineActivityStep => Boolean(step))
+    : [];
+  if (!id || !hookId || !position || !isRoutineActivityStatus(source.status) || steps.length === 0) return null;
+
+  return { id, hookId, position, status: source.status, steps };
+}
+
+function readRoutineActivityRuns(details: unknown): ConversationRoutineActivityRun[] {
+  if (!details || typeof details !== 'object') return [];
+  const root = details as Record<string, unknown>;
+  const source =
+    root.result && typeof root.result === 'object' && !Array.isArray(root.result) ? (root.result as Record<string, unknown>) : root;
+  const routineHooks = source.routineHooks;
+  return Array.isArray(routineHooks)
+    ? routineHooks.map(normalizeRoutineActivityRun).filter((run): run is ConversationRoutineActivityRun => Boolean(run))
+    : [];
+}
+
 function readToolInputString(input: Record<string, unknown>, key: string): string | undefined {
   const value = input[key];
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
@@ -168,6 +215,79 @@ function isCheckpointFailureOutput(block: Extract<MessageBlock, { type: 'tool_us
   if (block.tool !== 'checkpoint') return false;
   const output = stripAnsiForTranscript(block.output ?? '');
   return /\b(refusing to checkpoint|failed to push|rejected|non-fast-forward|error:)\b/i.test(output);
+}
+
+function formatRoutineHookLabel(hookId: string): string {
+  if (hookId === 'background.command') return 'background command';
+  if (hookId === 'checkpoint') return 'checkpoint';
+  return hookId
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function routineRunTitle(run: ConversationRoutineActivityRun): string {
+  const position = run.position === 'before' ? 'Before' : 'After';
+  const hook = formatRoutineHookLabel(run.hookId);
+  return hook ? `${position} ${hook}` : `${position} hook`;
+}
+
+function routineStatusClass(status: ConversationRoutineActivityStep['status'] | ConversationRoutineActivityRun['status']): string {
+  switch (status) {
+    case 'passed':
+      return 'text-success';
+    case 'warned':
+      return 'text-warning';
+    case 'blocked':
+    case 'failed':
+      return 'text-danger';
+    default:
+      return 'text-dim';
+  }
+}
+
+function routineStepSummary(step: ConversationRoutineActivityStep): string {
+  if (step.outcome) return step.outcome;
+  if (step.message) return step.message;
+  if (step.fallbackUsed && step.provider) return `fallback ${step.provider}`;
+  if (step.fallbackUsed) return 'fallback model';
+  return step.status;
+}
+
+function RoutineActivityRows({ runs }: { runs: ConversationRoutineActivityRun[] }) {
+  if (runs.length === 0) return null;
+
+  return (
+    <>
+      {runs.map((run) => (
+        <div key={run.id} className="bg-black/5 px-2.5 py-2 font-sans text-[12px]">
+          <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-[10px] uppercase tracking-[0.08em] text-dim">Routine activity</span>
+            <span className="font-medium text-secondary">{routineRunTitle(run)}</span>
+            <span className={cx('text-[11px]', routineStatusClass(run.status))}>{run.status}</span>
+          </div>
+          <div className="space-y-1">
+            {run.steps.map((step, index) => (
+              <div key={`${run.id}:${step.routineId}:${index}`} className="grid grid-cols-[1.35rem_minmax(0,1fr)_auto] items-start gap-2">
+                <span className="mt-0.5 w-4 shrink-0 text-right font-mono text-[10px] leading-4 tabular-nums text-secondary">
+                  {index + 1}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-medium leading-4 text-primary">{step.routineName}</span>
+                  {step.message && step.outcome ? (
+                    <span className="block truncate text-[11px] leading-4 text-secondary">{step.message}</span>
+                  ) : null}
+                </span>
+                <span className={cx('max-w-[11rem] truncate text-right text-[11px] leading-4', routineStatusClass(step.status))}>
+                  {routineStepSummary(step)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
+  );
 }
 
 export function ToolBlock({
@@ -239,6 +359,7 @@ export function ToolBlock({
   const executionWrappers = useMemo(() => readToolExecutionWrappers(block), [block]);
   const linkedRuns = useMemo(() => readLinkedRuns(block), [block]);
   const fileChanges = useMemo(() => readFileChangesForToolBlock(block), [block]);
+  const routineActivityRuns = useMemo(() => readRoutineActivityRuns(block.details), [block.details]);
   const isRunning = block.status === 'running' || !!block.running || live;
   const isError = block.status === 'error' || !!block.error || isCheckpointFailureOutput(block);
 
@@ -502,6 +623,8 @@ export function ToolBlock({
           {headerContent}
         </div>
       )}
+
+      <RoutineActivityRows runs={routineActivityRuns} />
 
       {displayedLinkedRuns.length > 0 && !pinnedTool && !backgroundShellStart && (
         <div className="border-t border-border-subtle/70 bg-black/5 px-2.5 py-2 text-[11px] font-sans">
