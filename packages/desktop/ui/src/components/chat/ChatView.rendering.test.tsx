@@ -11,6 +11,7 @@ import type { MessageBlock } from '../../shared/types';
 import { CONVERSATION_TRANSCRIPT_DISCLOSURE_SETTING_KEY } from './toolPresentation';
 
 const timeAgoSpy = vi.hoisted(() => vi.fn<(iso: string) => void>());
+const nativeExtensionInvokeMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../shared/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../shared/utils')>();
@@ -22,6 +23,14 @@ vi.mock('../../shared/utils', async (importOriginal) => {
     }),
   };
 });
+
+vi.mock('../../extensions/nativePaClient.js', () => ({
+  createNativeExtensionClient: () => ({
+    extension: {
+      invoke: nativeExtensionInvokeMock,
+    },
+  }),
+}));
 
 import { ChatView } from './ChatView';
 
@@ -72,6 +81,8 @@ function renderChatView(messages: MessageBlock[], props: Partial<React.Component
 describe('ChatView rendering stability', () => {
   beforeEach(() => {
     timeAgoSpy.mockReset();
+    nativeExtensionInvokeMock.mockReset();
+    nativeExtensionInvokeMock.mockResolvedValue({});
     if (!window.requestAnimationFrame) {
       window.requestAnimationFrame = ((callback: FrameRequestCallback) =>
         window.setTimeout(() => callback(performance.now()), 0)) as typeof window.requestAnimationFrame;
@@ -202,6 +213,114 @@ describe('ChatView rendering stability', () => {
     const { container } = renderChatView(messages, { isStreaming: false });
 
     expect(container.querySelector('[data-context-shelf-layout="wide"]')).toBeTruthy();
+  });
+
+  it('switches the conversation model when the preferred Model Arena side is the challenger', async () => {
+    const updatePreferenceSpy = vi.spyOn(api, 'updateConversationModelPreferences').mockResolvedValue({
+      currentModel: 'opencode-go/deepseek-v4-flash',
+    });
+    nativeExtensionInvokeMock.mockResolvedValue({
+      duel: {
+        duelId: 'duel-1',
+        conversationId: 'conv-1',
+        status: 'voted',
+        vote: 'b',
+        sideA: { role: 'primary', text: 'Stable assistant reply' },
+        sideB: { role: 'challenger', text: 'Alternative model reply' },
+        models: {
+          primary: 'opencode-go/glm-5.2',
+          challenger: 'opencode-go/deepseek-v4-flash',
+          a: 'opencode-go/glm-5.2',
+          b: 'opencode-go/deepseek-v4-flash',
+        },
+      },
+    });
+    const messages: MessageBlock[] = [
+      createUserBlock(),
+      createAssistantBlock(),
+      {
+        id: 'model_arena_duel:duel-1',
+        type: 'context',
+        customType: 'model_arena_duel',
+        ts: '2026-04-23T18:00:02.000Z',
+        text: 'Model Arena duel',
+        details: {
+          duelId: 'duel-1',
+          conversationId: 'conv-1',
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Stable assistant reply' },
+          sideB: { role: 'challenger', text: 'Alternative model reply' },
+        },
+      },
+    ];
+    const { container } = renderChatView(messages, { isStreaming: false });
+
+    const preferB = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+      button.textContent?.includes('Prefer B'),
+    );
+    expect(preferB).toBeTruthy();
+
+    await act(async () => {
+      preferB?.click();
+    });
+
+    expect(nativeExtensionInvokeMock).toHaveBeenCalledWith('voteDuel', { duelId: 'duel-1', choice: 'b' });
+    expect(updatePreferenceSpy).toHaveBeenCalledWith('conv-1', { model: 'opencode-go/deepseek-v4-flash' });
+  });
+
+  it('does not switch the conversation model when the preferred Model Arena side is already primary', async () => {
+    const updatePreferenceSpy = vi.spyOn(api, 'updateConversationModelPreferences').mockResolvedValue({
+      currentModel: 'opencode-go/glm-5.2',
+    });
+    nativeExtensionInvokeMock.mockResolvedValue({
+      duel: {
+        duelId: 'duel-1',
+        conversationId: 'conv-1',
+        status: 'voted',
+        vote: 'a',
+        sideA: { role: 'primary', text: 'Stable assistant reply' },
+        sideB: { role: 'challenger', text: 'Alternative model reply' },
+        models: {
+          primary: 'opencode-go/glm-5.2',
+          challenger: 'opencode-go/deepseek-v4-flash',
+          a: 'opencode-go/glm-5.2',
+          b: 'opencode-go/deepseek-v4-flash',
+        },
+      },
+    });
+    const messages: MessageBlock[] = [
+      createUserBlock(),
+      createAssistantBlock(),
+      {
+        id: 'model_arena_duel:duel-1',
+        type: 'context',
+        customType: 'model_arena_duel',
+        ts: '2026-04-23T18:00:02.000Z',
+        text: 'Model Arena duel',
+        details: {
+          duelId: 'duel-1',
+          conversationId: 'conv-1',
+          sourceBlockId: 'assistant-1',
+          status: 'ready',
+          sideA: { role: 'primary', text: 'Stable assistant reply' },
+          sideB: { role: 'challenger', text: 'Alternative model reply' },
+        },
+      },
+    ];
+    const { container } = renderChatView(messages, { isStreaming: false });
+
+    const preferA = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+      button.textContent?.includes('Prefer A'),
+    );
+    expect(preferA).toBeTruthy();
+
+    await act(async () => {
+      preferA?.click();
+    });
+
+    expect(nativeExtensionInvokeMock).toHaveBeenCalledWith('voteDuel', { duelId: 'duel-1', choice: 'a' });
+    expect(updatePreferenceSpy).not.toHaveBeenCalled();
   });
 
   it('keeps the source assistant answer visible while a Model Arena challenger answer is pending', () => {

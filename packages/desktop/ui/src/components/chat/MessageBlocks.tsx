@@ -1,5 +1,6 @@
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { api } from '../../client/api';
 import { setExtensionCommandContext } from '../../extensions/commands.js';
 import { NativeExtensionTranscriptBlockHost } from '../../extensions/NativeExtensionToolBlockHost.js';
 import { createNativeExtensionClient } from '../../extensions/nativePaClient.js';
@@ -9,6 +10,7 @@ import type { AssistantMessageVariationSet, LiveSessionToolDefinition, MessageBl
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
 import { cx, Disclosure, MessageActionButton, MessageCard, MessageMeta, StatusDot, Textarea, TextButton, Tooltip } from '../ui.js';
+import { addNotification } from '../notifications/notificationStore';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -73,6 +75,7 @@ function modelArenaTranscriptBlockKey(block: Extract<MessageBlock, { type: 'cont
 
 type ModelArenaDuelBlockData = {
   duelId: string;
+  conversationId?: string;
   status: 'running' | 'ready' | 'failed' | 'voted' | 'cancelled';
   taskType?: string;
   sideA?: { text?: string };
@@ -100,6 +103,18 @@ function modelArenaSideText(side?: { text?: string } | null): string {
 
 function modelArenaHasBothAnswers(duel: Pick<ModelArenaDuelBlockData, 'sideA' | 'sideB'>): boolean {
   return Boolean(modelArenaSideText(duel.sideA) && modelArenaSideText(duel.sideB));
+}
+
+function modelArenaPreferredChallengerModel(
+  duel: ModelArenaDuelBlockData,
+  choice: 'a' | 'b' | 'tie' | 'neither',
+): string | null {
+  if (choice !== 'a' && choice !== 'b') return null;
+  const challenger = duel.models?.challenger?.trim();
+  const primary = duel.models?.primary?.trim();
+  const selected = duel.models?.[choice]?.trim();
+  if (!challenger || !selected || selected !== challenger || selected === primary) return null;
+  return selected;
 }
 
 function mergeModelArenaSide(
@@ -473,6 +488,20 @@ function ModelArenaDuelContextBlock({ block }: { block: Extract<MessageBlock, { 
       const result = (await client.extension.invoke('voteDuel', { duelId: local.duelId, choice })) as { duel?: ModelArenaDuelBlockData };
       if (!result.duel || result.duel.status !== 'voted') {
         throw new Error('Vote was not recorded. The duel is still open.');
+      }
+      const preferredChallengerModel = modelArenaPreferredChallengerModel(result.duel, choice);
+      const conversationId = result.duel.conversationId?.trim() || local.conversationId?.trim();
+      if (preferredChallengerModel && conversationId) {
+        try {
+          await api.updateConversationModelPreferences(conversationId, { model: preferredChallengerModel });
+        } catch (preferenceError) {
+          addNotification({
+            type: 'warning',
+            message: 'Model Arena saved your vote, but could not switch the conversation model.',
+            details: preferenceError instanceof Error ? preferenceError.message : String(preferenceError),
+            source: 'Model Arena',
+          });
+        }
       }
       setLocal(result.duel);
       setError('');
