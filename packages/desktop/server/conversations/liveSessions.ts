@@ -935,6 +935,7 @@ export async function startParallelPromptSession(
     videos?: PromptVideoAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
+    cwd?: string;
     model?: string | null;
     thinkingLevel?: string | null;
     serviceTier?: string | null;
@@ -1309,7 +1310,12 @@ export async function branchSession(
 export async function forkSession(
   sessionId: string,
   entryId: string,
-  options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean; branchKind?: 'fork' | 'rewind' } = {},
+  options: LiveSessionLoaderOptions & {
+    preserveSource?: boolean;
+    beforeEntry?: boolean;
+    branchKind?: 'fork' | 'rewind';
+    cwdOverride?: string;
+  } = {},
   surfaceId?: string,
 ): Promise<{ newSessionId: string; sessionFile: string; perf?: Record<string, number> }> {
   const entry = registry.get(sessionId);

@@ -30,6 +30,14 @@ import {
   updateVisibleCustomMessage as updateVisibleLiveSessionCustomMessage,
 } from '../conversations/liveSessions.js';
 import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js';
+import {
+  applySpeculativeWorkspaceChanges,
+  createSpeculativeWorkspace,
+  disposeSpeculativeWorkspaceRoot,
+  type SpeculativeWorkspace,
+  type SpeculativeWorkspaceDiff,
+  type SpeculativeWorkspaceStrategy,
+} from '../filesystem/speculativeWorkspace.js';
 import type { ServerRouteContext } from '../routes/context.js';
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import { queryConversationMetadata, readConversationMetadata, writeConversationMetadata } from './extensionConversationMetadata.js';
@@ -39,6 +47,7 @@ import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 import { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
 
 const reservedConversationFiles = new Map<string, string>();
+const speculativeWorkspaces = new Map<string, SpeculativeWorkspace>();
 
 export interface ExtensionConversationDetailOptions {
   tailBlocks?: number;
@@ -57,6 +66,8 @@ export interface ExtensionConversationSendResult {
 }
 
 export interface ExtensionConversationStartParallelPromptOptions extends ExtensionConversationSendOptions {
+  /** Cwd override used by the child challenger conversation. */
+  cwd?: string;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
@@ -94,6 +105,13 @@ export interface ExtensionConversationCreateOptions {
   serviceTier?: string | null;
   /** When set, only these tool names are exposed to the created live session. */
   allowedToolNames?: string[];
+}
+
+export interface ExtensionConversationSpeculativeWorkspaceResult {
+  id: string;
+  sourcePath: string;
+  rootPath: string;
+  strategy: SpeculativeWorkspaceStrategy;
 }
 
 export interface ExtensionConversationBlocksOptions {
@@ -786,6 +804,7 @@ export function createExtensionConversationsCapability(
             ...(input.contextMessages !== undefined ? { contextMessages: input.contextMessages } : {}),
             ...(input.relatedConversationIds !== undefined ? { relatedConversationIds: input.relatedConversationIds } : {}),
             ...(input.surfaceId !== undefined ? { surfaceId: input.surfaceId } : {}),
+            ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
             ...(input.model !== undefined ? { model: input.model } : {}),
             ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
             ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),
@@ -809,6 +828,57 @@ export function createExtensionConversationsCapability(
     }): Promise<{ ok: true; status: 'imported' | 'queued' | 'skipped' | 'cancelled' }> {
       assertConversationPermission('write', 'conversations.manageParallelJob');
       return manageLiveSessionParallelJobCapability({ ...input, callerExtensionId: extensionId });
+    },
+
+    async createSpeculativeWorkspace(conversationId: string): Promise<ExtensionConversationSpeculativeWorkspaceResult> {
+      assertConversationPermission('write', 'conversations.createSpeculativeWorkspace');
+      const entry = findLiveEntry(conversationId);
+      const workspace = await createSpeculativeWorkspace({ sourcePath: entry.cwd });
+      speculativeWorkspaces.set(workspace.id, workspace);
+      return {
+        id: workspace.id,
+        sourcePath: workspace.sourcePath,
+        rootPath: workspace.rootPath,
+        strategy: workspace.strategy,
+      };
+    },
+
+    async applySpeculativeWorkspace(input: {
+      id: string;
+      sourcePath?: string;
+      rootPath?: string;
+      paths?: string[];
+    }): Promise<SpeculativeWorkspaceDiff> {
+      assertConversationPermission('write', 'conversations.applySpeculativeWorkspace');
+      const id = input.id.trim();
+      const workspace = speculativeWorkspaces.get(id);
+      if (!workspace) {
+        if (!input.sourcePath || !input.rootPath) throw new Error('Speculative workspace not found or already closed.');
+        const diff = await applySpeculativeWorkspaceChanges({
+          sourcePath: input.sourcePath,
+          workspacePath: input.rootPath,
+          paths: input.paths,
+        });
+        await disposeSpeculativeWorkspaceRoot(input.rootPath);
+        return diff;
+      }
+      const diff = await workspace.apply(input.paths ? { paths: input.paths } : undefined);
+      await workspace.dispose();
+      speculativeWorkspaces.delete(id);
+      return diff;
+    },
+
+    async disposeSpeculativeWorkspace(input: string | { id: string; rootPath?: string }): Promise<{ ok: true }> {
+      assertConversationPermission('write', 'conversations.disposeSpeculativeWorkspace');
+      const normalizedId = (typeof input === 'string' ? input : input.id).trim();
+      const workspace = speculativeWorkspaces.get(normalizedId);
+      if (workspace) {
+        await workspace.dispose();
+        speculativeWorkspaces.delete(normalizedId);
+      } else if (typeof input !== 'string' && input.rootPath) {
+        await disposeSpeculativeWorkspaceRoot(input.rootPath);
+      }
+      return { ok: true };
     },
 
     /**
@@ -974,6 +1044,7 @@ export function createExtensionConversationsCapability(
             preserveSource: true,
             beforeEntry: Boolean(typeof input !== 'string' && input.beforeEntry),
             branchKind: 'fork',
+            cwdOverride: cwd,
             ...(typeof input !== 'string' && input.model !== undefined ? { initialModel: input.model } : {}),
             ...(typeof input !== 'string' && input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
             ...(typeof input !== 'string' && input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),

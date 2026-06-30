@@ -6,6 +6,8 @@ const DUEL_PREFIX = 'duels/';
 const BLOCK_TYPE = 'model_arena_duel';
 const UNSUPPORTED_CHALLENGER_PROVIDERS = new Set(['openai-codex']);
 const STALE_RUNNING_DUEL_MS = 6 * 60 * 60 * 1000;
+const ARENA_STATE_RECOVERY_TIMEOUT_MS = 1_500;
+const ARENA_MODEL_LIST_TIMEOUT_MS = 2_500;
 
 type Choice = 'a' | 'b' | 'tie' | 'neither';
 type DuelStatus = 'running' | 'ready' | 'failed' | 'voted' | 'cancelled';
@@ -32,6 +34,12 @@ interface Duel {
   challengerModel: string;
   childConversationId: string;
   jobId: string;
+  speculativeWorkspace?: {
+    id: string;
+    sourcePath: string;
+    rootPath: string;
+    strategy: string;
+  };
   parallelJobCleared?: boolean;
   blockAppended?: boolean;
   sideA: Side;
@@ -49,6 +57,7 @@ interface Duel {
 interface StartedChallengerRun {
   childConversationId: string;
   jobId: string;
+  speculativeWorkspace?: Duel['speculativeWorkspace'];
   parallelJobCleared?: boolean;
 }
 
@@ -99,6 +108,21 @@ const defaultSettings = (): Settings => ({
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const asString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function normalizeModelList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -282,6 +306,9 @@ async function reconcileDuelAnswers(
     if (primaryError) {
       duel.error = primaryError;
       duel.status = 'failed';
+      if (await disposeSpeculativeWorkspace(ctx, duel).catch(() => false)) {
+        changed = true;
+      }
       changed = true;
     }
   }
@@ -291,6 +318,9 @@ async function reconcileDuelAnswers(
     if (challengerError) {
       duel.error = challengerError;
       duel.status = 'failed';
+      if (await disposeSpeculativeWorkspace(ctx, duel).catch(() => false)) {
+        changed = true;
+      }
       changed = true;
     }
   }
@@ -298,6 +328,9 @@ async function reconcileDuelAnswers(
   if (terminalConversationId === duel.conversationId && (runError || !duel.primaryText)) {
     duel.error = runError || 'Primary model ended without an answer.';
     duel.status = 'failed';
+    if (await disposeSpeculativeWorkspace(ctx, duel).catch(() => false)) {
+      changed = true;
+    }
     changed = true;
   }
 
@@ -305,6 +338,9 @@ async function reconcileDuelAnswers(
     if (runError || !duel.challengerText) {
       duel.error = runError || 'Challenger model ended without an answer.';
       duel.status = 'failed';
+      if (await disposeSpeculativeWorkspace(ctx, duel).catch(() => false)) {
+        changed = true;
+      }
       changed = true;
     }
     if (await cleanupParallelJob(ctx, duel)) {
@@ -444,7 +480,7 @@ function arenaModelRef(model: ArenaModel): string {
 }
 
 async function loadArenaModels(ctx: ExtensionBackendContext): Promise<ArenaModelLoad | null> {
-  const rawModels = await ctx.models.list().catch(() => null);
+  const rawModels = await withTimeout(ctx.models.list(), ARENA_MODEL_LIST_TIMEOUT_MS, null).catch(() => null);
   if (!Array.isArray(rawModels)) return null;
   const models = rawModels
     .filter(isRecord)
@@ -501,6 +537,31 @@ async function cleanupParallelJob(ctx: ExtensionBackendContext, duel: Duel) {
   }
 }
 
+async function disposeSpeculativeWorkspace(ctx: ExtensionBackendContext, duel: Duel) {
+  const workspace = duel.speculativeWorkspace;
+  const workspaceId = workspace?.id?.trim();
+  if (!workspaceId) return false;
+  await ctx.conversations.disposeSpeculativeWorkspace({
+    id: workspaceId,
+    rootPath: workspace?.rootPath,
+  });
+  delete duel.speculativeWorkspace;
+  return true;
+}
+
+async function applySpeculativeWorkspace(ctx: ExtensionBackendContext, duel: Duel) {
+  const workspace = duel.speculativeWorkspace;
+  const workspaceId = workspace?.id?.trim();
+  if (!workspaceId) return false;
+  await ctx.conversations.applySpeculativeWorkspace({
+    id: workspaceId,
+    sourcePath: workspace?.sourcePath,
+    rootPath: workspace?.rootPath,
+  });
+  delete duel.speculativeWorkspace;
+  return true;
+}
+
 async function createDuel(
   ctx: ExtensionBackendContext,
   input: {
@@ -543,6 +604,7 @@ async function createDuel(
     challengerModel: input.challengerModel,
     childConversationId: started.childConversationId,
     jobId: started.jobId,
+    speculativeWorkspace: started.speculativeWorkspace,
     parallelJobCleared: started.parallelJobCleared,
     blockAppended: !input.deferTranscriptBlock,
     sideA,
@@ -578,9 +640,11 @@ async function startChallengerRun(
     replay?: PromptReplay;
   },
 ): Promise<StartedChallengerRun> {
+  const workspace = await ctx.conversations.createSpeculativeWorkspace(input.parentConversationId);
   try {
     const started = await ctx.conversations.startParallelPrompt(input.parentConversationId, {
       text: input.prompt,
+      cwd: workspace.rootPath,
       ...(input.replay?.images ? { images: input.replay.images } : {}),
       ...(input.replay?.videos ? { videos: input.replay.videos } : {}),
       ...(input.replay?.attachmentRefs !== undefined ? { attachmentRefs: input.replay.attachmentRefs } : {}),
@@ -589,13 +653,17 @@ async function startChallengerRun(
       purpose: 'model_arena_duel',
       metadata: { duelId: input.duelId, taskType: input.taskType },
     });
-    return { childConversationId: started.childConversationId, jobId: started.jobId };
+    return { childConversationId: started.childConversationId, jobId: started.jobId, speculativeWorkspace: workspace };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (!/only available while the conversation is busy/i.test(message)) throw error;
+    if (!/only available while the conversation is busy/i.test(message)) {
+      await ctx.conversations.disposeSpeculativeWorkspace(workspace.id).catch(() => undefined);
+      throw error;
+    }
   }
 
   if (!input.allowFallback) {
+    await ctx.conversations.disposeSpeculativeWorkspace(workspace.id).catch(() => undefined);
     throw new Error('Automatic Model Arena duels require an active parallel prompt window.');
   }
 
@@ -605,14 +673,24 @@ async function startChallengerRun(
       atBlockId: input.sourcePromptBlockId,
       beforeEntry: true,
       title: 'Model Arena challenger',
+      targetCwd: workspace.rootPath,
       model: input.challengerModel,
     })) as { id?: unknown; conversationId?: unknown };
     const forkedConversationId = asString(forked.conversationId) || asString(forked.id);
-    if (!forkedConversationId) throw new Error('Failed to fork challenger conversation.');
-    await ctx.conversations.runTurn(forkedConversationId, input.prompt);
+    if (!forkedConversationId) {
+      await ctx.conversations.disposeSpeculativeWorkspace(workspace.id).catch(() => undefined);
+      throw new Error('Failed to fork challenger conversation.');
+    }
+    try {
+      await ctx.conversations.runTurn(forkedConversationId, input.prompt);
+    } catch (error) {
+      await ctx.conversations.disposeSpeculativeWorkspace(workspace.id).catch(() => undefined);
+      throw error;
+    }
     return {
       childConversationId: forkedConversationId,
       jobId: `conversation:${forkedConversationId}`,
+      speculativeWorkspace: workspace,
       parallelJobCleared: true,
     };
   }
@@ -620,13 +698,18 @@ async function startChallengerRun(
   const created = (await ctx.conversations.create({
     title: 'Model Arena challenger',
     prompt: input.prompt,
+    cwd: workspace.rootPath,
     model: input.challengerModel,
   })) as { id?: unknown; conversationId?: unknown };
   const childConversationId = asString(created.conversationId) || asString(created.id);
-  if (!childConversationId) throw new Error('Failed to create challenger conversation.');
+  if (!childConversationId) {
+    await ctx.conversations.disposeSpeculativeWorkspace(workspace.id).catch(() => undefined);
+    throw new Error('Failed to create challenger conversation.');
+  }
   return {
     childConversationId,
     jobId: `conversation:${childConversationId}`,
+    speculativeWorkspace: workspace,
     parallelJobCleared: true,
   };
 }
@@ -737,6 +820,7 @@ export async function startManualDuel(input: unknown, ctx: ExtensionBackendConte
     await updateBlock(ctx, existing as Duel).catch(() => undefined);
     return { text: `Model duel ${existing.id} already exists for this answer.`, duelId: existing.id, existing: true };
   }
+  await ctx.conversations.ensureLive(conversationId);
   const duel = await createDuel(ctx, {
     conversationId,
     prompt,
@@ -781,6 +865,15 @@ export async function voteDuel(input: unknown, ctx: ExtensionBackendContext) {
   }
   if (duel.status !== 'ready' || !duel.primaryText?.trim() || !duel.challengerText?.trim()) {
     throw new Error('Duel is not ready to vote on.');
+  }
+  const challengerWon =
+    choice !== 'tie' &&
+    choice !== 'neither' &&
+    ((choice === 'a' && duel.sideA === 'challenger') || (choice === 'b' && duel.sideB === 'challenger'));
+  if (challengerWon) {
+    await applySpeculativeWorkspace(ctx, duel);
+  } else {
+    await disposeSpeculativeWorkspace(ctx, duel);
   }
   const primary = stat(current, duel.primaryModel);
   const challengerStat = stat(current, duel.challengerModel);
@@ -847,6 +940,7 @@ export async function cancelDuel(input: unknown, ctx: ExtensionBackendContext) {
     if (!isRecord(candidate) || candidate.status === 'voted' || candidate.status === 'cancelled') continue;
     if (!sameSource(candidate as Duel)) continue;
     await cleanupParallelJob(ctx, candidate as Duel).catch(() => false);
+    await disposeSpeculativeWorkspace(ctx, candidate as Duel).catch(() => false);
     (candidate as Duel).status = 'cancelled';
     (candidate as Duel).updatedAt = now;
     await saveDuel(ctx, candidate as Duel);
@@ -861,7 +955,7 @@ export async function getArenaState(_input: unknown, ctx: ExtensionBackendContex
   const duels = [];
   for (const entry of await ctx.storage.list<Duel>(DUEL_PREFIX)) {
     if (!isRecord(entry.value)) continue;
-    duels.push(await recoverDuel(ctx, entry.value as Duel));
+    duels.push(await withTimeout(recoverDuel(ctx, entry.value as Duel), ARENA_STATE_RECOVERY_TIMEOUT_MS, entry.value as Duel));
   }
   const arena = await settingsWithAvailableModels(ctx);
   return { settings: arena.settings, stats: await stats(ctx), duels, models: arena.models };

@@ -167,6 +167,7 @@ export interface SubmitLiveSessionPromptCapabilityInput {
 export interface SubmitLiveSessionParallelPromptCapabilityInput {
   conversationId: string;
   text?: string;
+  cwd?: string;
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
@@ -1216,6 +1217,7 @@ export async function submitLiveSessionParallelPromptCapability(
       videos: prepared.promptVideos,
       attachmentRefs: prepared.referencedAttachments.map((attachment) => `${attachment.attachmentId} (rev ${attachment.revision})`),
       contextMessages: promptContextMessages,
+      ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
       ...(input.model !== undefined ? { model: input.model } : {}),
       ...(input.thinkingLevel !== undefined ? { thinkingLevel: input.thinkingLevel } : {}),
       ...(input.serviceTier !== undefined ? { serviceTier: input.serviceTier } : {}),

@@ -87,6 +87,7 @@ type CommandRunner = (
 ) => Promise<CommandResult>;
 
 const WORKSPACE_SCRATCH_DIR = '.neon-pilot-tmp';
+const DEFAULT_TEMP_PREFIX = 'neon-pilot-speculative-';
 const DEFAULT_EXCLUDE_NAMES = new Set(['.git', 'node_modules', '.DS_Store', WORKSPACE_SCRATCH_DIR]);
 
 function isAppleDoubleName(name: string): boolean {
@@ -106,6 +107,18 @@ function resolveContained(root: string, relativePath: string): string {
     throw new Error(`Speculative workspace path escapes root: ${relativePath}`);
   }
   return target;
+}
+
+function resolveDisposableSpeculativeTempPath(rootPath: string): string {
+  const resolvedRootPath = resolve(rootPath);
+  const tempPath = dirname(resolvedRootPath);
+  if (!basename(tempPath).startsWith(DEFAULT_TEMP_PREFIX)) {
+    throw new Error(`Refusing to dispose non-speculative workspace path: ${rootPath}`);
+  }
+  if (!contained(tmpdir(), tempPath)) {
+    throw new Error(`Refusing to dispose speculative workspace outside the system temp directory: ${rootPath}`);
+  }
+  return tempPath;
 }
 
 function normalizeRelativeSelection(path: string): string {
@@ -328,6 +341,10 @@ export async function applySpeculativeWorkspaceChanges(input: {
   return diff;
 }
 
+export async function disposeSpeculativeWorkspaceRoot(rootPath: string): Promise<void> {
+  await rm(resolveDisposableSpeculativeTempPath(rootPath), { recursive: true, force: true });
+}
+
 class DefaultSpeculativeWorkspace implements SpeculativeWorkspace {
   constructor(
     readonly id: string,
@@ -399,7 +416,7 @@ export async function createSpeculativeWorkspace(input: CreateSpeculativeWorkspa
   const stats = await lstat(sourcePath);
   if (!stats.isDirectory()) throw new Error(`Speculative workspace source must be a directory: ${input.sourcePath}`);
   const id = input.id ?? randomUUID();
-  const tempPath = await mkdtemp(join(tmpdir(), input.tempPrefix ?? 'neon-pilot-speculative-'));
+  const tempPath = await mkdtemp(join(tmpdir(), input.tempPrefix ?? DEFAULT_TEMP_PREFIX));
   const rootPath = join(tempPath, basename(sourcePath) || 'workspace');
   await mkdir(rootPath, { recursive: true });
   const runner = input.commandRunner ?? defaultCommandRunner;

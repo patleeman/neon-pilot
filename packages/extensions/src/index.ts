@@ -1514,6 +1514,7 @@ export interface ExtensionBackendContext {
       conversationId: string,
       input: {
         text: string;
+        cwd?: string;
         images?: Array<{ data: string; mimeType: string; name?: string }>;
         model?: string | null;
         thinkingLevel?: string | null;
@@ -1545,6 +1546,7 @@ export interface ExtensionBackendContext {
       conversationId: string,
       input: {
         text: string;
+        cwd?: string;
         images?: Array<{ data: string; mimeType: string; name?: string }>;
         videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
         attachmentRefs?: unknown;
@@ -1574,6 +1576,17 @@ export interface ExtensionBackendContext {
       jobId: string;
       action: 'importNow' | 'skip' | 'cancel';
     }): Promise<{ ok: true; status: string }>;
+    createSpeculativeWorkspace(conversationId: string): Promise<{
+      id: string;
+      sourcePath: string;
+      rootPath: string;
+      strategy: 'apfs-clone' | 'copy';
+    }>;
+    applySpeculativeWorkspace(input: { id: string; sourcePath?: string; rootPath?: string; paths?: string[] }): Promise<{
+      changes: Array<{ path: string; type: 'added' | 'modified' | 'deleted'; kind: 'file' | 'symlink' }>;
+      summary: { added: number; modified: number; deleted: number };
+    }>;
+    disposeSpeculativeWorkspace(input: string | { id: string; rootPath?: string }): Promise<{ ok: true }>;
     setTitle(conversationId: string, title: string): Promise<unknown>;
     compact(conversationId: string, customInstructions?: string): Promise<unknown>;
     abort(conversationId: string): Promise<{ ok: true }>;

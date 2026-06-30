@@ -361,6 +361,7 @@ function createWorkerBackendContext(
         conversationId: string,
         input: {
           text: string;
+          cwd?: string;
           images?: Array<{ data: string; mimeType: string; name?: string }>;
           model?: string | null;
           thinkingLevel?: string | null;
@@ -372,6 +373,12 @@ function createWorkerBackendContext(
       ) => callHostCapability(extensionId, 'conversations', 'startParallelPrompt', { conversationId, ...input }),
       manageParallelJob: (input: { conversationId: string; jobId: string; action: 'importNow' | 'skip' | 'cancel' }) =>
         callHostCapability(extensionId, 'conversations', 'manageParallelJob', input),
+      createSpeculativeWorkspace: (conversationId: string) =>
+        callHostCapability(extensionId, 'conversations', 'createSpeculativeWorkspace', { conversationId }),
+      applySpeculativeWorkspace: (input: { id: string; sourcePath?: string; rootPath?: string; paths?: string[] }) =>
+        callHostCapability(extensionId, 'conversations', 'applySpeculativeWorkspace', input),
+      disposeSpeculativeWorkspace: (input: string | { id: string; rootPath?: string }) =>
+        callHostCapability(extensionId, 'conversations', 'disposeSpeculativeWorkspace', typeof input === 'string' ? { id: input } : input),
       runTurn: (
         conversationId: string,
         text: string,

@@ -112,7 +112,11 @@ describe('live session parallel import operations', () => {
         callbacks,
       ),
     ).resolves.toEqual({ jobId: 'job-1', childConversationId: 'child-1' });
-    expect(callbacks.forkSession).toHaveBeenCalledWith('parent', 'entry-1', { preserveSource: true, model: 'm1' });
+    expect(callbacks.forkSession).toHaveBeenCalledWith('parent', 'entry-1', {
+      preserveSource: true,
+      cwdOverride: '/repo',
+      model: 'm1',
+    });
     expect(callbacks.queuePromptContext).toHaveBeenCalledWith('child-1', 'ctx', 'context');
     expect(callbacks.submitPromptSession).toHaveBeenCalledWith('child-1', 'prompt', undefined, undefined, undefined);
     expect(e.parallelJobs[0]).toMatchObject({
@@ -126,6 +130,33 @@ describe('live session parallel import operations', () => {
     await vi.runAllTicks();
     await Promise.resolve();
     expect(reconciliation.replacePersistedParallelJob).toHaveBeenCalled();
+  });
+
+  it('runs parallel child prompts in an overridden cwd while tracking parent dirtiness from the source cwd', async () => {
+    const e = entry({ cwd: '/repo/source' });
+    const callbacks = {
+      createJobId: vi.fn(() => 'job-1'),
+      createSession: vi.fn(async () => ({ id: 'child-created', sessionFile: '/sessions/created.jsonl' })),
+      forkSession: vi.fn(async () => ({ newSessionId: 'child-1', sessionFile: '/sessions/child.jsonl' })),
+      queuePromptContext: vi.fn(async () => undefined),
+      submitPromptSession: vi.fn(async () => ({ acceptedAs: 'started' as const, completion: Promise.resolve() })),
+      resolveDefaultServiceTier: vi.fn(() => 'auto'),
+      hasQueuedOrActiveStaleTurn: vi.fn(() => true),
+      persistParallelJobs: vi.fn(),
+      broadcastParallelState: vi.fn(),
+      getCurrentEntry: vi.fn(() => e),
+      resolveParallelChildSession: vi.fn(),
+      tryImportReadyParallelJobs: vi.fn(async () => undefined),
+    };
+
+    await startParallelPromptSession(e as never, { text: 'prompt', cwd: '/tmp/speculative/source' }, {} as never, callbacks);
+
+    expect(callbacks.forkSession).toHaveBeenCalledWith(
+      'parent',
+      'entry-1',
+      expect.objectContaining({ preserveSource: true, cwdOverride: '/tmp/speculative/source' }),
+    );
+    expect(reconciliation.readParallelCurrentWorktreeDirtyPaths).toHaveBeenCalledWith('/repo/source', '/repo');
   });
 
   it('validates start inputs and rolls back jobs on submit failure', async () => {

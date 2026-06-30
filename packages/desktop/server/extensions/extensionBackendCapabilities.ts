@@ -247,6 +247,7 @@ interface ExtensionBackendCapabilityConversations {
       contextMessages?: unknown;
       relatedConversationIds?: unknown;
       surfaceId?: string;
+      cwd?: string;
       model?: string | null;
       thinkingLevel?: string | null;
       serviceTier?: string | null;
@@ -259,6 +260,12 @@ interface ExtensionBackendCapabilityConversations {
     extensionId: string,
     input: { conversationId: string; jobId: string; action: 'importNow' | 'skip' | 'cancel' },
   ): Promise<unknown> | unknown;
+  createSpeculativeWorkspace?(extensionId: string, conversationId: string): Promise<unknown> | unknown;
+  applySpeculativeWorkspace?(
+    extensionId: string,
+    input: { id: string; sourcePath?: string; rootPath?: string; paths?: string[] },
+  ): Promise<unknown> | unknown;
+  disposeSpeculativeWorkspace?(extensionId: string, input: string | { id: string; rootPath?: string }): Promise<unknown> | unknown;
   abort?(extensionId: string, conversationId: string): Promise<unknown> | unknown;
   compact?(extensionId: string, conversationId: string, customInstructions?: string): Promise<unknown> | unknown;
   fork?(
@@ -649,6 +656,9 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
       'sendMessage',
       'startParallelPrompt',
       'manageParallelJob',
+      'createSpeculativeWorkspace',
+      'applySpeculativeWorkspace',
+      'disposeSpeculativeWorkspace',
       'runTurn',
       'abort',
       'compact',
@@ -1124,6 +1134,7 @@ function dispatchConversationsCapability(
     return conversations.startParallelPrompt(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
       text: requireString(input.text, 'Conversation parallel prompt text'),
       ...normalizeConversationSendOptions(input),
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Conversation parallel prompt cwd') } : {}),
       ...(input.model === null
         ? { model: null }
         : input.model !== undefined
@@ -1220,6 +1231,7 @@ function dispatchConversationsCapability(
     }
     return conversations.startParallelPrompt(request.extensionId, requireString(input.conversationId, 'Conversation id'), {
       text: requireString(input.text, 'Parallel prompt text'),
+      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Parallel prompt cwd') } : {}),
       ...(input.images !== undefined ? { images: input.images as Array<{ data: string; mimeType: string; name?: string }> } : {}),
       ...(input.videos !== undefined
         ? { videos: input.videos as Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }> }
@@ -1262,6 +1274,37 @@ function dispatchConversationsCapability(
       conversationId: requireString(input.conversationId, 'Conversation id'),
       jobId: requireString(input.jobId, 'Parallel prompt job id'),
       action,
+    });
+  }
+
+  if (request.operation === 'createSpeculativeWorkspace') {
+    if (!conversations.createSpeculativeWorkspace) {
+      throw new Error('Conversation createSpeculativeWorkspace capability is unavailable.');
+    }
+    return conversations.createSpeculativeWorkspace(request.extensionId, requireString(input.conversationId, 'Conversation id'));
+  }
+
+  if (request.operation === 'applySpeculativeWorkspace') {
+    if (!conversations.applySpeculativeWorkspace) {
+      throw new Error('Conversation applySpeculativeWorkspace capability is unavailable.');
+    }
+    return conversations.applySpeculativeWorkspace(request.extensionId, {
+      id: requireString(input.id, 'Speculative workspace id'),
+      ...(input.sourcePath !== undefined ? { sourcePath: requireString(input.sourcePath, 'Speculative workspace source path') } : {}),
+      ...(input.rootPath !== undefined ? { rootPath: requireString(input.rootPath, 'Speculative workspace root path') } : {}),
+      ...(input.paths !== undefined
+        ? { paths: Array.isArray(input.paths) ? input.paths.map((path) => requireString(path, 'Speculative workspace path')) : [] }
+        : {}),
+    });
+  }
+
+  if (request.operation === 'disposeSpeculativeWorkspace') {
+    if (!conversations.disposeSpeculativeWorkspace) {
+      throw new Error('Conversation disposeSpeculativeWorkspace capability is unavailable.');
+    }
+    return conversations.disposeSpeculativeWorkspace(request.extensionId, {
+      id: requireString(input.id, 'Speculative workspace id'),
+      ...(input.rootPath !== undefined ? { rootPath: requireString(input.rootPath, 'Speculative workspace root path') } : {}),
     });
   }
 
@@ -2496,6 +2539,14 @@ export function createExtensionBackendCapabilityDispatcher(
       extensionId: string,
       input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['manageParallelJob']>[0],
     ) => createExtensionConversationsCapability(undefined, extensionId).manageParallelJob(input),
+    createSpeculativeWorkspace: (extensionId: string, conversationId: string) =>
+      createExtensionConversationsCapability(undefined, extensionId).createSpeculativeWorkspace(conversationId),
+    applySpeculativeWorkspace: (
+      extensionId: string,
+      input: Parameters<ReturnType<typeof createExtensionConversationsCapability>['applySpeculativeWorkspace']>[0],
+    ) => createExtensionConversationsCapability(undefined, extensionId).applySpeculativeWorkspace(input),
+    disposeSpeculativeWorkspace: (extensionId: string, id: string) =>
+      createExtensionConversationsCapability(undefined, extensionId).disposeSpeculativeWorkspace(id),
     runTurn: (
       _extensionId: string,
       conversationId: string,

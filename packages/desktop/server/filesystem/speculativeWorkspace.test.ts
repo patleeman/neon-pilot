@@ -11,6 +11,7 @@ import {
   createMacWriteSandboxProfile,
   createSpeculativeWorkspace,
   type CreateSpeculativeWorkspaceInput,
+  disposeSpeculativeWorkspaceRoot,
 } from './speculativeWorkspace.js';
 
 const dirs: string[] = [];
@@ -285,5 +286,19 @@ describe('speculative workspace', () => {
     expect(diff.changes.some((change) => change.path === 'nested.txt' && change.type === 'added')).toBe(true);
     expect(readFileSync(join(source, 'edit.txt'), 'utf8')).toBe('direct');
     expect(existsSync(join(source, 'nested.txt'))).toBe(false);
+  });
+
+  it('disposes persisted speculative workspace roots and rejects unrelated paths', async () => {
+    const temp = tempDir('neon-pilot-speculative-');
+    const root = join(temp, 'workspace');
+    await mkdir(root, { recursive: true });
+    writeFileSync(join(root, 'scratch.txt'), 'temporary');
+
+    await disposeSpeculativeWorkspaceRoot(root);
+
+    expect(existsSync(temp)).toBe(false);
+    await expect(disposeSpeculativeWorkspaceRoot(join(tmpdir(), 'not-neon-pilot-speculative', 'workspace'))).rejects.toThrow(
+      /non-speculative workspace path/,
+    );
   });
 });

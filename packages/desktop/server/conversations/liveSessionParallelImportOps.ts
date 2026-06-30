@@ -59,6 +59,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     videos?: PromptVideoAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
+    cwd?: string;
     model?: string | null;
     thinkingLevel?: string | null;
     serviceTier?: string | null;
@@ -74,7 +75,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     forkSession: (
       sessionId: string,
       entryId: string,
-      options: LiveSessionLoaderOptions & { preserveSource?: boolean },
+      options: LiveSessionLoaderOptions & { preserveSource?: boolean; cwdOverride?: string },
     ) => Promise<{ newSessionId: string; sessionFile: string }>;
     queuePromptContext: (sessionId: string, customType: string, content: string) => Promise<void>;
     submitPromptSession: (
@@ -109,16 +110,18 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
   }
 
   const parallelRepoRoot = readGitRepoInfo(entry.cwd)?.root;
+  const childCwd = input.cwd?.trim() || entry.cwd;
   const stableEntryId = resolveStableForkEntryId(sourceSessionFile, { activeTurnInProgress });
   const forked = stableEntryId
     ? await callbacks.forkSession(entry.sessionId, stableEntryId, {
         preserveSource: true,
         ...options,
+        cwdOverride: childCwd,
         ...(input.model !== undefined ? { initialModel: input.model } : {}),
         ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
         ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
       })
-    : await callbacks.createSession(entry.cwd, {
+    : await callbacks.createSession(childCwd, {
         ...options,
         initialModel:
           input.model !== undefined
@@ -151,6 +154,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     forkEntryId: stableEntryId ?? undefined,
     repoRoot: parallelRepoRoot,
     cwd: entry.cwd,
+    childCwd,
     ownerExtensionId: input.ownerExtensionId,
     purpose: input.purpose,
     modelRef: input.model ?? undefined,
@@ -173,6 +177,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
       jobId: job.id,
       childSessionFile: forked.sessionFile,
       cwd: entry.cwd,
+      childCwd,
       repoRoot: parallelRepoRoot,
       getCurrentEntry: callbacks.getCurrentEntry,
       resolveParallelChildSession: callbacks.resolveParallelChildSession,
@@ -205,6 +210,7 @@ export function createRunningParallelPromptJob(input: {
   forkEntryId?: string;
   repoRoot?: string;
   cwd: string;
+  childCwd?: string;
   ownerExtensionId?: string;
   purpose?: string;
   modelRef?: string | null;
@@ -246,6 +252,7 @@ export async function handleParallelPromptCompletion<TEntry extends LiveSessionP
   jobId: string;
   childSessionFile: string;
   cwd: string;
+  childCwd?: string;
   repoRoot?: string;
   error?: unknown;
   getCurrentEntry: () => TEntry | undefined;
@@ -254,7 +261,7 @@ export async function handleParallelPromptCompletion<TEntry extends LiveSessionP
   tryImportReadyParallelJobs: (entry: TEntry) => Promise<void>;
 }): Promise<void> {
   const completion = existsSync(input.childSessionFile)
-    ? readParallelJobCompletionFromSessionFile(input.childSessionFile, { cwd: input.cwd, repoRoot: input.repoRoot })
+    ? readParallelJobCompletionFromSessionFile(input.childSessionFile, { cwd: input.childCwd ?? input.cwd, repoRoot: input.repoRoot })
     : { hasTerminalReply: false, touchedFiles: [] as string[], sideEffects: [] as string[] };
   const failed = input.error !== undefined;
   const nextJobs = replacePersistedParallelJob(

@@ -198,12 +198,18 @@ export async function branchLiveSession(
 export async function forkLiveSession(
   entry: LiveSessionBranchHost,
   entryId: string,
-  options: LiveSessionLoaderOptions & { preserveSource?: boolean; beforeEntry?: boolean; branchKind?: LiveSessionForkKind },
+  options: LiveSessionLoaderOptions & {
+    preserveSource?: boolean;
+    beforeEntry?: boolean;
+    branchKind?: LiveSessionForkKind;
+    cwdOverride?: string;
+  },
   callbacks: LiveSessionBranchCallbacks,
 ): Promise<LiveSessionBranchResult> {
   const startedAtMs = performance.now();
-  const { preserveSource, beforeEntry, branchKind, ...loaderOptions } = options;
+  const { preserveSource, beforeEntry, branchKind, cwdOverride, ...loaderOptions } = options;
   const topologyKind: LiveSessionForkKind = branchKind ?? (beforeEntry ? 'rewind' : 'fork');
+  const childCwd = cwdOverride?.trim() || entry.cwd;
 
   if (entry.session.isStreaming && !preserveSource) {
     throw new Error('Cannot replace a running conversation while forking. Keep the source conversation open instead.');
@@ -229,8 +235,8 @@ export async function forkLiveSession(
   if (beforeEntry && !branchTargetHasVisibleMessage(sourceManager, beforeEntryTargetId)) {
     const defaultsStartedAtMs = performance.now();
     const created =
-      callbacks.reserveSession?.(entry.cwd) ??
-      (await callbacks.createSession(entry.cwd, {
+      callbacks.reserveSession?.(childCwd) ??
+      (await callbacks.createSession(childCwd, {
         ...loaderOptions,
         initialModel: loaderOptions.initialModel === undefined ? (entry.session.model?.id ?? null) : loaderOptions.initialModel,
         initialThinkingLevel:
@@ -264,7 +270,7 @@ export async function forkLiveSession(
     appendForkedConversationWorkspaceMetadata({
       sourceSessionFile,
       childSessionFile: created.sessionFile,
-      fallbackCwd: entry.cwd,
+      fallbackCwd: childCwd,
     });
     const metadataAppendedAtMs = performance.now();
 
@@ -326,13 +332,13 @@ export async function forkLiveSession(
   appendForkedConversationWorkspaceMetadata({
     sourceSessionFile,
     childSessionFile: forkedSessionFile,
-    fallbackCwd: entry.cwd,
+    fallbackCwd: childCwd,
   });
   const metadataAppendedAtMs = performance.now();
 
   const resumed = await callbacks.resumeSession(forkedSessionFile, {
     ...loaderOptions,
-    cwdOverride: entry.cwd,
+    cwdOverride: childCwd,
   });
   const resumedAtMs = performance.now();
 

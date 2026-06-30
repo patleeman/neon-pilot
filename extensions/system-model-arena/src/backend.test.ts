@@ -19,9 +19,18 @@ function createContext(initial: Record<string, unknown> = {}) {
   const manageParallelJob = vi.fn(async () => ({ ok: true, status: 'skipped' as const }));
   const updateTranscriptBlock = vi.fn(async () => ({ blockId: 'block-1' }));
   const appendTranscriptBlock = vi.fn(async () => ({ blockId: 'block-1' }));
+  const createSpeculativeWorkspace = vi.fn(async () => ({
+    id: 'workspace-1',
+    sourcePath: '/repo',
+    rootPath: '/tmp/model-arena-workspace',
+    strategy: 'copy',
+  }));
+  const applySpeculativeWorkspace = vi.fn(async () => ({ changes: [], summary: { added: 0, modified: 0, deleted: 0 } }));
+  const disposeSpeculativeWorkspace = vi.fn(async () => ({ ok: true }));
   const startParallelPrompt = vi.fn(async () => ({ childConversationId: 'child-1', jobId: 'job-1' }));
   const create = vi.fn(async () => ({ id: 'created-child-1', conversationId: 'created-child-1' }));
   const fork = vi.fn(async () => ({ id: 'forked-child-1', conversationId: 'forked-child-1' }));
+  const ensureLive = vi.fn(async () => ({ id: 'conv-1', conversationId: 'conv-1' }));
   const runTurn = vi.fn(async () => ({ accepted: true }));
   const listModels = vi.fn(async () => [
     { id: 'gpt-5', name: 'GPT-5', provider: 'openai', input: ['text', 'image'], authConfigured: true },
@@ -51,8 +60,12 @@ function createContext(initial: Record<string, unknown> = {}) {
         create,
         manageParallelJob,
         startParallelPrompt,
+        createSpeculativeWorkspace,
+        applySpeculativeWorkspace,
+        disposeSpeculativeWorkspace,
         appendTranscriptBlock,
         updateTranscriptBlock,
+        ensureLive,
         fork,
         runTurn,
       },
@@ -66,9 +79,13 @@ function createContext(initial: Record<string, unknown> = {}) {
     getMeta,
     create,
     fork,
+    ensureLive,
     runTurn,
     manageParallelJob,
     startParallelPrompt,
+    createSpeculativeWorkspace,
+    applySpeculativeWorkspace,
+    disposeSpeculativeWorkspace,
     appendTranscriptBlock,
     updateTranscriptBlock,
   };
@@ -212,6 +229,57 @@ describe('Model Arena backend', () => {
         data: expect.objectContaining({ status: 'failed', error: 'Model Arena duel expired before both answers were captured.' }),
       }),
     );
+  });
+
+  it('returns arena state when stored duel recovery stalls', async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = createContext({
+        'duels/stalled': {
+          id: 'stalled',
+          conversationId: 'parent-1',
+          blockId: 'model_arena_duel:stalled',
+          prompt: 'Compare this answer',
+          taskType: 'general',
+          primaryModel: 'openai/gpt-5',
+          challengerModel: 'anthropic/claude-sonnet',
+          childConversationId: 'child-1',
+          jobId: 'job-1',
+          sideA: 'primary',
+          sideB: 'challenger',
+          status: 'running',
+          createdAt: '2026-06-29T00:00:00.000Z',
+          updatedAt: '2026-06-29T00:00:00.000Z',
+        },
+      });
+      harness.getBlocks.mockImplementation(() => new Promise(() => undefined));
+
+      const pending = getArenaState({}, harness.ctx as never);
+      await vi.advanceTimersByTimeAsync(1_501);
+
+      await expect(pending).resolves.toMatchObject({
+        duels: [expect.objectContaining({ id: 'stalled', status: 'running' })],
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('returns an empty arena model list when provider discovery stalls', async () => {
+    vi.useFakeTimers();
+    try {
+      const harness = createContext();
+      harness.listModels.mockImplementation(() => new Promise(() => undefined));
+
+      const pending = getArenaState({}, harness.ctx as never);
+      await vi.advanceTimersByTimeAsync(2_501);
+
+      await expect(pending).resolves.toMatchObject({
+        models: [],
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not launch stale challenger models that are no longer runnable', async () => {
@@ -423,6 +491,7 @@ describe('Model Arena backend', () => {
       'parent-1',
       expect.objectContaining({
         text: 'Compare this backend queue design',
+        cwd: '/tmp/model-arena-workspace',
         model: 'anthropic/claude-sonnet',
         purpose: 'model_arena_duel',
         metadata: expect.objectContaining({ duelId, taskType: 'backend' }),
@@ -434,6 +503,12 @@ describe('Model Arena backend', () => {
       challengerModel: 'anthropic/claude-sonnet',
       status: 'running',
       blockAppended: false,
+      speculativeWorkspace: {
+        id: 'workspace-1',
+        sourcePath: '/repo',
+        rootPath: '/tmp/model-arena-workspace',
+        strategy: 'copy',
+      },
     });
     expect(harness.appendTranscriptBlock).not.toHaveBeenCalled();
 
@@ -464,6 +539,11 @@ describe('Model Arena backend', () => {
 
     await voteDuel({ duelId, choice: 'a' }, harness.ctx as never);
 
+    expect(harness.disposeSpeculativeWorkspace).toHaveBeenCalledWith({
+      id: 'workspace-1',
+      rootPath: '/tmp/model-arena-workspace',
+    });
+    expect(harness.applySpeculativeWorkspace).not.toHaveBeenCalled();
     expect(harness.store.get('stats/models')).toMatchObject({
       models: {
         'openai/gpt-5': { byTask: { backend: { votes: 1 } } },
@@ -490,6 +570,7 @@ describe('Model Arena backend', () => {
 
     expect(result).toMatchObject({ text: expect.stringContaining('Started model duel'), duelId: expect.any(String) });
     expect(harness.getBlocks).toHaveBeenCalledWith('conv-1', { tailBlocks: 120 });
+    expect(harness.ensureLive).toHaveBeenCalledWith('conv-1');
     expect(harness.startParallelPrompt).toHaveBeenCalledWith('conv-1', expect.objectContaining({ text: 'First prompt' }));
     expect(harness.appendTranscriptBlock).toHaveBeenCalledWith(expect.objectContaining({ conversationId: 'conv-1' }));
     expect(harness.store.get(`duels/${result.duelId}`)).toMatchObject({ sourceBlockId: 'assistant-1', blockAppended: true });
@@ -595,6 +676,7 @@ describe('Model Arena backend', () => {
         atBlockId: 'user-1',
         beforeEntry: true,
         title: 'Model Arena challenger',
+        targetCwd: '/tmp/model-arena-workspace',
         model: 'anthropic/claude-sonnet',
       }),
     );
@@ -603,8 +685,90 @@ describe('Model Arena backend', () => {
     expect(harness.store.get(`duels/${result.duelId}`)).toMatchObject({
       childConversationId: 'forked-child-1',
       jobId: 'conversation:forked-child-1',
+      speculativeWorkspace: {
+        id: 'workspace-1',
+        sourcePath: '/repo',
+        rootPath: '/tmp/model-arena-workspace',
+        strategy: 'copy',
+      },
       parallelJobCleared: true,
     });
+  });
+
+  it('applies isolated challenger workspace changes only when the challenger wins', async () => {
+    const duel = {
+      id: 'duel-1',
+      conversationId: 'parent-1',
+      blockId: 'model_arena_duel:duel-1',
+      prompt: 'Fix a backend bug',
+      taskType: 'backend',
+      primaryModel: 'openai/gpt-5',
+      challengerModel: 'anthropic/claude-sonnet',
+      childConversationId: 'child-1',
+      jobId: 'job-1',
+      speculativeWorkspace: {
+        id: 'workspace-1',
+        sourcePath: '/repo',
+        rootPath: '/tmp/model-arena-workspace',
+        strategy: 'copy',
+      },
+      sideA: 'primary',
+      sideB: 'challenger',
+      status: 'ready',
+      createdAt: '2026-06-29T12:00:00.000Z',
+      updatedAt: '2026-06-29T12:00:00.000Z',
+      primaryText: 'Primary',
+      challengerText: 'Challenger',
+    };
+    const harness = createContext({ 'duels/duel-1': duel });
+
+    await voteDuel({ duelId: 'duel-1', choice: 'b' }, harness.ctx as never);
+
+    expect(harness.applySpeculativeWorkspace).toHaveBeenCalledWith({
+      id: 'workspace-1',
+      sourcePath: '/repo',
+      rootPath: '/tmp/model-arena-workspace',
+    });
+    expect(harness.disposeSpeculativeWorkspace).not.toHaveBeenCalled();
+    expect(harness.store.get('duels/duel-1')).toMatchObject({ status: 'voted', vote: 'b', revealed: true });
+    expect(harness.store.get('duels/duel-1')).not.toHaveProperty('speculativeWorkspace');
+  });
+
+  it('disposes isolated challenger workspace changes when the primary wins', async () => {
+    const duel = {
+      id: 'duel-1',
+      conversationId: 'parent-1',
+      blockId: 'model_arena_duel:duel-1',
+      prompt: 'Fix a backend bug',
+      taskType: 'backend',
+      primaryModel: 'openai/gpt-5',
+      challengerModel: 'anthropic/claude-sonnet',
+      childConversationId: 'child-1',
+      jobId: 'job-1',
+      speculativeWorkspace: {
+        id: 'workspace-1',
+        sourcePath: '/repo',
+        rootPath: '/tmp/model-arena-workspace',
+        strategy: 'copy',
+      },
+      sideA: 'primary',
+      sideB: 'challenger',
+      status: 'ready',
+      createdAt: '2026-06-29T12:00:00.000Z',
+      updatedAt: '2026-06-29T12:00:00.000Z',
+      primaryText: 'Primary',
+      challengerText: 'Challenger',
+    };
+    const harness = createContext({ 'duels/duel-1': duel });
+
+    await voteDuel({ duelId: 'duel-1', choice: 'a' }, harness.ctx as never);
+
+    expect(harness.disposeSpeculativeWorkspace).toHaveBeenCalledWith({
+      id: 'workspace-1',
+      rootPath: '/tmp/model-arena-workspace',
+    });
+    expect(harness.applySpeculativeWorkspace).not.toHaveBeenCalled();
+    expect(harness.store.get('duels/duel-1')).not.toHaveProperty('speculativeWorkspace');
   });
 
   it('rejects manual duels for image prompts until challenger runs receive equivalent media', async () => {

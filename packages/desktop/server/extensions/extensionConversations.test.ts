@@ -60,6 +60,25 @@ const runtimeHooks = vi.hoisted(() => ({
   buildLiveSessionExtensionFactoriesForRuntime: vi.fn(() => ['factory']),
   buildLiveSessionResourceOptionsForRuntime: vi.fn(() => ({ resources: true })),
 }));
+const speculativeWorkspace = vi.hoisted(() => ({
+  workspace: {
+    id: 'spec-1',
+    sourcePath: '/repo',
+    rootPath: '/tmp/speculative/repo',
+    strategy: 'copy',
+    apply: vi.fn(async () => ({
+      changes: [{ path: 'src/app.ts', type: 'modified', kind: 'file' }],
+      summary: { added: 0, modified: 1, deleted: 0 },
+    })),
+    dispose: vi.fn(async () => undefined),
+  },
+  createSpeculativeWorkspace: vi.fn(async () => speculativeWorkspace.workspace),
+  applySpeculativeWorkspaceChanges: vi.fn(async () => ({
+    changes: [{ path: 'src/fallback.ts', type: 'added', kind: 'file' }],
+    summary: { added: 1, modified: 0, deleted: 0 },
+  })),
+  disposeSpeculativeWorkspaceRoot: vi.fn(async () => undefined),
+}));
 const uiPreferences = vi.hoisted(() => ({
   saved: {
     openConversationIds: ['existing-open'],
@@ -93,6 +112,7 @@ vi.mock('../shared/appEvents.js', () => appEvents);
 vi.mock('./extensionConversationMetadata.js', () => metadata);
 vi.mock('./extensionSubscriptions.js', () => subscriptions);
 vi.mock('./runtimeAgentHooks.js', () => runtimeHooks);
+vi.mock('../filesystem/speculativeWorkspace.js', () => speculativeWorkspace);
 vi.mock('../ui/uiPreferences.js', () => uiPreferences);
 vi.mock('../ui/settingsPersistence.js', () => settingsPersistence);
 
@@ -127,6 +147,12 @@ function liveEntry(overrides: Record<string, unknown> = {}) {
 describe('extensionConversations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    speculativeWorkspace.workspace.apply.mockResolvedValue({
+      changes: [{ path: 'src/app.ts', type: 'modified', kind: 'file' }],
+      summary: { added: 0, modified: 1, deleted: 0 },
+    });
+    speculativeWorkspace.workspace.dispose.mockResolvedValue(undefined);
+    speculativeWorkspace.createSpeculativeWorkspace.mockResolvedValue(speculativeWorkspace.workspace);
     live.registry.clear();
     live.destroySession.mockImplementation((conversationId: string) => {
       live.registry.delete(conversationId);
@@ -527,6 +553,7 @@ describe('extensionConversations', () => {
     await expect(
       capability.startParallelPrompt('conv-1', {
         text: 'Compare this screenshot',
+        cwd: '/tmp/speculative/repo',
         images: [{ data: 'png-bytes', mimeType: 'image/png', name: 'shot.png' }],
         videos: [{ path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 123 }],
         attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
@@ -546,6 +573,7 @@ describe('extensionConversations', () => {
       expect.objectContaining({
         conversationId: 'conv-1',
         text: 'Compare this screenshot',
+        cwd: '/tmp/speculative/repo',
         images: [{ data: 'png-bytes', mimeType: 'image/png', name: 'shot.png' }],
         videos: [{ path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 123 }],
         attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
@@ -576,6 +604,7 @@ describe('extensionConversations', () => {
         atBlockId: 'user-1-x0',
         beforeEntry: true,
         title: 'Arena challenger',
+        targetCwd: '/tmp/speculative/repo',
         model: 'anthropic/claude-sonnet',
       }),
     ).resolves.toEqual({ id: 'forked-from-entry', conversationId: 'forked-from-entry' });
@@ -587,11 +616,64 @@ describe('extensionConversations', () => {
         preserveSource: true,
         beforeEntry: true,
         branchKind: 'fork',
+        cwdOverride: '/tmp/speculative/repo',
         initialModel: 'anthropic/claude-sonnet',
       }),
     );
     expect(live.createSessionFromExisting).not.toHaveBeenCalled();
     expect(forkedEntry.session.setSessionName).toHaveBeenCalledWith('Arena challenger');
+  });
+
+  it('creates, applies, and disposes speculative workspaces through the host boundary', async () => {
+    live.registry.set('conv-1', liveEntry({ cwd: '/repo' }));
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
+
+    await expect(capability.createSpeculativeWorkspace('conv-1')).resolves.toEqual({
+      id: 'spec-1',
+      sourcePath: '/repo',
+      rootPath: '/tmp/speculative/repo',
+      strategy: 'copy',
+    });
+    expect(speculativeWorkspace.createSpeculativeWorkspace).toHaveBeenCalledWith({ sourcePath: '/repo' });
+
+    await expect(capability.applySpeculativeWorkspace({ id: 'spec-1' })).resolves.toEqual({
+      changes: [{ path: 'src/app.ts', type: 'modified', kind: 'file' }],
+      summary: { added: 0, modified: 1, deleted: 0 },
+    });
+    expect(speculativeWorkspace.workspace.apply).toHaveBeenCalledWith(undefined);
+    expect(speculativeWorkspace.workspace.dispose).toHaveBeenCalledTimes(1);
+
+    await expect(capability.disposeSpeculativeWorkspace('spec-1')).resolves.toEqual({ ok: true });
+    expect(speculativeWorkspace.workspace.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies and disposes persisted speculative workspace paths after the live handle is gone', async () => {
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' });
+
+    await expect(
+      capability.applySpeculativeWorkspace({
+        id: 'spec-restarted',
+        sourcePath: '/repo',
+        rootPath: '/tmp/neon-pilot-speculative-abc/repo',
+      }),
+    ).resolves.toEqual({
+      changes: [{ path: 'src/fallback.ts', type: 'added', kind: 'file' }],
+      summary: { added: 1, modified: 0, deleted: 0 },
+    });
+    expect(speculativeWorkspace.applySpeculativeWorkspaceChanges).toHaveBeenCalledWith({
+      sourcePath: '/repo',
+      workspacePath: '/tmp/neon-pilot-speculative-abc/repo',
+      paths: undefined,
+    });
+    expect(speculativeWorkspace.disposeSpeculativeWorkspaceRoot).toHaveBeenCalledWith('/tmp/neon-pilot-speculative-abc/repo');
+
+    await expect(
+      capability.disposeSpeculativeWorkspace({
+        id: 'spec-restarted',
+        rootPath: '/tmp/neon-pilot-speculative-abc/repo',
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(speculativeWorkspace.disposeSpeculativeWorkspaceRoot).toHaveBeenCalledWith('/tmp/neon-pilot-speculative-abc/repo');
   });
 
   it('queues working directory changes through the host live session registry', async () => {
