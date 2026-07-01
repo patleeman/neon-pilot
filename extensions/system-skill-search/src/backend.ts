@@ -172,8 +172,8 @@ const MAX_BUNDLE_BYTES = 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 25 * 1024 * 1024;
 const MAX_ARCHIVE_UNPACKED_BYTES = 100 * 1024 * 1024;
 const COMMUNITY_APPROVAL_TIMEOUT_MS = 60_000;
-const BROWSE_CACHE_TTL_MS = 15 * 60_000;
-const MAX_BROWSE_CACHE_AGE_MS = 24 * 60 * 60_000;
+const BROWSE_CACHE_TTL_MS = 24 * 60 * 60_000;
+const MAX_BROWSE_CACHE_AGE_MS = 7 * 24 * 60 * 60_000;
 
 const browseRefreshes = new Map<string, Promise<void>>();
 

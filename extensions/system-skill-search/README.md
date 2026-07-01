@@ -13,7 +13,7 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 
 The user-facing marketplace is owned by `system-skills` at `/skills` and calls `browseSkills`/`installSkill` through the extension boundary. `system-skill-search` intentionally does not contribute a Settings panel so users have one place to browse, install, and manage skills.
 
-`browseSkills` caches marketplace inventory per source, query, and limit. A page visit returns cached results immediately when available; stale cache entries refresh in the background and invalidate the Skills page when new inventory is stored. Passing `refresh: "force"` bypasses the cache for explicit refresh actions while the UI can keep the current table visible.
+`browseSkills` caches marketplace inventory per source, query, and limit for about a day by default. A page visit returns cached results immediately when available; stale cache entries refresh in the background and invalidate the Skills page when new inventory is stored. Passing `refresh: "force"` bypasses the cache for explicit refresh actions while the UI can keep the current table visible.
 
 For agent task execution, agents should not show users a list of candidates or ask them which skill to install. The intended agent flow is:
 
