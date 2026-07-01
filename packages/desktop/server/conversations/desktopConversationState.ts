@@ -617,6 +617,7 @@ export async function readDesktopConversationState(input: {
   conversationId: string;
   profile: string;
   tailBlocks?: number;
+  signal?: AbortSignal;
 }): Promise<DesktopConversationState> {
   const startedAtMs = performance.now();
   const conversationId = input.conversationId.trim();
@@ -672,6 +673,7 @@ export async function readDesktopConversationState(input: {
     conversationId,
     profile: input.profile,
     tailBlocks,
+    signal: input.signal,
   });
   const sessionReadAtMs = performance.now();
 

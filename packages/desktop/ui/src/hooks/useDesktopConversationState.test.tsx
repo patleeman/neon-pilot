@@ -705,6 +705,54 @@ describe('useDesktopConversationState', () => {
     expect(JSON.parse(eventSources[0]?.sent[0] ?? '{}')).toMatchObject({ type: 'conversation_subscribe', conversationId: 'conv-empty' });
   });
 
+  it('aborts the stale aggregate fetch when the selected conversation changes', async () => {
+    const requests: Array<{ conversationId: string; signal: AbortSignal | undefined }> = [];
+    vi.spyOn(api, 'conversationAggregate').mockImplementation(
+      (conversationId, options) =>
+        new Promise((resolve, reject) => {
+          requests.push({ conversationId, signal: options?.signal });
+          options?.signal?.addEventListener(
+            'abort',
+            () => {
+              reject(new DOMException('Aborted', 'AbortError'));
+            },
+            { once: true },
+          );
+        }),
+    );
+
+    Object.defineProperty(window, 'neonPilotDesktop', {
+      configurable: true,
+      value: {
+        getEnvironment: vi.fn().mockResolvedValue({ activeHostKind: 'local' }),
+      },
+    });
+
+    const root = createRoot(document.createElement('div'));
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-aggregate-old" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    await vi.waitFor(() => expect(requests.some((request) => request.conversationId === 'conv-aggregate-old')).toBe(true));
+    const oldRequest = requests.find((request) => request.conversationId === 'conv-aggregate-old');
+    expect(oldRequest?.signal?.aborted).toBe(false);
+
+    await act(async () => {
+      root.render(<HookProbe conversationId="conv-aggregate-new" />);
+      await flushPromises();
+      await flushPromises();
+    });
+
+    await vi.waitFor(() => expect(requests.some((request) => request.conversationId === 'conv-aggregate-new')).toBe(true));
+    const newRequest = requests.find((request) => request.conversationId === 'conv-aggregate-new');
+    expect(oldRequest?.signal?.aborted).toBe(true);
+    expect(newRequest?.signal?.aborted).toBe(false);
+  });
+
   it('fetches missing aggregate deltas before falling back to a snapshot refresh', async () => {
     const conversationAggregate = vi.spyOn(api, 'conversationAggregate').mockResolvedValue(aggregateState('conv-gap', []));
     const conversationAggregateDeltas = vi.spyOn(api, 'conversationAggregateDeltas').mockResolvedValue({
@@ -933,7 +981,7 @@ describe('useDesktopConversationState', () => {
 
     expect(latestState?.loading).toBe(false);
     expect(latestState?.state?.sessionDetail?.meta.id).toBe('conv-created');
-    expect(conversationAggregate).toHaveBeenCalledWith('conv-created', { tailBlocks: 20 });
+    expect(conversationAggregate).toHaveBeenCalledWith('conv-created', expect.objectContaining({ tailBlocks: 20 }));
   });
 
   it('does not expose primed desktop conversation state from an older file version', async () => {
@@ -975,7 +1023,10 @@ describe('useDesktopConversationState', () => {
       await flushPromises();
     });
 
-    expect(conversationAggregate).toHaveBeenCalledWith('conv-versioned', { tailBlocks: 20, includeToolBlocks: false });
+    expect(conversationAggregate).toHaveBeenCalledWith(
+      'conv-versioned',
+      expect.objectContaining({ tailBlocks: 20, includeToolBlocks: false }),
+    );
     expect(latestState?.state?.stream.blocks.map((block) => block.id)).toEqual(['fresh']);
   });
 
@@ -1164,7 +1215,10 @@ describe('useDesktopConversationState', () => {
 
     expect(latestState?.loading).toBe(true);
     expect(latestState?.state).toBeNull();
-    expect(conversationAggregate).toHaveBeenCalledWith('conv-cached', { tailBlocks: 20, includeToolBlocks: false });
+    expect(conversationAggregate).toHaveBeenCalledWith(
+      'conv-cached',
+      expect.objectContaining({ tailBlocks: 20, includeToolBlocks: false }),
+    );
   });
 
   it('resumes a persisted desktop conversation before sending a prompt', async () => {
@@ -1252,6 +1306,8 @@ describe('useDesktopConversationState', () => {
       'conv-saved',
       'continue',
       'followUp',
+      undefined,
+      undefined,
       undefined,
       undefined,
       undefined,
@@ -1945,6 +2001,8 @@ describe('useDesktopConversationState', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
+      undefined,
       expect.any(String),
       undefined,
       undefined,
@@ -2063,6 +2121,8 @@ describe('useDesktopConversationState', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
+      undefined,
       expect.any(String),
       undefined,
       undefined,
@@ -2109,7 +2169,7 @@ describe('useDesktopConversationState', () => {
         sessionFile: '/repo/reserved.jsonl',
       }),
     );
-    expect(conversationAggregate).toHaveBeenCalledWith('conv-reserved', { tailBlocks: 20 });
+    expect(conversationAggregate).toHaveBeenCalledWith('conv-reserved', expect.objectContaining({ tailBlocks: 20 }));
     expect(eventSources).toHaveLength(1);
   });
 
@@ -2195,6 +2255,8 @@ describe('useDesktopConversationState', () => {
     expect(sendConversationMessage).toHaveBeenCalledWith(
       'conv-reserved',
       'Follow up',
+      undefined,
+      undefined,
       undefined,
       undefined,
       undefined,
@@ -2788,7 +2850,7 @@ describe('useDesktopConversationState', () => {
 
     const initialFetchCount = conversationAggregate.mock.calls.length;
     expect(initialFetchCount).toBeGreaterThan(0);
-    expect(conversationAggregate).toHaveBeenLastCalledWith('conv-1', { tailBlocks: 20 });
+    expect(conversationAggregate).toHaveBeenLastCalledWith('conv-1', expect.objectContaining({ tailBlocks: 20 }));
 
     await act(async () => {
       latestReconnect?.();

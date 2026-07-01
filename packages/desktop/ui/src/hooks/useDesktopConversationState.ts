@@ -56,6 +56,7 @@ interface DesktopConversationStateOptions {
   tailBlocks?: number;
   includeToolBlocks?: boolean;
   version?: number | string;
+  signal?: AbortSignal;
 }
 
 interface UseDesktopConversationStateOptions extends DesktopConversationStateOptions {
@@ -876,6 +877,7 @@ function fetchDesktopConversationStateCached(
     .conversationAggregate(conversationId, {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+      ...(options?.signal ? { signal: options.signal } : {}),
     })
     .then((nextAggregate: ConversationAggregateState) => {
       const nextState = desktopConversationStateFromAggregate(nextAggregate);
@@ -888,7 +890,9 @@ function fetchDesktopConversationStateCached(
       desktopConversationStateInflight.delete(cacheKey);
     });
 
-  desktopConversationStateInflight.set(cacheKey, request);
+  if (!options?.signal) {
+    desktopConversationStateInflight.set(cacheKey, request);
+  }
   return request;
 }
 
@@ -975,11 +979,13 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     let closed = false;
+    const abortController = new AbortController();
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
     const requestOptions = {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
       ...(options?.version !== undefined ? { version: options.version } : {}),
+      signal: abortController.signal,
     } satisfies DesktopConversationStateOptions;
     const cacheKey = buildDesktopConversationStateCacheKey(
       conversationId,
@@ -1010,6 +1016,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
 
     return () => {
       closed = true;
+      abortController.abort();
     };
   }, [
     bridge,
@@ -1063,10 +1070,12 @@ export function useDesktopConversationState(conversationId: string | null, optio
     }
 
     const tailBlocks = normalizeDesktopConversationStateTailBlocks(options?.tailBlocks);
+    const abortController = new AbortController();
     const requestOptions = {
       ...(tailBlocks !== undefined ? { tailBlocks } : {}),
       ...(options?.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
       ...(options?.version !== undefined ? { version: options.version } : {}),
+      signal: abortController.signal,
     } satisfies DesktopConversationStateOptions;
     const cacheKey = buildDesktopConversationStateCacheKey(
       conversationId,
@@ -1437,6 +1446,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
       const aggregateOptions = {
         ...(tailBlocks !== undefined ? { tailBlocks } : {}),
         ...(requestOptions.includeToolBlocks === false ? { includeToolBlocks: false } : {}),
+        signal: abortController.signal,
       };
       void api
         .conversationAggregate(conversationId, aggregateOptions)
@@ -1533,6 +1543,7 @@ export function useDesktopConversationState(conversationId: string | null, optio
         socket.send(JSON.stringify({ type: 'unsubscribe', subscriptionId }));
       }
       socket?.close();
+      abortController.abort();
       clearPendingStreamFlush();
       pendingStreamEventsRef.current = [];
       lastStreamCadenceFlushAtMsRef.current = null;

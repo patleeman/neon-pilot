@@ -48,6 +48,7 @@ export interface ReadConversationAggregateStateInput {
   profile: string;
   tailBlocks?: number;
   tasks?: RuntimeScopeTaskSummary[];
+  signal?: AbortSignal;
 }
 
 export interface SubscribeConversationAggregateInput extends ReadConversationAggregateStateInput {
@@ -129,6 +130,7 @@ export async function readConversationAggregateState(input: ReadConversationAggr
     conversationId: input.conversationId,
     profile: input.profile,
     tailBlocks: input.tailBlocks,
+    signal: input.signal,
   });
   const activity = await readConversationAggregateActivity(input);
   return {

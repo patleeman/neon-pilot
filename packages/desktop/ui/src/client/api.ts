@@ -908,13 +908,15 @@ export const api = {
     post<WorkspaceEntry>('/workspace/rename', { cwd, path, newName }),
   moveWorkspacePath: async (cwd: string, path: string, targetDir: string) =>
     post<WorkspaceEntry>('/workspace/move', { cwd, path, targetDir }),
-  conversationAggregate: async (id: string, options?: { tailBlocks?: number; includeToolBlocks?: boolean }) => {
+  conversationAggregate: async (id: string, options?: { tailBlocks?: number; includeToolBlocks?: boolean; signal?: AbortSignal }) => {
     const startedAtMs = performance.now();
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
     if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
     const query = params.toString();
-    const result = await get<ConversationAggregateState>(`/conversations/${encodeURIComponent(id)}/aggregate${query ? `?${query}` : ''}`);
+    const result = await get<ConversationAggregateState>(`/conversations/${encodeURIComponent(id)}/aggregate${query ? `?${query}` : ''}`, {
+      signal: options?.signal,
+    });
     recordClientPerfTiming({
       name: 'desktop.conversationAggregate',
       startedAtMs,

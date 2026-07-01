@@ -1752,6 +1752,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
         profile: capabilityContext.getRuntimeScope(),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
         tasks: capabilityContext.listTasksForRuntimeScope?.().map((task) => ({ ...task, title: task.title ?? task.id })),
+        signal: input.signal,
       }),
     );
   }

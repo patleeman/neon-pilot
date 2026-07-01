@@ -276,6 +276,7 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
       conversationId: 'conv-1',
       profile: 'shared',
       tailBlocks: 40,
+      signal: expect.objectContaining({ aborted: false }),
     });
     expect(conversationAggregateMock.subscribeConversationAggregate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -302,6 +303,56 @@ describe('createDesktopRealtimeUpgradeHandler', () => {
 
     fakeSocket.receive({ type: 'unsubscribe', subscriptionId: snapshot.subscriptionId });
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+    handleUpgrade.mockRestore();
+  });
+
+  it('aborts a pending conversation aggregate snapshot when unsubscribed', async () => {
+    const unsubscribe = vi.fn();
+    let aggregateSignal: AbortSignal | undefined;
+    conversationAggregateMock.readConversationAggregateState.mockImplementation(
+      (input) =>
+        new Promise((_resolve, reject) => {
+          aggregateSignal = input.signal;
+          input.signal?.addEventListener(
+            'abort',
+            () => {
+              const error = new Error('Aborted');
+              error.name = 'AbortError';
+              reject(error);
+            },
+            { once: true },
+          );
+        }),
+    );
+    conversationAggregateMock.subscribeConversationAggregate.mockReturnValue(unsubscribe);
+
+    const fakeSocket = new FakeWebSocket();
+    const { createDesktopRealtimeUpgradeHandler } = await import('./realtime.js');
+    const handler = createDesktopRealtimeUpgradeHandler();
+    const server = (await import('ws')).WebSocketServer;
+    const handleUpgrade = vi.spyOn(server.prototype, 'handleUpgrade').mockImplementation((_request, _socket, _head, cb) => {
+      cb(fakeSocket as never);
+    });
+
+    handler({ url: '/api/realtime' } as never, { destroy: vi.fn() } as never, Buffer.alloc(0));
+    fakeSocket.receive({
+      type: 'conversation_subscribe',
+      id: 'conv-req-abort',
+      conversationId: 'conv-abort',
+      profile: 'shared',
+      tailBlocks: 40,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const subscribeCall = conversationAggregateMock.subscribeConversationAggregate.mock.calls[0]?.[0];
+    expect(subscribeCall).toMatchObject({ conversationId: 'conv-abort' });
+    expect(fakeSocket.sent.map((entry) => JSON.parse(entry)).some((entry) => entry.type === 'conversation_snapshot')).toBe(false);
+    expect(aggregateSignal?.aborted).toBe(false);
+
+    fakeSocket.emit('close');
+    expect(aggregateSignal?.aborted).toBe(true);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(fakeSocket.sent.map((entry) => JSON.parse(entry)).some((entry) => entry.type === 'error')).toBe(false);
     handleUpgrade.mockRestore();
   });
 

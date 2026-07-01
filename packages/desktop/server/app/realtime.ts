@@ -184,6 +184,7 @@ export function createDesktopRealtimeUpgradeHandler(
 
           const subscriptionId = `conv:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
           let unsubscribe: (() => void) | undefined;
+          const abortController = new AbortController();
           try {
             const pendingDeltas: ConversationAggregateDelta[] = [];
             let snapshotSent = false;
@@ -208,18 +209,23 @@ export function createDesktopRealtimeUpgradeHandler(
                 sendRealtimeMessage({ type: 'conversation_delta', subscriptionId, delta });
               },
             });
+            const cleanupConversationSubscription = () => {
+              abortController.abort();
+              unsubscribe?.();
+            };
             if (cleanedUp || websocket.readyState !== websocket.OPEN) {
-              unsubscribe();
+              cleanupConversationSubscription();
               return;
             }
-            conversationSubscriptions.set(subscriptionId, unsubscribe);
+            conversationSubscriptions.set(subscriptionId, cleanupConversationSubscription);
             const state = await readConversationAggregateState({
               conversationId,
               profile,
               tailBlocks,
+              signal: abortController.signal,
             });
             if (cleanedUp || websocket.readyState !== websocket.OPEN) {
-              unsubscribe();
+              cleanupConversationSubscription();
               conversationSubscriptions.delete(subscriptionId);
               return;
             }
@@ -229,9 +235,11 @@ export function createDesktopRealtimeUpgradeHandler(
               sendRealtimeMessage({ type: 'conversation_delta', subscriptionId, delta });
             }
           } catch (error) {
+            const wasAborted = abortController.signal.aborted;
+            abortController.abort();
             unsubscribe?.();
             conversationSubscriptions.delete(subscriptionId);
-            if (cleanedUp) return;
+            if (cleanedUp || wasAborted) return;
             sendRealtimeMessage({
               type: 'error',
               id: message.id,
