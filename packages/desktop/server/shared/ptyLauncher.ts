@@ -2,7 +2,7 @@ import { chmodSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
-import { type IPty, spawn as defaultSpawnPty } from 'node-pty';
+import type { IPty } from 'node-pty';
 
 import { type ProcessLaunchResult, resolveProcessLaunch } from './processLauncher.js';
 
@@ -48,7 +48,7 @@ function loadNodePty(): { nodePty: NodePtyModule; nodePtyRequire: NodeJS.Require
       // native ABI or helper issues if that copy is not usable in this runtime.
     }
   }
-  return { nodePty: { spawn: defaultSpawnPty }, nodePtyRequire: require };
+  return { nodePty: require('node-pty') as NodePtyModule, nodePtyRequire: require };
 }
 
 function sanitizePtyEnv(env: NodeJS.ProcessEnv): Record<string, string> {
