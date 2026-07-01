@@ -12,6 +12,8 @@ The Settings panel lets users pick a curated Whisper.cpp model (`tiny`, `base`, 
 
 The backend action calls the host transcription API instead of importing Whisper.cpp directly. The host service owns `whisper-cpp-node` loading, model cache paths, normal audio decoding, timestamped transcript segments, and native runtime packaging.
 
+The extension contributes a setup readiness item for the selected local Whisper model. The readiness item reports a missing model as actionable, reports missing native Whisper runtime dependencies as blocked, and uses the same `installModel` backend action as the Settings panel and CLI.
+
 Release packaging must include `packages/desktop/node_modules/whisper-cpp-node`, `packages/desktop/node_modules/@whisper-cpp-node/darwin-arm64`, and `packages/desktop/node_modules/@ffmpeg-installer` as app-relative unpacked dependencies. The host loads the native binding and ffmpeg binary at runtime via `createRequire`, so a working waveform with no transcript usually means the release app is missing those native transcription dependencies. `pnpm run check:release:doctor` verifies the Whisper packages remain in both `files` and `asarUnpack`.
 
 ## Validation

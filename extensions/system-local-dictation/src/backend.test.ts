@@ -18,6 +18,7 @@ vi.mock('@neon-pilot/extensions/backend/transcription', () => ({
 
 const {
   installModel: installModelAction,
+  dictationModelSetupStatus,
   modelStatus,
   readSettings,
   runtimeStatus,
@@ -60,6 +61,40 @@ describe('local dictation backend', () => {
 
     await expect(installModelAction({}, ctx)).resolves.toEqual({ installed: true });
     expect(installTranscriptionModel).toHaveBeenLastCalledWith({ model: 'base.en' });
+  });
+
+  it('reports dictation model setup readiness', async () => {
+    readTranscriptionModelStatus.mockResolvedValueOnce({
+      provider: 'local-whisper',
+      model: 'base.en',
+      cacheDir: '/models',
+      installed: false,
+      runtime: { provider: 'local-whisper', available: true, dependencies: [] },
+    });
+
+    await expect(dictationModelSetupStatus({}, ctx)).resolves.toMatchObject({
+      status: 'needs_setup',
+      actions: ['install'],
+      detail: expect.stringContaining('base.en dictation model is not installed'),
+    });
+
+    readTranscriptionModelStatus.mockResolvedValueOnce({
+      provider: 'local-whisper',
+      model: 'base.en',
+      cacheDir: '/models',
+      installed: true,
+      runtime: {
+        provider: 'local-whisper',
+        available: false,
+        dependencies: [{ id: 'whisper', label: 'Whisper runtime', available: false, error: 'missing native binding' }],
+      },
+    });
+
+    await expect(dictationModelSetupStatus({}, ctx)).resolves.toMatchObject({
+      status: 'blocked',
+      actions: [],
+      detail: expect.stringContaining('local Whisper runtime is not available'),
+    });
   });
 
   it('reports host transcription runtime status', async () => {

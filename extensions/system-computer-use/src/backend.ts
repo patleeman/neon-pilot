@@ -258,6 +258,25 @@ function computerUseSetupIssue(status: ComputerUseStatusResult): string | null {
   return null;
 }
 
+export async function computerUseSetupStatus(_input: unknown, ctx: ExtensionBackendContext): Promise<Record<string, unknown>> {
+  const status = await computerUseStatus({}, ctx);
+  const issue = computerUseSetupIssue(status);
+  if (!issue) {
+    return {
+      status: 'ready',
+      detail: status.version ? `Cua Driver is installed (${status.version}) and ready.` : 'Cua Driver is installed and ready.',
+      actions: [],
+      computerUse: status,
+    };
+  }
+  return {
+    status: 'needs_setup',
+    detail: issue,
+    actions: status.installed ? ['doctor'] : ['install'],
+    computerUse: status,
+  };
+}
+
 export async function computerUseStartup(_input: unknown, ctx: ExtensionBackendContext): Promise<ComputerUseStatusResult> {
   const status = await computerUseStatus({}, ctx);
   const issue = computerUseSetupIssue(status);

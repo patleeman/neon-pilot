@@ -43,6 +43,14 @@
         }
       },
       {
+        "id": "computerUseSetupStatus",
+        "handler": "computerUseSetupStatus",
+        "title": "Computer Use setup status",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "computerUseStartup",
         "handler": "computerUseStartup",
         "title": "Computer Use startup check",
@@ -71,6 +79,32 @@
         "title": "Install Cua Driver",
         "category": "Computer Use",
         "action": "computerUseInstall"
+      }
+    ],
+    "setupItems": [
+      {
+        "id": "cua-driver",
+        "title": "Install Cua Driver for Computer Use",
+        "description": "Installs and checks the local Cua Driver runtime used to capture and control native desktop apps.",
+        "capability": "Computer Use",
+        "severity": "recommended",
+        "statusAction": "computerUseSetupStatus",
+        "actions": [
+          {
+            "id": "install",
+            "label": "Install",
+            "action": "computerUseInstall",
+            "tone": "primary"
+          },
+          {
+            "id": "doctor",
+            "label": "Run Doctor",
+            "action": "computerUseDoctor",
+            "tone": "default"
+          }
+        ],
+        "dismissible": true,
+        "order": 30
       }
     ],
     "cliCommands": [

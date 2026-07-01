@@ -7,6 +7,7 @@ import {
   readTranscriptionModelStatus,
   readTranscriptionRuntimeStatus,
   transcribeAudio,
+  type TranscriptionModelStatus,
 } from '@neon-pilot/extensions/backend/transcription';
 
 import { buildDictationSettingsState, readDictationSettings, writeDictationSettings } from './settings.js';
@@ -63,6 +64,38 @@ export async function installModel(input: { model?: unknown }, ctx: ExtensionBac
   const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
   const model = readOptionalString(input.model) ?? settings.model;
   return installTranscriptionModel({ model });
+}
+
+function dictationModelDetail(status: TranscriptionModelStatus): string {
+  if (!status.runtime?.available) {
+    const dependency = status.runtime?.dependencies.find((item) => !item.available);
+    const suffix = dependency?.error ? ` ${dependency.label}: ${dependency.error}` : '';
+    return `The local Whisper runtime is not available.${suffix}`;
+  }
+  if (status.installed) {
+    const size = typeof status.sizeBytes === 'number' ? ` (${Math.round(status.sizeBytes / 1024 / 1024)} MB)` : '';
+    return `The ${status.model} dictation model is installed in ${status.cacheDir}${size}.`;
+  }
+  return `The ${status.model} dictation model is not installed. Dictation can download it before first use.`;
+}
+
+export async function dictationModelSetupStatus(_input: unknown, ctx: ExtensionBackendContext) {
+  const settings = readDictationSettings(settingsFile(ctx.runtimeDir));
+  const status = await readTranscriptionModelStatus({ model: settings.model });
+  if (!status.runtime?.available) {
+    return {
+      status: 'blocked',
+      detail: dictationModelDetail(status),
+      actions: [],
+      transcription: status,
+    };
+  }
+  return {
+    status: status.installed ? 'ready' : 'needs_setup',
+    detail: dictationModelDetail(status),
+    actions: status.installed ? [] : ['install'],
+    transcription: status,
+  };
 }
 
 export async function transcribeFile(

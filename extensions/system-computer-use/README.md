@@ -15,6 +15,8 @@ Telemetry is disabled for Cua Driver calls by setting `CUA_DRIVER_RS_TELEMETRY_E
 
 The extension does not package Cua Driver or auto-install it on first use. The install command runs Cua's upstream installer and then verifies the installed `cua-driver --version`. The driver version tested for the current public workflow is `cua-driver 0.6.8`.
 
+The extension contributes a setup readiness item for Cua Driver. The readiness item offers Install when the driver is missing, offers Run Doctor when the driver is installed but permissions need attention, and reports ready after the health check passes.
+
 On macOS, the installer creates `/Applications/CuaDriver.app`. Neon Pilot resolves that app bundle directly as well as common PATH locations, so the agent can still use Cua Driver when the app process was launched before shell PATH changes were visible.
 
 Setup flow for users:

@@ -8,7 +8,14 @@ vi.mock('@neon-pilot/extensions/backend/mcp', () => ({
   callMcpToolDirect: callMcpToolDirectMock,
 }));
 
-import { computerUse, computerUseDoctor, computerUseInstall, computerUseStartup, computerUseStatus } from './backend';
+import {
+  computerUse,
+  computerUseDoctor,
+  computerUseInstall,
+  computerUseSetupStatus,
+  computerUseStartup,
+  computerUseStatus,
+} from './backend';
 
 function createCtx(shellExec: ReturnType<typeof vi.fn> = vi.fn(), notifyToast: ReturnType<typeof vi.fn> = vi.fn()) {
   return {
@@ -240,6 +247,42 @@ describe('system-computer-use backend', () => {
     );
 
     expect(notifyToast).toHaveBeenCalledWith(expect.stringContaining('Run Computer Use: Install Cua Driver'), 'warning');
+  });
+
+  it('reports Computer Use setup readiness for missing and ready drivers', async () => {
+    const missingShell = vi.fn().mockRejectedValue(new Error('spawn cua-driver ENOENT'));
+
+    await expect(computerUseSetupStatus({}, createCtx(missingShell))).resolves.toEqual(
+      expect.objectContaining({
+        status: 'needs_setup',
+        actions: ['install'],
+        detail: 'Cua Driver is not installed or is not reachable by Neon Pilot.',
+      }),
+    );
+
+    const readyShell = vi.fn().mockResolvedValue({ stdout: 'cua-driver 0.6.8\n', stderr: '', exitCode: 0 });
+    callMcpToolDirectMock.mockResolvedValueOnce({ data: { parsed: { structuredContent: { overall: 'ok' } } }, exitCode: 0 });
+
+    await expect(computerUseSetupStatus({}, createCtx(readyShell))).resolves.toEqual(
+      expect.objectContaining({
+        status: 'ready',
+        actions: [],
+        detail: expect.stringContaining('cua-driver 0.6.8'),
+      }),
+    );
+  });
+
+  it('offers doctor when Cua Driver is installed but permissions need attention', async () => {
+    const shellExec = vi.fn().mockResolvedValue({ stdout: 'cua-driver 0.6.8\n', stderr: '', exitCode: 0 });
+    callMcpToolDirectMock.mockResolvedValue({ data: { parsed: { structuredContent: { overall: 'needs_attention' } } }, exitCode: 0 });
+
+    await expect(computerUseSetupStatus({}, createCtx(shellExec))).resolves.toEqual(
+      expect.objectContaining({
+        status: 'needs_setup',
+        actions: ['doctor'],
+        detail: expect.stringContaining('macOS permissions'),
+      }),
+    );
   });
 
   it('warns on startup when Cua Driver is installed but permissions are not ready', async () => {

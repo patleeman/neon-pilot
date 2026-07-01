@@ -17,6 +17,12 @@
       { "id": "runtimeStatus", "handler": "runtimeStatus", "title": "Check dictation runtime", "worker": { "enabled": true } },
       { "id": "modelStatus", "handler": "modelStatus", "title": "Read dictation model status", "worker": { "enabled": true } },
       { "id": "installModel", "handler": "installModel", "title": "Install dictation model", "worker": { "enabled": true } },
+      {
+        "id": "dictationModelSetupStatus",
+        "handler": "dictationModelSetupStatus",
+        "title": "Dictation model setup status",
+        "worker": { "enabled": true }
+      },
       { "id": "transcribeFile", "handler": "transcribeFile", "title": "Transcribe dictation audio", "worker": { "enabled": true } },
       {
         "id": "dictationCli",
@@ -57,6 +63,26 @@
       "description": "Choose the local speech-to-text model used by the mic button in the message composer. Install a model here before using dictation.",
       "order": 30
     },
+    "setupItems": [
+      {
+        "id": "dictation-model",
+        "title": "Install the dictation model",
+        "description": "Downloads the selected local Whisper model so the composer microphone can transcribe speech without waiting on first use.",
+        "capability": "Dictation",
+        "severity": "recommended",
+        "statusAction": "dictationModelSetupStatus",
+        "actions": [
+          {
+            "id": "install",
+            "label": "Install",
+            "action": "installModel",
+            "tone": "primary"
+          }
+        ],
+        "dismissible": true,
+        "order": 20
+      }
+    ],
     "cliCommands": [
       {
         "id": "dictation-settings",
