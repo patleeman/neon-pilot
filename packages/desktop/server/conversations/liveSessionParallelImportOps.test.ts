@@ -118,7 +118,7 @@ describe('live session parallel import operations', () => {
       model: 'm1',
     });
     expect(callbacks.queuePromptContext).toHaveBeenCalledWith('child-1', 'ctx', 'context');
-    expect(callbacks.submitPromptSession).toHaveBeenCalledWith('child-1', 'prompt', undefined, undefined, undefined);
+    expect(callbacks.submitPromptSession).toHaveBeenCalledWith('child-1', 'prompt', undefined, undefined, undefined, undefined, undefined);
     expect(e.parallelJobs[0]).toMatchObject({
       id: 'job-1',
       prompt: 'prompt',
@@ -178,7 +178,7 @@ describe('live session parallel import operations', () => {
     };
 
     await expect(startParallelPromptSession(entry() as never, { text: '   ' }, {} as never, baseCallbacks)).rejects.toThrow(
-      'text, images, or videos required',
+      'text, images, videos, audio, or documents required',
     );
     await expect(
       startParallelPromptSession(

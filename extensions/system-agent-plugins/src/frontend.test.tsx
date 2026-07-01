@@ -42,6 +42,7 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   ),
   Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Pill: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  QuietLoadingState: ({ label }: { label?: string }) => <div role="status" aria-label={label ?? 'Loading'} />,
   RailSubsection: ({ title, children }: { title: React.ReactNode; children: React.ReactNode }) => (
     <section>
       <h4>{title}</h4>
@@ -107,6 +108,15 @@ beforeEach(() => {
 });
 
 describe('AgentPluginsSettingsPanel', () => {
+  it('keeps initial loading chrome visually quiet', () => {
+    mocks.useApi.mockReturnValue({ ...buildUseApiResult(null), loading: true });
+
+    render(<AgentPluginsSettingsPanel />);
+
+    expect(screen.getByRole('status', { name: 'Loading agent plugins' })).toBeTruthy();
+    expect(screen.queryByText('Loading agent plugins...')).toBeNull();
+  });
+
   it('renders installed plugin with capability summary and warnings', () => {
     mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [plugin] }));
 

@@ -639,7 +639,7 @@ export function ToolBlock({
                   : `Showing ${MAX_VISIBLE_LINKED_RUNS} of ${displayedLinkedRuns.length} executions returned by the tool.`}
               </span>
               <span className="flex-1" />
-              <Button variant="action" onClick={toggleLinkedRuns} className="text-[10px]">
+              <Button variant="action" onClick={toggleLinkedRuns}>
                 {showAllRuns ? 'Show fewer' : 'Show all'}
               </Button>
             </div>

@@ -148,8 +148,24 @@ Treat `ok: false` as actionable, not fatal. Fix every `error`, usually fix every
 Templates:
 
 - `main-page` — global app page with `/ext/{id}` route and sidebar nav.
-- `right-rail` — conversation-scoped tab-local rail panel.
+- `route-sidebar` — global app page with a route-owned contextual-left navigator bound through `nav[].sidebarView`.
+- `route-right-sidebar` — global app page with a route-owned right sidebar bound through `nav[].rightSidebarView`.
+- `route-shell` — global app page with contextual-left navigation, main content, and a route-owned right sidebar.
+- `right-rail` — legacy conversation-scoped tab-local Workbench rail.
 - `workbench-detail` — tab-local rail selector paired with a workbench detail view.
+
+Before writing UI, choose the route-region template explicitly:
+
+1. Pick the main page type from `docs/design/page-template-standards.md`: Conversation, Table, Editor, Settings, Dashboard, or Setup.
+2. Decide whether the route needs a contextual-left template. Use it only for selection/navigation; otherwise omit `sidebarView` and leave the shell's middle-left area blank.
+3. Decide whether the route needs a right-sidebar template. Use it for selected-object context, inspectors, setup help, activity, logs, previews, validation, or metadata; otherwise omit `rightSidebarView` so the shell hides the toggle.
+4. Use the matching starter template (`main-page`, `route-sidebar`, `route-right-sidebar`, or `route-shell`) instead of hand-building shell regions.
+
+Route-owned left sidebars should use `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, and `SidebarMessage` from `@neon-pilot/extensions/ui`. Do not build custom padded `aside` sidebar chrome. The host shell owns the global top/bottom nav; the extension owns only the contextual middle body.
+
+Route-owned right sidebars and tab-local right rails should use `ContextRail`, `ContextRailHeader`, `ContextRailBody`, and `ContextRailSection` from `@neon-pilot/extensions/ui`; do not build custom padded `aside` rail chrome.
+
+For full route shells, wire selection once and let the side templates share it: the left sidebar selects/navigates, the main page owns the primary workflow, and the right sidebar inspects context. Do not duplicate Threads, Workbench, page headers, or main-page controls inside side regions.
 
 ## Package layout
 
@@ -243,7 +259,7 @@ Rules:
 }
 ```
 
-### Tab-local right rail
+### Tab-local right sidebar
 
 ```json
 {
@@ -251,7 +267,7 @@ Rules:
 }
 ```
 
-### Workbench detail paired with a tab-local right rail
+### Workbench detail paired with a tab-local right sidebar
 
 ```json
 {

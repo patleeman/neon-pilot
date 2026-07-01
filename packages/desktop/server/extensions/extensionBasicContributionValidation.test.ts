@@ -11,7 +11,10 @@ import {
 
 describe('extensionBasicContributionValidation', () => {
   it('validates basic contribution groups', () => {
-    expect(validateNavigationContributions([{ id: 'home', label: 'Home', route: '/home', section: 'primary' }])).toBeUndefined();
+    expect(
+      validateNavigationContributions([{ id: 'home', label: 'Home', route: '/home', section: 'primary', pageType: 'table' }]),
+    ).toBeUndefined();
+    expect(validateNavigationContributions([{ id: 'custom', label: 'Custom', route: '/custom' }])).toBeUndefined();
     expect(validateCommandContributions([{ id: 'cmd', title: 'Run', action: 'run', category: 'Tools' }])).toBeUndefined();
     expect(
       validateCliCommandContributions([
@@ -35,6 +38,9 @@ describe('extensionBasicContributionValidation', () => {
   it('preserves validation error paths', () => {
     expect(() => validateNavigationContributions([{ id: 'home', label: 'Home' }])).toThrow(
       'Extension manifest contributes.nav[0].route must be a non-empty string.',
+    );
+    expect(() => validateNavigationContributions([{ id: 'home', label: 'Home', route: '/home', pageType: 'spreadsheet' }])).toThrow(
+      'Extension manifest contributes.nav[0].pageType must be one of:',
     );
     expect(() => validateCommandContributions([{ id: 'cmd', title: 'Run', action: 'run', icon: 'bad-icon' }])).toThrow(
       'Extension manifest contributes.commands[0].icon must be one of:',

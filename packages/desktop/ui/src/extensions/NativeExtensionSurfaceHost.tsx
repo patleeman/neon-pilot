@@ -2,7 +2,7 @@ import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
 import { addNotification } from '../components/notifications/notificationStore';
-import { ErrorState, LoadingState } from '../components/ui';
+import { ErrorState, QuietLoadingState } from '../components/ui';
 import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlobals';
 import { getExtensionRegistryRevision } from './extensionRegistryEvents';
 import {
@@ -172,13 +172,15 @@ export function NativeExtensionSurfaceHost({
     [conversationId, cwd, hash, instanceId, pathname, search, surface.extensionId, surface.id, surface.route],
   );
 
+  const shouldUseTransparentChrome = surface.location === 'sidebar' || surface.location === 'rightRail';
+
   return (
     <section
-      className={surface.location === 'sidebar' ? 'h-full min-h-0 overflow-auto bg-transparent' : 'h-full min-h-0 overflow-auto bg-base'}
+      className={shouldUseTransparentChrome ? 'h-full min-h-0 overflow-auto bg-transparent' : 'h-full min-h-0 overflow-auto bg-base'}
       data-extension-id={surface.extensionId}
       data-extension-surface-id={surface.id}
     >
-      <Suspense fallback={<LoadingState label="Loading extension…" className="h-full justify-center" />}>
+      <Suspense fallback={<QuietExtensionSurfaceLoading />}>
         <ExtensionErrorBoundary extensionId={surface.extensionId}>
           <Component
             pa={pa}
@@ -191,6 +193,10 @@ export function NativeExtensionSurfaceHost({
       </Suspense>
     </section>
   );
+}
+
+function QuietExtensionSurfaceLoading() {
+  return <QuietLoadingState label="Loading extension surface" />;
 }
 
 class ExtensionErrorBoundary extends React.Component<{ children: React.ReactNode; extensionId: string }, { message: string | null }> {

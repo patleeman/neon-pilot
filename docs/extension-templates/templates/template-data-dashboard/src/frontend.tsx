@@ -87,16 +87,22 @@ export function DataDashboardPage({ pa }: { pa: NativeExtensionClient }) {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center px-6">
-        <LoadingState label="Loading…" />
+      <div className="h-full overflow-y-auto">
+        <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
+          <AppPageIntro title="My Dashboard" />
+          <LoadingState label="Loading..." />
+        </AppPageLayout>
       </div>
     );
   }
 
   if (error && items.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center px-6">
-        <ErrorState message={error} />
+      <div className="h-full overflow-y-auto">
+        <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
+          <AppPageIntro title="My Dashboard" />
+          <ErrorState message={error} />
+        </AppPageLayout>
       </div>
     );
   }
@@ -110,7 +116,6 @@ export function DataDashboardPage({ pa }: { pa: NativeExtensionClient }) {
       <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-8">
         <AppPageIntro
           title="My Dashboard"
-          summary={`One sentence describing what this page shows. ${summary}`}
           actions={
             <IconButton title="Refresh" aria-label="Refresh" disabled={refreshing} onClick={() => void refresh()}>
               <RefreshIcon />
@@ -118,10 +123,23 @@ export function DataDashboardPage({ pa }: { pa: NativeExtensionClient }) {
           }
         />
 
+        <p className="text-[13px] text-secondary">One sentence describing what this page shows. {summary}</p>
+
         {error ? <Notice tone="danger">{error}</Notice> : null}
 
         {items.length === 0 ? (
-          <EmptyState title="No items" body="Nothing to show yet." className="py-10" />
+          <EmptyState
+            eyebrow="Dashboard page"
+            title="No dashboard data yet"
+            body="This dashboard summarizes recent extension activity. Replace this copy with what the feature measures and when data appears."
+            steps={['Run the workflow that produces data', 'Refresh the dashboard', 'Check warnings or errors in the status column']}
+            action={
+              <IconButton title="Refresh" aria-label="Refresh" disabled={refreshing} onClick={() => void refresh()}>
+                <RefreshIcon />
+              </IconButton>
+            }
+            className="py-10"
+          />
         ) : (
           // ── data table ────────────────────────────────────────────────────
           // Replace columns and row content with your domain data.

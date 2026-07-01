@@ -4,11 +4,11 @@ Ready-to-copy starting points for common extension patterns. Each template lives
 example under `docs/extension-templates/templates/template-*` — copy the folder, rename the extension
 id, fill in your domain logic, build, and reload. Templates are documentation/scaffolding, not runtime-loaded extensions.
 
-| Template           | Pattern                                                   | Location                                                                                               |
-| ------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `data-dashboard`   | Read-only page — load from backend, render table or cards | [`docs/extension-templates/templates/template-data-dashboard`](templates/template-data-dashboard/)     |
-| `crud-page`        | List + slide-in form editor. Full create/edit/delete.     | [`docs/extension-templates/templates/template-crud-page`](templates/template-crud-page/)               |
-| `settings-section` | Section in the shared Settings page. No separate route.   | [`docs/extension-templates/templates/template-settings-section`](templates/template-settings-section/) |
+| Template           | Pattern                                                          | Location                                                                                               |
+| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `data-dashboard`   | Read-only page — load from backend, render table or cards        | [`docs/extension-templates/templates/template-data-dashboard`](templates/template-data-dashboard/)     |
+| `crud-page`        | Main-only list with inline editor flow. Full create/edit/delete. | [`docs/extension-templates/templates/template-crud-page`](templates/template-crud-page/)               |
+| `settings-section` | Section in the shared Settings page. No separate route.          | [`docs/extension-templates/templates/template-settings-section`](templates/template-settings-section/) |
 
 ## Quick-start
 
@@ -42,15 +42,17 @@ pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/my-extension
 neon-pilot-extension doctor ~/.local/state/neon-pilot/extensions/my-extension
 ```
 
-Then reload extensions and open the contributed route, rail, Settings section, command, or tool through the app.
+Then reload extensions and open the contributed route, route-owned right sidebar, tab-local workbench rail, Settings section, command, or tool through the app.
 
 ## When to pick each template
 
 **data-dashboard** — displaying state the user can't directly edit (server health, run history,
 token usage). Add a Refresh button. One-shot load or polling.
 
-**crud-page** — a list of user-managed items. The automations and gateway pages are the canonical
-examples. Pattern: list → click item or "New" → editor form slides in → save/cancel.
+**crud-page** — a list of user-managed items. Automations is the canonical main-only example.
+Pattern: list -> click item or "New" -> inline editor flow -> save/cancel. If inspection details
+need to stay visible beside the list, add a route-owned `rightSidebarView` instead of inventing an
+in-page second column.
 
 **settings-section** — contributing to the existing Settings page rather than a new route. Simpler
 than a full page; the host handles layout. Good for integration config and toggle-style preferences.
@@ -58,7 +60,7 @@ than a full page; the host handles layout. Good for integration config and toggl
 ## Shared patterns across templates
 
 - `AppPageLayout` + `AppPageIntro` — standard page chrome (`max-w-[72rem]`, consistent header)
-- `AppPageSection` / `AppPageEmptyState` — standard page sections and empty page states
+- `AppPageSection` / `AppPageEmptyState` — standard page sections and feature-aware empty page states
 - `LoadingState` / `ErrorState` / `EmptyState` — unified feedback components
 - `ToolbarButton` / `IconButton` / `TextButton` — action buttons
 - `SegmentedControl` / `Switch` / `ToggleRow` — mode and boolean controls

@@ -1,4 +1,12 @@
-export type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange';
+export type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange' | 'resource';
+
+export interface ExtensionResourceSelection {
+  type: string;
+  id: string;
+  label?: string;
+  source?: string;
+  data?: unknown;
+}
 
 export interface ExtensionSelectionState {
   kind: ExtensionSelectionKind;
@@ -6,6 +14,12 @@ export interface ExtensionSelectionState {
   messageBlockIds?: string[];
   files?: Array<{ cwd: string; path: string }>;
   transcriptRange?: { conversationId: string; startBlockId: string; endBlockId: string };
+  /**
+   * Route page selection state for right-sidebar context rails. Main pages
+   * publish the selected row/object here; route-owned rails subscribe to render
+   * details without opening modal inspectors.
+   */
+  resource?: ExtensionResourceSelection;
   conversationId?: string | null;
   cwd?: string | null;
   updatedAt: string;

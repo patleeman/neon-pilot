@@ -70,11 +70,22 @@ interface ExtensionSearchProviderContribution {
 interface ExtensionViewContribution {
   id: string;
   title: string;
+  /**
+   * Host region for this view.
+   * - `main`: required route page content; a nav route must match a main view route.
+   *   `placement` and `scope` are invalid on main views.
+   * - `sidebar`: optional route-owned middle-left contextual area, bound from nav with `sidebarView`.
+   * - `rightRail`: either a route-owned context rail (`placement: "primary"`), bound from nav with
+   *   `rightSidebarView`, or a tab-local workbench rail.
+   * - `workbench`: large detail content paired with a tab-local rail.
+   */
   location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
+  /** Side-region instance boundary. Invalid on `main` views. */
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
   icon?: ExtensionIconName;
+  /** Side-region placement. Invalid on `main` views; route context rails use `primary`. */
   placement?: ExtensionViewPlacement;
   activation?: ExtensionViewActivation;
   defaultOpen?: boolean;
@@ -94,13 +105,20 @@ interface ExtensionWebappContribution {
   spaFallback?: boolean;
 }
 
+export type ExtensionPageType = 'conversation' | 'table' | 'editor' | 'settings' | 'dashboard' | 'setup';
+
 interface ExtensionNavContribution {
   id: string;
   label: string;
   route: string;
   icon?: ExtensionIconName;
   badgeAction?: string;
+  /** Optional sidebar view id for the route-owned middle-left contextual area. Omit to leave that area blank. */
   sidebarView?: string;
+  /** Optional primary `rightRail` view id for the route-owned right-sidebar context rail. Omit to hide the toggle. */
+  rightSidebarView?: string;
+  /** Optional design-system page type annotation for route inventory and conformance. */
+  pageType?: ExtensionPageType;
   section?: 'primary' | 'settings';
 }
 
@@ -287,7 +305,7 @@ interface ExtensionContextMenuContribution {
   when?: string;
 }
 
-type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange';
+type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange' | 'resource';
 
 interface ExtensionSelectionActionContribution {
   id: string;
@@ -765,10 +783,8 @@ export function isNativeExtensionPageSurface(
   return isNativeExtensionViewSurface(surface) && surface.location === 'main' && typeof surface.route === 'string';
 }
 
-export function isNativeExtensionRightRailSurface(
-  surface: unknown,
-): surface is NativeExtensionViewSummary & { location: 'rightRail'; scope: ExtensionRightSurfaceScope } {
-  return isNativeExtensionViewSurface(surface) && surface.location === 'rightRail' && typeof surface.scope === 'string';
+export function isNativeExtensionRightRailSurface(surface: unknown): surface is NativeExtensionViewSummary & { location: 'rightRail' } {
+  return isNativeExtensionViewSurface(surface) && surface.location === 'rightRail';
 }
 
 export function isNativeExtensionSidebarSurface(surface: unknown): surface is NativeExtensionViewSummary & { location: 'sidebar' } {

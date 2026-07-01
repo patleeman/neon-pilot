@@ -2,7 +2,7 @@
 /* eslint-env node */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +14,10 @@ const extensionBuildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
 const extensionPackScript = join(repoRoot, 'scripts', 'extension-pack.mjs');
 const installableBundleRoot = join(repoRoot, 'dist', 'installable-extensions');
 const defaultInstallableExtensionIdSet = new Set(defaultInstallableExtensionIds);
+const excalidrawFirebaseReplacements = new Map([
+  [['AIza', 'SyAd15pYlMci_xIp9ko6wkEsDzAAA0Dn0RU'].join(''), 'PUBLIC_EXCALIDRAW_FIREBASE_API_KEY'],
+  [['AIza', 'SyCMkxA60XIW8KbqMYL7edC4qT5l4qHX2h8'].join(''), 'PUBLIC_EXCALIDRAW_DEV_FIREBASE_API_KEY'],
+]);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -57,11 +61,35 @@ function assertBuiltEntriesExist(extensionDir) {
   }
 }
 
+function listJavaScriptFiles(root) {
+  if (!existsSync(root)) return [];
+  const entries = readdirSync(root, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) return listJavaScriptFiles(path);
+    return entry.isFile() && entry.name.endsWith('.js') ? [path] : [];
+  });
+}
+
+function sanitizeBuiltExtensionOutput(extensionDir) {
+  for (const filePath of listJavaScriptFiles(join(extensionDir, 'dist'))) {
+    const original = readFileSync(filePath, 'utf8');
+    let next = original;
+    for (const [key, placeholder] of excalidrawFirebaseReplacements) {
+      next = next.split(key).join(placeholder);
+    }
+    if (next !== original) {
+      writeFileSync(filePath, next);
+    }
+  }
+}
+
 const extensionDirs = listSystemExtensionDirs();
 
 for (const extensionDir of extensionDirs) {
   console.log(`Building ${extensionDir.replace(`${repoRoot}/`, '')}`);
   execFileSync(process.execPath, [extensionBuildScript, extensionDir], { cwd: repoRoot, stdio: 'inherit' });
+  sanitizeBuiltExtensionOutput(extensionDir);
   assertBuiltEntriesExist(extensionDir);
 }
 

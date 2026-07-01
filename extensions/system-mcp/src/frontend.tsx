@@ -328,8 +328,13 @@ export function McpSettingsPanel() {
             actionsClassName="max-w-none"
           >
             <div className="flex items-center gap-2">
-              <ToolbarButton type="button" disabled={mcpLoading} onClick={() => void refetch()}>
-                Refresh
+              <ToolbarButton
+                aria-label="Refresh MCP servers"
+                title="Refresh MCP servers"
+                disabled={mcpLoading}
+                onClick={() => void refetch()}
+              >
+                <span aria-hidden="true">↻</span>
               </ToolbarButton>
               <ToolbarButton type="button" onClick={startNewServerDraft}>
                 Add server
@@ -463,6 +468,7 @@ export function McpSettingsPanel() {
                                 Down
                               </ToolbarButton>
                               <ToolbarButton type="button" onClick={() => setDraft(removeDraftArg(draft, index))}>
+                                <span aria-hidden="true">-</span>
                                 Remove
                               </ToolbarButton>
                             </div>
@@ -514,6 +520,7 @@ export function McpSettingsPanel() {
                         onClick={() => void removeServer(draft.originalName!)}
                         disabled={saveState.busy}
                       >
+                        <span aria-hidden="true">-</span>
                         Remove
                       </ToolbarButton>
                     </>

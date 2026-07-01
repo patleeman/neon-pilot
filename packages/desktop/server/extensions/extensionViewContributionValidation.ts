@@ -70,6 +70,12 @@ export function validateViewContributions(value: unknown): void {
     validateEnum(view.location, ['main', 'rightRail', 'workbench', 'sidebar'], `contributes.views[${index}].location`);
     validateViewComponent(view.component, `contributes.views[${index}].component`);
     validateOptionalString(view.route, `contributes.views[${index}].route`);
+    if (view.location === 'main' && view.scope !== undefined) {
+      throw new Error(`Extension manifest contributes.views[${index}].scope is only valid for side-region views.`);
+    }
+    if (view.location === 'main' && view.placement !== undefined) {
+      throw new Error(`Extension manifest contributes.views[${index}].placement is only valid for side-region views.`);
+    }
     if (view.scope !== undefined) validateEnum(view.scope, EXTENSION_RIGHT_SURFACE_SCOPES, `contributes.views[${index}].scope`);
     if (view.placement !== undefined) validateEnum(view.placement, EXTENSION_VIEW_PLACEMENTS, `contributes.views[${index}].placement`);
     if (view.placement !== undefined && view.scope !== undefined)

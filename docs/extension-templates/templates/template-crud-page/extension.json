@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "system-template-crud-page",
   "name": "Template: CRUD Page",
-  "description": "Starter template — management page with a list view and slide-in editor form. Full create/edit/delete.",
+  "description": "Starter template — main-only management page with a list view and inline editor flow. Full create/edit/delete.",
   "version": "0.1.0",
   "defaultEnabled": false,
   "frontend": {
@@ -25,8 +25,6 @@
         "location": "main",
         "route": "/ext/template-crud-page",
         "component": "CrudPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       }
     ],
@@ -35,6 +33,7 @@
         "id": "nav",
         "label": "CRUD Page",
         "route": "/ext/template-crud-page",
+        "pageType": "table",
         "icon": "kanban"
       }
     ]

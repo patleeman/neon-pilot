@@ -36,7 +36,11 @@ export function validateSelectionActionContributions(value: unknown): void {
     requireString(action.action, `contributes.selectionActions[${index}].action`);
     const kinds = requireStringArray(action.kinds, `contributes.selectionActions[${index}].kinds`);
     for (const [kindIndex, kind] of kinds.entries()) {
-      validateEnum(kind, ['text', 'messages', 'files', 'transcriptRange'], `contributes.selectionActions[${index}].kinds[${kindIndex}]`);
+      validateEnum(
+        kind,
+        ['text', 'messages', 'files', 'transcriptRange', 'resource'],
+        `contributes.selectionActions[${index}].kinds[${kindIndex}]`,
+      );
     }
     validateOptionalString(action.icon, `contributes.selectionActions[${index}].icon`);
     validateOptionalString(action.when, `contributes.selectionActions[${index}].when`);

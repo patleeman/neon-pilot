@@ -557,10 +557,9 @@ export function WorkbenchBrowserTab({
               placeholder="What should the agent know about this?"
             />
             <div className="mt-2 flex justify-end gap-1.5">
-              <ToolbarButton className="px-2 py-1 text-[11px]" onClick={() => setCommentDraft(null)}>
-                Cancel
-              </ToolbarButton>
-              <Button variant="action" className="px-2 py-1 text-[11px]" onClick={saveCommentDraft}>
+              <ToolbarButton onClick={() => setCommentDraft(null)}>Cancel</ToolbarButton>
+              <Button variant="action" onClick={saveCommentDraft}>
+                <span aria-hidden="true">+</span>
                 Add comment
               </Button>
             </div>

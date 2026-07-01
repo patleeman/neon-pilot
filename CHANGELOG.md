@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.37 — 2026-07-01
+
+### Highlights
+
+- Brings the Browser extension in-house and adds multimedia probe support so image and video attachments can flow through richer inspection paths, including video frames chained into image probing.
+- Improves Skills discovery with source-first browsing, cached marketplace inventory, fresher cache behavior, table-header filters, list controls, and clearer Skills-before-Extensions navigation.
+- Adds the setup readiness popover and actionable local-prerequisite checks so users can rediscover missing setup items and launch host-owned fixes without a separate onboarding surface.
+- Hardens transcript responsiveness by cancelling stale transcript loads, moving reads into an abortable worker, and aborting stale desktop transcript aggregates before they overwrite newer views.
+- Polishes conversation ergonomics around dictation submit, streaming scroll anchoring, the simplified top bar, and Model Arena challenger wins updating the selected model.
+- Redesigns and hardens the Routines onboarding/workbench path with GA multimedia probe coverage, stronger workflow tests, and refreshed Pi runtime packages at `^0.80.3`.
+
+### Notes
+
+- 32 commits since the previous release.
+
 ## 0.11.36 — 2026-06-30
 
 ### Highlights

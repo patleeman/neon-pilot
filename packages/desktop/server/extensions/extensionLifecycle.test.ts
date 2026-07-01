@@ -120,11 +120,15 @@ describe('extensionLifecycle', () => {
       backend: { actions: [{ id: 'ping', worker: { enabled: true } }] },
       contributes: { views: [{ location: 'main', route: '/ext/my-extension' }], nav: [{ label: 'My Extension' }] },
     });
-    expect(readFileSync(join(runtimeRoot, 'my-extension', 'src', 'frontend.tsx'), 'utf-8')).toContain('ExtensionPage');
+    const frontend = readFileSync(join(runtimeRoot, 'my-extension', 'src', 'frontend.tsx'), 'utf-8');
+    expect(frontend).toContain('ExtensionPage');
+    expect(frontend).toContain('AppPageLayout');
+    expect(frontend).toContain('AppPageIntro');
+    expect(frontend).not.toContain('text-[34px]');
     expect(readFileSync(join(runtimeRoot, 'my-extension', 'src', 'backend.ts'), 'utf-8')).toContain('export async function ping');
   });
 
-  it('creates right rail and workbench detail templates', () => {
+  it('creates rightRail and workbench detail templates', () => {
     createRuntimeExtension({ id: 'right-rail-ext', name: 'Right Rail', template: 'right-rail' }, stateRoot);
     createRuntimeExtension({ id: 'workbench-ext', name: 'Workbench', template: 'workbench-detail' }, stateRoot);
 
@@ -132,15 +136,117 @@ describe('extensionLifecycle', () => {
       location: 'rightRail',
       component: 'ExtensionPanel',
     });
+    const rightSidebarFrontend = readFileSync(join(runtimeRoot, 'right-rail-ext', 'src', 'frontend.tsx'), 'utf-8');
+    expect(rightSidebarFrontend).toContain(
+      "import { ContextRail, ContextRailBody, ContextRailHeader, ContextRailSection, ToolbarButton } from '@neon-pilot/extensions/ui';",
+    );
+    expect(rightSidebarFrontend).toContain('Right sidebar');
+    expect(rightSidebarFrontend).not.toContain('Right rail');
+    expect(rightSidebarFrontend).not.toContain('<button');
     expect(JSON.parse(readFileSync(join(runtimeRoot, 'workbench-ext', 'extension.json'), 'utf-8')).contributes.views).toEqual(
       expect.arrayContaining([expect.objectContaining({ detailView: 'detail' }), expect.objectContaining({ location: 'workbench' })]),
     );
+    const workbenchFrontend = readFileSync(join(runtimeRoot, 'workbench-ext', 'src', 'frontend.tsx'), 'utf-8');
+    expect(workbenchFrontend).toContain(
+      "import { ContextRail, ContextRailBody, ContextRailHeader, ContextRailSection, ToolbarButton } from '@neon-pilot/extensions/ui';",
+    );
+    expect(workbenchFrontend).toContain('Right sidebar');
+    expect(workbenchFrontend).not.toContain('Right rail');
+    expect(workbenchFrontend).not.toContain('<button');
+  });
+
+  it('creates a route-owned right sidebar starter template', () => {
+    createRuntimeExtension({ id: 'route-context-ext', name: 'Route Context', template: 'route-right-sidebar' }, stateRoot);
+
+    const manifest = JSON.parse(readFileSync(join(runtimeRoot, 'route-context-ext', 'extension.json'), 'utf-8'));
+    expect(manifest.contributes.nav[0]).toMatchObject({
+      route: '/ext/route-context-ext',
+      rightSidebarView: 'context',
+    });
+    expect(manifest.contributes.views).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'page', location: 'main', route: '/ext/route-context-ext', component: 'ExtensionPage' }),
+        expect.objectContaining({ id: 'context', location: 'rightRail', placement: 'primary', component: 'ExtensionContextRail' }),
+      ]),
+    );
+
+    const frontend = readFileSync(join(runtimeRoot, 'route-context-ext', 'src', 'frontend.tsx'), 'utf-8');
+    expect(frontend).toContain("import { useEffect, useState } from 'react';");
+    expect(frontend).toContain('pa.selection.set');
+    expect(frontend).toContain('pa.selection.subscribe');
+    expect(frontend).toContain('Use this right sidebar');
+    expect(frontend).not.toContain('Right rail');
+    expect(frontend).not.toContain('<button');
+  });
+
+  it('creates a route-owned contextual left sidebar starter template', () => {
+    createRuntimeExtension({ id: 'route-sidebar-ext', name: 'Route Sidebar', template: 'route-sidebar' }, stateRoot);
+
+    const manifest = JSON.parse(readFileSync(join(runtimeRoot, 'route-sidebar-ext', 'extension.json'), 'utf-8'));
+    expect(manifest.contributes.nav[0]).toMatchObject({
+      route: '/ext/route-sidebar-ext',
+      sidebarView: 'sidebar',
+    });
+    expect(manifest.contributes.views).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'page', location: 'main', route: '/ext/route-sidebar-ext', component: 'ExtensionPage' }),
+        expect.objectContaining({ id: 'sidebar', location: 'sidebar', component: 'ExtensionSidebar' }),
+      ]),
+    );
+
+    const frontend = readFileSync(join(runtimeRoot, 'route-sidebar-ext', 'src', 'frontend.tsx'), 'utf-8');
+    expect(frontend).toContain("import { useEffect, useState } from 'react';");
+    expect(frontend).toContain(
+      "import { AppPageIntro, AppPageLayout, SidebarList, SidebarSection, ToolbarButton } from '@neon-pilot/extensions/ui';",
+    );
+    expect(frontend).toContain('<SidebarSection title="Navigate">');
+    expect(frontend).toContain('pa.selection.set');
+    expect(frontend).toContain('pa.selection.subscribe');
+    expect(frontend).toContain('route-owned left sidebar');
+    expect(frontend).not.toContain('Threads');
+    expect(frontend).not.toContain('<aside');
+    expect(frontend).not.toContain('<button');
+  });
+
+  it('creates a full route shell starter template', () => {
+    createRuntimeExtension({ id: 'route-shell-ext', name: 'Route Shell', template: 'route-shell' }, stateRoot);
+
+    const manifest = JSON.parse(readFileSync(join(runtimeRoot, 'route-shell-ext', 'extension.json'), 'utf-8'));
+    expect(manifest.contributes.nav[0]).toMatchObject({
+      route: '/ext/route-shell-ext',
+      sidebarView: 'sidebar',
+      rightSidebarView: 'context',
+    });
+    expect(manifest.contributes.views).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'page', location: 'main', route: '/ext/route-shell-ext', component: 'ExtensionPage' }),
+        expect.objectContaining({ id: 'sidebar', location: 'sidebar', component: 'ExtensionSidebar' }),
+        expect.objectContaining({ id: 'context', location: 'rightRail', placement: 'primary', component: 'ExtensionContextRail' }),
+      ]),
+    );
+
+    const frontend = readFileSync(join(runtimeRoot, 'route-shell-ext', 'src', 'frontend.tsx'), 'utf-8');
+    expect(frontend).toContain("import { useEffect, useState } from 'react';");
+    expect(frontend).toContain(
+      "import { AppPageIntro, AppPageLayout, ContextRail, ContextRailBody, ContextRailHeader, ContextRailSection, SidebarList, SidebarSection, ToolbarButton } from '@neon-pilot/extensions/ui';",
+    );
+    expect(frontend).toContain('<SidebarSection title="Navigate">');
+    expect(frontend).toContain('pa.selection.set');
+    expect(frontend).toContain('pa.selection.subscribe');
+    expect(frontend).toContain('route-owned left sidebar');
+    expect(frontend).toContain('Use this right sidebar');
+    expect(frontend).not.toContain('Threads');
+    expect(frontend).not.toContain('Right rail');
+    expect(frontend).not.toContain('<aside');
+    expect(frontend).not.toContain('<button');
   });
 
   it('validates create input and prevents duplicate ids or directories', () => {
     expect(() => createRuntimeExtension({ id: 'Bad', name: 'Name' }, stateRoot)).toThrow('Extension id must be');
     expect(() => createRuntimeExtension({ id: 'ok-id', name: '   ' }, stateRoot)).toThrow('Extension name is required');
-    expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name', template: 'bad' }, stateRoot)).toThrow('Extension template must be');
+    expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name', template: 'bad' }, stateRoot)).toThrow(
+      'Extension template must be main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
+    );
     findExtensionEntry.mockReturnValueOnce({});
     expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name' }, stateRoot)).toThrow('Extension id already exists');
     mkdirSync(join(runtimeRoot, 'ok-id'), { recursive: true });
@@ -201,8 +307,7 @@ describe('extensionLifecycle', () => {
     mkdirSync(stateRoot, { recursive: true });
     writeFileSync(zipPath, 'zip');
     execFileSync.mockImplementation((command, args) => {
-      if (command === 'zipinfo')
-        return safeBundleZipInfo as ReturnType<ExecFileSync>;
+      if (command === 'zipinfo') return safeBundleZipInfo as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
         const extractRoot = String(args?.[3]);
         mkdirSync(join(extractRoot, 'bundle', 'dist'), { recursive: true });
@@ -278,7 +383,10 @@ describe('extensionLifecycle', () => {
   it('deletes runtime-installed extensions even when their manifest packageType is system', async () => {
     const packageRoot = join(runtimeRoot, 'system-hermes-agent');
     mkdirSync(packageRoot, { recursive: true });
-    writeFileSync(join(packageRoot, 'extension.json'), JSON.stringify({ id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'system' }));
+    writeFileSync(
+      join(packageRoot, 'extension.json'),
+      JSON.stringify({ id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'system' }),
+    );
     findExtensionEntry.mockReturnValue({
       manifest: { id: 'system-hermes-agent', name: 'Hermes Agent', packageType: 'system' },
       packageRoot,

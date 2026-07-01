@@ -1,0 +1,13 @@
+diff --git a/dist/api/openai-responses-shared.js b/dist/api/openai-responses-shared.js
+--- a/dist/api/openai-responses-shared.js
++++ b/dist/api/openai-responses-shared.js
+@@ -412,7 +412,8 @@ export async function processResponsesStream(openaiStream, output, stream, model
+                 outputSlots.delete(event.output_index);
+             }
+             else if (item.type === "message" && slot?.type === "text") {
+-                slot.block.text = item.content?.map((c) => (c.type === "output_text" ? c.text : c.refusal)).join("") || "";
++                const finalText = item.content?.map((c) => (c.type === "output_text" ? c.text : c.refusal)).join("") || "";
++                slot.block.text = finalText || slot.block.text;
+                 slot.block.textSignature = encodeTextSignatureV1(item.id, item.phase ?? undefined);
+                 stream.push({
+                     type: "text_end",

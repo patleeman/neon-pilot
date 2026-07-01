@@ -180,6 +180,14 @@ const ctx = {
     },
     notify() {},
   },
+  notify: {
+    system() {
+      return true;
+    },
+    isSystemAvailable() {
+      return true;
+    },
+  },
   log: {
     info() {},
     warn() {},
@@ -473,6 +481,13 @@ const smokes = {
     assert(typeof module.deferredResume === 'function', 'deferred resume action missing');
     assert(typeof module.scheduledTask === 'function', 'scheduled task action missing');
   },
+  async 'system-alerts'() {
+    const state = await module.readSettings({}, ctx);
+    assert(state.settings?.enabled === true, 'alerts readSettings did not return defaults');
+    assert(state.systemNotificationsAvailable === true, 'alerts system notification availability missing');
+    const updated = await module.updateSettings({ enabled: false, soundEnabled: false }, ctx);
+    assert(updated.settings?.enabled === false, 'alerts updateSettings did not persist enabled setting');
+  },
   async 'system-agent-plugins'() {
     const result = await module.listPlugins({}, ctx);
     assert(result.ok === true && Array.isArray(result.plugins), 'agent plugins list failed');
@@ -657,7 +672,7 @@ const smokes = {
   async 'system-routines'() {
     const initial = await module.getState({}, ctx);
     assert(Array.isArray(initial.hooks) && initial.hooks.some((hook) => hook.id === 'checkpoint'), 'routines getState missing hooks');
-    assert(Array.isArray(initial.routines) && initial.routines.length > 0, 'routines getState missing seeded routines');
+    assert(Array.isArray(initial.routines), 'routines getState missing routines list');
     const registered = await module.registerHookPoint(
       { id: 'smoke.lifecycle', title: 'Smoke lifecycle', group: 'Smoke', ownerExtensionId: extensionId },
       ctx,

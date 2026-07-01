@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { addNotification } from '../components/notifications/notificationStore';
-import { ButtonLink, CenteredMessage, ErrorState, LoadingState } from '../components/ui';
+import { ButtonLink, CenteredMessage, ErrorState, QuietLoadingState } from '../components/ui';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
@@ -57,6 +57,10 @@ function findMainViewRoute(
   return matches.sort((left, right) => compareRouteMatch(left, right, pathname))[0];
 }
 
+function extensionSurfaceRouteKey(surface: NativeExtensionViewSummary, pathname: string, search: string, hash: string): string {
+  return `${surface.extensionId}:${surface.id}:${surface.route ?? ''}:${pathname}${search}${hash}`;
+}
+
 export function ExtensionPage() {
   const location = useLocation();
   const registry = useExtensionRegistry();
@@ -82,7 +86,7 @@ export function ExtensionPage() {
   }, [registry.error]);
 
   if (registry.loading && !nativeSurface) {
-    return <LoadingState label="Loading extension…" />;
+    return <QuietExtensionPageLoading />;
   }
 
   if (registry.error && !nativeSurface) {
@@ -91,7 +95,13 @@ export function ExtensionPage() {
 
   if (nativeSurface) {
     return (
-      <NativeExtensionSurfaceHost surface={nativeSurface} pathname={location.pathname} search={location.search} hash={location.hash} />
+      <NativeExtensionSurfaceHost
+        key={extensionSurfaceRouteKey(nativeSurface, location.pathname, location.search, location.hash)}
+        surface={nativeSurface}
+        pathname={location.pathname}
+        search={location.search}
+        hash={location.hash}
+      />
     );
   }
 
@@ -111,4 +121,8 @@ export function ExtensionPage() {
       }
     />
   );
+}
+
+function QuietExtensionPageLoading() {
+  return <QuietLoadingState label="Loading extension page" />;
 }

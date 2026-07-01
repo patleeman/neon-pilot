@@ -1,7 +1,9 @@
 # Template: crud-page
 
-Management page with a list view and a slide-in editor form. Supports create, edit, and delete.
-The main view shows a filterable table; clicking "New" or an edit button opens an inline form panel.
+Main-only management page with a list view and inline editor flow. Supports create, edit, and delete.
+The main view shows a filterable table; clicking "New" or an edit button opens an inline editor. If
+your copied extension needs persistent selected-item details beside the table, declare a route-owned
+`rightSidebarView` instead of adding a local second column.
 
 Derived from: `system-automations`.
 

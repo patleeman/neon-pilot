@@ -4,22 +4,21 @@ import {
   AppPageLayout,
   Checkbox,
   CodeBlock,
-  cx,
   Disclosure,
   Field,
   IconButton,
   Notice,
   PanelHeader,
   Pill,
-  ResourceListItem,
-  RowButton,
-  SectionLabel,
+  SidebarList,
+  SidebarMessage,
+  SidebarSection,
   SurfacePanel,
   Textarea,
   TextInput,
   ToolbarButton,
 } from '@neon-pilot/extensions/ui';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 type WorkflowSummary = {
   id: string;
@@ -100,6 +99,8 @@ const EMPTY_DRAFT: SavedWorkflowDraft = {
   additionalAllowedToolsText: '',
 };
 
+type WorkflowSelection = { kind: 'run'; id: string } | { kind: 'template'; id: string } | { kind: 'none' };
+
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
   if (status === 'completed') return 'success';
   if (status === 'failed') return 'danger';
@@ -122,6 +123,30 @@ function parseToolText(value: string): string[] {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function parseWorkflowSelection(hash?: string): WorkflowSelection {
+  const raw = (hash ?? '').replace(/^#/, '');
+  if (!raw) return { kind: 'none' };
+  const [kind, encoded = ''] = raw.split(':', 2);
+  if ((kind !== 'run' && kind !== 'template') || !encoded) return { kind: 'none' };
+  try {
+    return { kind, id: decodeURIComponent(encoded) };
+  } catch {
+    return { kind, id: encoded };
+  }
+}
+
+function workflowSelectionHash(selection: Exclude<WorkflowSelection, { kind: 'none' }>): string {
+  return `${selection.kind}:${encodeURIComponent(selection.id)}`;
+}
+
+async function navigateWorkflows(pa: ExtensionSurfaceProps['pa'], selection?: Exclude<WorkflowSelection, { kind: 'none' }>, search = '') {
+  const to = `/workflows${search}${selection ? `#${workflowSelectionHash(selection)}` : ''}`;
+  const handled = await pa.commands?.execute?.('app.navigate', { to });
+  if (!handled && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: to } }));
+  }
 }
 
 export function splitWorkflowTools(tools: unknown): Pick<SavedWorkflowDraft, 'selectedAllowedTools' | 'additionalAllowedToolsText'> {
@@ -176,30 +201,6 @@ function parseDraft(draft: SavedWorkflowDraft) {
     model: draft.model.trim(),
     agentDefaults,
   };
-}
-
-function WorkflowCard({ workflow, selected, onSelect }: { workflow: WorkflowSummary; selected: boolean; onSelect: () => void }) {
-  const agents = workflow.agents;
-  return (
-    <ResourceListItem
-      label={workflow.name}
-      meta={<Pill tone={statusTone(workflow.status)}>{workflow.status}</Pill>}
-      detail={workflow.activePhase || workflow.cwd}
-      selected={selected}
-      className={cx('px-3 py-2', selected && 'ui-selected-row-accent')}
-      onClick={onSelect}
-    >
-      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-dim">
-        <span>{formatDate(workflow.createdAt)}</span>
-        {agents ? (
-          <span>
-            {agents.completed}/{agents.total} agents
-          </span>
-        ) : null}
-        {workflow.model ? <span>{workflow.model}</span> : null}
-      </div>
-    </ResourceListItem>
-  );
 }
 
 function RefreshIcon() {
@@ -294,18 +295,110 @@ function toggleDraftAllowedTool(draft: SavedWorkflowDraft, tool: string): SavedW
   return { ...draft, selectedAllowedTools };
 }
 
-export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
+export function WorkflowsSidebar({ pa, context }: ExtensionSurfaceProps) {
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [savedWorkflows, setSavedWorkflows] = useState<WorkflowTemplate[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const selection = parseWorkflowSelection(context.hash);
+
+  const refresh = useCallback(async () => {
+    setError(null);
+    try {
+      const result = (await pa.extension.invoke('listWorkflows', { limit: 100 })) as { workflows?: WorkflowSummary[] };
+      const templateResult = (await pa.extension.invoke('listWorkflowTemplates', {})) as { templates?: WorkflowTemplate[] };
+      const savedResult = (await pa.extension.invoke('listSavedWorkflows', {})) as { workflows?: WorkflowTemplate[] };
+      setWorkflows(result.workflows ?? []);
+      setTemplates(templateResult.templates ?? []);
+      setSavedWorkflows(savedResult.workflows ?? []);
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
+    } finally {
+      setLoading(false);
+    }
+  }, [pa]);
+
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 5000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  const isEmpty = !loading && workflows.length === 0 && savedWorkflows.length === 0 && templates.length === 0;
+
+  return (
+    <SidebarSection
+      title="Workflows"
+      actionItems={[
+        {
+          id: 'new',
+          label: 'New saved workflow',
+          icon: <PlusIcon />,
+          onClick: () => void navigateWorkflows(pa, undefined, '?action=new'),
+        },
+        {
+          id: 'refresh',
+          label: 'Refresh workflows',
+          icon: <RefreshIcon />,
+          onClick: () => void refresh(),
+        },
+      ]}
+    >
+      {error ? <SidebarMessage className="text-danger">{error}</SidebarMessage> : null}
+      {loading && workflows.length === 0 && savedWorkflows.length === 0 && templates.length === 0 ? (
+        <div role="status" aria-label="Loading workflows" />
+      ) : null}
+      {isEmpty ? <SidebarMessage>No workflows yet.</SidebarMessage> : null}
+      {workflows.length ? (
+        <SidebarSection title="Runs" className="mt-3">
+          <SidebarList
+            items={workflows.map((workflow) => ({
+              id: workflow.id,
+              title: workflow.name,
+              meta: workflow.status,
+            }))}
+            selectedId={selection.kind === 'run' ? selection.id : null}
+            onSelect={(item) => void navigateWorkflows(pa, { kind: 'run', id: item.id })}
+          />
+        </SidebarSection>
+      ) : null}
+      {savedWorkflows.length ? (
+        <SidebarSection title="Saved" className="mt-3">
+          <SidebarList
+            items={savedWorkflows.map((item) => ({ id: item.id, title: item.name, meta: 'ready' }))}
+            selectedId={selection.kind === 'template' ? selection.id : null}
+            onSelect={(item) => void navigateWorkflows(pa, { kind: 'template', id: item.id })}
+          />
+        </SidebarSection>
+      ) : null}
+      {templates.length ? (
+        <SidebarSection title="Templates" className="mt-3">
+          <SidebarList
+            items={templates.map((item) => ({ id: item.id, title: item.name, meta: 'stock' }))}
+            selectedId={selection.kind === 'template' ? selection.id : null}
+            onSelect={(item) => void navigateWorkflows(pa, { kind: 'template', id: item.id })}
+          />
+        </SidebarSection>
+      ) : null}
+    </SidebarSection>
+  );
+}
+
+export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
+  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
+  const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
+  const [savedWorkflows, setSavedWorkflows] = useState<WorkflowTemplate[]>([]);
+  const initialSelection = parseWorkflowSelection(context.hash);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelection.kind === 'run' ? initialSelection.id : null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    initialSelection.kind === 'template' ? initialSelection.id : null,
+  );
   const [detail, setDetail] = useState<WorkflowDetail | null>(null);
   const [draft, setDraft] = useState<SavedWorkflowDraft>(EMPTY_DRAFT);
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const selected = detail?.workflow ?? workflows.find((workflow) => workflow.id === selectedId) ?? null;
   const selectedTemplate =
@@ -317,12 +410,29 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
         null)
       : null;
   const selectedSavedWorkflow = selectedTemplate ? (savedWorkflows.find((workflow) => workflow.id === selectedTemplate.id) ?? null) : null;
-  const hasLibraryItems = workflows.length > 0 || savedWorkflows.length > 0 || templates.length > 0;
   const savedDraftRef = useRef<string | null>(null);
   const draftSaveRequestIdRef = useRef(0);
 
+  useEffect(() => {
+    const selection = parseWorkflowSelection(context.hash);
+    if (selection.kind === 'run') {
+      setSelectedId(selection.id);
+      setSelectedTemplateId(null);
+    } else if (selection.kind === 'template') {
+      setSelectedId(null);
+      setSelectedTemplateId(selection.id);
+    }
+  }, [context.hash]);
+
+  useEffect(() => {
+    if (!context.search?.includes('action=new')) return;
+    setDraft(EMPTY_DRAFT);
+    setDraftError(null);
+    setDraftStatus(null);
+    setDraftOpen(true);
+  }, [context.search]);
+
   const refresh = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const result = (await pa.extension.invoke('listWorkflows', { limit: 100 })) as { workflows?: WorkflowSummary[] };
@@ -334,14 +444,17 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
       setWorkflows(next);
       setTemplates(nextTemplates);
       setSavedWorkflows(nextSaved);
-      setSelectedId((current) => current ?? next[0]?.id ?? null);
-      setSelectedTemplateId((current) => current ?? nextSaved[0]?.id ?? nextTemplates[0]?.id ?? null);
+      const routeSelection = parseWorkflowSelection(context.hash);
+      setSelectedId((current) => current ?? (routeSelection.kind === 'run' ? routeSelection.id : (next[0]?.id ?? null)));
+      setSelectedTemplateId(
+        (current) =>
+          current ??
+          (routeSelection.kind === 'template' ? routeSelection.id : next[0] ? null : (nextSaved[0]?.id ?? nextTemplates[0]?.id ?? null)),
+      );
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
-    } finally {
-      setLoading(false);
     }
-  }, [pa]);
+  }, [context.hash, pa]);
 
   useEffect(() => {
     void refresh();
@@ -441,7 +554,7 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
   async function runSaved(template: WorkflowTemplate) {
     const result = (await pa.extension.invoke('runSavedWorkflow', { id: template.id })) as { details?: { workflowId?: string } };
     await refresh();
-    if (result.details?.workflowId) setSelectedId(result.details.workflowId);
+    if (result.details?.workflowId) await navigateWorkflows(pa, { kind: 'run', id: result.details.workflowId });
   }
 
   return (
@@ -450,182 +563,15 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
         <AppPageIntro
           title="Workflows"
           actions={
-            <IconButton aria-label="Refresh workflows" title="Refresh workflows" onClick={() => void refresh()}>
+            <ToolbarButton aria-label="Refresh workflows" title="Refresh workflows" onClick={() => void refresh()}>
               <RefreshIcon />
-            </IconButton>
+            </ToolbarButton>
           }
         />
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
 
-        <div className="grid min-h-[calc(100vh-11rem)] gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
-          <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
-            <div className="flex items-center justify-between gap-3">
-              <SectionLabel>Workflow Library</SectionLabel>
-              <div className="flex items-center gap-2">
-                {loading ? <span className="text-[11px] text-dim">Refreshing...</span> : null}
-                <IconButton
-                  compact
-                  aria-label="New saved workflow"
-                  title="New saved workflow"
-                  onClick={() => {
-                    setDraft(EMPTY_DRAFT);
-                    setDraftError(null);
-                    setDraftOpen(true);
-                  }}
-                >
-                  <PlusIcon />
-                </IconButton>
-                <IconButton compact aria-label="Refresh workflow library" title="Refresh workflow library" onClick={() => void refresh()}>
-                  <RefreshIcon />
-                </IconButton>
-              </div>
-            </div>
-            <div className="mt-3 flex-1 overflow-hidden">
-              {loading && !hasLibraryItems ? (
-                <div className="border-b border-border-subtle py-2 text-[12px] text-dim">Loading workflows...</div>
-              ) : null}
-              <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-y border-border-subtle py-1.5 text-[11px] uppercase text-dim">
-                <span>Type</span>
-                <span>Name</span>
-                <span className="text-right">State</span>
-              </div>
-              {!loading && workflows.length === 0 ? (
-                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border-subtle py-1.5 text-[12px]">
-                  <span className="text-dim">Run</span>
-                  <span className="truncate text-secondary">No active or completed runs</span>
-                  <span className="text-right text-dim">0</span>
-                </div>
-              ) : null}
-              {workflows.map((workflow) => (
-                <WorkflowCard
-                  key={workflow.id}
-                  workflow={workflow}
-                  selected={workflow.id === selectedId}
-                  onSelect={() => {
-                    setSelectedId(workflow.id);
-                    setSelectedTemplateId(null);
-                  }}
-                />
-              ))}
-              {!loading && savedWorkflows.length === 0 ? (
-                <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] border-b border-border-subtle py-1.5 text-[12px]">
-                  <span className="text-dim">Saved</span>
-                  <span className="truncate text-secondary">No reusable workflows</span>
-                  <span className="text-right text-dim">0</span>
-                </div>
-              ) : null}
-              {savedWorkflows.map((item) => (
-                <RowButton
-                  key={item.id}
-                  type="button"
-                  selected={selectedId === null && selectedTemplate?.id === item.id}
-                  compact
-                  className="rounded-none border-b border-border-subtle px-0 py-0"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setSelectedTemplateId(item.id);
-                  }}
-                >
-                  <span className="grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 py-1.5 text-[12px]">
-                    <span className="text-dim">Saved</span>
-                    <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
-                    <span className="text-right text-secondary">ready</span>
-                  </span>
-                </RowButton>
-              ))}
-              {templates.map((item) => (
-                <RowButton
-                  key={item.id}
-                  type="button"
-                  selected={selectedId === null && selectedTemplate?.id === item.id}
-                  compact
-                  className="rounded-none border-b border-border-subtle px-0 py-0"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setSelectedTemplateId(item.id);
-                  }}
-                >
-                  <span className="grid w-full grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] items-center gap-2 py-1.5 text-[12px]">
-                    <span className="text-dim">Template</span>
-                    <span className="min-w-0 truncate font-medium text-primary">{item.name}</span>
-                    <span className="text-right text-secondary">stock</span>
-                  </span>
-                </RowButton>
-              ))}
-            </div>
-            {draftOpen ? (
-              <SurfacePanel muted className="space-y-2 px-3 py-3 shadow-none">
-                <div className="text-[13px] font-medium text-primary">{draft.id ? 'Edit saved workflow' : 'New saved workflow'}</div>
-                {draftError ? <Notice tone="danger">{draftError}</Notice> : null}
-                <Field label="Name">
-                  <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
-                </Field>
-                <Field label="Description">
-                  <TextInput
-                    value={draft.description}
-                    onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
-                  />
-                </Field>
-                <Field label="Agent model">
-                  <TextInput
-                    placeholder="opencode-go/deepseek-v4-flash"
-                    value={draft.agentModel}
-                    onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
-                  />
-                </Field>
-                <Field label="Allowed tools">
-                  <div className="grid gap-2">
-                    <div className="grid grid-cols-2 gap-2 text-[12px] text-secondary">
-                      {KNOWN_WORKFLOW_TOOLS.map((tool) => (
-                        <label key={tool} className="flex items-center gap-2 rounded border border-border-subtle px-2 py-1.5">
-                          <Checkbox
-                            checked={draft.selectedAllowedTools.includes(tool)}
-                            onChange={() => setDraft((current) => toggleDraftAllowedTool(current, tool))}
-                          />
-                          <span>{tool}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <TextInput
-                      aria-label="Additional allowed tools"
-                      placeholder="Additional tools"
-                      value={draft.additionalAllowedToolsText}
-                      onChange={(event) => setDraft((current) => ({ ...current, additionalAllowedToolsText: event.target.value }))}
-                    />
-                  </div>
-                </Field>
-                <Field label="Workflow input JSON">
-                  <Textarea
-                    className="h-24 font-mono text-[12px]"
-                    value={draft.argsText}
-                    onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
-                  />
-                </Field>
-                <Field label="Script">
-                  <Textarea
-                    className="h-40 font-mono text-[12px]"
-                    value={draft.script}
-                    onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
-                  />
-                </Field>
-                {draftStatus ? <p className="text-[12px] text-dim">{draftStatus}</p> : null}
-                <div className="flex flex-wrap gap-2">
-                  <ToolbarButton
-                    onClick={() => {
-                      setDraftOpen(false);
-                      setDraftError(null);
-                      setDraftStatus(null);
-                      savedDraftRef.current = null;
-                    }}
-                  >
-                    Close
-                  </ToolbarButton>
-                </div>
-              </SurfacePanel>
-            ) : null}
-          </section>
-
+        <div className="min-h-[calc(100vh-11rem)]">
           <section className="flex min-w-0 flex-col border-t border-border-subtle pt-3">
             <div className="flex min-h-7 items-center justify-between gap-3">
               <h2 className="min-w-0 truncate text-[16px] font-semibold text-primary">
@@ -665,6 +611,80 @@ export function WorkflowsPage({ pa }: ExtensionSurfaceProps) {
                 </div>
               ) : null}
             </div>
+            {draftOpen ? (
+              <SurfacePanel muted className="mt-3 space-y-2 px-3 py-3 shadow-none">
+                <div className="text-[13px] font-medium text-primary">{draft.id ? 'Edit saved workflow' : 'New saved workflow'}</div>
+                {draftError ? <Notice tone="danger">{draftError}</Notice> : null}
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <Field label="Name">
+                    <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+                  </Field>
+                  <Field label="Description">
+                    <TextInput
+                      value={draft.description}
+                      onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+                    />
+                  </Field>
+                  <Field label="Agent model">
+                    <TextInput
+                      placeholder="opencode-go/deepseek-v4-flash"
+                      value={draft.agentModel}
+                      onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
+                    />
+                  </Field>
+                  <Field label="Allowed tools">
+                    <div className="grid gap-2">
+                      <div className="grid grid-cols-2 gap-2 text-[12px] text-secondary">
+                        {KNOWN_WORKFLOW_TOOLS.map((tool) => (
+                          <label key={tool} className="flex items-center gap-2 rounded border border-border-subtle px-2 py-1.5">
+                            <Checkbox
+                              checked={draft.selectedAllowedTools.includes(tool)}
+                              onChange={() => setDraft((current) => toggleDraftAllowedTool(current, tool))}
+                            />
+                            <span>{tool}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <TextInput
+                        aria-label="Additional allowed tools"
+                        placeholder="Additional tools"
+                        value={draft.additionalAllowedToolsText}
+                        onChange={(event) => setDraft((current) => ({ ...current, additionalAllowedToolsText: event.target.value }))}
+                      />
+                    </div>
+                  </Field>
+                </div>
+                <Field label="Workflow input JSON">
+                  <Textarea
+                    className="h-24 font-mono text-[12px]"
+                    value={draft.argsText}
+                    onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
+                  />
+                </Field>
+                <Field label="Script">
+                  <Textarea
+                    className="h-56 font-mono text-[12px]"
+                    value={draft.script}
+                    onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
+                  />
+                </Field>
+                <div className="flex flex-wrap items-center gap-2">
+                  {draftStatus ? <p className="m-0 text-[12px] text-dim">{draftStatus}</p> : null}
+                  <IconButton
+                    aria-label="Close workflow editor"
+                    title="Close workflow editor"
+                    onClick={() => {
+                      setDraftOpen(false);
+                      setDraftError(null);
+                      setDraftStatus(null);
+                      savedDraftRef.current = null;
+                    }}
+                  >
+                    <span aria-hidden="true">x</span>
+                  </IconButton>
+                </div>
+              </SurfacePanel>
+            ) : null}
             {!selected && !selectedTemplate ? (
               <div className="mt-3 grid max-w-xl gap-0 text-[12px]">
                 {[

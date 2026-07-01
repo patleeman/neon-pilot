@@ -5,6 +5,10 @@ import {
   AppPageLayout,
   BrowsePathButton,
   Button,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
   cx,
   DataTable,
   DataTableActionGroup,
@@ -14,39 +18,33 @@ import {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
+  DataTableToolbar,
   Dialog,
   DialogBody,
-  DialogFooter,
   DialogHeader,
   Disclosure,
+  EmptyState,
   Field,
   FieldError,
   FieldHint,
   FieldLabel,
   IconButton,
-  LoadingState,
+  KeyValueItem,
+  KeyValueList,
   MenuItem,
   MenuSeparator,
   Notice,
+  PanelMessage,
   Pill,
   PositionedMenu,
+  QuietLoadingState,
   SegmentedControl,
   Select,
   Textarea,
   TextButton,
   TextInput,
 } from '@neon-pilot/extensions/ui';
-import {
-  type CSSProperties,
-  type FormEvent,
-  type MouseEvent as ReactMouseEvent,
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 interface TaskSummary {
   id: string;
@@ -101,6 +99,14 @@ type RowMenuState = {
   taskId: string;
   position: Pick<CSSProperties, 'top' | 'right' | 'bottom'>;
 };
+type AutomationSelectionData =
+  | {
+      kind: 'automation' | 'edit';
+      task: TaskSummary;
+    }
+  | {
+      kind: 'new';
+    };
 
 const ROW_ACTION_MENU_GAP = 4;
 const ROW_ACTION_MENU_MARGIN = 8;
@@ -216,6 +222,56 @@ function readModels(input: unknown): ModelOption[] {
 
 function taskTitle(task: TaskSummary): string {
   return task.title?.trim() || task.id;
+}
+
+function automationResourceId(taskId: string): string {
+  return `automation:${taskId}`;
+}
+
+function automationSelectionPayload(data: AutomationSelectionData | null) {
+  if (!data) return null;
+  if (data.kind === 'new') {
+    return {
+      kind: 'resource',
+      resource: {
+        type: 'automation',
+        id: 'automation:new',
+        label: 'New automation',
+        source: 'system-automations',
+        data,
+      },
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  return {
+    kind: 'resource',
+    resource: {
+      type: 'automation',
+      id: automationResourceId(data.task.id),
+      label: taskTitle(data.task),
+      source: 'system-automations',
+      data,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function isAutomationSelection(value: unknown): value is { resource: { type: 'automation'; id: string; data?: AutomationSelectionData } } {
+  if (!value || typeof value !== 'object') return false;
+  const resource = (value as { resource?: unknown }).resource;
+  if (!resource || typeof resource !== 'object') return false;
+  const typed = resource as { type?: unknown; id?: unknown; data?: unknown };
+  return typed.type === 'automation' && typeof typed.id === 'string';
+}
+
+function isAutomationSelectionData(value: unknown): value is AutomationSelectionData {
+  if (!value || typeof value !== 'object') return false;
+  const typed = value as { kind?: unknown; task?: unknown };
+  if (typed.kind === 'new') return true;
+  return (
+    (typed.kind === 'automation' || typed.kind === 'edit') &&
+    Boolean(typed.task && typeof typed.task === 'object' && typeof (typed.task as { id?: unknown }).id === 'string')
+  );
 }
 
 function scheduleText(task: TaskSummary): string {
@@ -410,18 +466,11 @@ function modelLabel(model: ModelOption): string {
 
 export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; context?: AutomationsPageContext }) {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
-  const [conversations, setConversations] = useState<ConversationOption[]>([]);
-  const [models, setModels] = useState<ModelOption[]>([]);
-  const [form, setForm] = useState<AutomationFormState>(EMPTY_FORM);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null);
+  const [activeAutomation, setActiveAutomation] = useState<AutomationSelectionData | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [pickingCwd, setPickingCwd] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const titleId = useId();
   const rowMenuBaseId = useId();
   const loadRequestIdRef = useRef(0);
   const handledRouteSearchRef = useRef<string | null>(null);
@@ -431,17 +480,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     loadRequestIdRef.current = requestId;
     setError(null);
     try {
-      const conversationsApi = (pa as NativeExtensionClient & { conversations?: NativeExtensionClient['conversations'] }).conversations;
-      const modelsFn = (pa as NativeExtensionClient & { models?: () => Promise<unknown> }).models;
-      const [taskList, conversationList, modelList] = await Promise.all([
-        pa.automations.list(),
-        conversationsApi?.list ? conversationsApi.list() : Promise.resolve([]),
-        typeof modelsFn === 'function' ? modelsFn() : Promise.resolve([]),
-      ]);
+      const taskList = await pa.automations.list();
       if (loadRequestIdRef.current !== requestId) return;
       setTasks(readTasks(taskList));
-      setConversations(readConversations(conversationList));
-      setModels(readModels(modelList));
     } catch (err) {
       if (loadRequestIdRef.current !== requestId) return;
       setError(err instanceof Error ? err.message : String(err));
@@ -513,12 +554,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   }, [rowMenu]);
 
   const openCreate = useCallback(() => {
-    setEditingId(null);
-    setForm({ ...EMPTY_FORM, ownerThreadId: conversations[0]?.id ?? '' });
-    setFormError(null);
     setRowMenu(null);
-    setDialogOpen(true);
-  }, [conversations]);
+    setActiveAutomation({ kind: 'new' });
+  }, []);
 
   useEffect(() => {
     const search = context?.search ?? '';
@@ -531,65 +569,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     openCreate();
   }, [context?.search, openCreate]);
 
-  useEffect(() => {
-    if (!dialogOpen || editingId || form.ownerThreadId || conversations.length === 0) return;
-    setForm((current) => (current.ownerThreadId ? current : { ...current, ownerThreadId: conversations[0]?.id ?? '' }));
-  }, [conversations, dialogOpen, editingId, form.ownerThreadId]);
-
   const visibleTasks = useMemo(() => sortTasks(tasks), [tasks]);
 
-  const openEdit = useCallback((task: TaskSummary) => {
-    setEditingId(task.id);
-    setForm(formFromTask(task));
-    setFormError(null);
+  const selectTask = useCallback((task: TaskSummary, mode: 'automation' | 'edit' = 'automation') => {
     setRowMenu(null);
-    setDialogOpen(true);
+    setActiveAutomation({ kind: mode, task });
   }, []);
-
-  const closeDialog = () => {
-    if (busy === 'save') return;
-    setDialogOpen(false);
-    setFormError(null);
-  };
-
-  const save = async () => {
-    if (!form.title.trim() || !form.prompt.trim() || !form.ownerThreadId.trim()) {
-      setFormError('Add a name, instructions, and an owner thread.');
-      return;
-    }
-    if (form.scheduleType === 'at' && !form.atLocal.trim()) {
-      setFormError('Choose when this one-time automation should run.');
-      return;
-    }
-    if (form.scheduleType === 'cron' && !form.cron.trim()) {
-      setFormError('Choose a recurring schedule.');
-      return;
-    }
-    if (!parseTimeoutSeconds(form.timeoutSeconds)) {
-      setFormError('Enter a whole-number timeout from 1 second to 7 days.');
-      return;
-    }
-    setBusy('save');
-    setFormError(null);
-    try {
-      if (editingId) {
-        await pa.automations.update(editingId, buildSaveInput(form));
-      } else {
-        await pa.automations.create({ ...buildSaveInput(form), id: form.id.trim() || undefined });
-      }
-      setDialogOpen(false);
-      await load();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const submitForm = (event: FormEvent) => {
-    event.preventDefault();
-    void save();
-  };
 
   const updateEnabled = async (task: TaskSummary, enabled: boolean) => {
     setBusy(`${enabled ? 'resume' : 'pause'}:${task.id}`);
@@ -653,45 +638,76 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     }
   };
 
-  const pickCwd = async () => {
-    setPickingCwd(true);
-    try {
-      const picked = await pa.pickFolder({ cwd: form.cwd || null, prompt: 'Choose automation working directory' });
-      if (!picked.cancelled && picked.path) setForm((current) => ({ ...current, cwd: picked.path ?? '' }));
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setPickingCwd(false);
-    }
-  };
-
-  const ownerConversation = conversations.find((conversation) => conversation.id === form.ownerThreadId);
-  const scheduleTypeOptions: Array<{ value: 'cron' | 'at'; label: string }> = [
-    { value: 'cron', label: 'Recurring' },
-    { value: 'at', label: 'Once' },
-  ];
-  const cronValue = cronSelectValue(form.cron);
-  const timeoutValue = timeoutSelectValue(form.timeoutSeconds);
-  const editingTitle = editingId ? 'Edit automation' : 'New automation';
+  const activeAutomationTitle = activeAutomation
+    ? activeAutomation.kind === 'new'
+      ? 'New automation'
+      : activeAutomation.kind === 'edit'
+        ? 'Edit automation'
+        : 'Automation details'
+    : '';
+  const dialogPa = activeAutomation
+    ? ({
+        ...pa,
+        selection: {
+          ...pa.selection,
+          get: () => automationSelectionPayload(activeAutomation),
+          set: (nextSelection: unknown) => {
+            if (!isAutomationSelection(nextSelection)) {
+              setActiveAutomation(null);
+              return;
+            }
+            const data = nextSelection.resource.data;
+            setActiveAutomation(isAutomationSelectionData(data) ? data : null);
+          },
+          subscribe: () => ({ unsubscribe: () => undefined }),
+        },
+        automations: {
+          ...pa.automations,
+          create: async (...args: Parameters<NativeExtensionClient['automations']['create']>) => {
+            const result = await pa.automations.create(...args);
+            await load();
+            return result;
+          },
+          update: async (...args: Parameters<NativeExtensionClient['automations']['update']>) => {
+            const result = await pa.automations.update(...args);
+            await load();
+            return result;
+          },
+          delete: async (...args: Parameters<NativeExtensionClient['automations']['delete']>) => {
+            const result = await pa.automations.delete(...args);
+            await load();
+            return result;
+          },
+          run: async (...args: Parameters<NativeExtensionClient['automations']['run']>) => {
+            const result = await pa.automations.run(...args);
+            await load();
+            return result;
+          },
+        },
+      } as NativeExtensionClient)
+    : null;
 
   return (
     <div className="h-full overflow-y-auto bg-base">
       <AppPageLayout contentClassName="flex min-h-full flex-col gap-4">
-        <AppPageIntro
-          title="Automations"
+        <AppPageIntro title="Automations" />
+
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+
+        <DataTableToolbar
+          summary={`${visibleTasks.length} automation${visibleTasks.length === 1 ? '' : 's'}`}
           actions={
-            <div className="flex items-center gap-2">
-              <IconButton aria-label="Refresh automations" title="Refresh automations" onClick={() => void load()}>
+            <>
+              <IconButton compact aria-label="Refresh automations" title="Refresh automations" onClick={() => void load()}>
                 <RefreshIcon />
               </IconButton>
               <Button variant="action" tone="accent" onClick={openCreate}>
+                <span aria-hidden="true">+</span>
                 New automation
               </Button>
-            </div>
+            </>
           }
         />
-
-        {error ? <Notice tone="danger">{error}</Notice> : null}
 
         <DataTable
           className="min-h-0 overflow-hidden"
@@ -699,11 +715,11 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
           columns={
             <colgroup>
               <col style={{ width: '10%' }} />
-              <col style={{ width: '26%' }} />
+              <col style={{ width: '24%' }} />
               <col style={{ width: '18%' }} />
               <col style={{ width: '13%' }} />
-              <col style={{ width: '13%' }} />
-              <col style={{ width: '15%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '18%' }} />
               <col style={{ width: '5%' }} />
             </colgroup>
           }
@@ -722,13 +738,26 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
           <DataTableBody>
             {loading && tasks.length === 0 ? (
               <DataTableEmptyRow colSpan={7} cellClassName="py-8 text-left">
-                <LoadingState label="Loading automations…" />
+                <QuietLoadingState label="Loading automations" className="min-h-8" />
               </DataTableEmptyRow>
             ) : null}
 
             {!loading && visibleTasks.length === 0 ? (
-              <DataTableEmptyRow colSpan={7} cellClassName="py-8 text-left">
-                No automations yet.
+              <DataTableEmptyRow colSpan={7} cellClassName="py-10 text-left">
+                <EmptyState
+                  eyebrow="Table page"
+                  title="No automations yet"
+                  body="Automations run prompts on a schedule, then keep the owner thread updated with the result."
+                  steps={['Create an automation.', 'Choose when it should run.', 'Pick the conversation that owns the follow-up.']}
+                  action={
+                    <Button variant="action" tone="accent" onClick={openCreate}>
+                      <span aria-hidden="true">+</span>
+                      New automation
+                    </Button>
+                  }
+                  align="start"
+                  className="max-w-[34rem]"
+                />
               </DataTableEmptyRow>
             ) : null}
 
@@ -742,7 +771,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                     <Button
                       variant="ghost"
                       className="max-w-full justify-start truncate px-0 py-0 text-left font-medium text-primary"
-                      onClick={() => openEdit(task)}
+                      onClick={() => selectTask(task)}
                     >
                       {taskTitle(task)}
                     </Button>
@@ -754,13 +783,14 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 </DataTableCell>
                 <DataTableCell className="truncate text-secondary">{nextRunText(task)}</DataTableCell>
                 <DataTableCell className="truncate text-secondary">{lastRunText(task)}</DataTableCell>
-                <DataTableCell className="truncate text-secondary">
+                <DataTableCell className="min-w-0 text-secondary">
                   {task.threadConversationId ? (
                     <TextButton
                       aria-label={`Open owner thread for ${taskTitle(task)}: ${task.threadTitle || task.threadConversationId}`}
                       title={`Open ${task.threadTitle || task.threadConversationId}`}
                       tone="accent"
-                      className="max-w-full justify-start truncate text-left text-[13px]"
+                      className="w-full max-w-full justify-start truncate px-0 py-0 text-left text-[13px]"
+                      style={{ justifyContent: 'flex-start' }}
                       onClick={() => void openOwnerThread(task)}
                     >
                       {task.threadTitle || task.threadConversationId}
@@ -809,7 +839,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       <MenuItem disabled={busy?.endsWith(`:${task.id}`)} onClick={() => void updateEnabled(task, !task.enabled)}>
                         {task.enabled ? 'Pause' : 'Resume'}
                       </MenuItem>
-                      <MenuItem onClick={() => openEdit(task)}>Edit</MenuItem>
+                      <MenuItem onClick={() => selectTask(task)}>Details</MenuItem>
+                      <MenuItem onClick={() => selectTask(task, 'edit')}>Edit</MenuItem>
                       <MenuSeparator />
                       <MenuItem tone="danger" disabled={task.running || busy === `delete:${task.id}`} onClick={() => void deleteTask(task)}>
                         Delete
@@ -823,203 +854,557 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
         </DataTable>
       </AppPageLayout>
 
-      {dialogOpen ? (
-        <Dialog portal onClose={closeDialog} labelledBy={titleId} className="max-w-[42rem]">
-          <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitForm}>
-            <DialogHeader title={editingTitle} titleId={titleId} />
-            <DialogBody className="flex flex-1 flex-col gap-4">
-              {formError ? <Notice tone="danger">{formError}</Notice> : null}
+      {activeAutomation && dialogPa ? (
+        <Dialog className="max-w-3xl" labelledBy="automation-dialog-title" onClose={() => setActiveAutomation(null)}>
+          <DialogHeader title={activeAutomationTitle} titleId="automation-dialog-title" />
+          <DialogBody className="max-h-[min(78vh,52rem)] overflow-auto">
+            <AutomationDialogPanel
+              key={`${activeAutomation.kind}:${activeAutomation.kind === 'new' ? 'new' : activeAutomation.task.id}`}
+              pa={dialogPa}
+            />
+          </DialogBody>
+        </Dialog>
+      ) : null}
+    </div>
+  );
+}
 
-              <Field label="Name" className="shrink-0">
+export function AutomationDialogPanel({ pa }: { pa: NativeExtensionClient }) {
+  const [selection, setSelection] = useState<AutomationSelectionData | null>(() => {
+    const current = pa.selection.get();
+    return isAutomationSelection(current) && isAutomationSelectionData(current.resource.data) ? current.resource.data : null;
+  });
+  const [tasks, setTasks] = useState<TaskSummary[]>([]);
+  const [conversations, setConversations] = useState<ConversationOption[]>([]);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [form, setForm] = useState<AutomationFormState>(EMPTY_FORM);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [pickingCwd, setPickingCwd] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const nextTasks = readTasks(await pa.automations.list());
+      setTasks(nextTasks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [pa]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const loadReferenceData = useCallback(async () => {
+    try {
+      const conversationsApi = (pa as NativeExtensionClient & { conversations?: NativeExtensionClient['conversations'] }).conversations;
+      const modelsFn = (pa as NativeExtensionClient & { models?: () => Promise<unknown> }).models;
+      const [conversationList, modelList] = await Promise.all([
+        conversationsApi?.list ? conversationsApi.list() : Promise.resolve([]),
+        typeof modelsFn === 'function' ? modelsFn() : Promise.resolve([]),
+      ]);
+      setConversations(readConversations(conversationList));
+      setModels(readModels(modelList));
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err));
+    }
+  }, [pa]);
+
+  useEffect(() => {
+    void loadReferenceData();
+  }, [loadReferenceData]);
+
+  useEffect(() => {
+    const subscription = pa.selection.subscribe((nextSelection) => {
+      if (!isAutomationSelection(nextSelection)) {
+        setSelection(null);
+        return;
+      }
+      const data = nextSelection.resource.data;
+      setSelection(isAutomationSelectionData(data) ? data : null);
+    });
+    return () => subscription.unsubscribe();
+  }, [pa]);
+
+  useEffect(() => {
+    setFormError(null);
+    if (!selection) {
+      setForm(EMPTY_FORM);
+      return;
+    }
+    if (selection.kind === 'new') {
+      setForm((current) => {
+        const hasDraft =
+          current.id.trim() ||
+          current.title.trim() ||
+          current.prompt.trim() ||
+          current.cwd.trim() ||
+          current.model.trim() ||
+          current.atLocal.trim() ||
+          current.cron !== EMPTY_FORM.cron ||
+          current.timeoutSeconds !== EMPTY_FORM.timeoutSeconds;
+        if (hasDraft) return { ...current, ownerThreadId: current.ownerThreadId || conversations[0]?.id || '' };
+        return { ...EMPTY_FORM, ownerThreadId: conversations[0]?.id ?? '' };
+      });
+      return;
+    }
+    if (selection.kind === 'edit') {
+      setForm(formFromTask(selection.task));
+    }
+  }, [conversations, selection]);
+
+  useEffect(() => {
+    const subscribe = (
+      pa as NativeExtensionClient & {
+        ui?: NativeExtensionClient['ui'] & {
+          subscribeInvalidations?: (handler: (event: { topics: string[] }) => void) => { unsubscribe: () => void };
+        };
+      }
+    ).ui?.subscribeInvalidations;
+    if (!subscribe) return;
+    const subscription = subscribe((event) => {
+      if (event.topics?.some((topic) => topic === 'automation' || topic === 'automations' || topic === 'tasks')) void load();
+    });
+    return () => subscription.unsubscribe();
+  }, [load, pa]);
+
+  const task = selection && selection.kind !== 'new' ? (tasks.find((item) => item.id === selection.task.id) ?? selection.task) : null;
+  const editingTask = selection?.kind === 'edit' ? task : null;
+  const editorOpen = selection?.kind === 'new' || selection?.kind === 'edit';
+  const ownerConversation = conversations.find((conversation) => conversation.id === form.ownerThreadId);
+  const scheduleTypeOptions: Array<{ value: 'cron' | 'at'; label: string }> = [
+    { value: 'cron', label: 'Recurring' },
+    { value: 'at', label: 'Once' },
+  ];
+  const cronValue = cronSelectValue(form.cron);
+  const timeoutValue = timeoutSelectValue(form.timeoutSeconds);
+  const panelTitle = editorOpen ? (editingTask ? 'Edit automation' : 'New automation') : 'Automation details';
+
+  const clearSelection = useCallback(() => {
+    pa.selection.set(null);
+    setSelection(null);
+  }, [pa]);
+
+  const selectDetails = useCallback(
+    (nextTask: TaskSummary) => {
+      const nextSelection: AutomationSelectionData = { kind: 'automation', task: nextTask };
+      setSelection(nextSelection);
+      pa.selection.set({
+        kind: 'resource',
+        resource: {
+          type: 'automation',
+          id: automationResourceId(nextTask.id),
+          label: taskTitle(nextTask),
+          source: 'system-automations',
+          data: nextSelection,
+        },
+      });
+    },
+    [pa],
+  );
+
+  const cancelEditor = useCallback(() => {
+    if (editingTask) {
+      selectDetails(editingTask);
+      return;
+    }
+    clearSelection();
+  }, [clearSelection, editingTask, selectDetails]);
+
+  const saveForm = useCallback(async () => {
+    if (!form.title.trim() || !form.prompt.trim() || !form.ownerThreadId.trim()) {
+      setFormError('Add a name, instructions, and an owner thread.');
+      return;
+    }
+    if (form.scheduleType === 'at' && !form.atLocal.trim()) {
+      setFormError('Choose when this one-time automation should run.');
+      return;
+    }
+    if (form.scheduleType === 'cron' && !form.cron.trim()) {
+      setFormError('Choose a recurring schedule.');
+      return;
+    }
+    if (!parseTimeoutSeconds(form.timeoutSeconds)) {
+      setFormError('Enter a whole-number timeout from 1 second to 7 days.');
+      return;
+    }
+    setBusy('save');
+    setFormError(null);
+    try {
+      if (editingTask) {
+        await pa.automations.update(editingTask.id, buildSaveInput(form));
+        selectDetails({
+          ...editingTask,
+          title: form.title.trim(),
+          prompt: form.prompt.trim(),
+          enabled: form.enabled,
+          threadConversationId: form.ownerThreadId,
+          cwd: form.cwd.trim() || undefined,
+          model: form.model.trim() || undefined,
+          timeoutSeconds: parseTimeoutSeconds(form.timeoutSeconds),
+          scheduleType: form.scheduleType,
+          cron: form.scheduleType === 'cron' ? form.cron.trim() : undefined,
+          at: form.scheduleType === 'at' ? (localInputToIso(form.atLocal) ?? undefined) : undefined,
+        });
+      } else {
+        await pa.automations.create({ ...buildSaveInput(form), id: form.id.trim() || undefined });
+        clearSelection();
+      }
+      await load();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
+  }, [clearSelection, editingTask, form, load, pa, selectDetails]);
+
+  const pickCwd = useCallback(async () => {
+    setPickingCwd(true);
+    try {
+      const picked = await pa.pickFolder({ cwd: form.cwd || null, prompt: 'Choose automation working directory' });
+      if (!picked.cancelled && picked.path) setForm((current) => ({ ...current, cwd: picked.path ?? '' }));
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPickingCwd(false);
+    }
+  }, [form.cwd, pa]);
+
+  const runNow = useCallback(async () => {
+    if (!task || task.running) return;
+    setBusy(`run:${task.id}`);
+    setError(null);
+    try {
+      await pa.automations.run(task.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
+  }, [load, pa, task]);
+
+  const updateEnabled = useCallback(async () => {
+    if (!task) return;
+    const enabled = !(task.enabled ?? true);
+    setBusy(`${enabled ? 'resume' : 'pause'}:${task.id}`);
+    setError(null);
+    try {
+      await pa.automations.update(task.id, { enabled, threadConversationId: task.threadConversationId, targetType: 'conversation' });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
+  }, [load, pa, task]);
+
+  const deleteTask = useCallback(async () => {
+    if (!task) return;
+    const confirmed = await pa.ui.confirm({
+      title: 'Delete automation',
+      message: `Delete automation "${taskTitle(task)}"? This cannot be undone.`,
+    });
+    if (!confirmed) return;
+    setBusy(`delete:${task.id}`);
+    setError(null);
+    try {
+      await pa.automations.delete(task.id);
+      clearSelection();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
+  }, [clearSelection, load, pa, task]);
+
+  const openOwnerThread = useCallback(async () => {
+    const conversationId = task?.threadConversationId?.trim();
+    if (!conversationId) return;
+    try {
+      const opened = await pa.commands.execute('conversation.open', { conversationId });
+      if (!opened) {
+        const navigated = await pa.commands.execute('app.navigate', { to: `/conversations/${encodeURIComponent(conversationId)}` });
+        if (!navigated) pa.ui.toast('Could not open the owner thread.', 'warning');
+      }
+    } catch (err) {
+      pa.ui.toast(err instanceof Error ? err.message : 'Could not open the owner thread.', 'warning');
+    }
+  }, [pa, task]);
+
+  const detailTitle = editorOpen ? panelTitle : task ? taskTitle(task) : panelTitle;
+  const detailSubtitle = editorOpen
+    ? 'Configure schedule and owner'
+    : task
+      ? `${statusLabel(task)} · ${scheduleText(task)}`
+      : 'Select a row to inspect details';
+
+  return (
+    <ContextRail>
+      <ContextRailHeader eyebrow="Automation context" title={detailTitle} subtitle={detailSubtitle} />
+      <ContextRailBody>
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+        {editorOpen ? (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveForm();
+            }}
+          >
+            {formError ? <Notice tone="danger">{formError}</Notice> : null}
+
+            <Field label="Name">
+              <TextInput
+                name="automation-title"
+                autoFocus
+                autoComplete="off"
+                value={form.title}
+                onChange={(event) => setForm({ ...form, title: event.target.value })}
+                placeholder="Morning release check..."
+              />
+            </Field>
+
+            <Field label="Instructions">
+              <Textarea
+                name="automation-prompt"
+                className="min-h-28 resize-y text-[13px]"
+                value={form.prompt}
+                onChange={(event) => setForm({ ...form, prompt: event.target.value })}
+                placeholder="Check the release dashboard and summarize blockers..."
+              />
+            </Field>
+
+            <div className="ui-field">
+              <FieldLabel>Schedule</FieldLabel>
+              <SegmentedControl
+                ariaLabel="Schedule type"
+                value={form.scheduleType}
+                options={scheduleTypeOptions}
+                onChange={(next: 'cron' | 'at') => setForm({ ...form, scheduleType: next })}
+              />
+            </div>
+
+            {form.scheduleType === 'cron' ? (
+              <div className="ui-field">
+                <FieldLabel>Repeat</FieldLabel>
+                <Select
+                  name="automation-cron-preset"
+                  aria-label="Repeat schedule"
+                  value={cronValue}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? '' : next }));
+                  }}
+                >
+                  {CRON_PRESETS.map((preset) => (
+                    <option key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_VALUE}>Custom cron...</option>
+                </Select>
+                {cronValue === CUSTOM_VALUE ? (
+                  <div className="mt-2">
+                    <TextInput
+                      name="automation-cron"
+                      aria-label="Custom cron schedule"
+                      autoComplete="off"
+                      className="font-mono text-[13px]"
+                      value={form.cron}
+                      onChange={(event) => setForm({ ...form, cron: event.target.value })}
+                      placeholder="0 9 * * *..."
+                    />
+                    <FieldHint>Five-field cron.</FieldHint>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="ui-field">
+                <FieldLabel>Run at</FieldLabel>
                 <TextInput
-                  name="automation-title"
-                  autoFocus
-                  autoComplete="off"
-                  value={form.title}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, title: event.target.value })}
-                  placeholder="Morning release check…"
+                  type="datetime-local"
+                  name="automation-run-at"
+                  aria-label="Run at"
+                  value={form.atLocal}
+                  onChange={(event) => setForm({ ...form, atLocal: event.target.value })}
                 />
-              </Field>
+                {form.scheduleType === 'at' && !form.atLocal ? <FieldError>Pick a date and time.</FieldError> : null}
+                <FieldHint>Uses your local timezone.</FieldHint>
+              </div>
+            )}
 
-              <Field label="Instructions" className="shrink-0">
-                <Textarea
-                  name="automation-prompt"
-                  className="min-h-28 resize-y text-[13px]"
-                  value={form.prompt}
-                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, prompt: event.target.value })}
-                  placeholder="Check the release dashboard and summarize blockers…"
-                />
-              </Field>
+            <Field label="Owner thread" hint={ownerThreadHint(ownerConversation)}>
+              <Select
+                name="automation-owner-thread"
+                value={form.ownerThreadId}
+                onChange={(event) => setForm({ ...form, ownerThreadId: event.target.value })}
+              >
+                <option value="">Choose a thread...</option>
+                {conversations.map((conversation) => (
+                  <option key={conversation.id} value={conversation.id}>
+                    {conversation.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-              <div className="grid shrink-0 gap-4 sm:grid-cols-2">
-                <div className="ui-field">
-                  <FieldLabel>Schedule</FieldLabel>
-                  <SegmentedControl
-                    ariaLabel="Schedule type"
-                    value={form.scheduleType}
-                    options={scheduleTypeOptions}
-                    onChange={(next: 'cron' | 'at') => setForm({ ...form, scheduleType: next })}
-                  />
-                </div>
-
-                {form.scheduleType === 'cron' ? (
-                  <div className="ui-field">
-                    <FieldLabel>Repeat</FieldLabel>
-                    <Select
-                      name="automation-cron-preset"
-                      aria-label="Repeat schedule"
-                      value={cronValue}
-                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                        const next = event.target.value;
-                        setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? '' : next }));
-                      }}
-                    >
-                      {CRON_PRESETS.map((preset) => (
-                        <option key={preset.value} value={preset.value}>
-                          {preset.label}
+            <Disclosure summary="Advanced" bodyClassName="grid gap-4 pt-3">
+              <Field label="Model" hint="Uses the app default when empty.">
+                <Select name="automation-model" value={form.model} onChange={(event) => setForm({ ...form, model: event.target.value })}>
+                  <option value="">Use app default</option>
+                  {groupedModels(models).map(([provider, providerModels]) => (
+                    <optgroup key={provider} label={provider}>
+                      {providerModels.map((model) => (
+                        <option key={`${provider}/${model.id}`} value={model.id}>
+                          {modelLabel(model)}
                         </option>
                       ))}
-                      <option value={CUSTOM_VALUE}>Custom cron…</option>
-                    </Select>
-                    {cronValue === CUSTOM_VALUE ? (
-                      <div className="mt-2">
-                        <TextInput
-                          name="automation-cron"
-                          aria-label="Custom cron schedule"
-                          autoComplete="off"
-                          className="font-mono text-[13px]"
-                          value={form.cron}
-                          onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cron: event.target.value })}
-                          placeholder="0 9 * * *…"
-                        />
-                        <FieldHint>Five-field cron.</FieldHint>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="ui-field">
-                    <FieldLabel>Run at</FieldLabel>
-                    <TextInput
-                      type="datetime-local"
-                      name="automation-run-at"
-                      aria-label="Run at"
-                      value={form.atLocal}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, atLocal: event.target.value })}
-                    />
-                    {form.scheduleType === 'at' && !form.atLocal ? <FieldError>Pick a date and time.</FieldError> : null}
-                    <FieldHint>Uses your local timezone.</FieldHint>
-                  </div>
-                )}
-              </div>
-
-              <Field label="Owner thread" className="shrink-0" hint={ownerThreadHint(ownerConversation)}>
-                <Select
-                  name="automation-owner-thread"
-                  value={form.ownerThreadId}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, ownerThreadId: event.target.value })}
-                >
-                  <option value="">Choose a thread…</option>
-                  {conversations.map((conversation) => (
-                    <option key={conversation.id} value={conversation.id}>
-                      {conversation.title}
-                    </option>
+                    </optgroup>
                   ))}
                 </Select>
               </Field>
 
-              <Disclosure summary="Advanced" className="shrink-0" bodyClassName="grid gap-4 pt-3">
-                <div className="grid items-start gap-4 sm:grid-cols-2">
-                  <Field label="Model" hint="Uses the app default when empty.">
-                    <Select
-                      name="automation-model"
-                      value={form.model}
-                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setForm({ ...form, model: event.target.value })}
-                    >
-                      <option value="">Use app default</option>
-                      {groupedModels(models).map(([provider, providerModels]) => (
-                        <optgroup key={provider} label={provider}>
-                          {providerModels.map((model) => (
-                            <option key={`${provider}/${model.id}`} value={model.id}>
-                              {modelLabel(model)}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </Select>
-                  </Field>
-
-                  <Field label="Timeout">
-                    <Select
-                      name="automation-timeout-preset"
-                      aria-label="Timeout"
-                      value={timeoutValue}
-                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                        const next = event.target.value;
-                        setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? '' : next }));
-                      }}
-                    >
-                      {TIMEOUT_PRESETS.map((preset) => (
-                        <option key={preset.value} value={preset.value}>
-                          {preset.label}
-                        </option>
-                      ))}
-                      <option value={CUSTOM_VALUE}>Custom…</option>
-                    </Select>
-                    {timeoutValue === CUSTOM_VALUE ? (
-                      <div className="mt-2">
-                        <TextInput
-                          name="automation-timeout"
-                          aria-label="Custom timeout in seconds"
-                          inputMode="numeric"
-                          autoComplete="off"
-                          value={form.timeoutSeconds}
-                          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                            setForm({ ...form, timeoutSeconds: event.target.value })
-                          }
-                        />
-                        {!parseTimeoutSeconds(form.timeoutSeconds) ? (
-                          <FieldError>Enter a whole number from 1 to 604800 seconds.</FieldError>
-                        ) : null}
-                        <FieldHint>Seconds before the run is stopped.</FieldHint>
-                      </div>
-                    ) : null}
-                  </Field>
-                </div>
-
-                <div className="ui-field">
-                  <FieldLabel>Working directory</FieldLabel>
-                  <div className="flex gap-2">
+              <Field label="Timeout">
+                <Select
+                  name="automation-timeout-preset"
+                  aria-label="Timeout"
+                  value={timeoutValue}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? '' : next }));
+                  }}
+                >
+                  {TIMEOUT_PRESETS.map((preset) => (
+                    <option key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_VALUE}>Custom...</option>
+                </Select>
+                {timeoutValue === CUSTOM_VALUE ? (
+                  <div className="mt-2">
                     <TextInput
-                      name="automation-cwd"
-                      aria-label="Working directory"
+                      name="automation-timeout"
+                      aria-label="Custom timeout in seconds"
+                      inputMode="numeric"
                       autoComplete="off"
-                      className="min-w-0 flex-1 font-mono text-[12px]"
-                      value={form.cwd}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, cwd: event.target.value })}
-                      placeholder="Thread default…"
+                      value={form.timeoutSeconds}
+                      onChange={(event) => setForm({ ...form, timeoutSeconds: event.target.value })}
                     />
-                    <BrowsePathButton
-                      busy={pickingCwd}
-                      title="Choose working directory"
-                      ariaLabel="Choose automation working directory"
-                      onClick={() => void pickCwd()}
-                    />
+                    {!parseTimeoutSeconds(form.timeoutSeconds) ? (
+                      <FieldError>Enter a whole number from 1 to 604800 seconds.</FieldError>
+                    ) : null}
+                    <FieldHint>Seconds before the run is stopped.</FieldHint>
                   </div>
+                ) : null}
+              </Field>
+
+              <div className="ui-field">
+                <FieldLabel>Working directory</FieldLabel>
+                <div className="flex gap-2">
+                  <TextInput
+                    name="automation-cwd"
+                    aria-label="Working directory"
+                    autoComplete="off"
+                    className="min-w-0 flex-1 font-mono text-[12px]"
+                    value={form.cwd}
+                    onChange={(event) => setForm({ ...form, cwd: event.target.value })}
+                    placeholder="Thread default..."
+                  />
+                  <BrowsePathButton
+                    busy={pickingCwd}
+                    title="Choose working directory"
+                    ariaLabel="Choose automation working directory"
+                    onClick={() => void pickCwd()}
+                  />
                 </div>
-              </Disclosure>
-            </DialogBody>
-            <DialogFooter>
-              <Button variant="ghost" type="button" onClick={closeDialog}>
+              </div>
+            </Disclosure>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+              <Button variant="ghost" type="button" onClick={cancelEditor}>
                 Cancel
               </Button>
               <Button type="submit" variant="action" tone="accent" disabled={busy === 'save'}>
-                {busy === 'save' ? 'Saving…' : editingId ? 'Save automation' : 'Create automation'}
+                {busy === 'save' ? 'Saving...' : editingTask ? 'Save automation' : 'Create automation'}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
-        </Dialog>
-      ) : null}
-    </div>
+        ) : null}
+        {!editorOpen && loading && !task ? <QuietLoadingState label="Loading automations" className="min-h-12" /> : null}
+        {!editorOpen && !loading && !task ? (
+          <EmptyState
+            eyebrow="Context rail"
+            title="No automation selected"
+            body="Select an automation to inspect schedule, owner, and run controls without leaving the table."
+            steps={[
+              'Pick a row in the automations table.',
+              'Review schedule and owner details here.',
+              'Run, pause, or edit from this rail.',
+            ]}
+            align="start"
+          />
+        ) : null}
+        {!editorOpen && task ? (
+          <div className="space-y-5">
+            {task.prompt ? <p className="text-[12px] leading-5 text-secondary">{task.prompt}</p> : null}
+
+            <ContextRailSection
+              title="Actions"
+              actions={<Pill tone={statusPillTone(task)}>{statusLabel(task)}</Pill>}
+              bodyClassName="flex flex-wrap gap-2"
+            >
+              <Button variant="toolbar" disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow()}>
+                Run now
+              </Button>
+              <Button variant="toolbar" disabled={Boolean(busy?.endsWith(`:${task.id}`))} onClick={() => void updateEnabled()}>
+                {(task.enabled ?? true) ? 'Pause' : 'Resume'}
+              </Button>
+              <Button
+                variant="toolbar"
+                tone="danger"
+                disabled={task.running || busy === `delete:${task.id}`}
+                onClick={() => void deleteTask()}
+              >
+                Delete
+              </Button>
+            </ContextRailSection>
+
+            <ContextRailSection title="Schedule">
+              <KeyValueList>
+                <KeyValueItem label="Next run" value={nextRunText(task)} />
+                <KeyValueItem label="Last run" value={lastRunText(task)} />
+                <KeyValueItem label="Type" value={task.scheduleType === 'at' ? 'Once' : 'Recurring'} />
+                {task.cron ? <KeyValueItem label="Cron" value={<span className="font-mono">{task.cron}</span>} /> : null}
+                {task.at ? <KeyValueItem label="Run at" value={task.at} /> : null}
+              </KeyValueList>
+            </ContextRailSection>
+
+            <ContextRailSection title="Owner">
+              {task.threadConversationId ? (
+                <TextButton className="max-w-full text-left" tone="accent" onClick={() => void openOwnerThread()}>
+                  {task.threadTitle || task.threadConversationId}
+                </TextButton>
+              ) : (
+                <PanelMessage className="py-1">No owner thread.</PanelMessage>
+              )}
+              <KeyValueList>
+                {task.cwd ? <KeyValueItem label="Directory" value={<span className="font-mono">{task.cwd}</span>} /> : null}
+                {task.model ? <KeyValueItem label="Model" value={<span className="font-mono">{task.model}</span>} /> : null}
+                {task.timeoutSeconds ? <KeyValueItem label="Timeout" value={`${task.timeoutSeconds}s`} /> : null}
+              </KeyValueList>
+            </ContextRailSection>
+          </div>
+        ) : null}
+      </ContextRailBody>
+    </ContextRail>
   );
 }
 

@@ -3,7 +3,7 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ImageProbeSettings } from '../../../../../extensions/system-image-probe/src/frontend';
+import { MultimediaProbeSettings } from '../../../../../extensions/system-image-probe/src/frontend';
 import { api } from '../client/api';
 import { useApi } from '../hooks/useApi';
 
@@ -32,7 +32,7 @@ function renderPanel() {
   const root = createRoot(container);
 
   act(() => {
-    root.render(<ImageProbeSettings />);
+    root.render(<MultimediaProbeSettings />);
   });
 
   mountedRoots.push(root);
@@ -154,6 +154,6 @@ describe('ImageProbeSettings', () => {
     const visionSelect = container.querySelector<HTMLSelectElement>('#settings-image-probe-vision-model');
     expect(visionSelect).toBeInstanceOf(HTMLSelectElement);
     expect(visionSelect!.value).toBe('openai-codex/gpt-5.4');
-    expect(container.textContent).toContain('Image questions use openai-codex/gpt-5.4.');
+    expect(container.textContent).toContain('Media questions use openai-codex/gpt-5.4.');
   });
 });

@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GatewaysPage, GatewaysSidebar } from './frontend';
+import { GatewaysContextRail, GatewaysPage } from './frontend';
 
 vi.mock('@neon-pilot/extensions/ui', () => ({
   AppPageIntro: ({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) => (
@@ -20,12 +20,53 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     tone: _tone,
     ...props
   }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; tone?: string }) => <button {...props}>{children}</button>,
-  CenteredLoadingState: ({ label }: { label: string }) => <div>{label}</div>,
+  ContextRail: ({ children }: { children: React.ReactNode }) => <aside>{children}</aside>,
+  ContextRailBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ContextRailHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
+    <header>
+      <h2>{title}</h2>
+      {subtitle ? <p>{subtitle}</p> : null}
+    </header>
+  ),
+  ContextRailSection: ({ title, children }: { title?: string; children: React.ReactNode }) => (
+    <section>
+      {title ? <h3>{title}</h3> : null}
+      {children}
+    </section>
+  ),
   ErrorState: ({ message }: { message: string }) => <div>{message}</div>,
+  IconButton: ({ children, compact: _compact, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }) => (
+    <button {...props}>{children}</button>
+  ),
+  KeyValueItem: ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  ),
+  KeyValueList: ({ children }: { children: React.ReactNode }) => <dl>{children}</dl>,
+  KeyValueTable: ({ items }: { columns?: number; items: Array<{ label: string; value: React.ReactNode }>; className?: string }) => (
+    <dl>
+      {items.map((item) => (
+        <div key={item.label}>
+          <dt>{item.label}</dt>
+          <dd>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  ),
   Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PanelMessage: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  QuietLoadingState: ({ label }: { label?: string }) => <div role="status" aria-label={label ?? 'Loading'} />,
+  SectionLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   StatusDot: () => <span data-testid="status-dot" />,
   Switch: ({ checked, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean }) => (
     <button type="button" role="switch" aria-checked={checked} onClick={onClick} {...props} />
+  ),
+  TextLink: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
@@ -105,11 +146,13 @@ describe('GatewaysPage', () => {
 
     render(<GatewaysPage />);
 
-    expect(screen.getByText('Loading gateways...')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Gateways' })).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading gateway settings' })).toBeTruthy();
+    expect(screen.queryByText('Loading gateway settings...')).toBeNull();
     expect(await screen.findByRole('heading', { name: 'Gateways' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Telegram' })).toBeTruthy();
     expect(screen.getByText('Configured')).toBeTruthy();
-    expect(screen.getByText('Gateways page')).toBeTruthy();
+    expect(screen.queryByText('Gateways page')).toBeNull();
   });
 
   it('saves and clears the bot token through the Telegram token route', async () => {
@@ -130,7 +173,7 @@ describe('GatewaysPage', () => {
     );
     expect(await screen.findByText('Telegram token saved and the gateway is enabled.')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Telegram bot token' }));
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
@@ -146,7 +189,7 @@ describe('GatewaysPage', () => {
 
     render(<GatewaysPage />);
     const toggle = await screen.findByLabelText('Enable Telegram gateway');
-    expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Test Telegram bot' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Enable gateway' })).toBeNull();
 
     fireEvent.click(toggle);
@@ -166,11 +209,11 @@ describe('GatewaysPage', () => {
     render(<GatewaysPage />);
     await screen.findByRole('heading', { name: 'Telegram' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Test bot' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Test Telegram bot' }));
     expect(await screen.findByText('Telegram responded as @neonpilot_bot.')).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText('Telegram user ID'), { target: { value: '1191448898' } });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Add approved users' }));
 
     await waitFor(() =>
       expect(calls).toContainEqual(
@@ -238,7 +281,7 @@ describe('GatewaysPage', () => {
     });
 
     expect(await screen.findByText('Needs attention')).toBeTruthy();
-    expect(await screen.findAllByText('Telegram polling failed: Unauthorized')).toHaveLength(2);
+    expect(await screen.findByText('Telegram polling failed: Unauthorized')).toBeTruthy();
   });
 
   it('shows server validation errors for invalid Telegram access IDs', async () => {
@@ -264,7 +307,7 @@ describe('GatewaysPage', () => {
     await screen.findByRole('heading', { name: 'Telegram' });
 
     fireEvent.change(screen.getByLabelText('Telegram user ID'), { target: { value: '@alice' } });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Add approved users' }));
 
     expect(await screen.findByText('Telegram access IDs must be numeric. Chat IDs may start with -.')).toBeTruthy();
   });
@@ -279,40 +322,31 @@ describe('GatewaysPage', () => {
   });
 });
 
-describe('GatewaysSidebar', () => {
-  it('renders the Telegram provider as a row, not a bordered card', async () => {
-    installFetchMock({ token: { configured: true } });
-
-    const { container } = render(<GatewaysSidebar />);
-
-    expect(await screen.findByText('Telegram')).toBeTruthy();
-    expect(screen.getByText('Needs setup')).toBeTruthy();
-
-    const providerRow = container.querySelector('.rounded-md.bg-elevated\\/55');
-    expect(providerRow).toBeTruthy();
-    expect(providerRow?.className).not.toContain('border');
-  });
-
-  it('reloads when gateway state is invalidated', async () => {
-    let gateway = baseGateway;
-    globalThis.fetch = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(path);
-      if (url === '/api/gateways') return jsonResponse(gateway);
-      if (url === '/api/gateways/telegram/token' && (!init?.method || init.method === 'GET')) return jsonResponse({ configured: true });
-      return jsonResponse({ error: `Unhandled ${url}` }, 404);
-    }) as never;
-
-    render(<GatewaysSidebar />);
-
-    expect(await screen.findByText('Needs setup')).toBeTruthy();
-    gateway = {
-      ...baseGateway,
-      connections: [{ ...baseGateway.connections[0], status: 'needs_attention', enabled: true }],
-    };
-    act(() => {
-      window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: ['gateways'] } }));
+describe('GatewaysContextRail', () => {
+  it('renders provider metadata and recent activity in the right rail', async () => {
+    installFetchMock({
+      token: { configured: true },
+      gateway: {
+        ...baseGateway,
+        connections: [{ ...baseGateway.connections[0], status: 'active', enabled: true }],
+        events: [
+          {
+            id: 'event-1',
+            provider: 'telegram',
+            kind: 'status',
+            message: 'Telegram gateway enabled',
+            createdAt: '2026-06-26T12:01:00.000Z',
+          },
+        ],
+      },
     });
 
-    expect(await screen.findByText('Needs attention')).toBeTruthy();
+    render(<GatewaysContextRail />);
+
+    expect(await screen.findByText('Telegram')).toBeTruthy();
+    expect(screen.queryByText('Loading gateway context...')).toBeNull();
+    expect(screen.getByText('Gateways page')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Telegram Bot API' }).getAttribute('href')).toBe('https://core.telegram.org/bots/api');
+    expect(screen.getByText('Telegram gateway enabled')).toBeTruthy();
   });
 });

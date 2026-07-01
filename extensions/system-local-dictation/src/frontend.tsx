@@ -5,6 +5,7 @@ import {
   IconButton,
   LoadingState,
   Notice,
+  QuietLoadingState,
   Select,
   SettingsRow,
   Spinner,
@@ -469,7 +470,7 @@ export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient; sett
 
   return (
     <div className="space-y-3">
-      {!settings ? <LoadingState label="Loading dictation settings..." /> : null}
+      {!settings ? <QuietLoadingState label="Loading dictation settings" className="min-h-12" /> : null}
       {settings ? (
         <div className="space-y-3">
           {runtime && !runtime.available ? (

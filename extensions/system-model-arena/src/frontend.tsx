@@ -1,5 +1,29 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageIntro, AppPageLayout, Button, ErrorState, Select, StatusDot, Switch, TextInput } from '@neon-pilot/extensions/ui';
+import {
+  AppPageIntro,
+  AppPageLayout,
+  Button,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
+  DataTable,
+  DataTableBody,
+  DataTableCell,
+  DataTableEmptyRow,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+  DataTableToolbar,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  QuietLoadingState,
+  Select,
+  StatusDot,
+  Switch,
+  TextInput,
+} from '@neon-pilot/extensions/ui';
 import React, { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 type ArenaSettings = {
@@ -205,18 +229,21 @@ function uniqueTasks(stats: ArenaState['stats'] | undefined): string[] {
   return [...tasks].sort((a, b) => a.localeCompare(b));
 }
 
+function publishModelArenaState(state: ArenaState) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<ArenaState>('neon-pilot-model-arena-state', { detail: state }));
+}
+
 export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
   const [state, setState] = useState<ArenaState | null>(null);
-  const [selectedModelRef, setSelectedModelRef] = useState('');
   const [taskFilter, setTaskFilter] = useState('all');
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const refresh = async () => {
     try {
       const next = (await pa.extension.invoke('getArenaState', {})) as ArenaState;
       setState(next);
-      setSelectedModelRef((current) => firstAvailableModelRef(next.models, next.settings.challengerModels, current));
+      publishModelArenaState(next);
       setError('');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -227,16 +254,13 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
     void refresh();
   }, []);
 
+  useEffect(() => {
+    const onState = (event: Event) => setState((event as CustomEvent<ArenaState>).detail);
+    window.addEventListener('neon-pilot-model-arena-state', onState);
+    return () => window.removeEventListener('neon-pilot-model-arena-state', onState);
+  }, []);
+
   const tasks = useMemo(() => uniqueTasks(state?.stats), [state?.stats]);
-  const selectableModels = useMemo(
-    () => (state?.models ?? []).filter((model) => !state?.settings.challengerModels.includes(modelRef(model))),
-    [state?.models, state?.settings.challengerModels],
-  );
-  const selectableModelGroups = useMemo(() => groupModelsByProvider(selectableModels), [selectableModels]);
-  const selectedModels = useMemo(() => {
-    const byRef = new Map((state?.models ?? []).map((model) => [modelRef(model), model]));
-    return (state?.settings.challengerModels ?? []).map((ref) => ({ ref, model: byRef.get(ref) }));
-  }, [state?.models, state?.settings.challengerModels]);
   const ranked = useMemo<RankedModelRow[]>(() => {
     return Object.values(state?.stats.models ?? {})
       .map((model) => {
@@ -259,14 +283,169 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
       .sort((a, b) => b.rating - a.rating || b.votes - a.votes);
   }, [state?.stats.models, taskFilter]);
 
+  if (error && !state) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <AppPageLayout contentClassName="space-y-4">
+          <AppPageIntro title="Model Arena" />
+          <ErrorState message={error} />
+        </AppPageLayout>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <AppPageLayout contentClassName="space-y-4">
+        <AppPageIntro
+          title="Model Arena"
+          actions={
+            <IconButton compact aria-label="Refresh Model Arena" title="Refresh Model Arena" onClick={() => void refresh()}>
+              <span aria-hidden="true">↻</span>
+            </IconButton>
+          }
+        />
+
+        <section className="space-y-3">
+          <DataTableToolbar
+            summary={
+              state
+                ? `${state.duels.length} recent duels · ${ranked.reduce((sum, model) => sum + model.votes, 0) / 2} votes · sample ${percent(
+                    state.settings.sampleRate,
+                  )}`
+                : 'Loading arena rankings'
+            }
+            filters={
+              <Select aria-label="Task type" value={taskFilter} onChange={(event) => setTaskFilter(event.target.value)}>
+                <option value="all">All task types</option>
+                {tasks.map((task) => (
+                  <option key={task} value={task}>
+                    {task}
+                  </option>
+                ))}
+              </Select>
+            }
+          />
+          <DataTable
+            aria-label="Model Arena rankings"
+            columns={
+              <colgroup>
+                <col className="w-[46%]" />
+                <col className="w-[12%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+              </colgroup>
+            }
+          >
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableHeaderCell>Model</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right">Rating</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right">Votes</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right">Wins</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right">Losses</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right">Confidence</DataTableHeaderCell>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              {!state ? (
+                <DataTableEmptyRow colSpan={6} cellClassName="py-8">
+                  <QuietLoadingState label="Loading Model Arena rankings" />
+                </DataTableEmptyRow>
+              ) : ranked.length === 0 ? (
+                <DataTableEmptyRow colSpan={6} cellClassName="py-10 text-left">
+                  <EmptyState
+                    eyebrow="Table page"
+                    title="No model votes yet"
+                    body="Model Arena records votes after challenger models compare answers in conversations."
+                    steps={[
+                      'Add at least one challenger model in the right rail.',
+                      'Leave automatic duels on.',
+                      'Vote when a duel appears in a conversation.',
+                    ]}
+                    align="start"
+                    className="max-w-[34rem]"
+                  />
+                </DataTableEmptyRow>
+              ) : (
+                ranked.map((model) => (
+                  <DataTableRow key={model.modelRef}>
+                    <DataTableCell className="min-w-0 py-2 pr-4">
+                      <div className="truncate font-mono text-[12px] text-primary">{model.modelRef}</div>
+                      {model.summary ? <div className="truncate text-[11px] text-dim">{model.summary}</div> : null}
+                    </DataTableCell>
+                    <DataTableCell className="py-2 text-right tabular-nums">{model.rating}</DataTableCell>
+                    <DataTableCell className="py-2 text-right tabular-nums">{model.votes}</DataTableCell>
+                    <DataTableCell className="py-2 text-right tabular-nums">{model.wins}</DataTableCell>
+                    <DataTableCell className="py-2 text-right tabular-nums">{model.losses}</DataTableCell>
+                    <DataTableCell className="py-2 text-right text-[11px] text-dim">{confidenceLabel(model.votes)}</DataTableCell>
+                  </DataTableRow>
+                ))
+              )}
+            </DataTableBody>
+          </DataTable>
+        </section>
+
+        {error ? <ErrorState message={error} /> : null}
+      </AppPageLayout>
+    </div>
+  );
+}
+
+export function ModelArenaContextRail({ pa }: ExtensionSurfaceProps) {
+  const [state, setState] = useState<ArenaState | null>(null);
+  const [selectedModelRef, setSelectedModelRef] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const refresh = async () => {
+    try {
+      const next = (await pa.extension.invoke('getArenaState', {})) as ArenaState;
+      setState(next);
+      setSelectedModelRef((current) => firstAvailableModelRef(next.models, next.settings.challengerModels, current));
+      publishModelArenaState(next);
+      setError('');
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : String(loadError));
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  useEffect(() => {
+    const onState = (event: Event) => {
+      const next = (event as CustomEvent<ArenaState>).detail;
+      setState(next);
+      setSelectedModelRef((current) => firstAvailableModelRef(next.models, next.settings.challengerModels, current));
+    };
+    window.addEventListener('neon-pilot-model-arena-state', onState);
+    return () => window.removeEventListener('neon-pilot-model-arena-state', onState);
+  }, []);
+
+  const selectableModels = useMemo(
+    () => (state?.models ?? []).filter((model) => !state?.settings.challengerModels.includes(modelRef(model))),
+    [state?.models, state?.settings.challengerModels],
+  );
+  const selectableModelGroups = useMemo(() => groupModelsByProvider(selectableModels), [selectableModels]);
+  const selectedModels = useMemo(() => {
+    const byRef = new Map((state?.models ?? []).map((model) => [modelRef(model), model]));
+    return (state?.settings.challengerModels ?? []).map((ref) => ({ ref, model: byRef.get(ref) }));
+  }, [state?.models, state?.settings.challengerModels]);
+
   const save = async (patch: Partial<ArenaSettings> = {}) => {
     if (!state || saving) return;
     setSaving(true);
     try {
       const settings = { ...state.settings, ...patch };
       const result = (await pa.extension.invoke('saveArenaSettings', settings)) as { settings: ArenaSettings };
-      setState({ ...state, settings: result.settings });
+      const next = { ...state, settings: result.settings };
+      setState(next);
       setSelectedModelRef((current) => firstAvailableModelRef(state.models, result.settings.challengerModels, current));
+      publishModelArenaState(next);
       setError('');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : String(saveError));
@@ -285,225 +464,175 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
     await save({ challengerModels: state.settings.challengerModels.filter((model) => model !== ref) });
   };
 
-  if (error && !state) {
+  if (error && !state)
     return (
-      <div className="flex h-full items-center justify-center px-6">
+      <div className="p-4">
         <ErrorState message={error} />
       </div>
     );
-  }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <AppPageLayout contentClassName="space-y-4">
-        <AppPageIntro
-          title="Model Arena"
-          actions={
-            <div className="flex items-center gap-2">
-              {state ? (
-                <Switch
-                  checked={state.settings.automaticDuels}
-                  disabled={saving}
-                  aria-label={state.settings.automaticDuels ? 'Disable Model Arena' : 'Enable Model Arena'}
-                  label={state.settings.automaticDuels ? 'On' : 'Off'}
-                  onClick={() => void save({ automaticDuels: !state.settings.automaticDuels })}
-                />
-              ) : null}
-              <Button variant="secondary" disabled={saving} onClick={() => void refresh()}>
-                Refresh
-              </Button>
-            </div>
-          }
-        />
-
-        <div className="grid gap-4 lg:grid-cols-[minmax(20rem,0.8fr)_minmax(28rem,1.2fr)]">
-          <section className="rounded-md border border-border-subtle bg-panel/60">
-            <div className="border-b border-border-subtle px-3 py-2 text-[12px] font-medium text-primary">Setup</div>
-            {state ? (
-              <div className="divide-y divide-border-subtle text-[12px]">
-                <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-2">
-                  <div>
-                    <div className="text-primary">Status</div>
-                    <div className="text-dim">
-                      {state.settings.automaticDuels && state.settings.challengerModels.length > 0
-                        ? 'Arena is comparing challenger runs against each conversation’s selected model.'
-                        : state.settings.challengerModels.length === 0
-                          ? 'Add challenger models to compare against the model selected in each conversation.'
-                          : 'Arena is paused.'}
-                    </div>
-                  </div>
-                  <StatusDot tone={state.settings.automaticDuels && state.settings.challengerModels.length > 0 ? 'success' : 'warning'} />
-                </div>
-                <div className="space-y-2 px-3 py-2">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                    <Select
-                      aria-label="Challenger model"
-                      value={selectedModelRef}
-                      onChange={(event) => setSelectedModelRef(event.target.value)}
-                      disabled={selectableModels.length === 0 || saving}
-                    >
-                      {selectableModels.length === 0 ? (
-                        <option value="">{state.models.length === 0 ? 'No runnable models available' : 'No more models available'}</option>
-                      ) : null}
-                      {selectableModelGroups.map((group) => (
-                        <optgroup key={group.provider} label={group.provider}>
-                          {group.models.map((model) => (
-                            <option key={modelRef(model)} value={modelRef(model)}>
-                              {modelOptionLabel(model)}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </Select>
-                    <Button variant="secondary" disabled={!selectedModelRef || saving} onClick={() => void addModel()}>
-                      Add
-                    </Button>
-                  </div>
-                  <div className="divide-y divide-border-subtle rounded-md border border-border-subtle">
-                    {selectedModels.length === 0 ? (
-                      <div className="px-3 py-3 text-dim">
-                        {state.models.length === 0
-                          ? 'No runnable challenger models available. Add a provider key in Settings, then refresh.'
-                          : 'No challenger models selected. Challengers run against the active conversation model.'}
-                      </div>
-                    ) : (
-                      selectedModels.map(({ ref, model }) => (
-                        <div key={ref} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
-                          <div className="min-w-0">
-                            <div className="truncate text-primary">{model ? modelLabel(model) : ref}</div>
-                            <div className="truncate font-mono text-[11px] text-dim">{ref}</div>
-                          </div>
-                          <Button variant="ghost" disabled={saving} onClick={() => void removeModel(ref)}>
-                            Remove
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <label className="grid grid-cols-[1fr_5rem] items-center gap-3 px-3 py-2">
-                  <span>
-                    <span className="block text-primary">Initial sample rate</span>
-                    <span className="text-dim">Used until enough votes accumulate.</span>
-                  </span>
-                  <TextInput
-                    className="text-right"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={Math.round(state.settings.sampleRate * 100)}
-                    onChange={(event) =>
-                      setState({ ...state, settings: { ...state.settings, sampleRate: Number(event.target.value) / 100 } })
-                    }
-                    onBlur={() => void save()}
-                  />
-                </label>
-                <label className="grid grid-cols-[1fr_5rem] items-center gap-3 px-3 py-2">
-                  <span>
-                    <span className="block text-primary">Later sample rate</span>
-                    <span className="text-dim">Applied after the ramp-down threshold.</span>
-                  </span>
-                  <TextInput
-                    className="text-right"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={Math.round(state.settings.rampedSampleRate * 100)}
-                    onChange={(event) =>
-                      setState({ ...state, settings: { ...state.settings, rampedSampleRate: Number(event.target.value) / 100 } })
-                    }
-                    onBlur={() => void save()}
-                  />
-                </label>
-                <label className="grid grid-cols-[1fr_5rem] items-center gap-3 px-3 py-2">
-                  <span>
-                    <span className="block text-primary">Ramp down after</span>
-                    <span className="text-dim">Votes to collect before using the later sample rate.</span>
-                  </span>
-                  <TextInput
-                    className="text-right"
-                    type="number"
-                    min={0}
-                    max={5000}
-                    value={state.settings.rampDownAfterVotes}
-                    onChange={(event) =>
-                      setState({ ...state, settings: { ...state.settings, rampDownAfterVotes: Number(event.target.value) } })
-                    }
-                    onBlur={() => void save()}
-                  />
-                </label>
-                <label className="grid grid-cols-[1fr_5rem] items-center gap-3 px-3 py-2">
-                  <span>
-                    <span className="block text-primary">Minimum prompt length</span>
-                    <span className="text-dim">Shorter prompts are skipped.</span>
-                  </span>
-                  <TextInput
-                    className="text-right"
-                    type="number"
-                    min={0}
-                    max={2000}
-                    value={state.settings.minPromptChars}
-                    onChange={(event) =>
-                      setState({ ...state, settings: { ...state.settings, minPromptChars: Number(event.target.value) } })
-                    }
-                    onBlur={() => void save()}
-                  />
-                </label>
-              </div>
-            ) : null}
-          </section>
-
-          <section className="rounded-md border border-border-subtle bg-panel/60">
-            <div className="grid grid-cols-[1fr_12rem] items-center gap-3 border-b border-border-subtle px-3 py-2">
-              <div className="text-[12px] font-medium text-primary">Preferences</div>
-              <Select aria-label="Task type" value={taskFilter} onChange={(event) => setTaskFilter(event.target.value)}>
-                <option value="all">All task types</option>
-                {tasks.map((task) => (
-                  <option key={task} value={task}>
-                    {task}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_6rem] border-b border-border-subtle px-3 py-2 text-[11px] font-medium uppercase text-dim">
-              <span>Model</span>
-              <span className="text-right">Rating</span>
-              <span className="text-right">Votes</span>
-              <span className="text-right">Wins</span>
-              <span className="text-right">Losses</span>
-              <span className="text-right">Confidence</span>
-            </div>
-            <div className="divide-y divide-border-subtle text-[12px]">
-              {ranked.length === 0 ? (
-                <div className="px-3 py-8 text-center text-dim">No votes recorded yet.</div>
-              ) : (
-                ranked.map((model) => (
-                  <div key={model.modelRef} className="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem_6rem] items-center px-3 py-2">
-                    <span className="min-w-0">
-                      <span className="block truncate font-mono text-primary">{model.modelRef}</span>
-                      {model.summary ? <span className="block truncate text-[11px] text-dim">{model.summary}</span> : null}
-                    </span>
-                    <span className="text-right tabular-nums">{model.rating}</span>
-                    <span className="text-right tabular-nums">{model.votes}</span>
-                    <span className="text-right tabular-nums">{model.wins}</span>
-                    <span className="text-right tabular-nums">{model.losses}</span>
-                    <span className="text-right text-[11px] text-dim">{confidenceLabel(model.votes)}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
-
+    <ContextRail>
+      <ContextRailHeader
+        eyebrow="Arena setup"
+        title="Model Arena"
+        subtitle={state?.settings.automaticDuels ? 'Automatic duels on' : 'Automatic duels off'}
+        actions={
+          state ? (
+            <Switch
+              checked={state.settings.automaticDuels}
+              disabled={saving}
+              aria-label={state.settings.automaticDuels ? 'Disable Model Arena' : 'Enable Model Arena'}
+              label={state.settings.automaticDuels ? 'On' : 'Off'}
+              onClick={() => void save({ automaticDuels: !state.settings.automaticDuels })}
+            />
+          ) : null
+        }
+      />
+      <ContextRailBody>
         {state ? (
-          <div className="text-[11px] text-dim">
-            {state.duels.length} recent duels · {ranked.reduce((sum, model) => sum + model.votes, 0) / 2} votes · sample{' '}
-            {percent(state.settings.sampleRate)}
+          <>
+            <ContextRailSection title="Status">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-[12px] leading-5 text-secondary">
+                <div className="min-w-0">
+                  {state.settings.automaticDuels && state.settings.challengerModels.length > 0
+                    ? 'Comparing challenger runs against each conversation model.'
+                    : state.settings.challengerModels.length === 0
+                      ? 'Add challenger models before automatic duels can run.'
+                      : 'Arena is paused.'}
+                </div>
+                <StatusDot tone={state.settings.automaticDuels && state.settings.challengerModels.length > 0 ? 'success' : 'warning'} />
+              </div>
+            </ContextRailSection>
+
+            <ContextRailSection title="Challengers">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                <Select
+                  aria-label="Challenger model"
+                  value={selectedModelRef}
+                  onChange={(event) => setSelectedModelRef(event.target.value)}
+                  disabled={selectableModels.length === 0 || saving}
+                >
+                  {selectableModels.length === 0 ? (
+                    <option value="">{state.models.length === 0 ? 'No runnable models available' : 'No more models available'}</option>
+                  ) : null}
+                  {selectableModelGroups.map((group) => (
+                    <optgroup key={group.provider} label={group.provider}>
+                      {group.models.map((model) => (
+                        <option key={modelRef(model)} value={modelRef(model)}>
+                          {modelOptionLabel(model)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
+                <IconButton
+                  aria-label="Add challenger model"
+                  title="Add challenger model"
+                  disabled={!selectedModelRef || saving}
+                  onClick={() => void addModel()}
+                >
+                  <span aria-hidden="true">+</span>
+                </IconButton>
+              </div>
+              {selectedModels.length === 0 ? (
+                <EmptyState
+                  title={state.models.length === 0 ? 'No runnable models' : 'No challengers selected'}
+                  body={
+                    state.models.length === 0
+                      ? 'Add a model provider in Settings, then refresh this rail.'
+                      : 'Choose a challenger model so the arena can compare conversation answers.'
+                  }
+                  steps={
+                    state.models.length === 0
+                      ? ['Open Settings.', 'Add or verify a provider key.', 'Refresh Model Arena.']
+                      : ['Choose a model.', 'Add it as a challenger.']
+                  }
+                  align="start"
+                />
+              ) : (
+                <div className="divide-y divide-border-subtle">
+                  {selectedModels.map(({ ref, model }) => (
+                    <div key={ref} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-[12px] text-primary">{model ? modelLabel(model) : ref}</div>
+                        <div className="truncate font-mono text-[11px] text-dim">{ref}</div>
+                      </div>
+                      <Button variant="ghost" tone="danger" disabled={saving} onClick={() => void removeModel(ref)}>
+                        <span aria-hidden="true">-</span>
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ContextRailSection>
+
+            <ContextRailSection title="Sampling">
+              <label className="grid grid-cols-[1fr_5rem] items-center gap-3">
+                <span className="text-[12px] text-primary">Initial rate</span>
+                <TextInput
+                  className="text-right"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={Math.round(state.settings.sampleRate * 100)}
+                  onChange={(event) =>
+                    setState({ ...state, settings: { ...state.settings, sampleRate: Number(event.target.value) / 100 } })
+                  }
+                  onBlur={() => void save()}
+                />
+              </label>
+              <label className="grid grid-cols-[1fr_5rem] items-center gap-3">
+                <span className="text-[12px] text-primary">Later rate</span>
+                <TextInput
+                  className="text-right"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={Math.round(state.settings.rampedSampleRate * 100)}
+                  onChange={(event) =>
+                    setState({ ...state, settings: { ...state.settings, rampedSampleRate: Number(event.target.value) / 100 } })
+                  }
+                  onBlur={() => void save()}
+                />
+              </label>
+              <label className="grid grid-cols-[1fr_5rem] items-center gap-3">
+                <span className="text-[12px] text-primary">Ramp after</span>
+                <TextInput
+                  className="text-right"
+                  type="number"
+                  min={0}
+                  max={5000}
+                  value={state.settings.rampDownAfterVotes}
+                  onChange={(event) =>
+                    setState({ ...state, settings: { ...state.settings, rampDownAfterVotes: Number(event.target.value) } })
+                  }
+                  onBlur={() => void save()}
+                />
+              </label>
+              <label className="grid grid-cols-[1fr_5rem] items-center gap-3">
+                <span className="text-[12px] text-primary">Minimum prompt</span>
+                <TextInput
+                  className="text-right"
+                  type="number"
+                  min={0}
+                  max={2000}
+                  value={state.settings.minPromptChars}
+                  onChange={(event) => setState({ ...state, settings: { ...state.settings, minPromptChars: Number(event.target.value) } })}
+                  onBlur={() => void save()}
+                />
+              </label>
+            </ContextRailSection>
+          </>
+        ) : null}
+        {error ? (
+          <div className="mt-4">
+            <ErrorState message={error} />
           </div>
         ) : null}
-        {error ? <ErrorState message={error} /> : null}
-      </AppPageLayout>
-    </div>
+      </ContextRailBody>
+    </ContextRail>
   );
 }
 

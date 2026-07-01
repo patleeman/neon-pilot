@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 
 import { recordClientPerfTimingOnce } from '../client/perfDiagnostics';
 import { Layout } from '../components/Layout';
-import { Button, ButtonLink, CenteredLoadingState, Notice, SectionLabel, SurfacePanel } from '../components/ui';
+import { Button, ButtonLink, Notice, QuietLoadingState, SectionLabel, SurfacePanel } from '../components/ui';
 import { resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
 import {
   hasDraftConversationAttachments,
@@ -103,7 +103,7 @@ function ConversationsRouteRedirect() {
     hasDraftConversationContextDocs();
 
   if (layoutHydrating) {
-    return <CenteredLoadingState label="Loading..." />;
+    return <QuietLoadingState label="Loading conversations" />;
   }
 
   const redirectPath = resolveConversationIndexRedirect({
@@ -122,7 +122,7 @@ function readConversationNavigationStart(conversationId: string): number | null 
 }
 
 function suspendRoute(element: React.ReactNode) {
-  return <Suspense fallback={<CenteredLoadingState label="Loading..." />}>{element}</Suspense>;
+  return <Suspense fallback={<QuietLoadingState label="Loading route" />}>{element}</Suspense>;
 }
 
 function DraftConversationRoute() {

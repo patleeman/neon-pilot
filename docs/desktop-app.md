@@ -102,7 +102,7 @@ Desktop menu shortcuts are configurable in Settings → Desktop. Host and extens
 | Toggle workbench explorer | `Cmd/Ctrl+B`       |
 | Toggle workbench diff     | `Cmd/Ctrl+Shift+D` |
 | Toggle left sidebar       | `Cmd/Ctrl+/`       |
-| Toggle right rail         | `Cmd/Ctrl+\`       |
+| Toggle right sidebar      | `Cmd/Ctrl+\`       |
 
 ## Routes
 

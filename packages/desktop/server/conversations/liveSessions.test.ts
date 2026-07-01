@@ -1541,8 +1541,26 @@ describe('live session subscriptions', () => {
       },
     });
 
-    await promptSession('session-prompt-control', 'from mirrored surface', undefined, undefined, undefined, 'mobile-1');
-    await promptSession('session-prompt-control', 'from controlling surface', undefined, undefined, undefined, 'desktop-1');
+    await promptSession(
+      'session-prompt-control',
+      'from mirrored surface',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'mobile-1',
+    );
+    await promptSession(
+      'session-prompt-control',
+      'from controlling surface',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'desktop-1',
+    );
 
     expect(prompt).toHaveBeenNthCalledWith(1, 'from mirrored surface');
     expect(prompt).toHaveBeenNthCalledWith(2, 'from controlling surface');
@@ -3903,6 +3921,8 @@ describe('submitPromptSession', () => {
     const submitted = await submitPromptSession(
       'session-submit-detached-surface',
       'send this anyway',
+      undefined,
+      undefined,
       undefined,
       undefined,
       undefined,

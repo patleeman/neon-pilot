@@ -74,7 +74,7 @@ const CONTEXT_REQUIRED_HOST_COMMANDS = new Map([
   ['conversation.copyWorkingDirectory', 'conversation.hasCwd'],
   ['conversation.saveTitle', 'conversation.titleEditorOpen'],
   ['conversation.cancelTitleEdit', 'conversation.titleEditorOpen'],
-  ['layout.toggleRightRail', 'layout.canToggleRightRail'],
+  ['layout.toggleRightRail', 'layout.canToggleRightSidebar'],
   ['conversation.next', 'conversation.canNavigate'],
   ['conversation.previous', 'conversation.canNavigate'],
   ['conversation.editCwd', 'conversation.canEditCwd'],

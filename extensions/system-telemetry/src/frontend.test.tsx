@@ -40,7 +40,9 @@ describe('TelemetryPage', () => {
 
     render(<TelemetryPage pa={{} as never} />);
 
-    expect(screen.getByText('Loading trace data…')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading diagnostics' })).toBeTruthy();
+    expect(screen.queryByText('Loading diagnostics...')).toBeNull();
   });
 
   it('renders errors with a retry action', () => {

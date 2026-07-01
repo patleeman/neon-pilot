@@ -12,6 +12,8 @@ const allowed = new Set([
   'packages/desktop/server/conversations/conversationTranscriptOps.ts',
   'packages/desktop/server/conversations/conversationTypes.ts',
   'packages/desktop/server/conversations/conversationService.ts',
+  // Isolated worker owned by conversationService for abortable transcript reads.
+  'packages/desktop/server/conversations/conversationTranscriptReadWorker.ts',
 ]);
 
 function walkTrackedFallback(dir) {

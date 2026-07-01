@@ -146,6 +146,66 @@ async function waitForLoadedBody(cdp, child, label, timeoutMs = 45_000) {
   throw new Error(`Timed out waiting for ${label}. Last body text:\n${lastBody.slice(-1200)}`);
 }
 
+async function waitForBodyWithout(cdp, child, label, pattern, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastBody = '';
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`App exited while waiting for ${label}.`);
+    const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
+    lastBody = body;
+    if (!pattern.test(body)) return body;
+    await sleep(250);
+  }
+  throw new Error(`Timed out waiting for ${label}. Last body text:\n${lastBody.slice(-1200)}`);
+}
+
+async function waitForPathname(cdp, child, route, timeoutMs = 20_000) {
+  const expected = route.split(/[?#]/)[0] || '/';
+  const deadline = Date.now() + timeoutMs;
+  let lastPathname = '';
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`App exited while waiting for route ${route}.`);
+    lastPathname = String(
+      await evalJs(
+        cdp,
+        `(() => {
+          try { return new URL(window.location.href).pathname || '/'; }
+          catch { return window.location.pathname || '/'; }
+        })()`,
+      ),
+    );
+    if (lastPathname === expected) return;
+    await sleep(200);
+  }
+  throw new Error(`Timed out waiting for route ${route}; last pathname was ${lastPathname || '(empty)'}.`);
+}
+
+async function clickVisibleButton(cdp, label) {
+  return evalJs(
+    cdp,
+    `(() => {
+      const targetLabel = ${JSON.stringify(label)};
+      const buttons = [...document.querySelectorAll('button')];
+      const button = buttons.find((item) => item.textContent?.trim() === targetLabel);
+      if (!button) return false;
+      button.click();
+      return true;
+    })()`,
+  );
+}
+
+async function dismissOnboardingOverlayIfRequested(cdp, child) {
+  if (!boolArg('skip-onboarding')) return;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    if (await clickVisibleButton(cdp, 'Skip tour')) {
+      await waitForBodyWithout(cdp, child, 'onboarding overlay to close', /TOUR \d+ OF \d+|Skip tour/i);
+      await sleep(250);
+      return;
+    }
+    await sleep(350);
+  }
+}
+
 async function requestJson(cdp, method, path, body) {
   const result = await evalJs(
     cdp,
@@ -303,8 +363,10 @@ async function stripTestingAttributes(cdp) {
 
 async function captureRoute(cdp, child, route, outDir, group, modes = captureModeSet()) {
   await cdp.send('Page.navigate', { url: `neon-pilot://app${route}` });
+  await waitForPathname(cdp, child, route);
   await waitForLoadedBody(cdp, child, route);
-  await sleep(900);
+  await sleep(1200);
+  await dismissOnboardingOverlayIfRequested(cdp, child);
   if (boolArg('strip-test-attrs')) await stripTestingAttributes(cdp);
   const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
   const captures = [];
@@ -314,6 +376,7 @@ async function captureRoute(cdp, child, route, outDir, group, modes = captureMod
   if (modes.has('viewport')) {
     await setPrimaryScrollFraction(cdp, 0);
     await sleep(250);
+    await dismissOnboardingOverlayIfRequested(cdp, child);
     captures.push({
       route,
       variant: 'viewport',
@@ -325,6 +388,7 @@ async function captureRoute(cdp, child, route, outDir, group, modes = captureMod
   if (modes.has('full') || modes.has('fullpage')) {
     await setPrimaryScrollFraction(cdp, 0);
     await sleep(250);
+    await dismissOnboardingOverlayIfRequested(cdp, child);
     captures.push({
       route,
       variant: 'full-page',
@@ -343,6 +407,7 @@ async function captureRoute(cdp, child, route, outDir, group, modes = captureMod
       ]) {
         await setPrimaryScrollFraction(cdp, fraction);
         await sleep(450);
+        await dismissOnboardingOverlayIfRequested(cdp, child);
         captures.push({
           route,
           variant,
@@ -612,6 +677,14 @@ export async function runVisualCapture() {
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
     await waitForLoadedBody(cdp, child, 'initial route');
+    if (boolArg('skip-onboarding')) {
+      await postJson(cdp, '/api/extensions/system-onboarding/actions/update', { status: 'skipped', stepIndex: 0 });
+      await cdp.send('Page.reload', { ignoreCache: true });
+      await waitForLoadedBody(cdp, child, 'post-onboarding-skip route');
+      if (await clickVisibleButton(cdp, 'Skip tour')) {
+        await waitForBodyWithout(cdp, child, 'onboarding overlay to close', /TOUR \d+ OF \d+|Skip tour/i);
+      }
+    }
 
     const baseline = [];
     for (const route of baselineRoutes) {

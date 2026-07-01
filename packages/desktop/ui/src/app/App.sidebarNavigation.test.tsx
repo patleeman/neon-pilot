@@ -536,9 +536,9 @@ describe('App sidebar conversation navigation workflow', () => {
       archivedSessionIds: ['conv-second'],
       activeConversationId: null,
     };
-    ({ root } = await renderAppAt('/automations'));
+    ({ root } = await renderAppAt('/conversations'));
 
-    await screen.findByText('No conversations yet.');
+    expect(await screen.findByText('No conversations yet.')).toBeTruthy();
     expect(document.querySelector('[data-sidebar-session-id="conv-second"]')).toBeNull();
 
     workspaceLayout = {

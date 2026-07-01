@@ -1,4 +1,4 @@
-export type HostViewComponentLocation = 'main' | 'rightRail' | 'workbench';
+export type HostViewComponentLocation = 'main' | 'sidebar' | 'rightRail' | 'workbench';
 
 export interface HostViewComponentOverrideSlotDefinition {
   description: string;

@@ -3,9 +3,9 @@ import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
-import type { readSessionBlocksWithTelemetry } from './sessions.js';
+import type { SessionDetailRouteReadResult } from './conversationService.js';
 
-type TranscriptReadResult = ReturnType<typeof readSessionBlocksWithTelemetry>;
+type TranscriptReadResult = SessionDetailRouteReadResult;
 
 interface WorkerRequest {
   id: number;

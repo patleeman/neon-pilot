@@ -100,6 +100,29 @@ describe('NativeExtensionSurfaceHost', () => {
     expect(host?.className).not.toContain('bg-base');
   });
 
+  it('uses transparent chrome for right rail extension surfaces', async () => {
+    const surface: NativeExtensionViewSummary = {
+      extensionId: 'system-model-arena',
+      id: 'model-arena-context-rail',
+      title: 'Model Arena Context',
+      location: 'rightRail',
+      component: 'ModelArenaContextRail',
+      frontend: { entry: 'dist/frontend.js' },
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/model-arena" search="" hash="" />);
+    });
+
+    const host = container.querySelector('[data-extension-surface-id="model-arena-context-rail"]');
+    expect(host?.className).toContain('bg-transparent');
+    expect(host?.className).not.toContain('bg-base');
+  });
+
   it('lazy-loads a native system extension component with PA props', async () => {
     const surface: NativeExtensionViewSummary = {
       extensionId: 'system-automations',

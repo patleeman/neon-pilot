@@ -89,6 +89,7 @@ export function DesktopTopBar({
   sidebarToggleLabel,
   showRailToggle,
   railOpen,
+  railToggleLabel,
   onToggleRail,
   trailingExtra,
 }: {
@@ -98,11 +99,13 @@ export function DesktopTopBar({
   sidebarToggleLabel?: { open: string; closed: string };
   showRailToggle: boolean;
   railOpen: boolean;
+  railToggleLabel?: { open: string; closed: string };
   onToggleRail: () => void;
   trailingExtra?: React.ReactNode;
 }) {
   const location = useLocation();
   const effectiveSidebarToggleLabel = sidebarToggleLabel ?? { open: 'Hide sidebar', closed: 'Show sidebar' };
+  const effectiveRailToggleLabel = railToggleLabel ?? { open: 'Hide right sidebar', closed: 'Show right sidebar' };
   const { topBarElements } = useExtensionRegistry();
   const searchShellRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -275,8 +278,9 @@ export function DesktopTopBar({
 
   useEffect(() => {
     function handlePaletteShortcut(event: Event) {
-      const detail = (event as CustomEvent<{ anchorRect?: unknown; query?: string }>).detail;
+      const detail = (event as CustomEvent<{ anchorRect?: unknown; query?: string; scope?: unknown }>).detail;
       if (detail?.anchorRect) return;
+      if (typeof detail?.scope === 'string' && detail.scope.trim().length > 0) return;
       event.stopImmediatePropagation();
       const input = searchInputRef.current;
       if (!input) return;
@@ -382,15 +386,16 @@ export function DesktopTopBar({
           </ToolbarButton>
         ) : null}
         {trailingExtra}
-        <ToolbarButton
-          className="ui-desktop-top-bar__icon-button"
-          onClick={onToggleRail}
-          disabled={!showRailToggle}
-          aria-label={showRailToggle ? (railOpen ? 'Hide workbench' : 'Show workbench') : 'Workbench unavailable'}
-          title={showRailToggle ? (railOpen ? 'Hide workbench' : 'Show workbench') : 'Workbench unavailable'}
-        >
-          <RightRailToggleIcon open={showRailToggle ? railOpen : false} />
-        </ToolbarButton>
+        {showRailToggle ? (
+          <ToolbarButton
+            className="ui-desktop-top-bar__icon-button"
+            onClick={onToggleRail}
+            aria-label={railOpen ? effectiveRailToggleLabel.open : effectiveRailToggleLabel.closed}
+            title={railOpen ? effectiveRailToggleLabel.open : effectiveRailToggleLabel.closed}
+          >
+            <RightRailToggleIcon open={railOpen} />
+          </ToolbarButton>
+        ) : null}
       </div>
     </div>
   );

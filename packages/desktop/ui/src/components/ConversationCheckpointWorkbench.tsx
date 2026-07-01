@@ -596,7 +596,7 @@ export function ConversationCheckpointWorkbenchPane({
   }, [scrollToFile, checkpoint]);
 
   if (!checkpointId) {
-    return <CenteredMessage eyebrow="Diffs" title="Select a diff" body="Pick a saved conversation diff from the right rail." />;
+    return <CenteredMessage eyebrow="Diffs" title="Select a diff" body="Pick a saved conversation diff from the right sidebar." />;
   }
 
   // Uncommitted mode — show working tree diffs

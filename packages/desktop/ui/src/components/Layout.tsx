@@ -33,6 +33,7 @@ import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from '../extensions/extensionModa
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
 import { findMatchingExtensionKeybinding, isShortcutCaptureActive, isShortcutCaptureEventTarget } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
+import { readExtensionSelection, setExtensionSelection } from '../extensions/selection';
 import {
   type ExtensionCommandRegistration,
   type ExtensionKeybindingRegistration,
@@ -40,7 +41,6 @@ import {
   type ExtensionSurfaceSummary,
   getExtensionViewPlacement,
   isExtensionRightToolPanelSurface,
-  isNativeExtensionPageSurface,
   isNativeExtensionRightRailSurface,
   isNativeExtensionWorkbenchSurface,
   type NativeExtensionViewSummary,
@@ -133,6 +133,12 @@ import {
 import { useConversationArtifactSummaries } from './conversationArtifactHooks';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar';
 import {
+  buildRouteShellNavItems,
+  resolveActiveRouteShellNavItem,
+  resolveRouteRightSidebarSurface,
+  type RouteShellNavItem,
+} from './layout/routeShellRegions';
+import {
   extensionToolPanelMode,
   findExtensionToolPanelBySlot,
   inferSurfaceToolSlot,
@@ -181,6 +187,36 @@ const NOTIFICATIONS_DISMISS_ALL_EVENT = 'neon-pilot-notifications-dismiss-all';
 const NOTIFICATIONS_CLOSE_EVENT = 'neon-pilot-notifications-close';
 const SETUP_READINESS_CLOSE_EVENT = 'neon-pilot-setup-readiness-close';
 const SIDEBAR_AUTO_COLLAPSE_WIDTH = 720;
+const LEGACY_ROUTE_RIGHT_RAIL_OPEN_STORAGE_KEY_PREFIX = 'pa:right-rail-open:';
+const ROUTE_RIGHT_SIDEBAR_OPEN_STORAGE_KEY_PREFIX = 'pa:right-sidebar-open:';
+
+function buildRouteRightRailOpenStorageKey(pathname: string): string {
+  return `${ROUTE_RIGHT_SIDEBAR_OPEN_STORAGE_KEY_PREFIX}${encodeURIComponent(pathname || '/')}`;
+}
+
+function buildLegacyRouteRightRailOpenStorageKey(pathname: string): string {
+  return `${LEGACY_ROUTE_RIGHT_RAIL_OPEN_STORAGE_KEY_PREFIX}${encodeURIComponent(pathname || '/')}`;
+}
+
+function readStoredRouteRightRailOpen(pathname: string): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const stored = window.localStorage.getItem(buildRouteRightRailOpenStorageKey(pathname));
+    if (stored !== null) return stored !== 'closed';
+    return window.localStorage.getItem(buildLegacyRouteRightRailOpenStorageKey(pathname)) !== 'closed';
+  } catch {
+    return true;
+  }
+}
+
+function writeStoredRouteRightRailOpen(pathname: string, open: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(buildRouteRightRailOpenStorageKey(pathname), open ? 'open' : 'closed');
+  } catch {
+    // Ignore storage failures; the visible state still updates for this session.
+  }
+}
 
 const WorkspaceExplorer = lazyRouteWithRecovery('layout-workspace-explorer', () =>
   import('./workspace/WorkspaceExplorer').then((module) => ({ default: module.WorkspaceExplorer })),
@@ -681,6 +717,16 @@ export function resolveActiveWorkspaceCwd(
   return session?.cwd ?? null;
 }
 
+function isChatWorkspaceCwd(cwd: string | null | undefined): boolean {
+  if (!cwd) return false;
+  const normalized = cwd.replace(/\\/g, '/').replace(/\/+$/, '');
+  return normalized.endsWith('/chat-workspaces') || normalized.includes('/chat-workspaces/');
+}
+
+function hasProjectWorkspaceCwd(cwd: string | null | undefined): boolean {
+  return Boolean(cwd?.trim()) && !isChatWorkspaceCwd(cwd);
+}
+
 function hasBlockingOverlayOpen(): boolean {
   return document.querySelector('.ui-overlay-backdrop') !== null;
 }
@@ -1089,6 +1135,7 @@ function WorkbenchDocumentPane({
       <WorkbenchNewTabPage
         extensionToolPanels={extensionToolPanels}
         conversationId={conversationId}
+        workspaceCwd={workspaceCwd ?? null}
         onActiveToolChange={onActiveToolChange}
         onWorkspaceFileClear={onWorkspaceFileClear}
         onStartSideChat={onStartSideChat}
@@ -1324,22 +1371,25 @@ function WorkbenchPanel({
 function WorkbenchNewTabPage({
   extensionToolPanels,
   conversationId,
+  workspaceCwd,
   onActiveToolChange,
   onWorkspaceFileClear,
   onStartSideChat,
 }: {
   extensionToolPanels: Array<(ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary>;
   conversationId: string | null;
+  workspaceCwd: string | null;
   onActiveToolChange: (mode: WorkbenchRailMode) => void;
   onWorkspaceFileClear: () => void;
   onStartSideChat?: () => Promise<string | void>;
 }) {
   const availableTools = extensionToolPanels.filter((surface) => {
     const slot = inferSurfaceToolSlot(surface);
-    return shouldRenderWorkbenchToolInNav(surface) && slot !== 'artifacts' && slot !== 'terminal';
+    return shouldRenderWorkbenchToolInNav(surface) && slot !== 'artifacts' && slot !== 'files' && slot !== 'terminal';
   });
   const systemFilesExtensionSurface = findExtensionToolPanelBySlot(extensionToolPanels, 'files');
   const systemTerminalExtensionSurface = findExtensionToolPanelBySlot(extensionToolPanels, 'terminal');
+  const canOpenFileExplorer = hasProjectWorkspaceCwd(workspaceCwd);
   const [sideChatStarting, setSideChatStarting] = useState(false);
 
   function openTool(surface: (ExtensionRightToolPanelSurface & ExtensionSurfaceSummary) | NativeExtensionViewSummary) {
@@ -1363,14 +1413,16 @@ function WorkbenchNewTabPage({
         <SectionLabel tone="secondary">Workbench</SectionLabel>
         <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
         <div className="ui-workbench-new-tab-grid mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(10rem,100%),1fr))] gap-2">
-          <ActionTile
-            icon="□"
-            label="File Explorer"
-            onClick={() => {
-              onActiveToolChange(systemFilesExtensionSurface ? extensionToolPanelMode(systemFilesExtensionSurface) : 'files');
-              onWorkspaceFileClear();
-            }}
-          />
+          {canOpenFileExplorer ? (
+            <ActionTile
+              icon="□"
+              label="File Explorer"
+              onClick={() => {
+                onActiveToolChange(systemFilesExtensionSurface ? extensionToolPanelMode(systemFilesExtensionSurface) : 'files');
+                onWorkspaceFileClear();
+              }}
+            />
+          ) : null}
           {onStartSideChat && conversationId ? (
             <ActionTile
               data-workbench-new-tab-action="chat"
@@ -1794,13 +1846,43 @@ export function Layout() {
     storageKey: WORKBENCH_DOCUMENT_WIDTH_STORAGE_KEY,
     side: 'right',
   });
-  const [railOpen, setRailOpen] = useState(true);
+  const [railOpen, setRailOpen] = useState(() => readStoredRouteRightRailOpen(location.pathname));
   const pageSearchRootRef = useRef<HTMLDivElement | null>(null);
   const [registeredRightRailControl, setRegisteredRightRailControl] = useState<DesktopRightRailControl | null>(null);
   const railWidth = rail.width;
   const extensionRegistry = useExtensionRegistry();
+  const routeShellNavItems = useMemo<RouteShellNavItem[]>(
+    () => buildRouteShellNavItems(extensionRegistry.extensions),
+    [extensionRegistry.extensions],
+  );
+  const activeRouteShellNavItem = useMemo(
+    () => resolveActiveRouteShellNavItem(location.pathname, routeShellNavItems),
+    [location.pathname, routeShellNavItems],
+  );
+  const routeRightRailStorageRoute = activeRouteShellNavItem?.route ?? location.pathname;
+  const previousRouteShellRouteRef = useRef(routeRightRailStorageRoute);
   const [extensionKeybindings, setExtensionKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
   const [extensionCommands, setExtensionCommands] = useState<ExtensionCommandRegistration[]>([]);
+  useEffect(() => {
+    setRailOpen(readStoredRouteRightRailOpen(routeRightRailStorageRoute));
+  }, [routeRightRailStorageRoute]);
+  useEffect(() => {
+    if (previousRouteShellRouteRef.current === routeRightRailStorageRoute) return;
+    previousRouteShellRouteRef.current = routeRightRailStorageRoute;
+    if (readExtensionSelection()?.kind === 'resource') {
+      setExtensionSelection(null);
+    }
+  }, [routeRightRailStorageRoute]);
+  const setRouteRightRailOpen = useCallback(
+    (nextOpen: boolean | ((current: boolean) => boolean)) => {
+      setRailOpen((current) => {
+        const next = typeof nextOpen === 'function' ? nextOpen(current) : nextOpen;
+        writeStoredRouteRightRailOpen(routeRightRailStorageRoute, next);
+        return next;
+      });
+    },
+    [routeRightRailStorageRoute],
+  );
   useEffect(() => {
     writeStoredWorkbenchTabs({ tabs: openWorkbenchTabs, activeTabId: activeWorkbenchTabId });
   }, [activeWorkbenchTabId, openWorkbenchTabs]);
@@ -1895,10 +1977,23 @@ export function Layout() {
       window.removeEventListener(DRAFT_CONVERSATION_STATE_CHANGED_EVENT, refreshDraftConversationCwd);
     };
   }, []);
+  const clearActiveWorkbenchFileSelection = useCallback(() => {
+    if (activeConversationId) {
+      setSelectedFileByConversation((current) => ({ ...current, [activeConversationId]: null }));
+      setSelectedWorkspaceFileByConversation((current) => ({ ...current, [activeConversationId]: null }));
+    }
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('file');
+      next.delete('workspaceFile');
+      return next;
+    });
+  }, [activeConversationId, setSearchParams]);
   const activeWorkspaceCwd = resolveActiveWorkspaceCwd(layoutSessions, activeConversationId, {
     pathname: location.pathname,
     draftCwd: draftConversationCwd,
   });
+  const activeHasProjectWorkspaceCwd = hasProjectWorkspaceCwd(activeWorkspaceCwd);
   useEffect(() => {
     if (!activeWorkspaceCwd) {
       return;
@@ -1930,23 +2025,27 @@ export function Layout() {
       }
     };
   }, [activeWorkspaceCwd]);
-  const clearActiveWorkbenchFileSelection = useCallback(() => {
-    if (activeConversationId) {
-      setSelectedFileByConversation((current) => ({ ...current, [activeConversationId]: null }));
-      setSelectedWorkspaceFileByConversation((current) => ({ ...current, [activeConversationId]: null }));
-    }
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete('file');
-      next.delete('workspaceFile');
-      return next;
+  useEffect(() => {
+    if (!activeConversationId) return;
+    if (activeHasProjectWorkspaceCwd) return;
+
+    setOpenWorkbenchTabs((current) => {
+      const nextTabs = current.filter((tab) => tab.mode !== 'files');
+      if (nextTabs.length === current.length) return current;
+      setActiveWorkbenchTabId((currentActiveTabId) =>
+        nextTabs.some((tab) => tab.id === currentActiveTabId) ? currentActiveTabId : (nextTabs[0]?.id ?? null),
+      );
+      return nextTabs;
     });
-  }, [activeConversationId, setSearchParams]);
+    clearActiveWorkbenchFileSelection();
+  }, [activeConversationId, activeHasProjectWorkspaceCwd, clearActiveWorkbenchFileSelection]);
 
   const extensionRightToolPanels = useMemo(
     () =>
       extensionRegistry.surfaces.filter(
-        (surface) => isExtensionRightToolPanelSurface(surface) || isNativeExtensionRightRailSurface(surface),
+        (surface) =>
+          isExtensionRightToolPanelSurface(surface) ||
+          (isNativeExtensionRightRailSurface(surface) && getExtensionViewPlacement(surface) === 'workbench-tool'),
       ),
     [extensionRegistry.surfaces],
   );
@@ -1964,20 +2063,12 @@ export function Layout() {
   );
   const routePrimaryRailSurface = useMemo(() => {
     if (showWorkbench) return null;
-    const pageSurface = extensionRegistry.surfaces.find(
-      (surface) => isNativeExtensionPageSurface(surface) && routeMatchesPrefix(location.pathname, surface.route),
-    );
-    if (!pageSurface) return null;
-    return (
-      extensionRightToolPanels.find(
-        (surface) =>
-          surface.extensionId === pageSurface.extensionId &&
-          'location' in surface &&
-          surface.location === 'rightRail' &&
-          getExtensionViewPlacement(surface) === 'primary',
-      ) ?? null
-    );
-  }, [extensionRegistry.surfaces, extensionRightToolPanels, location.pathname, showWorkbench]);
+    return resolveRouteRightSidebarSurface({
+      pathname: location.pathname,
+      navItems: routeShellNavItems,
+      surfaces: extensionRegistry.surfaces,
+    });
+  }, [extensionRegistry.surfaces, location.pathname, routeShellNavItems, showWorkbench]);
   const showRoutePrimaryRail = routePrimaryRailSurface !== null && railOpen;
   const knowledgeRouteFileId =
     !showWorkbench && routeIsKnowledge(location.pathname, extensionRegistry.surfaces) ? (searchParams.get('file') ?? null) : null;
@@ -2000,7 +2091,7 @@ export function Layout() {
   const activeWorkbenchAllowsRailSurface = shouldAllowWorkbenchRailSurface({
     activeToolSlot: activeWorkbenchToolSlot,
     hasPairedDocument: activeWorkbenchHasPairedDocument,
-    hasWorkspaceCwd: Boolean(activeWorkspaceCwd),
+    hasWorkspaceCwd: activeHasProjectWorkspaceCwd,
   });
   const activeWorkbenchRailSurface =
     showWorkbench &&
@@ -2044,13 +2135,19 @@ export function Layout() {
         setActiveWorkbenchTabId(null);
         return;
       }
-
-      // Compute next tabs state and derive next active tab ID from current state.
-      const current = openWorkbenchTabsRef.current;
       const parsed = parseExtensionToolPanelMode(tool);
       const surface = parsed
         ? extensionRightToolPanels.find((candidate) => candidate.extensionId === parsed.extensionId && candidate.id === parsed.surfaceId)
         : findExtensionToolPanelBySlot(extensionRightToolPanels, tool);
+      const toolSlot = surface ? inferSurfaceToolSlot(surface) : tool;
+      if (toolSlot === 'files' && !activeHasProjectWorkspaceCwd) {
+        clearActiveWorkbenchFileSelection();
+        setActiveWorkbenchTabId(null);
+        return;
+      }
+
+      // Compute next tabs state and derive next active tab ID from current state.
+      const current = openWorkbenchTabsRef.current;
       const singletonTabId = singletonWorkbenchToolTabId(tool, surface, activeConversationId);
       const normalizedOptions = singletonTabId
         ? { ...options, id: singletonTabId, conversationId: activeConversationId ?? options?.conversationId ?? null }
@@ -2086,7 +2183,7 @@ export function Layout() {
         }));
       }
     },
-    [activeConversationId, extensionRightToolPanels],
+    [activeConversationId, activeHasProjectWorkspaceCwd, clearActiveWorkbenchFileSelection, extensionRightToolPanels],
   );
 
   const setActiveConversationTool = useCallback(
@@ -2272,14 +2369,18 @@ export function Layout() {
     : routePrimaryRailSurface
       ? {
           railOpen: showRoutePrimaryRail,
-          toggleRail: () => setRailOpen((current) => !current),
+          toggleRail: () => setRouteRightRailOpen((current) => !current),
         }
       : registeredRightRailControl;
   const canToggleRightRail = canToggleWorkbench || activeRightRailControl !== null;
 
   useEffect(() => {
+    setExtensionCommandContext('layout.canToggleRightSidebar', canToggleRightRail);
     setExtensionCommandContext('layout.canToggleRightRail', canToggleRightRail);
-    return () => setExtensionCommandContext('layout.canToggleRightRail', null);
+    return () => {
+      setExtensionCommandContext('layout.canToggleRightSidebar', null);
+      setExtensionCommandContext('layout.canToggleRightRail', null);
+    };
   }, [canToggleRightRail]);
 
   useEffect(() => {
@@ -3146,13 +3247,17 @@ export function Layout() {
     if (!workspaceFile) {
       return;
     }
+    if (!activeHasProjectWorkspaceCwd) {
+      clearActiveWorkbenchFileSelection();
+      return;
+    }
 
     setSelectedWorkspaceFileByConversation((current) => ({
       ...current,
       [activeConversationId]: workspaceFile,
     }));
     setActiveConversationTool('files');
-  }, [activeConversationId, location.search, setActiveConversationTool]);
+  }, [activeConversationId, activeHasProjectWorkspaceCwd, clearActiveWorkbenchFileSelection, location.search, setActiveConversationTool]);
 
   useEffect(() => {
     if (!activeWorkbenchKnowledgeFileId) {
@@ -3371,6 +3476,7 @@ export function Layout() {
     function handleOpenWorkbenchWorkspaceFile(event: Event) {
       const path = (event as CustomEvent<{ path?: unknown }>).detail?.path;
       if (typeof path !== 'string' || path.trim().length === 0 || !activeConversationId) return;
+      if (!activeHasProjectWorkspaceCwd) return;
       const workspaceFile = path.trim().replace(/^\.\/+/, '');
       handleAppLayoutModeChange('workbench');
       setSelectedWorkspaceFileByConversation((current) => ({
@@ -3413,6 +3519,7 @@ export function Layout() {
     };
   }, [
     activeConversationId,
+    activeHasProjectWorkspaceCwd,
     closeWorkbenchTab,
     executeCommandOptions,
     handleAppLayoutModeChange,
@@ -3438,8 +3545,9 @@ export function Layout() {
             environment={desktopEnvironment}
             sidebarOpen={effectiveSidebarOpen}
             onToggleSidebar={handlePrimarySidebarToggle}
-            showRailToggle={canToggleWorkbench || activeRightRailControl !== null}
+            showRailToggle={canToggleRightRail}
             railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
+            railToggleLabel={canToggleWorkbench ? { open: 'Hide workbench', closed: 'Show workbench' } : undefined}
             onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
             trailingExtra={
               <>
@@ -3464,7 +3572,13 @@ export function Layout() {
                 className="relative z-20 flex-shrink-0 flex flex-col overflow-hidden bg-panel border-r border-border-subtle"
               >
                 <Suspense fallback={<div className="flex-1 bg-panel" aria-label="Loading sidebar" />}>
-                  <Sidebar />
+                  <Sidebar
+                    onNewConversation={(args) =>
+                      startNewConversationFromLayout(true, {
+                        cwd: args?.cwd,
+                      })
+                    }
+                  />
                 </Suspense>
               </div>
             ) : null}
@@ -3520,7 +3634,7 @@ export function Layout() {
                         filePath={knowledgeRouteFileId}
                         railOpen={false}
                         canToggleRail={false}
-                        onRailOpenChange={setRailOpen}
+                        onRailOpenChange={setRouteRightRailOpen}
                       />
                     ) : null}
                     <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -3533,7 +3647,7 @@ export function Layout() {
                           <ResizeHandle onMouseDown={rail.onMouseDown} onDoubleClick={rail.reset} />
                           <aside
                             style={{ width: railWidth }}
-                            className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
+                            className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-transparent select-text [&>[data-extension-id]]:bg-transparent"
                           >
                             <NativeExtensionSurfaceHost
                               surface={routePrimaryRailSurface}
@@ -3542,6 +3656,7 @@ export function Layout() {
                               hash={location.hash}
                               conversationId={activeConversationId}
                               cwd={activeWorkspaceCwd}
+                              instanceId="right-sidebar"
                             />
                           </aside>
                         </>

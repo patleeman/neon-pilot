@@ -3,71 +3,14 @@
 }
 
 .settings-page-main.ui-app-page-main {
-  max-width: none;
+  width: min(100%, 68rem);
+  max-width: 68rem;
   margin-inline: auto;
-}
-
-.settings-page-toc-nav {
-  padding-top: 0.125rem;
-}
-
-.settings-page-search {
-  border-color: rgb(var(--color-border-subtle));
-}
-
-.settings-page-toc-link.ui-app-page-toc-link {
-  min-height: 1.75rem;
-  border-left: 0;
-  border-radius: 0.375rem;
-  padding: 0.3125rem 0.5rem;
-  color: rgb(var(--color-secondary));
-}
-
-.settings-page-toc-link.ui-app-page-toc-link:hover {
-  background: rgb(var(--color-surface-2) / 0.65);
-  color: rgb(var(--color-primary));
-}
-
-.settings-page-toc-link.ui-app-page-toc-link-active {
-  background: rgb(var(--color-surface-2));
-  color: rgb(var(--color-primary));
-}
-
-.settings-page-toc-link-nested.ui-app-page-toc-link {
-  min-height: 1.625rem;
-  padding-block: 0.25rem;
-  padding-left: 0.625rem;
-}
-
-.settings-page-toc-children {
-  margin-left: 0.5rem;
-  padding-left: 0.375rem;
-}
-
-.settings-page-toc-empty {
-  padding: 0.375rem 0.5rem;
-  color: rgb(var(--color-tertiary));
-  font-size: 0.75rem;
-}
-
-.settings-sidebar .settings-page-toc {
-  min-width: 0;
-}
-
-.settings-sidebar .settings-page-search {
-  width: 100%;
-}
-
-.settings-sidebar .settings-page-toc-link.ui-app-page-toc-link {
-  padding-inline: 0.5rem;
-}
-
-.settings-sidebar .settings-page-toc-children {
-  margin-left: 0.375rem;
 }
 
 .settings-page-detail {
   width: 100%;
+  max-width: 68rem;
 }
 
 .settings-page-section {
@@ -161,7 +104,7 @@
 
 .settings-page-control-row .ui-settings-row-description,
 .settings-page-row-group .ui-field-hint {
-  max-width: 30rem;
+  max-width: 28rem;
   font-size: 0.75rem;
   line-height: 1.2rem;
   color: rgb(var(--color-secondary));
@@ -171,8 +114,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 13rem;
-  max-width: 22rem;
+  min-width: 10rem;
+  max-width: 18rem;
 }
 
 .settings-page-extension-index-row.ui-settings-row {

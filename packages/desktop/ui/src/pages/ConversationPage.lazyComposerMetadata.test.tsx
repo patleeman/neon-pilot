@@ -1329,7 +1329,16 @@ describe('ConversationPage lazy composer metadata', () => {
         await Promise.resolve();
       });
 
-      expect(desktopConversationState.send).toHaveBeenCalledWith('stale draft dictated transcript', undefined, [], [], [], undefined);
+      expect(desktopConversationState.send).toHaveBeenCalledWith(
+        'stale draft dictated transcript',
+        undefined,
+        [],
+        [],
+        [],
+        [],
+        [],
+        undefined,
+      );
     } finally {
       window.removeEventListener('neon-pilot:dictation-flush-active', handleDictationFlush);
     }

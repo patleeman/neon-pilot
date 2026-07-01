@@ -1,7 +1,7 @@
 import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
-import { ErrorState, LoadingState } from '../components/ui';
+import { ErrorState, QuietLoadingState } from '../components/ui';
 import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlobals';
 import { getExtensionRegistryRevision } from './extensionRegistryEvents';
 import { createNativeExtensionClient } from './nativePaClient';
@@ -70,7 +70,7 @@ export function SettingsPanelHost({ registration }: { registration: ExtensionSet
 
   return (
     <SettingsPanelErrorBoundary extensionId={registration.extensionId} componentId={registration.id} errorBody={friendlyErrorBody}>
-      <Suspense fallback={<LoadingState label="Loading extension settings…" />}>
+      <Suspense fallback={<QuietLoadingState label="Loading extension settings" />}>
         <Component pa={pa} settingsContext={{ sectionId: registration.sectionId, extensionId: registration.extensionId }} />
       </Suspense>
     </SettingsPanelErrorBoundary>

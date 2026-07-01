@@ -2,13 +2,22 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
-  CenteredLoadingState,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
   ErrorState,
+  IconButton,
+  KeyValueItem,
+  KeyValueList,
+  KeyValueTable,
   Notice,
+  PanelMessage,
+  QuietLoadingState,
   StatusDot,
   Switch,
   TextInput,
-  ToolbarButton,
+  TextLink,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -73,6 +82,32 @@ type Operation = 'refresh' | 'saveToken' | 'removeToken' | 'test' | 'create' | '
 
 const TELEGRAM_PROVIDER_ID = 'telegram';
 
+function GatewayIcon({ name }: { name: 'check' | 'refresh' | 'plus' | 'minus' | 'trash' }) {
+  const paths = {
+    check: ['M20 6 9 17l-5-5'],
+    refresh: ['M21 12a9 9 0 1 1-3-6.7', 'M21 3v6h-6'],
+    plus: ['M12 5v14', 'M5 12h14'],
+    minus: ['M5 12h14'],
+    trash: ['M3 6h18', 'M8 6V4h8v2', 'M6 6l1 14h10l1-14', 'M10 11v5', 'M14 11v5'],
+  } satisfies Record<string, string[]>;
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      {paths[name].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+async function loadPageState(): Promise<PageState> {
+  const [gateway, token, access] = await Promise.all([
+    apiRequest<GatewayState>('/api/gateways'),
+    apiRequest<TelegramTokenState>('/api/gateways/telegram/token'),
+    apiRequest<TelegramAccessPolicy>('/api/gateways/telegram/access'),
+  ]);
+  return { gateway, token, access };
+}
+
 export function GatewaysPage() {
   const [pageState, setPageState] = useState<PageState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,12 +123,7 @@ export function GatewaysPage() {
     setOperation((current) => current ?? 'refresh');
     setError(null);
     try {
-      const [gateway, token, access] = await Promise.all([
-        apiRequest<GatewayState>('/api/gateways'),
-        apiRequest<TelegramTokenState>('/api/gateways/telegram/token'),
-        apiRequest<TelegramAccessPolicy>('/api/gateways/telegram/access'),
-      ]);
-      setPageState({ gateway, token, access });
+      setPageState(await loadPageState());
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -124,10 +154,6 @@ export function GatewaysPage() {
   );
   const telegramConnection = useMemo(
     () => pageState?.gateway.connections.find((connection) => connection.provider === TELEGRAM_PROVIDER_ID) ?? null,
-    [pageState],
-  );
-  const telegramEvents = useMemo(
-    () => pageState?.gateway.events.filter((event) => event.provider === TELEGRAM_PROVIDER_ID).slice(0, 5) ?? [],
     [pageState],
   );
 
@@ -220,19 +246,18 @@ export function GatewaysPage() {
     [runMutation],
   );
 
-  if (loading && !pageState) {
-    return <CenteredLoadingState label="Loading gateways..." />;
-  }
+  if (loading && !pageState) return <GatewaysLoadingPage />;
 
   if (!pageState) {
     return (
-      <div className="flex h-full items-center justify-center px-6">
-        <div className="space-y-3 text-center">
+      <div className="h-full overflow-y-auto">
+        <AppPageLayout contentClassName="space-y-6">
+          <AppPageIntro title="Gateways" />
           <ErrorState message={error ?? 'Gateways could not be loaded.'} />
           <Button variant="action" onClick={() => void load()}>
             Try again
           </Button>
-        </div>
+        </AppPageLayout>
       </div>
     );
   }
@@ -251,21 +276,26 @@ export function GatewaysPage() {
           title="Gateways"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <div className="flex items-center gap-2 text-sm text-secondary">
-                <span>Telegram gateway</span>
-                <Switch
-                  checked={gatewayEnabled}
-                  disabled={gatewayToggleDisabled}
-                  aria-label={gatewayEnabled ? 'Pause Telegram gateway' : 'Enable Telegram gateway'}
-                  onClick={() => setConnectionEnabled(!gatewayEnabled)}
-                />
-              </div>
-              <ToolbarButton type="button" disabled={busy || !tokenConfigured} onClick={testToken}>
-                Test bot
-              </ToolbarButton>
-              <ToolbarButton type="button" disabled={busy} onClick={() => void load()}>
-                Refresh
-              </ToolbarButton>
+              <IconButton
+                type="button"
+                compact
+                aria-label="Test Telegram bot"
+                title="Test Telegram bot"
+                disabled={busy || !tokenConfigured}
+                onClick={testToken}
+              >
+                <GatewayIcon name="check" />
+              </IconButton>
+              <IconButton
+                type="button"
+                compact
+                aria-label="Refresh gateways"
+                title="Refresh gateways"
+                disabled={busy}
+                onClick={() => void load()}
+              >
+                <GatewayIcon name="refresh" />
+              </IconButton>
             </div>
           }
         />
@@ -273,152 +303,160 @@ export function GatewaysPage() {
         {error ? <Notice tone="danger">{error}</Notice> : null}
         {notice ? <Notice tone="success">{notice}</Notice> : null}
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="space-y-6">
-            <div className="border-b border-border-subtle pb-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <StatusDot tone={statusTone} size="sm" />
-                    <h2 className="text-base font-semibold text-primary">{telegramProvider?.label ?? 'Telegram'}</h2>
-                  </div>
-                  <p className="max-w-2xl text-sm text-secondary">
-                    {telegramProvider?.description ?? 'Run Neon Pilot from Telegram DMs, groups, and topics.'}
-                  </p>
+        <section className="space-y-6">
+          <div className="border-b border-border-subtle pb-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <StatusDot tone={statusTone} size="sm" />
+                  <h2 className="truncate text-base font-semibold text-primary">{telegramProvider?.label ?? 'Telegram'}</h2>
                 </div>
-                <ConnectionStatusLabel status={connectionStatus} enabled={gatewayEnabled} />
+                <GatewayReadinessTable
+                  tokenConfigured={tokenConfigured}
+                  connectionCreated={Boolean(telegramConnection)}
+                  runtimeLabel={gatewayEnabled ? formatGatewayStatus(connectionStatus) : 'Paused'}
+                />
+                {telegramConnection?.statusMessage ? <p className="text-xs text-secondary">{telegramConnection.statusMessage}</p> : null}
               </div>
-
-              <dl className="mt-5 grid gap-px overflow-hidden rounded-md border border-border-subtle bg-border-subtle text-sm sm:grid-cols-3">
-                <StatusMetric label="Token" value={tokenConfigured ? 'Configured' : 'Missing'} />
-                <StatusMetric label="Connection" value={telegramConnection ? 'Created' : 'Not created'} />
-                <StatusMetric label="Runtime" value={gatewayEnabled ? 'Enabled' : 'Paused'} />
-              </dl>
-
-              {!telegramConnection ? (
-                <div className="mt-5">
-                  <Button variant="action" disabled={busy} onClick={createConnection}>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {telegramConnection ? (
+                  <label className="flex items-center gap-2 text-sm text-secondary">
+                    <span>{gatewayEnabled ? 'Enabled' : 'Paused'}</span>
+                    <Switch
+                      checked={gatewayEnabled}
+                      disabled={gatewayToggleDisabled}
+                      aria-label={gatewayEnabled ? 'Pause Telegram gateway' : 'Enable Telegram gateway'}
+                      onClick={() => setConnectionEnabled(!gatewayEnabled)}
+                    />
+                  </label>
+                ) : (
+                  <Button variant="action" tone="accent" disabled={busy} onClick={createConnection}>
+                    <GatewayIcon name="plus" />
                     Create connection
                   </Button>
-                </div>
-              ) : null}
-              {telegramConnection?.statusMessage ? <p className="mt-5 text-xs text-secondary">{telegramConnection.statusMessage}</p> : null}
-            </div>
-
-            <div className="border-b border-border-subtle pb-5">
-              <div className="space-y-1">
-                <h2 className="text-base font-semibold text-primary">Bot token</h2>
-                <p className="text-sm text-secondary">Paste a BotFather token. Neon Pilot stores it in the host secret store.</p>
-              </div>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <TextInput
-                  aria-label="Telegram bot token"
-                  autoComplete="off"
-                  placeholder={tokenConfigured ? 'Token is already saved' : '123456789:AA...'}
-                  type="password"
-                  value={tokenDraft}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
-                />
-                <div className="flex gap-2">
-                  <Button variant="action" disabled={busy || !tokenDraft.trim()} onClick={saveToken}>
-                    Save token
-                  </Button>
-                  <Button variant="ghost" tone="danger" disabled={busy || !tokenConfigured} onClick={removeToken}>
-                    Remove
-                  </Button>
-                </div>
+                )}
               </div>
             </div>
-
-            <AccessEditor
-              access={pageState.access}
-              busy={busy}
-              newUserId={newUserId}
-              newChatId={newChatId}
-              onNewUserIdChange={setNewUserId}
-              onNewChatIdChange={setNewChatId}
-              onAddUser={() => {
-                const value = newUserId.trim();
-                if (!value || pageState.access.approvedUserIds.includes(value)) return;
-                setNewUserId('');
-                updateAccess(
-                  { ...pageState.access, approvedUserIds: [...pageState.access.approvedUserIds, value] },
-                  'Telegram user allowlist updated.',
-                );
-              }}
-              onAddChat={() => {
-                const value = newChatId.trim();
-                if (!value || pageState.access.approvedChatIds.includes(value)) return;
-                setNewChatId('');
-                updateAccess(
-                  { ...pageState.access, approvedChatIds: [...pageState.access.approvedChatIds, value] },
-                  'Telegram chat allowlist updated.',
-                );
-              }}
-              onRemoveUser={(value) =>
-                updateAccess(
-                  { ...pageState.access, approvedUserIds: pageState.access.approvedUserIds.filter((id) => id !== value) },
-                  'Telegram user allowlist updated.',
-                )
-              }
-              onRemoveChat={(value) =>
-                updateAccess(
-                  { ...pageState.access, approvedChatIds: pageState.access.approvedChatIds.filter((id) => id !== value) },
-                  'Telegram chat allowlist updated.',
-                )
-              }
-            />
           </div>
 
-          <aside className="space-y-4">
-            <div className="border-b border-border-subtle pb-5">
-              <h2 className="text-sm font-semibold text-primary">Provider details</h2>
-              <div className="mt-4 space-y-3 text-sm">
-                <DetailRow label="Setup" value={telegramProvider?.setupRoute ?? '/gateways'} />
-                <DetailRow label="Configuration" value={formatConfigurationLocation(telegramProvider?.configurationLocation)} />
-                <DetailRow label="Docs" value={telegramProvider?.docsUrl ?? 'Telegram Bot API'} />
+          <div className="border-b border-border-subtle pb-5">
+            <h2 className="text-base font-semibold text-primary">Bot token</h2>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <TextInput
+                aria-label="Telegram bot token"
+                autoComplete="off"
+                placeholder={tokenConfigured ? 'Token is already saved' : '123456789:AA...'}
+                type="password"
+                value={tokenDraft}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
+              />
+              <div className="flex gap-2">
+                {tokenDraft.trim() ? (
+                  <Button variant="action" tone="accent" title="Save Telegram bot token" disabled={busy} onClick={saveToken}>
+                    <GatewayIcon name="check" />
+                    Save token
+                  </Button>
+                ) : null}
+                {tokenConfigured ? (
+                  <IconButton
+                    type="button"
+                    compact
+                    className="text-danger"
+                    aria-label="Remove Telegram bot token"
+                    title="Remove Telegram bot token"
+                    disabled={busy}
+                    onClick={removeToken}
+                  >
+                    <GatewayIcon name="trash" />
+                  </IconButton>
+                ) : null}
               </div>
             </div>
+          </div>
 
-            <div className="border-b border-border-subtle pb-5">
-              <h2 className="text-sm font-semibold text-primary">Recent activity</h2>
-              {telegramEvents.length > 0 ? (
-                <ol className="mt-4 space-y-3">
-                  {telegramEvents.map((event) => (
-                    <li key={event.id} className="border-l border-border pl-3">
-                      <div className="text-sm text-primary">{event.message}</div>
-                      <div className="mt-1 text-xs text-secondary">
-                        {formatEventKind(event.kind)} · {formatDate(event.createdAt)}
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="mt-3 text-sm text-secondary">No Telegram gateway events yet.</p>
-              )}
-            </div>
-          </aside>
+          <AccessEditor
+            access={pageState.access}
+            busy={busy}
+            newUserId={newUserId}
+            newChatId={newChatId}
+            onNewUserIdChange={setNewUserId}
+            onNewChatIdChange={setNewChatId}
+            onAddUser={() => {
+              const value = newUserId.trim();
+              if (!value || pageState.access.approvedUserIds.includes(value)) return;
+              setNewUserId('');
+              updateAccess(
+                { ...pageState.access, approvedUserIds: [...pageState.access.approvedUserIds, value] },
+                'Telegram user allowlist updated.',
+              );
+            }}
+            onAddChat={() => {
+              const value = newChatId.trim();
+              if (!value || pageState.access.approvedChatIds.includes(value)) return;
+              setNewChatId('');
+              updateAccess(
+                { ...pageState.access, approvedChatIds: [...pageState.access.approvedChatIds, value] },
+                'Telegram chat allowlist updated.',
+              );
+            }}
+            onRemoveUser={(value) =>
+              updateAccess(
+                { ...pageState.access, approvedUserIds: pageState.access.approvedUserIds.filter((id) => id !== value) },
+                'Telegram user allowlist updated.',
+              )
+            }
+            onRemoveChat={(value) =>
+              updateAccess(
+                { ...pageState.access, approvedChatIds: pageState.access.approvedChatIds.filter((id) => id !== value) },
+                'Telegram chat allowlist updated.',
+              )
+            }
+          />
         </section>
       </AppPageLayout>
     </div>
   );
 }
 
-export function GatewaysSidebar() {
-  const [state, setState] = useState<{ gateway: GatewayState; token: TelegramTokenState } | null>(null);
+function GatewaysLoadingPage() {
+  return (
+    <div className="h-full overflow-y-auto">
+      <AppPageLayout contentClassName="space-y-6">
+        <AppPageIntro
+          title="Gateways"
+          actions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <IconButton type="button" compact aria-label="Test Telegram bot" title="Test Telegram bot" disabled>
+                <GatewayIcon name="check" />
+              </IconButton>
+              <IconButton type="button" compact aria-label="Refresh gateways" title="Refresh gateways" disabled>
+                <GatewayIcon name="refresh" />
+              </IconButton>
+            </div>
+          }
+        />
+        <QuietLoadingState label="Loading gateway settings" className="min-h-24" />
+      </AppPageLayout>
+    </div>
+  );
+}
+
+export function GatewaysContextRail() {
+  const [state, setState] = useState<PageState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(() => {
+    setError(null);
+    void loadPageState()
+      .then(setState)
+      .catch((err) => setError(errorMessage(err)));
+  }, []);
 
-    const load = () =>
-      void Promise.all([apiRequest<GatewayState>('/api/gateways'), apiRequest<TelegramTokenState>('/api/gateways/telegram/token')])
-        .then(([gateway, token]) => {
-          if (!cancelled) setState({ gateway, token });
-        })
-        .catch((err) => {
-          if (!cancelled) setError(errorMessage(err));
-        });
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
     const handleInvalidation = (event: Event) => {
       const detail = (event as CustomEvent<{ topics?: unknown }>).detail;
       const topics = Array.isArray(detail?.topics) ? detail.topics : [];
@@ -426,55 +464,81 @@ export function GatewaysSidebar() {
         load();
       }
     };
-
-    load();
     window.addEventListener('neon-pilot-app-invalidate', handleInvalidation);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('neon-pilot-app-invalidate', handleInvalidation);
-    };
-  }, []);
+    return () => window.removeEventListener('neon-pilot-app-invalidate', handleInvalidation);
+  }, [load]);
 
-  const telegram = state?.gateway.connections.find((connection) => connection.provider === TELEGRAM_PROVIDER_ID) ?? null;
-  const events = state?.gateway.events.filter((event) => event.provider === TELEGRAM_PROVIDER_ID).slice(0, 3) ?? [];
+  const telegramProvider = state?.gateway.providers.find((provider) => provider.id === TELEGRAM_PROVIDER_ID) ?? null;
+  const telegramConnection = state?.gateway.connections.find((connection) => connection.provider === TELEGRAM_PROVIDER_ID) ?? null;
+  const telegramEvents = state?.gateway.events.filter((event) => event.provider === TELEGRAM_PROVIDER_ID).slice(0, 8) ?? [];
 
   return (
-    <div className="h-full overflow-y-auto px-3 py-4">
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-sm font-semibold text-primary">Gateways</h2>
-          <p className="mt-1 text-xs text-secondary">External chat connections.</p>
-        </div>
-        {error ? <p className="text-xs text-danger">{error}</p> : null}
-        {!state && !error ? <p className="text-xs text-secondary">Loading gateway status...</p> : null}
+    <ContextRail>
+      <ContextRailHeader
+        eyebrow="Gateway context"
+        title={telegramProvider?.label ?? 'Telegram'}
+        subtitle={state?.token.configured ? formatGatewayStatus(telegramConnection?.status ?? 'needs_config') : 'Token missing'}
+      />
+      <ContextRailBody>
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+        {!state && !error ? <QuietLoadingState label="Loading gateway context" className="min-h-12" /> : null}
         {state ? (
-          <div className="rounded-md bg-elevated/55 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <StatusDot
-                tone={statusDotTone(telegram?.status ?? 'needs_config', state.token.configured, Boolean(telegram?.enabled))}
-                size="xs"
-              />
-              <span className="text-sm font-medium text-primary">Telegram</span>
-            </div>
-            <p className="mt-2 text-xs text-secondary">
-              {state.token.configured ? formatGatewayStatus(telegram?.status ?? 'needs_config') : 'Token needed'}
-            </p>
-          </div>
+          <>
+            <ContextRailSection
+              title="Status"
+              actions={
+                <StatusDot
+                  tone={statusDotTone(
+                    telegramConnection?.status ?? 'needs_config',
+                    state.token.configured,
+                    Boolean(telegramConnection?.enabled),
+                  )}
+                  size="xs"
+                />
+              }
+            >
+              <KeyValueList>
+                <KeyValueItem label="Setup" value={telegramProvider?.setupRoute ?? '/gateways'} />
+                <KeyValueItem label="Configuration" value={formatConfigurationLocation(telegramProvider?.configurationLocation)} />
+                <KeyValueItem
+                  label="Docs"
+                  value={
+                    telegramProvider?.docsUrl ? (
+                      <TextLink href={telegramProvider.docsUrl} target="_blank" rel="noreferrer">
+                        Telegram Bot API
+                      </TextLink>
+                    ) : (
+                      'Telegram Bot API'
+                    )
+                  }
+                />
+                <KeyValueItem
+                  label="Last update"
+                  value={telegramConnection?.updatedAt ? formatDate(telegramConnection.updatedAt) : 'Never'}
+                />
+              </KeyValueList>
+            </ContextRailSection>
+
+            <ContextRailSection title="Recent activity">
+              {telegramEvents.length > 0 ? (
+                <ol className="divide-y divide-border-subtle">
+                  {telegramEvents.map((event) => (
+                    <li key={event.id} className="py-2">
+                      <div className="text-[13px] text-primary">{event.message}</div>
+                      <div className="mt-1 text-[11px] text-secondary">
+                        {formatEventKind(event.kind)} · {formatDate(event.createdAt)}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <PanelMessage className="py-2">No Telegram gateway events yet.</PanelMessage>
+              )}
+            </ContextRailSection>
+          </>
         ) : null}
-        {events.length > 0 ? (
-          <div>
-            <h3 className="text-xs font-medium uppercase text-secondary">Recent</h3>
-            <ol className="mt-2 space-y-2">
-              {events.map((event) => (
-                <li key={event.id} className="text-xs text-secondary">
-                  {event.message}
-                </li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
-      </div>
-    </div>
+      </ContextRailBody>
+    </ContextRail>
   );
 }
 
@@ -507,7 +571,7 @@ function AccessEditor({
         <h2 className="text-base font-semibold text-primary">Telegram access</h2>
         <p className="text-sm text-secondary">Only approved users and chats can send work to Neon Pilot.</p>
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4">
         <AllowlistEditor
           title="Approved users"
           emptyLabel="No approved users yet."
@@ -561,9 +625,12 @@ function AllowlistEditor({
   onRemove: (value: string) => void;
 }) {
   return (
-    <div className="min-w-0 space-y-3">
-      <h3 className="text-sm font-medium text-primary">{title}</h3>
-      <div className="flex gap-2">
+    <div className="min-w-0 rounded-md border border-border-subtle/70 bg-surface/35">
+      <div className="flex min-h-9 items-center justify-between gap-2 border-b border-border-subtle/60 px-3">
+        <h3 className="text-sm font-medium text-primary">{title}</h3>
+        <span className="text-[11px] text-tertiary">{values.length} approved</span>
+      </div>
+      <div className="flex gap-2 px-3 py-3">
         <TextInput
           aria-label={inputLabel}
           inputMode="text"
@@ -577,51 +644,63 @@ function AllowlistEditor({
             }
           }}
         />
-        <ToolbarButton type="button" disabled={busy || !value.trim()} onClick={onAdd}>
-          Add
-        </ToolbarButton>
+        {value.trim() ? (
+          <IconButton
+            type="button"
+            compact
+            aria-label={`Add ${title.toLowerCase()}`}
+            title={`Add ${title.toLowerCase()}`}
+            disabled={busy}
+            onClick={onAdd}
+          >
+            <GatewayIcon name="plus" />
+          </IconButton>
+        ) : null}
       </div>
       {values.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-border-subtle/55 border-t border-border-subtle/55">
           {values.map((entry) => (
-            <li key={entry} className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-surface px-3 py-2">
+            <li key={entry} className="flex min-w-0 items-center justify-between gap-2 px-3 py-2">
               <span className="truncate font-mono text-xs text-primary">{entry}</span>
-              <ToolbarButton type="button" disabled={busy} onClick={() => onRemove(entry)}>
-                Remove
-              </ToolbarButton>
+              <IconButton
+                type="button"
+                compact
+                aria-label={`Remove ${entry}`}
+                title={`Remove ${entry}`}
+                disabled={busy}
+                onClick={() => onRemove(entry)}
+              >
+                <GatewayIcon name="trash" />
+              </IconButton>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-secondary">{emptyLabel}</p>
+        <p className="border-t border-border-subtle/55 px-3 py-3 text-sm text-secondary">{emptyLabel}</p>
       )}
     </div>
   );
 }
 
-function StatusMetric({ label, value }: { label: string; value: string }) {
+function GatewayReadinessTable({
+  tokenConfigured,
+  connectionCreated,
+  runtimeLabel,
+}: {
+  tokenConfigured: boolean;
+  connectionCreated: boolean;
+  runtimeLabel: string;
+}) {
   return (
-    <div className="bg-surface px-3 py-2">
-      <dt className="text-xs text-secondary">{label}</dt>
-      <dd className="mt-1 font-medium text-primary">{value}</dd>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex min-w-0 justify-between gap-3">
-      <span className="text-secondary">{label}</span>
-      <span className="min-w-0 truncate text-right text-primary">{value}</span>
-    </div>
-  );
-}
-
-function ConnectionStatusLabel({ status, enabled }: { status: GatewayStatus; enabled: boolean }) {
-  return (
-    <div className="rounded-md bg-surface px-3 py-1.5 text-xs font-medium text-secondary">
-      {enabled ? formatGatewayStatus(status) : 'Paused'}
-    </div>
+    <KeyValueTable
+      columns={3}
+      items={[
+        { label: 'Token', value: tokenConfigured ? 'Configured' : 'Missing' },
+        { label: 'Connection', value: connectionCreated ? 'Created' : 'Not created' },
+        { label: 'Runtime', value: runtimeLabel },
+      ]}
+      className="max-w-2xl"
+    />
   );
 }
 

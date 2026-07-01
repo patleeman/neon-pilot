@@ -6,12 +6,76 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
 import { evaluateCommandEnablement, setExtensionCommandContext } from '../extensions/commands';
+import { readExtensionSelection, setExtensionSelection } from '../extensions/selection';
 import { SIDEBAR_WIDTH_STORAGE_KEY } from '../local/localSettings';
 import { sessionStore } from '../store';
 import { APP_LAYOUT_MODE_SESSION_STORAGE_KEY, APP_LAYOUT_MODE_STORAGE_KEY } from '../ui-state/appLayoutMode';
 import { closeWorkbenchTabState, Layout } from './Layout';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
+
+const extensionRegistryMock = vi.hoisted(() => ({
+  state: {
+    extensions: [] as unknown[],
+    routes: [],
+    surfaces: [] as unknown[],
+    topBarElements: [],
+    messageActions: [],
+    composerShelves: [],
+    newConversationPanels: [],
+    settingsComponent: null,
+    settingsComponents: [],
+    composerControls: [],
+    composerInputTools: [],
+    toolbarActions: [],
+    contextMenus: [],
+    selectionActions: [],
+    threadHeaderActions: [],
+    statusBarItems: [],
+    conversationHeaderElements: [],
+    conversationDecorators: [],
+    activityTreeItemElements: [],
+    activityTreeItemStyles: [],
+    conversationLifecycle: [],
+    composerAttachmentProviders: [],
+    composerAttachmentRenderers: [],
+    composerAttachmentResolvers: [],
+    activityTreeItemActions: [],
+    loading: false,
+    error: null,
+  },
+}));
+
+vi.mock('../extensions/useExtensionRegistry', () => ({
+  useExtensionRegistry: () => extensionRegistryMock.state,
+}));
+
+vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
+  NativeExtensionSurfaceHost: ({
+    surface,
+    pathname,
+    search,
+    hash,
+    instanceId,
+  }: {
+    surface: { id: string; title?: string };
+    pathname?: string;
+    search?: string;
+    hash?: string;
+    instanceId?: string | null;
+  }) => (
+    <div
+      data-testid="native-extension-surface"
+      data-surface-id={surface.id}
+      data-pathname={pathname}
+      data-search={search}
+      data-hash={hash}
+      data-instance-id={instanceId ?? ''}
+    >
+      {surface.title ?? surface.id}
+    </div>
+  ),
+}));
 
 vi.mock('./chat/ChatRail', async () => {
   const { createElement } = await import('react');
@@ -65,9 +129,32 @@ function ConversationRouteFixture() {
   );
 }
 
+function RouteRailFixture({ name, next, detail }: { name: string; next: string; detail?: string }) {
+  return (
+    <div>
+      <div>{`${name} route`}</div>
+      <Link to={next}>{`Open ${next}`}</Link>
+      {detail ? <Link to={detail}>{`Open ${detail}`}</Link> : null}
+    </div>
+  );
+}
+
 function setWorkbenchModeForCurrentSession() {
   window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
   window.sessionStorage.setItem(APP_LAYOUT_MODE_SESSION_STORAGE_KEY, 'workbench');
+}
+
+function seedConversationCwd(cwd: string, id = 'conv-1') {
+  sessionStore.upsert({
+    id,
+    file: `/tmp/${id}.jsonl`,
+    timestamp: new Date().toISOString(),
+    cwd,
+    cwdSlug: cwd.split('/').filter(Boolean).at(-1) ?? 'workspace',
+    model: 'deepseek-v4-flash',
+    title: 'Workspace conversation',
+    messageCount: 0,
+  });
 }
 
 function renderLayout(pathname = '/conversations/new') {
@@ -77,6 +164,10 @@ function renderLayout(pathname = '/conversations/new') {
         <Route path="/" element={<Layout />}>
           <Route path="conversations/new" element={<div>Conversation draft</div>} />
           <Route path="conversations/:id" element={<ConversationRouteFixture />} />
+          <Route path="automations" element={<div>Automations route</div>} />
+          <Route path="route-a" element={<RouteRailFixture name="Route A" next="/route-b" detail="/route-a/detail" />} />
+          <Route path="route-a/detail" element={<RouteRailFixture name="Route A detail" next="/route-b" />} />
+          <Route path="route-b" element={<RouteRailFixture name="Route B" next="/route-a" />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -108,6 +199,8 @@ describe('Layout workbench toggle', () => {
       currentThinkingLevel: null,
       currentServiceTier: null,
     });
+    extensionRegistryMock.state.extensions = [];
+    extensionRegistryMock.state.surfaces = [];
   });
 
   afterEach(() => {
@@ -117,6 +210,7 @@ describe('Layout workbench toggle', () => {
     setExtensionCommandContext('workbench.hasActiveFile', null);
     setExtensionCommandContext('workbench.canToggleDiff', null);
     setExtensionCommandContext('browser.active', null);
+    setExtensionSelection(null);
     delete document.documentElement.dataset.neonPilotDesktop;
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
@@ -135,6 +229,337 @@ describe('Layout workbench toggle', () => {
     expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it('hides the right-sidebar toggle on routes without a declared right sidebar', () => {
+    renderLayout('/automations');
+
+    expect(screen.getByText('Automations route')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show workbench' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
+  });
+
+  it('hides the right-sidebar toggle when the declared route rail is missing', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: true,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [{ id: 'route-a', label: 'Route A', route: '/route-a', rightSidebarView: 'missing-context' }],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [];
+
+    renderLayout('/route-a');
+
+    expect(screen.getByText('Route A route')).toBeTruthy();
+    expect(screen.queryByTestId('native-extension-surface')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
+    expect(evaluateCommandEnablement('layout.canToggleRightSidebar')).toBe(false);
+  });
+
+  it('ignores side-region declarations from disabled extensions', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: false,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [{ id: 'route-a', label: 'Route A', route: '/route-a', rightSidebarView: 'route-a-context' }],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-a-context',
+        title: 'Route A Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteAContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    renderLayout('/route-a');
+
+    expect(screen.getByText('Route A route')).toBeTruthy();
+    expect(screen.queryByTestId('native-extension-surface')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
+    expect(evaluateCommandEnablement('layout.canToggleRightSidebar')).toBe(false);
+  });
+
+  it('does not expose route-owned primary right rails as workbench tools', () => {
+    setWorkbenchModeForCurrentSession();
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-context',
+        title: 'Route Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'workbench-tool',
+        title: 'Workbench Tool',
+        location: 'rightRail',
+        scope: 'conversation',
+        placement: 'workbench-tool',
+        component: 'WorkbenchTool',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    renderLayout('/conversations/conv-1');
+
+    expect(screen.getByText('Open a tab')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Route Context' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Workbench Tool' })).toBeTruthy();
+  });
+
+  it('remembers route-owned right sidebar open state per route', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: true,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [
+            { id: 'route-a', label: 'Route A', route: '/route-a', rightSidebarView: 'route-a-context' },
+            { id: 'route-b', label: 'Route B', route: '/route-b', rightSidebarView: 'route-b-context' },
+          ],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-a-context',
+        title: 'Route A Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteAContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-b-context',
+        title: 'Route B Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteBContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    renderLayout('/route-a');
+
+    const routeARail = screen.getByTestId('native-extension-surface');
+    expect(screen.getByText('Route A route')).toBeTruthy();
+    expect(routeARail.getAttribute('data-surface-id')).toBe('route-a-context');
+    expect(routeARail.getAttribute('data-instance-id')).toBe('right-sidebar');
+    expect(evaluateCommandEnablement('layout.canToggleRightSidebar')).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide right sidebar' }));
+
+    expect(screen.queryByTestId('native-extension-surface')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show right sidebar' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open /route-b' }));
+
+    expect(screen.getByText('Route B route')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hide right sidebar' })).toBeTruthy();
+    expect(screen.getByTestId('native-extension-surface').getAttribute('data-surface-id')).toBe('route-b-context');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open /route-a' }));
+
+    expect(screen.getByText('Route A route')).toBeTruthy();
+    expect(screen.queryByTestId('native-extension-surface')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show right sidebar' })).toBeTruthy();
+  });
+
+  it('keys route-owned right sidebar open state by the matched route declaration', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: true,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [{ id: 'route-a', label: 'Route A', route: '/route-a', rightSidebarView: 'route-a-context' }],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-a-context',
+        title: 'Route A Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteAContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    renderLayout('/route-a?mode=inspect#rail');
+
+    const routeRail = screen.getByTestId('native-extension-surface');
+    expect(routeRail.getAttribute('data-surface-id')).toBe('route-a-context');
+    expect(routeRail.getAttribute('data-pathname')).toBe('/route-a');
+    expect(routeRail.getAttribute('data-search')).toBe('?mode=inspect');
+    expect(routeRail.getAttribute('data-hash')).toBe('#rail');
+    expect(routeRail.getAttribute('data-instance-id')).toBe('right-sidebar');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide right sidebar' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Open /route-a/detail' }));
+
+    expect(screen.getByText('Route A detail route')).toBeTruthy();
+    expect(screen.queryByTestId('native-extension-surface')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show right sidebar' })).toBeTruthy();
+  });
+
+  it('migrates route-owned right sidebar open state from the legacy right-rail storage key', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: true,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [{ id: 'route-a', label: 'Route A', route: '/route-a', rightSidebarView: 'route-a-context' }],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-a-context',
+        title: 'Route A Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteAContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+    window.localStorage.setItem('pa:right-rail-open:%2Froute-a', 'closed');
+
+    renderLayout('/route-a');
+
+    expect(screen.getByText('Route A route')).toBeTruthy();
+    expect(screen.queryByTestId('native-extension-surface')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show right sidebar' }));
+
+    expect(screen.getByTestId('native-extension-surface').getAttribute('data-surface-id')).toBe('route-a-context');
+    expect(window.localStorage.getItem('pa:right-sidebar-open:%2Froute-a')).toBe('open');
+  });
+
+  it('clears route resource selection when the active route shell changes', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: true,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [
+            { id: 'route-a', label: 'Route A', route: '/route-a', rightSidebarView: 'route-a-context' },
+            { id: 'route-b', label: 'Route B', route: '/route-b', rightSidebarView: 'route-b-context' },
+          ],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-a-context',
+        title: 'Route A Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteAContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-b-context',
+        title: 'Route B Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteBContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+    setExtensionSelection({
+      kind: 'resource',
+      resource: { type: 'skill', id: 'skill:demo', label: 'Demo Skill', source: 'system-skills' },
+    });
+
+    renderLayout('/route-a');
+    expect(readExtensionSelection()?.kind).toBe('resource');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open /route-b' }));
+
+    expect(screen.getByText('Route B route')).toBeTruthy();
+    expect(readExtensionSelection()).toBeNull();
+  });
+
+  it('preserves text selection when the active route shell changes', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: true,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [
+            { id: 'route-a', label: 'Route A', route: '/route-a' },
+            { id: 'route-b', label: 'Route B', route: '/route-b' },
+          ],
+        },
+      },
+    ];
+    setExtensionSelection({ kind: 'text', text: 'selected transcript text' });
+
+    renderLayout('/route-a');
+    fireEvent.click(screen.getByRole('link', { name: 'Open /route-b' }));
+
+    expect(screen.getByText('Route B route')).toBeTruthy();
+    expect(readExtensionSelection()).toEqual({
+      kind: 'text',
+      text: 'selected transcript text',
+      updatedAt: expect.any(String),
+    });
+  });
+
   it('starts with the workbench closed even when the previous app session left it open', () => {
     window.localStorage.setItem(APP_LAYOUT_MODE_STORAGE_KEY, 'workbench');
 
@@ -149,6 +574,7 @@ describe('Layout workbench toggle', () => {
     renderLayout('/conversations/conv-1');
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
+    expect(evaluateCommandEnablement('layout.canToggleRightSidebar')).toBe(true);
 
     act(() => {
       window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { action: 'toggle-right-rail' } }));
@@ -248,6 +674,7 @@ describe('Layout workbench toggle', () => {
 
   it('accepts command-only desktop shortcut events for workbench refresh', () => {
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
     setExtensionCommandContext('workbench.hasActiveFile', true);
@@ -263,6 +690,7 @@ describe('Layout workbench toggle', () => {
 
   it('clears remembered file selection after closing the active workbench file', async () => {
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
     renderLayout('/conversations/conv-1?workspaceFile=README.md');
@@ -289,6 +717,7 @@ describe('Layout workbench toggle', () => {
 
   it('closes the workbench when the last workbench tab is closed', async () => {
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     renderLayout('/conversations/conv-1');
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
@@ -311,6 +740,7 @@ describe('Layout workbench toggle', () => {
 
   it('reuses the existing File Explorer tab from the new-tab launcher', async () => {
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     renderLayout('/conversations/conv-1');
 
     fireEvent.click(screen.getByRole('button', { name: 'File Explorer' }));
@@ -329,8 +759,44 @@ describe('Layout workbench toggle', () => {
     expect(screen.getAllByLabelText('Close File Explorer')).toHaveLength(1);
   });
 
+  it('hides File Explorer from the new-tab launcher for conversations without a project workspace', () => {
+    setWorkbenchModeForCurrentSession();
+
+    renderLayout('/conversations/conv-1');
+
+    expect(screen.getByText('Open a tab')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'File Explorer' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Chat' })).toBeTruthy();
+  });
+
+  it('removes restored File Explorer tabs for chat-workspace conversations', async () => {
+    setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/Users/patrick/.neon-pilot/chat-workspaces/fast-tick');
+    window.localStorage.setItem(
+      'pa:workbench-tabs',
+      JSON.stringify({
+        tabs: [
+          { id: 'files', mode: 'files' },
+          { id: 'browser-1', mode: 'browser' },
+        ],
+        activeTabId: 'files',
+      }),
+    );
+
+    renderLayout('/conversations/conv-1?workspaceFile=README.md');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'File Explorer' })).toBeNull();
+      expect(screen.queryByLabelText('Close File Explorer')).toBeNull();
+      expect(screen.queryByText('Not available in chat conversations')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Browser' })).toBeTruthy();
+      expect(screen.getByTestId('route-search').textContent).toBe('');
+    });
+  });
+
   it('restores open workbench tabs after a reload-style remount', async () => {
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     window.localStorage.setItem(
       'pa:workbench-tabs',
       JSON.stringify({
@@ -353,6 +819,7 @@ describe('Layout workbench toggle', () => {
 
   it('publishes browser command context when the browser workbench tab is active', async () => {
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     renderLayout('/conversations/conv-1');
 
     expect(evaluateCommandEnablement('browser.active')).toBe(false);
@@ -462,6 +929,7 @@ describe('Layout workbench toggle', () => {
     ]);
     vi.mocked(api.extensionCommands).mockResolvedValue([]);
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
     const capture = document.createElement('button');
@@ -497,6 +965,7 @@ describe('Layout workbench toggle', () => {
     ]);
     vi.mocked(api.extensionCommands).mockResolvedValue([]);
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
     const refreshListener = vi.fn();
     window.addEventListener('pa:workbench-refresh-active-file', refreshListener);
     renderLayout('/conversations/conv-1?workspaceFile=%2Frepo%2FREADME.md');
@@ -700,6 +1169,7 @@ describe('Layout workbench toggle', () => {
 
   it('keeps the workbench new tab button outside the scrollable tab lane', () => {
     setWorkbenchModeForCurrentSession();
+    seedConversationCwd('/repo');
 
     renderLayout('/conversations/conv-1');
 

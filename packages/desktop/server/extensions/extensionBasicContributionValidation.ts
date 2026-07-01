@@ -7,6 +7,8 @@ import {
   validateOptionalString,
 } from './extensionManifestValidation.js';
 
+const EXTENSION_PAGE_TYPES = ['conversation', 'table', 'editor', 'settings', 'dashboard', 'setup'] as const;
+
 export function validateNavigationContributions(value: unknown): void {
   for (const [index, nav] of assertRecordArray(value, 'contributes.nav').entries()) {
     requireString(nav.id, `contributes.nav[${index}].id`);
@@ -15,6 +17,8 @@ export function validateNavigationContributions(value: unknown): void {
     if (nav.icon !== undefined) validateEnum(nav.icon, EXTENSION_ICON_NAMES, `contributes.nav[${index}].icon`);
     validateOptionalString(nav.badgeAction, `contributes.nav[${index}].badgeAction`);
     validateOptionalString(nav.sidebarView, `contributes.nav[${index}].sidebarView`);
+    validateOptionalString(nav.rightSidebarView, `contributes.nav[${index}].rightSidebarView`);
+    if (nav.pageType !== undefined) validateEnum(nav.pageType, EXTENSION_PAGE_TYPES, `contributes.nav[${index}].pageType`);
     if (nav.section !== undefined) validateEnum(nav.section, ['primary', 'settings'], `contributes.nav[${index}].section`);
   }
 }

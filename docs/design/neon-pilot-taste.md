@@ -30,17 +30,39 @@ Use this workflow especially when:
 - the task has many layout/control tradeoffs
 - Patrick has not already supplied a concrete visual reference
 
+## GA Taste Review
+
+Before calling a broad page, shell, or design-system sweep GA-ready, run a screenshot-backed antagonistic taste review against this document. The reviewer should inspect the real app surfaces, not source descriptions, and should name concrete failures using the negative smells below.
+
+Treat missing screenshots, unvisited routes, unreadable captures, or untested populated/empty/loading/error states as review failures. A passing implementation should have page-by-page visual evidence, no design-system guardrail violations, no horizontal overflow, consistent action/control sizing, and no obvious route that feels like a standalone reskin instead of a Neon Pilot workbench contribution.
+
 ## Layout Modes
 
 Neon Pilot uses adaptive workbench layouts, not one-off page chrome. Every main-route app or extension page must start from the shared `AppPageLayout` and `AppPageIntro` rhythm unless it is embedded in an existing workbench pane.
 
-Canonical page rules:
+Use `docs/design/page-template-standards.md` for the accepted shell-region rules and approved page-type map before inventing local page chrome. The six defaults are Conversation, Table, Editor, Settings, Dashboard, and Setup.
+
+Routes are composed from shell regions:
+
+- global left nav: persistent top-level and utility navigation
+- contextual left area: route-declared selection/navigation content, blank when absent
+- main page: required primary workflow surface
+- right sidebar: route-declared context rail, hidden when absent
+
+Threads belong to the Chat route's contextual left area. Do not keep Threads visible on unrelated routes to fill space. Workbench belongs to the Chat route's right sidebar; other routes may use the same right sidebar region for inspectors, selected-item details, setup output, activity, logs, previews, or metadata.
+
+Route-owned right sidebars use the shared context rail grammar: `ContextRail` as the root, `ContextRailHeader` for one compact title/subtitle/action band, `ContextRailBody` for the single scroll container, and `ContextRailSection` for grouped content. The shell owns the rail background and divider. Do not create route-local right bars with custom `aside` padding, custom header heights, card stacks, or a brighter/darker panel background than the host region.
+
+Route-owned contextual-left content uses the shared sidebar grammar: `SidebarSection` for section structure, `SidebarList`/`SidebarRow` for selection rows, and `SidebarMessage` for compact empty/loading/error notes. Do not build route-local left bars with custom `aside` padding, page headers, search chrome, or row systems unless the shared sidebar template cannot express the workflow and the design system is updated first.
+
+Active page-shell rules:
 
 - `AppPageLayout` owns page padding and responsive behavior. Main-route pages are left-aligned in the workspace, not centered hero pages. Do not hard-code competing `max-w-*`, page-level `px-*`, or oversized vertical gaps on normal pages.
 - `AppPageIntro` owns the page title scale and top-right actions. Main page titles should be title-only by default: no local eyebrow, no subtitle line, no divider directly under the title. Put counts, explanations, and metadata in the body, toolbar, or first section instead of making every title block different.
 - Page sections should use shared page/section/list/table primitives before local wrappers. A page can be solo, list/detail, table, editor, or split-pane, but its outer shell should still feel like the same product.
 - Full-height split workflows may use `h-full` inside the canonical shell, but they should not invent separate top bars, padding systems, or title treatments.
 - Settings, Extension Manager, Diagnostics, Automations, Routines, and installed extension pages should look like siblings: same title rhythm, toolbar density, spacing scale, and edge alignment.
+- Lazy route, contextual-left, and right-sidebar fallbacks should use `QuietLoadingState`: keep accessible status semantics without visible page-level loading copy. Visible loading belongs inside the table, list, editor, setting group, tool output, or object that is actually waiting.
 
 ### Chat + Workbench
 
@@ -72,6 +94,7 @@ Use when a primary workflow has secondary state worth keeping reachable: preview
 
 - Main content owns the primary task.
 - Context tabs should reduce clutter, not create a second app frame.
+- When the context is route-level or selection-driven, prefer the shared right sidebar over page-local second columns or modal detail views.
 
 ### Modal / Drawer Focus
 
@@ -182,6 +205,8 @@ Do not fix a weak surface by adding more explanatory copy, padding, headings, di
 
 The left sidebar is app chrome. Extension sidebar views should feel like they temporarily replace the native Threads body, not like a standalone panel embedded inside the sidebar.
 
+The top and bottom global nav regions remain available across routes. The middle contextual area is route-owned. If a route does not declare contextual sidebar content, leave the middle region blank instead of showing Threads or another unrelated navigator.
+
 Use the native sidebar grammar:
 
 - section title: compact uppercase accent label, same weight/color/rhythm as `Threads`
@@ -200,10 +225,19 @@ Avoid:
 
 If an extension needs an object navigator, the sidebar should select objects and the main/workbench surface should edit or inspect the selected object. Do not make the sidebar row carry the whole object model.
 
+## Right Sidebar Surfaces
+
+The right sidebar is a generic context rail. It appears only on routes that declare right-sidebar content; do not show a disabled right-sidebar button on routes without a rail.
+
+Use the right sidebar for selected-object details, inspectors, preview, logs, activity, metadata, setup help, validation, and secondary actions. The right sidebar should follow main-page selection when the route has selectable objects.
+
+Avoid treating the right sidebar as a second primary page. If two areas are both primary, the workflow likely needs a different page type.
+
 ## Actions
 
 Use IDE-like action chrome.
 
+- Follow `docs/design/action-button-standards.md` for the canonical button/action taxonomy before adding or changing action controls.
 - Common actions may be icon-only with tooltips: refresh, add, remove, copy, open, search, filter, collapse, expand.
 - Use text labels for domain-specific, ambiguous, primary, or destructive actions.
 - Place actions in toolbars, rows, context menus, overflow menus, or selected-detail regions.
@@ -232,6 +266,16 @@ Avoid glowing badges, large status pills, decorative "Live" treatments, and stat
 Empty states should be compact, operational, and embedded in the working surface.
 
 They should explain what is missing, offer the next useful action, and preserve the intended layout. Avoid giant centered cards, illustrations, marketing copy, or empty expanses.
+
+Feature-page empty states should also teach the page model. Use `EmptyState` or `AppPageEmptyState` with a compact anatomy:
+
+- page/feature type as an eyebrow only when it clarifies the template, such as `Table page`, `Dashboard page`, or `Setup page`
+- one title that names the missing object or data
+- one operational sentence that says what the feature does or when data appears
+- two or three concrete first steps
+- one attached action area for the next command, when available
+
+Do not ship generic copy such as `No items yet` by itself. The empty state is part of the page template contract: it should force extension authors and agents to explain the feature and its first useful move without turning the page into a landing page.
 
 Prefer:
 

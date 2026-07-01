@@ -1411,6 +1411,13 @@ describe('extension commands', () => {
       executeExtensionCommand('layout.toggleRightRail', undefined, {
         ...baseOptions,
         toggleRightRail,
+        context: { 'layout.canToggleRightSidebar': true },
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      executeExtensionCommand('layout.toggleRightRail', undefined, {
+        ...baseOptions,
+        toggleRightRail,
         context: { 'layout.canToggleRightRail': true },
       }),
     ).resolves.toBe(true);
@@ -1440,7 +1447,7 @@ describe('extension commands', () => {
 
     expect(toggleLayout).toHaveBeenCalledTimes(1);
     expect(toggleSidebar).toHaveBeenCalledTimes(1);
-    expect(toggleRightRail).toHaveBeenCalledTimes(2);
+    expect(toggleRightRail).toHaveBeenCalledTimes(3);
     expect(findOnPage).toHaveBeenCalledTimes(1);
     expect(findNextOnPage).toHaveBeenCalledTimes(1);
     expect(findPreviousOnPage).toHaveBeenCalledTimes(1);

@@ -50,6 +50,23 @@ describe('check-ui-patterns', () => {
     expect(ids).toContain('raw-semantic-surface');
   });
 
+  it('allows inline-code mentions of ui-pattern-ok syntax in docs', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'docs/design/ui-migration-plan.md',
+      `
+        Mention \`ui-pattern-ok raw-control reason="specific reason"\` when documenting exception syntax.
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['docs/design'] }).filter(
+      (finding) => finding.id === 'invalid-ui-pattern-exception',
+    );
+
+    expect(findings).toHaveLength(0);
+  });
+
   it('flags custom pill styling', () => {
     const root = createRepo();
     writeFixture(
@@ -128,6 +145,874 @@ describe('check-ui-patterns', () => {
     const ids = findingIds(auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['packages/desktop/ui/src'] }));
 
     expect(ids).toContain('raw-control');
+  });
+
+  it('flags invalid shared button variants', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/src/frontend.tsx',
+      `
+        import { Button } from '@neon-pilot/extensions/ui';
+
+        export function Demo() {
+          return <Button variant="secondary">Refresh</Button>;
+        }
+      `,
+    );
+
+    const ids = findingIds(auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }));
+
+    expect(ids).toContain('invalid-button-variant');
+  });
+
+  it('flags local size overrides on shared action buttons', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/src/frontend.tsx',
+      `
+        import { Button, IconButton } from '@neon-pilot/extensions/ui';
+
+        export function Demo() {
+          return (
+            <>
+              <Button className="min-h-9 px-3 py-2 text-[13px]">Install</Button>
+              <IconButton aria-label="Refresh" title="Refresh" className="h-7 w-7">↻</IconButton>
+              <Button className="absolute right-3">Pinned action</Button>
+            </>
+          );
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'local-action-button-sizing',
+    );
+
+    expect(findings).toHaveLength(2);
+  });
+
+  it('flags text-only common action buttons while allowing icon plus text', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/src/frontend.tsx',
+      `
+        import { Button, ToolbarButton } from '@neon-pilot/extensions/ui';
+
+        export function Demo() {
+          return (
+            <>
+              <ToolbarButton>Refresh</ToolbarButton>
+              <Button variant="toolbar">
+                <span aria-hidden="true">⌕</span>
+                Search
+              </Button>
+            </>
+          );
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'common-text-action-button',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ sample: '<ToolbarButton>Refresh</ToolbarButton>' });
+  });
+
+  it('requires hover help on icon actions', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo/src/frontend.tsx',
+      `
+        import { IconButton } from '@neon-pilot/extensions/ui';
+
+        export function Demo() {
+          return (
+            <>
+              <IconButton aria-label="Refresh">↻</IconButton>
+              <IconButton aria-label="Add" title="Add">+</IconButton>
+            </>
+          );
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'icon-action-missing-title',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ sample: '<IconButton aria-label="Refresh">↻</IconButton>' });
+  });
+
+  it('flags centered loading chrome in main-route extension pages', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'demo-route',
+        name: 'Demo Route',
+        version: '0.1.0',
+        contributes: {
+          views: [{ id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' }],
+        },
+      }),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-route/src/frontend.tsx',
+      `
+        import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
+
+        export function DemoPage() {
+          return <CenteredLoadingState label="Loading demo..." />;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-page-centered-loading',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/src/frontend.tsx' });
+  });
+
+  it('flags centered loading chrome in desktop route fallbacks', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'packages/desktop/ui/src/app/App.tsx',
+      `
+        import { CenteredLoadingState } from '../components/ui';
+
+        export function App() {
+          return <CenteredLoadingState label="Loading..." />;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['packages/desktop/ui/src'] }).filter(
+      (finding) => finding.id === 'app-route-centered-loading',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'packages/desktop/ui/src/app/App.tsx' });
+  });
+
+  it('flags full-page centered loading wrappers in main-route extension templates', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'docs/extension-templates/templates/template-route/extension.json',
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'template-route',
+        name: 'Template Route',
+        version: '0.1.0',
+        contributes: {
+          views: [{ id: 'page', title: 'Template', location: 'main', route: '/template-route', component: 'TemplatePage' }],
+        },
+      }),
+    );
+    writeFixture(
+      root,
+      'docs/extension-templates/templates/template-route/src/frontend.tsx',
+      `
+        import { LoadingState } from '@neon-pilot/extensions/ui';
+
+        export function TemplatePage() {
+          return (
+            <div className="flex h-full items-center justify-center px-6">
+              <LoadingState label="Loading items..." />
+            </div>
+          );
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['docs/extension-templates'] }).filter(
+      (finding) => finding.id === 'route-page-centered-loading-wrapper',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'docs/extension-templates/templates/template-route/src/frontend.tsx' });
+  });
+
+  it('flags oversized local route titles in main-route extension pages', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'demo-route',
+        name: 'Demo Route',
+        version: '0.1.0',
+        contributes: {
+          views: [{ id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' }],
+        },
+      }),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-route/src/frontend.tsx',
+      `
+        export function DemoPage() {
+          return <h1 className="text-[32px] font-semibold">Demo</h1>;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-page-local-title-scale',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/src/frontend.tsx' });
+  });
+
+  it('flags in-page sidebars in manifest main-route components', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'demo-route',
+        name: 'Demo Route',
+        version: '0.1.0',
+        contributes: {
+          views: [
+            { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+            { id: 'details', title: 'Details', location: 'rightRail', placement: 'primary', component: 'DemoDetails' },
+          ],
+        },
+      }),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-route/src/frontend.tsx',
+      `
+        export function DemoDetails() {
+          return <aside className="flex h-full min-h-0 flex-col">Details</aside>;
+        }
+
+        export function DemoPage() {
+          return (
+            <main>
+              <aside className="w-72 border-r border-border-subtle">Filters</aside>
+            </main>
+          );
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-page-local-shell-sidebar',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      file: 'extensions/demo-route/src/frontend.tsx',
+      sample: '<aside className="w-72 border-r border-border-subtle">Filters</aside>',
+    });
+  });
+
+  it('flags old right-rail wording in extension authoring docs', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'docs/extension-templates/README.md',
+      `
+        Build a route, rail extension with a route-owned right-rail panel.
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['docs/extension-templates'] }).filter(
+      (finding) => finding.id === 'extension-doc-old-right-rail-language',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'docs/extension-templates/README.md' });
+  });
+
+  it('allows literal rightRail and right-rail identifiers in extension authoring docs', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/system-extension-manager/README.md',
+      `
+        Use \`rightRail\` in manifest JSON and the \`right-rail\` starter template id for compatibility.
+        Describe the visible surface as the right sidebar in prose.
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'extension-doc-old-right-rail-language',
+    );
+
+    expect(findings).toHaveLength(0);
+  });
+
+  it('flags side-region fields on main extension manifest views', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              {
+                id: 'page',
+                title: 'Demo',
+                location: 'main',
+                route: '/ext/demo-route',
+                component: 'DemoPage',
+                placement: 'primary',
+                scope: 'global',
+              },
+              {
+                id: 'context',
+                title: 'Demo context',
+                location: 'rightRail',
+                placement: 'primary',
+                scope: 'global',
+                component: 'DemoContext',
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-main-view-shell-fields',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/extension.json' });
+  });
+
+  it('flags primary right sidebar views that are not bound from route nav', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context', title: 'Demo context', location: 'rightRail', placement: 'primary', component: 'DemoContext' },
+            ],
+            nav: [{ id: 'demo-route', label: 'Demo', route: '/ext/demo-route' }],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-unbound-primary-right-sidebar',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/extension.json' });
+  });
+
+  it('flags sidebar views that are not bound from route nav', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context-nav', title: 'Demo navigation', location: 'sidebar', component: 'DemoSidebar' },
+            ],
+            nav: [{ id: 'demo-route', label: 'Demo', route: '/ext/demo-route' }],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-unbound-sidebar-view',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/extension.json' });
+  });
+
+  it('flags nav sidebar references that do not point to sidebar views', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [{ id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' }],
+            nav: [{ id: 'demo-route', label: 'Demo', route: '/ext/demo-route', sidebarView: 'page' }],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-invalid-sidebar-nav-reference',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/extension.json' });
+  });
+
+  it('flags nav right-sidebar references that do not point to primary right sidebar views', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context', title: 'Demo context', location: 'rightRail', component: 'DemoContext' },
+            ],
+            nav: [{ id: 'demo-route', label: 'Demo', route: '/ext/demo-route', rightSidebarView: 'context' }],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-invalid-right-sidebar-nav-reference',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/extension.json' });
+  });
+
+  it('flags main-route nav items without approved page types', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [{ id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' }],
+            nav: [{ id: 'demo-route', label: 'Demo', route: '/ext/demo-route' }],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-main-route-missing-page-type',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/extension.json' });
+  });
+
+  it('flags unknown main-route page types', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [{ id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' }],
+            nav: [{ id: 'demo-route', label: 'Demo', route: '/ext/demo-route', pageType: 'wizard' }],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-main-route-invalid-page-type',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/extension.json' });
+  });
+
+  it('allows approved page types and ignores non-page nav items', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [{ id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' }],
+            nav: [
+              { id: 'demo-route', label: 'Demo', route: '/ext/demo-route', pageType: 'dashboard' },
+              { id: 'external-help', label: 'Help', route: '/external/help' },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'manifest-main-route-missing-page-type' || finding.id === 'manifest-main-route-invalid-page-type',
+    );
+
+    expect(findings).toHaveLength(0);
+  });
+
+  it('allows route-bound sidebar views, primary right sidebar views, and workbench tool rails', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context-nav', title: 'Demo navigation', location: 'sidebar', component: 'DemoSidebar' },
+              { id: 'context', title: 'Demo context', location: 'rightRail', placement: 'primary', component: 'DemoContext' },
+              { id: 'tool', title: 'Demo tool', location: 'rightRail', placement: 'workbench-tool', component: 'DemoTool' },
+            ],
+            nav: [
+              {
+                id: 'demo-route',
+                label: 'Demo',
+                route: '/ext/demo-route',
+                sidebarView: 'context-nav',
+                rightSidebarView: 'context',
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) =>
+        finding.id === 'manifest-unbound-primary-right-sidebar' ||
+        finding.id === 'manifest-unbound-sidebar-view' ||
+        finding.id === 'manifest-invalid-sidebar-nav-reference' ||
+        finding.id === 'manifest-invalid-right-sidebar-nav-reference',
+    );
+
+    expect(findings).toHaveLength(0);
+  });
+
+  it('flags route-owned sidebar components that bypass the sidebar template', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context-nav', title: 'Demo navigation', location: 'sidebar', component: 'DemoSidebar' },
+            ],
+            nav: [
+              {
+                id: 'demo-route',
+                label: 'Demo',
+                route: '/ext/demo-route',
+                pageType: 'table',
+                sidebarView: 'context-nav',
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-route/src/frontend.tsx',
+      `
+        export function DemoPage() {
+          return <div>Demo</div>;
+        }
+
+        export function DemoSidebar() {
+          return <div className="flex h-full flex-col gap-2 p-3">Local sidebar</div>;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-sidebar-template-missing',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/src/frontend.tsx' });
+  });
+
+  it('allows route-owned sidebar components that use the sidebar template', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context-nav', title: 'Demo navigation', location: 'sidebar', component: 'DemoSidebar' },
+            ],
+            nav: [
+              {
+                id: 'demo-route',
+                label: 'Demo',
+                route: '/ext/demo-route',
+                pageType: 'table',
+                sidebarView: 'context-nav',
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-route/src/frontend.tsx',
+      `
+        import { SidebarSection } from '@neon-pilot/extensions/ui';
+
+        export function DemoPage() {
+          return <div>Demo</div>;
+        }
+
+        export function DemoSidebar() {
+          return <SidebarSection title="Demo">Content</SidebarSection>;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-sidebar-template-missing',
+    );
+
+    expect(findings).toHaveLength(0);
+  });
+
+  it('flags route-owned right sidebar components that bypass ContextRail', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context', title: 'Demo context', location: 'rightRail', placement: 'primary', component: 'DemoContext' },
+            ],
+            nav: [
+              {
+                id: 'demo-route',
+                label: 'Demo',
+                route: '/ext/demo-route',
+                pageType: 'table',
+                rightSidebarView: 'context',
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-route/src/frontend.tsx',
+      `
+        export function DemoPage() {
+          return <div>Demo</div>;
+        }
+
+        export function DemoContext() {
+          return <div className="flex h-full flex-col border-l border-border-subtle">Context</div>;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-right-sidebar-template-missing',
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ file: 'extensions/demo-route/src/frontend.tsx' });
+  });
+
+  it('allows route-owned right sidebar components that use ContextRail', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-route/extension.json',
+      JSON.stringify(
+        {
+          schemaVersion: 2,
+          id: 'demo-route',
+          name: 'Demo Route',
+          version: '0.1.0',
+          contributes: {
+            views: [
+              { id: 'page', title: 'Demo', location: 'main', route: '/ext/demo-route', component: 'DemoPage' },
+              { id: 'context', title: 'Demo context', location: 'rightRail', placement: 'primary', component: 'DemoContext' },
+            ],
+            nav: [
+              {
+                id: 'demo-route',
+                label: 'Demo',
+                route: '/ext/demo-route',
+                pageType: 'table',
+                rightSidebarView: 'context',
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-route/src/frontend.tsx',
+      `
+        import { ContextRail } from '@neon-pilot/extensions/ui';
+
+        export function DemoPage() {
+          return <div>Demo</div>;
+        }
+
+        export function DemoContext() {
+          return <ContextRail title="Demo">Context</ContextRail>;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-right-sidebar-template-missing',
+    );
+
+    expect(findings).toHaveLength(0);
+  });
+
+  it('allows centered loading in workbench-only extension panels', () => {
+    const root = createRepo();
+    writeFixture(
+      root,
+      'extensions/demo-workbench/extension.json',
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'demo-workbench',
+        name: 'Demo Workbench',
+        version: '0.1.0',
+        contributes: {
+          views: [{ id: 'panel', title: 'Demo', location: 'rightRail', scope: 'conversation', component: 'DemoPanel' }],
+        },
+      }),
+    );
+    writeFixture(
+      root,
+      'extensions/demo-workbench/src/frontend.tsx',
+      `
+        import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
+
+        export function DemoPanel() {
+          return <CenteredLoadingState label="Loading panel..." />;
+        }
+      `,
+    );
+
+    const findings = auditUiPatterns({ allowlist: [], repoRoot: root, roots: ['extensions'] }).filter(
+      (finding) => finding.id === 'route-page-centered-loading',
+    );
+
+    expect(findings).toHaveLength(0);
   });
 
   it('scans extension templates by default', () => {

@@ -19,13 +19,13 @@ import {
   AppPageLayout,
   AppPageSection,
   Button,
-  CenteredLoadingState,
+  EmptyState,
   ErrorState,
   IconButton,
   MetricTile,
+  QuietLoadingState,
   SegmentedControl,
   StatGrid,
-  StatusDot,
 } from '@neon-pilot/extensions/ui';
 import React, { useState } from 'react';
 
@@ -66,20 +66,28 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
     error,
     refetch,
   } = useTracesData(range, pa);
-
-  if (loading && !summary) {
-    return <CenteredLoadingState label="Loading trace data…" />;
-  }
+  const hasDiagnosticActivity = Boolean(
+    summary &&
+    (summary.activeSessions > 0 ||
+      summary.runsToday > 0 ||
+      summary.toolCalls > 0 ||
+      summary.tokensTotal > 0 ||
+      summary.toolErrors > 0 ||
+      (tokensDaily?.length ?? 0) > 0 ||
+      (toolHealth?.length ?? 0) > 0),
+  );
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center px-6">
-        <div className="text-center space-y-3">
+      <div className="h-full overflow-y-auto">
+        <AppPageLayout contentClassName="space-y-6">
+          <AppPageIntro title="Diagnostics" />
           <ErrorState message={error} />
-          <Button variant="action" onClick={refetch} className="text-[11px]">
+          <Button variant="action" onClick={refetch}>
+            <span aria-hidden="true">↻</span>
             Try again
           </Button>
-        </div>
+        </AppPageLayout>
       </div>
     );
   }
@@ -92,48 +100,102 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
           actions={
             <div className="flex items-center gap-2">
               <TimeRangeSelector value={range} onChange={setRange} />
-              <IconButton aria-label="Refresh diagnostics" title="Refresh diagnostics" onClick={refetch}>
+              <IconButton compact aria-label="Refresh diagnostics" title="Refresh diagnostics" onClick={refetch}>
                 <RefreshIcon />
               </IconButton>
             </div>
           }
         />
 
+        {loading && !summary ? (
+          <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
+            <QuietLoadingState label="Loading diagnostics" />
+          </AppPageSection>
+        ) : !summary ? (
+          <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
+            <EmptyState
+              align="start"
+              eyebrow="Dashboard page"
+              title="No diagnostics yet"
+              body={
+                loading
+                  ? 'Diagnostics will fill in after retained usage, tool, and context data loads.'
+                  : 'Diagnostics fill in after conversations produce retained usage, tool, and context data.'
+              }
+              steps={[
+                'Run or resume a conversation.',
+                'Open Diagnostics after usage is recorded.',
+                'Refresh when you expect new activity.',
+              ]}
+              action={
+                <Button variant="action" tone="accent" onClick={refetch}>
+                  <RefreshIcon />
+                  Refresh diagnostics
+                </Button>
+              }
+            />
+          </AppPageSection>
+        ) : null}
+
         {/* ── Pulse Row ── */}
         {summary && <PulseRow summary={summary} />}
 
-        <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
-          {tokensDaily && <TracesHeatmap data={tokensDaily} />}
-          {tokensDaily && <TracesDailyUsage data={tokensDaily} />}
-          {modelUsage && summary && (
-            <TracesModelUsage
-              models={modelUsage}
-              throughput={throughput ?? []}
-              totalTokens={modelUsage.reduce((total, model) => total + model.tokens, 0)}
-              tokensInput={summary.tokensInput}
-              tokensOutput={summary.tokensOutput}
-              tokensCached={summary.tokensCached}
-              tokensCachedWrite={summary.tokensCachedWrite}
-              cacheHitRate={summary.cacheHitRate}
-              cacheEfficiency={cacheEfficiency}
+        {summary && !hasDiagnosticActivity ? (
+          <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
+            <EmptyState
+              align="start"
+              eyebrow="Dashboard page"
+              title="No diagnostic activity in this range"
+              body="Diagnostics populate after conversations, tools, and model runs produce retained usage data."
+              steps={['Run or resume a conversation.', 'Use a tool or model response path.', 'Refresh this page after the run finishes.']}
+              action={
+                <Button variant="action" tone="accent" onClick={refetch}>
+                  <RefreshIcon />
+                  Refresh diagnostics
+                </Button>
+              }
             />
-          )}
-          {tokensDaily && summary && <TracesBraidChart data={tokensDaily} />}
-        </AppPageSection>
+          </AppPageSection>
+        ) : null}
 
-        <AppPageSection title="Tools" layout="stacked" bodyClassName="space-y-4">
-          {toolHealth && <TracesToolHealth tools={toolHealth} />}
-          <TracesToolFlow data={toolFlow} />
-        </AppPageSection>
+        {summary && hasDiagnosticActivity ? (
+          <AppPageSection title="Usage" layout="stacked" bodyClassName="space-y-4">
+            {tokensDaily && <TracesHeatmap data={tokensDaily} />}
+            {tokensDaily && <TracesDailyUsage data={tokensDaily} />}
+            {modelUsage && summary && (
+              <TracesModelUsage
+                models={modelUsage}
+                throughput={throughput ?? []}
+                totalTokens={modelUsage.reduce((total, model) => total + model.tokens, 0)}
+                tokensInput={summary.tokensInput}
+                tokensOutput={summary.tokensOutput}
+                tokensCached={summary.tokensCached}
+                tokensCachedWrite={summary.tokensCachedWrite}
+                cacheHitRate={summary.cacheHitRate}
+                cacheEfficiency={cacheEfficiency}
+              />
+            )}
+            {tokensDaily && summary && <TracesBraidChart data={tokensDaily} />}
+          </AppPageSection>
+        ) : null}
 
-        <AppPageSection title="App activity" layout="stacked" bodyClassName="space-y-4">
-          <TracesContextPointers data={contextPointers} />
-          <TracesAutoMode data={autoMode} />
-          <TracesSessionIntegrity events={sessionIntegrity ?? []} />
-          <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
-          <TracesContextPressure sessions={contextSessions ?? []} compactions={compactions ?? []} compactionAggs={compactionAggs} />
-          <TracesAgentLoop loop={agentLoop} />
-        </AppPageSection>
+        {summary && hasDiagnosticActivity ? (
+          <AppPageSection title="Tools" layout="stacked" bodyClassName="space-y-4">
+            {toolHealth && <TracesToolHealth tools={toolHealth} />}
+            <TracesToolFlow data={toolFlow} />
+          </AppPageSection>
+        ) : null}
+
+        {summary && hasDiagnosticActivity ? (
+          <AppPageSection title="App activity" layout="stacked" bodyClassName="space-y-4">
+            <TracesContextPointers data={contextPointers} />
+            <TracesAutoMode data={autoMode} />
+            <TracesSessionIntegrity events={sessionIntegrity ?? []} />
+            <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
+            <TracesContextPressure sessions={contextSessions ?? []} compactions={compactions ?? []} compactionAggs={compactionAggs} />
+            <TracesAgentLoop loop={agentLoop} />
+          </AppPageSection>
+        ) : null}
       </AppPageLayout>
     </div>
   );
@@ -198,7 +260,6 @@ function PulseRow({ summary }: { summary: NonNullable<ReturnType<typeof useTrace
       value: String(summary.toolErrors),
       tone: summary.toolErrors > 0 ? ('danger' as const) : ('default' as const),
       trend: `${((summary.toolErrors / Math.max(summary.toolCalls, 1)) * 100).toFixed(1)}% error rate`,
-      dot: summary.toolErrors > 0,
     },
   ];
 
@@ -214,10 +275,8 @@ function PulseRow({ summary }: { summary: NonNullable<ReturnType<typeof useTrace
           align="left"
           appearance="plain"
           valueClassName="font-mono tabular-nums"
-          className="relative min-w-0"
-        >
-          {card.dot ? <StatusDot tone={card.tone === 'danger' ? 'danger' : 'accent'} size="xs" className="absolute right-1 top-1" /> : null}
-        </MetricTile>
+          className="min-w-0"
+        />
       ))}
     </StatGrid>
   );

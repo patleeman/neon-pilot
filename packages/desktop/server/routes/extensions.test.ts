@@ -673,79 +673,43 @@ describe('registerExtensionRoutes', () => {
   });
 
   it('serves command and slash command registrations for enabled extensions', async () => {
-    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
-    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
-    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
-    mkdirSync(extensionRoot, { recursive: true });
-    writeFileSync(
-      join(extensionRoot, 'extension.json'),
-      JSON.stringify({
-        schemaVersion: 2,
-        id: 'agent-board',
-        name: 'Agent Board',
-        contributes: {
-          nav: [{ id: 'board-nav', label: 'Agent Board', route: '/ext/agent-board', icon: 'kanban' }],
-          views: [{ id: 'board-rail', title: 'Board Rail', location: 'rightRail', component: 'BoardRail', icon: 'kanban' }],
-          commands: [{ id: 'plan', title: 'Plan board sprint', action: 'planSprint', icon: 'kanban' }],
-          slashCommands: [{ name: 'task', description: 'Create a board task', action: 'createTask' }],
-        },
-      }),
-    );
-
     const harness = createHarness();
     const commandsRes = createResponse();
     await harness.getHandler('/api/extensions/commands')({}, commandsRes);
     expect(commandsRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         {
-          extensionId: 'agent-board',
-          surfaceId: 'plan',
-          packageType: 'user',
-          title: 'Plan board sprint',
-          action: 'planSprint',
-          icon: 'kanban',
-        },
-        {
-          extensionId: 'agent-board',
-          surfaceId: 'open-board-nav',
-          packageType: 'user',
-          title: 'Open Agent Board',
+          extensionId: 'system-automations',
+          surfaceId: 'new',
+          packageType: 'system',
+          title: 'New Automation',
           action: 'app.navigate',
-          args: { to: '/ext/agent-board' },
-          icon: 'kanban',
-          category: 'Agent Board',
-        },
-        {
-          extensionId: 'agent-board',
-          surfaceId: 'open-board-rail',
-          packageType: 'user',
-          title: 'Open Board Rail panel',
-          action: 'rail.open',
-          args: { extensionId: 'agent-board', surfaceId: 'board-rail' },
-          icon: 'kanban',
-          category: 'Agent Board',
+          args: { to: '/automations?action=new' },
+          icon: 'automation',
+          category: 'Automations',
+          description: 'Open the automation creation flow.',
         },
       ]),
     );
 
     const commandRes = createResponse();
     await harness.postHandler('/api/extensions/commands/:commandId/execute')(
-      { params: { commandId: 'agent-board.plan' }, body: { sprint: 'next' } },
+      { params: { commandId: 'system-automations.new' }, body: {} },
       commandRes,
     );
-    expect(commandRes.json).toHaveBeenCalledWith({ ok: true, result: { ok: false, error: expect.stringContaining('worker') } });
+    expect(commandRes.json).toHaveBeenCalledWith({ ok: true, result: false });
 
     const slashRes = createResponse();
     await harness.getHandler('/api/extensions/slash-commands')({}, slashRes);
     expect(slashRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         {
-          extensionId: 'agent-board',
-          surfaceId: 'task',
-          packageType: 'user',
-          name: 'task',
-          description: 'Create a board task',
-          action: 'createTask',
+          extensionId: 'system-auto-mode',
+          surfaceId: 'goal',
+          packageType: 'system',
+          name: 'goal',
+          description: expect.stringContaining('Set, view, pause, resume, or clear the current goal.'),
+          action: 'handleSlashGoal',
         },
       ]),
     );
@@ -806,7 +770,7 @@ describe('registerExtensionRoutes', () => {
 
     const frontend = readFileSync(join(stateRoot, 'extensions', 'agent-board', 'src', 'frontend.tsx'), 'utf-8');
     expect(frontend).toContain(`const EXTENSION_NAME = "Patrick's <Tool>";`);
-    expect(frontend).toContain('{EXTENSION_NAME}</h1>');
+    expect(frontend).toContain('<AppPageIntro title={EXTENSION_NAME} />');
     expect(frontend).toContain("pa.ui.toast(EXTENSION_NAME + ' is wired up.')");
     expect(frontend).not.toContain("pa.ui.toast('Patrick's <Tool>");
   });

@@ -11,7 +11,7 @@ describe('extensionInteractionContributionValidation', () => {
   it('validates interaction contribution groups', () => {
     expect(validateContextMenuContributions([{ id: 'menu', title: 'Menu', action: 'act', surface: 'message' }])).toBeUndefined();
     expect(
-      validateSelectionActionContributions([{ id: 'sel', title: 'Sel', action: 'act', kinds: ['text'], priority: 1 }]),
+      validateSelectionActionContributions([{ id: 'sel', title: 'Sel', action: 'act', kinds: ['text', 'resource'], priority: 1 }]),
     ).toBeUndefined();
     expect(validateTranscriptBlockContributions([{ id: 'block', component: 'Block', schemaVersion: 1 }])).toBeUndefined();
     expect(validateSubscriptionContributions([{ id: 'sub', handler: 'run', source: 'events', debounceMs: 1 }])).toBeUndefined();

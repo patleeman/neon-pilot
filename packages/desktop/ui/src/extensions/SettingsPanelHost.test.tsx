@@ -20,6 +20,7 @@ vi.mock('./nativePaClient', () => ({
 vi.mock('./systemExtensionModules', () => ({
   systemExtensionModules: new Map([
     ['system-test-panel', async () => ({ OtherPanel: () => null })],
+    ['system-pending-panel', () => new Promise(() => {})],
     [
       'system-error-panel',
       async () => {
@@ -59,6 +60,23 @@ describe('SettingsPanelHost', () => {
     expect(screen.getByText(/The settings panel for Test Panel could not load/)).toBeTruthy();
     expect(screen.queryByText(/system-test-panel:test-panel/)).toBeNull();
     expect(screen.queryByText(/MissingPanel/)).toBeNull();
+  });
+
+  it('keeps extension settings loading visually quiet', () => {
+    render(
+      <SettingsPanelHost
+        registration={{
+          extensionId: 'system-pending-panel',
+          id: 'pending-panel',
+          component: 'PendingPanel',
+          sectionId: 'settings-pending-panel',
+          label: 'Pending Panel',
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('status', { name: 'Loading extension settings' })).toBeTruthy();
+    expect(screen.queryByText('Loading extension settings…')).toBeNull();
   });
 
   it('does not expose raw import or module details when a settings panel fails to load', async () => {

@@ -3,6 +3,7 @@ import {
   Field,
   Notice,
   Pill,
+  QuietLoadingState,
   RailSubsection,
   RowButton,
   Select,
@@ -225,7 +226,7 @@ export function AgentPluginsSettingsPanel() {
   return (
     <div className="space-y-5">
       {loading && !data ? (
-        <SupportingText>Loading agent plugins...</SupportingText>
+        <QuietLoadingState label="Loading agent plugins" className="min-h-12" />
       ) : error && !data ? (
         <p className="text-[12px] text-danger">Failed to load agent plugins: {error}</p>
       ) : data ? (
@@ -360,6 +361,7 @@ export function AgentPluginsSettingsPanel() {
                     disabled={operation.busy}
                     onClick={() => void removeSelectedPlugin(selectedPlugin)}
                   >
+                    <span aria-hidden="true">-</span>
                     Remove
                   </ToolbarButton>
                 </div>

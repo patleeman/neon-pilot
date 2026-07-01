@@ -79,7 +79,7 @@ Static extension-local `bin/` and `templates/` directories are copied into `dist
 
 Packaged desktop releases only load prebuilt `dist/` files. They do not run esbuild for extensions at runtime, so imported/user extensions must already include their built frontend/backend bundles.
 
-After building, reload extensions from the Extension Manager or the app reload path. If you changed UI, open the declared route, workbench tab, or tab-local rail surface and visually inspect it.
+After building, reload extensions from the Extension Manager or the app reload path. If you changed UI, open the declared route, route-owned right sidebar, workbench tab, or tab-local workbench rail and visually inspect it.
 When the app is running, `neon-pilot extensions smoke <extension-id>` invokes host-level backend smoke checks through the same extension host path used by the packaged app.
 
 ## Packaging extensions
@@ -153,24 +153,103 @@ Minimal example:
 }
 ```
 
-Nav items can also replace the left sidebar body with an extension-owned view while their route is active:
+Nav items can also declare route-owned shell regions. Every nav route must match a `main` view with the same route. `sidebarView` replaces the middle-left contextual sidebar body while the route is active. `rightSidebarView` renders a right-sidebar context rail and makes the shell's right-sidebar toggle visible on that route.
+
+Before adding a route, choose one approved page type from `docs/design/page-template-standards.md`: Conversation, Table, Editor, Settings, Dashboard, or Setup. First-party routes must annotate the nav item with `pageType` (`"conversation"`, `"table"`, `"editor"`, `"settings"`, `"dashboard"`, or `"setup"`) so conformance sweeps can audit the intended template. If an extension appears to need another recurring page type, document the missing behavior instead of inventing local shell chrome.
+
+Use `QuietLoadingState` for route, contextual-left, and right-sidebar `Suspense` fallbacks that only wait for extension code or registry state. Visible loading copy belongs inside the table, list, editor, settings group, tool output, or object that is actually loading.
 
 ```json
 {
   "contributes": {
-    "views": [{ "id": "sessions-sidebar", "title": "Sessions", "location": "sidebar", "component": "SessionsSidebar" }],
+    "views": [
+      { "id": "sessions-page", "title": "Remote Agent", "location": "main", "route": "/ext/remote-agent", "component": "SessionsPage" },
+      { "id": "sessions-sidebar", "title": "Sessions", "location": "sidebar", "component": "SessionsSidebar" },
+      {
+        "id": "session-inspector",
+        "title": "Session Inspector",
+        "location": "rightRail",
+        "placement": "primary",
+        "component": "SessionInspector"
+      }
+    ],
     "nav": [
       {
         "id": "nav",
         "label": "Remote Agent",
         "icon": "sparkle",
         "route": "/ext/remote-agent",
-        "sidebarView": "sessions-sidebar"
+        "pageType": "table",
+        "sidebarView": "sessions-sidebar",
+        "rightSidebarView": "session-inspector"
       }
     ]
   }
 }
 ```
+
+If a route does not declare `sidebarView`, the global sidebar nav remains and the middle contextual area is blank. Do not rely on Threads showing outside Chat routes. If a route does not declare `rightSidebarView`, the shell hides the right-sidebar toggle. Route-owned right-sidebar views require `location: "rightRail"` and `placement: "primary"`; `scope` is optional and defaults through the host.
+
+Main views own only the route's primary page. Do not put `placement` or `scope` on `location: "main"` views; those fields are valid only for side-region views and are rejected by manifest validation.
+
+For table/list pages, publish the selected object through `pa.selection.set({ kind: "resource", resource: { type, id, label, source, data } })` and render the detail in the route-owned `rightSidebarView`. Resource selections are cleared when the active route shell changes, so each route should publish its own selected resource and render a compact empty state before selection. Keep normal object inspection out of modals unless the flow is truly blocking or transient.
+
+Route-owned context rails are opened through route navigation plus the shell right-sidebar toggle. They are not standalone command-palette tools. Tab-local workbench rails may still be opened directly with `rail.open`.
+
+Common route shapes:
+
+```json
+{
+  "contributes": {
+    "views": [{ "id": "runs-page", "title": "Runs", "location": "main", "route": "/ext/runs", "component": "RunsPage" }],
+    "nav": [{ "id": "runs", "label": "Runs", "route": "/ext/runs", "icon": "graph", "pageType": "table" }]
+  }
+}
+```
+
+Use this main-only shape for pages like Automations or Diagnostics where the route does not need a selector on the left or persistent details on the right.
+
+```json
+{
+  "contributes": {
+    "views": [
+      { "id": "flows-page", "title": "Flows", "location": "main", "route": "/ext/flows", "component": "FlowsPage" },
+      { "id": "flows-sidebar", "title": "Flows", "location": "sidebar", "component": "FlowsSidebar" }
+    ],
+    "nav": [{ "id": "flows", "label": "Flows", "route": "/ext/flows", "icon": "graph", "sidebarView": "flows-sidebar" }]
+  }
+}
+```
+
+Use this left+main shape when the left area is the natural object or section navigator for the route.
+
+```json
+{
+  "contributes": {
+    "views": [
+      { "id": "catalog-page", "title": "Catalog", "location": "main", "route": "/ext/catalog", "component": "CatalogPage" },
+      {
+        "id": "catalog-details",
+        "title": "Catalog Details",
+        "location": "rightRail",
+        "placement": "primary",
+        "component": "CatalogDetails"
+      }
+    ],
+    "nav": [
+      {
+        "id": "catalog",
+        "label": "Catalog",
+        "route": "/ext/catalog",
+        "icon": "app",
+        "rightSidebarView": "catalog-details"
+      }
+    ]
+  }
+}
+```
+
+Use this table+right-detail shape when row selection should keep details, metadata, logs, or secondary actions adjacent to the list.
 
 Rules:
 
@@ -332,13 +411,15 @@ Start with the smallest shared primitive that fits the job, then compose upward:
 - Page chrome: `AppPageLayout`, `AppPageIntro`, `AppPageSection`, `AppPageEmptyState`
 - Actions: `Button`, `ToolbarButton`, `IconButton`, `TextButton`, `CheckButton`
 - Forms: `Field`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `SegmentedControl`, `Switch`, `SettingToggleRow`
-- Feedback: `LoadingState`, `CenteredLoadingState`, `PanelMessage`, `Notice`, `ErrorState`, `EmptyState`, `StatusDot`, `Pill`
+- Feedback: `QuietLoadingState`, `LoadingState`, `CenteredLoadingState`, `PanelMessage`, `Notice`, `ErrorState`, `EmptyState`, `StatusDot`, `Pill`
 - Lists and tables: `DataTable`, `DataTableEmptyRow`, `DataTableActionGroup`, `ResourceList`, `ResourceListRow`, `ResourceListItem`
 - Runtime pages: `RuntimePage`, `RuntimeStrip`, `RuntimeHeaderControls`, `RuntimeSection`, `MetricTile`, `DashboardGrid`
 - Rails, sidebars, and settings panels: `RailSection`, `RailSubsection`, `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, `SidebarMessage`, `SidebarTreeSection`, `ActivityTreeView`, `SettingsPanel`, `SettingsRow`, `Switch`, `Select`, `TextInput`, `Textarea`, `ToolbarButton`
 - Chat and files: `ChatView`, `ChatRailComposer`, `ExtensionChatRail`, `ResourcePickerDialog`
 
 Use local markup for product-specific layout and content, but extract repeated chrome, action groups, pickers, chat surfaces, table actions, runtime summaries, and settings rows into shared UI instead of creating extension-local lookalikes. See [Design system](../../docs/design-system.md) and [`packages/ui`](../ui/README.md) for the full component catalog, Storybook guidance, and replacement checklist.
+
+Every extension page needs a real empty state for its primary working surface. Use `EmptyState` or `AppPageEmptyState` with the feature's job, why the surface is empty, two or three first steps, and one attached next action when available. Do not ship a bare `No items yet` placeholder; empty states are how new routes explain themselves without becoming landing pages.
 
 Settings components are not standalone app pages. When contributing `contributes.settingsComponent`, import settings-specific host pieces such as `SettingsPanel`, `SettingsRow`, `SettingsField`, and settings data helpers from `@neon-pilot/extensions/settings`; import generic controls such as `TextInput`, `Textarea`, `Select`, `Switch`, `ToolbarButton`, and `RowButton` from `@neon-pilot/extensions/ui`. The host owns the page title, outer width, scroll anchor, and section spacing. Normal preferences should autosave on change, blur, or debounce; reserve visible buttons for explicit commands such as refresh, install, sync, test connection, or destructive actions.
 
@@ -436,13 +517,25 @@ A frontend surface exports a React component referenced by `contributes.views[].
 
 ```tsx
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { AppPageLayout, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
+import { AppPageIntro, AppPageLayout, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
 
 export function AgentBoardPage({ pa, context }: ExtensionSurfaceProps) {
   return (
-    <AppPageLayout title="Agent Board" summary={`Conversation: ${context.conversationId ?? 'none'}`}>
+    <AppPageLayout>
+      <AppPageIntro title="Agent Board" />
+      <p className="text-[13px] text-secondary">Conversation: {context.conversationId ?? 'none'}</p>
       <ToolbarButton onClick={() => pa.extension.invoke('createTask', { conversationId: context.conversationId })}>New task</ToolbarButton>
-      <EmptyState title="No tasks yet" body="Create a task from a conversation or start one here." />
+      <EmptyState
+        eyebrow="Table page"
+        title="No tasks yet"
+        body="Tasks track agent work that should stay visible outside the transcript."
+        steps={['Create a task from the current conversation', 'Assign the next action', 'Use the table to inspect progress later']}
+        action={
+          <ToolbarButton onClick={() => pa.extension.invoke('createTask', { conversationId: context.conversationId })}>
+            New task
+          </ToolbarButton>
+        }
+      />
     </AppPageLayout>
   );
 }
@@ -487,7 +580,7 @@ await pa.extension.invoke('createTask', { title: 'Write docs' });
 
 Do not import backend handlers directly into frontend components. Browser/Node boundary lies are expensive and stupid.
 
-Backend actions receive capability namespaces through `ctx`, including extension storage and backend-only capabilities such as workspace, git, shell, executions, automations, conversations, transcript block writing, and secrets where available. Use those seams instead of importing app internals. Frontend surfaces also receive `pa.selection` for shared text/message/file/transcript-range selection state.
+Backend actions receive capability namespaces through `ctx`, including extension storage and backend-only capabilities such as workspace, git, shell, executions, automations, conversations, transcript block writing, and secrets where available. Use those seams instead of importing app internals. Frontend surfaces also receive `pa.selection` for shared text/message/file/transcript-range and route resource selection state.
 
 File-mutating actions should return standard `details.fileChanges` metadata when they can identify the exact mutation. The host transcript renders this shape as an inline Pierre diff for any tool result:
 
@@ -621,7 +714,7 @@ The handler receives `{ text, mentionIds }` and returns `{ contextBlocks, refere
 
 ## Selection, transcript blocks, services, subscriptions, and dependencies
 
-Use `contributes.selectionActions` for actions on selected text, messages, files, or transcript ranges. Selection actions support compact `icon` labels and static `args`; transcript selection menus merge those args with the active selection when invoking host composer actions like `composer.replyToSelection`. Frontend surfaces can read and publish shared selection with `pa.selection.get()`, `pa.selection.set(...)`, and `pa.selection.subscribe(...)`; the host also emits `host:selection` events for subscription consumers.
+Use `contributes.selectionActions` for actions on selected text, messages, files, or transcript ranges. Selection actions support compact `icon` labels and static `args`; transcript selection menus merge those args with the active selection when invoking host composer actions like `composer.replyToSelection`. Frontend surfaces can read and publish shared selection with `pa.selection.get()`, `pa.selection.set(...)`, and `pa.selection.subscribe(...)`; the host also emits `host:selection` events for subscription consumers. Route pages can also publish selected resources for their own right-sidebar context rails by using selection kind `resource`.
 
 Use `contributes.transcriptBlocks` plus `ctx.conversations.appendTranscriptBlock(...)` / `ctx.conversations.updateTranscriptBlock(...)` for extension-owned durable visible transcript blocks. This is the preferred seam for product-specific interactive blocks instead of baking new block types into core. Frontend components can use `pa.transcript.targetProps(target)` and `pa.transcript.spotlight(target)` to mark extension-owned transcript anchors and later scroll/focus/flash them; supported targets are `block`, `tool_call`, `background_run`, and `extension`.
 
@@ -756,27 +849,27 @@ Prompt assembly providers are isolated: failures, timeouts, and malformed items 
 
 ## Surfaces and contribution choices
 
-Pick the smallest surface that matches the product shape. Do not use a tab-local rail as a junk drawer.
+Pick the smallest surface that matches the product shape. Do not use a tab-local workbench rail as a junk drawer.
 
-| Surface                | Use for                                                                | Avoid using for                  |
-| ---------------------- | ---------------------------------------------------------------------- | -------------------------------- |
-| Main page view         | Durable app-level workflows with their own route                       | Tiny contextual helpers          |
-| Left nav item          | Primary destinations users should see every day (`section: 'primary'`) | Settings subpanels               |
-| Nav item (settings)    | Settings/configuration destinations (`section: 'settings'`)            | Product workflows                |
-| Right-rail panel       | Compact contextual companions inside a workbench tab                   | Wide editors or log/diff viewers |
-| Workbench detail view  | Large detail rendering paired to a tab-local rail selector             | Standalone app-level workflows   |
-| Settings contribution  | Configuration and preferences                                          | Product workflows                |
-| Command                | Fast one-shot actions or opening a surface                             | Persistent UI                    |
-| Slash command          | Conversation-authored actions that affect prompt context               | Global app navigation            |
-| Top bar element        | Status indicator icon/badge in the top bar                             | Full UI surfaces                 |
-| Message action         | Hover-reveal action button on a message block                          | Persistent UI elements           |
-| Toolbar action         | Icon button in the composer toolbar row                                | Text-heavy actions               |
-| Composer shelf         | Info/status section above the composer input                           | Full-page workflows              |
-| Conversation decorator | Badge/indicator on a conversation list item                            | Interactive UI                   |
-| Context menu           | Right-click menu item on message or sidebar item                       | Primary navigation               |
-| Thread header action   | Compact button beside the Threads sidebar header                       | Wide/persistent workflows        |
-| Status bar item        | Label in the status bar below the composer                             | Interactive controls             |
-| Theme                  | Color theme via CSS variable tokens                                    | Layout or UI changes             |
+| Surface                | Use for                                                                                              | Avoid using for                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Main page view         | Durable app-level workflows with their own route                                                     | Tiny contextual helpers        |
+| Left nav item          | Primary destinations users should see every day (`section: 'primary'`)                               | Settings subpanels             |
+| Nav item (settings)    | Settings/configuration destinations (`section: 'settings'`)                                          | Product workflows              |
+| Right-sidebar panel    | Route or workbench contextual companions: inspectors, selected details, metadata, activity, previews | Second primary page columns    |
+| Workbench detail view  | Large detail rendering paired to a tab-local workbench rail selector                                 | Standalone app-level workflows |
+| Settings contribution  | Configuration and preferences                                                                        | Product workflows              |
+| Command                | Fast one-shot actions or opening a surface                                                           | Persistent UI                  |
+| Slash command          | Conversation-authored actions that affect prompt context                                             | Global app navigation          |
+| Top bar element        | Status indicator icon/badge in the top bar                                                           | Full UI surfaces               |
+| Message action         | Hover-reveal action button on a message block                                                        | Persistent UI elements         |
+| Toolbar action         | Icon button in the composer toolbar row                                                              | Text-heavy actions             |
+| Composer shelf         | Info/status section above the composer input                                                         | Full-page workflows            |
+| Conversation decorator | Badge/indicator on a conversation list item                                                          | Interactive UI                 |
+| Context menu           | Right-click menu item on message or sidebar item                                                     | Primary navigation             |
+| Thread header action   | Compact button beside the Threads sidebar header                                                     | Wide/persistent workflows      |
+| Status bar item        | Label in the status bar below the composer                                                           | Interactive controls           |
+| Theme                  | Color theme via CSS variable tokens                                                                  | Layout or UI changes           |
 
 ### Composer host boundary
 
@@ -789,7 +882,9 @@ Rules:
 - Imperative DOM is acceptable only for browser-owned UI state: focus, caret/selection, scroll, measurement, and the hidden file input reset that lets users pick the same file twice.
 - If a new composer action needs state changes, add a host-owned intent method instead of passing refs or DOM handles across the extension boundary.
 
-Right-rail views are tab-local extension rails. They may point at a paired workbench detail view with `detailView`:
+Right-sidebar views can be route-owned context rails via a nav `rightSidebarView`, or tab-local workbench rails. Route-owned rails should be contextual companions to the active page: selected row details, inspectors, setup help, metadata, recent activity, previews, logs, validation, and secondary object actions. They should not become a second primary page column.
+
+Tab-local workbench rails may point at a paired workbench detail view with `detailView`:
 
 ```json
 {
@@ -847,7 +942,7 @@ Built-in host commands include:
 
 - `app.navigate` with `{ "to": "/path" }`
 - `palette.open` with `{ "scope": "threads" }`
-- `rail.open` with `{ "extensionId": "...", "surfaceId": "..." }`
+- `rail.open` with `{ "extensionId": "...", "surfaceId": "..." }` for tab-local Workbench rails; route-owned right sidebars open through navigation plus the shell toggle.
 - `layout.set` with `{ "mode": "compact" | "workbench" }` for hiding/showing the workbench panel
 - `layout.toggle`, `layout.toggleSidebar`, and `layout.toggleRightRail`
 - `page.find`

@@ -22,7 +22,7 @@ export interface CreateRuntimeExtensionInput {
   template?: unknown;
 }
 
-type RuntimeExtensionTemplate = 'main-page' | 'right-rail' | 'workbench-detail';
+type RuntimeExtensionTemplate = 'main-page' | 'route-sidebar' | 'route-right-sidebar' | 'route-shell' | 'right-rail' | 'workbench-detail';
 type RuntimeExtensionDeleteWarning = { operation: string; message: string };
 
 function normalizeExtensionId(value: unknown): string {
@@ -50,8 +50,18 @@ function normalizeOptionalString(value: unknown): string | undefined {
 
 function normalizeExtensionTemplate(value: unknown): RuntimeExtensionTemplate {
   if (value === undefined || value === null || value === '') return 'main-page';
-  if (value === 'main-page' || value === 'right-rail' || value === 'workbench-detail') return value;
-  throw new Error('Extension template must be main-page, right-rail, or workbench-detail.');
+  if (
+    value === 'main-page' ||
+    value === 'route-sidebar' ||
+    value === 'route-right-sidebar' ||
+    value === 'route-shell' ||
+    value === 'right-rail' ||
+    value === 'workbench-detail'
+  )
+    return value;
+  throw new Error(
+    'Extension template must be main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
+  );
 }
 
 function getExtensionSnapshotsRoot(stateRoot: string = getStateRoot()): string {
@@ -87,19 +97,250 @@ function createStarterFrontend(name: string, template: RuntimeExtensionTemplate)
 
   if (template === 'right-rail') {
     return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { ContextRail, ContextRailBody, ContextRailHeader, ContextRailSection, ToolbarButton } from '@neon-pilot/extensions/ui';
 
 const EXTENSION_NAME = ${nameLiteral};
 
 export function ExtensionPanel({ pa }: ExtensionSurfaceProps) {
+  // Right-sidebar templates always use ContextRail primitives; the host shell owns the outer region.
   return (
-    <aside className="h-full overflow-auto px-4 py-5 text-[13px] text-secondary">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Right rail</p>
-      <h2 className="mt-2 text-lg font-semibold text-primary">{EXTENSION_NAME}</h2>
-      <p className="mt-2 leading-6">${starterHelpText()}</p>
-      <button className="ui-toolbar-button mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
-        Test toast
-      </button>
-    </aside>
+    <ContextRail>
+      <ContextRailHeader eyebrow="Right sidebar" title={EXTENSION_NAME} />
+      <ContextRailBody>
+        <ContextRailSection title="Getting started">
+          <p className="text-[12px] leading-5 text-secondary">${starterHelpText()}</p>
+          <ToolbarButton type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+            Test toast
+          </ToolbarButton>
+        </ContextRailSection>
+      </ContextRailBody>
+    </ContextRail>
+  );
+}
+`;
+  }
+
+  if (template === 'route-right-sidebar') {
+    return `import { useEffect, useState } from 'react';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, ContextRail, ContextRailBody, ContextRailHeader, ContextRailSection, ToolbarButton } from '@neon-pilot/extensions/ui';
+
+const EXTENSION_NAME = ${nameLiteral};
+
+export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
+  useEffect(() => {
+    pa.selection.set({
+      kind: 'resource',
+      resource: {
+        type: 'starter',
+        id: 'welcome',
+        label: EXTENSION_NAME,
+        source: EXTENSION_NAME,
+        data: { status: 'Ready' },
+      },
+    });
+  }, [pa.selection]);
+
+  return (
+    <AppPageLayout>
+      <AppPageIntro title={EXTENSION_NAME} />
+      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+        <p>${starterHelpText()}</p>
+        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+          Test toast
+        </ToolbarButton>
+      </div>
+    </AppPageLayout>
+  );
+}
+
+export function ExtensionContextRail({ pa }: ExtensionSurfaceProps) {
+  const [resource, setResource] = useState(() => {
+    const selection = pa.selection.get();
+    return selection.kind === 'resource' ? selection.resource : null;
+  });
+
+  useEffect(() => {
+    return pa.selection.subscribe((selection) => {
+      setResource(selection.kind === 'resource' ? selection.resource : null);
+    });
+  }, [pa.selection]);
+
+  // Route-owned right sidebars use ContextRail as the only rail shell.
+  return (
+    <ContextRail>
+      <ContextRailHeader eyebrow="Context" title={resource?.label ?? EXTENSION_NAME} subtitle={resource?.source} />
+      <ContextRailBody>
+        <ContextRailSection title="Details">
+          <p className="text-[12px] leading-5 text-secondary">Use this right sidebar for selected-object details, metadata, logs, previews, or secondary actions.</p>
+        </ContextRailSection>
+      </ContextRailBody>
+    </ContextRail>
+  );
+}
+`;
+  }
+
+  if (template === 'route-sidebar') {
+    return `import { useEffect, useState } from 'react';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, SidebarList, SidebarSection, ToolbarButton } from '@neon-pilot/extensions/ui';
+
+const EXTENSION_NAME = ${nameLiteral};
+const ITEMS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'details', label: 'Details' },
+];
+
+export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
+  const [activeId, setActiveId] = useState(() => {
+    const selection = pa.selection.get();
+    return selection.kind === 'resource' && selection.resource?.type === 'starter-nav' ? selection.resource.id : 'overview';
+  });
+
+  useEffect(() => {
+    return pa.selection.subscribe((selection) => {
+      if (selection.kind === 'resource' && selection.resource?.type === 'starter-nav') {
+        setActiveId(selection.resource.id);
+      }
+    });
+  }, [pa.selection]);
+
+  const activeItem = ITEMS.find((item) => item.id === activeId) ?? ITEMS[0];
+
+  return (
+    <AppPageLayout>
+      <AppPageIntro title={EXTENSION_NAME} />
+      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+        <p>{activeItem.label} is selected in the route-owned left sidebar. ${starterHelpText()}</p>
+        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+          Test toast
+        </ToolbarButton>
+      </div>
+    </AppPageLayout>
+  );
+}
+
+export function ExtensionSidebar({ pa }: ExtensionSurfaceProps) {
+  const [activeId, setActiveId] = useState('overview');
+
+  function selectItem(item: (typeof ITEMS)[number]) {
+    setActiveId(item.id);
+    pa.selection.set({
+      kind: 'resource',
+      resource: {
+        type: 'starter-nav',
+        id: item.id,
+        label: item.label,
+        source: EXTENSION_NAME,
+      },
+    });
+  }
+
+  return (
+    <SidebarSection title="Navigate">
+      <SidebarList
+        items={ITEMS.map((item) => ({ id: item.id, title: item.label }))}
+        selectedId={activeId}
+        onSelect={(item) => selectItem({ id: item.id, label: String(item.title) })}
+      />
+    </SidebarSection>
+  );
+}
+`;
+  }
+
+  if (template === 'route-shell') {
+    return `import { useEffect, useState } from 'react';
+import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, ContextRail, ContextRailBody, ContextRailHeader, ContextRailSection, SidebarList, SidebarSection, ToolbarButton } from '@neon-pilot/extensions/ui';
+
+const EXTENSION_NAME = ${nameLiteral};
+const ITEMS = [
+  { id: 'overview', label: 'Overview', status: 'Ready' },
+  { id: 'activity', label: 'Activity', status: 'Watching' },
+];
+
+function readActiveResource(pa: ExtensionSurfaceProps['pa']) {
+  const selection = pa.selection.get();
+  return selection.kind === 'resource' && selection.resource?.type === 'starter-nav' ? selection.resource : null;
+}
+
+export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
+  const [resource, setResource] = useState(() => readActiveResource(pa));
+
+  useEffect(() => {
+    return pa.selection.subscribe((selection) => {
+      setResource(selection.kind === 'resource' && selection.resource?.type === 'starter-nav' ? selection.resource : null);
+    });
+  }, [pa.selection]);
+
+  const label = resource?.label ?? ITEMS[0].label;
+
+  return (
+    <AppPageLayout>
+      <AppPageIntro title={EXTENSION_NAME} />
+      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+        <p>{label} is selected in the route-owned left sidebar. The right sidebar shows contextual detail for the same selection.</p>
+        <p className="mt-3">${starterHelpText()}</p>
+        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+          Test toast
+        </ToolbarButton>
+      </div>
+    </AppPageLayout>
+  );
+}
+
+export function ExtensionSidebar({ pa }: ExtensionSurfaceProps) {
+  const [activeId, setActiveId] = useState('overview');
+
+  function selectItem(item: (typeof ITEMS)[number]) {
+    setActiveId(item.id);
+    pa.selection.set({
+      kind: 'resource',
+      resource: {
+        type: 'starter-nav',
+        id: item.id,
+        label: item.label,
+        source: EXTENSION_NAME,
+        data: { status: item.status },
+      },
+    });
+  }
+
+  return (
+    <SidebarSection title="Navigate">
+      <SidebarList
+        items={ITEMS.map((item) => ({ id: item.id, title: item.label, meta: item.status }))}
+        selectedId={activeId}
+        onSelect={(item) => {
+          const next = ITEMS.find((candidate) => candidate.id === item.id) ?? ITEMS[0];
+          selectItem(next);
+        }}
+      />
+    </SidebarSection>
+  );
+}
+
+export function ExtensionContextRail({ pa }: ExtensionSurfaceProps) {
+  const [resource, setResource] = useState(() => readActiveResource(pa));
+
+  useEffect(() => {
+    return pa.selection.subscribe((selection) => {
+      setResource(selection.kind === 'resource' && selection.resource?.type === 'starter-nav' ? selection.resource : null);
+    });
+  }, [pa.selection]);
+
+  // Route-owned right sidebars use ContextRail as the only rail shell.
+  return (
+    <ContextRail>
+      <ContextRailHeader eyebrow="Context" title={resource?.label ?? 'Select an item'} subtitle={resource?.source} />
+      <ContextRailBody>
+        <ContextRailSection title="Details">
+          <p className="text-[12px] leading-5 text-secondary">Use this right sidebar for metadata, logs, previews, validation, or secondary actions for the selected item.</p>
+        </ContextRailSection>
+      </ContextRailBody>
+    </ContextRail>
   );
 }
 `;
@@ -107,19 +348,24 @@ export function ExtensionPanel({ pa }: ExtensionSurfaceProps) {
 
   if (template === 'workbench-detail') {
     return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { ContextRail, ContextRailBody, ContextRailHeader, ContextRailSection, ToolbarButton } from '@neon-pilot/extensions/ui';
 
 const EXTENSION_NAME = ${nameLiteral};
 
 export function ExtensionRail({ pa }: ExtensionSurfaceProps) {
+  // Tab-local workbench rails use the same ContextRail anatomy as route-owned right sidebars.
   return (
-    <aside className="h-full overflow-auto px-4 py-5 text-[13px] text-secondary">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Right rail</p>
-      <h2 className="mt-2 text-lg font-semibold text-primary">{EXTENSION_NAME}</h2>
-      <p className="mt-2 leading-6">Select something here; render the large view in the paired workbench detail surface.</p>
-      <button className="ui-toolbar-button mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' rail action')}>
-        Test toast
-      </button>
-    </aside>
+    <ContextRail>
+      <ContextRailHeader eyebrow="Right sidebar" title={EXTENSION_NAME} />
+      <ContextRailBody>
+        <ContextRailSection title="Detail driver">
+          <p className="text-[12px] leading-5 text-secondary">Select something here; render the large view in the paired workbench detail surface.</p>
+          <ToolbarButton type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' sidebar action')}>
+            Test toast
+          </ToolbarButton>
+        </ContextRailSection>
+      </ContextRailBody>
+    </ContextRail>
   );
 }
 
@@ -130,9 +376,9 @@ export function ExtensionWorkbench({ pa }: ExtensionSurfaceProps) {
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Workbench detail</p>
         <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-primary">{EXTENSION_NAME}</h1>
         <p className="mt-2 text-[13px] leading-6 text-secondary">${starterHelpText()}</p>
-        <button className="ui-toolbar-button mt-6" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' detail action')}>
+        <ToolbarButton className="mt-6" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' detail action')}>
           Test toast
-        </button>
+        </ToolbarButton>
       </div>
     </main>
   );
@@ -141,19 +387,21 @@ export function ExtensionWorkbench({ pa }: ExtensionSurfaceProps) {
   }
 
   return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, ToolbarButton } from '@neon-pilot/extensions/ui';
 
 const EXTENSION_NAME = ${nameLiteral};
 
 export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   return (
-    <main className="mx-auto max-w-5xl px-8 py-14">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Extension</p>
-      <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.04em] text-primary">{EXTENSION_NAME}</h1>
-      <p className="mt-2 max-w-2xl text-[13px] leading-6 text-secondary">${starterHelpText()}</p>
-      <button className="ui-toolbar-button mt-6" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
-        Test toast
-      </button>
-    </main>
+    <AppPageLayout>
+      <AppPageIntro title={EXTENSION_NAME} />
+      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+        <p>${starterHelpText()}</p>
+        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+          Test toast
+        </ToolbarButton>
+      </div>
+    </AppPageLayout>
   );
 }
 `;
@@ -248,25 +496,73 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
         ? {
             views: [{ id: 'panel', title: name, location: 'rightRail', scope: 'conversation', component: 'ExtensionPanel', icon: 'app' }],
           }
-        : template === 'workbench-detail'
+        : template === 'route-sidebar'
           ? {
               views: [
-                {
-                  id: 'rail',
-                  title: name,
-                  location: 'rightRail',
-                  scope: 'conversation',
-                  component: 'ExtensionRail',
-                  icon: 'app',
-                  detailView: 'detail',
-                },
-                { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
+                { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
               ],
+              nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', sidebarView: 'sidebar' }],
             }
-          : {
-              views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
-              nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
-            },
+          : template === 'route-right-sidebar'
+            ? {
+                views: [
+                  { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                  {
+                    id: 'context',
+                    title: `${name} context`,
+                    location: 'rightRail',
+                    placement: 'primary',
+                    component: 'ExtensionContextRail',
+                    icon: 'app',
+                  },
+                ],
+                nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', rightSidebarView: 'context' }],
+              }
+            : template === 'route-shell'
+              ? {
+                  views: [
+                    { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                    { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
+                    {
+                      id: 'context',
+                      title: `${name} context`,
+                      location: 'rightRail',
+                      placement: 'primary',
+                      component: 'ExtensionContextRail',
+                      icon: 'app',
+                    },
+                  ],
+                  nav: [
+                    {
+                      id: 'nav',
+                      label: name,
+                      route: `/ext/${id}`,
+                      icon: 'app',
+                      sidebarView: 'sidebar',
+                      rightSidebarView: 'context',
+                    },
+                  ],
+                }
+              : template === 'workbench-detail'
+                ? {
+                    views: [
+                      {
+                        id: 'rail',
+                        title: name,
+                        location: 'rightRail',
+                        scope: 'conversation',
+                        component: 'ExtensionRail',
+                        icon: 'app',
+                        detailView: 'detail',
+                      },
+                      { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
+                    ],
+                  }
+                : {
+                    views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
+                    nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
+                  },
     permissions: [],
   });
   writeFileSync(join(extensionRoot, 'extension.json'), `${JSON.stringify(manifest, null, 2)}\n`);

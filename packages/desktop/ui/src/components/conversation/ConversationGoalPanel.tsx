@@ -80,7 +80,7 @@ export function ConversationGoalPanel({ goal, onCancel }: GoalPanelProps) {
         }
         actions={
           goal.status === 'active' ? (
-            <Button variant="action" tone="danger" type="button" onClick={onCancel} className="text-[11px]" aria-label="Cancel goal">
+            <Button variant="action" tone="danger" type="button" onClick={onCancel} aria-label="Cancel goal">
               <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="1.2" />
               </svg>

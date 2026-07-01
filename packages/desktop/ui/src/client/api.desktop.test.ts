@@ -669,7 +669,7 @@ describe('api desktop transport', () => {
     const created = await api.createLiveSession('/repo', undefined, { model: 'gpt-5.4' });
     const resumed = await api.resumeSession('/tmp/live-1.jsonl', '/repo');
     const takeover = await api.takeoverLiveSession('live-1', 'surface-1');
-    const prompted = await api.promptSession('live-1', 'hello', 'followUp', [], [], [], 'surface-1');
+    const prompted = await api.promptSession('live-1', 'hello', 'followUp', [], [], [], [], [], 'surface-1');
     const restored = await api.restoreQueuedMessage('live-1', { behavior: 'followUp', index: 0, previewId: 'queue-1' }, 'surface-1');
     const compacted = await api.compactSession('live-1', 'be shorter', 'surface-1');
     const exported = await api.exportSession('live-1', '/tmp/live-1.html');
@@ -752,6 +752,8 @@ describe('api desktop transport', () => {
       surfaceId: 'surface-1',
       images: [],
       videos: [],
+      audios: [],
+      documents: [],
       attachmentRefs: [],
     });
     expect(restoreQueuedLiveSessionMessage).toHaveBeenCalledWith({

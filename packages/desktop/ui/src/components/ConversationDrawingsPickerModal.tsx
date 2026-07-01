@@ -12,6 +12,7 @@ import {
   CardMeta,
   CardTitle,
   cx,
+  IconButton,
   PanelMessage,
   Pill,
   ResourcePickerDialog,
@@ -118,7 +119,11 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
     <ResourcePickerDialog
       title="Conversation drawings"
       description="Attach a saved drawing (latest or a specific revision) to your next prompt."
-      actions={<ToolbarButton onClick={onClose}>Close</ToolbarButton>}
+      actions={
+        <IconButton aria-label="Close drawings picker" title="Close drawings picker" onClick={onClose}>
+          <span aria-hidden="true">x</span>
+        </IconButton>
+      }
       onClose={onClose}
       backdropStyle={{ background: 'rgb(0 0 0 / 0.55)', backdropFilter: 'blur(2px)' }}
       style={{ maxWidth: '840px', maxHeight: 'calc(100vh - 5rem)' }}

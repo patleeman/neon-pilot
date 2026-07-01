@@ -176,7 +176,7 @@ export interface ChatRailComposerProps {
     currentThinkingLevel: string;
     tokens: ExtensionChatTokenUsage | null;
     contextUsage: ExtensionChatContextUsage | null;
-    onSubmit: (text: string, behavior?: 'steer' | 'followUp', images?: unknown[], videos?: unknown[], attachmentRefs?: unknown[]) => void;
+    onSubmit: (text: string, behavior?: 'steer' | 'followUp', images?: unknown[], videos?: unknown[], audios?: unknown[], documents?: unknown[], attachmentRefs?: unknown[]) => void;
     onAbortStream: () => void;
     onSelectModel: (modelId: string) => void;
     onSelectThinkingLevel: (thinkingLevel: string) => void;
@@ -349,6 +349,7 @@ export declare const PanelMessage: HostComponent;
 export declare const Pill: HostComponent;
 export declare const ProgressBar: HostComponent;
 export declare const ProgressRow: HostComponent;
+export declare const QuietLoadingState: HostComponent;
 export declare const RailSection: HostComponent;
 export declare const RailSubsection: HostComponent;
 export declare const ResourceList: HostComponent;

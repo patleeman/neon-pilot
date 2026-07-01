@@ -112,6 +112,7 @@ import {
   useTitleVersion,
 } from '../store';
 import { ConversationStatusText } from './ConversationStatusText';
+import { isChatShellRoute, resolveRouteSidebarSurface } from './layout/routeShellRegions';
 import { addNotification } from './notifications/notificationStore';
 import { ContextMenu, ContextMenuSection, ContextMenuSections } from './shared/ContextMenu';
 import { estimateContextMenuHeight } from './shared/contextMenuPosition';
@@ -124,7 +125,7 @@ import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 const SIDEBAR_DESKTOP_CONVERSATION_PREFETCH_TAIL_BLOCKS = 40;
 const SIDEBAR_CONVERSATION_PREFETCH_DELAY_MS = 140;
 
-function Ico({ d, size = 16 }: { d: string; size?: number }) {
+function Ico({ d, size = 16, className }: { d: string; size?: number; className?: string }) {
   return (
     <svg
       width={size}
@@ -135,6 +136,7 @@ function Ico({ d, size = 16 }: { d: string; size?: number }) {
       strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
+      className={className}
     >
       <path d={d} />
     </svg>
@@ -297,6 +299,7 @@ type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
   label: string;
   icon?: string;
   sidebarView?: string;
+  rightSidebarView?: string;
   section?: 'primary' | 'settings';
   attentionCount?: number;
   attentionSeverity?: 'warning' | 'error';
@@ -565,6 +568,7 @@ function SidebarPrimaryNav({
   newConversationBusy,
   newConversationHotkeyLabel,
   items,
+  documentNavigationRoutes,
   onOpenChat,
   onNewConversation,
 }: {
@@ -572,11 +576,10 @@ function SidebarPrimaryNav({
   newConversationBusy: boolean;
   newConversationHotkeyLabel: string;
   items: SidebarExtensionNavItem[];
+  documentNavigationRoutes: readonly string[];
   onOpenChat: () => void;
   onNewConversation: () => void;
 }) {
-  const documentNavigationRoutes = useMemo(() => items.map((item) => item.route), [items]);
-
   return (
     <nav className="relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3" aria-label="Primary navigation">
       <div className="grid grid-cols-[minmax(0,1fr)_32px] gap-1 px-1">
@@ -587,11 +590,11 @@ function SidebarPrimaryNav({
         <SidebarNavButton
           onClick={onNewConversation}
           disabled={newConversationBusy}
-          className="mx-0 flex justify-center text-secondary"
+          className="mx-0 flex h-7 w-8 justify-center px-0 text-secondary"
           title={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
           aria-label={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
         >
-          <Ico d={PATH.plus} size={15} />
+          <Ico d={PATH.plus} size={19} className="shrink-0" />
         </SidebarNavButton>
       </div>
       {items.map((item) => (
@@ -607,9 +610,15 @@ function SidebarPrimaryNav({
   );
 }
 
-function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[]; notice: string | null }) {
-  const documentNavigationRoutes = useMemo(() => items.map((item) => item.route), [items]);
-
+function SidebarSettingsNav({
+  items,
+  notice,
+  documentNavigationRoutes,
+}: {
+  items: SidebarExtensionNavItem[];
+  notice: string | null;
+  documentNavigationRoutes: readonly string[];
+}) {
   return (
     <div className="relative z-20 shrink-0 bg-panel">
       {notice ? (
@@ -1679,7 +1688,11 @@ const SessionRow = memo(function SessionRow({
   );
 });
 
-export function Sidebar() {
+export interface SidebarProps {
+  onNewConversation?: (input?: { cwd?: string | null }) => boolean | Promise<boolean>;
+}
+
+export function Sidebar({ onNewConversation }: SidebarProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { versions } = useAppEvents();
@@ -2986,6 +2999,12 @@ export function Sidebar() {
   const handleNewConversation = useCallback(
     (cwd?: string | null, options?: { reuseEmptyConversation?: boolean }) => {
       const explicitCwd = normalizeConversationGroupCwd(cwd);
+      if (onNewConversation) {
+        void onNewConversation({ cwd: explicitCwd });
+        setDraftCwd(explicitCwd);
+        return;
+      }
+
       void startNewConversation({
         navigate,
         cwd: explicitCwd,
@@ -2996,7 +3015,7 @@ export function Sidebar() {
       });
       setDraftCwd(explicitCwd);
     },
-    [location.pathname, navigate, sessions],
+    [location.pathname, navigate, onNewConversation, sessions],
   );
 
   const handleOpenChat = useCallback(() => {
@@ -3818,20 +3837,15 @@ export function Sidebar() {
         .map(({ item }) => item),
     [extensionNavItems],
   );
+  const documentNavigationRoutes = useMemo(() => extensionNavItems.map((item) => item.route), [extensionNavItems]);
   const activeSidebarSurface = useMemo(() => {
-    const activeNavItem = extensionNavItems.find(
-      (item) => item.sidebarView && routeMatchesPrefix(location.pathname, item.route) && item.extensionId,
-    );
-    if (!activeNavItem?.sidebarView) return null;
-    return (
-      extensionRegistry.surfaces.find(
-        (surface) =>
-          surface.extensionId === activeNavItem.extensionId &&
-          surface.id === activeNavItem.sidebarView &&
-          isNativeExtensionSidebarSurface(surface),
-      ) ?? null
-    );
+    return resolveRouteSidebarSurface({
+      pathname: location.pathname,
+      navItems: extensionNavItems,
+      surfaces: extensionRegistry.surfaces,
+    });
   }, [extensionNavItems, extensionRegistry.surfaces, location.pathname]);
+  const showThreadSidebar = isChatShellRoute(location.pathname);
   const newConversationHotkeyLabel = getNewConversationHotkeyLabel();
   const chatButtonActive = location.pathname === DRAFT_CONVERSATION_ROUTE;
   return (
@@ -3842,6 +3856,7 @@ export function Sidebar() {
           newConversationBusy={false}
           newConversationHotkeyLabel={newConversationHotkeyLabel}
           items={primaryNavItems}
+          documentNavigationRoutes={documentNavigationRoutes}
           onOpenChat={handleOpenChat}
           onNewConversation={() => {
             handleNewConversation();
@@ -3858,7 +3873,7 @@ export function Sidebar() {
               instanceId="left-sidebar"
             />
           </div>
-        ) : (
+        ) : showThreadSidebar ? (
           <>
             <div className="px-4 pt-1 pb-0.5">
               <div className="flex items-center gap-1">
@@ -4206,9 +4221,15 @@ export function Sidebar() {
               </div>
             </div>
           </>
+        ) : (
+          <div className="flex-1 min-h-0" aria-label="No contextual sidebar" />
         )}
 
-        <SidebarSettingsNav items={settingsNavItems} notice={sidebarNotice?.text ?? null} />
+        <SidebarSettingsNav
+          items={settingsNavItems}
+          notice={sidebarNotice?.text ?? null}
+          documentNavigationRoutes={documentNavigationRoutes}
+        />
       </aside>
       {renameConversationGroupPrompt ? (
         <TextPromptDialog

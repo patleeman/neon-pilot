@@ -100,6 +100,14 @@ export const EmptyLoadingAndErrors: Story = {
         </div>
         <ErrorState title="Failed to load" body="The extension backend returned an unexpected response." />
         <EmptyState title="No Results" body="Clear the filter to show all registered extensions." />
+        <EmptyState
+          eyebrow="Table page"
+          title="No automations yet"
+          body="Automations run saved instructions on a schedule and report back to an owner thread."
+          steps={['Create the first automation', 'Choose its owner thread', 'Pick when it should run']}
+          action={<ToolbarButton>New automation</ToolbarButton>}
+          align="start"
+        />
       </SurfacePanel>
     </StoryStack>
   ),

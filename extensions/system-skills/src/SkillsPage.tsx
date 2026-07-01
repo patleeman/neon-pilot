@@ -911,13 +911,12 @@ export function SkillsContextRail({ pa }: ExtensionSurfaceProps) {
     <ContextRail>
       <ContextRailHeader
         eyebrow="Skill details"
-        title={selection ? (selection.kind === 'marketplace' ? selection.candidate.title : selection.skill.name) : 'No skill selected'}
+        title={selection ? (selection.kind === 'marketplace' ? selection.candidate.title : selection.skill.name) : 'Select a skill'}
       />
       <ContextRailBody>
         {!selection ? (
           <EmptyState
-            eyebrow="Context rail"
-            title="No skill selected"
+            title="Pick a row to inspect"
             body="Select a skill to inspect its source, trust level, install state, and local path."
             steps={['Pick a skill from the table.', 'Review its details here.', 'Install or manage it from the row actions.']}
             align="start"

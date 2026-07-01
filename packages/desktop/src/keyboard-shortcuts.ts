@@ -226,8 +226,8 @@ export const CORE_KEYBOARD_SHORTCUT_REGISTRATIONS: CoreKeyboardShortcutRegistrat
   },
   {
     id: 'toggleRightRail',
-    title: 'Toggle right rail',
-    description: 'Collapse or restore the active workbench rail.',
+    title: 'Toggle right sidebar',
+    description: 'Collapse or restore the active right sidebar.',
     command: 'layout.toggleRightRail',
     defaultKeys: ['CommandOrControl+\\'],
     menu: 'view',

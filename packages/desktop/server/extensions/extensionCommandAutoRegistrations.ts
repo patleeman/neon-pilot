@@ -6,8 +6,8 @@ export function buildExtensionAutoCommandRegistrations(extension: {
   packageType?: ExtensionPackageType;
   contributes?: {
     commands?: Array<{ id: string; action?: string; args?: unknown }>;
-    nav?: Array<{ id: string; label: string; route: string; icon?: string }>;
-    views?: Array<{ id: string; title: string; location?: string; icon?: string }>;
+    nav?: Array<{ id: string; label: string; route: string; icon?: string; sidebarView?: string; rightSidebarView?: string }>;
+    views?: Array<{ id: string; title: string; location?: string; placement?: string; icon?: string }>;
   };
 }) {
   const explicitCommandIds = new Set((extension.contributes?.commands ?? []).map((command) => command.id));
@@ -28,7 +28,7 @@ export function buildExtensionAutoCommandRegistrations(extension: {
       category: extension.name,
     })),
     ...(extension.contributes?.views ?? [])
-      .filter((view) => view.location === 'rightRail')
+      .filter((view) => view.location === 'rightRail' && view.placement !== 'primary')
       .map((view) => ({
         extensionId: extension.id,
         surfaceId: `open-${view.id}`,

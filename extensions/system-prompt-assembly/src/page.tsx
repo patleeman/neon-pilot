@@ -15,10 +15,10 @@ import {
   DataTableRow,
   EmptyState,
   ErrorState,
-  LoadingState,
   MetaLabel,
   Notice,
   Pill,
+  QuietLoadingState,
   SearchInput,
   Switch,
   Textarea,
@@ -302,7 +302,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   }
 
   if (error) return <ErrorState title="Failed to load prompt assembly" message={error} />;
-  if (!data) return <LoadingState label="Loading prompt assembly…" className="h-full justify-center" />;
+  if (!data) return <QuietLoadingState label="Loading prompt assembly" className="h-full" />;
 
   return (
     <div ref={runtimeScrollRef} className="h-full overflow-y-auto">
@@ -321,7 +321,11 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         <AppPageIntro
           title="Prompt Assembly"
           summary="Review the instructions, tools, MCP servers, templates, and context available to the agent."
-          actions={<ToolbarButton onClick={() => void load()}>Refresh</ToolbarButton>}
+          actions={
+            <ToolbarButton aria-label="Refresh prompt assembly" title="Refresh prompt assembly" onClick={() => void load()}>
+              <span aria-hidden="true">↻</span>
+            </ToolbarButton>
+          }
         />
 
         <AppPageSection

@@ -29,8 +29,6 @@
         "location": "main",
         "route": "/ext/template-data-dashboard",
         "component": "DataDashboardPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       }
     ],
@@ -39,6 +37,7 @@
         "id": "nav",
         "label": "Data Dashboard",
         "route": "/ext/template-data-dashboard",
+        "pageType": "dashboard",
         "icon": "graph"
       }
     ]

@@ -381,7 +381,7 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     expect(container.textContent).toContain('⌘/Ctrl + B');
     expect(container.textContent).toContain('Toggle workbench diff');
     expect(container.textContent).toContain('⌘/Ctrl + Shift + D');
-    expect(container.textContent).toContain('Toggle right rail');
+    expect(container.textContent).toContain('Toggle right sidebar');
     expect(container.textContent).not.toContain('Built-in shortcuts');
     expect(container.textContent).not.toContain('Save shortcuts');
   });

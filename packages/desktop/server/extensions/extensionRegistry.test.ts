@@ -446,6 +446,127 @@ describe('extension registry', () => {
         },
       }),
     ).toThrow(/contributes\.themes\[0\]\.tokens\.*/);
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'shell-ext',
+        name: 'Shell Ext',
+        contributes: {
+          nav: [{ id: 'shell', label: 'Shell', route: '/shell', sidebarView: 'shell-list', rightSidebarView: 'shell-context' }],
+          views: [
+            { id: 'shell-page', title: 'Shell Page', location: 'main', route: '/shell', component: 'ShellPage' },
+            { id: 'shell-list', title: 'Shell List', location: 'sidebar', component: 'ShellList' },
+            {
+              id: 'shell-context',
+              title: 'Shell Context',
+              location: 'rightRail',
+              placement: 'primary',
+              scope: 'global',
+              component: 'ShellContext',
+            },
+          ],
+        },
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'shell-ext-no-scope',
+        name: 'Shell Ext No Scope',
+        contributes: {
+          nav: [{ id: 'shell', label: 'Shell', route: '/shell', rightSidebarView: 'shell-context' }],
+          views: [
+            { id: 'shell-page', title: 'Shell Page', location: 'main', route: '/shell', component: 'ShellPage' },
+            {
+              id: 'shell-context',
+              title: 'Shell Context',
+              location: 'rightRail',
+              placement: 'primary',
+              component: 'ShellContext',
+            },
+          ],
+        },
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          nav: [{ id: 'bad-shell', label: 'Bad Shell', route: '/bad-shell', sidebarView: 'missing' }],
+          views: [{ id: 'page', title: 'Page', location: 'main', route: '/bad-shell', component: 'Page' }],
+        },
+      }),
+    ).toThrow('Extension manifest contributes.nav[0].sidebarView "missing" must reference a known view.');
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          nav: [{ id: 'bad-shell', label: 'Bad Shell', route: '/bad-shell' }],
+        },
+      }),
+    ).toThrow('Extension manifest contributes.nav requires contributes.views with matching main view routes.');
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          nav: [{ id: 'bad-shell', label: 'Bad Shell', route: '/bad-shell' }],
+          views: [{ id: 'page', title: 'Page', location: 'main', route: '/other-route', component: 'Page' }],
+        },
+      }),
+    ).toThrow('Extension manifest contributes.nav[0].route "/bad-shell" must reference a matching main view route.');
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          nav: [{ id: 'bad-shell', label: 'Bad Shell', route: '/bad-shell', sidebarView: 'page' }],
+          views: [{ id: 'page', title: 'Page', location: 'main', route: '/bad-shell', component: 'Page' }],
+        },
+      }),
+    ).toThrow('Extension manifest contributes.nav[0].sidebarView "page" must reference a sidebar view.');
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          nav: [{ id: 'bad-shell', label: 'Bad Shell', route: '/bad-shell', rightSidebarView: 'shell-list' }],
+          views: [
+            { id: 'page', title: 'Page', location: 'main', route: '/bad-shell', component: 'Page' },
+            { id: 'shell-list', title: 'Shell List', location: 'sidebar', component: 'ShellList' },
+          ],
+        },
+      }),
+    ).toThrow('Extension manifest contributes.nav[0].rightSidebarView "shell-list" must reference a rightRail view.');
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          nav: [{ id: 'bad-shell', label: 'Bad Shell', route: '/bad-shell', rightSidebarView: 'details' }],
+          views: [
+            { id: 'page', title: 'Page', location: 'main', route: '/bad-shell', component: 'Page' },
+            { id: 'details', title: 'Details', location: 'rightRail', component: 'Details' },
+          ],
+        },
+      }),
+    ).toThrow('Extension manifest contributes.nav[0].rightSidebarView "details" must reference a rightRail view with placement "primary".');
   });
 
   it('loads runtime extension manifests from the state root as user extensions', () => {

@@ -40,6 +40,20 @@ describe('extension surface type guards', () => {
     expect(isNativeExtensionRightRailSurface(surface)).toBe(true);
   });
 
+  it('recognizes route-owned right sidebar surfaces without requiring scope', () => {
+    const surface: NativeExtensionViewSummary = {
+      extensionId: 'agent-board',
+      id: 'route-context',
+      title: 'Route context',
+      location: 'rightRail',
+      placement: 'primary',
+      component: 'RouteContextRail',
+      frontend: { entry: 'dist/frontend.js' },
+    };
+
+    expect(isNativeExtensionRightRailSurface(surface)).toBe(true);
+  });
+
   it('recognizes native workbench surfaces', () => {
     const surface: NativeExtensionViewSummary = {
       extensionId: 'agent-board',
@@ -70,9 +84,7 @@ describe('extension surface type guards', () => {
     expect(isNativeExtensionPageSurface({ extensionId: 'agent-board', id: 'page', location: 'main', component: 'AgentBoardPage' })).toBe(
       false,
     );
-    expect(
-      isNativeExtensionRightRailSurface({ extensionId: 'agent-board', id: 'rail', location: 'rightRail', component: 'AgentBoardRail' }),
-    ).toBe(false);
+    expect(isNativeExtensionRightRailSurface({ extensionId: 'agent-board', id: 'rail', location: 'rightRail' })).toBe(false);
   });
 
   it('normalizes placement, scope, and activation defaults', () => {

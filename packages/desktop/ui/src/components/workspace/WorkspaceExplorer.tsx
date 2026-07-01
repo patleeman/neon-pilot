@@ -1269,7 +1269,7 @@ export function WorkspaceExplorer({
 
   if (!open && !railOnly) {
     return (
-      <ToolbarButton className="absolute right-3 top-3 z-40 px-2 py-1 text-[11px] text-secondary" onClick={() => setOpen(true)}>
+      <ToolbarButton className="absolute right-3 top-3 z-40" onClick={() => setOpen(true)}>
         Files
       </ToolbarButton>
     );

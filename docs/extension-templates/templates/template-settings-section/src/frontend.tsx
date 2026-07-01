@@ -104,7 +104,7 @@ export function MySettingsSection({ pa }: { pa: NativeExtensionClient }) {
           />
         </SettingsRow>
 
-        <SettingsRow title="Endpoint" description={savingKey === 'endpoint' ? 'Saving…' : 'Base URL for API requests.'}>
+        <SettingsRow title="Endpoint" description={savingKey === 'endpoint' ? 'Saving...' : 'Base URL for API requests.'}>
           <TextInput
             type="url"
             value={settings.endpoint}

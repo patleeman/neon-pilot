@@ -178,7 +178,9 @@
         "label": "Extensions",
         "route": "/extensions",
         "icon": "sparkle",
-        "section": "settings"
+        "pageType": "table",
+        "section": "settings",
+        "rightSidebarView": "extension-details-rail"
       }
     ],
     "views": [
@@ -188,9 +190,17 @@
         "location": "main",
         "route": "/extensions",
         "component": "ExtensionManagerPage",
+        "activation": "on-route"
+      },
+      {
+        "id": "extension-details-rail",
+        "title": "Extension details",
+        "location": "rightRail",
+        "route": "/extensions",
+        "component": "ExtensionDetailsRail",
         "placement": "primary",
         "scope": "global",
-        "activation": "on-route"
+        "activation": "on-open"
       }
     ],
     "settingsComponent": {

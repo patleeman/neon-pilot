@@ -10,9 +10,9 @@ import {
   DataTableHeaderCell,
   DataTableRow,
   Field,
-  LoadingState,
   Notice,
   Pill,
+  QuietLoadingState,
   SupportingText,
   TextInput,
   ToolbarButton,
@@ -199,7 +199,7 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
 
   return (
     <div className="space-y-5">
-      {loading ? <LoadingState label="Loading AI Gateway settings..." /> : null}
+      {loading ? <QuietLoadingState label="Loading AI Gateway settings" className="min-h-12" /> : null}
 
       {!loading ? (
         <div className="space-y-5">
@@ -237,8 +237,13 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
               />
             </Field>
             <div className="flex flex-wrap items-center gap-2 pb-0.5">
-              <ToolbarButton disabled={busy !== null} onClick={() => void load()}>
-                Refresh
+              <ToolbarButton
+                aria-label="Refresh model gateway"
+                title="Refresh model gateway"
+                disabled={busy !== null}
+                onClick={() => void load()}
+              >
+                <span aria-hidden="true">↻</span>
               </ToolbarButton>
             </div>
           </div>

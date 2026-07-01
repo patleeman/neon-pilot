@@ -182,7 +182,7 @@ export function buildDesktopApplicationMenuTemplate(
       { role: 'zoomOut' },
       { type: 'separator' },
       menuShortcut('toggleSidebar', 'Toggle Sidebar', actions, keyboardShortcuts),
-      menuShortcut('toggleRightRail', 'Toggle Right Rail', actions, keyboardShortcuts),
+      menuShortcut('toggleRightRail', 'Toggle Right Sidebar', actions, keyboardShortcuts),
       menuShortcut('conversationMode', 'Conversation Mode', actions, keyboardShortcuts),
       menuShortcut('workbenchMode', 'Workbench Mode', actions, keyboardShortcuts),
       { type: 'separator' },

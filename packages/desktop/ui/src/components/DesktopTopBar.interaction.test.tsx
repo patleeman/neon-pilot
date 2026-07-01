@@ -72,6 +72,22 @@ describe('DesktopTopBar interactions', () => {
     window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
   });
 
+  it('lets scoped command palette shortcut opens reach the palette unchanged', () => {
+    const listener = vi.fn();
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
+
+    renderTopBar();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands' } }));
+    });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ scope: 'commands' });
+
+    window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
+  });
+
   it('handles shared app history navigation commands', async () => {
     window.history.replaceState({ idx: 1 }, '', '/conversations/one');
     window.sessionStorage.setItem('__pa_nav_max_idx__', '1');

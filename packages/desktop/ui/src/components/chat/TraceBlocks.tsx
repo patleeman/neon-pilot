@@ -520,7 +520,7 @@ export function TraceClusterBlock({
                   : `${overflowBlockCount} earlier step${overflowBlockCount === 1 ? '' : 's'} summarized above.`}
               </span>
               <span className="flex-1" />
-              <Button variant="action" onClick={toggleTraceClusterOverflow} className="text-[10px]">
+              <Button variant="action" onClick={toggleTraceClusterOverflow}>
                 {showAllBlocks ? `Show latest ${MAX_VISIBLE_TRACE_BLOCKS}` : 'Show all'}
               </Button>
             </div>

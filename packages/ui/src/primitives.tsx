@@ -1941,6 +1941,78 @@ export function RailSection({
   );
 }
 
+export function ContextRail({ children, className, ...props }: HTMLAttributes<HTMLElement>) {
+  return (
+    <aside className={cx('ui-context-rail', className)} {...props}>
+      {children}
+    </aside>
+  );
+}
+
+export function ContextRailHeader({
+  eyebrow,
+  title,
+  subtitle,
+  actions,
+  children,
+  className,
+  ...props
+}: {
+  eyebrow?: ReactNode;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-context-rail-header', className)} {...props}>
+      <div className="ui-context-rail-header-copy">
+        {eyebrow ? <SectionLabel tone="accent">{eyebrow}</SectionLabel> : null}
+        {title ? <h2 className="ui-context-rail-title">{title}</h2> : null}
+        {subtitle ? <div className="ui-context-rail-subtitle">{subtitle}</div> : null}
+        {children}
+      </div>
+      {actions ? <div className="ui-context-rail-header-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
+export function ContextRailBody({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-context-rail-body', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export function ContextRailSection({
+  title,
+  actions,
+  children,
+  className,
+  bodyClassName,
+  headerClassName,
+  ...props
+}: {
+  title: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  headerClassName?: string;
+} & HTMLAttributes<HTMLElement>) {
+  return (
+    <section className={cx('ui-context-rail-section', className)} {...props}>
+      <div className={cx('ui-context-rail-section-header', headerClassName)}>
+        <SectionLabel tone="accent">{title}</SectionLabel>
+        {actions ? <div className="ui-context-rail-section-actions">{actions}</div> : null}
+      </div>
+      <div className={cx('ui-context-rail-section-body', bodyClassName)}>{children}</div>
+    </section>
+  );
+}
+
 export function RailSubsection({
   title,
   actions,
@@ -2276,6 +2348,77 @@ export function DataTable({
         {columns}
         {children}
       </table>
+    </div>
+  );
+}
+
+export function DataTableToolbar({
+  tabs,
+  filters,
+  search,
+  actions,
+  summary,
+  className,
+  ...props
+}: {
+  tabs?: ReactNode;
+  filters?: ReactNode;
+  search?: ReactNode;
+  actions?: ReactNode;
+  summary?: ReactNode;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cx('ui-data-table-toolbar', className)} {...props}>
+      {tabs ? <div className="ui-data-table-toolbar-tabs">{tabs}</div> : null}
+      <div className="ui-data-table-toolbar-controls">
+        <div className="ui-data-table-toolbar-primary">
+          {summary ? <div className="ui-data-table-toolbar-summary">{summary}</div> : null}
+          {filters ? <div className="ui-data-table-toolbar-filters">{filters}</div> : null}
+        </div>
+        {(search || actions) && (
+          <div className="ui-data-table-toolbar-actions">
+            {search}
+            {actions}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function DataTablePagination({
+  page,
+  pageCount,
+  totalLabel,
+  onPrevious,
+  onNext,
+  className,
+  ...props
+}: {
+  page: number;
+  pageCount: number;
+  totalLabel?: ReactNode;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>) {
+  const normalizedPageCount = Math.max(1, pageCount);
+  const normalizedPage = Math.min(Math.max(1, page), normalizedPageCount);
+  return (
+    <div className={cx('ui-data-table-pagination', className)} {...props}>
+      <div className="ui-data-table-pagination-summary">{totalLabel ?? `Page ${normalizedPage} of ${normalizedPageCount}`}</div>
+      <div className="ui-data-table-pagination-actions">
+        <ToolbarButton type="button" disabled={normalizedPage <= 1 || !onPrevious} onClick={onPrevious}>
+          Previous
+        </ToolbarButton>
+        <span className="ui-data-table-pagination-page">
+          {normalizedPage} / {normalizedPageCount}
+        </span>
+        <ToolbarButton type="button" disabled={normalizedPage >= normalizedPageCount || !onNext} onClick={onNext}>
+          Next
+        </ToolbarButton>
+      </div>
     </div>
   );
 }
@@ -2818,12 +2961,13 @@ export function SegmentedControl<TValue extends string>({
 export function LoadingState({ label, className }: { label: string; className?: string }) {
   return (
     <div className={cx('ui-loading-state', className)} role="status" aria-live="polite">
-      <span className="animate-pulse" aria-hidden="true">
-        ●
-      </span>
       <span>{label}</span>
     </div>
   );
+}
+
+export function QuietLoadingState({ label = 'Loading', className }: { label?: string; className?: string }) {
+  return <div className={cx('h-full min-h-0', className)} role="status" aria-label={label} aria-live="polite" />;
 }
 
 export type PanelMessageTone = 'muted' | 'danger';
@@ -2908,23 +3052,42 @@ export function ErrorState({
 
 export function EmptyState({
   icon,
+  eyebrow,
   title,
   body,
+  steps,
   action,
+  align = 'center',
   className,
 }: {
   icon?: ReactNode;
+  eyebrow?: ReactNode;
   title: ReactNode;
   body?: ReactNode;
+  steps?: readonly ReactNode[];
   action?: ReactNode;
+  align?: 'start' | 'center';
   className?: string;
 }) {
   return (
-    <div className={cx('ui-empty-state', className)}>
+    <div className={cx('ui-empty-state', align === 'start' && 'ui-empty-state-start', className)}>
       {icon && <div className="ui-empty-icon">{icon}</div>}
+      {eyebrow ? <div className="ui-empty-eyebrow">{eyebrow}</div> : null}
       <p className="ui-empty-title">{title}</p>
       {body && <div className="ui-empty-body">{body}</div>}
-      {action && <div className="mt-1">{action}</div>}
+      {steps && steps.length > 0 ? (
+        <ol className="ui-empty-steps" aria-label="Getting started">
+          {steps.map((step, index) => (
+            <li key={index} className="ui-empty-step">
+              <span className="ui-empty-step-index" aria-hidden="true">
+                {index + 1}
+              </span>
+              <span className="min-w-0">{step}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {action && <div className="ui-empty-action">{action}</div>}
     </div>
   );
 }
@@ -3626,16 +3789,20 @@ export function AppPageToc<TId extends string>({
 
 export function AppPageEmptyState({
   icon,
+  eyebrow,
   title,
   body,
+  steps,
   action,
   align = 'center',
   className,
   contentClassName,
 }: {
   icon?: ReactNode;
+  eyebrow?: ReactNode;
   title: ReactNode;
   body?: ReactNode;
+  steps?: readonly ReactNode[];
   action?: ReactNode;
   align?: 'start' | 'center';
   className?: string;
@@ -3649,7 +3816,16 @@ export function AppPageEmptyState({
         className,
       )}
     >
-      <EmptyState icon={icon} title={title} body={body} action={action} className={cx('w-full max-w-[34rem]', contentClassName)} />
+      <EmptyState
+        icon={icon}
+        eyebrow={eyebrow}
+        title={title}
+        body={body}
+        steps={steps}
+        action={action}
+        align={align}
+        className={cx('w-full max-w-[34rem]', contentClassName)}
+      />
     </div>
   );
 }

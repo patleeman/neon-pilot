@@ -49,6 +49,7 @@
         "label": "Settings",
         "route": "/settings",
         "icon": "gear",
+        "pageType": "settings",
         "section": "settings",
         "sidebarView": "settings-sidebar"
       }
@@ -267,8 +268,6 @@
         "location": "main",
         "route": "/settings",
         "component": "SettingsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       },
       {
@@ -277,8 +276,6 @@
         "location": "main",
         "route": "/settings/providers",
         "component": "ProviderSettingsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       },
       {
@@ -287,8 +284,6 @@
         "location": "main",
         "route": "/settings/workspace",
         "component": "WorkspaceSettingsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       },
       {
@@ -297,8 +292,6 @@
         "location": "main",
         "route": "/settings/commands",
         "component": "CommandsSettingsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       },
       {
@@ -307,8 +300,6 @@
         "location": "main",
         "route": "/settings/security",
         "component": "SecuritySettingsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       },
       {
@@ -317,8 +308,6 @@
         "location": "main",
         "route": "/settings/extensions",
         "component": "ExtensionsSettingsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       },
       {
@@ -327,8 +316,6 @@
         "location": "main",
         "route": "/settings/desktop",
         "component": "DesktopSettingsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       },
       {

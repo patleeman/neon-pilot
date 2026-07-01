@@ -8,6 +8,9 @@ import {
   CardBody,
   CodeBlock,
   CompactCard,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
   cx,
   DataTable,
   DataTableActionGroup,
@@ -16,6 +19,7 @@ import {
   DataTableHead,
   DataTableHeaderCell,
   DataTableRow,
+  DataTableToolbar,
   Dialog,
   DialogBody,
   DialogHeader,
@@ -26,11 +30,11 @@ import {
   IconLink,
   KeyValueItem,
   KeyValueList,
-  LoadingState,
   MenuItem,
   MenuShell,
   Notice,
   PanelMessage,
+  QuietLoadingState,
   ResourceList,
   ResourceListRow,
   SearchInput,
@@ -41,7 +45,6 @@ import {
   Switch,
   TabButton,
   TabList,
-  TextButton,
   TextInput,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
@@ -60,6 +63,20 @@ import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type NativeViewContribution = NonNullable<NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['views']>[number];
+
+function ExtensionDetailIcon({ name }: { name: 'copy' | 'open' }) {
+  const paths = {
+    copy: ['M8 8h10v10H8z', 'M6 14H4V4h10v2'],
+    open: ['M14 5h5v5', 'M10 14 19 5', 'M19 14v5H5V5h5'],
+  } satisfies Record<string, string[]>;
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      {paths[name].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
 
 interface InstallableExtensionCatalogItem {
   id: string;
@@ -115,6 +132,16 @@ interface ExtensionCatalogSource {
 type ExtensionFilter = 'all' | 'platform' | 'attention';
 type ExtensionActionBridge = ExtensionSurfaceProps['pa']['extensions'];
 type ExtensionManagerNotice = { type: 'info' | 'success' | 'error'; message: string; details?: string };
+
+function extensionResourceId(extensionId: string): string {
+  return `extension:${extensionId}`;
+}
+
+function isExtensionSelection(value: unknown): value is { resource: { type: 'extension'; id: string; data?: { extensionId?: string } } } {
+  if (!value || typeof value !== 'object') return false;
+  const resource = (value as { resource?: unknown }).resource;
+  return Boolean(resource && typeof resource === 'object' && (resource as { type?: unknown }).type === 'extension');
+}
 
 const ACTIONS_MENU_VIEWPORT_MARGIN = 8;
 const ACTIONS_MENU_BUTTON_GAP = 8;
@@ -355,7 +382,6 @@ function ExtensionActionsMenu({
       <IconButton
         ref={buttonRef}
         compact
-        className="h-7 w-7 shrink-0"
         title={busy ? 'Working…' : 'More actions'}
         aria-label={busy ? 'Working…' : 'More actions'}
         aria-haspopup="menu"
@@ -521,6 +547,15 @@ function SparkIcon() {
       <path d="M8 1.8 9.3 5.9 13.2 8 9.3 10.1 8 14.2 6.7 10.1 2.8 8 6.7 5.9 8 1.8Z" />
       <path d="M13 1.8v3" />
       <path d="M11.5 3.3h3" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M8 3.5v9" />
+      <path d="M3.5 8h9" />
     </svg>
   );
 }
@@ -739,7 +774,8 @@ function ExtensionRepositoriesControl({
           onChange={(event) => onInputChange(event.currentTarget.value)}
           placeholder="GitHub URL or owner/name"
         />
-        <Button variant="action" className="px-3 py-2 text-[13px]" disabled={busyId === 'extension-source'} onClick={onAdd}>
+        <Button variant="action" disabled={busyId === 'extension-source'} onClick={onAdd}>
+          <span aria-hidden="true">+</span>
           {busyId === 'extension-source' ? 'Adding...' : 'Add source'}
         </Button>
       </div>
@@ -759,10 +795,12 @@ function ExtensionRepositoriesControl({
               source.id !== 'neon-pilot' ? (
                 <Button
                   variant="action"
+                  tone="danger"
                   className="px-3 py-1.5 text-[12px]"
                   disabled={busyId === `extension-source:${source.id}`}
                   onClick={() => onRemove(source)}
                 >
+                  <span aria-hidden="true">-</span>
                   Remove
                 </Button>
               ) : null
@@ -1037,6 +1075,18 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     return () => window.removeEventListener('resize', updateLayout);
   }, []);
 
+  useEffect(() => {
+    if (!pa.selection) return;
+    const subscription = pa.selection.subscribe((selection) => {
+      if (!isExtensionSelection(selection)) {
+        setDetailsExtensionId(null);
+        return;
+      }
+      setDetailsExtensionId(selection.resource.data?.extensionId ?? selection.resource.id.replace(/^extension:/, ''));
+    });
+    return () => subscription.unsubscribe();
+  }, [pa]);
+
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
       setBusyId(item.id);
@@ -1242,16 +1292,22 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     });
   }, []);
 
-  const selectedExtension = useMemo(
-    () => extensions.find((extension) => extension.id === detailsExtensionId) ?? null,
-    [detailsExtensionId, extensions],
+  const selectExtension = useCallback(
+    (extension: ExtensionInstallSummary) => {
+      setDetailsExtensionId(extension.id);
+      pa.selection?.set({
+        kind: 'resource',
+        resource: {
+          type: 'extension',
+          id: extensionResourceId(extension.id),
+          label: extension.name,
+          source: 'system-extension-manager',
+          data: { extensionId: extension.id },
+        },
+      });
+    },
+    [pa],
   );
-
-  useEffect(() => {
-    if (detailsExtensionId && !selectedExtension && extensions.length) {
-      setDetailsExtensionId(null);
-    }
-  }, [detailsExtensionId, extensions.length, selectedExtension]);
 
   const catalogIds = useMemo(() => new Set(catalog?.extensions.map((item) => item.id) ?? []), [catalog]);
   const catalogById = useMemo(() => new Map(catalog?.extensions.map((item) => [item.id, item]) ?? []), [catalog]);
@@ -1407,7 +1463,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       {route && extension.enabled ? (
         <IconLink
           compact
-          className="h-7 w-7 shrink-0"
           href={route}
           title={`Open ${extension.name}`}
           aria-label={`Open ${extension.name}`}
@@ -1423,7 +1478,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       {hasExtensionSettings(extension) ? (
         <IconLink
           compact
-          className="h-7 w-7 shrink-0"
           href={`/settings#${extensionSettingsSectionId(extension)}`}
           title={`Configure ${extension.name} in Settings`}
           aria-label={`Configure ${extension.name} in Settings`}
@@ -1438,12 +1492,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
       ) : null}
       <IconButton
         compact
-        className="h-7 w-7 shrink-0"
         title={`Details for ${extension.name}`}
         aria-label={`Details for ${extension.name}`}
         onClick={(event) => {
           event.stopPropagation();
-          setDetailsExtensionId(extension.id);
+          selectExtension(extension);
         }}
       >
         <DetailsIcon />
@@ -1471,14 +1524,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
         <DataTableRow
           key={`installed:${extension.id}`}
           className={cx('group cursor-default', selected && 'ui-selected-row-accent')}
-          onClick={() => setDetailsExtensionId(extension.id)}
+          onClick={() => selectExtension(extension)}
         >
           <DataTableCell className="min-w-0 py-3 pl-0 pr-6">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <TextButton className="truncate text-left text-[14px] font-semibold" onClick={() => setDetailsExtensionId(extension.id)}>
-                  {extension.name}
-                </TextButton>
+                <span className="truncate text-[14px] font-semibold text-primary">{extension.name}</span>
                 <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
               </div>
               {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
@@ -1505,7 +1556,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               {extensionStatusLabel(extension, unavailableCatalogItem)}
             </span>
           </DataTableCell>
-          <DataTableCell className="py-3 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</DataTableCell>
+          <DataTableCell className="min-w-0 py-3 text-[12px] leading-5 text-secondary">
+            <span className="block truncate" title={formatAppearsInSummary(extension)}>
+              {formatAppearsInSummary(extension)}
+            </span>
+          </DataTableCell>
           {options.showEnablement ? (
             <DataTableCell className="whitespace-nowrap py-3">
               {extension.status === 'invalid' ? (
@@ -1535,14 +1590,12 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           <div
             key={`installed-card:${extension.id}`}
             className={cx('space-y-3 py-4', selected && 'ui-selected-row-accent px-3')}
-            onClick={() => setDetailsExtensionId(extension.id)}
+            onClick={() => selectExtension(extension)}
           >
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <TextButton className="text-left text-[14px] font-semibold" onClick={() => setDetailsExtensionId(extension.id)}>
-                    {extension.name}
-                  </TextButton>
+                  <span className="text-[14px] font-semibold text-primary">{extension.name}</span>
                   <span className="text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
                 </div>
               </div>
@@ -1598,19 +1651,19 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     return compactExtensionsLayout ? (
       renderExtensionCards(items, { showEnablement })
     ) : (
-      <DataTable className="overflow-auto" tableClassName="min-w-[58rem] table-fixed">
+      <DataTable className="overflow-auto" tableClassName="min-w-full table-fixed">
         <colgroup>
-          <col className="w-[44%]" />
-          <col className="w-[9rem]" />
-          <col />
-          {showEnablement ? <col className="w-[8rem]" /> : null}
-          <col className="w-40" />
+          <col className="w-[38%]" />
+          <col className="w-[8rem]" />
+          <col className="w-[24%]" />
+          {showEnablement ? <col className="w-[7rem]" /> : null}
+          <col className="w-36" />
         </colgroup>
         <DataTableHead>
           <DataTableRow>
             <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
             <DataTableHeaderCell>Status</DataTableHeaderCell>
-            <DataTableHeaderCell>Appears in</DataTableHeaderCell>
+            <DataTableHeaderCell className="whitespace-nowrap">Appears in</DataTableHeaderCell>
             {showEnablement ? <DataTableHeaderCell>Enabled</DataTableHeaderCell> : null}
             <DataTableHeaderCell className="pr-0 text-right">Actions</DataTableHeaderCell>
           </DataTableRow>
@@ -1625,10 +1678,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
     window.setTimeout(() => draftComposerTextWhenReady(BUILD_EXTENSION_PROMPT), 0);
   }, [navigate]);
 
-  if (loading) {
-    return <LoadingState label="Loading extensions…" />;
-  }
-
   if (error) {
     return <ErrorState message={error} />;
   }
@@ -1641,78 +1690,79 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
             shellClassName={embedded ? 'max-w-none px-0 py-0' : undefined}
             contentClassName={embedded ? 'space-y-6' : 'flex flex-col gap-7'}
           >
-            {!embedded ? (
-              <AppPageIntro
-                title="Extensions"
-                actions={
-                  <div className="flex min-w-[26rem] items-center gap-2">
-                    <SearchInput
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search extensions…"
-                      className="h-9 w-72"
-                    />
-                    <IconButton
-                      type="button"
-                      aria-label="Reload extensions"
-                      title="Reload extensions"
-                      disabled={busyId === 'update-all'}
-                      onClick={() => {
-                        notifyExtensionRegistryChanged();
-                        void load();
-                        loadCatalog();
-                      }}
-                    >
-                      <RefreshIcon />
-                    </IconButton>
-                    {updatableExtensions.length ? (
-                      <Button
-                        className="min-h-9 px-3 py-2 text-[13px]"
-                        disabled={busyId !== null}
-                        onClick={() => void updateAllExtensions()}
-                      >
-                        {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
-                      </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      data-onboarding-target="build-extension"
-                      className="min-h-9 px-3 py-2 text-[13px]"
-                      disabled={busyId === 'update-all'}
-                      onClick={startExtensionBuildConversation}
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        <SparkIcon />
-                        Build with agent
-                      </span>
-                    </Button>
-                    <Button
-                      variant="action"
-                      tone="accent"
-                      className="min-h-9 px-3 py-2 text-[13px]"
-                      disabled={busyId === 'update-all'}
-                      onClick={() => setInstallModalOpen(true)}
-                    >
-                      Install
-                    </Button>
-                  </div>
-                }
-              />
-            ) : null}
+            {!embedded ? <AppPageIntro title="Extensions" /> : null}
 
-            <TabList ariaLabel="Extension filters" variant="underline">
-              {(
-                [
-                  ['all', 'All'],
-                  ['platform', 'Platform'],
-                  ['attention', 'Attention'],
-                ] as const
-              ).map(([id, label]) => (
-                <TabButton key={id} active={activeFilter === id} onClick={() => setActiveFilter(id)}>
-                  {label}
-                </TabButton>
-              ))}
-            </TabList>
+            <DataTableToolbar
+              tabs={
+                <TabList ariaLabel="Extension filters" variant="underline">
+                  {(
+                    [
+                      ['all', 'All'],
+                      ['platform', 'Platform'],
+                      ['attention', 'Attention'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <TabButton key={id} active={activeFilter === id} onClick={() => setActiveFilter(id)}>
+                      {label}
+                    </TabButton>
+                  ))}
+                </TabList>
+              }
+              summary={sectionSummary}
+              search={
+                <SearchInput
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search extensions…"
+                  className="max-w-full"
+                />
+              }
+              actions={
+                <>
+                  <IconButton
+                    compact
+                    type="button"
+                    aria-label="Reload extensions"
+                    title="Reload extensions"
+                    disabled={busyId === 'update-all'}
+                    onClick={() => {
+                      notifyExtensionRegistryChanged();
+                      void load();
+                      loadCatalog();
+                    }}
+                  >
+                    <RefreshIcon />
+                  </IconButton>
+                  {updatableExtensions.length ? (
+                    <Button title="Update all extensions" disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
+                      <RefreshIcon />
+                      {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="action"
+                    tone="accent"
+                    data-onboarding-target="build-extension"
+                    title="Build extension with agent"
+                    disabled={busyId === 'update-all'}
+                    onClick={startExtensionBuildConversation}
+                  >
+                    <SparkIcon />
+                    Build with agent
+                  </Button>
+                  <IconButton
+                    compact
+                    aria-label="Install extension"
+                    title="Install extension"
+                    disabled={busyId === 'update-all'}
+                    onClick={() => setInstallModalOpen(true)}
+                  >
+                    <PlusIcon />
+                  </IconButton>
+                </>
+              }
+            />
 
             {notice ? (
               <div className="sticky top-0 z-20 bg-base py-2">
@@ -1722,66 +1772,11 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
             {catalogError ? <ErrorState title="Could not load installable extensions" message={catalogError} /> : null}
 
-            {embedded ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <SearchInput
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search extensions…"
-                  className="w-full md:w-80"
-                />
-                <IconButton
-                  type="button"
-                  aria-label="Reload extensions"
-                  title="Reload extensions"
-                  disabled={busyId === 'update-all'}
-                  onClick={() => {
-                    notifyExtensionRegistryChanged();
-                    void load();
-                    loadCatalog();
-                  }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-                {updatableExtensions.length ? (
-                  <Button className="min-h-9 px-3 py-2 text-[13px]" disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
-                    {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
-                  </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  data-onboarding-target="build-extension"
-                  className="min-h-9 px-3 py-2 text-[13px]"
-                  disabled={busyId === 'update-all'}
-                  onClick={startExtensionBuildConversation}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <SparkIcon />
-                    Build with agent
-                  </span>
-                </Button>
-                <Button
-                  variant="action"
-                  tone="accent"
-                  className="min-h-9 px-3 py-2 text-[13px]"
-                  disabled={busyId === 'update-all'}
-                  onClick={() => setInstallModalOpen(true)}
-                >
-                  Install
-                </Button>
-              </div>
-            ) : null}
-
             <section className="space-y-5">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  {activeFilter === 'all' ? null : <h2 className="text-[18px] font-semibold leading-tight text-primary">{sectionTitle}</h2>}
-                  <p className={cx(activeFilter === 'all' ? 'text-[12px] text-secondary' : 'mt-1 text-[12px] text-secondary')}>
-                    {sectionSummary}
-                  </p>
-                </div>
-              </div>
-              {extensions.length === 0 ? (
+              {activeFilter === 'all' ? null : <h2 className="text-[15px] font-semibold leading-tight text-primary">{sectionTitle}</h2>}
+              {loading ? (
+                <QuietLoadingState label="Loading extensions" className="min-h-24" />
+              ) : extensions.length === 0 ? (
                 <EmptyState title="No extensions installed" body="Install one from a source, or ask an agent to build one." />
               ) : visibleExtensions.length === 0 ? (
                 <EmptyState title={emptyVisibleExtensionsTitle} body={emptyVisibleExtensionsBody} />
@@ -1807,7 +1802,6 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
           onClose={() => setInstallModalOpen(false)}
         />
       ) : null}
-      {selectedExtension ? <ExtensionDetailsModal extensionId={selectedExtension.id} onClose={() => setDetailsExtensionId(null)} /> : null}
     </>
   );
 }
@@ -1974,10 +1968,11 @@ function ExtensionSettingsPointer({ extension }: { extension: ExtensionInstallSu
   );
 }
 
-function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; onClose: () => void }) {
+export function ExtensionDetailsRail({ pa }: ExtensionSurfaceProps) {
   const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
+  const [extensionId, setExtensionId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -2008,6 +2003,18 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
     return () => window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
   }, [load]);
 
+  useEffect(() => {
+    if (!pa.selection) return;
+    const subscription = pa.selection.subscribe((selection) => {
+      if (!isExtensionSelection(selection)) {
+        setExtensionId(null);
+        return;
+      }
+      setExtensionId(selection.resource.data?.extensionId ?? selection.resource.id.replace(/^extension:/, ''));
+    });
+    return () => subscription.unsubscribe();
+  }, [pa]);
+
   const openPath = useCallback((path: string) => {
     const bridge = getDesktopBridge();
     if (!bridge) {
@@ -2031,46 +2038,42 @@ function ExtensionDetailsModal({ extensionId, onClose }: { extensionId: string; 
     }
   }, []);
 
-  const extension = extensions.find((e) => e.id === extensionId) ?? null;
+  const extension = extensionId ? (extensions.find((e) => e.id === extensionId) ?? null) : null;
 
   return (
-    <Dialog
-      aria-label="Extension details"
-      className="max-w-3xl bg-base"
-      onClose={onClose}
-      style={{
-        width: 'min(48rem, calc(100vw - var(--neon-pilot-sidebar-offset, 0px) - 2rem))',
-        maxHeight: 'min(44rem, calc(100vh - 7.5rem))',
-        marginBlock: '2rem',
-        marginInlineStart: 'var(--neon-pilot-sidebar-offset, 0px)',
-        alignSelf: 'flex-start',
-      }}
-    >
-      <DialogHeader
-        title="Extension details"
-        className="px-6 py-4"
-        actions={
-          <IconButton type="button" onClick={onClose} aria-label="Close details" title="Close">
-            <CloseIcon />
-          </IconButton>
-        }
+    <ContextRail>
+      <ContextRailHeader
+        eyebrow="Extension details"
+        title={extension?.name ?? (!extensionId ? 'Select an extension' : 'Extension not found')}
+        subtitle={extension ? extension.id : undefined}
       />
-
-      <DialogBody className="max-h-[72vh] px-6 py-5">
+      <ContextRailBody>
         {loading ? (
-          <LoadingState label="Loading extension details…" />
+          <QuietLoadingState label="Loading extension details" className="min-h-12" />
+        ) : !extensionId ? (
+          <EmptyState
+            title="Pick a row to inspect"
+            body="Select an extension to inspect its surfaces, enabled state, diagnostics, and install details."
+            steps={[
+              'Pick an extension from the table.',
+              'Review its details here.',
+              'Use row actions for settings, diagnostics, or install work.',
+            ]}
+            align="start"
+          />
         ) : !extension ? (
-          <p className="text-[13px] text-dim">Extension not found.</p>
+          <PanelMessage className="py-2">Extension not found.</PanelMessage>
         ) : (
           <ExtensionDetailsContent
             extension={extension}
             notice={notice}
+            compact
             onCopyDiagnostics={copyExtensionDiagnostics}
             onOpenPath={openPath}
           />
         )}
-      </DialogBody>
-    </Dialog>
+      </ContextRailBody>
+    </ContextRail>
   );
 }
 
@@ -2162,7 +2165,17 @@ function ExtensionDetailsContent({
       {extension.status === 'invalid' || extension.diagnostics?.length || extension.buildError ? (
         <DetailBlock
           title="Diagnostics"
-          action={<TextButton onClick={() => void onCopyDiagnostics(extension)}>Copy diagnostics</TextButton>}
+          action={
+            <IconButton
+              compact
+              type="button"
+              aria-label="Copy diagnostics"
+              title="Copy diagnostics"
+              onClick={() => void onCopyDiagnostics(extension)}
+            >
+              <ExtensionDetailIcon name="copy" />
+            </IconButton>
+          }
         >
           <div className="space-y-2">
             {[...(extension.errors ?? []), ...(extension.diagnostics ?? []), extension.buildError ?? null]
@@ -2196,7 +2209,17 @@ function ExtensionDetailsContent({
               <KeyValueItem
                 label="Package"
                 value={extension.packageRoot}
-                action={<TextButton onClick={() => onOpenPath(extension.packageRoot!)}>Open</TextButton>}
+                action={
+                  <IconButton
+                    compact
+                    type="button"
+                    aria-label="Open package folder"
+                    title="Open package folder"
+                    onClick={() => onOpenPath(extension.packageRoot!)}
+                  >
+                    <ExtensionDetailIcon name="open" />
+                  </IconButton>
+                }
               />
             ) : null}
           </KeyValueList>

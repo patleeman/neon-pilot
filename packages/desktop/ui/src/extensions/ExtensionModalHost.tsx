@@ -252,7 +252,7 @@ export function ExtensionModalHost() {
             title={modal.title}
             titleId="extension-modal-title"
             actions={
-              <IconButton onClick={() => handleClose()} aria-label="Close">
+              <IconButton onClick={() => handleClose()} aria-label="Close extension modal" title="Close extension modal">
                 <svg
                   width="14"
                   height="14"

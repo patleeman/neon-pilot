@@ -4,6 +4,54 @@ import { describe, expect, it, vi } from 'vitest';
 import { createNativeExtensionClient } from './nativePaClient';
 
 describe('native extension transcript client', () => {
+  it('shares resource selection state for route right sidebars', () => {
+    const pa = createNativeExtensionClient('demo');
+    pa.selection.set(null);
+    const handler = vi.fn();
+    const hostEventHandler = vi.fn();
+    window.addEventListener('pa-ext-event', hostEventHandler);
+
+    const subscription = pa.selection.subscribe(handler);
+    const selection = {
+      kind: 'resource' as const,
+      resource: {
+        type: 'skill',
+        id: 'skill:demo',
+        label: 'Demo Skill',
+        source: 'system-skills',
+        data: { path: 'demo' },
+      },
+      cwd: '/repo',
+    };
+    pa.selection.set(selection);
+
+    expect(pa.selection.get()).toEqual({
+      ...selection,
+      updatedAt: expect.any(String),
+    });
+    expect(handler).toHaveBeenNthCalledWith(1, null);
+    expect(handler).toHaveBeenNthCalledWith(2, {
+      ...selection,
+      updatedAt: expect.any(String),
+    });
+    expect(hostEventHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: {
+          event: 'host:selection',
+          payload: {
+            ...selection,
+            updatedAt: expect.any(String),
+          },
+        },
+      }),
+    );
+
+    subscription.unsubscribe();
+    pa.selection.set(null);
+    expect(handler).toHaveBeenCalledTimes(2);
+    window.removeEventListener('pa-ext-event', hostEventHandler);
+  });
+
   it('exposes target props for extension-owned transcript targets', () => {
     const pa = createNativeExtensionClient('demo');
 

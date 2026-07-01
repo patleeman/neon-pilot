@@ -934,6 +934,7 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   if (contributes.nav !== undefined) {
     validateNavigationContributions(contributes.nav);
   }
+  validateRouteShellRegionReferences(contributes);
 
   if (contributes.commands !== undefined) {
     validateCommandContributions(contributes.commands);
@@ -1119,6 +1120,62 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
 
   if (contributes.secretBackends !== undefined) {
     throw new Error('Extension manifest contributes.secretBackends is not supported. Use the built-in secrets.provider backends.');
+  }
+}
+
+function validateRouteShellRegionReferences(contributes: Record<string, unknown>): void {
+  if (contributes.nav === undefined) return;
+  if (contributes.views === undefined) {
+    throw new Error('Extension manifest contributes.nav requires contributes.views with matching main view routes.');
+  }
+  if (!Array.isArray(contributes.nav) || !Array.isArray(contributes.views)) return;
+
+  const viewsById = new Map(
+    contributes.views
+      .filter((view): view is Record<string, unknown> => isRecord(view) && typeof view.id === 'string')
+      .map((view) => [view.id as string, view]),
+  );
+  const mainRoutes = new Set(
+    contributes.views
+      .filter((view): view is Record<string, unknown> => isRecord(view) && view.location === 'main' && typeof view.route === 'string')
+      .map((view) => view.route as string),
+  );
+
+  for (const [index, nav] of contributes.nav.entries()) {
+    if (!isRecord(nav)) continue;
+
+    if (typeof nav.route === 'string' && !mainRoutes.has(nav.route)) {
+      throw new Error(`Extension manifest contributes.nav[${index}].route "${nav.route}" must reference a matching main view route.`);
+    }
+
+    if (typeof nav.sidebarView === 'string') {
+      const view = viewsById.get(nav.sidebarView);
+      if (!view) {
+        throw new Error(`Extension manifest contributes.nav[${index}].sidebarView "${nav.sidebarView}" must reference a known view.`);
+      }
+      if (view.location !== 'sidebar') {
+        throw new Error(`Extension manifest contributes.nav[${index}].sidebarView "${nav.sidebarView}" must reference a sidebar view.`);
+      }
+    }
+
+    if (typeof nav.rightSidebarView === 'string') {
+      const view = viewsById.get(nav.rightSidebarView);
+      if (!view) {
+        throw new Error(
+          `Extension manifest contributes.nav[${index}].rightSidebarView "${nav.rightSidebarView}" must reference a known view.`,
+        );
+      }
+      if (view.location !== 'rightRail') {
+        throw new Error(
+          `Extension manifest contributes.nav[${index}].rightSidebarView "${nav.rightSidebarView}" must reference a rightRail view.`,
+        );
+      }
+      if (view.placement !== 'primary') {
+        throw new Error(
+          `Extension manifest contributes.nav[${index}].rightSidebarView "${nav.rightSidebarView}" must reference a rightRail view with placement "primary".`,
+        );
+      }
+    }
   }
 }
 

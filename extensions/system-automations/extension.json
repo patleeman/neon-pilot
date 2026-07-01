@@ -142,7 +142,8 @@
         "id": "nav",
         "label": "Automations",
         "route": "/automations",
-        "icon": "automation"
+        "icon": "automation",
+        "pageType": "table"
       }
     ],
     "views": [
@@ -152,8 +153,6 @@
         "location": "main",
         "route": "/automations",
         "component": "AutomationsPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       }
     ],

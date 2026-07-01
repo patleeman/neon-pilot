@@ -27,21 +27,20 @@
         "title": "Gateways",
         "location": "main",
         "route": "/gateways",
-        "placement": "primary",
-        "scope": "global",
         "component": "GatewaysPage",
         "icon": "app",
         "activation": "on-route"
       },
       {
-        "id": "gateways-sidebar",
-        "title": "Gateways",
-        "location": "sidebar",
+        "id": "gateway-context-rail",
+        "title": "Gateway context",
+        "location": "rightRail",
+        "route": "/gateways",
         "placement": "primary",
         "scope": "global",
-        "component": "GatewaysSidebar",
+        "component": "GatewaysContextRail",
         "icon": "app",
-        "activation": "on-route"
+        "activation": "on-open"
       }
     ],
     "nav": [
@@ -50,8 +49,9 @@
         "label": "Gateways",
         "route": "/gateways",
         "icon": "app",
+        "pageType": "setup",
         "section": "primary",
-        "sidebarView": "gateways-sidebar"
+        "rightSidebarView": "gateway-context-rail"
       }
     ],
     "gatewayProviders": [

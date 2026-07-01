@@ -5,8 +5,8 @@ import { extname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = join(fileURLToPath(new URL('..', import.meta.url)));
-const defaultRoots = ['packages/desktop/ui/src', 'extensions', 'docs/extension-templates'];
-const includeExt = new Set(['.css', '.ts', '.tsx']);
+const defaultRoots = ['packages/desktop/ui/src', 'extensions', 'docs/design', 'docs/extension-templates'];
+const includeExt = new Set(['.css', '.json', '.md', '.ts', '.tsx']);
 const ignoreSegments = new Set(['node_modules', 'dist', 'coverage', '.git']);
 const ignoredFileRegexes = [/\.(test|spec)\.[cm]?[tj]sx?$/, /\.stories\.[cm]?[tj]sx?$/];
 const inlineExceptionId = 'invalid-ui-pattern-exception';
@@ -14,6 +14,8 @@ const inlineExceptionId = 'invalid-ui-pattern-exception';
 const designSystemSourceRegexes = [/^packages\/ui\/src\//, /^packages\/desktop\/ui\/src\/components\/ui\.[tj]sx?$/];
 
 const defaultAllowlist = [];
+const extensionManifestCache = new Map();
+const approvedPageTypes = new Set(['conversation', 'table', 'editor', 'settings', 'dashboard', 'setup']);
 
 const rules = [
   {
@@ -42,6 +44,45 @@ const rules = [
     extensions: new Set(['.tsx']),
     appliesTo: ({ file }) => isInternalFrontendFile(file),
     match: ({ line, snippet }) => /<\s*(?:details|summary)(?=[\s>/]|$)/.test(line) || /<\s*(?:details|summary)(?=[\s>/])/.test(snippet),
+  },
+  {
+    id: 'invalid-button-variant',
+    message: 'invalid Button/ButtonLink variant; use toolbar, action, or ghost from the shared action button standard',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => isInternalFrontendFile(file),
+    match: ({ snippet }) => /<\s*Button(?:Link)?\b/.test(snippet) && /\bvariant=(["'])(?!(?:toolbar|action|ghost)\1)[^"']+\1/.test(snippet),
+  },
+  {
+    id: 'local-action-button-sizing',
+    message: 'shared action button has local size/typography overrides; use the primitive geometry and keep className for layout only',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => isInternalFrontendFile(file),
+    match: ({ snippet }) =>
+      /<\s*(?:Button|ButtonLink|ToolbarButton|IconButton|IconLink)\b/.test(snippet) &&
+      /\bclassName=(["'])[^"']*\b(?:min-h-|h-\d|w-\d|px-|py-|text-\[)[^"']*\1/.test(snippet),
+  },
+  {
+    id: 'common-text-action-button',
+    message: 'text-only common action button; use IconButton with aria-label/title, or icon plus text when the label disambiguates',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => isInternalFrontendFile(file),
+    match: ({ line, index, lines, snippet }) => {
+      if (!/<\s*(?:Button|ToolbarButton)\b/.test(line) && !/<\s*(?:Button|ToolbarButton)\b/.test(snippet)) return false;
+      const block = collectElementBlock(lines, index);
+      if (!/(?:^|>|\{)\s*(?:Refresh|Add|Search|Copy|Close|Remove|Retry)\s*(?:<|\}|$)/.test(block)) return false;
+      return !/<(?:Ico|svg)\b|aria-hidden=/.test(block);
+    },
+  },
+  {
+    id: 'icon-action-missing-title',
+    message: 'icon-only action missing hover help; pass title alongside aria-label',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => isInternalFrontendFile(file),
+    match: ({ line, snippet }) =>
+      /<\s*Icon(?:Button|Link)\b/.test(line) &&
+      /\baria-label=/.test(snippet) &&
+      !/\btitle=/.test(snippet) &&
+      !/\baria-hidden=["']true["']/.test(snippet),
   },
   {
     id: 'custom-pill',
@@ -96,6 +137,201 @@ const rules = [
     message: 'arbitrary text size; prefer shared primitive typography or documented utility classes',
     match: ({ snippet }) => /\btext-\[(?:10|10\.5|11|12|13|14|15|22|30|32|36)px\]\b/.test(snippet),
   },
+  {
+    id: 'route-page-centered-loading',
+    message:
+      'main-route extension page uses centered/page-level loading chrome; reserve the page shape and put loading state inside the working surface',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file, root }) => isMainRouteExtensionSource(file, root),
+    match: ({ snippet }) => /<\s*CenteredLoadingState\b/.test(snippet),
+  },
+  {
+    id: 'app-route-centered-loading',
+    message:
+      'desktop route fallback uses visible page-level loading chrome; use QuietLoadingState for shell-level route and hydration fallbacks',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => file === 'packages/desktop/ui/src/app/App.tsx',
+    match: ({ snippet }) => /<\s*CenteredLoadingState\b/.test(snippet),
+  },
+  {
+    id: 'route-page-centered-loading-wrapper',
+    message:
+      'main-route extension page centers loading at page level; keep route chrome stable and put LoadingState inside AppPageLayout or the waiting table/list/editor surface',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file, root }) => isMainRouteExtensionSource(file, root),
+    match: ({ snippet }) => /\bh-full\b(?=[^"']*\bitems-center\b)(?=[^"']*\bjustify-center\b)/.test(snippet),
+  },
+  {
+    id: 'route-page-local-title-scale',
+    message: 'main-route extension page uses local oversized title typography; use AppPageIntro for route titles',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file, root }) => isMainRouteExtensionSource(file, root),
+    match: ({ snippet }) => /<\s*h[1-3]\b[^>]*\btext-\[(?:30|32|36)px\](?=$|[^\w-])/.test(snippet),
+  },
+  {
+    id: 'route-page-local-shell-sidebar',
+    message:
+      'main-route extension page renders an in-page sidebar; declare sidebarView or rightSidebarView so the app shell owns contextual side regions',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file, root }) => isMainRouteExtensionSource(file, root),
+    match: ({ file, root, snippet, index, lines }) =>
+      /<\s*aside\b/.test(snippet) && isInsideMainRouteComponent({ file, root, lines, index }),
+  },
+  {
+    id: 'route-sidebar-template-missing',
+    message: 'route-owned sidebar component should use SidebarSection/SidebarList/SidebarMessage instead of local sidebar chrome',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => isExtensionFrontendFile(file),
+    match: ({ file, root, line, index, lines }) => {
+      const declaration = componentDeclarationName(line);
+      if (!declaration) return false;
+      const sidebarComponents = routeSideRegionComponentsForFile(file, root, 'sidebar');
+      if (!sidebarComponents.has(declaration)) return false;
+      const templateRegex = /<\s*SidebarSection\b/;
+      return (
+        !templateRegex.test(collectComponentBlock(lines, index)) &&
+        !componentTemplateExistsInExtensionSource({ file, root, componentName: declaration, templateRegex })
+      );
+    },
+  },
+  {
+    id: 'route-right-sidebar-template-missing',
+    message: 'route-owned right sidebar component should use ContextRail as its outer visual template',
+    extensions: new Set(['.tsx']),
+    appliesTo: ({ file }) => isExtensionFrontendFile(file),
+    match: ({ file, root, line, index, lines }) => {
+      const declaration = componentDeclarationName(line);
+      if (!declaration) return false;
+      const rightSidebarComponents = routeSideRegionComponentsForFile(file, root, 'right-sidebar');
+      if (!rightSidebarComponents.has(declaration)) return false;
+      const templateRegex = /<\s*ContextRail\b/;
+      return (
+        !templateRegex.test(collectComponentBlock(lines, index)) &&
+        !componentTemplateExistsInExtensionSource({ file, root, componentName: declaration, templateRegex })
+      );
+    },
+  },
+  {
+    id: 'extension-doc-old-right-rail-language',
+    message: 'extension authoring docs should say right sidebar or context rail; reserve rightRail for literal manifest/API examples',
+    extensions: new Set(['.md']),
+    appliesTo: ({ file }) =>
+      file === 'docs/build-an-extension.md' ||
+      file === 'docs/extensions.md' ||
+      file === 'packages/extensions/README.md' ||
+      file === 'extensions/system-extension-manager/README.md' ||
+      file === 'extensions/system-extension-manager/skills/local-extension-development/SKILL.md' ||
+      file.startsWith('docs/design/') ||
+      file.startsWith('docs/extension-templates/'),
+    match: ({ line }) => {
+      const prose = line.replace(/`[^`]*`/g, '');
+      return /\bright-rail\b/i.test(prose) || /\broute,\s*rail\b/i.test(prose) || /\bright rail\b/i.test(prose);
+    },
+  },
+  {
+    id: 'manifest-main-view-shell-fields',
+    message: 'main route view declares placement/scope; omit side-region fields on main views',
+    extensions: new Set(['.json']),
+    appliesTo: ({ file }) =>
+      /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
+    match: ({ line, lines, index }) =>
+      /"location"\s*:\s*"main"/.test(line) && /"(?:placement|scope)"\s*:/.test(collectJsonObjectAround(lines, index)),
+  },
+  {
+    id: 'manifest-main-route-missing-page-type',
+    message: 'first-party route nav item is missing nav[].pageType; choose conversation, table, editor, settings, dashboard, or setup',
+    extensions: new Set(['.json']),
+    appliesTo: ({ file }) =>
+      /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
+    match: ({ line, lines, index }) => {
+      if (!/"route"\s*:/.test(line)) return false;
+      const navItem = parseJsonObjectAround(lines, index);
+      if (!navItem || typeof navItem.route !== 'string' || typeof navItem.pageType === 'string') return false;
+      const manifest = parseJsonDocument(lines);
+      if (!isMainRouteNavItem(manifest, navItem)) return false;
+      return true;
+    },
+  },
+  {
+    id: 'manifest-main-route-invalid-page-type',
+    message: 'first-party route nav item has an unknown nav[].pageType; use conversation, table, editor, settings, dashboard, or setup',
+    extensions: new Set(['.json']),
+    appliesTo: ({ file }) =>
+      /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
+    match: ({ line, lines, index }) => {
+      if (!/"pageType"\s*:/.test(line)) return false;
+      const navItem = parseJsonObjectAround(lines, index);
+      if (!navItem || typeof navItem.route !== 'string' || typeof navItem.pageType !== 'string') return false;
+      const manifest = parseJsonDocument(lines);
+      if (!isMainRouteNavItem(manifest, navItem)) return false;
+      return !approvedPageTypes.has(navItem.pageType);
+    },
+  },
+  {
+    id: 'manifest-unbound-primary-right-sidebar',
+    message:
+      'primary rightRail view is not bound from nav[].rightSidebarView; bind route context rails from nav or use placement "workbench-tool" for Workbench tools',
+    extensions: new Set(['.json']),
+    appliesTo: ({ file }) =>
+      /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
+    match: ({ line, lines, index }) => {
+      if (!/"location"\s*:\s*"rightRail"/.test(line)) return false;
+      const view = parseJsonObjectAround(lines, index);
+      if (view?.placement !== 'primary' || typeof view.id !== 'string') return false;
+      const manifest = parseJsonDocument(lines);
+      const nav = Array.isArray(manifest?.contributes?.nav) ? manifest.contributes.nav : [];
+      return !nav.some((item) => item?.rightSidebarView === view.id);
+    },
+  },
+  {
+    id: 'manifest-unbound-sidebar-view',
+    message: 'sidebar view is not bound from nav[].sidebarView; route contextual-left regions must be declared from nav or removed',
+    extensions: new Set(['.json']),
+    appliesTo: ({ file }) =>
+      /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
+    match: ({ line, lines, index }) => {
+      if (!/"location"\s*:\s*"sidebar"/.test(line)) return false;
+      const view = parseJsonObjectAround(lines, index);
+      if (typeof view?.id !== 'string') return false;
+      const manifest = parseJsonDocument(lines);
+      const nav = Array.isArray(manifest?.contributes?.nav) ? manifest.contributes.nav : [];
+      return !nav.some((item) => item?.sidebarView === view.id);
+    },
+  },
+  {
+    id: 'manifest-invalid-sidebar-nav-reference',
+    message: 'nav[].sidebarView must reference a known sidebar view',
+    extensions: new Set(['.json']),
+    appliesTo: ({ file }) =>
+      /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
+    match: ({ line, lines, index }) => {
+      if (!/"sidebarView"\s*:/.test(line)) return false;
+      const navItem = parseJsonObjectAround(lines, index);
+      const sidebarView = navItem?.sidebarView;
+      if (typeof sidebarView !== 'string') return false;
+      const manifest = parseJsonDocument(lines);
+      const views = Array.isArray(manifest?.contributes?.views) ? manifest.contributes.views : [];
+      const view = views.find((item) => item?.id === sidebarView);
+      return view?.location !== 'sidebar';
+    },
+  },
+  {
+    id: 'manifest-invalid-right-sidebar-nav-reference',
+    message: 'nav[].rightSidebarView must reference a known primary rightRail view',
+    extensions: new Set(['.json']),
+    appliesTo: ({ file }) =>
+      /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
+    match: ({ line, lines, index }) => {
+      if (!/"rightSidebarView"\s*:/.test(line)) return false;
+      const navItem = parseJsonObjectAround(lines, index);
+      const rightSidebarView = navItem?.rightSidebarView;
+      if (typeof rightSidebarView !== 'string') return false;
+      const manifest = parseJsonDocument(lines);
+      const views = Array.isArray(manifest?.contributes?.views) ? manifest.contributes.views : [];
+      const view = views.find((item) => item?.id === rightSidebarView);
+      return view?.location !== 'rightRail' || view?.placement !== 'primary';
+    },
+  },
 ];
 
 function normalizePath(path) {
@@ -123,6 +359,133 @@ function isInternalFrontendFile(file) {
   return /^packages\/desktop\/ui\/src\/.*\.tsx$/.test(file) || isExtensionFrontendFile(file);
 }
 
+function readExtensionManifest(root, extensionId) {
+  const cacheKey = `${root}:${extensionId}`;
+  if (extensionManifestCache.has(cacheKey)) return extensionManifestCache.get(cacheKey);
+
+  const manifestPath = join(root, 'extensions', extensionId, 'extension.json');
+  let manifest = null;
+  try {
+    if (existsSync(manifestPath)) manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch {
+    manifest = null;
+  }
+  extensionManifestCache.set(cacheKey, manifest);
+  return manifest;
+}
+
+function readExtensionTemplateManifest(root, templateId) {
+  const cacheKey = `${root}:template:${templateId}`;
+  if (extensionManifestCache.has(cacheKey)) return extensionManifestCache.get(cacheKey);
+
+  const manifestPath = join(root, 'docs', 'extension-templates', 'templates', templateId, 'extension.json');
+  let manifest = null;
+  try {
+    if (existsSync(manifestPath)) manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch {
+    manifest = null;
+  }
+  extensionManifestCache.set(cacheKey, manifest);
+  return manifest;
+}
+
+function manifestHasMainRoute(manifest) {
+  const views = Array.isArray(manifest?.contributes?.views) ? manifest.contributes.views : [];
+  return views.some((view) => view?.location === 'main' && typeof view?.route === 'string' && view.route.length > 0);
+}
+
+function isMainRouteNavItem(manifest, navItem) {
+  const nav = Array.isArray(manifest?.contributes?.nav) ? manifest.contributes.nav : [];
+  const views = Array.isArray(manifest?.contributes?.views) ? manifest.contributes.views : [];
+  const matchingNavItem = nav.some((item) => item?.id === navItem.id && item?.route === navItem.route && item?.label === navItem.label);
+  if (!matchingNavItem) return false;
+  return views.some((view) => view?.location === 'main' && view?.route === navItem.route);
+}
+
+function mainRouteComponentNames(manifest) {
+  const views = Array.isArray(manifest?.contributes?.views) ? manifest.contributes.views : [];
+  return new Set(
+    views
+      .filter((view) => view?.location === 'main' && typeof view?.route === 'string' && view.route.length > 0)
+      .map((view) => view?.component)
+      .filter((component) => typeof component === 'string' && component.length > 0),
+  );
+}
+
+function mainRouteComponentsForFile(file, root) {
+  const match = /^extensions\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  if (match) return mainRouteComponentNames(readExtensionManifest(root, match[1]));
+
+  const templateMatch = /^docs\/extension-templates\/templates\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  if (templateMatch) return mainRouteComponentNames(readExtensionTemplateManifest(root, templateMatch[1]));
+
+  return new Set();
+}
+
+function routeSideRegionComponentNames(manifest, kind) {
+  const views = Array.isArray(manifest?.contributes?.views) ? manifest.contributes.views : [];
+  const nav = Array.isArray(manifest?.contributes?.nav) ? manifest.contributes.nav : [];
+  const mainRouteNav = nav.filter((item) => isMainRouteNavItem(manifest, item));
+  const viewIds = new Set(
+    mainRouteNav
+      .map((item) => (kind === 'sidebar' ? item?.sidebarView : item?.rightSidebarView))
+      .filter((id) => typeof id === 'string' && id.length > 0),
+  );
+
+  return new Set(
+    views
+      .filter((view) => {
+        if (!viewIds.has(view?.id)) return false;
+        if (kind === 'sidebar') return view?.location === 'sidebar';
+        return view?.location === 'rightRail' && view?.placement === 'primary';
+      })
+      .map((view) => view?.component)
+      .filter((component) => typeof component === 'string' && component.length > 0),
+  );
+}
+
+function routeSideRegionComponentsForFile(file, root, kind) {
+  const match = /^extensions\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  if (match) return routeSideRegionComponentNames(readExtensionManifest(root, match[1]), kind);
+
+  const templateMatch = /^docs\/extension-templates\/templates\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  if (templateMatch) return routeSideRegionComponentNames(readExtensionTemplateManifest(root, templateMatch[1]), kind);
+
+  return new Set();
+}
+
+function extensionHasMainRoute(root, extensionId) {
+  return manifestHasMainRoute(readExtensionManifest(root, extensionId));
+}
+
+function extensionTemplateHasMainRoute(root, templateId) {
+  return manifestHasMainRoute(readExtensionTemplateManifest(root, templateId));
+}
+
+function isMainRouteExtensionSource(file, root) {
+  const match = /^extensions\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  if (match) return extensionHasMainRoute(root, match[1]);
+
+  const templateMatch = /^docs\/extension-templates\/templates\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  return Boolean(templateMatch && extensionTemplateHasMainRoute(root, templateMatch[1]));
+}
+
+function isInsideMainRouteComponent({ file, root, lines, index }) {
+  const mainComponents = mainRouteComponentsForFile(file, root);
+  if (mainComponents.size === 0) return false;
+
+  for (let cursor = index; cursor >= 0; cursor -= 1) {
+    const line = lines[cursor] ?? '';
+    const declaration =
+      /\b(?:export\s+)?function\s+([A-Z][A-Za-z0-9_]*)\s*\(/.exec(line) ??
+      /\b(?:export\s+)?const\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(?:\([^)]*\)|[A-Za-z0-9_]+)\s*=>/.exec(line);
+    if (!declaration) continue;
+    return mainComponents.has(declaration[1]);
+  }
+
+  return false;
+}
+
 function walk(dir, files = []) {
   if (!existsSync(dir)) return files;
   for (const name of readdirSync(dir)) {
@@ -144,6 +507,88 @@ function collectOpeningSnippet(lines, index) {
   return parts.join(' ').replace(/\s+/g, ' ').trim();
 }
 
+function collectElementBlock(lines, index) {
+  const parts = [];
+  for (let offset = 0; offset < 14 && index + offset < lines.length; offset += 1) {
+    const line = lines[index + offset].trim();
+    parts.push(line);
+    if (/<\/(?:Button|ToolbarButton)>/.test(line)) break;
+    if (offset === 0 && /\/>\s*$/.test(line)) break;
+  }
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function componentDeclarationName(line) {
+  const declaration =
+    /\b(?:export\s+)?function\s+([A-Z][A-Za-z0-9_]*)\s*\(/.exec(line) ??
+    /\b(?:export\s+)?const\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(?:\([^)]*\)|[A-Za-z0-9_]+)\s*=>/.exec(line);
+  return declaration?.[1] ?? null;
+}
+
+function collectComponentBlock(lines, index) {
+  const parts = [];
+  for (let cursor = index; cursor < lines.length && cursor < index + 240; cursor += 1) {
+    if (cursor > index && componentDeclarationName(lines[cursor] ?? '')) break;
+    parts.push(lines[cursor]);
+  }
+  return parts.join('\n');
+}
+
+function componentTemplateExistsInExtensionSource({ file, root, componentName, templateRegex }) {
+  const extensionMatch = /^extensions\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  const templateMatch = /^docs\/extension-templates\/templates\/([^/]+)\/src\/.*\.tsx$/.exec(file);
+  const sourceRoot = extensionMatch
+    ? join(root, 'extensions', extensionMatch[1], 'src')
+    : templateMatch
+      ? join(root, 'docs', 'extension-templates', 'templates', templateMatch[1], 'src')
+      : null;
+  if (!sourceRoot || !existsSync(sourceRoot)) return false;
+
+  for (const sourceFile of walk(sourceRoot, [])) {
+    if (extname(sourceFile) !== '.tsx') continue;
+    const relativeFile = normalizePath(relative(root, sourceFile));
+    if (isIgnoredFile(relativeFile)) continue;
+    const lines = readFileSync(sourceFile, 'utf8').split(/\r?\n/);
+    for (let index = 0; index < lines.length; index += 1) {
+      if (componentDeclarationName(lines[index] ?? '') !== componentName) continue;
+      if (relativeFile === file) continue;
+      if (templateRegex.test(collectComponentBlock(lines, index))) return true;
+    }
+  }
+
+  return false;
+}
+
+function collectJsonObjectAround(lines, index) {
+  let start = index;
+  for (; start >= 0; start -= 1) {
+    if (/^\s*\{\s*$/.test(lines[start] ?? '')) break;
+  }
+
+  let end = index;
+  for (; end < lines.length; end += 1) {
+    if (/^\s*\},?\s*$/.test(lines[end] ?? '')) break;
+  }
+
+  return lines.slice(Math.max(0, start), Math.min(lines.length, end + 1)).join('\n');
+}
+
+function parseJsonDocument(lines) {
+  try {
+    return JSON.parse(lines.join('\n'));
+  } catch {
+    return null;
+  }
+}
+
+function parseJsonObjectAround(lines, index) {
+  try {
+    return JSON.parse(collectJsonObjectAround(lines, index).replace(/,\s*$/, ''));
+  } catch {
+    return null;
+  }
+}
+
 function sampleForLine(lines, index) {
   const line = lines[index] ?? '';
   if (/<\s*[A-Za-z][\w.:/-]*(?=[\s>/])/.test(line)) return collectOpeningSnippet(lines, index).slice(0, 260);
@@ -155,9 +600,16 @@ function hasSpecificReason(reason) {
   return trimmedReason.length >= 12 && !/^(?:ok|todo|fix later|temporary|n\/a|na)$/i.test(trimmedReason);
 }
 
+function isInsideInlineCode(line, index) {
+  const before = line.slice(0, index);
+  const ticksBefore = before.match(/`/g)?.length ?? 0;
+  return ticksBefore % 2 === 1;
+}
+
 function parseInlineException(line) {
   const markerIndex = line.indexOf('ui-pattern-ok');
   if (markerIndex === -1) return null;
+  if (isInsideInlineCode(line, markerIndex)) return null;
 
   const tail = line.slice(markerIndex);
   const match = /^ui-pattern-ok\s+([a-z0-9-]+)\s+reason="([^"]+)"/.exec(tail);
@@ -265,8 +717,8 @@ export function auditUiPatterns(options = {}) {
         const snippet = sampleForLine(lines, index);
         for (const rule of rules) {
           if (rule.extensions && !rule.extensions.has(extension)) continue;
-          if (rule.appliesTo && !rule.appliesTo({ file: relativeFile, extension })) continue;
-          if (!rule.match({ file: relativeFile, extension, line, snippet, index, lines })) continue;
+          if (rule.appliesTo && !rule.appliesTo({ file: relativeFile, extension, root })) continue;
+          if (!rule.match({ file: relativeFile, extension, root, line, snippet, index, lines })) continue;
           if (isInlineAllowed(lines, index, rule.id)) continue;
 
           const finding = {

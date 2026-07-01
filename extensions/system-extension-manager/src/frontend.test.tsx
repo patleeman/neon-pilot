@@ -181,6 +181,16 @@ describe('ExtensionManagerPage', () => {
     });
   });
 
+  it('keeps initial extension list loading chrome visually quiet', async () => {
+    const deferred = createDeferred<never[]>();
+    mocks.extensionInstallations.mockReturnValue(deferred.promise);
+
+    renderPage();
+
+    expect(await screen.findByRole('status', { name: 'Loading extensions' })).toBeTruthy();
+    expect(screen.queryByText('Loading extensions...')).toBeNull();
+  });
+
   it('keeps the row actions menu focused on opening the package folder', async () => {
     renderPage();
 
@@ -257,8 +267,8 @@ describe('ExtensionManagerPage', () => {
 
     expect(actionsCell?.className).toContain('w-40');
     expect(actionsCell?.className).toContain('text-right');
-    expect(moreButton.className).toContain('h-7');
-    expect(moreButton.className).toContain('w-7');
+    expect(moreButton.parentElement?.className).toContain('h-7');
+    expect(moreButton.parentElement?.className).toContain('w-7');
     expect(container.querySelector('table')?.className).toContain('table-fixed');
   });
 
@@ -471,14 +481,28 @@ describe('ExtensionManagerPage', () => {
 
   it('points extension details to Settings instead of rendering duplicate controls', async () => {
     mocks.extensionInstallations.mockResolvedValue([createConfigurableExtension()]);
-    renderPage();
+    const selectionSet = vi.fn();
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      selection: { subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })), set: selectionSet },
+    });
 
     expect(await screen.findByText('Configurable Test')).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Details for Configurable Test'));
 
-    expect(await screen.findByRole('dialog', { name: 'Extension details' })).toBeTruthy();
-    expect(screen.getByText('Configure Configurable Test from Settings.')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Open settings' }).getAttribute('href')).toBe('/settings#settings-extensions');
+    expect(selectionSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'resource',
+        resource: expect.objectContaining({
+          type: 'extension',
+          label: 'Configurable Test',
+          data: expect.objectContaining({ extensionId: 'configurable-test' }),
+        }),
+      }),
+    );
+    expect(screen.queryByRole('dialog', { name: 'Extension details' })).toBeNull();
+    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings#settings-extensions');
     expect(screen.queryByText('Toggle a test setting.')).toBeNull();
   });
 
@@ -506,7 +530,7 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(screen.queryByText('Available Only')).toBeNull();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 
@@ -536,7 +560,7 @@ describe('ExtensionManagerPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Search extensions…'), { target: { value: 'Menu Test' } });
     expect(screen.getByText('Menu Test')).toBeTruthy();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
     const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
 
     expect(within(dialog).getByText('Available Only')).toBeTruthy();
@@ -574,7 +598,7 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
 
     expect(await screen.findByText('Available Only')).toBeTruthy();
     expect(within(screen.getByRole('dialog', { name: 'Install extension' })).queryByText('Agent Browser')).toBeNull();
@@ -610,7 +634,7 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
     const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Install' }));
@@ -1020,7 +1044,7 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
     expect(screen.queryByPlaceholderText('Extension, agent plugin, marketplace package, URL, or local path')).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'Package type' })).toBeNull();
     expect(screen.getByText('Available extensions')).toBeTruthy();

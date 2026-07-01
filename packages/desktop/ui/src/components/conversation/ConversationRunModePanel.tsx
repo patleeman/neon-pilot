@@ -51,7 +51,8 @@ export function ConversationRunModePanel({
         </ul>
         <form onSubmit={submitTask}>
           <TextInput aria-label="Add mission task" value={taskInput} onChange={(event) => setTaskInput(event.currentTarget.value)} />
-          <Button type="submit" variant="secondary" disabled={!taskInput.trim()}>
+          <Button type="submit" variant="action" disabled={!taskInput.trim()} title="Add mission task">
+            <span aria-hidden="true">+</span>
             Add
           </Button>
         </form>

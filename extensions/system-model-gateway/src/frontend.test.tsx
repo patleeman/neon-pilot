@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { formatGatewayClientConfig, formatGatewayConfigRows, ModelGatewaySettingsPanel } from './frontend';
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
 
 describe('ModelGatewaySettingsPanel', () => {
   it('formats Codex setup rows and copy config from gateway status', () => {
@@ -31,23 +38,17 @@ describe('ModelGatewaySettingsPanel', () => {
     );
   });
 
-  it('renders the settings loading state', () => {
+  it('keeps settings loading chrome visually quiet', () => {
+    const status = deferred<never>();
     const pa = {
       extension: {
-        invoke: vi.fn(async () => ({
-          running: false,
-          host: '127.0.0.1',
-          port: 8766,
-          baseUrl: 'http://127.0.0.1:8766/v1',
-          models: 1,
-          defaultModel: 'auto',
-          logs: [],
-        })),
+        invoke: vi.fn(() => status.promise),
       },
       ui: { notify: vi.fn() },
     };
-    const html = renderToStaticMarkup(<ModelGatewaySettingsPanel pa={pa as never} />);
-    expect(html).toContain('Loading AI Gateway settings');
+    render(<ModelGatewaySettingsPanel pa={pa as never} />);
+    expect(screen.getByRole('status', { name: 'Loading AI Gateway settings' })).toBeTruthy();
+    expect(screen.queryByText('Loading AI Gateway settings...')).toBeNull();
   });
 
   it('renders loaded setup rows and guided copy action', async () => {

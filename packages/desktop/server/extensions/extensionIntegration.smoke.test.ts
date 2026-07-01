@@ -95,6 +95,115 @@ function latestMtimeUnder(path: string): number | null {
   return latest;
 }
 
+function readPageTypeVettingLines(): string[] {
+  const doc = readFileSync(resolve('docs/design/page-type-vetting.md'), 'utf-8');
+  return doc.split('\n');
+}
+
+function linesAfterMarkdownHeading(lines: string[], heading: string): string[] {
+  const start = lines.findIndex((line) => line.trim() === heading);
+  if (start === -1) return [];
+  const result: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('## ')) break;
+    result.push(line);
+  }
+  return result;
+}
+
+function extractPageTypeVettingRoutes(): string[] {
+  const lines = readPageTypeVettingLines();
+  const mappingStart = lines.findIndex((line) => line.trim() === '## Route Mapping');
+  if (mappingStart === -1) return [];
+
+  const routes: string[] = [];
+  for (const line of linesAfterMarkdownHeading(lines, '## Route Mapping')) {
+    const match = line.match(/^\|\s+`([^`]+)`\s+\|/);
+    if (match) routes.push(match[1]);
+  }
+  return routes;
+}
+
+function extractPageTypeVettingApprovedTypes(): string[] {
+  return linesAfterMarkdownHeading(readPageTypeVettingLines(), '## Approved Types')
+    .map((line) => line.match(/^\| ([^|]+) \|/)?.[1]?.trim())
+    .filter((type): type is string => Boolean(type) && type !== 'Type' && !type.startsWith('---'));
+}
+
+type PageTypeVettingManifestAuditRow = {
+  extensionId: string;
+  route: string;
+  pageType: string;
+  sidebarView?: string;
+  rightSidebarView?: string;
+};
+
+function normalizeManifestAuditRegion(value: string): string | undefined {
+  if (value === 'None' || value.startsWith('None;')) return undefined;
+  return value.replace(/^`([^`]+)`$/, '$1');
+}
+
+function extractPageTypeVettingManifestAuditRows(): PageTypeVettingManifestAuditRow[] {
+  const rows: PageTypeVettingManifestAuditRow[] = [];
+  for (const line of linesAfterMarkdownHeading(readPageTypeVettingLines(), '## Manifest Audit')) {
+    const match = line.match(/^\|\s+`([^`]+)`\s+\|\s+`([^`]+)`\s+\|\s+`([^`]+)`\s+\|\s+([^|]+?)\s+\|\s+([^|]+?)\s+\|$/);
+    if (!match) continue;
+
+    const [, extensionId, route, pageType, sidebarView, rightSidebarView] = match;
+    rows.push({
+      extensionId,
+      route,
+      pageType,
+      sidebarView: normalizeManifestAuditRegion(sidebarView.trim()),
+      rightSidebarView: normalizeManifestAuditRegion(rightSidebarView.trim()),
+    });
+  }
+  return rows;
+}
+
+function collectFirstPartyManifestNavRoutes(): string[] {
+  return readdirSync(resolve('extensions'), { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory())
+    .flatMap((dirent): string[] => {
+      const manifestPath = resolve('extensions', dirent.name, 'extension.json');
+      if (!existsSync(manifestPath)) return [];
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+        contributes?: { nav?: Array<{ route?: unknown }> };
+      };
+      return (manifest.contributes?.nav ?? []).map((item) => item.route).filter((route): route is string => typeof route === 'string');
+    });
+}
+
+function collectFirstPartyManifestAuditRows(): PageTypeVettingManifestAuditRow[] {
+  return readdirSync(resolve('extensions'), { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory())
+    .flatMap((dirent): PageTypeVettingManifestAuditRow[] => {
+      const manifestPath = resolve('extensions', dirent.name, 'extension.json');
+      if (!existsSync(manifestPath)) return [];
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+        contributes?: {
+          nav?: Array<{
+            route?: unknown;
+            pageType?: unknown;
+            sidebarView?: unknown;
+            rightSidebarView?: unknown;
+          }>;
+        };
+      };
+
+      return (manifest.contributes?.nav ?? [])
+        .filter((item) => typeof item.route === 'string')
+        .map((item) => ({
+          extensionId: dirent.name,
+          route: item.route as string,
+          pageType: typeof item.pageType === 'string' ? item.pageType : '',
+          sidebarView: typeof item.sidebarView === 'string' ? item.sidebarView : undefined,
+          rightSidebarView: typeof item.rightSidebarView === 'string' ? item.rightSidebarView : undefined,
+        }));
+    })
+    .sort((a, b) => `${a.extensionId}:${a.route}`.localeCompare(`${b.extensionId}:${b.route}`));
+}
+
 /* ------------------------------------------------------------------ */
 /*  1. Manifest Structural Validation                                  */
 /* ------------------------------------------------------------------ */
@@ -205,6 +314,115 @@ describe('extension manifests - structural validation', () => {
         expect(n.route.startsWith('/'), `${ext.id}: nav "${n.id}" route "${n.route}" must start with /`).toBe(true);
       }
     }
+  });
+
+  it('main route views do not declare side-region placement or scope fields', () => {
+    for (const ext of snapshot.extensions) {
+      const views = ext.contributes?.views ?? [];
+      for (const view of views) {
+        if (view.location !== 'main') continue;
+        expect(view.placement, `${ext.id}: main view "${view.id}" should not declare side-region placement`).toBeUndefined();
+        expect(view.scope, `${ext.id}: main view "${view.id}" should not declare side-region scope`).toBeUndefined();
+      }
+    }
+  });
+
+  it('nav shell-region references point at route-owned view locations', () => {
+    for (const ext of snapshot.extensions) {
+      const views = ext.contributes?.views ?? [];
+      const viewsById = new Map(views.map((view) => [view.id, view]));
+      const nav = ext.contributes?.nav ?? [];
+
+      for (const item of nav) {
+        if (item.sidebarView) {
+          const view = viewsById.get(item.sidebarView);
+          expect(view, `${ext.id}: nav "${item.id}" sidebarView "${item.sidebarView}" is not a known view`).toBeTruthy();
+          expect(view?.location, `${ext.id}: nav "${item.id}" sidebarView "${item.sidebarView}" must reference a sidebar view`).toBe(
+            'sidebar',
+          );
+        }
+
+        if (item.rightSidebarView) {
+          const view = viewsById.get(item.rightSidebarView);
+          expect(view, `${ext.id}: nav "${item.id}" rightSidebarView "${item.rightSidebarView}" is not a known view`).toBeTruthy();
+          expect(
+            view?.location,
+            `${ext.id}: nav "${item.id}" rightSidebarView "${item.rightSidebarView}" must reference a rightRail view`,
+          ).toBe('rightRail');
+          expect(
+            view?.placement,
+            `${ext.id}: nav "${item.id}" rightSidebarView "${item.rightSidebarView}" must use placement "primary" so the route shell can render it`,
+          ).toBe('primary');
+        }
+      }
+    }
+  });
+
+  it('primary rightRail views are bound to route nav instead of leaking into workbench tools', () => {
+    for (const ext of snapshot.extensions) {
+      const views = ext.contributes?.views ?? [];
+      const nav = ext.contributes?.nav ?? [];
+      const routeRightSidebarViews = new Set(nav.map((item) => item.rightSidebarView).filter(Boolean));
+
+      for (const view of views) {
+        if (view.location !== 'rightRail' || view.placement !== 'primary') continue;
+        expect(
+          routeRightSidebarViews.has(view.id),
+          `${ext.id}: primary rightRail view "${view.id}" must be bound from nav[].rightSidebarView; use placement "workbench-tool" for Workbench tools`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('sidebar views are bound to route nav instead of becoming orphan contextual-left regions', () => {
+    for (const ext of snapshot.extensions) {
+      const views = ext.contributes?.views ?? [];
+      const nav = ext.contributes?.nav ?? [];
+      const routeSidebarViews = new Set(nav.map((item) => item.sidebarView).filter(Boolean));
+
+      for (const view of views) {
+        if (view.location !== 'sidebar') continue;
+        expect(
+          routeSidebarViews.has(view.id),
+          `${ext.id}: sidebar view "${view.id}" must be bound from nav[].sidebarView so the app shell owns the contextual-left region`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('nav routes have a main page view for the declared route', () => {
+    for (const ext of snapshot.extensions) {
+      const views = ext.contributes?.views ?? [];
+      const mainRoutes = new Set(views.filter((view) => view.location === 'main' && view.route).map((view) => view.route));
+      const nav = ext.contributes?.nav ?? [];
+
+      for (const item of nav) {
+        expect(mainRoutes.has(item.route), `${ext.id}: nav "${item.id}" route "${item.route}" must have a matching main view route`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it('keeps the page-type vetting route mapping aligned with bundled nav routes', () => {
+    const bundledNavRoutes = collectFirstPartyManifestNavRoutes().sort();
+    const documentedRoutes = extractPageTypeVettingRoutes()
+      .map((route) => (route === '/settings/*' ? '/settings' : route))
+      .filter((route) => route !== '/conversations/*')
+      .sort();
+
+    expect(documentedRoutes).toEqual(bundledNavRoutes);
+    expect(extractPageTypeVettingRoutes()).toContain('/conversations/*');
+  });
+
+  it('keeps the approved page-type taxonomy aligned with the design decision', () => {
+    const approvedTypes = extractPageTypeVettingApprovedTypes();
+
+    expect(approvedTypes).toEqual(['Conversation', 'Table', 'Editor', 'Settings', 'Dashboard', 'Setup']);
+  });
+
+  it('keeps the page-type vetting manifest audit aligned with bundled manifests', () => {
+    expect(extractPageTypeVettingManifestAuditRows()).toEqual(collectFirstPartyManifestAuditRows());
   });
 
   it('lifecycle actions and services reference valid backend exports', () => {

@@ -28,6 +28,12 @@ describe('extensionViewContributionValidation', () => {
     expect(() =>
       validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View', routeCapabilities: ['bad'] }]),
     ).toThrow('Extension manifest contributes.views[0].routeCapabilities[0] must be one of:');
+    expect(() => validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View', scope: 'global' }])).toThrow(
+      'Extension manifest contributes.views[0].scope is only valid for side-region views.',
+    );
+    expect(() =>
+      validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View', placement: 'primary' }]),
+    ).toThrow('Extension manifest contributes.views[0].placement is only valid for side-region views.');
     expect(() => validateWebappContributions([{ id: 'app', title: 'App' }])).toThrow(
       'Extension manifest contributes.webapps[0] must declare entry or target.',
     );

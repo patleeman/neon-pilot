@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { addNotification } from '../components/notifications/notificationStore';
@@ -13,9 +14,17 @@ vi.mock('../components/notifications/notificationStore', () => ({
 }));
 
 vi.mock('./NativeExtensionSurfaceHost', () => ({
-  NativeExtensionSurfaceHost: ({ surface }: { surface: { extensionId: string; id: string } }) => (
-    <div data-testid="surface-host" data-extension-id={surface.extensionId} data-surface-id={surface.id} />
-  ),
+  NativeExtensionSurfaceHost: ({ surface }: { surface: { extensionId: string; id: string } }) => {
+    const [mountedSurfaceId] = useState(surface.id);
+    return (
+      <div
+        data-testid="surface-host"
+        data-extension-id={surface.extensionId}
+        data-surface-id={surface.id}
+        data-mounted-surface-id={mountedSurfaceId}
+      />
+    );
+  },
 }));
 
 vi.mock('./useExtensionRegistry', () => ({
@@ -99,6 +108,26 @@ describe('ExtensionPage', () => {
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
   });
 
+  it('keeps registry loading visually quiet while preserving status semantics', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: true,
+      error: null,
+      extensions: [],
+      routes: [],
+      surfaces: [],
+    } as never);
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/skills']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(container.textContent).toBe('');
+    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading extension page');
+    expect(screen.queryByText(/Loading extension/i)).toBeNull();
+  });
+
   it('renders the most specific extension route when parent and child routes both match', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: false,
@@ -151,6 +180,68 @@ describe('ExtensionPage', () => {
     const host = screen.getByTestId('surface-host');
     expect(host.getAttribute('data-extension-id')).toBe('system-extension-manager');
     expect(host.getAttribute('data-surface-id')).toBe('extension-search-paths');
+  });
+
+  it('remounts the native surface when moving between extension page routes', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      surfaces: [],
+      routes: [
+        { route: '/skills', extensionId: 'system-skills', surfaceId: 'skills-page', packageType: 'system' },
+        { route: '/gateways', extensionId: 'system-gateways', surfaceId: 'page', packageType: 'system' },
+      ],
+      extensions: [
+        {
+          id: 'system-skills',
+          name: 'Skills',
+          enabled: true,
+          packageType: 'system',
+          frontend: { entry: 'dist/frontend.js' },
+          contributes: {
+            views: [{ id: 'skills-page', title: 'Skills', location: 'main', route: '/skills', component: 'SkillsPage' }],
+          },
+        },
+        {
+          id: 'system-gateways',
+          name: 'Gateways',
+          enabled: true,
+          packageType: 'system',
+          frontend: { entry: 'dist/frontend.js' },
+          contributes: {
+            views: [{ id: 'page', title: 'Gateways', location: 'main', route: '/gateways', component: 'GatewaysPage' }],
+          },
+        },
+      ],
+    } as never);
+
+    function Harness() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <button type="button" onClick={() => navigate('/gateways')}>
+            Gateways
+          </button>
+          <ExtensionPage />
+        </>
+      );
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/skills']}>
+        <Routes>
+          <Route path="*" element={<Harness />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('surface-host').getAttribute('data-mounted-surface-id')).toBe('skills-page');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gateways' }));
+
+    const host = screen.getByTestId('surface-host');
+    expect(host.getAttribute('data-surface-id')).toBe('page');
+    expect(host.getAttribute('data-mounted-surface-id')).toBe('page');
   });
 
   it('shows a calm recovery state for unknown extension routes without warning toasts', () => {

@@ -69,8 +69,27 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
 }));
 
 vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
-  NativeExtensionSurfaceHost: ({ surface, instanceId }: { surface: { id: string; title?: string }; instanceId?: string }) => (
-    <div data-testid="mock-sidebar-extension-surface" data-surface-id={surface.id} data-instance-id={instanceId}>
+  NativeExtensionSurfaceHost: ({
+    surface,
+    instanceId,
+    pathname,
+    search,
+    hash,
+  }: {
+    surface: { id: string; title?: string };
+    instanceId?: string;
+    pathname?: string;
+    search?: string;
+    hash?: string;
+  }) => (
+    <div
+      data-testid="mock-sidebar-extension-surface"
+      data-surface-id={surface.id}
+      data-instance-id={instanceId}
+      data-pathname={pathname}
+      data-search={search}
+      data-hash={hash}
+    >
       {surface.title ?? surface.id}
     </div>
   ),
@@ -977,7 +996,8 @@ describe('Sidebar', () => {
 
     expect(html).not.toContain('Open Files');
     expect(html).not.toContain('aria-label="Open file AGENTS.md"');
-    expect(html).toContain('Threads');
+    expect(html).not.toContain('Threads');
+    expect(html).toContain('aria-label="No contextual sidebar"');
   });
 
   it('replaces the thread list with an active extension sidebar surface', () => {
@@ -1010,12 +1030,15 @@ describe('Sidebar', () => {
       },
     ];
 
-    const html = renderSidebar('/ext/hermes');
+    const html = renderSidebar('/ext/hermes?session=abc#events');
 
     expect(html).toContain('Hermes');
     expect(html).toContain('data-testid="mock-sidebar-extension-surface"');
     expect(html).toContain('data-surface-id="sessions-sidebar"');
     expect(html).toContain('data-instance-id="left-sidebar"');
+    expect(html).toContain('data-pathname="/ext/hermes"');
+    expect(html).toContain('data-search="?session=abc"');
+    expect(html).toContain('data-hash="#events"');
     expect(html).toContain('Hermes Sessions');
     expect(html).toContain('aria-label="Primary navigation"');
     expect(html).toContain('relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3');
@@ -1023,6 +1046,75 @@ describe('Sidebar', () => {
     expect(html).toContain('style="contain:layout paint"');
     expect(html).not.toContain('ui-section-label flex-1">Threads');
     expect(html).not.toContain('aria-label="Find threads and archived conversations"');
+  });
+
+  it('leaves the contextual sidebar blank when a declared extension sidebar surface is missing', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'hermes-remote-agent',
+        enabled: true,
+        packageType: 'user',
+        contributes: {
+          nav: [
+            {
+              id: 'nav',
+              label: 'Hermes',
+              route: '/ext/hermes',
+              icon: 'sparkle',
+              sidebarView: 'missing-sidebar',
+            },
+          ],
+        },
+      },
+    ];
+    extensionRegistryMock.state.routes = [{ route: '/ext/hermes' }];
+    extensionRegistryMock.state.surfaces = [];
+
+    const html = renderSidebar('/ext/hermes');
+
+    expect(html).toContain('Hermes');
+    expect(html).toContain('aria-label="No contextual sidebar"');
+    expect(html).not.toContain('data-testid="mock-sidebar-extension-surface"');
+    expect(html).not.toContain('ui-section-label flex-1">Threads');
+  });
+
+  it('ignores contextual sidebar declarations from disabled extensions', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'hermes-remote-agent',
+        enabled: false,
+        packageType: 'user',
+        contributes: {
+          nav: [
+            {
+              id: 'nav',
+              label: 'Hermes',
+              route: '/ext/hermes',
+              icon: 'sparkle',
+              sidebarView: 'sessions-sidebar',
+            },
+          ],
+        },
+      },
+    ];
+    extensionRegistryMock.state.routes = [{ route: '/ext/hermes' }];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'hermes-remote-agent',
+        id: 'sessions-sidebar',
+        title: 'Hermes Sessions',
+        location: 'sidebar',
+        component: 'HermesSessionsSidebar',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    const html = renderSidebar('/ext/hermes');
+
+    expect(html).not.toContain('Hermes');
+    expect(html).toContain('aria-label="No contextual sidebar"');
+    expect(html).not.toContain('data-testid="mock-sidebar-extension-surface"');
+    expect(html).not.toContain('ui-section-label flex-1">Threads');
   });
 
   it('restores native thread controls after leaving an extension sidebar surface', () => {
@@ -1108,7 +1200,8 @@ describe('Sidebar', () => {
 
   it('renders the settings nav section at the bottom with extension-contributed items', () => {
     const html = renderSidebar('/settings');
-    expect(html).toContain('Threads');
+    expect(html).not.toContain('Threads');
+    expect(html).toContain('aria-label="No contextual sidebar"');
     expect(html).toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
   });
 

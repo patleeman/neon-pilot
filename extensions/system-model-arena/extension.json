@@ -26,12 +26,28 @@
         "location": "main",
         "route": "/model-arena",
         "component": "ModelArenaPage",
+        "activation": "on-route"
+      },
+      {
+        "id": "model-arena-context-rail",
+        "title": "Model Arena context",
+        "location": "rightRail",
+        "component": "ModelArenaContextRail",
         "placement": "primary",
         "scope": "global",
         "activation": "on-route"
       }
     ],
-    "nav": [{ "id": "model-arena-nav", "label": "Model Arena", "route": "/model-arena", "icon": "graph" }],
+    "nav": [
+      {
+        "id": "model-arena-nav",
+        "label": "Model Arena",
+        "route": "/model-arena",
+        "icon": "graph",
+        "pageType": "dashboard",
+        "rightSidebarView": "model-arena-context-rail"
+      }
+    ],
     "messageActions": [
       {
         "id": "compare-message",

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildExtensionAutoCommandRegistrations } from './extensionCommandAutoRegistrations';
 
 describe('extensionCommandAutoRegistrations', () => {
-  it('builds nav and right-rail auto commands while skipping explicit ids', () => {
+  it('builds nav and tab-local right-sidebar auto commands while skipping explicit ids', () => {
     expect(
       buildExtensionAutoCommandRegistrations({
         id: 'ext',
@@ -11,9 +11,11 @@ describe('extensionCommandAutoRegistrations', () => {
         packageType: 'system',
         contributes: {
           commands: [{ id: 'open-nav' }],
-          nav: [{ id: 'nav', label: 'Nav', route: '/nav', icon: 'spark' }],
+          nav: [{ id: 'nav', label: 'Nav', route: '/nav', icon: 'spark', sidebarView: 'sidebar', rightSidebarView: 'context' }],
           views: [
+            { id: 'sidebar', title: 'Sidebar', location: 'sidebar', icon: 'panel' },
             { id: 'rail', title: 'Rail', location: 'rightRail', icon: 'panel' },
+            { id: 'context', title: 'Context', location: 'rightRail', placement: 'primary', icon: 'panel' },
             { id: 'main', title: 'Main', location: 'main' },
           ],
         },

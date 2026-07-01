@@ -36,14 +36,32 @@
         "title": "Workflows",
         "location": "main",
         "route": "/workflows",
+        "component": "WorkflowsPage",
+        "icon": "graph",
+        "activation": "on-route"
+      },
+      {
+        "id": "workflows-sidebar",
+        "title": "Workflows",
+        "location": "sidebar",
         "placement": "primary",
         "scope": "global",
-        "component": "WorkflowsPage",
+        "component": "WorkflowsSidebar",
         "icon": "graph",
         "activation": "on-route"
       }
     ],
-    "nav": [{ "id": "workflows-nav", "label": "Workflows", "route": "/workflows", "icon": "graph", "section": "primary" }],
+    "nav": [
+      {
+        "id": "workflows-nav",
+        "label": "Workflows",
+        "route": "/workflows",
+        "icon": "graph",
+        "pageType": "editor",
+        "section": "primary",
+        "sidebarView": "workflows-sidebar"
+      }
+    ],
     "tools": [
       {
         "id": "workflow",

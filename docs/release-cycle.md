@@ -4,16 +4,18 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.36** — stable release being prepared locally.
+**v0.11.37** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.36
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.37
 
 Highlights in this train:
 
-- Runs Model Arena challenger agents in isolated speculative workspaces so tool/file changes stay separate until the user chooses the challenger response.
-- Applies challenger workspace changes only when the challenger wins and cleans up speculative workspaces for primary wins, ties, neither votes, cancelled duels, and failures.
-- Hardens manual Compare Models on existing conversations with live-session recovery, restart-safe workspace apply/dispose fallbacks, and stalled-duel/model-list timeouts.
-- Expands regression coverage for speculative workspace cloning, diff application, cleanup guardrails, parallel prompt cwd propagation, and Model Arena vote/cancel/recovery flows.
+- Brings the Browser extension in-house and adds multimedia probe support for richer image/video attachment inspection.
+- Improves Skills discovery with source-first browsing, cached marketplace inventory, table-header filters, list controls, and clearer Skills-before-Extensions navigation.
+- Adds setup readiness as a rediscoverable top-bar popover with actionable local-prerequisite checks.
+- Hardens transcript loading and stale aggregate cancellation so older reads do not overwrite newer conversation views.
+- Polishes dictation submit, streaming scroll anchoring, top-bar presentation, Model Arena challenger wins, and the Routines onboarding/workbench path.
+- Refreshes Pi runtime packages to `^0.80.3` and retargets the local Responses streaming patch for that runtime.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions

@@ -35,7 +35,7 @@ Before implementation, produce a short UX brief and ask me focused product/desig
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- tab-local right rail for a compact conversation-specific tool panel inside the workbench
+- tab-local workbench rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test the exact user path, fix any layout or interaction problems you see, and checkpoint the changes.
@@ -47,7 +47,7 @@ The agent should create editable `src/` files, declare contributions in `extensi
 
 Before calling an extension done, an agent must be able to answer each item with evidence from the repo or app:
 
-- **Surface chosen**: the extension has one clear primary surface for the first version: main page, workbench rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
+- **Surface chosen**: the extension has one clear primary surface for the first version: main page, route-owned right sidebar, tab-local workbench rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
 - **Product choices clarified**: ambiguous workflow, data/action, persistence, and visual design decisions were resolved with the user before building.
 - **UX brief written first**: primary user, job-to-be-done, information architecture, states, main actions, command-backed entry points, and visual acceptance criteria were stated before implementation.
 - **Shared primitives selected**: page shell, rail/workbench chrome, forms, resource lists/tables, dialogs, status, loading, empty, and error states use `@neon-pilot/extensions/ui` primitives unless a local custom component is clearly justified.
@@ -55,11 +55,11 @@ Before calling an extension done, an agent must be able to answer each item with
 - **Manifest wired**: every declared component/action/tool/skill/settings entry points to an existing source export or file, and every frontend `pa.extension.invoke(...)` action id is declared in `backend.actions`.
 - **Runtime built**: `dist/` files are current, because packaged desktop runtimes load built bundles and do not compile extension source at install time.
 - **Diagnostics clean**: `neon-pilot-extension doctor <extension-dir>` is clean when available; boundary work also runs `pnpm run check:extensions:static`.
-- **User path validated**: the route, rail, Settings section, command, composer control, or tool invocation was opened or invoked through the app/extension host.
+- **User path validated**: the route, route-owned right sidebar, tab-local workbench rail, Settings section, command, composer control, or tool invocation was opened or invoked through the app/extension host.
 - **States covered**: UI surfaces show useful loading, empty, error, and success states; backend-only extensions return useful error text/details for malformed input.
 - **Inputs user-friendly**: UI uses constrained, structured controls where possible: dropdowns over free-form inputs for known choices, toggles for booleans, segmented controls for modes, pickers for resources, and key/value or row editors over raw JSON textareas unless the JSON is highly complex or expert-only.
 - **Actions command-backed**: meaningful user-reachable actions are contributed as commands so they can appear in the command palette, be invoked programmatically, and be hot-keyed with default or user-editable keybindings when appropriate.
-- **Visual pass recorded**: the app route, rail, Settings section, composer control, or transcript renderer was visually inspected for density, wrapping, focus/keyboard behavior, responsive constraints, and obvious overlap or clipping.
+- **Visual pass recorded**: the app route, right sidebar, tab-local workbench rail, Settings section, composer control, or transcript renderer was visually inspected for density, wrapping, focus/keyboard behavior, responsive constraints, and obvious overlap or clipping.
 - **Docs local**: the extension has or updates a `README.md` with build, reload, validation, and usage notes for the next agent.
 - **Release matrix updated**: if the extension is release-critical or fixes a released regression, add a route/action/install case to `scripts/release-extension-golden-matrix.json` so packaged-app verification catches future breakage.
 
@@ -173,9 +173,9 @@ The manifest declares what your extension contributes:
 
 | Field                             | Purpose                                                                                       | Docs                                                                                      |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `views`                           | UI surfaces (pages, panels, sidebar replacements)                                             | See `docs/views.md`                                                                       |
+| `views`                           | UI surfaces: main pages, route sidebar bodies, route context rails, and workbench panels      | See [Views](#views)                                                                       |
 | `webapps`                         | Locally hosted sidecar webpages exposed through `.localhost` names                            | [See below](#webapps)                                                                     |
-| `nav`                             | Left sidebar navigation items; can reference a sidebar view with `sidebarView`                |                                                                                           |
+| `nav`                             | App navigation items; can bind route-owned `sidebarView` and `rightSidebarView` regions       | [See below](#route-shell-regions)                                                         |
 | `commands`                        | Extension actions invokable by command IDs                                                    | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
 | `cliCommands`                     | Product administration commands contributed to the `neon-pilot` CLI                           | [See below](#cli-commands-clicommands)                                                    |
 | `keybindings`                     | Keyboard shortcuts that execute commands                                                      | See [Commands and keybindings](../packages/extensions/README.md#commands-and-keybindings) |
@@ -195,7 +195,7 @@ The manifest declares what your extension contributes:
 | `promptReferences`                | @-mention resolvers                                                                           |                                                                                           |
 | `turnContextProviders`            | Ordered per-turn context injection                                                            | [See below](#turn-context-providers-turncontextproviders)                                 |
 | `promptContextProviders`          | Prompt Assembly context diagnostics/providers                                                 | [See below](#prompt-context-providers-promptcontextproviders)                             |
-| `conversationConnectionProviders` | Conversation-attached state/work/assets for shelves, right rail, and CLI                      | [See below](#conversation-connection-providers-conversationconnectionproviders)           |
+| `conversationConnectionProviders` | Conversation-attached state/work/assets for shelves, context rails, and CLI                   | [See below](#conversation-connection-providers-conversationconnectionproviders)           |
 | `selectionActions`                | Actions available for selected transcript/composer text                                       | [See below](#selection-actions-selectionactions)                                          |
 | `transcriptBlocks`                | Extension-owned transcript block renderers                                                    | [See below](#transcript-blocks-transcriptblocks)                                          |
 | `subscriptions`                   | Backend event subscriptions                                                                   | [See below](#backend-event-subscriptions-subscriptions)                                   |
@@ -320,10 +320,11 @@ ctx.setActiveTools(toolNames: string[]): void;
 
 ### Views
 
-Views are the primary way to add UI. Three locations:
+Views are the primary way to add UI. Four locations:
 
 - **`main`**: Full-page view at a custom route (`/ext/your-id`).
-- **`rightRail`**: Tab-local rail inside the workbench, usually used as a compact selector/context panel.
+- **`sidebar`**: Route-owned contextual body in the left sidebar, bound from a nav item with `sidebarView`.
+- **`rightRail`**: Either a route-owned context rail bound from a nav item with `rightSidebarView`, or a tab-local rail inside the workbench.
 - **`workbench`**: Detail pane, optionally paired with a tab-local rail view.
 
 ```json
@@ -338,6 +339,8 @@ Views are the primary way to add UI. Three locations:
 }
 ```
 
+For route-owned right sidebars, set `location: "rightRail"`, `placement: "primary"`, and bind the view from the route's nav item with `rightSidebarView`. `scope` is optional for route-owned context rails and defaults through the host. Tab-local workbench rails use `placement: "workbench-tool"` or omit `placement`.
+
 **`activation`** controls when the component loads:
 
 - `"on-route"` — loads when the route is active (for main pages).
@@ -350,6 +353,8 @@ Views are the primary way to add UI. Three locations:
 - `"conversation"` — one instance per conversation.
 - `"workspace"` — one per workspace/cwd.
 - `"global"` — single instance.
+
+Route-owned right sidebars can omit `scope`; use it only when the view needs an explicit instance boundary.
 
 ### Webapps
 
@@ -1035,6 +1040,70 @@ Add compact component buttons beside the left sidebar conversation header. Use t
 
 The component receives `{ pa, actionContext }`; `actionContext` includes `activeConversationId` and `cwd` when available.
 
+### Route shell regions
+
+Extension nav routes can declare the shell regions they own:
+
+- `views[].location: "main"` is the required primary page for the route.
+- `nav[].pageType` records the approved page template for route pages: `"conversation"`, `"table"`, `"editor"`, `"settings"`, `"dashboard"`, or `"setup"`.
+- `nav[].sidebarView` optionally replaces the middle-left contextual sidebar body while the route is active.
+- `nav[].rightSidebarView` optionally renders a route-owned right-sidebar context rail and makes the shell toggle visible for that route.
+
+If `sidebarView` is omitted, the global left navigation remains and the middle-left contextual area is blank. Threads do not appear outside Chat as filler. If `rightSidebarView` is omitted, the shell hides the right-sidebar toggle for that route.
+
+Every `nav[].route` must match a `views[]` entry with the same `route` and `location: "main"`. Side regions never create a page by themselves; they attach to the active main route.
+
+Main views own only the primary route surface. Do not put `placement` or `scope` on `location: "main"` views; manifest validation rejects those fields there. Put side-region metadata on the `sidebar` or `rightRail` view, then bind that view from the route's nav item.
+
+Route-owned right-sidebar views must use `location: "rightRail"` and `placement: "primary"`; `scope` is optional and defaults through the host. Tab-local workbench rails should not be bound with `rightSidebarView`; open those through workbench rail commands instead.
+
+```json
+{
+  "views": [
+    {
+      "id": "sessions-page",
+      "title": "Hermes Sessions",
+      "location": "main",
+      "route": "/ext/hermes",
+      "component": "HermesSessionsPage"
+    },
+    {
+      "id": "sessions-sidebar",
+      "title": "Hermes Sessions",
+      "location": "sidebar",
+      "component": "HermesSessionsSidebar"
+    },
+    {
+      "id": "session-inspector",
+      "title": "Session Inspector",
+      "location": "rightRail",
+      "placement": "primary",
+      "component": "HermesSessionInspector"
+    }
+  ],
+  "nav": [
+    {
+      "id": "hermes",
+      "label": "Hermes",
+      "icon": "sparkle",
+      "route": "/ext/hermes",
+      "pageType": "table",
+      "sidebarView": "sessions-sidebar",
+      "rightSidebarView": "session-inspector"
+    }
+  ]
+}
+```
+
+Use the contextual left area for selection/navigation. Use the right sidebar for selected-item details, inspectors, setup help, metadata, activity, logs, previews, validation, and secondary actions. Do not use the right sidebar as a second primary page column. The `pageType` annotation records the approved template; it does not change routing behavior.
+
+Common route shapes:
+
+- Main-only: declare one `main` route view and a matching `nav` item. Use it when the route can do its work without a contextual navigator or persistent details.
+- Left+main: add a `sidebar` view and bind it with `sidebarView`. Use it when the left area is the route's natural object, section, or workflow navigator.
+- Table+right-detail: add a primary `rightRail` view and bind it with `rightSidebarView`. Use it when row selection should show details, logs, metadata, preview, validation, or secondary actions beside the list.
+- Full route shell: add `main`, `sidebar`, and primary `rightRail` views. Use it when the left area selects objects or sections and the right sidebar inspects the current selection. Start from the `route-shell` starter template rather than hand-building the three regions.
+
 ### Sidebar Views (`views[].location: "sidebar"`)
 
 Add a native extension surface that replaces the thread list area in the left sidebar while an extension nav item is active. Use this for extension-owned navigation models such as remote-agent sessions, external task lists, or project-specific explorers.
@@ -1042,6 +1111,13 @@ Add a native extension surface that replaces the thread list area in the left si
 ```json
 {
   "views": [
+    {
+      "id": "hermes-page",
+      "title": "Hermes",
+      "location": "main",
+      "route": "/ext/hermes",
+      "component": "HermesPage"
+    },
     {
       "id": "sessions-sidebar",
       "title": "Hermes Sessions",
@@ -1061,7 +1137,138 @@ Add a native extension surface that replaces the thread list area in the left si
 }
 ```
 
-The host still owns the fixed app navigation stack and bottom settings area. The sidebar view owns only the body below the nav item list, so it should render its own header, filters, empty/loading/error states, and row actions.
+The host still owns the fixed app navigation stack and bottom settings area. The sidebar view owns only the middle contextual body, so it should render its own compact section header, empty/loading/error states, and row actions through the sidebar template primitives. Do not render custom `aside` chrome, large panels, page titles, or Threads-like fallback content.
+
+Sidebar frontend components must use the shared left-region primitives from `@neon-pilot/extensions/ui`: `SidebarSection`, `SidebarActionHeader`, `SidebarList`, `SidebarTemplateList`, `SidebarRow`, and `SidebarMessage`. Use `SidebarList` for normal navigators and `SidebarMessage` for compact empty/loading/error copy.
+
+```tsx
+import { SidebarList, SidebarMessage, SidebarSection } from '@neon-pilot/extensions/ui';
+
+export function HermesSessionsSidebar({ pa }: ExtensionSurfaceProps) {
+  const sessions = useSessions();
+
+  return (
+    <SidebarSection title="Sessions">
+      <SidebarList
+        items={sessions.map((session) => ({
+          id: session.id,
+          title: session.title,
+          meta: session.state,
+        }))}
+        selectedId={activeSessionId}
+        emptyMessage="No sessions yet."
+        onSelect={(item) => {
+          pa.selection.set({
+            kind: 'resource',
+            resource: { type: 'session', id: item.id, label: String(item.title), source: 'hermes' },
+          });
+        }}
+      />
+    </SidebarSection>
+  );
+}
+```
+
+### Route context rails (`views[].location: "rightRail"`)
+
+Add a native extension surface that appears in the shell's right sidebar while an extension route is active. Use this for selected-object details, inspectors, setup output, recent activity, logs, previews, validation, and secondary actions that should stay adjacent to the main page.
+
+```json
+{
+  "views": [
+    {
+      "id": "hermes-page",
+      "title": "Hermes",
+      "location": "main",
+      "route": "/ext/hermes",
+      "component": "HermesPage"
+    },
+    {
+      "id": "session-inspector",
+      "title": "Session Inspector",
+      "location": "rightRail",
+      "placement": "primary",
+      "component": "HermesSessionInspector"
+    }
+  ],
+  "nav": [
+    {
+      "id": "hermes",
+      "label": "Hermes",
+      "route": "/ext/hermes",
+      "pageType": "table",
+      "rightSidebarView": "session-inspector"
+    }
+  ]
+}
+```
+
+The right-sidebar toggle appears only on routes that declare `rightSidebarView`. Route-owned context rails open through route navigation plus that shell toggle; they are not standalone Workbench tools or command-palette panels. Main pages that drive row or object selection should publish selection state so the right sidebar can render the active object. Resource selections are cleared when the active route shell changes, so each route should publish its own selected resource instead of relying on stale global state:
+
+Right-sidebar frontend components must use the shared rail primitives from `@neon-pilot/extensions/ui`: `ContextRail`, `ContextRailHeader`, `ContextRailBody`, and `ContextRailSection`. Do not hand-roll route-owned rail roots, headers, scroll containers, or section chrome; the shell and shared primitive own the background, divider, spacing, and typography.
+
+```ts
+pa.selection.set({
+  kind: 'resource',
+  resource: {
+    type: 'session',
+    id: session.id,
+    label: session.title,
+    source: 'hermes',
+    data: { sessionId: session.id },
+  },
+});
+```
+
+The right sidebar should subscribe to the same state and render a compact empty state when no matching object is selected:
+
+```ts
+const selection = pa.selection.get();
+const session = selection?.kind === 'resource' && selection.resource?.type === 'session' ? selection.resource : null;
+```
+
+Use the right-sidebar component template:
+
+```tsx
+import {
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
+  EmptyState,
+  KeyValueItem,
+  KeyValueList,
+} from '@neon-pilot/extensions/ui';
+
+export function HermesSessionInspector({ pa }: ExtensionSurfaceProps) {
+  const session = useSelectedSession(pa);
+
+  return (
+    <ContextRail>
+      <ContextRailHeader eyebrow="Session details" title={session?.title ?? 'Select a session'} subtitle={session?.id} />
+      <ContextRailBody>
+        {!session ? (
+          <EmptyState
+            align="start"
+            title="Pick a row to inspect"
+            body="Select a session in the main page to inspect its state here."
+            steps={['Pick a session from the table.', 'Review its status here.', 'Use row actions for short-lived work.']}
+          />
+        ) : (
+          <ContextRailSection title="Status">
+            <KeyValueList>
+              <KeyValueItem label="State" value={session.state} />
+              <KeyValueItem label="Last run" value={session.lastRunLabel} />
+            </KeyValueList>
+          </ContextRailSection>
+        )}
+      </ContextRailBody>
+    </ContextRail>
+  );
+}
+```
+
+Use modals for blocking or transient flows, not normal object inspection.
 
 ### Status Bar Items (`statusBarItems`)
 
@@ -1311,7 +1518,7 @@ Guidelines:
 - Avoid hard-coded colors, custom shadows, gradients, decorative pills, and nested bordered cards. Spacing, typography, and alignment should do most of the hierarchy work.
 - Keep typography consistent: page titles come from `AppPageIntro`; section titles come from `AppPageSection`; body copy uses compact `text-[12px]`/`text-[13px]` secondary text. Do not hard-code oversized page titles.
 - Prefer shared UI from `@neon-pilot/extensions/ui` over local lookalikes. Common first choices are `ToolbarButton`/`IconButton` for actions, `EmptyState`/`LoadingState`/`ErrorState` for feedback, `AppPageEmptyState`/`AppPageSection` for page structure, `SegmentedControl` for mutually exclusive modes, `DataTableActionGroup` for row actions, `RuntimeHeaderControls` for runtime refresh/reset headers, `RailSubsection` for compact rails, `ResourcePickerDialog` for file/resource selection, and `ChatView`/`ExtensionChatRail` for chat surfaces.
-- Right-rail and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers there.
+- Right-sidebar and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers there.
 
 If a page needs a style that fights these defaults, first ask whether it should be a new shared primitive. One-off chrome is how UI entropy sneaks in wearing a fake mustache.
 
@@ -2004,7 +2211,7 @@ When changing a bundled system extension in this repo, run the repo workflow rat
 2. For frontend, route, nav, sidebar, manifest, or shared UI changes, run `pnpm --dir packages/desktop run build:ui` so the desktop renderer sees the current source and contributions.
 3. Restart the dev app before visual QA; otherwise stale renderer chunks or cached component registrations can make the app show old UI.
 4. Open the exact app route/surface and click through each touched interaction, including create/edit/save/delete, dropdowns/menus, autocomplete, drag/reorder, sidebar navigation/search, empty states, and persistence after refresh or reopen.
-5. Compare the full app frame against the closest existing product surface before calling the UI done. If a feature is modeled on Automations, Settings, Diffs, or Runs, inspect that surface in the app and align shell spacing, toolbar treatment, sidebar behavior, typography, and right-rail density.
+5. Compare the full app frame against the closest existing product surface before calling the UI done. If a feature is modeled on Automations, Settings, Diffs, or Runs, inspect that surface in the app and align shell spacing, toolbar treatment, sidebar behavior, typography, and context-rail density.
 
 Do not treat passing unit tests, `extension:build`, manifest checks, or a cropped screenshot as proof that a user-facing extension surface works. They are required support checks; the app-path interaction pass is the acceptance check.
 

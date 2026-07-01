@@ -37,7 +37,7 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
 2. Inspect existing extension ids, routes, nav labels, action ids, commands, settings components, and tools before choosing names.
 3. Write a short UX brief before implementation:
    - **Primary user and job**: who uses it, what they are trying to accomplish, and what they should inspect or change first.
-   - **Primary surface**: exactly one first-version surface: `main-page`, `right-rail`, `workbench-detail`, `settingsComponent`, backend tool/action, or theme.
+   - **Primary surface**: exactly one first-version surface: main route, route-owned right sidebar, tab-local workbench rail/detail, `settingsComponent`, backend tool/action, or theme. If the feature has a route, state whether it is main-only, left+main, or table+right-detail.
    - **Information architecture**: the core sections, list/detail structure, controls, and command-backed actions.
    - **State model**: default, empty, loading, error, success, disabled, and long-running states.
    - **Primitive plan**: which `@neon-pilot/extensions/ui` components will be used for page shell, lists/tables, forms, feedback, dialogs, runtime status, rails, or workbench chrome.
@@ -50,7 +50,7 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
 8. Build with `pnpm run extension:build -- <extension-dir>`.
 9. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; in a packaged app, run `neon-pilot extensions validate --package-root <extension-dir>` before install or `neon-pilot extensions validate <extension-id>` after install. For repo extension or boundary work, also run `pnpm run check:extensions:static`.
 10. Reload extensions from Settings -> Extensions, or restart the desktop app when reload is unavailable.
-11. Run `neon-pilot extensions smoke <extension-id>` when the app is running, then validate through the same surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
+11. Run `neon-pilot extensions smoke <extension-id>` when the app is running, then validate through the same surface the user will use: open the route, route-owned right sidebar, tab-local workbench rail, Settings section, command, composer control, or agent tool.
     For a Settings component, open `/settings#<sectionId>` and inspect it beside neighboring Settings sections for row spacing, padding, title hierarchy, and action alignment.
 12. Exercise empty, loading, error, success, disabled, and long-running states when the surface has UI; for backend tools/actions, run one representative invocation and inspect the transcript or visible result.
 13. Visually inspect the UI against the brief. Check layout density, text wrapping, keyboard/focus behavior, responsive constraints, empty/error copy, command availability, and whether shared primitives were used instead of one-off chrome.
@@ -68,7 +68,7 @@ derived from real first-party extensions:
 | Template                                                                       | Pattern                                                                              |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | [`data-dashboard`](extension-templates/templates/template-data-dashboard/)     | Read-only page — load from backend, render table or cards                            |
-| [`crud-page`](extension-templates/templates/template-crud-page/)               | List + slide-in form editor. Full CRUD.                                              |
+| [`crud-page`](extension-templates/templates/template-crud-page/)               | Main-only list with inline editor flow. Full CRUD.                                   |
 | [`settings-section`](extension-templates/templates/template-settings-section/) | Section in the shared Settings page. No separate route. Autosaving row-list example. |
 
 Copy the matching folder, rename the extension id, replace domain types, and build.
@@ -79,16 +79,18 @@ Use this as agent guidance, not homework for the user:
 
 | If you want...                                       | Ask for...                                 |
 | ---------------------------------------------------- | ------------------------------------------ |
-| A full app, dashboard, or workflow                   | `main-page` extension                      |
-| Context inside a workbench tab-local rail            | `right-rail` extension                     |
-| A compact rail panel plus workbench pane detail view | `workbench-detail` extension               |
+| A full app, dashboard, or workflow                   | Main route extension                       |
+| A route with object navigation                       | Main route plus `sidebarView`              |
+| A table/list with persistent selected-item details   | Main route plus `rightSidebarView`         |
+| Context inside a workbench tab-local rail            | Tab-local workbench rail                   |
+| A compact rail panel plus workbench pane detail view | Tab-local workbench rail plus detail view  |
 | Something the agent can call                         | backend tool or action                     |
 | A command palette, slash command, or composer button | command/composer contribution              |
 | Settings for an integration                          | settings contribution                      |
 | Recurring or background behavior                     | automation/scheduled-task backed extension |
 | A color theme only                                   | theme contribution                         |
 
-When unsure, tell the agent the user experience you want and let it choose the smallest surface that fits.
+When unsure, tell the agent the user experience you want and let it choose the smallest surface that fits. Do not use a tab-local workbench rail as a substitute for a route-owned right sidebar; if the context belongs beside an extension page, declare `rightSidebarView`.
 
 ## What your agent should do
 
@@ -102,7 +104,7 @@ For a new extension, the agent should:
 6. Build outside the desktop app using repo or CLI extension tooling.
 7. Validate and fix Extension Manager diagnostics.
 8. Reload extensions.
-9. Open the contributed page/panel and visually inspect UI changes.
+9. Open the contributed route, right sidebar, tab-local workbench rail, panel, or tool and visually inspect UI changes.
 10. Add or update the extension `README.md` when behavior is non-obvious.
 11. If publishing through an extension repo, build release artifacts; source folders plus `neon.extensions.json` are not enough for normal GitHub install.
 12. Checkpoint only the files it touched.
@@ -160,11 +162,11 @@ Use the app version tag unless the catalog package explicitly declares another c
 ## Good extension requests
 
 ```text
-Build a tab-local right-rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.
+Build a tab-local workbench rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.
 ```
 
 ```text
-Build a main-page extension for reviewing background work. It should list recent executions, show status and duration, and open background command or subagent logs in a detail pane.
+Build a main-route extension for reviewing background work. It should list recent executions, show status and duration, and open background command or subagent logs in a route-owned right sidebar.
 ```
 
 ```text

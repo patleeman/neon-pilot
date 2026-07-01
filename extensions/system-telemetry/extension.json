@@ -46,8 +46,6 @@
         "location": "main",
         "route": "/telemetry",
         "component": "TelemetryPage",
-        "placement": "primary",
-        "scope": "global",
         "activation": "on-route"
       }
     ],
@@ -56,7 +54,8 @@
         "id": "telemetry-nav",
         "label": "Diagnostics",
         "route": "/telemetry",
-        "icon": "graph"
+        "icon": "graph",
+        "pageType": "dashboard"
       }
     ],
     "cliCommands": [

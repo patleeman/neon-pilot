@@ -183,7 +183,7 @@ Agents can inspect the catalog through the Extension Manager UI once the extensi
 
 ## Adding a new host component
 
-1. Add metadata to `packages/extensions/src/host-view-components.ts`.
+1. Add metadata to `packages/extensions/src/host-view-components.ts`, choosing locations from `main`, `sidebar`, `rightRail`, and `workbench`.
 2. Add the UI loader in `packages/desktop/ui/src/extensions/hostViewComponents.tsx`.
 3. If the component needs configuration, define JSON-serializable `propsSchema` in the catalog.
 4. If it needs customization, add named override slots to the catalog and make the host component read `slotOverrides`.

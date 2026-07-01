@@ -9,6 +9,7 @@ import {
   serializeExcalidrawScene,
 } from '@neon-pilot/extensions/excalidraw';
 import {
+  Button,
   CenteredLoadingState,
   CenteredMessage,
   IconButton,
@@ -326,18 +327,20 @@ function ExcalidrawEditor({
           <Ico d={persisting ? ICON.refresh : ICON.save} size={12} />
           <span>{persisting ? 'Saving...' : persistButtonLabel}</span>
         </ToolbarButton>
-        <ToolbarButton
+        <Button
           onClick={() => {
             void handleAttach();
           }}
-          className="ui-accent-solid-button ui-icon-button-compact gap-1.5 px-2.5"
+          variant="action"
+          tone="accent"
+          className="ui-icon-button-compact gap-1.5 px-2.5"
           disabled={busy || !LoadedExcalidraw || loadError !== null}
           title={attaching ? 'Attaching...' : attachButtonLabel}
           aria-label={attachButtonLabel}
         >
           <Ico d={attaching ? ICON.refresh : ICON.attach} size={12} />
           <span>{attaching ? 'Attaching...' : attachButtonLabel}</span>
-        </ToolbarButton>
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden">

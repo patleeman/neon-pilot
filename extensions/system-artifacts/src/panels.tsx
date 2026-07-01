@@ -1,5 +1,6 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
+  Button,
   CardBody,
   CenteredLoadingState,
   CenteredMessage,
@@ -526,12 +527,14 @@ export function ArtifactDetailPanel({ pa, context }: ExtensionSurfaceProps) {
               {copyError || deleteError ? (
                 <span className="max-w-[240px] truncate text-[11px] text-danger">{copyError ?? deleteError}</span>
               ) : null}
-              <ToolbarButton onClick={() => void copySource()} className="shrink-0 px-2 py-1 text-[10px]">
+              <ToolbarButton onClick={() => void copySource()}>
+                <span aria-hidden="true">⧉</span>
                 {copied ? 'copied' : artifact.kind === 'latex' ? 'copy latex' : 'copy source'}
               </ToolbarButton>
-              <ToolbarButton onClick={() => void deleteArtifact()} disabled={deleting} className="shrink-0 px-2 py-1 text-[10px]">
+              <Button variant="toolbar" tone="danger" onClick={() => void deleteArtifact()} disabled={deleting}>
+                <span aria-hidden="true">−</span>
                 {deleting ? 'deleting' : 'delete'}
-              </ToolbarButton>
+              </Button>
             </div>
           ) : null}
         </div>

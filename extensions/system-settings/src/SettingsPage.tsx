@@ -61,9 +61,10 @@ import {
   KeyboardShortcutCaptureInput,
   RowButton,
   SearchInput,
-  SectionLabel,
   SegmentedControl,
   Select,
+  SidebarRow,
+  SidebarSection,
   SwatchOption,
   Switch,
   Textarea,
@@ -1794,79 +1795,40 @@ function TelemetryLogsSettingsPanel() {
 function SettingsTableOfContents({
   items,
   activeId,
-  query,
-  onQueryChange,
   onNavigate,
 }: {
   items: readonly SettingsQuickLink[];
   activeId: SettingsQuickLinkId;
-  query: string;
-  onQueryChange: (query: string) => void;
   onNavigate: (item: SettingsQuickLink) => void;
 }) {
-  const normalizedQuery = query.trim().toLowerCase();
-  const filteredItems = useMemo(() => {
-    if (!normalizedQuery) return items;
-    return items
-      .map((item) => {
-        const matchingChildren = item.children?.filter((child) => child.label.toLowerCase().includes(normalizedQuery)) ?? [];
-        if (item.label.toLowerCase().includes(normalizedQuery)) return item;
-        if (matchingChildren.length > 0) return { ...item, children: matchingChildren };
-        return null;
-      })
-      .filter((item): item is SettingsQuickLink => item !== null);
-  }, [items, normalizedQuery]);
-
   const renderLink = (item: SettingsQuickLink, nested = false) => {
     const active = item.id === activeId;
     return (
-      <a
+      <SidebarRow
         key={item.id}
-        href={item.route ?? `#${item.id}`}
-        onClick={(event) => {
-          event.preventDefault();
+        title={item.label}
+        selected={active}
+        className={nested ? 'pl-5' : undefined}
+        onClick={() => {
           onNavigate(item);
         }}
-        className={cx(
-          'ui-app-page-toc-link settings-page-toc-link',
-          nested && 'settings-page-toc-link-nested',
-          active && 'ui-app-page-toc-link-active',
-        )}
-        aria-current={active ? 'location' : undefined}
-      >
-        <span className={cx('settings-page-toc-label block font-medium', nested ? 'text-[12px]' : 'text-[13px]')}>{item.label}</span>
-      </a>
+      />
     );
   };
 
   return (
-    <aside className="settings-page-toc">
-      <nav aria-label="Settings sections" className="settings-page-toc-nav space-y-3">
-        <SearchInput
-          value={query}
-          onChange={(event) => onQueryChange(event.currentTarget.value)}
-          placeholder="Search settings..."
-          className="settings-page-search h-8 bg-surface/70 text-[12px]"
-          aria-label="Search settings"
-        />
-        <div className="settings-page-toc-list space-y-1">
-          {filteredItems.map((item) => (
-            <div key={item.id} className="space-y-1">
-              {renderLink(item)}
-              {item.children &&
-              item.children.length > 0 &&
-              (item.id === 'settings-extensions' ||
-                normalizedQuery ||
-                item.id === activeId ||
-                item.children.some((child) => child.id === activeId)) ? (
-                <div className="settings-page-toc-children space-y-1">{item.children.map((child) => renderLink(child, true))}</div>
-              ) : null}
-            </div>
-          ))}
-          {filteredItems.length === 0 ? <div className="settings-page-toc-empty">No settings found</div> : null}
+    <nav aria-label="Settings sections" className="grid gap-1">
+      {items.map((item) => (
+        <div key={item.id} className="grid gap-1">
+          {renderLink(item)}
+          {item.children &&
+          item.children.length > 0 &&
+          (item.id === 'settings-extensions' || item.id === activeId || item.children.some((child) => child.id === activeId))
+            ? item.children.map((child) => renderLink(child, true))
+            : null}
         </div>
-      </nav>
-    </aside>
+      ))}
+    </nav>
   );
 }
 
@@ -1885,7 +1847,6 @@ export function SettingsSidebar({ pa, context }: ExtensionSurfaceProps) {
   const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(
     visibleTocLinks.some((item) => item.id === initialActiveId) ? initialActiveId : SETTINGS_QUICK_LINKS[0].id,
   );
-  const [settingsQuery, setSettingsQuery] = useState('');
 
   useEffect(() => {
     const contextSectionId = readSettingsSectionIdFromContext(context);
@@ -1899,25 +1860,16 @@ export function SettingsSidebar({ pa, context }: ExtensionSurfaceProps) {
   }, [activeQuickLinkId, context.hash, context.pathname, visibleTocLinks]);
 
   return (
-    <div className="settings-sidebar flex h-full min-h-0 flex-col bg-transparent">
-      <div className="settings-sidebar-header px-4 pb-1 pt-1">
-        <div className="flex items-center gap-1">
-          <SectionLabel className="flex-1">Settings</SectionLabel>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-        <SettingsTableOfContents
-          items={settingsNavLinks}
-          activeId={activeQuickLinkId}
-          query={settingsQuery}
-          onQueryChange={setSettingsQuery}
-          onNavigate={(item) => {
-            setActiveQuickLinkId(item.id);
-            void navigateSettingsSidebar(pa, item);
-          }}
-        />
-      </div>
-    </div>
+    <SidebarSection title="Settings">
+      <SettingsTableOfContents
+        items={settingsNavLinks}
+        activeId={activeQuickLinkId}
+        onNavigate={(item) => {
+          setActiveQuickLinkId(item.id);
+          void navigateSettingsSidebar(pa, item);
+        }}
+      />
+    </SidebarSection>
   );
 }
 
@@ -2608,11 +2560,13 @@ function ExtensionSecretsSection() {
                     {savingKey === secret.key ? <span className="ui-card-meta">Saving...</span> : null}
                     <ToolbarButton
                       type="button"
+                      className="text-danger hover:text-danger"
                       disabled={!secret.writable || savingKey === secret.key || !secret.configured || secret.source === 'env'}
                       onClick={() => {
                         void removeSecret(secret);
                       }}
                     >
+                      <span aria-hidden="true">-</span>
                       Remove
                     </ToolbarButton>
                   </div>
@@ -4570,7 +4524,12 @@ export function SettingsPage({
                                               <ToolbarButton type="button" onClick={() => startEditingProviderModel(model.id)}>
                                                 Edit
                                               </ToolbarButton>
-                                              <ToolbarButton type="button" onClick={() => void handleDeleteProviderModel(model.id)}>
+                                              <ToolbarButton
+                                                type="button"
+                                                className="text-danger hover:text-danger"
+                                                onClick={() => void handleDeleteProviderModel(model.id)}
+                                              >
+                                                <span aria-hidden="true">-</span>
                                                 Remove
                                               </ToolbarButton>
                                             </div>
@@ -4932,6 +4891,7 @@ export function SettingsPage({
                                                 }}
                                                 disabled={oauthAction !== null}
                                               >
+                                                <span aria-hidden="true">⧉</span>
                                                 Copy
                                               </ToolbarButton>
                                             </div>

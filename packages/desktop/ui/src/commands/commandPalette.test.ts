@@ -142,13 +142,13 @@ describe('command palette search', () => {
     expect(
       isHostCommandDisabledInPalette('layout.toggleRightRail', {
         activeConversationId: 'conversation-1',
-        context: { 'layout.canToggleRightRail': false },
+        context: { 'layout.canToggleRightSidebar': false },
       }),
     ).toBe(true);
     expect(
       isHostCommandDisabledInPalette('layout.toggleRightRail', {
         activeConversationId: 'conversation-1',
-        context: { 'layout.canToggleRightRail': true },
+        context: { 'layout.canToggleRightSidebar': true },
       }),
     ).toBe(false);
     expect(

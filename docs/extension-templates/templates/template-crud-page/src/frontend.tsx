@@ -178,16 +178,22 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center px-6">
-        <LoadingState label="Loading items…" />
+      <div className="h-full overflow-y-auto">
+        <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
+          <AppPageIntro title="My Items" />
+          <LoadingState label="Loading items..." />
+        </AppPageLayout>
       </div>
     );
   }
 
   if (error && items.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center px-6">
-        <ErrorState message={error} />
+      <div className="h-full overflow-y-auto">
+        <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-6">
+          <AppPageIntro title="My Items" />
+          <ErrorState message={error} />
+        </AppPageLayout>
       </div>
     );
   }
@@ -199,22 +205,23 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
       <div className="h-full overflow-y-auto">
         <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-0">
           <form onSubmit={save}>
-            {/* Editor header */}
-            <div className="flex items-start justify-between gap-4 pb-10">
-              <div className="min-w-0">
-                <TextButton type="button" onClick={closeEditor}>
-                  ← Items
-                </TextButton>
-                <h2 className="mt-6 text-[32px] font-semibold tracking-tight text-primary">{editingId ? 'Edit item' : 'New item'}</h2>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <ToolbarButton type="button" onClick={closeEditor}>
-                  Cancel
-                </ToolbarButton>
-                <ToolbarButton type="submit" disabled={busy === 'save'}>
-                  {busy === 'save' ? 'Saving…' : editingId ? 'Save changes' : 'Create'}
-                </ToolbarButton>
-              </div>
+            <div className="pb-8">
+              <TextButton type="button" onClick={closeEditor}>
+                Items
+              </TextButton>
+              <AppPageIntro
+                title={editingId ? 'Edit item' : 'New item'}
+                actions={
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <ToolbarButton type="button" onClick={closeEditor}>
+                      Cancel
+                    </ToolbarButton>
+                    <ToolbarButton type="submit" disabled={busy === 'save'}>
+                      {busy === 'save' ? 'Saving...' : editingId ? 'Save changes' : 'Create'}
+                    </ToolbarButton>
+                  </div>
+                }
+              />
             </div>
 
             {/* Editor fields — replace with your domain fields */}
@@ -255,7 +262,7 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
                   Cancel
                 </ToolbarButton>
                 <ToolbarButton type="submit" disabled={busy === 'save'}>
-                  {busy === 'save' ? 'Saving…' : editingId ? 'Save changes' : 'Create item'}
+                  {busy === 'save' ? 'Saving...' : editingId ? 'Save changes' : 'Create item'}
                 </ToolbarButton>
               </div>
             </div>
@@ -274,7 +281,6 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
       <AppPageLayout shellClassName="max-w-[72rem]" contentClassName="space-y-8">
         <AppPageIntro
           title="My Items"
-          summary={`Manage your items. ${countLabel}`}
           actions={
             <div className="flex items-center gap-2">
               <ToolbarButton onClick={() => openEditor()}>New item</ToolbarButton>
@@ -285,12 +291,21 @@ export function CrudPage({ pa }: { pa: NativeExtensionClient }) {
           }
         />
 
+        <p className="text-[13px] text-secondary">{countLabel}</p>
+
         {notice ? <Notice tone="success">{notice}</Notice> : null}
 
         {error ? <Notice tone="danger">{error}</Notice> : null}
 
         {items.length === 0 ? (
-          <EmptyState title="No items yet" body="Create one to get started." className="py-10" />
+          <EmptyState
+            eyebrow="Table page"
+            title="No items yet"
+            body="Items are the records this extension manages. Replace this copy with the feature's real job and the user's next decision."
+            steps={['Create the first item', 'Fill in the required fields', 'Use row actions to edit or delete it later']}
+            action={<ToolbarButton onClick={() => openEditor()}>New item</ToolbarButton>}
+            className="py-10"
+          />
         ) : (
           <DataTable
             columns={

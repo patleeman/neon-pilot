@@ -412,9 +412,9 @@ describe('extension catalog', () => {
   });
 
   it('refuses to install a catalog item that is already installed', async () => {
-    findExtensionEntry.mockReturnValue({ manifest: { id: 'system-browser' } });
+    findExtensionEntry.mockReturnValue({ manifest: { id: 'system-dynamic-workflows' } });
     const { installCatalogExtension } = await import('./extensionCatalog.js');
-    await expect(installCatalogExtension({ id: 'system-browser' })).rejects.toThrow('already installed');
+    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).rejects.toThrow('already installed');
   });
 
   it('installs fresh remote catalog extensions from URL instead of stale repo-built bundles', async () => {

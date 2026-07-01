@@ -118,7 +118,7 @@ export function WorkspaceQuickSelectModal({
         overscrollBehavior: 'contain',
       }}
       actions={
-        <IconButton compact onClick={onClose} className="-mr-1 shrink-0" aria-label="Close workspace picker">
+        <IconButton compact onClick={onClose} className="-mr-1 shrink-0" aria-label="Close workspace picker" title="Close workspace picker">
           <Icon d={CLOSE_PATH} size={12} />
         </IconButton>
       }

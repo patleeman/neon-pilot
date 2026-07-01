@@ -83,6 +83,7 @@
             },
             "question": {
               "type": "string",
+              "description": "Ask about at least one imageIds, videoIds, audioIds, or documentIds attachment.",
               "minLength": 1,
               "maxLength": 8000
             },
@@ -109,12 +110,6 @@
             }
           },
           "required": ["question"],
-          "anyOf": [
-            { "required": ["imageIds"] },
-            { "required": ["videoIds"] },
-            { "required": ["audioIds"] },
-            { "required": ["documentIds"] }
-          ],
           "additionalProperties": false
         }
       },

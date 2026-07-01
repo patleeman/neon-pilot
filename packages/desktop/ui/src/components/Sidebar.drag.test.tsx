@@ -80,7 +80,7 @@ function createDeferredPromise<T>() {
   return { promise, resolve, reject };
 }
 
-function renderSidebar(sessions: SessionMeta[], pathname = '/conversations/new') {
+function renderSidebar(sessions: SessionMeta[], pathname = '/conversations/new', sidebarProps?: React.ComponentProps<typeof Sidebar>) {
   // Seed the store so hooks find the sessions
   sessionStore.replaceAll(sessions);
   sessionStore.markReady?.();
@@ -106,7 +106,7 @@ function renderSidebar(sessions: SessionMeta[], pathname = '/conversations/new')
             }}
           >
             <LiveTitlesContext.Provider value={{ titles: new Map(), setTitle: () => {} }}>
-              <Sidebar />
+              <Sidebar {...sidebarProps} />
             </LiveTitlesContext.Provider>
           </AppDataContext.Provider>
         </SseConnectionContext.Provider>
@@ -240,6 +240,50 @@ describe('Sidebar group drag reordering', () => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('routes the primary new chat button through the layout conversation creator', async () => {
+    const onNewConversation = vi.fn().mockResolvedValue(true);
+    const container = renderSidebar([], '/conversations/new', { onNewConversation });
+
+    const button = container.querySelector<HTMLButtonElement>('button[aria-label^="New chat"]');
+    expect(button).not.toBeNull();
+
+    await act(async () => {
+      button?.click();
+      await Promise.resolve();
+    });
+
+    expect(onNewConversation).toHaveBeenCalledTimes(1);
+    expect(onNewConversation).toHaveBeenCalledWith({ cwd: '' });
+    expect(apiMocks.createLiveSession).not.toHaveBeenCalled();
+  });
+
+  it('passes the workspace cwd from project new chat buttons to the layout conversation creator', async () => {
+    const alphaPath = '/tmp/alpha-worktree';
+    const onNewConversation = vi.fn().mockResolvedValue(true);
+    localStorage.setItem(SAVED_WORKSPACE_PATHS_STORAGE_KEY, JSON.stringify([alphaPath]));
+    apiMocks.readConversationWorkspace.mockResolvedValue({
+      sessionIds: [],
+      pinnedSessionIds: [],
+      archivedSessionIds: [],
+      workspacePaths: [alphaPath],
+    });
+
+    const container = renderSidebar([], '/conversations/new', { onNewConversation });
+    await flushAsyncWork();
+
+    const button = container.querySelector<HTMLButtonElement>('button[aria-label="New conversation in alpha-worktree"]');
+    expect(button).not.toBeNull();
+
+    await act(async () => {
+      button?.click();
+      await Promise.resolve();
+    });
+
+    expect(onNewConversation).toHaveBeenCalledTimes(1);
+    expect(onNewConversation).toHaveBeenCalledWith({ cwd: alphaPath });
+    expect(apiMocks.createLiveSession).not.toHaveBeenCalled();
   });
 
   it('reorders local project sections and moves their threads with them', async () => {

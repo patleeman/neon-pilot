@@ -3,7 +3,11 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { AutomationsPage, shouldOpenNewAutomationFromSearch } from '../../../../../../extensions/system-automations/src/frontend';
+import {
+  AutomationDialogPanel,
+  AutomationsPage,
+  shouldOpenNewAutomationFromSearch,
+} from '../../../../../../extensions/system-automations/src/frontend';
 import type { NativeExtensionClient } from '../nativePaClient';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -23,6 +27,7 @@ function createPa(overrides: Partial<NativeExtensionClient['automations']> = {})
     executions: { start: vi.fn(), get: vi.fn(), list: vi.fn(), readLog: vi.fn(), cancel: vi.fn() },
     storage: { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() },
     commands: { execute: vi.fn(async () => true), list: vi.fn(async () => []), setContext: vi.fn() },
+    selection: { get: vi.fn(() => null), set: vi.fn(), subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })) },
     ui: {
       toast: vi.fn(),
       notify: vi.fn(),
@@ -94,6 +99,28 @@ async function renderPage(pa = createPa(), context: { search?: string } = {}) {
   return { container, pa };
 }
 
+async function renderRail(pa = createPa()) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  mountedRoots.push(root);
+  await act(async () => root.render(<AutomationDialogPanel pa={pa} />));
+  await act(async () => Promise.resolve());
+  return { container, pa };
+}
+
+function automationSelection(data: unknown, id = 'automation:new') {
+  return {
+    kind: 'resource',
+    resource: {
+      type: 'automation',
+      id,
+      data,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -111,42 +138,39 @@ async function flushPromises(times = 3) {
 }
 
 describe('AutomationsPage', () => {
+  it('keeps initial automations loading chrome visually quiet', async () => {
+    const list = deferred<unknown[]>();
+    const pa = createPa({ list: vi.fn(() => list.promise) });
+    const { container } = await renderPage(pa);
+
+    expect(container.querySelector('[role="status"][aria-label="Loading automations"]')).not.toBeNull();
+    expect(container.textContent).not.toContain('Loading automations...');
+  });
+
   it('opens the creation editor from the command-backed route query', async () => {
     expect(shouldOpenNewAutomationFromSearch('?action=new')).toBe(true);
     expect(shouldOpenNewAutomationFromSearch('?new=1')).toBe(true);
     expect(shouldOpenNewAutomationFromSearch('?filter=current')).toBe(false);
 
-    await renderPage(createPa(), { search: '?action=new' });
+    const pa = createPa();
+    await renderPage(pa, { search: '?action=new' });
 
-    expect(document.body.textContent).toContain('New automation');
-    expect(document.body.textContent).toContain('Create automation');
-    const dialog = document.querySelector('[role="dialog"]');
-    const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
-    expect(dialog).not.toBeNull();
-    expect(dialog?.getAttribute('aria-modal')).toBe('true');
-    expect(dialog?.querySelector('form')?.className).toContain('flex');
-    const body = dialog?.querySelector('.ui-dialog-body');
-    expect(body?.className).toContain('flex-col');
-    expect(body?.className).not.toContain('grid');
-    expect(dialog?.querySelector('.ui-disclosure')?.className).toContain('shrink-0');
-    expect(document.querySelector('select[name="automation-model"]')?.closest('.grid')?.className).toContain('items-start');
-    expect(title).not.toBeNull();
-    expect(document.activeElement).toBe(title);
-    expect(document.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
-    expect(document.querySelector('select[name="automation-timeout-preset"]')?.closest('.ui-field')).not.toBeNull();
-    expect(document.querySelector('input[name="automation-cwd"]')).not.toBeNull();
-    expect(document.querySelector('[aria-label="Enable automation"]')).toBeNull();
+    expect(pa.selection.set).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.querySelector('input[name="automation-title"]')).not.toBeNull();
   });
 
-  it('keeps route-opened create drafts when conversations load later', async () => {
+  it('keeps dialog create drafts when conversations load later', async () => {
     const conversations = deferred<unknown[]>();
     const pa = createPa();
     pa.conversations.list = vi.fn(() => conversations.promise);
+    vi.mocked(pa.selection.get).mockReturnValue(automationSelection({ kind: 'new' }) as never);
 
-    await renderPage(pa, { search: '?action=new' });
+    await renderRail(pa);
 
     const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
-    if (!title) throw new Error('create title input missing');
+    const ownerBefore = document.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]');
+    if (!title || !ownerBefore) throw new Error('create editor controls missing');
 
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, 'Draft automation');
@@ -160,15 +184,19 @@ describe('AutomationsPage', () => {
     expect(document.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]')?.value).toBe('conv-owner');
   });
 
-  it('mounts the creation dialog at document body so the overlay covers desktop chrome', async () => {
-    const { container } = await renderPage(createPa(), { search: '?action=new' });
+  it('renders the creation editor in the automation dialog panel', async () => {
+    const pa = createPa();
+    vi.mocked(pa.selection.get).mockReturnValue(automationSelection({ kind: 'new' }) as never);
 
-    const backdrop = document.body.querySelector<HTMLElement>(':scope > .ui-overlay-backdrop');
-    const dialog = backdrop?.querySelector('[role="dialog"]');
+    const { container } = await renderRail(pa);
 
-    expect(backdrop).not.toBeNull();
-    expect(dialog).not.toBeNull();
-    expect(container.querySelector('.ui-overlay-backdrop')).toBeNull();
+    expect(container.textContent).toContain('New automation');
+    expect(container.textContent).toContain('Create automation');
+    expect(container.querySelector('input[name="automation-title"]')).not.toBeNull();
+    expect(container.querySelector('select[name="automation-owner-thread"]')).not.toBeNull();
+    expect(container.querySelector('select[name="automation-timeout-preset"]')).not.toBeNull();
+    expect(container.querySelector('input[name="automation-cwd"]')).not.toBeNull();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('keeps the empty state as a list-only page until the dialog is opened', async () => {
@@ -176,8 +204,10 @@ describe('AutomationsPage', () => {
     const { container } = await renderPage(pa);
 
     expect(container.querySelector('table')).not.toBeNull();
-    expect(container.textContent).toContain('No automations yet.');
-    expect(Array.from(container.querySelectorAll('button')).filter((button) => button.textContent === 'New automation')).toHaveLength(1);
+    expect(container.textContent).toContain('No automations yet');
+    expect(
+      Array.from(container.querySelectorAll('button')).filter((button) => button.textContent?.includes('New automation')),
+    ).toHaveLength(2);
     expect(container.querySelector('input[name="automation-title"]')).toBeNull();
     expect(container.textContent).not.toContain('Run preview');
     expect(container.textContent).not.toContain('Scheduler');
@@ -194,6 +224,39 @@ describe('AutomationsPage', () => {
     expect(container.querySelector('button[aria-label="Open owner thread for Release watch: Release watch thread"]')).not.toBeNull();
     expect(container.textContent).toContain('Paused check');
     expect(container.textContent).toContain('Paused');
+  });
+
+  it('renders selected automation details in the automation dialog panel', async () => {
+    const pa = createPa();
+    vi.mocked(pa.selection.get).mockReturnValue({
+      kind: 'resource',
+      resource: {
+        type: 'automation',
+        id: 'automation:release-watch',
+        data: {
+          kind: 'automation',
+          task: {
+            id: 'release-watch',
+            title: 'Release watch',
+            scheduleType: 'cron',
+            enabled: true,
+            cron: '*/15 * * * *',
+            prompt: 'Check release state',
+            threadConversationId: 'conv-owner',
+            threadTitle: 'Release watch thread',
+          },
+        },
+      },
+      updatedAt: new Date().toISOString(),
+    });
+
+    const { container } = await renderRail(pa);
+
+    expect(container.textContent).toContain('Automation context');
+    expect(container.textContent).toContain('Release watch');
+    expect(container.textContent).toContain('Check release state');
+    expect(container.textContent).toContain('Run now');
+    expect(container.textContent).toContain('Release watch thread');
   });
 
   it('opens the owner thread from the automations list', async () => {
@@ -474,7 +537,7 @@ describe('AutomationsPage', () => {
     expect(container.textContent).not.toContain('Release watch');
   });
 
-  it('edits an existing automation in the modal instead of an inline details pane', async () => {
+  it('opens existing automation details from the table title', async () => {
     const pa = createPa();
     const { container } = await renderPage(pa);
     await act(async () =>
@@ -483,9 +546,57 @@ describe('AutomationsPage', () => {
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
 
+    expect(pa.selection.set).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.body.textContent).toContain('Automation details');
+    expect(document.body.textContent).toContain('Release watch');
+  });
+
+  it('edits an existing automation from the row action menu', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa);
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Actions for Release watch"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+    await act(async () =>
+      Array.from(document.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Edit')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(pa.selection.set).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.body.textContent).toContain('Edit automation');
+    expect(document.querySelector<HTMLInputElement>('input[name="automation-title"]')?.value).toBe('Release watch');
+  });
+
+  it('saves edits from the automation dialog panel', async () => {
+    const pa = createPa();
+    vi.mocked(pa.selection.get).mockReturnValue(
+      automationSelection(
+        {
+          kind: 'edit',
+          task: {
+            id: 'release-watch',
+            title: 'Release watch',
+            scheduleType: 'cron',
+            enabled: true,
+            cron: '*/15 * * * *',
+            prompt: 'Check release state',
+            threadConversationId: 'conv-owner',
+            threadTitle: 'Release watch thread',
+          },
+        },
+        'automation:release-watch',
+      ) as never,
+    );
+
+    await renderRail(pa);
     const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
     if (!title) throw new Error('edit title input missing');
-    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     expect(title.value).toBe('Release watch');
     expect(document.querySelector('[aria-label="Enable automation"]')).toBeNull();
 
@@ -504,7 +615,8 @@ describe('AutomationsPage', () => {
 
   it('creates a new owner-threaded conversation automation', async () => {
     const pa = createPa();
-    await renderPage(pa, { search: '?action=new' });
+    vi.mocked(pa.selection.get).mockReturnValue(automationSelection({ kind: 'new' }) as never);
+    await renderRail(pa);
     const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
     const owner = document.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]');
     const prompt = document.querySelector<HTMLTextAreaElement>('textarea[name="automation-prompt"]');
@@ -538,7 +650,8 @@ describe('AutomationsPage', () => {
 
   it('validates custom timeout before creating an automation', async () => {
     const pa = createPa();
-    await renderPage(pa, { search: '?action=new' });
+    vi.mocked(pa.selection.get).mockReturnValue(automationSelection({ kind: 'new' }) as never);
+    await renderRail(pa);
     const title = document.querySelector<HTMLInputElement>('input[name="automation-title"]');
     const owner = document.querySelector<HTMLSelectElement>('select[name="automation-owner-thread"]');
     const prompt = document.querySelector<HTMLTextAreaElement>('textarea[name="automation-prompt"]');

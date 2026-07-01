@@ -736,7 +736,7 @@ export function readConversationSessionMeta(conversationId: string, options: { p
   };
 }
 
-type SessionDetailRouteReadResult = ReturnType<typeof readSessionBlocksWithTelemetry>;
+export type SessionDetailRouteReadResult = ReturnType<typeof readSessionBlocksWithTelemetry>;
 
 const MAX_SESSION_DETAIL_TAIL_BLOCKS = 10000;
 

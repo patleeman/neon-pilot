@@ -93,6 +93,16 @@ describe('PromptAssemblyPage', () => {
     expect(screen.queryByText(/\/repo\/one/)).toBeNull();
   });
 
+  it('keeps the initial Prompt Assembly loading state visually quiet', () => {
+    const load = deferred<ReturnType<typeof runtimeResult>>();
+    const callAction = vi.fn().mockReturnValue(load.promise);
+
+    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction }));
+
+    expect(screen.getByRole('status', { name: 'Loading prompt assembly' })).toBeTruthy();
+    expect(screen.queryByText('Loading prompt assembly…')).toBeNull();
+  });
+
   it('does not render or toggle skills from Prompt Assembly settings', async () => {
     const callAction = vi.fn().mockResolvedValue(
       runtimeResult('/repo', [

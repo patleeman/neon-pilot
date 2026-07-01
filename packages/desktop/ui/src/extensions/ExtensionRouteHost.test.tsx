@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { buildExtensionRouteKey, ExtensionRouteHost } from './ExtensionRouteHost';
+import { buildExtensionRouteKey, ExtensionRouteHost, QuietExtensionRouteLoading } from './ExtensionRouteHost';
 
 vi.mock('../navigation/lazyRouteRecovery', () => ({
   lazyRouteWithRecovery: () =>
@@ -48,6 +48,20 @@ function RouteHarness() {
 describe('ExtensionRouteHost', () => {
   it('builds route keys from path and search', () => {
     expect(buildExtensionRouteKey('/telemetry', '?range=24h')).toBe('/telemetry?range=24h');
+  });
+
+  it('uses a quiet accessible loading fallback for extension routes', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    roots.push(root);
+
+    act(() => {
+      root.render(<QuietExtensionRouteLoading />);
+    });
+
+    expect(container.textContent).toBe('');
+    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading extension page');
   });
 
   it('remounts extension pages when the extension route changes', async () => {

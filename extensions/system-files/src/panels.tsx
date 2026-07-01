@@ -1,4 +1,4 @@
-import { CenteredLoadingState, CenteredMessage } from '@neon-pilot/extensions/ui';
+import { CenteredMessage, QuietLoadingState } from '@neon-pilot/extensions/ui';
 import { type ExtensionSurfaceProps, WorkspaceExplorer, WorkspaceFileDocument } from '@neon-pilot/extensions/workbench-files';
 import { Suspense, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -68,7 +68,7 @@ export function WorkspaceFilesPanel({ context }: ExtensionSurfaceProps) {
   }
 
   return (
-    <Suspense fallback={<CenteredLoadingState label="Loading workspace..." />}>
+    <Suspense fallback={<QuietLoadingState label="Loading workspace" className="h-full" />}>
       <WorkspaceExplorer
         cwd={context.cwd}
         railOnly
@@ -116,7 +116,7 @@ export function WorkspaceFileDetailPanel({ context }: ExtensionSurfaceProps) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-base">
       <div className="min-h-0 flex-1 overflow-hidden">
-        <Suspense fallback={<CenteredLoadingState label="Opening file..." />}>
+        <Suspense fallback={<QuietLoadingState label="Opening file" className="h-full" />}>
           <WorkspaceFileDocument
             cwd={context.cwd}
             path={filePath}

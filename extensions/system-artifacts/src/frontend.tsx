@@ -1,11 +1,11 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { CenteredLoadingState } from '@neon-pilot/extensions/ui';
+import { QuietLoadingState } from '@neon-pilot/extensions/ui';
 import { lazy, Suspense } from 'react';
 
 const LazyArtifactsPanel = lazy(async () => ({ default: (await import('./panels.js')).ArtifactsPanel }));
 const LazyArtifactDetailPanel = lazy(async () => ({ default: (await import('./panels.js')).ArtifactDetailPanel }));
 const LazyArtifactTranscriptRenderer = lazy(async () => ({ default: (await import('./panels.js')).ArtifactTranscriptRenderer }));
-const fallback = <CenteredLoadingState label="Loading artifacts..." />;
+const fallback = <QuietLoadingState label="Loading artifacts surface" />;
 
 export function ArtifactTranscriptRenderer(props: never) {
   return (

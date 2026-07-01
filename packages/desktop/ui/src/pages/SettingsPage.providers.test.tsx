@@ -151,9 +151,15 @@ function queryProviderPicker(container: HTMLElement): HTMLSelectElement {
   return picker;
 }
 
-function querySettingsTocLink(container: HTMLElement, sectionId: string): HTMLAnchorElement {
-  const link = container.querySelector(`nav[aria-label="Settings sections"] a[href="#${sectionId}"]`);
-  if (!(link instanceof HTMLAnchorElement)) {
+function querySettingsTocLink(container: HTMLElement, sectionId: string): HTMLButtonElement {
+  const label = sectionId
+    .replace(/^settings-/, '')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const link = Array.from(container.querySelectorAll('nav[aria-label="Settings sections"] button')).find(
+    (button) => button.textContent?.trim() === label,
+  );
+  if (!(link instanceof HTMLButtonElement)) {
     throw new Error(`Expected settings table-of-contents link for ${sectionId}`);
   }
   return link;
@@ -599,7 +605,7 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
 
     const workspaceLink = querySettingsTocLink(container, 'settings-workspace');
-    expect(workspaceLink.getAttribute('aria-current')).toBe('location');
+    expect(workspaceLink.getAttribute('aria-current')).toBe('page');
 
     const providersLink = querySettingsTocLink(container, 'settings-providers');
 
@@ -615,19 +621,19 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderSettingsSidebar('', '/settings/providers');
     await flushAsyncWork();
 
-    expect(querySettingsTocLink(container, 'settings-providers').getAttribute('aria-current')).toBe('location');
+    expect(querySettingsTocLink(container, 'settings-providers').getAttribute('aria-current')).toBe('page');
     expect(querySettingsTocLink(container, 'settings-appearance').getAttribute('aria-current')).toBeNull();
   });
 
   it('highlights appearance and conversation for their direct settings routes', async () => {
     const { container } = renderSettingsSidebar('', '/settings/appearance');
     await flushAsyncWork();
-    expect(querySettingsTocLink(container, 'settings-appearance').getAttribute('aria-current')).toBe('location');
+    expect(querySettingsTocLink(container, 'settings-appearance').getAttribute('aria-current')).toBe('page');
     expect(querySettingsTocLink(container, 'settings-providers').getAttribute('aria-current')).toBeNull();
 
     const conversationContainer = renderSettingsSidebar('', '/settings/conversation');
     await flushAsyncWork();
-    expect(querySettingsTocLink(conversationContainer.container, 'settings-conversation').getAttribute('aria-current')).toBe('location');
+    expect(querySettingsTocLink(conversationContainer.container, 'settings-conversation').getAttribute('aria-current')).toBe('page');
     expect(querySettingsTocLink(conversationContainer.container, 'settings-appearance').getAttribute('aria-current')).toBeNull();
   });
 

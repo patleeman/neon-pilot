@@ -224,7 +224,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     },
     {
       id: 'rail.open',
-      title: 'Open Right Rail',
+      title: 'Open Right Sidebar',
       category: 'App',
       argsSchema: { type: 'object', properties: { extensionId: { type: 'string' }, surfaceId: { type: 'string' } } },
     },
@@ -236,7 +236,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     },
     { id: 'layout.toggle', title: 'Toggle Layout Mode', category: 'App' },
     { id: 'layout.toggleSidebar', title: 'Toggle Left Sidebar', category: 'App' },
-    { id: 'layout.toggleRightRail', title: 'Toggle Right Rail', category: 'App' },
+    { id: 'layout.toggleRightRail', title: 'Toggle Right Sidebar', category: 'App' },
     { id: 'page.find', title: 'Find on Page', category: 'App' },
     { id: 'page.findNext', title: 'Find Next Match', category: 'App' },
     { id: 'page.findPrevious', title: 'Find Previous Match', category: 'App' },
@@ -495,7 +495,7 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
     },
     {
       id: 'rail.open',
-      title: 'Open Right Rail',
+      title: 'Open Right Sidebar',
       category: 'App',
       execute(args) {
         const target = readStringArg(args, 'target');
@@ -549,13 +549,17 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
     },
     {
       id: 'layout.toggleRightRail',
-      title: 'Toggle Right Rail',
+      title: 'Toggle Right Sidebar',
       category: 'App',
       execute() {
         return options.toggleRightRail?.() ?? false;
       },
       canExecute(_args, context) {
-        return Boolean(options.toggleRightRail) && readContextValue(context, 'layout.canToggleRightRail') === true;
+        return (
+          Boolean(options.toggleRightRail) &&
+          (readContextValue(context, 'layout.canToggleRightSidebar') === true ||
+            readContextValue(context, 'layout.canToggleRightRail') === true)
+        );
       },
     },
     {

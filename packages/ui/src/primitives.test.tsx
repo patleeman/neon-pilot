@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ActionTile,
+  AppPageEmptyState,
   AppPageSection,
   BrowsePathButton,
   Button,
@@ -21,18 +22,25 @@ import {
   CodeBlock,
   CompactCard,
   ComposerActionButton,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
   cx,
   DataTable,
   DataTableBody,
   DataTableCell,
   DataTableHead,
   DataTableHeaderCell,
+  DataTablePagination,
   DataTableRow,
+  DataTableToolbar,
   Dialog,
   Disclosure,
   EditorToolbar,
   EditorToolbarButton,
   EditorToolbarGroup,
+  EmptyState,
   FilterToolbar,
   FolderIcon,
   formatKeyboardShortcutLabel,
@@ -57,6 +65,7 @@ import {
   Pill,
   PositionedMenu,
   ProgressBar,
+  QuietLoadingState,
   RailSection,
   RailSubsection,
   ResourceList,
@@ -132,6 +141,55 @@ describe('design-system primitives', () => {
     expect(html).toContain('href="#new"');
     expect(html).toContain('ui-action-button');
     expect(html).toContain('text-accent');
+  });
+
+  it('renders quiet loading without visible copy', () => {
+    const html = renderToStaticMarkup(createElement(QuietLoadingState, { label: 'Loading extension page' }));
+
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-label="Loading extension page"');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).not.toContain('>Loading extension page<');
+  });
+
+  it('renders feature empty states with getting-started steps', () => {
+    const html = renderToStaticMarkup(
+      createElement(EmptyState, {
+        eyebrow: 'Table page',
+        title: 'No automations yet',
+        body: 'Automations run saved instructions on a schedule.',
+        steps: ['Create an automation', 'Choose the owner thread', 'Pick a schedule'],
+        action: createElement(Button, { variant: 'action', tone: 'accent' }, 'New automation'),
+        align: 'start',
+      }),
+    );
+
+    expect(html).toContain('ui-empty-state-start');
+    expect(html).toContain('Table page');
+    expect(html).toContain('No automations yet');
+    expect(html).toContain('Automations run saved instructions on a schedule.');
+    expect(html).toContain('aria-label="Getting started"');
+    expect(html).toContain('Create an automation');
+    expect(html).toContain('Choose the owner thread');
+    expect(html).toContain('Pick a schedule');
+    expect(html).toContain('ui-action-button');
+  });
+
+  it('passes feature empty-state affordances through app page empty states', () => {
+    const html = renderToStaticMarkup(
+      createElement(AppPageEmptyState, {
+        eyebrow: 'Dashboard page',
+        title: 'No diagnostics yet',
+        body: 'Diagnostics appear after a session produces retained usage data.',
+        steps: ['Run a conversation', 'Refresh the dashboard'],
+        align: 'start',
+      }),
+    );
+
+    expect(html).toContain('ui-app-page-empty-shell-start');
+    expect(html).toContain('Dashboard page');
+    expect(html).toContain('No diagnostics yet');
+    expect(html).toContain('Run a conversation');
   });
 
   it('maps text links to stable inline link classes', () => {
@@ -745,6 +803,22 @@ describe('design-system primitives', () => {
     expect(html).toContain('ui-compact-card-interactive');
   });
 
+  it('renders route context rail chrome with stable header and section anatomy', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        ContextRail,
+        null,
+        createElement(ContextRailHeader, { eyebrow: 'Context rail', title: 'Model Arena', subtitle: 'Automatic duels on' }),
+        createElement(ContextRailBody, null, createElement(ContextRailSection, { title: 'Status' }, 'Ready')),
+      ),
+    );
+
+    expect(html).toContain('ui-context-rail');
+    expect(html).toContain('ui-context-rail-header');
+    expect(html).toContain('ui-context-rail-body');
+    expect(html).toContain('ui-context-rail-section');
+  });
+
   it('renders action tiles with icon and description slots', () => {
     const html = renderToStaticMarkup(
       createElement(ActionTile, { icon: '▸', label: 'Terminal', description: 'Open a terminal tab.', meta: 'local' }),
@@ -919,5 +993,33 @@ describe('design-system primitives', () => {
     expect(html).toContain('table-fixed');
     expect(html).toContain('ui-data-table-head');
     expect(html).toContain('ui-data-table-cell');
+  });
+
+  it('renders data table toolbar and pagination anatomy', () => {
+    const html = renderToStaticMarkup(
+      createElement('div', null, [
+        createElement(DataTableToolbar, {
+          key: 'toolbar',
+          tabs: 'Browse',
+          summary: '12 results',
+          filters: 'Capability',
+          search: createElement('input', { 'aria-label': 'Search' }),
+          actions: createElement(Button, null, 'Install'),
+        }),
+        createElement(DataTablePagination, {
+          key: 'pagination',
+          page: 2,
+          pageCount: 4,
+          totalLabel: '24 results',
+          onPrevious: () => {},
+          onNext: () => {},
+        }),
+      ]),
+    );
+
+    expect(html).toContain('ui-data-table-toolbar');
+    expect(html).toContain('ui-data-table-toolbar-summary');
+    expect(html).toContain('ui-data-table-pagination');
+    expect(html).toContain('2 / 4');
   });
 });

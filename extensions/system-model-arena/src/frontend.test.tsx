@@ -4,29 +4,60 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ModelArenaDuelBlock, ModelArenaPage } from './frontend';
+import { ModelArenaContextRail, ModelArenaDuelBlock, ModelArenaPage } from './frontend';
+
+const arenaState = {
+  settings: {
+    automaticDuels: true,
+    sampleRate: 0.35,
+    rampDownAfterVotes: 60,
+    rampedSampleRate: 0.15,
+    challengerModels: [],
+    minPromptChars: 24,
+  },
+  stats: {
+    models: {
+      'openai/gpt-5': {
+        modelRef: 'openai/gpt-5',
+        rating: 1532,
+        wins: 6,
+        losses: 2,
+        ties: 1,
+        neither: 0,
+        votes: 9,
+        byTask: { frontend: { wins: 6, losses: 2, ties: 1, neither: 0, votes: 9 } },
+      },
+    },
+  },
+  duels: [{ id: 'duel-1' }],
+  models: [
+    { id: 'zeta', name: 'Zeta', provider: 'opencode-go' },
+    { id: 'spark', name: 'GPT-5.3 Codex Spark', provider: 'openai-codex' },
+    { id: 'flash', name: 'DeepSeek V4 Flash', provider: 'opencode-go' },
+  ],
+};
 
 describe('ModelArenaPage', () => {
-  it('groups challenger model choices by provider', async () => {
-    const invoke = vi.fn().mockResolvedValue({
-      settings: {
-        automaticDuels: true,
-        sampleRate: 0.35,
-        rampDownAfterVotes: 60,
-        rampedSampleRate: 0.15,
-        challengerModels: [],
-        minPromptChars: 24,
-      },
-      stats: { models: {} },
-      duels: [],
-      models: [
-        { id: 'zeta', name: 'Zeta', provider: 'opencode-go' },
-        { id: 'spark', name: 'GPT-5.3 Codex Spark', provider: 'openai-codex' },
-        { id: 'flash', name: 'DeepSeek V4 Flash', provider: 'opencode-go' },
-      ],
-    });
+  it('renders rankings through the shared table page pattern', async () => {
+    const invoke = vi.fn().mockResolvedValue(arenaState);
 
-    const { container } = render(<ModelArenaPage pa={{ extension: { invoke } } as never} />);
+    render(<ModelArenaPage pa={{ extension: { invoke } } as never} />);
+
+    expect(await screen.findByLabelText('Model Arena rankings')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Refresh Model Arena' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Task type' })).toBeTruthy();
+    expect(screen.getByText('openai/gpt-5')).toBeTruthy();
+    expect(screen.getByText('frontend 6W/2L/1T')).toBeTruthy();
+    expect(document.body.textContent).toContain('1 recent duels');
+    expect(document.body.textContent).toContain('sample 35%');
+  });
+});
+
+describe('ModelArenaContextRail', () => {
+  it('groups challenger model choices by provider', async () => {
+    const invoke = vi.fn().mockResolvedValue({ ...arenaState, stats: { models: {} }, duels: [] });
+
+    const { container } = render(<ModelArenaContextRail pa={{ extension: { invoke } } as never} />);
 
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy());
 

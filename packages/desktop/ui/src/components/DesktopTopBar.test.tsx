@@ -178,7 +178,7 @@ describe('DesktopTopBar', () => {
 
     expect(html.indexOf('Hide sidebar')).toBeLessThan(html.indexOf('Go back'));
     expect(html.indexOf('Go back')).toBeLessThan(html.indexOf('Go forward'));
-    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Hide workbench'));
+    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Hide right sidebar'));
   });
 
   it('keeps the top bar chrome draggable except for interactive controls', () => {
@@ -199,7 +199,7 @@ describe('DesktopTopBar', () => {
     expect(html).not.toContain('ui-desktop-top-bar__brand-label');
   });
 
-  it('keeps the right sidebar toggle disabled when no right sidebar is available', () => {
+  it('hides the right sidebar toggle when no right sidebar is available', () => {
     const html = renderTopBar({
       isElectron: true,
       activeHostId: 'local',
@@ -208,8 +208,8 @@ describe('DesktopTopBar', () => {
       activeHostSummary: 'Local runtime is healthy.',
     });
 
-    expect(html).toContain('Workbench unavailable');
-    expect(html).toContain('disabled=""');
+    expect(html).not.toContain('Workbench unavailable');
+    expect(html).not.toContain('Show right sidebar');
   });
 
   it('does not render the old compact/workbench mode switcher', () => {
