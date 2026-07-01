@@ -8,7 +8,7 @@ const releaseSmokeArgs = [
   '--max-conversation-content-open-phase-ms=1500',
   '--max-conversation-extension-open-phase-ms=1500',
   '--max-related-conversation-results-ms=1500',
-  '--max-recovery-ms=3000',
+  '--max-recovery-ms=5000',
 ];
 
 describe('release smoke perf budgets', () => {

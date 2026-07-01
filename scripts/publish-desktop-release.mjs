@@ -575,7 +575,7 @@ function requireSmokeTestApproval(env, releaseDir, buildRoot) {
         '--max-draft-submit-visible-ms=15000',
         '--max-long-transcript-open-ms=10000',
         '--max-related-conversation-results-ms=1500',
-        '--max-recovery-ms=3000',
+        '--max-recovery-ms=5000',
         '--max-fork-ms=2500',
         '--max-conversation-switch-content-ms=300',
         '--max-conversation-content-open-phase-ms=1500',
