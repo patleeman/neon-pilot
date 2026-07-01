@@ -90,6 +90,12 @@ const hermesBrowse = {
   installed: [],
 };
 
+const allBrowse = {
+  ...openAiBrowse,
+  sourceId: 'all',
+  candidates: [...openAiBrowse.candidates, ...hermesBrowse.candidates],
+};
+
 function createPa({
   invoke = vi.fn(async (action: string) => {
     if (action === 'listSkills') return { ok: true, skills };
@@ -98,6 +104,7 @@ function createPa({
   callAction = vi.fn(async (_extensionId: string, action: string, input?: unknown) => {
     if (action === 'browseSkills') {
       const sourceId = (input as { sourceId?: string } | undefined)?.sourceId;
+      if (sourceId === 'all') return allBrowse;
       return sourceId === 'hermes' ? hermesBrowse : openAiBrowse;
     }
     if (action === 'installSkill') return { ok: true, message: 'Installed PDF.' };
@@ -114,35 +121,38 @@ function createPa({
 }
 
 describe('SkillsPage', () => {
-  it('renders source-first marketplace results from Skill Search', async () => {
+  it('renders unified marketplace search results from Skill Search', async () => {
     const pa = createPa();
 
     render(<SkillsPage pa={pa as never} context={{} as never} />);
 
     await screen.findByText('PDF');
-    expect(screen.getByText('Sources')).toBeTruthy();
-    expect(screen.getAllByText('OpenAI').length).toBeGreaterThan(0);
+    expect(screen.getByText('Browse')).toBeTruthy();
+    expect(screen.getByText('Skill')).toBeTruthy();
+    expect(screen.getByText('Capability')).toBeTruthy();
+    expect(screen.getByText('State')).toBeTruthy();
+    expect(
+      screen.getByText('Searching 2 marketplace sources. Trusted skills install after vetting; community skills require approval.'),
+    ).toBeTruthy();
     expect(screen.getByText('Read and verify PDF files.')).toBeTruthy();
     expect(pa.extensions.callAction).toHaveBeenCalledWith('system-skill-search', 'browseSkills', {
-      sourceId: 'openai',
+      sourceId: 'all',
       query: '',
       limit: 60,
     });
   });
 
-  it('switches marketplace sources and preserves community approval copy', async () => {
+  it('shows community approval state inside unified marketplace results', async () => {
     const pa = createPa();
 
     render(<SkillsPage pa={pa as never} context={{} as never} />);
 
-    await screen.findByText('PDF');
-    fireEvent.click(screen.getByText('Hermes'));
-
     await screen.findByText('Release QA');
     expect(screen.getByText('Community release QA checklist.')).toBeTruthy();
-    expect(screen.getAllByText('Approval required').length).toBeGreaterThan(0);
+    expect(screen.getByText('Hermes Skills Index')).toBeTruthy();
+    expect(screen.getByText('Approval required')).toBeTruthy();
     expect(pa.extensions.callAction).toHaveBeenCalledWith('system-skill-search', 'browseSkills', {
-      sourceId: 'hermes',
+      sourceId: 'all',
       query: '',
       limit: 60,
     });
@@ -152,7 +162,7 @@ describe('SkillsPage', () => {
     const pa = createPa({
       callAction: vi.fn(async (_extensionId: string, action: string, input?: unknown) => {
         if (action === 'browseSkills') {
-          return (input as { query?: string } | undefined)?.query ? { ...openAiBrowse, candidates: [] } : openAiBrowse;
+          return (input as { query?: string } | undefined)?.query ? { ...allBrowse, candidates: [] } : allBrowse;
         }
         return { ok: true };
       }),
@@ -164,8 +174,9 @@ describe('SkillsPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Search marketplace skills'), { target: { value: 'zzzz-no-such-skill-ga' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
-    await screen.findByText('No matching skills');
-    expect(screen.getByText('No skills in this source match the current search.')).toBeTruthy();
+    await screen.findByText('No marketplace skills match the current search.');
+    fireEvent.click(screen.getByRole('tab', { name: /Installed/ }));
+    expect(screen.getByText('Documents')).toBeTruthy();
   });
 
   it('installs a marketplace candidate and refreshes both data sources', async () => {
@@ -174,7 +185,7 @@ describe('SkillsPage', () => {
     render(<SkillsPage pa={pa as never} context={{} as never} />);
 
     await screen.findByText('PDF');
-    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install' })[0]);
 
     await screen.findByText('Installed PDF.');
     expect(pa.extensions.callAction).toHaveBeenCalledWith('system-skill-search', 'installSkill', { candidateId: 'pdf-candidate' });
@@ -190,8 +201,8 @@ describe('SkillsPage', () => {
 
     render(<SkillsPage pa={pa as never} context={{} as never} />);
 
-    await screen.findByText('Marketplace source unavailable');
-    fireEvent.click(screen.getByText('Manage'));
+    await screen.findAllByText('Marketplace unavailable');
+    fireEvent.click(screen.getByRole('tab', { name: /Installed/ }));
 
     expect(screen.getByText('Documents')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Disable Documents' })).toBeTruthy();
@@ -207,7 +218,7 @@ describe('SkillsPage', () => {
     render(<SkillsPage pa={pa as never} context={{} as never} />);
 
     await screen.findByText('PDF');
-    fireEvent.click(screen.getByText('Manage'));
+    fireEvent.click(screen.getByRole('tab', { name: /Installed/ }));
     fireEvent.click(screen.getByRole('switch', { name: 'Enable Build iOS Apps' }));
 
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('updateSkillEnabled', { id: 'ios', enabled: true }));

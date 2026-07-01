@@ -3,17 +3,23 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
+  DataTable,
+  DataTableActionGroup,
+  DataTableBody,
+  DataTableCell,
+  DataTableEmptyRow,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
   EmptyState,
   ErrorState,
   FilterToolbar,
+  IconButton,
   LoadingState,
   Notice,
-  Pill,
   ResourceList,
   ResourceListRow,
-  RowButton,
   SearchInput,
-  SectionLabel,
   SupportingText,
   Switch,
   TabButton,
@@ -24,7 +30,7 @@ import React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type SkillSource = 'extension' | 'knowledge' | 'project' | string;
-type SkillView = 'marketplace' | 'manage';
+type SkillView = 'marketplace' | 'installed';
 type TrustLevel = 'builtin' | 'trusted' | 'community';
 type SourceKind = 'github' | 'hermes-index';
 
@@ -149,34 +155,12 @@ function sourceLabel(skill: SkillItem): string {
   return skill.sourceLabel || skill.source;
 }
 
-function trustTone(trustLevel: TrustLevel): 'success' | 'warning' | 'muted' {
-  if (trustLevel === 'community') return 'warning';
-  if (trustLevel === 'trusted' || trustLevel === 'builtin') return 'success';
-  return 'muted';
-}
-
-function trustLabel(source: Pick<MarketplaceSource, 'trustLevel' | 'installPolicy'>): string {
-  if (source.installPolicy === 'approval-after-vetting') return 'Approval required';
-  if (source.trustLevel === 'trusted') return 'Trusted';
-  return source.trustLevel === 'builtin' ? 'Built in' : 'Community';
-}
-
 function candidateCategory(candidate: MarketplaceCandidate): string {
   const haystack = `${candidate.title} ${candidate.description} ${(candidate.tags ?? []).join(' ')}`.toLowerCase();
   if (/pdf|document|spreadsheet|presentation|slide|template|office|sheet|csv|xlsx|docx/.test(haystack)) return 'Productivity';
   if (/code|review|github|git|xcode|ios|security|test|qa|debug|build/.test(haystack)) return 'Coding';
   if (/image|video|audio|browser|computer|chrome|vision/.test(haystack)) return 'Tools';
   return 'Featured';
-}
-
-function skillIconLabel(value: string): string {
-  const letters = value
-    .split(/[^a-z0-9]+/i)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
-  return letters || 'SK';
 }
 
 function isCandidateInstalled(candidate: MarketplaceCandidate, installed: InstalledSkillRecord[]): boolean {
@@ -188,27 +172,14 @@ function isCandidateInstalled(candidate: MarketplaceCandidate, installed: Instal
   );
 }
 
-function installedUpstreamIds(installed: InstalledSkillRecord[]): Set<string> {
-  return new Set(installed.flatMap((skill) => [skill.id, skill.candidateId, skill.identifier].filter(Boolean) as string[]));
-}
-
-function groupCandidates(candidates: MarketplaceCandidate[], query: string): Array<{ name: string; candidates: MarketplaceCandidate[] }> {
-  if (candidates.length === 0) return [];
-  if (query.trim()) return [{ name: 'Results', candidates }];
-  const order = ['Featured', 'Productivity', 'Coding', 'Tools'];
-  const groups = new Map<string, MarketplaceCandidate[]>();
-  for (const candidate of candidates) {
-    const category = candidateCategory(candidate);
-    groups.set(category, [...(groups.get(category) ?? []), candidate]);
-  }
-  return order.flatMap((name) => {
-    const items = groups.get(name) ?? [];
-    return items.length ? [{ name, candidates: items }] : [];
-  });
-}
-
 function normalizeSources(value: MarketplaceSource[] | undefined): MarketplaceSource[] {
   return value?.length ? value : DEFAULT_SOURCES;
+}
+
+function candidateState(candidate: MarketplaceCandidate, installed: boolean): { label: string; className: string } {
+  if (installed) return { label: 'Installed', className: 'text-success' };
+  if (candidate.requiresApproval) return { label: 'Approval required', className: 'text-warning' };
+  return { label: 'Available', className: 'text-secondary' };
 }
 
 export function SkillsPage({ pa }: ExtensionSurfaceProps) {
@@ -217,8 +188,8 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   const [candidates, setCandidates] = useState<MarketplaceCandidate[]>([]);
   const [installedUpstream, setInstalledUpstream] = useState<InstalledSkillRecord[]>([]);
   const [view, setView] = useState<SkillView>('marketplace');
-  const [activeSourceId, setActiveSourceId] = useState('openai');
-  const [queryDraft, setQueryDraft] = useState('');
+  const [marketplaceQueryDraft, setMarketplaceQueryDraft] = useState('');
+  const [installedQueryDraft, setInstalledQueryDraft] = useState('');
   const [query, setQuery] = useState('');
   const [loadingSkills, setLoadingSkills] = useState(true);
   const [loadingMarketplace, setLoadingMarketplace] = useState(true);
@@ -242,12 +213,12 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   }, [pa]);
 
   const browseMarketplace = useCallback(
-    async (sourceId = activeSourceId, nextQuery = query) => {
+    async (nextQuery = query) => {
       setMarketplaceError(null);
       setLoadingMarketplace(true);
       try {
         const result = (await pa.extensions.callAction('system-skill-search', 'browseSkills', {
-          sourceId,
+          sourceId: 'all',
           query: nextQuery,
           limit: 60,
         })) as BrowseSkillsResult;
@@ -261,7 +232,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
         setLoadingMarketplace(false);
       }
     },
-    [activeSourceId, pa, query],
+    [pa, query],
   );
 
   useEffect(() => {
@@ -269,26 +240,18 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   }, [loadSkills]);
 
   useEffect(() => {
-    void browseMarketplace(activeSourceId, query);
-  }, [activeSourceId, browseMarketplace, query]);
-
-  const activeSource = useMemo(
-    () => sources.find((source) => source.id === activeSourceId) ?? sources[0] ?? DEFAULT_SOURCES[0],
-    [activeSourceId, sources],
-  );
-
-  const installedIds = useMemo(() => installedUpstreamIds(installedUpstream), [installedUpstream]);
-  const candidateGroups = useMemo(() => groupCandidates(candidates, query), [candidates, query]);
+    void browseMarketplace(query);
+  }, [browseMarketplace, query]);
 
   const filteredSkills = useMemo(() => {
-    const normalizedQuery = queryDraft.trim().toLowerCase();
+    const normalizedQuery = installedQueryDraft.trim().toLowerCase();
     if (!normalizedQuery) return skills;
     return skills.filter((skill) =>
       `${skill.name} ${skill.id} ${skill.description ?? ''} ${skill.path} ${skill.sourceLabel ?? ''}`
         .toLowerCase()
         .includes(normalizedQuery),
     );
-  }, [queryDraft, skills]);
+  }, [installedQueryDraft, skills]);
 
   const skillCounts = useMemo(
     () => ({
@@ -302,21 +265,18 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   const submitSearch = useCallback(
     (event?: { preventDefault(): void }) => {
       event?.preventDefault();
-      setQuery(queryDraft.trim());
+      if (view === 'marketplace') {
+        setQuery(marketplaceQueryDraft.trim());
+      }
     },
-    [queryDraft],
+    [marketplaceQueryDraft, view],
   );
-
-  const selectSource = useCallback((sourceId: string) => {
-    setActiveSourceId(sourceId);
-    setView('marketplace');
-  }, []);
 
   const refresh = useCallback(() => {
     setNotice(null);
     void loadSkills();
-    void browseMarketplace(activeSourceId, query);
-  }, [activeSourceId, browseMarketplace, loadSkills, query]);
+    void browseMarketplace(query);
+  }, [browseMarketplace, loadSkills, query]);
 
   const installCandidate = useCallback(
     async (candidate: MarketplaceCandidate) => {
@@ -334,14 +294,14 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
         } else {
           setNotice({ tone: 'success', message: result.message || `Installed ${candidate.title}.` });
         }
-        await Promise.all([loadSkills(), browseMarketplace(activeSourceId, query)]);
+        await Promise.all([loadSkills(), browseMarketplace(query)]);
       } catch (error) {
         setNotice({ tone: 'danger', message: readError(error) });
       } finally {
         setInstallingId(null);
       }
     },
-    [activeSourceId, browseMarketplace, loadSkills, pa, query],
+    [browseMarketplace, loadSkills, pa, query],
   );
 
   const toggleSkill = useCallback(
@@ -362,40 +322,6 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
     [pa],
   );
 
-  const renderCandidate = (candidate: MarketplaceCandidate) => {
-    const installed = isCandidateInstalled(candidate, installedUpstream);
-    const busy = installingId === candidate.candidateId;
-    return (
-      <ResourceListRow
-        key={candidate.candidateId}
-        title={candidate.title}
-        detail={candidate.description || candidate.identifier}
-        meta={
-          <Pill tone={trustTone(candidate.trustLevel)}>{candidate.requiresApproval ? 'Approval required' : candidate.sourceLabel}</Pill>
-        }
-        titleClassName="text-[13px]"
-        detailClassName="text-[12px] text-secondary"
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant={installed ? 'ghost' : 'action'} disabled={busy || installed} onClick={() => void installCandidate(candidate)}>
-              {busy ? 'Installing...' : installed ? 'Installed' : 'Install'}
-            </Button>
-            <Button variant="ghost" onClick={() => window.open(candidate.url, '_blank', 'noopener,noreferrer')}>
-              Source
-            </Button>
-          </div>
-        }
-      >
-        <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-dim">
-          <span>{candidate.identifier}</span>
-          {candidate.tags?.slice(0, 3).map((tag) => (
-            <span key={`${candidate.candidateId}:${tag}`}>{tag}</span>
-          ))}
-        </div>
-      </ResourceListRow>
-    );
-  };
-
   if (loadingSkills && loadingMarketplace) return <LoadingState label="Loading skills..." />;
   if (skillsError && marketplaceError) return <ErrorState title="Skills unavailable" message={`${skillsError} ${marketplaceError}`} />;
 
@@ -405,9 +331,9 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
         title="Skills"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={refresh} disabled={loadingSkills || loadingMarketplace}>
-              Refresh
-            </Button>
+            <IconButton aria-label="Refresh skills" title="Refresh skills" onClick={refresh} disabled={loadingSkills || loadingMarketplace}>
+              <span aria-hidden="true">↻</span>
+            </IconButton>
           </div>
         }
       />
@@ -419,22 +345,29 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
         filters={
           <TabList ariaLabel="Skill views">
             <TabButton active={view === 'marketplace'} onClick={() => setView('marketplace')}>
-              Marketplace
+              Browse
             </TabButton>
-            <TabButton active={view === 'manage'} onClick={() => setView('manage')}>
-              Manage <span className="text-dim">{skillCounts.installed}</span>
+            <TabButton active={view === 'installed'} onClick={() => setView('installed')}>
+              Installed <span className="text-dim">{skillCounts.installed}</span>
             </TabButton>
           </TabList>
         }
         search={
           <form className="flex min-w-0 items-center gap-2" onSubmit={submitSearch}>
             <SearchInput
-              value={queryDraft}
-              onChange={(event) => setQueryDraft(event.target.value)}
+              value={view === 'marketplace' ? marketplaceQueryDraft : installedQueryDraft}
+              onChange={(event) => {
+                if (view === 'marketplace') {
+                  setMarketplaceQueryDraft(event.target.value);
+                } else {
+                  setInstalledQueryDraft(event.target.value);
+                }
+              }}
               placeholder={view === 'marketplace' ? 'Search marketplace skills' : 'Search installed skills'}
               className="w-full md:w-80"
             />
-            <Button variant="secondary" type="submit">
+            <Button variant="toolbar" type="submit" title="Search skills">
+              <span aria-hidden="true">⌕</span>
               Search
             </Button>
           </form>
@@ -443,78 +376,85 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
 
       {view === 'marketplace' ? (
         <TabPanel>
-          <div className="grid gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
-            <section className="space-y-2">
-              <SectionLabel>Sources</SectionLabel>
-              <div className="divide-y divide-border-subtle rounded-md border border-border-subtle bg-surface">
-                {sources.map((source) => (
-                  <RowButton
-                    key={source.id}
-                    type="button"
-                    selected={activeSourceId === source.id}
-                    aria-pressed={activeSourceId === source.id}
-                    className="block px-3 py-2 text-left"
-                    onClick={() => selectSource(source.id)}
-                  >
-                    <span className="block text-[13px] font-medium text-primary">{source.label}</span>
-                    <span className="mt-0.5 block text-[11px] text-secondary">{trustLabel(source)}</span>
-                  </RowButton>
-                ))}
-              </div>
-            </section>
-
-            <section className="min-w-0 space-y-4">
-              {activeSource ? (
-                <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border-subtle bg-surface px-3 py-3">
-                  <div className="space-y-1">
-                    <h2 className="text-[15px] font-medium text-primary">{activeSource.label}</h2>
-                    <SupportingText>
-                      {activeSource.installPolicy === 'approval-after-vetting'
-                        ? 'Community skills are previewed, vetted, and approved before install.'
-                        : 'Trusted skills install after preview and vetting.'}
-                    </SupportingText>
-                  </div>
-                  <Pill tone={trustTone(activeSource.trustLevel)}>{trustLabel(activeSource)}</Pill>
-                </div>
-              ) : null}
-
-              {marketplaceError ? (
-                <Notice tone="danger" title="Marketplace source unavailable">
-                  {marketplaceError}
-                </Notice>
-              ) : null}
-              {loadingMarketplace ? <LoadingState label="Loading marketplace skills..." /> : null}
-
-              {!loadingMarketplace && !marketplaceError && candidateGroups.length === 0 ? (
-                <EmptyState
-                  title={query ? 'No matching skills' : 'No skills found'}
-                  body={
-                    query
-                      ? 'No skills in this source match the current search.'
-                      : 'This source did not return installable skills. Try another source or refresh.'
-                  }
-                />
-              ) : null}
-
-              {candidateGroups.map((group) => (
-                <section key={group.name} className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <SectionLabel>{group.name}</SectionLabel>
-                    <SupportingText>{group.candidates.length} skills</SupportingText>
-                  </div>
-                  <ResourceList>{group.candidates.map(renderCandidate)}</ResourceList>
-                </section>
-              ))}
-            </section>
+          <div className="space-y-3">
+            <SupportingText>
+              Searching {sources.length} marketplace sources. Trusted skills install after vetting; community skills require approval.
+            </SupportingText>
+            {marketplaceError ? (
+              <Notice tone="danger" title="Marketplace unavailable">
+                {marketplaceError}
+              </Notice>
+            ) : null}
+            {loadingMarketplace ? <LoadingState label="Loading marketplace skills..." /> : null}
+            <DataTable
+              tableClassName="table-fixed"
+              columns={
+                <colgroup>
+                  <col className="w-[34%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[13%]" />
+                </colgroup>
+              }
+            >
+              <DataTableHead>
+                <DataTableRow>
+                  <DataTableHeaderCell>Skill</DataTableHeaderCell>
+                  <DataTableHeaderCell>Capability</DataTableHeaderCell>
+                  <DataTableHeaderCell>Source</DataTableHeaderCell>
+                  <DataTableHeaderCell>State</DataTableHeaderCell>
+                  <DataTableHeaderCell className="text-right">Action</DataTableHeaderCell>
+                </DataTableRow>
+              </DataTableHead>
+              <DataTableBody>
+                {!loadingMarketplace && !marketplaceError && candidates.length === 0 ? (
+                  <DataTableEmptyRow colSpan={5} cellClassName="py-8">
+                    {query ? 'No marketplace skills match the current search.' : 'No installable skills returned.'}
+                  </DataTableEmptyRow>
+                ) : null}
+                {candidates.map((candidate) => {
+                  const installed = isCandidateInstalled(candidate, installedUpstream);
+                  const busy = installingId === candidate.candidateId;
+                  const state = candidateState(candidate, installed);
+                  return (
+                    <DataTableRow key={candidate.candidateId}>
+                      <DataTableCell className="min-w-0 py-2 pr-4">
+                        <div className="truncate text-[13px] font-medium text-primary">{candidate.title}</div>
+                        {candidate.description ? <div className="truncate text-[12px] text-secondary">{candidate.description}</div> : null}
+                      </DataTableCell>
+                      <DataTableCell className="py-2 text-[12px] text-secondary">{candidateCategory(candidate)}</DataTableCell>
+                      <DataTableCell className="min-w-0 py-2 text-[12px] text-secondary">
+                        <div className="truncate">{candidate.sourceLabel}</div>
+                        <div className="truncate text-dim">{candidate.trustLevel === 'community' ? 'Community' : 'Trusted'}</div>
+                      </DataTableCell>
+                      <DataTableCell className={`py-2 text-[12px] ${state.className}`}>{state.label}</DataTableCell>
+                      <DataTableCell className="py-2">
+                        <DataTableActionGroup>
+                          <Button
+                            variant={installed ? 'ghost' : 'action'}
+                            disabled={busy || installed}
+                            onClick={() => void installCandidate(candidate)}
+                          >
+                            {busy ? 'Installing...' : installed ? 'Installed' : 'Install'}
+                          </Button>
+                          <Button variant="ghost" onClick={() => window.open(candidate.url, '_blank', 'noopener,noreferrer')}>
+                            Details
+                          </Button>
+                        </DataTableActionGroup>
+                      </DataTableCell>
+                    </DataTableRow>
+                  );
+                })}
+              </DataTableBody>
+            </DataTable>
           </div>
         </TabPanel>
       ) : (
         <TabPanel>
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Pill tone="success">{skillCounts.enabled} enabled</Pill>
-              <Pill tone="muted">{skillCounts.disabled} disabled</Pill>
-              <Pill tone="teal">{installedUpstream.length} upstream records</Pill>
+            <div className="text-[12px] text-secondary">
+              {skillCounts.enabled} enabled · {skillCounts.disabled} disabled · {installedUpstream.length} upstream records
             </div>
             {loadingSkills ? <LoadingState label="Loading installed skills..." /> : null}
             {!loadingSkills && filteredSkills.length === 0 ? (
@@ -526,8 +466,8 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                   <ResourceListRow
                     key={`${skill.source}:${skill.id}:${skill.path}`}
                     title={skill.name}
-                    detail={skill.description || skill.path}
-                    meta={<Pill tone={skill.enabled ? 'success' : 'muted'}>{sourceLabel(skill)}</Pill>}
+                    detail={skill.description || sourceLabel(skill)}
+                    meta={<span className="text-[12px] text-secondary">{sourceLabel(skill)}</span>}
                     titleClassName="text-[13px]"
                     detailClassName="text-[12px] text-secondary"
                     actions={
@@ -540,7 +480,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                       />
                     }
                   >
-                    <div className="mt-1 truncate text-[11px] text-dim">{skill.sourceLabel ?? skill.path}</div>
+                    <div className="mt-1 truncate text-[11px] text-dim">{skill.enabled ? 'Enabled for agents' : 'Disabled'}</div>
                   </ResourceListRow>
                 ))}
               </ResourceList>
