@@ -1777,7 +1777,16 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
               {loading ? (
                 <QuietLoadingState label="Loading extensions" className="min-h-24" />
               ) : extensions.length === 0 ? (
-                <EmptyState title="No extensions installed" body="Install one from a source, or ask an agent to build one." />
+                <EmptyState
+                  title="Add capabilities to Neon Pilot"
+                  body="Extensions add native pages, tools, settings, skills, and workflow surfaces without changing the core app."
+                  steps={[
+                    'Install a released extension from a configured source.',
+                    'Ask an agent to build a small native extension.',
+                    'Use this page to validate, reload, enable, and inspect it.',
+                  ]}
+                  align="start"
+                />
               ) : visibleExtensions.length === 0 ? (
                 <EmptyState title={emptyVisibleExtensionsTitle} body={emptyVisibleExtensionsBody} />
               ) : (

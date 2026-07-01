@@ -270,10 +270,10 @@ describe('RoutinesPage', () => {
       </>,
     );
 
-    await screen.findByText('No events added');
+    await screen.findByText('How Routines work');
     expect(screen.getByText('No event selected')).toBeTruthy();
 
-    fireEvent.click(screen.getByText('Use checkpoint example'));
+    fireEvent.click(screen.getAllByText('Create')[0]);
 
     expect(await screen.findByText('When Checkpoint runs')).toBeTruthy();
     await waitFor(() => expect(screen.queryByText('No event selected')).toBeNull());

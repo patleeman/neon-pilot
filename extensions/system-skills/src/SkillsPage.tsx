@@ -835,7 +835,20 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
           <div className="space-y-3">
             {loadingSkills ? <QuietLoadingState label="Loading installed skills" className="min-h-12" /> : null}
             {!loadingSkills && filteredSkills.length === 0 ? (
-              <EmptyState title="No installed skills" body="No installed skills match the current search." />
+              installedQueryDraft.trim() ? (
+                <EmptyState title="No installed skills" body="No installed skills match the current search." />
+              ) : (
+                <EmptyState
+                  title="No installed skills"
+                  body="Skills give agents reusable instructions for focused work such as reviews, document handling, or domain workflows."
+                  steps={[
+                    'Browse Marketplace for trusted skill sources.',
+                    'Install a skill after previewing its source and trust level.',
+                    'Return here to enable, disable, and inspect installed skills.',
+                  ]}
+                  align="start"
+                />
+              )
             ) : null}
             {filteredSkills.length > 0 ? (
               <ResourceList>

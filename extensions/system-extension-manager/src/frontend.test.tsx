@@ -732,7 +732,7 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(screen.getByLabelText('More actions'));
     fireEvent.click(screen.getByText('Delete'));
 
-    await screen.findByText('No extensions installed');
+    await screen.findByText('Add capabilities to Neon Pilot');
     expect(screen.queryByText('Onboarding')).toBeNull();
   });
 

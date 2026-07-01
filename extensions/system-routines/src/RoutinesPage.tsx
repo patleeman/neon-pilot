@@ -2,7 +2,6 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   type ActivityTreeItem,
   ActivityTreeView,
-  AppPageEmptyState,
   AppPageIntro,
   AppPageLayout,
   Button,
@@ -16,6 +15,7 @@ import {
   IconButton,
   MenuItem,
   MenuShell,
+  Pill,
   PositionedMenu,
   Select,
   SidebarSection,
@@ -184,6 +184,70 @@ function checkpointExampleRoutine(hookId = 'checkpoint'): Routine {
       { id: 'issues_found', label: 'Issues found', target: 'Stop checkpoint and report issues', behavior: 'block' },
       { id: 'needs_validation', label: 'Needs validation', target: 'Warn and continue', behavior: 'warn' },
       { id: 'unclear', label: 'Unclear', target: 'Ask before continuing', behavior: 'ask' },
+    ],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function checkpointHandoffExampleRoutine(hookId = 'checkpoint'): Routine {
+  const timestamp = new Date().toISOString();
+  return {
+    id: `routine-${Date.now().toString(36)}`,
+    hookId,
+    position: 'after',
+    type: 'instruction',
+    name: 'Write checkpoint handoff',
+    instruction: 'Summarize what changed in this checkpoint, call out unresolved risks, and list the next useful follow-up.',
+    enabled: true,
+    order: 0,
+    failureBehavior: 'warn',
+    outcomes: [],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function riskyBackgroundWorkExampleRoutine(hookId = 'background.command'): Routine {
+  const timestamp = new Date().toISOString();
+  return {
+    id: `routine-${Date.now().toString(36)}`,
+    hookId,
+    position: 'before',
+    type: 'decision',
+    name: 'Ask before risky background work',
+    instruction:
+      'Inspect the background command. If it can delete files, rewrite history, change credentials, or run outside the workspace, ask before continuing.',
+    enabled: true,
+    order: 0,
+    failureBehavior: 'block',
+    outcomes: [
+      { id: 'safe', label: 'Safe', target: 'Continue background command', behavior: 'continue' },
+      { id: 'ask_first', label: 'Ask first', target: 'Ask before running', behavior: 'ask' },
+      { id: 'block', label: 'Block', target: 'Stop the command and explain why', behavior: 'block' },
+    ],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function agentStartPathExampleRoutine(hookId = 'agent.before_start'): Routine {
+  const timestamp = new Date().toISOString();
+  return {
+    id: `routine-${Date.now().toString(36)}`,
+    hookId,
+    position: 'before',
+    type: 'decision',
+    name: 'Choose a path before agent start',
+    instruction:
+      'Read the user request and choose the best starting mode: plan first, implement directly, or ask a clarifying question before work begins.',
+    enabled: true,
+    order: 0,
+    failureBehavior: 'warn',
+    outcomes: [
+      { id: 'plan', label: 'Plan', target: 'Start with a concise implementation plan', behavior: 'warn' },
+      { id: 'implement', label: 'Implement', target: 'Proceed with implementation', behavior: 'continue' },
+      { id: 'ask', label: 'Ask', target: 'Ask for missing information before starting', behavior: 'ask' },
     ],
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -789,21 +853,26 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     [data, hookRoutines, selectedHook],
   );
 
-  const addCheckpointExample = useCallback(() => {
-    const hookId = data?.hooks.some((hook) => hook.id === 'checkpoint') ? 'checkpoint' : (data?.hooks[0]?.id ?? 'checkpoint');
-    const routine = checkpointExampleRoutine(hookId);
-    setShowAdd(false);
-    setShowEvents(false);
-    setActionError(null);
-    setSelectedHookId(hookId);
-    setSelectedRoutineId(routine.id);
-    setPendingScrollRoutineId(routine.id);
-    setDraft({ ...routine, outcomes: routine.outcomes.map((outcome) => ({ ...outcome })) });
-    setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
-    const next = data ? withHookSummaries({ ...data, routines: [...data.routines, routine] }) : data;
-    setData(next);
-    if (next) publishRoutinesState(next);
-  }, [data]);
+  const addExampleRoutine = useCallback(
+    (preferredHookId: string, createRoutine: (hookId: string) => Routine) => {
+      const hookId = data?.hooks.some((hook) => hook.id === preferredHookId) ? preferredHookId : (data?.hooks[0]?.id ?? preferredHookId);
+      const routine = createRoutine(hookId);
+      setShowAdd(false);
+      setShowEvents(false);
+      setActionError(null);
+      setSelectedHookId(hookId);
+      setSelectedRoutineId(routine.id);
+      setPendingScrollRoutineId(routine.id);
+      setDraft({ ...routine, outcomes: routine.outcomes.map((outcome) => ({ ...outcome })) });
+      setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
+      const next = data ? withHookSummaries({ ...data, routines: [...data.routines, routine] }) : data;
+      setData(next);
+      if (next) publishRoutinesState(next);
+    },
+    [data],
+  );
+
+  const addCheckpointExample = useCallback(() => addExampleRoutine('checkpoint', checkpointExampleRoutine), [addExampleRoutine]);
 
   const moveRoutineById = useCallback(
     async (
@@ -1054,12 +1123,39 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   );
 
   if (!selectedHook) {
+    const exampleRows = [
+      {
+        title: 'Check before checkpoint',
+        body: 'Review changed files before saving a checkpoint, then stop or warn if something looks unfinished.',
+        action: () => addExampleRoutine('checkpoint', checkpointExampleRoutine),
+        primary: true,
+      },
+      {
+        title: 'Write a checkpoint handoff',
+        body: 'After a checkpoint saves, summarize what changed and what still needs attention.',
+        action: () => addExampleRoutine('checkpoint', checkpointHandoffExampleRoutine),
+        primary: false,
+      },
+      {
+        title: 'Ask before risky background work',
+        body: 'Pause background commands that can delete files, rewrite history, or change credentials.',
+        action: () => addExampleRoutine('background.command', riskyBackgroundWorkExampleRoutine),
+        primary: false,
+      },
+      {
+        title: 'Choose a path before agent start',
+        body: 'Route a request through planning, direct implementation, or a clarification before work begins.',
+        action: () => addExampleRoutine('agent.before_start', agentStartPathExampleRoutine),
+        primary: false,
+      },
+    ];
+
     return (
       <div className="h-full min-h-0 overflow-auto bg-app text-[13px] text-primary">
         <AppPageLayout contentClassName="flex min-h-full w-full max-w-none flex-col gap-5">
           <AppPageIntro
             title="Routines"
-            summary="Attach prompt workflows to lifecycle events. A routine can run before or after an event, choose a path, ask you, warn, or stop the event."
+            summary="Teach Neon Pilot what to do around key moments in your workflow."
             actions={
               <div className="relative" data-routines-menu="true">
                 <ToolbarButton type="button" onClick={() => setShowEvents((value) => !value)}>
@@ -1069,26 +1165,67 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               </div>
             }
           />
-          <AppPageEmptyState
-            align="start"
-            eyebrow="No events added"
-            title="Choose the first lifecycle event to automate"
-            body="Events are moments like Checkpoint, Before agent starts, or Background command. Add an event, then place routines in Before or After."
-            steps={['Add a lifecycle event.', 'Add a prompt routine or choose-path routine.', 'Review recent runs in the right rail.']}
-            action={
-              <div className="flex flex-wrap gap-2">
-                <div className="relative" data-routines-menu="true">
-                  <ToolbarButton type="button" onClick={() => setShowEvents((value) => !value)}>
-                    Add event
-                  </ToolbarButton>
-                  {showEvents ? renderEventMenu('left') : null}
-                </div>
-                <Button type="button" variant="toolbar" onClick={addCheckpointExample}>
-                  Use checkpoint example
-                </Button>
+
+          <section className="max-w-[54rem] overflow-hidden rounded-md border border-border-subtle bg-surface/30">
+            <div className="grid gap-4 border-b border-border-subtle px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto]">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">No events added</div>
+                <h2 className="m-0 mt-2 text-[18px] font-semibold">How Routines work</h2>
+                <p className="m-0 mt-2 max-w-[42rem] text-[13px] leading-5 text-secondary">
+                  Routines are prompt blocks that run automatically before or after lifecycle events, such as checkpoint saves, agent
+                  starts, or background commands.
+                </p>
               </div>
-            }
-          />
+              <Pill tone="accent">First run</Pill>
+            </div>
+
+            <div className="grid border-b border-border-subtle md:grid-cols-3">
+              {[
+                ['1', 'Pick an event', 'Events are moments Neon Pilot can react to, like Checkpoint or Before agent starts.'],
+                ['2', 'Place routines', 'Use Before for setup checks and After for follow-up work once the event finishes.'],
+                ['3', 'Review runs', 'Each execution records status, warnings, stops, and branch choices in the context rail.'],
+              ].map(([index, title, body], itemIndex) => (
+                <div key={title} className={cx('p-4', itemIndex > 0 ? 'border-t border-border-subtle md:border-l md:border-t-0' : '')}>
+                  <Pill tone="accent" mono>
+                    {index}
+                  </Pill>
+                  <h3 className="m-0 mt-2 text-[13px] font-semibold">{title}</h3>
+                  <p className="m-0 mt-1 text-[12px] leading-5 text-secondary">{body}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-3 px-4 py-4">
+              <div>
+                <h3 className="m-0 text-[13px] font-semibold">Try a ready-made routine</h3>
+                <p className="m-0 mt-1 text-[12px] text-secondary">Pick an example, then edit its prompts and lanes after it is created.</p>
+              </div>
+              <div className="overflow-hidden rounded-md border border-border-subtle bg-app/40">
+                {exampleRows.map((example, index) => (
+                  <div
+                    key={example.title}
+                    className={cx(
+                      'grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center',
+                      index > 0 ? 'border-t border-border-subtle' : '',
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium text-primary">{example.title}</div>
+                      <div className="mt-0.5 text-[12px] leading-5 text-secondary">{example.body}</div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={example.primary ? 'action' : 'toolbar'}
+                      tone={example.primary ? 'accent' : undefined}
+                      onClick={example.action}
+                    >
+                      Create
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
         </AppPageLayout>
       </div>
     );

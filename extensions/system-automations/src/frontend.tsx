@@ -745,10 +745,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             {!loading && visibleTasks.length === 0 ? (
               <DataTableEmptyRow colSpan={7} cellClassName="py-10 text-left">
                 <EmptyState
-                  eyebrow="Table page"
-                  title="No automations yet"
-                  body="Automations run prompts on a schedule, then keep the owner thread updated with the result."
-                  steps={['Create an automation.', 'Choose when it should run.', 'Pick the conversation that owns the follow-up.']}
+                  title="Schedule work into a conversation"
+                  body="Automations run prompts on a one-time or recurring schedule, then write the result back to an owner thread."
+                  steps={[
+                    'Pick an owner thread so every run is auditable.',
+                    'Choose a schedule such as daily, weekdays, or one-time follow-up.',
+                    'Use it for project check-ins, release watches, reminders, or recurring reports.',
+                  ]}
                   action={
                     <Button variant="action" tone="accent" onClick={openCreate}>
                       <span aria-hidden="true">+</span>

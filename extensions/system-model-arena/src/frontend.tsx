@@ -357,13 +357,12 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
               ) : ranked.length === 0 ? (
                 <DataTableEmptyRow colSpan={6} cellClassName="py-10 text-left">
                   <EmptyState
-                    eyebrow="Table page"
-                    title="No model votes yet"
-                    body="Model Arena records votes after challenger models compare answers in conversations."
+                    title="Compare models during real conversations"
+                    body="Model Arena samples normal prompts, runs challenger models in parallel, and records blind votes after you choose the better answer."
                     steps={[
-                      'Add at least one challenger model in the right rail.',
-                      'Leave automatic duels on.',
-                      'Vote when a duel appears in a conversation.',
+                      'Add at least one challenger model in the context rail.',
+                      'Keep automatic duels on so eligible prompts can create comparisons.',
+                      'Vote on the inline duel to build local preference stats.',
                     ]}
                     align="start"
                     className="max-w-[34rem]"
