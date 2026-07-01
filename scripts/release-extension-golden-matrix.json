@@ -56,7 +56,7 @@
     {
       "extensionId": "system-routines",
       "path": "/routines",
-      "text": ["Routines", "No routines yet. Add an event to start.", "Use checkpoint example"]
+      "text": ["Routines", "How Routines work", "Check before checkpoint"]
     },
     {
       "extensionId": "system-dynamic-workflows",
