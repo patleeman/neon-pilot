@@ -2093,10 +2093,20 @@ var SettingsPanelErrorBoundary = class extends neon_pilot_shared_react_default.C
 // extensions/system-alerts/src/frontend.tsx
 init_neon_pilot_shared_react();
 var SOUND_OPTIONS = [
-  { id: "ping", label: "Ping" },
+  { id: "basso", label: "Basso" },
+  { id: "blow", label: "Blow" },
+  { id: "bottle", label: "Bottle" },
+  { id: "frog", label: "Frog" },
+  { id: "funk", label: "Funk" },
   { id: "glass", label: "Glass" },
+  { id: "hero", label: "Hero" },
+  { id: "morse", label: "Morse" },
+  { id: "ping", label: "Ping" },
   { id: "pop", label: "Pop" },
-  { id: "submarine", label: "Submarine" }
+  { id: "purr", label: "Purr" },
+  { id: "sosumi", label: "Sosumi" },
+  { id: "submarine", label: "Submarine" },
+  { id: "tink", label: "Tink" }
 ];
 function statusText(settings, systemNotificationsAvailable) {
   if (!settings.enabled) return "Paused";

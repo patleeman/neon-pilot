@@ -1,5 +1,23 @@
 import { createRequire as __paExtensionCreateRequire } from "node:module"; const require = __paExtensionCreateRequire(import.meta.url);
 
+// extensions/system-alerts/src/types.ts
+var ALERT_SOUND_IDS = [
+  "basso",
+  "blow",
+  "bottle",
+  "frog",
+  "funk",
+  "glass",
+  "hero",
+  "morse",
+  "ping",
+  "pop",
+  "purr",
+  "sosumi",
+  "submarine",
+  "tink"
+];
+
 // extensions/system-alerts/src/backend.ts
 var SETTINGS_KEY = "settings";
 var NOTIFIED_PREFIX = "notified/";
@@ -13,16 +31,26 @@ var DEFAULT_SETTINGS = {
   sound: "pop"
 };
 var SOUND_PATHS = {
-  ping: "/System/Library/Sounds/Ping.aiff",
+  basso: "/System/Library/Sounds/Basso.aiff",
+  blow: "/System/Library/Sounds/Blow.aiff",
+  bottle: "/System/Library/Sounds/Bottle.aiff",
+  frog: "/System/Library/Sounds/Frog.aiff",
+  funk: "/System/Library/Sounds/Funk.aiff",
   glass: "/System/Library/Sounds/Glass.aiff",
+  hero: "/System/Library/Sounds/Hero.aiff",
+  morse: "/System/Library/Sounds/Morse.aiff",
+  ping: "/System/Library/Sounds/Ping.aiff",
   pop: "/System/Library/Sounds/Pop.aiff",
-  submarine: "/System/Library/Sounds/Submarine.aiff"
+  purr: "/System/Library/Sounds/Purr.aiff",
+  sosumi: "/System/Library/Sounds/Sosumi.aiff",
+  submarine: "/System/Library/Sounds/Submarine.aiff",
+  tink: "/System/Library/Sounds/Tink.aiff"
 };
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 function normalizeSound(value) {
-  return value === "glass" || value === "pop" || value === "submarine" || value === "ping" ? value : DEFAULT_SETTINGS.sound;
+  return typeof value === "string" && ALERT_SOUND_IDS.includes(value) ? value : DEFAULT_SETTINGS.sound;
 }
 function normalizeSettings(value) {
   const record = isRecord(value) ? value : {};
@@ -41,7 +69,7 @@ function normalizeUpdate(input) {
   if (typeof input.nativeNotifications === "boolean") update.nativeNotifications = input.nativeNotifications;
   if (typeof input.soundEnabled === "boolean") update.soundEnabled = input.soundEnabled;
   if (input.severity === "all" || input.severity === "disruptive") update.severity = input.severity;
-  if (input.sound === "ping" || input.sound === "glass" || input.sound === "pop" || input.sound === "submarine") update.sound = input.sound;
+  if (typeof input.sound === "string" && ALERT_SOUND_IDS.includes(input.sound)) update.sound = input.sound;
   return update;
 }
 async function loadSettings(ctx) {

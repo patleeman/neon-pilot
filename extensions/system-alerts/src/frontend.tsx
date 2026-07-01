@@ -5,10 +5,20 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { AlertsSettings, AlertsSettingsState, AlertSoundId, AlertSeverityFilter } from './types.js';
 
 const SOUND_OPTIONS: Array<{ id: AlertSoundId; label: string }> = [
-  { id: 'ping', label: 'Ping' },
+  { id: 'basso', label: 'Basso' },
+  { id: 'blow', label: 'Blow' },
+  { id: 'bottle', label: 'Bottle' },
+  { id: 'frog', label: 'Frog' },
+  { id: 'funk', label: 'Funk' },
   { id: 'glass', label: 'Glass' },
+  { id: 'hero', label: 'Hero' },
+  { id: 'morse', label: 'Morse' },
+  { id: 'ping', label: 'Ping' },
   { id: 'pop', label: 'Pop' },
+  { id: 'purr', label: 'Purr' },
+  { id: 'sosumi', label: 'Sosumi' },
   { id: 'submarine', label: 'Submarine' },
+  { id: 'tink', label: 'Tink' },
 ];
 
 interface AlertsSettingsPanelProps {

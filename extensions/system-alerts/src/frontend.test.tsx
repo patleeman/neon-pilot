@@ -100,6 +100,22 @@ describe('AlertsSettingsPanel', () => {
     await act(async () => flush());
 
     expect(container.querySelector('[aria-label="Attention alerts"]')).not.toBeNull();
+    expect([...container.querySelectorAll('select[aria-label="Alert sound"] option')].map((option) => option.textContent)).toEqual([
+      'Basso',
+      'Blow',
+      'Bottle',
+      'Frog',
+      'Funk',
+      'Glass',
+      'Hero',
+      'Morse',
+      'Ping',
+      'Pop',
+      'Purr',
+      'Sosumi',
+      'Submarine',
+      'Tink',
+    ]);
     const toggle = container.querySelector<HTMLButtonElement>('button[aria-label="Disable attention alerts"]');
     expect(toggle).not.toBeNull();
 

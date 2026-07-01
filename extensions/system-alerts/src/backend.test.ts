@@ -79,13 +79,13 @@ describe('system-alerts backend', () => {
     const ctx = createCtx();
 
     await expect(
-      updateSettings({ enabled: false, severity: 'all', sound: 'glass', ignored: true }, ctx as never),
+      updateSettings({ enabled: false, severity: 'all', sound: 'tink', ignored: true }, ctx as never),
     ).resolves.toEqual(
       expect.objectContaining({
         settings: expect.objectContaining({
           enabled: false,
           severity: 'all',
-          sound: 'glass',
+          sound: 'tink',
         }),
       }),
     );
@@ -95,7 +95,7 @@ describe('system-alerts backend', () => {
       nativeNotifications: true,
       soundEnabled: true,
       severity: 'all',
-      sound: 'glass',
+      sound: 'tink',
     });
   });
 
@@ -156,13 +156,13 @@ describe('system-alerts backend', () => {
   });
 
   it('honors disabled channels and sends test alerts', async () => {
-    const ctx = createCtx({ settings: { nativeNotifications: false, soundEnabled: true, sound: 'pop' } });
+    const ctx = createCtx({ settings: { nativeNotifications: false, soundEnabled: true, sound: 'tink' } });
 
     await onAlertUpserted(event(), ctx as never);
     expect(ctx.notify.system).not.toHaveBeenCalled();
     expect(ctx.shell.spawn).toHaveBeenCalledWith({
       command: '/usr/bin/afplay',
-      args: ['/System/Library/Sounds/Pop.aiff'],
+      args: ['/System/Library/Sounds/Tink.aiff'],
       onExit: expect.any(Function),
     });
 

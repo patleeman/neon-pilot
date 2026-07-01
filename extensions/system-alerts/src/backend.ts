@@ -1,5 +1,6 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
+import { ALERT_SOUND_IDS } from './types.js';
 import type { AlertRecord, AlertsSettings, AlertsSettingsState, AlertSoundId, AlertSubscriptionEvent } from './types.js';
 
 const SETTINGS_KEY = 'settings';
@@ -16,10 +17,20 @@ const DEFAULT_SETTINGS: AlertsSettings = {
 };
 
 const SOUND_PATHS: Record<AlertSoundId, string> = {
-  ping: '/System/Library/Sounds/Ping.aiff',
+  basso: '/System/Library/Sounds/Basso.aiff',
+  blow: '/System/Library/Sounds/Blow.aiff',
+  bottle: '/System/Library/Sounds/Bottle.aiff',
+  frog: '/System/Library/Sounds/Frog.aiff',
+  funk: '/System/Library/Sounds/Funk.aiff',
   glass: '/System/Library/Sounds/Glass.aiff',
+  hero: '/System/Library/Sounds/Hero.aiff',
+  morse: '/System/Library/Sounds/Morse.aiff',
+  ping: '/System/Library/Sounds/Ping.aiff',
   pop: '/System/Library/Sounds/Pop.aiff',
+  purr: '/System/Library/Sounds/Purr.aiff',
+  sosumi: '/System/Library/Sounds/Sosumi.aiff',
   submarine: '/System/Library/Sounds/Submarine.aiff',
+  tink: '/System/Library/Sounds/Tink.aiff',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -27,7 +38,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeSound(value: unknown): AlertSoundId {
-  return value === 'glass' || value === 'pop' || value === 'submarine' || value === 'ping' ? value : DEFAULT_SETTINGS.sound;
+  return typeof value === 'string' && ALERT_SOUND_IDS.includes(value as AlertSoundId) ? (value as AlertSoundId) : DEFAULT_SETTINGS.sound;
 }
 
 function normalizeSettings(value: unknown): AlertsSettings {
@@ -49,7 +60,7 @@ function normalizeUpdate(input: unknown): Partial<AlertsSettings> {
   if (typeof input.nativeNotifications === 'boolean') update.nativeNotifications = input.nativeNotifications;
   if (typeof input.soundEnabled === 'boolean') update.soundEnabled = input.soundEnabled;
   if (input.severity === 'all' || input.severity === 'disruptive') update.severity = input.severity;
-  if (input.sound === 'ping' || input.sound === 'glass' || input.sound === 'pop' || input.sound === 'submarine') update.sound = input.sound;
+  if (typeof input.sound === 'string' && ALERT_SOUND_IDS.includes(input.sound as AlertSoundId)) update.sound = input.sound as AlertSoundId;
   return update;
 }
 
