@@ -69,7 +69,7 @@ describe('system-alerts backend', () => {
         nativeNotifications: true,
         soundEnabled: true,
         severity: 'disruptive',
-        sound: 'ping',
+        sound: 'pop',
       },
       systemNotificationsAvailable: true,
     });
@@ -112,10 +112,26 @@ describe('system-alerts backend', () => {
     });
     expect(ctx.shell.spawn).toHaveBeenCalledWith({
       command: '/usr/bin/afplay',
-      args: ['/System/Library/Sounds/Ping.aiff'],
+      args: ['/System/Library/Sounds/Pop.aiff'],
       onExit: expect.any(Function),
     });
     expect(ctx.storage.put).toHaveBeenCalledWith('notified/alert-1', expect.objectContaining({ updatedAt: '2026-03-26T14:00:00.000Z' }));
+  });
+
+  it('coalesces alert sounds during a burst', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-26T14:00:00.000Z'));
+    const ctx = createCtx();
+
+    await onAlertUpserted(event(), ctx as never);
+    await onAlertUpserted(event(alert({ id: 'alert-2', updatedAt: '2026-03-26T14:00:01.000Z' })), ctx as never);
+
+    expect(ctx.notify.system).toHaveBeenCalledTimes(2);
+    expect(ctx.shell.spawn).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date('2026-03-26T14:00:11.000Z'));
+    await onAlertUpserted(event(alert({ id: 'alert-3', updatedAt: '2026-03-26T14:00:11.000Z' })), ctx as never);
+    expect(ctx.shell.spawn).toHaveBeenCalledTimes(2);
   });
 
   it('does not redeliver the same alert timestamp', async () => {

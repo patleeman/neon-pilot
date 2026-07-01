@@ -2167,7 +2167,7 @@ function AlertsSettingsPanel({ pa }) {
         onClick: () => void save({ nativeNotifications: !settings.nativeNotifications })
       }
     ) }),
-    /* @__PURE__ */ jsx(SettingsRow, { title: "Sound", description: "Play a short macOS system sound with each delivered alert.", children: /* @__PURE__ */ jsxs("div", { className: "flex min-w-0 items-center gap-2", children: [
+    /* @__PURE__ */ jsx(SettingsRow, { title: "Sound", description: "Play a short macOS system sound when alerts arrive, coalesced during bursts.", children: /* @__PURE__ */ jsxs("div", { className: "flex min-w-0 items-center gap-2", children: [
       /* @__PURE__ */ jsx(
         Select,
         {

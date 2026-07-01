@@ -75,7 +75,7 @@ describe('AlertsSettingsPanel', () => {
             nativeNotifications: true,
             soundEnabled: true,
             severity: 'disruptive',
-            sound: 'ping',
+            sound: 'pop',
           },
           systemNotificationsAvailable: true,
         };
@@ -87,7 +87,7 @@ describe('AlertsSettingsPanel', () => {
             nativeNotifications: true,
             soundEnabled: true,
             severity: 'disruptive',
-            sound: 'ping',
+            sound: 'pop',
             ...(input as Record<string, unknown>),
           },
           systemNotificationsAvailable: true,
@@ -120,7 +120,7 @@ describe('AlertsSettingsPanel', () => {
             nativeNotifications: true,
             soundEnabled: true,
             severity: 'disruptive',
-            sound: 'ping',
+            sound: 'pop',
           },
           systemNotificationsAvailable: false,
         };

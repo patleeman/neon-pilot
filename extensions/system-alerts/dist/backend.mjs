@@ -3,12 +3,14 @@ import { createRequire as __paExtensionCreateRequire } from "node:module"; const
 // extensions/system-alerts/src/backend.ts
 var SETTINGS_KEY = "settings";
 var NOTIFIED_PREFIX = "notified/";
+var LAST_SOUND_KEY = "lastSound";
+var SOUND_COOLDOWN_MS = 1e4;
 var DEFAULT_SETTINGS = {
   enabled: true,
   nativeNotifications: true,
   soundEnabled: true,
   severity: "disruptive",
-  sound: "ping"
+  sound: "pop"
 };
 var SOUND_PATHS = {
   ping: "/System/Library/Sounds/Ping.aiff",
@@ -69,8 +71,17 @@ async function alreadyDelivered(ctx, alert) {
   await ctx.storage.put(key, { updatedAt: alert.updatedAt, deliveredAt: (/* @__PURE__ */ new Date()).toISOString() });
   return false;
 }
-async function playSound(ctx, settings) {
-  const soundPath = SOUND_PATHS[settings.sound] ?? SOUND_PATHS.ping;
+async function playSound(ctx, settings, options = {}) {
+  const now = Date.now();
+  if (!options.force) {
+    const previous = await ctx.storage.get(LAST_SOUND_KEY);
+    const previousPlayedAt = isRecord(previous) && typeof previous.playedAt === "number" ? previous.playedAt : 0;
+    if (now - previousPlayedAt < SOUND_COOLDOWN_MS) {
+      return;
+    }
+  }
+  await ctx.storage.put(LAST_SOUND_KEY, { playedAt: now });
+  const soundPath = SOUND_PATHS[settings.sound] ?? SOUND_PATHS.pop;
   try {
     const child = await ctx.shell.spawn({
       command: "/usr/bin/afplay",
@@ -89,7 +100,7 @@ async function playSound(ctx, settings) {
     ctx.log.warn("failed to play alert sound", { message: error instanceof Error ? error.message : String(error), soundPath });
   }
 }
-async function deliverAlert(ctx, alert, settings) {
+async function deliverAlert(ctx, alert, settings, options = {}) {
   if (settings.nativeNotifications) {
     const delivered = ctx.notify.system({
       title: alert.title || "Neon Pilot needs attention",
@@ -102,7 +113,7 @@ async function deliverAlert(ctx, alert, settings) {
     }
   }
   if (settings.soundEnabled) {
-    await playSound(ctx, settings);
+    await playSound(ctx, settings, { force: options.forceSound });
   }
 }
 async function readSettings(_input, ctx) {
@@ -135,7 +146,8 @@ async function sendTestAlert(_input, ctx) {
       sourceKind: "system-alerts",
       sourceId: "test"
     },
-    { ...settings, enabled: true }
+    { ...settings, enabled: true },
+    { forceSound: true }
   );
   return { ok: true };
 }

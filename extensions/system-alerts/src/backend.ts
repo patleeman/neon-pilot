@@ -4,13 +4,15 @@ import type { AlertRecord, AlertsSettings, AlertsSettingsState, AlertSoundId, Al
 
 const SETTINGS_KEY = 'settings';
 const NOTIFIED_PREFIX = 'notified/';
+const LAST_SOUND_KEY = 'lastSound';
+const SOUND_COOLDOWN_MS = 10_000;
 
 const DEFAULT_SETTINGS: AlertsSettings = {
   enabled: true,
   nativeNotifications: true,
   soundEnabled: true,
   severity: 'disruptive',
-  sound: 'ping',
+  sound: 'pop',
 };
 
 const SOUND_PATHS: Record<AlertSoundId, string> = {
@@ -83,8 +85,18 @@ async function alreadyDelivered(ctx: ExtensionBackendContext, alert: AlertRecord
   return false;
 }
 
-async function playSound(ctx: ExtensionBackendContext, settings: AlertsSettings): Promise<void> {
-  const soundPath = SOUND_PATHS[settings.sound] ?? SOUND_PATHS.ping;
+async function playSound(ctx: ExtensionBackendContext, settings: AlertsSettings, options: { force?: boolean } = {}): Promise<void> {
+  const now = Date.now();
+  if (!options.force) {
+    const previous = await ctx.storage.get<{ playedAt?: number }>(LAST_SOUND_KEY);
+    const previousPlayedAt = isRecord(previous) && typeof previous.playedAt === 'number' ? previous.playedAt : 0;
+    if (now - previousPlayedAt < SOUND_COOLDOWN_MS) {
+      return;
+    }
+  }
+  await ctx.storage.put(LAST_SOUND_KEY, { playedAt: now });
+
+  const soundPath = SOUND_PATHS[settings.sound] ?? SOUND_PATHS.pop;
   try {
     const child = await ctx.shell.spawn({
       command: '/usr/bin/afplay',
@@ -104,7 +116,12 @@ async function playSound(ctx: ExtensionBackendContext, settings: AlertsSettings)
   }
 }
 
-async function deliverAlert(ctx: ExtensionBackendContext, alert: AlertRecord, settings: AlertsSettings): Promise<void> {
+async function deliverAlert(
+  ctx: ExtensionBackendContext,
+  alert: AlertRecord,
+  settings: AlertsSettings,
+  options: { forceSound?: boolean } = {},
+): Promise<void> {
   if (settings.nativeNotifications) {
     const delivered = ctx.notify.system({
       title: alert.title || 'Neon Pilot needs attention',
@@ -118,7 +135,7 @@ async function deliverAlert(ctx: ExtensionBackendContext, alert: AlertRecord, se
   }
 
   if (settings.soundEnabled) {
-    await playSound(ctx, settings);
+    await playSound(ctx, settings, { force: options.forceSound });
   }
 }
 
@@ -155,6 +172,7 @@ export async function sendTestAlert(_input: unknown, ctx: ExtensionBackendContex
       sourceId: 'test',
     },
     { ...settings, enabled: true },
+    { forceSound: true },
   );
   return { ok: true };
 }

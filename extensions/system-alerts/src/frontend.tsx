@@ -96,7 +96,7 @@ export function AlertsSettingsPanel({ pa }: AlertsSettingsPanelProps) {
         />
       </SettingsRow>
 
-      <SettingsRow title="Sound" description="Play a short macOS system sound with each delivered alert.">
+      <SettingsRow title="Sound" description="Play a short macOS system sound when alerts arrive, coalesced during bursts.">
         <div className="flex min-w-0 items-center gap-2">
           <Select
             aria-label="Alert sound"

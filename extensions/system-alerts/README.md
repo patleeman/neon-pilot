@@ -12,7 +12,7 @@ System extension that sends native macOS notifications and optionally plays a so
 The backend listens for `host:alerts:upserted` events. It filters alerts through extension settings, suppresses duplicate delivery for the same alert `updatedAt`, then sends:
 
 - `ctx.notify.system(...)` for macOS Notification Center delivery
-- `ctx.shell.spawn({ command: "/usr/bin/afplay" })` for the selected system sound
+- `ctx.shell.spawn({ command: "/usr/bin/afplay" })` for the selected system sound, coalesced during alert bursts
 
 The extension does not import core or desktop internals. Core alert producers publish through the host event bus; this extension reacts through the public subscription API.
 
