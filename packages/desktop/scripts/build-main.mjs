@@ -139,3 +139,22 @@ await build({
   nodePaths,
   ...sharedNodeBuildOptions,
 });
+
+// Build transcript read worker. Transcript page loads can parse very large
+// JSONL files; keeping that work in a killable worker prevents route clicks
+// from blocking the product backend.
+await build({
+  entryPoints: [resolve(dir, 'server', 'conversations', 'conversationTranscriptReadWorker.ts')],
+  outfile: resolve(dir, 'server', 'dist', 'conversations', 'conversationTranscriptReadWorker.js'),
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node20',
+  banner: {
+    js: `import { createRequire as __paTranscriptReadWorkerCreateRequire } from 'node:module';var require=__paTranscriptReadWorkerCreateRequire(import.meta.url);`,
+  },
+  external: ['electron', 'fsevents', 'node-pty'],
+  logLevel: 'info',
+  nodePaths,
+  ...sharedNodeBuildOptions,
+});

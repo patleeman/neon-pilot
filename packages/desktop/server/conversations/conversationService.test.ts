@@ -28,6 +28,7 @@ const {
   invalidateAppTopicsMock,
   publishAppEventMock,
   readConversationModelPreferenceSnapshotMock,
+  readConversationTranscriptDetailInWorkerMock,
   readSavedModelPreferencesMock,
   readSessionBlocksByFileWithTelemetryMock,
   readSessionBlocksWithTelemetryMock,
@@ -66,6 +67,7 @@ const {
   invalidateAppTopicsMock: vi.fn(),
   publishAppEventMock: vi.fn(),
   readConversationModelPreferenceSnapshotMock: vi.fn(),
+  readConversationTranscriptDetailInWorkerMock: vi.fn(),
   readSavedModelPreferencesMock: vi.fn(),
   readSessionBlocksByFileWithTelemetryMock: vi.fn(),
   readSessionBlocksWithTelemetryMock: vi.fn(),
@@ -154,6 +156,10 @@ vi.mock('./conversationSearchIndex.js', () => ({
   scheduleConversationSearchIndexing: scheduleConversationSearchIndexingMock,
 }));
 
+vi.mock('./conversationTranscriptReadWorkerClient.js', () => ({
+  readConversationTranscriptDetailInWorker: readConversationTranscriptDetailInWorkerMock,
+}));
+
 vi.mock('../models/modelPreferences.js', () => ({
   readSavedModelPreferences: readSavedModelPreferencesMock,
 }));
@@ -213,6 +219,7 @@ describe('conversationService', () => {
     invalidateAppTopicsMock.mockReset();
     publishAppEventMock.mockReset();
     readConversationModelPreferenceSnapshotMock.mockReset();
+    readConversationTranscriptDetailInWorkerMock.mockReset();
     readSessionBlocksByFileWithTelemetryMock.mockReset();
     readSavedModelPreferencesMock.mockReset();
     readSessionBlocksWithTelemetryMock.mockReset();
@@ -831,16 +838,18 @@ describe('conversationService', () => {
   });
 
   it('reads route session detail and model preference state', async () => {
-    readSessionBlocksWithTelemetryMock.mockReturnValueOnce({
+    readConversationTranscriptDetailInWorkerMock.mockResolvedValueOnce({
       detail: { id: 'detail-1' },
       telemetry: { cache: 'hit', loader: 'disk', durationMs: 2 },
     });
+    const controller = new AbortController();
 
     await expect(
       readSessionDetailForRoute({
         conversationId: 'conversation-1',
         profile: 'assistant',
         tailBlocks: 5,
+        signal: controller.signal,
       }),
     ).resolves.toEqual({
       sessionRead: {
@@ -849,9 +858,13 @@ describe('conversationService', () => {
       },
       remoteMirror: { status: 'deferred', durationMs: 0 },
     });
-    expect(readSessionBlocksWithTelemetryMock).toHaveBeenCalledWith('conversation-1', { tailBlocks: 5 });
+    expect(readConversationTranscriptDetailInWorkerMock).toHaveBeenCalledWith({
+      conversationId: 'conversation-1',
+      tailBlocks: 5,
+      signal: controller.signal,
+    });
 
-    readSessionBlocksWithTelemetryMock.mockReturnValueOnce({
+    readConversationTranscriptDetailInWorkerMock.mockResolvedValueOnce({
       detail: { id: 'detail-capped' },
       telemetry: { cache: 'hit', loader: 'disk', durationMs: 2 },
     });
@@ -862,44 +875,18 @@ describe('conversationService', () => {
         tailBlocks: 50000,
       }),
     ).resolves.toMatchObject({ sessionRead: { detail: { id: 'detail-capped' } } });
-    expect(readSessionBlocksWithTelemetryMock).toHaveBeenLastCalledWith('conversation-capped', { tailBlocks: 10000 });
-
-    readSessionBlocksWithTelemetryMock
-      .mockReturnValueOnce({
-        detail: { blocks: [], totalBlocks: 4 },
-        telemetry: { cache: 'miss', loader: 'fast-tail', durationMs: 2 },
-      })
-      .mockReturnValueOnce({
-        detail: { blocks: [{ type: 'text', text: 'hydrated' }], totalBlocks: 4 },
-        telemetry: { cache: 'miss', loader: 'full', durationMs: 4 },
-      });
-    await expect(
-      readSessionDetailForRoute({
-        conversationId: 'conversation-empty-tail',
-        profile: 'assistant',
-        tailBlocks: 400,
-      }),
-    ).resolves.toMatchObject({
-      sessionRead: {
-        detail: { blocks: [{ type: 'text', text: 'hydrated' }], totalBlocks: 4 },
-      },
+    expect(readConversationTranscriptDetailInWorkerMock).toHaveBeenLastCalledWith({
+      conversationId: 'conversation-capped',
+      tailBlocks: 10000,
     });
-    expect(readSessionBlocksWithTelemetryMock).toHaveBeenNthCalledWith(
-      readSessionBlocksWithTelemetryMock.mock.calls.length - 1,
-      'conversation-empty-tail',
-      { tailBlocks: 400 },
-    );
-    expect(readSessionBlocksWithTelemetryMock).toHaveBeenLastCalledWith('conversation-empty-tail');
 
-    getLocalLiveSessionsMock.mockReturnValue([
-      {
-        id: 'conversation-live',
-        cwd: '/repo/live',
-        sessionFile: '/sessions/live.jsonl',
-        isStreaming: true,
-      },
-    ]);
-    readSessionBlocksByFileWithTelemetryMock.mockReturnValueOnce({
+    getLocalLiveSessionMock.mockReturnValue({
+      id: 'conversation-live',
+      cwd: '/repo/live',
+      sessionFile: '/sessions/live.jsonl',
+      isStreaming: true,
+    });
+    readConversationTranscriptDetailInWorkerMock.mockResolvedValueOnce({
       detail: { id: 'detail-live' },
       telemetry: { cache: 'miss', loader: 'fast-tail', durationMs: 2 },
     });
@@ -910,47 +897,14 @@ describe('conversationService', () => {
         tailBlocks: 12,
       }),
     ).resolves.toMatchObject({ sessionRead: { detail: { id: 'detail-live' } } });
-    expect(readSessionBlocksByFileWithTelemetryMock).toHaveBeenCalledWith('/sessions/live.jsonl', { tailBlocks: 12 });
-    expect(readSessionBlocksWithTelemetryMock).not.toHaveBeenLastCalledWith('conversation-live', expect.anything());
-    getLocalLiveSessionsMock.mockReturnValue([]);
-
-    getLocalLiveSessionsMock.mockReturnValue([
-      {
-        id: 'conversation-live-empty-tail',
-        cwd: '/repo/live',
-        sessionFile: '/sessions/live-empty-tail.jsonl',
-        isStreaming: false,
-      },
-    ]);
-    readSessionBlocksByFileWithTelemetryMock
-      .mockReturnValueOnce({
-        detail: { blocks: [], totalBlocks: 3 },
-        telemetry: { cache: 'miss', loader: 'fast-tail', durationMs: 2 },
-      })
-      .mockReturnValueOnce({
-        detail: { blocks: [{ type: 'text', text: 'live hydrated' }], totalBlocks: 3 },
-        telemetry: { cache: 'miss', loader: 'full', durationMs: 5 },
-      });
-    await expect(
-      readSessionDetailForRoute({
-        conversationId: 'conversation-live-empty-tail',
-        profile: 'assistant',
-        tailBlocks: 12,
-      }),
-    ).resolves.toMatchObject({
-      sessionRead: {
-        detail: { blocks: [{ type: 'text', text: 'live hydrated' }], totalBlocks: 3 },
-      },
+    expect(readConversationTranscriptDetailInWorkerMock).toHaveBeenLastCalledWith({
+      conversationId: 'conversation-live',
+      sessionFile: '/sessions/live.jsonl',
+      tailBlocks: 12,
     });
-    expect(readSessionBlocksByFileWithTelemetryMock).toHaveBeenNthCalledWith(
-      readSessionBlocksByFileWithTelemetryMock.mock.calls.length - 1,
-      '/sessions/live-empty-tail.jsonl',
-      { tailBlocks: 12 },
-    );
-    expect(readSessionBlocksByFileWithTelemetryMock).toHaveBeenLastCalledWith('/sessions/live-empty-tail.jsonl');
-    getLocalLiveSessionsMock.mockReturnValue([]);
+    getLocalLiveSessionMock.mockReturnValue(null);
 
-    readSessionBlocksWithTelemetryMock.mockReturnValueOnce({
+    readConversationTranscriptDetailInWorkerMock.mockResolvedValueOnce({
       detail: null,
       telemetry: { cache: 'miss', loader: 'disk', durationMs: 3 },
     });
@@ -966,7 +920,9 @@ describe('conversationService', () => {
       },
       remoteMirror: { status: 'not-remote', durationMs: 0 },
     });
-    expect(readSessionBlocksWithTelemetryMock).toHaveBeenLastCalledWith('conversation-2', undefined);
+    expect(readConversationTranscriptDetailInWorkerMock).toHaveBeenLastCalledWith({
+      conversationId: 'conversation-2',
+    });
 
     getLocalLiveSessionsMock.mockReturnValue([
       {

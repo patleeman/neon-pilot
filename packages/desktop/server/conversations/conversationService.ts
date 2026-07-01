@@ -32,6 +32,7 @@ import {
 import { readConversationContextDocs } from './conversationContextDocs.js';
 import { readConversationModelPreferenceSnapshot, resolveConversationModelPreferenceState } from './conversationModelPreferences.js';
 import { scheduleConversationSearchIndexing } from './conversationSearchIndex.js';
+import { readConversationTranscriptDetailInWorker } from './conversationTranscriptReadWorkerClient.js';
 import { ensureSessionFileExists, registry as liveSessionRegistry } from './liveSessions.js';
 import {
   getAvailableModelObjects,
@@ -774,6 +775,21 @@ export function readConversationSessionDetail(input: { conversationId: string; t
   return sessionRead;
 }
 
+async function readConversationSessionDetailForRoute(input: {
+  conversationId: string;
+  tailBlocks?: number;
+  signal?: AbortSignal;
+}): Promise<SessionDetailRouteReadResult> {
+  const tailBlocks = normalizeSessionDetailTailBlocks(input.tailBlocks);
+  const liveSessionFile = readLiveSession(input.conversationId)?.sessionFile?.trim();
+  return readConversationTranscriptDetailInWorker({
+    conversationId: input.conversationId,
+    ...(liveSessionFile && existsSync(liveSessionFile) ? { sessionFile: liveSessionFile } : {}),
+    ...(tailBlocks ? { tailBlocks } : {}),
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+}
+
 export function readConversationSessionEntryBlocks(input: { conversationId: string; entryIds: string[] }) {
   return readSessionEntryBlocks(input.conversationId, input.entryIds);
 }
@@ -782,11 +798,16 @@ export function readConversationSessionBlock(input: { conversationId: string; bl
   return readSessionBlock(input.conversationId, input.blockId);
 }
 
-export async function readSessionDetailForRoute(input: { conversationId: string; profile: string; tailBlocks?: number }): Promise<{
+export async function readSessionDetailForRoute(input: {
+  conversationId: string;
+  profile: string;
+  tailBlocks?: number;
+  signal?: AbortSignal;
+}): Promise<{
   sessionRead: SessionDetailRouteReadResult;
   remoteMirror: SessionDetailRouteRemoteMirrorTelemetry;
 }> {
-  const sessionRead = readConversationSessionDetail(input);
+  const sessionRead = await readConversationSessionDetailForRoute(input);
 
   return {
     sessionRead,

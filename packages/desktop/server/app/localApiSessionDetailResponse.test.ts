@@ -58,27 +58,26 @@ describe('readSessionDetailRouteResponse', () => {
     expect(readSessionDetailForRouteMock).not.toHaveBeenCalled();
   });
 
-  it('coalesces identical inflight transcript reads', async () => {
+  it('passes active abort signals through to the route reader', async () => {
     const { readSessionDetailRouteResponse } = await import('./localApiSessionDetailResponse.js');
     const detail = { meta: { id: 'conversation-1' }, blocks: [], blockOffset: 0, totalBlocks: 0, signature: 'sig-1' };
-    let resolveRead!: (value: unknown) => void;
-    readSessionDetailForRouteMock.mockReturnValue(
-      new Promise((resolve) => {
-        resolveRead = resolve;
-      }),
-    );
+    const controller = new AbortController();
+    readSessionDetailForRouteMock.mockResolvedValue({
+      sessionRead: { detail, telemetry: null },
+      remoteMirror: { status: 'deferred', durationMs: 0 },
+    });
 
-    const first = readSessionDetailRouteResponse({ sessionId: 'conversation-1', profile: 'shared', tailBlocks: 40 });
-    const second = readSessionDetailRouteResponse({ sessionId: 'conversation-1', profile: 'shared', tailBlocks: 40 });
-    await Promise.resolve();
+    await expect(
+      readSessionDetailRouteResponse({ sessionId: 'conversation-1', profile: 'shared', tailBlocks: 40, signal: controller.signal }),
+    ).resolves.toEqual({ inlined: true, sessionId: 'conversation-1', detail });
 
     expect(readSessionDetailForRouteMock).toHaveBeenCalledTimes(1);
-    resolveRead({ sessionRead: { detail, telemetry: null }, remoteMirror: { status: 'deferred', durationMs: 0 } });
-
-    await expect(Promise.all([first, second])).resolves.toEqual([
-      { inlined: true, sessionId: 'conversation-1', detail },
-      { inlined: true, sessionId: 'conversation-1', detail },
-    ]);
+    expect(readSessionDetailForRouteMock).toHaveBeenCalledWith({
+      conversationId: 'conversation-1',
+      profile: 'shared',
+      tailBlocks: 40,
+      signal: controller.signal,
+    });
   });
 });
 

@@ -1533,12 +1533,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const [hydratedHistoricalBlocks, setHydratedHistoricalBlocks] = useState<Record<string, MessageBlock>>({});
   const [hydratedHistoricalEntryClusters, setHydratedHistoricalEntryClusters] = useState<Record<string, MessageBlock[]>>({});
   const [hydratingHistoricalBlockIds, setHydratingHistoricalBlockIds] = useState<string[]>([]);
+  const historicalBlockHydrationAbortControllersRef = useRef<Set<AbortController>>(new Set());
   const hydratingHistoricalBlockIdSet = useMemo(
     () => buildHydratingHistoricalBlockIdSet(hydratingHistoricalBlockIds),
     [hydratingHistoricalBlockIds],
   );
 
   useEffect(() => {
+    for (const controller of historicalBlockHydrationAbortControllersRef.current) {
+      controller.abort();
+    }
+    historicalBlockHydrationAbortControllersRef.current.clear();
     setHydratedHistoricalBlocks({});
     setHydratedHistoricalEntryClusters({});
     setHydratingHistoricalBlockIds([]);
@@ -1554,17 +1559,19 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }
 
       setHydratingHistoricalBlockIds((current) => addHydratingHistoricalBlockId(current, normalizedBlockId));
+      const abortController = new AbortController();
+      historicalBlockHydrationAbortControllersRef.current.add(abortController);
 
       try {
         const deferredEntryIds = parseDeferredEntryHydrationId(normalizedBlockId);
         if (deferredEntryIds) {
-          const { blocks } = await api.sessionEntryBlocks(id, deferredEntryIds);
+          const { blocks } = await api.sessionEntryBlocks(id, deferredEntryIds, { signal: abortController.signal });
           setHydratedHistoricalEntryClusters((current) => ({
             ...current,
             [normalizedBlockId]: blocks.map(displayBlockToMessageBlock),
           }));
         } else {
-          const block = await api.sessionBlock(id, normalizedBlockId);
+          const block = await api.sessionBlock(id, normalizedBlockId, { signal: abortController.signal });
           const messageBlock = displayBlockToMessageBlock(block);
           setHydratedHistoricalBlocks((current) => ({
             ...current,
@@ -1573,6 +1580,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           }));
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
         console.error('Failed to hydrate historical block', error);
         addNotification({
           type: 'warning',
@@ -1581,6 +1591,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           source: 'core',
         });
       } finally {
+        historicalBlockHydrationAbortControllersRef.current.delete(abortController);
         setHydratingHistoricalBlockIds((current) => removeHydratingHistoricalBlockId(current, normalizedBlockId));
       }
     },

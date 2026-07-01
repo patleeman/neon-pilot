@@ -55,40 +55,6 @@ function abortPromise(signal?: AbortSignal): Promise<never> {
   });
 }
 
-type SessionDetailRouteReadResult = Awaited<ReturnType<typeof readSessionDetailForRoute>>;
-
-const inflightSessionDetailReads = new Map<string, Promise<SessionDetailRouteReadResult>>();
-
-function buildInflightSessionDetailReadKey(input: { sessionId: string; profile: string; tailBlocks?: number }): string {
-  return `${input.profile}::${input.sessionId}::${input.tailBlocks ?? 'all'}`;
-}
-
-function readSessionDetailForRouteCoalesced(input: {
-  sessionId: string;
-  profile: string;
-  tailBlocks?: number;
-}): Promise<SessionDetailRouteReadResult> {
-  const key = buildInflightSessionDetailReadKey(input);
-  const inflight = inflightSessionDetailReads.get(key);
-  if (inflight) {
-    return inflight;
-  }
-
-  const request = Promise.resolve()
-    .then(() =>
-      readSessionDetailForRoute({
-        conversationId: input.sessionId,
-        profile: input.profile,
-        tailBlocks: input.tailBlocks,
-      }),
-    )
-    .finally(() => {
-      inflightSessionDetailReads.delete(key);
-    });
-  inflightSessionDetailReads.set(key, request);
-  return request;
-}
-
 export async function readSessionDetailRouteResponse(input: {
   sessionId: string;
   profile: string;
@@ -111,10 +77,11 @@ export async function readSessionDetailRouteResponse(input: {
   }
 
   const { sessionRead } = await Promise.race([
-    readSessionDetailForRouteCoalesced({
-      sessionId,
+    readSessionDetailForRoute({
+      conversationId: sessionId,
       profile: input.profile,
       tailBlocks: input.tailBlocks,
+      signal: input.signal,
     }),
     abortPromise(input.signal),
   ]);
