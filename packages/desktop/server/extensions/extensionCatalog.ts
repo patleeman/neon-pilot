@@ -208,41 +208,48 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
         }),
     )
   ).flat();
-  const packages: InstallableExtensionCatalogItem[] = [...firstPartySeeds, ...remoteSeeds].map((item) => {
-    const installed = installedById.get(item.id);
-    const explicitVersion = item.version;
-    const itemVersion = explicitVersion ?? installed?.version ?? version;
-    const itemTag = item.tag ?? (explicitVersion ? `v${explicitVersion}` : tag);
-    const sourceRepo = item.sourceRepo ?? FIRST_PARTY_REPO;
-    const updateAvailable = Boolean(explicitVersion && installed?.version && installed.version !== explicitVersion);
-    const staleFallbackReason =
-      usingBakedFirstPartyFallback && isFirstPartyRepo(sourceRepo) && itemTag !== tag
-        ? `No ${tag} release artifact is published for this extension. The latest catalog points to ${itemTag}.`
-        : undefined;
-    const compatibilityReason = getExtensionCompatibilityError(
-      { id: item.id, name: item.name, compatibility: item.compatibility },
-      version,
-    );
-    return {
-      ...item,
-      version: itemVersion,
-      tag: itemTag,
-      packageType: item.packageType ?? 'extension',
-      ecosystem: item.ecosystem ?? 'neon-pilot',
-      marketplaceSourceId: item.marketplaceSourceId ?? 'neon-pilot-release',
-      bundleUrl: bundleUrlForRepo(sourceRepo, item.id, itemTag, item.artifact),
-      defaultEnabled: false,
-      source: 'github-release',
-      sourceRepo,
-      installed: Boolean(installed),
-      ...(installed?.version ? { installedVersion: installed.version } : {}),
-      ...(installed ? { enabled: installed.enabled } : {}),
-      ...(explicitVersion ? { availableVersion: explicitVersion } : {}),
-      ...(compatibilityReason ? { compatibilityWarning: compatibilityReason } : {}),
-      ...(staleFallbackReason ? { unavailableReason: staleFallbackReason } : {}),
-      updateAvailable,
-    };
-  });
+  const packages: InstallableExtensionCatalogItem[] = [...firstPartySeeds, ...remoteSeeds]
+    .filter((item) => {
+      const installed = installedById.get(item.id);
+      if (installed?.packageType === 'system') return false;
+      const registryEntry = findExtensionEntry(item.id, stateRoot);
+      return registryEntry?.manifest.packageType !== 'system';
+    })
+    .map((item) => {
+      const installed = installedById.get(item.id);
+      const explicitVersion = item.version;
+      const itemVersion = explicitVersion ?? installed?.version ?? version;
+      const itemTag = item.tag ?? (explicitVersion ? `v${explicitVersion}` : tag);
+      const sourceRepo = item.sourceRepo ?? FIRST_PARTY_REPO;
+      const updateAvailable = Boolean(explicitVersion && installed?.version && installed.version !== explicitVersion);
+      const staleFallbackReason =
+        usingBakedFirstPartyFallback && isFirstPartyRepo(sourceRepo) && itemTag !== tag
+          ? `No ${tag} release artifact is published for this extension. The latest catalog points to ${itemTag}.`
+          : undefined;
+      const compatibilityReason = getExtensionCompatibilityError(
+        { id: item.id, name: item.name, compatibility: item.compatibility },
+        version,
+      );
+      return {
+        ...item,
+        version: itemVersion,
+        tag: itemTag,
+        packageType: item.packageType ?? 'extension',
+        ecosystem: item.ecosystem ?? 'neon-pilot',
+        marketplaceSourceId: item.marketplaceSourceId ?? 'neon-pilot-release',
+        bundleUrl: bundleUrlForRepo(sourceRepo, item.id, itemTag, item.artifact),
+        defaultEnabled: false,
+        source: 'github-release',
+        sourceRepo,
+        installed: Boolean(installed),
+        ...(installed?.version ? { installedVersion: installed.version } : {}),
+        ...(installed ? { enabled: installed.enabled } : {}),
+        ...(explicitVersion ? { availableVersion: explicitVersion } : {}),
+        ...(compatibilityReason ? { compatibilityWarning: compatibilityReason } : {}),
+        ...(staleFallbackReason ? { unavailableReason: staleFallbackReason } : {}),
+        updateAvailable,
+      };
+    });
   const marketplaceSources = [
     ...MARKETPLACE_SOURCES,
     ...enabledConfigured
@@ -530,13 +537,13 @@ export async function installCatalogExtension(input: { id?: unknown }, stateRoot
 export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?: string) {
   const id = typeof input.id === 'string' ? input.id.trim() : '';
   if (!id) throw new Error('id is required.');
+  const installed = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
+  if (installed?.packageType === 'system') throw new Error('Packaged system extensions cannot be updated from the catalog.');
   const catalog = await listInstallableExtensionCatalog(stateRoot);
   const item = catalog.extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
-  const installed = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
   if (!installed) throw new Error(`Extension ${id} is not installed.`);
-  if (installed.packageType === 'system') throw new Error('Packaged system extensions cannot be updated from the catalog.');
   const wasEnabled = installed.enabled;
   const localBundlePath = localFallbackBundlePathFor(item);
   if (!localBundlePath && item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);

@@ -101,6 +101,7 @@ Bundled system extensions:
 - [Dynamic Workflows](../extensions/system-dynamic-workflows/README.md) — model-authored workflow coordinators that fan out daemon-backed subagents
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
 - [Agent Plugins](../extensions/system-agent-plugins/README.md) — Codex and Claude plugin import, update tracking, and compatibility reports
+- [Browser](../extensions/system-browser/README.md) — Workbench browser views and browser automation
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing
 - [Git Status](../extensions/system-git-status/README.md) — branch and diff status in the composer
@@ -127,7 +128,6 @@ Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https:/
 
 - [Agent Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser) — agent-browser CLI integration
 - [Auto Router](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-auto-router) — judge-based model routing controls
-- [Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-browser) — Workbench browser views and browser automation
 - [DuckDuckGo Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search) — web search using DuckDuckGo's HTML page
 - [Dynamic Workflows](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-dynamic-workflows) — workflow coordinators that fan out daemon-backed subagents
 - [DS4](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4) — local DeepSeek V4 Flash provider/profile for antirez/ds4

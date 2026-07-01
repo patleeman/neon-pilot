@@ -1972,7 +1972,7 @@ See bundled system extensions in `extensions/` and optional first-party extensio
 
 - **`system-artifacts`** — Tools + views + transcript renderer + skills
 - **`system-agent-browser`** — agent-browser CLI tool integration (`patleeman/neon-pilot-extensions/system-agent-browser`)
-- **`system-browser`** — Experimental browser automation tool + views (`patleeman/neon-pilot-extensions/system-browser`)
+- **`system-browser`** — Workbench browser views and browser automation
 - **`system-writing-studio`** — Document-first writing surface with hosted chat, file tree sidebar, and structured annotation tools (`patleeman/neon-pilot-extensions/system-writing-studio`)
 - **`system-automations`** — Scheduled tasks, follow-up queues, and the Automations page
 - **`system-conversation-tools`** — Agent lifecycle hooks + contextMenus

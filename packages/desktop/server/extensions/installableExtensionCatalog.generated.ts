@@ -19,13 +19,6 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     tag: 'v0.10.2',
   },
   {
-    id: 'system-browser',
-    name: 'Browser',
-    description: 'Browse web pages beside the active conversation.',
-    version: '0.1.0',
-    tag: 'v0.10.2',
-  },
-  {
     id: 'system-ds4',
     name: 'DS4',
     description: 'DeepSeek V4 Flash local model profile and ds4-agent-shaped tools for antirez/ds4.',

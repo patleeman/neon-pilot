@@ -39,7 +39,10 @@ describe('extension catalog', () => {
 
   it('lists first-party installable bundles for the published package tag', async () => {
     process.env.NEON_PILOT_REPO_ROOT = join(process.cwd());
-    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1' }]);
+    summaries.mockReturnValue([
+      { id: 'system-browser', name: 'Browser', enabled: true, version: '0.1.0', packageType: 'system' },
+      { id: 'system-suggested-context', name: 'Suggested Context', enabled: true, version: '0.0.1', packageType: 'user' },
+    ]);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -79,21 +82,11 @@ describe('extension catalog', () => {
     expect(catalog.extensions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'system-browser',
-          packageType: 'extension',
-          ecosystem: 'neon-pilot',
-          marketplaceSourceId: 'neon-pilot-release',
+          id: 'system-suggested-context',
           installed: true,
           enabled: true,
-          version: '0.1.0',
           installedVersion: '0.0.1',
           updateAvailable: true,
-          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-browser.neon-extension.zip',
-        }),
-        expect.objectContaining({
-          id: 'system-suggested-context',
-          installed: false,
-          updateAvailable: false,
           bundleUrl:
             'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-suggested-context.neon-extension.zip',
         }),
@@ -110,6 +103,7 @@ describe('extension catalog', () => {
         }),
       ]),
     );
+    expect(catalog.extensions.some((extension) => extension.id === 'system-browser')).toBe(false);
   });
 
   it('discovers first-party packages from the release catalog that are not in the baked catalog', async () => {
@@ -175,13 +169,22 @@ describe('extension catalog', () => {
   });
 
   it('uses remote first-party release catalog version metadata for update detection', async () => {
-    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.1.0' }]);
+    summaries.mockReturnValue([
+      { id: 'system-suggested-context', name: 'Suggested Context', enabled: true, version: '0.1.0', packageType: 'user' },
+    ]);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
         ok: true,
         json: async () => ({
-          packages: [{ id: 'system-browser', version: '0.2.0', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }],
+          packages: [
+            {
+              id: 'system-suggested-context',
+              version: '0.2.0',
+              tag: 'v0.10.2',
+              artifact: 'system-suggested-context.neon-extension.zip',
+            },
+          ],
         }),
       })),
     );
@@ -192,12 +195,13 @@ describe('extension catalog', () => {
     expect(catalog.extensions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'system-browser',
+          id: 'system-suggested-context',
           version: '0.2.0',
           availableVersion: '0.2.0',
           installedVersion: '0.1.0',
           updateAvailable: true,
-          bundleUrl: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-browser.neon-extension.zip',
+          bundleUrl:
+            'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-suggested-context.neon-extension.zip',
         }),
       ]),
     );
@@ -219,7 +223,7 @@ describe('extension catalog', () => {
     expect(catalog.extensions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'system-browser',
+          id: 'system-agent-browser',
           unavailableReason: expect.stringContaining('release artifact is published'),
         }),
       ]),
@@ -244,7 +248,7 @@ describe('extension catalog', () => {
         message: 'Failed to fetch first-party extension release catalog: HTTP 500',
       }),
     ]);
-    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-browser' })]));
+    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-agent-browser' })]));
   });
 
   it('refuses to install stale baked first-party catalog entries', async () => {
@@ -257,7 +261,7 @@ describe('extension catalog', () => {
     );
 
     const { installCatalogExtension } = await import('./extensionCatalog.js');
-    await expect(installCatalogExtension({ id: 'system-browser' })).rejects.toThrow('is not installable');
+    await expect(installCatalogExtension({ id: 'system-agent-browser' })).rejects.toThrow('is not installable');
   });
 
   it('installs stale baked first-party catalog entries from local packaged bundles', async () => {

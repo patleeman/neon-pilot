@@ -160,7 +160,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Actions: `terminalCreate`, `terminalWrite`, `terminalDrain`, `terminalResize`, `terminalClose`; stream route `/stream`.
 - Test create/write/read/resize/close, SSE output stream, cwd handling, shell startup failure, long output, process cleanup, and app reload cleanup.
 
-### Browser (`system-browser`, first-party optional)
+### Browser (`system-browser`)
 
 - Views: Browser workbench tabs.
 - Commands/buttons/keybindings: open browser (`mod+shift+b`), new tab (`mod+t`), reopen closed tab (`mod+shift+t`), close tab (`mod+w`), focus location bar (`mod+l`).
@@ -532,7 +532,6 @@ Validate these by installing from the catalog or release artifact and reading th
 
 - system-agent-browser — Agent Browser
 - system-auto-router — Auto Router
-- system-browser — Browser
 - system-ds4 — DS4
 - system-duckduckgo-search — DuckDuckGo Search
 - system-dynamic-workflows — Dynamic Workflows
