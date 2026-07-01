@@ -679,6 +679,11 @@
             "label": "Install",
             "action": "installCliShellLink",
             "tone": "primary"
+          },
+          {
+            "id": "open-settings",
+            "label": "Open CLI Settings",
+            "route": "/settings/extensions/system-neon-pilot-admin-cli"
           }
         ],
         "dismissible": true,

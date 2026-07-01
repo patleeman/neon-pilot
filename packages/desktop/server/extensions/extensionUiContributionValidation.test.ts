@@ -50,6 +50,9 @@ describe('extensionUiContributionValidation', () => {
     expect(() => validateSetupItemContributions([{ id: 'setup', title: 'Setup' }])).toThrow(
       'Extension manifest contributes.setupItems[0].statusAction must be a non-empty string.',
     );
+    expect(() => validateSetupItemContributions([{ id: 'setup', title: 'Setup', statusAction: 'status' }])).toThrow(
+      'Extension manifest contributes.setupItems[0].actions must include at least one setup action.',
+    );
     expect(() =>
       validateSetupItemContributions([
         { id: 'setup', title: 'Setup', statusAction: 'status', actions: [{ id: 'install', action: 'install' }] },

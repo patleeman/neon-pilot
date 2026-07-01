@@ -188,7 +188,7 @@ describe('system-neon-pilot-admin-cli backend', () => {
     const status = await cliShellLinkSetupStatus();
     expect(status).toMatchObject({
       status: 'blocked',
-      actions: [],
+      actions: ['open-settings'],
     });
     expect(status.detail).toContain('/usr/local/bin/other');
     expect(status.detail).toContain('Remove or rename that file');

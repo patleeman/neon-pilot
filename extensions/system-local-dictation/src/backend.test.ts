@@ -92,7 +92,7 @@ describe('local dictation backend', () => {
 
     await expect(dictationModelSetupStatus({}, ctx)).resolves.toMatchObject({
       status: 'blocked',
-      actions: [],
+      actions: ['open-settings'],
       detail: expect.stringContaining('local Whisper runtime is not available'),
     });
   });

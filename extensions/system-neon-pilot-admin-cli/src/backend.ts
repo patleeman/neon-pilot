@@ -295,7 +295,7 @@ export async function cliShellLinkSetupStatus() {
   return {
     status: status.globallyInstalled ? 'ready' : status.linkConflict ? 'blocked' : 'needs_setup',
     detail: cliInstallDetail(status),
-    actions: status.globallyInstalled || status.linkConflict ? [] : ['install'],
+    actions: status.globallyInstalled ? [] : status.linkConflict ? ['open-settings'] : ['install'],
     cli: status,
   };
 }

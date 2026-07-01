@@ -77,6 +77,11 @@
             "label": "Install",
             "action": "installModel",
             "tone": "primary"
+          },
+          {
+            "id": "open-settings",
+            "label": "Open Dictation Settings",
+            "route": "/settings/extensions/system-local-dictation"
           }
         ],
         "dismissible": true,

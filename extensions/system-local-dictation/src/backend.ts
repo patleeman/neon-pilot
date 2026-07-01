@@ -86,7 +86,7 @@ export async function dictationModelSetupStatus(_input: unknown, ctx: ExtensionB
     return {
       status: 'blocked',
       detail: dictationModelDetail(status),
-      actions: [],
+      actions: ['open-settings'],
       transcription: status,
     };
   }

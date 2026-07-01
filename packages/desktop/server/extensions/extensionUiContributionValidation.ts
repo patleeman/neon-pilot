@@ -28,18 +28,20 @@ export function validateSetupItemContributions(value: unknown): void {
       throw new Error(`Extension manifest contributes.setupItems[${index}].dismissible must be a boolean.`);
     }
     validateOptionalInteger(item.order, `contributes.setupItems[${index}].order`);
-    if (item.actions !== undefined) {
-      for (const [actionIndex, action] of assertRecordArray(item.actions, `contributes.setupItems[${index}].actions`).entries()) {
-        requireString(action.id, `contributes.setupItems[${index}].actions[${actionIndex}].id`);
-        requireString(action.label, `contributes.setupItems[${index}].actions[${actionIndex}].label`);
-        validateOptionalString(action.action, `contributes.setupItems[${index}].actions[${actionIndex}].action`);
-        validateOptionalString(action.route, `contributes.setupItems[${index}].actions[${actionIndex}].route`);
-        if (typeof action.action !== 'string' && typeof action.route !== 'string') {
-          throw new Error(`Extension manifest contributes.setupItems[${index}].actions[${actionIndex}] must define action or route.`);
-        }
-        if (action.tone !== undefined)
-          validateEnum(action.tone, ['default', 'primary', 'danger'], `contributes.setupItems[${index}].actions[${actionIndex}].tone`);
+    if (item.actions === undefined || (Array.isArray(item.actions) && item.actions.length === 0)) {
+      throw new Error(`Extension manifest contributes.setupItems[${index}].actions must include at least one setup action.`);
+    }
+    const actions = assertRecordArray(item.actions, `contributes.setupItems[${index}].actions`);
+    for (const [actionIndex, action] of actions.entries()) {
+      requireString(action.id, `contributes.setupItems[${index}].actions[${actionIndex}].id`);
+      requireString(action.label, `contributes.setupItems[${index}].actions[${actionIndex}].label`);
+      validateOptionalString(action.action, `contributes.setupItems[${index}].actions[${actionIndex}].action`);
+      validateOptionalString(action.route, `contributes.setupItems[${index}].actions[${actionIndex}].route`);
+      if (typeof action.action !== 'string' && typeof action.route !== 'string') {
+        throw new Error(`Extension manifest contributes.setupItems[${index}].actions[${actionIndex}] must define action or route.`);
       }
+      if (action.tone !== undefined)
+        validateEnum(action.tone, ['default', 'primary', 'danger'], `contributes.setupItems[${index}].actions[${actionIndex}].tone`);
     }
   }
 }
