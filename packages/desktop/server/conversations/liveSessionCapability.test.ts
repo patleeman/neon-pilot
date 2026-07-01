@@ -280,6 +280,31 @@ describe('createLiveSessionCapability', () => {
       undefined,
       undefined,
       undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('submits an initial prompt when creating a live session with only audio and document attachments', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+
+    await createLiveSessionCapability(
+      {
+        audios: [{ path: '/tmp/tone.wav', mimeType: 'audio/wav', name: 'tone.wav', sizeBytes: 456 }],
+        documents: [{ path: '/tmp/brief.pdf', mimeType: 'application/pdf', name: 'brief.pdf', sizeBytes: 789 }],
+      },
+      createContext(),
+    );
+
+    expect(submitLocalPromptSessionMock).toHaveBeenCalledWith(
+      'test-session',
+      '',
+      undefined,
+      undefined,
+      undefined,
+      [{ type: 'audio', path: '/tmp/tone.wav', mimeType: 'audio/wav', name: 'tone.wav', sizeBytes: 456 }],
+      [{ type: 'document', path: '/tmp/brief.pdf', mimeType: 'application/pdf', name: 'brief.pdf', sizeBytes: 789 }],
+      undefined,
     );
   });
 
@@ -291,6 +316,8 @@ describe('createLiveSessionCapability', () => {
     expect(submitLocalPromptSessionMock).toHaveBeenCalledWith(
       'test-session',
       'Hello from companion.',
+      undefined,
+      undefined,
       undefined,
       undefined,
       undefined,
@@ -435,6 +462,8 @@ describe('liveSessionCapability input validation', () => {
         text: 'Describe this screenshot and video',
         images: [{ data: 'aW1n', mimeType: 'image/png', name: 'shot.png' }],
         videos: [{ path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 42 }],
+        audios: [{ path: '/tmp/tone.wav', mimeType: 'audio/wav', name: 'tone.wav', sizeBytes: 456 }],
+        documents: [{ path: '/tmp/brief.pdf', mimeType: 'application/pdf', name: 'brief.pdf', sizeBytes: 789 }],
         attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
         contextMessages: [{ customType: 'manual_context', content: 'Pinned context' }],
         relatedConversationIds: ['related-1'],
@@ -452,8 +481,12 @@ describe('liveSessionCapability input validation', () => {
         delivery: 'started',
         imageCount: 1,
         videoCount: 1,
+        audioCount: 1,
+        documentCount: 1,
         images: [{ type: 'image', data: 'aW1n', mimeType: 'image/png', name: 'shot.png' }],
         videos: [{ type: 'video', path: '/tmp/demo.mov', mimeType: 'video/quicktime', name: 'demo.mov', sizeBytes: 42 }],
+        audios: [{ type: 'audio', path: '/tmp/tone.wav', mimeType: 'audio/wav', name: 'tone.wav', sizeBytes: 456 }],
+        documents: [{ type: 'document', path: '/tmp/brief.pdf', mimeType: 'application/pdf', name: 'brief.pdf', sizeBytes: 789 }],
         attachmentRefs: [{ attachmentId: 'att-1', revision: 2 }],
         contextMessageCount: 2,
         contextMessages: [

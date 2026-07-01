@@ -1255,24 +1255,23 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
   // ── Desktop bridge is the only stream path. If the bridge is unavailable
   // the conversation is read-only — no live streaming is possible.
-  const stream =
-    useDesktopConversation && visibleDesktopConversationState
-      ? {
-          ...visibleDesktopConversationState.stream,
-          surfaceId: desktopConversation.surfaceId,
-          reconnect: desktopConversation.reconnect,
-          send: desktopConversation.send,
-          abort: desktopConversation.abort,
-          takeover: desktopConversation.takeover,
-        }
-      : {
-          ...INITIAL_STREAM_STATE,
-          surfaceId: '',
-          reconnect: async () => {},
-          send: async () => undefined,
-          abort: async () => {},
-          takeover: async () => {},
-        };
+  const stream = useDesktopConversation
+    ? {
+        ...(visibleDesktopConversationState?.stream ?? INITIAL_STREAM_STATE),
+        surfaceId: desktopConversation.surfaceId,
+        reconnect: desktopConversation.reconnect,
+        send: desktopConversation.send,
+        abort: desktopConversation.abort,
+        takeover: desktopConversation.takeover,
+      }
+    : {
+        ...INITIAL_STREAM_STATE,
+        surfaceId: '',
+        reconnect: async () => {},
+        send: async () => undefined,
+        abort: async () => {},
+        takeover: async () => {},
+      };
   const streamSend = stream.send;
   const streamAbort = stream.abort;
   const streamReconnect = stream.reconnect;

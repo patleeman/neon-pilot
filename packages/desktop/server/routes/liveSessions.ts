@@ -148,19 +148,25 @@ function readPromptImages(value: unknown): Array<{ data: string; mimeType: strin
 }
 
 function readPromptVideos(value: unknown): Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }> | undefined {
+  return readPromptPathBackedAttachments(value);
+}
+
+function readPromptPathBackedAttachments(
+  value: unknown,
+): Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }> | undefined {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
   return value
     .filter(
-      (video): video is { path?: unknown; mimeType?: unknown; name?: unknown; sizeBytes?: unknown } => !!video && typeof video === 'object',
+      (item): item is { path?: unknown; mimeType?: unknown; name?: unknown; sizeBytes?: unknown } => !!item && typeof item === 'object',
     )
-    .map((video) => ({
-      path: typeof video.path === 'string' ? video.path : '',
-      mimeType: typeof video.mimeType === 'string' ? video.mimeType : '',
-      ...(typeof video.name === 'string' ? { name: video.name } : {}),
-      ...(Number.isSafeInteger(video.sizeBytes) && Number(video.sizeBytes) >= 0 ? { sizeBytes: Number(video.sizeBytes) } : {}),
+    .map((item) => ({
+      path: typeof item.path === 'string' ? item.path : '',
+      mimeType: typeof item.mimeType === 'string' ? item.mimeType : '',
+      ...(typeof item.name === 'string' ? { name: item.name } : {}),
+      ...(Number.isSafeInteger(item.sizeBytes) && Number(item.sizeBytes) >= 0 ? { sizeBytes: Number(item.sizeBytes) } : {}),
     }));
 }
 
@@ -173,6 +179,8 @@ export async function handleLiveSessionPrompt(req: Request, res: Response): Prom
         behavior: req.body?.behavior,
         images: readPromptImages(req.body?.images),
         videos: readPromptVideos(req.body?.videos),
+        audios: readPromptPathBackedAttachments(req.body?.audios),
+        documents: readPromptPathBackedAttachments(req.body?.documents),
         attachmentRefs: req.body?.attachmentRefs,
         contextMessages: req.body?.contextMessages,
         relatedConversationIds: req.body?.relatedConversationIds,

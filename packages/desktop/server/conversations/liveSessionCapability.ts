@@ -246,6 +246,8 @@ function hasInitialPromptPayload(input: CreateLiveSessionCapabilityInput): boole
     text.length > 0 ||
     (Array.isArray(input.images) && input.images.length > 0) ||
     (Array.isArray(input.videos) && input.videos.length > 0) ||
+    (Array.isArray(input.audios) && input.audios.length > 0) ||
+    (Array.isArray(input.documents) && input.documents.length > 0) ||
     input.attachmentRefs !== undefined
   );
 }
@@ -265,6 +267,8 @@ async function submitInitialPromptForCreatedSession(
       behavior: input.behavior,
       images: input.images,
       videos: input.videos,
+      audios: input.audios,
+      documents: input.documents,
       attachmentRefs: input.attachmentRefs,
       contextMessages: input.contextMessages,
       relatedConversationIds: input.relatedConversationIds,
