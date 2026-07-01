@@ -173,11 +173,35 @@ describe('SkillsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
     await screen.findByText('No marketplace skills match the current search.');
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
     await screen.findByText('PDF');
     expect((screen.getByPlaceholderText('Search marketplace skills') as HTMLInputElement).value).toBe('');
     fireEvent.click(screen.getByRole('tab', { name: /Installed/ }));
     expect(screen.getByText('Documents')).toBeTruthy();
+  });
+
+  it('clears a marketplace search back to all skills', async () => {
+    const pa = createPa();
+
+    render(<SkillsPage pa={pa as never} context={{} as never} />);
+
+    await screen.findByText('PDF');
+    fireEvent.change(screen.getByPlaceholderText('Search marketplace skills'), { target: { value: 'release' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+    expect(screen.getByRole('button', { name: 'Clear search' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+
+    await waitFor(() =>
+      expect(pa.extensions.callAction).toHaveBeenLastCalledWith('system-skill-search', 'browseSkills', {
+        sourceId: 'all',
+        query: '',
+        limit: 60,
+      }),
+    );
+    expect((screen.getByPlaceholderText('Search marketplace skills') as HTMLInputElement).value).toBe('');
+    expect(screen.getByText('PDF')).toBeTruthy();
+    expect(screen.getByText('Release QA')).toBeTruthy();
   });
 
   it('filters and sorts marketplace results without switching sources', async () => {

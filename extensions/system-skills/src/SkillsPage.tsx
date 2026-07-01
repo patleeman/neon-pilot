@@ -15,12 +15,12 @@ import {
   ErrorState,
   FilterToolbar,
   IconButton,
+  InlineSelect,
   LoadingState,
   Notice,
   ResourceList,
   ResourceListRow,
   SearchInput,
-  Select,
   SupportingText,
   Switch,
   TabButton,
@@ -469,7 +469,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
               className="w-full md:w-80"
             />
             {(view === 'marketplace' ? marketplaceQueryDraft || query : installedQueryDraft) ? (
-              <Button variant="ghost" type="button" onClick={clearSearch}>
+              <Button variant="ghost" type="button" onClick={clearSearch} aria-label="Clear search" title="Clear search">
                 Clear
               </Button>
             ) : null}
@@ -484,54 +484,15 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
       {view === 'marketplace' ? (
         <TabPanel>
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <SupportingText>
                 Searching {sources.length} marketplace sources · {marketplaceFilterSummary}
               </SupportingText>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  aria-label="Filter by capability"
-                  value={capabilityFilter}
-                  onChange={(event) => setCapabilityFilter(event.target.value)}
-                  className="h-8 w-36 text-[12px]"
-                >
-                  <option value="all">All capabilities</option>
-                  {capabilityOptions.map((capability) => (
-                    <option key={capability} value={capability}>
-                      {capability}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  aria-label="Filter by source"
-                  value={sourceFilter}
-                  onChange={(event) => setSourceFilter(event.target.value)}
-                  className="h-8 w-40 text-[12px]"
-                >
-                  <option value="all">All sources</option>
-                  {sourceOptions.map((source) => (
-                    <option key={source} value={source}>
-                      {source}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  aria-label="Filter by state"
-                  value={stateFilter}
-                  onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
-                  className="h-8 w-36 text-[12px]"
-                >
-                  <option value="all">All states</option>
-                  <option value="available">Available</option>
-                  <option value="approval-required">Approval required</option>
-                  <option value="installed">Installed</option>
-                </Select>
-                {hasMarketplaceFilters ? (
-                  <Button variant="ghost" type="button" onClick={clearMarketplaceFilters}>
-                    Clear filters
-                  </Button>
-                ) : null}
-              </div>
+              {hasMarketplaceFilters ? (
+                <Button variant="ghost" type="button" onClick={clearMarketplaceFilters}>
+                  Clear filters
+                </Button>
+              ) : null}
             </div>
             {marketplaceError ? (
               <Notice tone="danger" title="Marketplace unavailable">
@@ -559,19 +520,62 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                     </Button>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell aria-sort={sortKey === 'capability' ? sortDirection : 'none'}>
-                    <Button variant="ghost" type="button" onClick={() => toggleSort('capability')}>
-                      Capability{sortIndicator('capability')}
-                    </Button>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Button variant="ghost" type="button" onClick={() => toggleSort('capability')}>
+                        Capability{sortIndicator('capability')}
+                      </Button>
+                      <InlineSelect
+                        aria-label="Filter by capability"
+                        value={capabilityFilter}
+                        onChange={(event) => setCapabilityFilter(event.target.value)}
+                        className="max-w-28"
+                      >
+                        <option value="all">All</option>
+                        {capabilityOptions.map((capability) => (
+                          <option key={capability} value={capability}>
+                            {capability}
+                          </option>
+                        ))}
+                      </InlineSelect>
+                    </div>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell aria-sort={sortKey === 'source' ? sortDirection : 'none'}>
-                    <Button variant="ghost" type="button" onClick={() => toggleSort('source')}>
-                      Source{sortIndicator('source')}
-                    </Button>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Button variant="ghost" type="button" onClick={() => toggleSort('source')}>
+                        Source{sortIndicator('source')}
+                      </Button>
+                      <InlineSelect
+                        aria-label="Filter by source"
+                        value={sourceFilter}
+                        onChange={(event) => setSourceFilter(event.target.value)}
+                        className="max-w-32"
+                      >
+                        <option value="all">All</option>
+                        {sourceOptions.map((source) => (
+                          <option key={source} value={source}>
+                            {source}
+                          </option>
+                        ))}
+                      </InlineSelect>
+                    </div>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell aria-sort={sortKey === 'state' ? sortDirection : 'none'}>
-                    <Button variant="ghost" type="button" onClick={() => toggleSort('state')}>
-                      State{sortIndicator('state')}
-                    </Button>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Button variant="ghost" type="button" onClick={() => toggleSort('state')}>
+                        State{sortIndicator('state')}
+                      </Button>
+                      <InlineSelect
+                        aria-label="Filter by state"
+                        value={stateFilter}
+                        onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
+                        className="max-w-28"
+                      >
+                        <option value="all">All</option>
+                        <option value="available">Available</option>
+                        <option value="approval-required">Approval required</option>
+                        <option value="installed">Installed</option>
+                      </InlineSelect>
+                    </div>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell className="text-right">Action</DataTableHeaderCell>
                 </DataTableRow>
