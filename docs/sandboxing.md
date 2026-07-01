@@ -1,63 +1,65 @@
-# Sandboxing and Process Execution
+# Local data and permissions
 
-Neon Pilot routes host-owned process execution through a shared process launcher so sandboxing extensions can wrap commands consistently. Filesystem access should converge on the same authority model through the [Filesystem Authority](filesystem-authority.md): direct file APIs and command sandboxes should share scoped root grants instead of inventing separate policy vocabularies.
+Neon Pilot is local first. Conversations, settings, installed extensions, extension data, and runtime state live on your Mac.
 
-## Execution boundary
+Network access happens through the model providers, MCP servers, tools, and integrations you choose to configure.
 
-Extensions and core code should not spawn processes directly. Use the host APIs that route through the shared launcher:
+## What stays local
 
-- live-session bash tool
-- extension `ctx.shell` and `ctx.git`
-- daemon/background run launches
-- automation command tasks
+Neon Pilot stores these on your machine:
 
-When a wrapper is active, tool UI should expose the wrapper metadata, for example a human label or the extension id. This is a visibility contract: users and agents should be able to tell which execution boundary handled a command.
+- conversations and transcript history;
+- app settings and local runtime state;
+- installed extensions;
+- extension settings and extension-owned data;
+- local files and folders you attach or reference;
+- generated artifacts and checkpoints;
+- background work state.
 
-## Registering a process wrapper
+Provider API keys should be stored through Settings, macOS Keychain, or another supported credential path.
 
-Agent extensions can register a process wrapper from their backend agent extension export:
+## What can leave your machine
 
-```ts
-export function mySandboxAgentExtension(pi) {
-  pi.registerBashProcessWrapper(
-    'my-sandbox-extension',
-    (context) => ({
-      ...context,
-      command: '/path/to/sandbox',
-      args: ['run', '--', context.command, ...context.args],
-      shell: false,
-    }),
-    { label: 'My Sandbox' },
-  );
-}
-```
+Model providers receive the prompt and context needed for the message you send. This can include conversation history, attached files, referenced files, images, screenshots, or tool results when they are part of the request.
 
-The wrapper receives `{ command, args, cwd, env, shell, wrappers }` and returns the launch context to execute. Wrappers are applied in registration order. Use stable extension ids for wrapper ids.
+Other configured tools may also use the network. For example:
 
-## Filesystem root grants
+- an MCP server may call a remote service;
+- a browser tool may load a website;
+- an extension may connect to an integration you enabled;
+- a model gateway may serve local API requests to another tool.
 
-Process wrappers should eventually receive the Filesystem Authority grants for the subject they are launching for. That lets a sandbox wrapper mount or expose the same roots that direct file APIs would allow: workspace read/write, extension private storage, artifact output, temp workspaces, knowledge access, or secrets. The process launcher remains the execution boundary; the Filesystem Authority owns root identity, grants, policy decisions, and audit vocabulary.
+Review what you attach and which extensions you enable.
 
-## Speculative workspaces
+## Extension permissions
 
-Speculative agent runs, including Model Arena challenger runs, should not write directly into the user's active workspace. Use the host-owned speculative workspace boundary instead:
+Extensions declare the capabilities they need. Depending on the extension, this can include storage, backend actions, tools, settings, commands, process execution, or provider-aware behavior.
 
-1. create a temporary workspace from the source directory;
-2. prefer APFS clone copies on macOS and fall back to a normal recursive copy when clone support is unavailable;
-3. run the challenger command in the temporary workspace;
-4. use the generated macOS `sandbox-exec` profile when available to deny writes outside the temporary workspace and explicit writable temp roots;
-5. collect a file-tree diff against the source workspace;
-6. apply the selected change set back to the source workspace only after the user chooses that run;
-7. dispose of the temporary workspace on cancel, rejection, or completion.
+Use the Extensions page to inspect installed extensions, enable or disable them, and review diagnostics.
 
-The first implementation lives in `packages/desktop/server/filesystem/speculativeWorkspace.ts`. It intentionally does not depend on AgentFS, Treebeard, git worktrees, or an external filesystem daemon. AgentFS-style systems can be tested later as alternative adapters behind the same boundary, but Model Arena should target Neon Pilot's speculative workspace contract rather than a third-party command shape.
+## Process execution
 
-## Extension process API policy
+Some agent work needs to run shell commands. Neon Pilot routes process execution through host-owned APIs so extensions and tools use the same visible execution boundary.
 
-Extension backend code must use `ctx.shell` for process execution. Direct Node process APIs are blocked during backend builds and bundle loading for normal extension code:
+When a command runs, inspect the transcript or background-work surface to see what ran and what it returned.
 
-- `child_process` / `node:child_process`
-- `cluster` / `node:cluster`
-- `worker_threads` / `node:worker_threads`
+## Filesystem access
 
-This is a guardrail against accidental bypasses, not a hostile-code security boundary. Unknown or hostile extension code still requires out-of-process isolation or a VM/workspace sandbox.
+The agent can work with files you attach, folders you select, and workspace paths you make available.
+
+Keep sensitive files out of prompts unless the model provider and enabled tools are allowed to see them.
+
+## Practical safety habits
+
+- Store provider keys through Settings or a supported credential flow.
+- Do not paste secrets into chat messages.
+- Attach the smallest file set that solves the task.
+- Inspect new extensions before enabling them.
+- Disable extensions you are not using.
+- Use local-only providers or tools when a task must not reach hosted services.
+
+## Related pages
+
+- [Providers and models](providers-and-models.md)
+- [Context and attachments](conversation-context.md)
+- [Build an extension](build-an-extension.md)

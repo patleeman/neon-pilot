@@ -1042,6 +1042,14 @@ th {
     max-height: none;
   }
 
+  .docs-content {
+    order: 1;
+  }
+
+  .docs-sidebar {
+    order: 2;
+  }
+
   .docs-toc {
     display: none;
   }

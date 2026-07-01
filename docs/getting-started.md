@@ -1,75 +1,66 @@
 # Getting Started
 
-Install the packaged Neon Pilot app and verify the setup.
+Install Neon Pilot, connect a model provider, and send your first message.
 
 ## Install the app
 
-Download the latest macOS `.dmg` from [GitHub Releases](https://github.com/patleeman/neon-pilot/releases/latest), open it, and drag **Neon Pilot.app** into Applications.
+Download the latest signed macOS build:
 
-For agent-driven setup, use the packaged installer script:
+[Download the latest DMG](https://github.com/patleeman/neon-pilot/releases/download/v0.11.38/Neon-Pilot-0.11.38-mac-arm64.dmg)
+
+Open the `.dmg`, then drag **Neon Pilot.app** into **Applications**.
+
+You can also install and bootstrap from Terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap
 ```
 
-Use `--channel rc` when you want the release-candidate app.
+Use the Terminal command when you want the CLI installed at the same time, or when you want another local agent to run the install for you.
 
-## Configure a model provider
+## Open Neon Pilot
 
-Open **Neon Pilot.app**. The desktop app manages the local daemon automatically. On a fresh install, Neon Pilot starts a short guided tour over the real app pages instead of a separate setup wizard.
+Open **Neon Pilot.app** from Applications.
 
-In the app, open **Settings** and confirm the model provider and default model you want to use. If you installed the CLI, you can do the same setup from a terminal:
+On first launch, Neon Pilot starts a short guided tour over the real app. The app also starts and manages its local background services for you.
 
-```bash
-neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
-printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin
+## Connect a model provider
+
+Open **Settings**, then choose the provider and model you want to use.
+
+Neon Pilot supports the providers available through Pi. Bring your own API keys and store them through the app. Do not paste API keys into chat messages or command history.
+
+For more detail, see [Providers and models](providers-and-models.md).
+
+## Send a first message
+
+Create a new conversation and send a small prompt:
+
+```text
+Summarize what Neon Pilot is and suggest one useful next step.
 ```
 
-Provider keys must not be passed in command arguments. Use stdin, Keychain, OAuth/device login, or another configured secrets backend.
+The setup is working when the conversation loads and the agent replies.
 
-## Verify the install
+## Add useful context
 
-Use both checks when the CLI is installed:
+When the agent needs local context, add it from the composer:
 
-```bash
-neon-pilot bootstrap doctor
-```
+- Type `@` to reference workspace files.
+- Drag files or screenshots into the composer.
+- Attach a folder when the task needs a whole project.
+- Use the workbench to inspect files, artifacts, browser views, terminal output, and extension surfaces beside the conversation.
 
-Then open **Neon Pilot.app**, start a new conversation, and send a small first prompt such as:
+See [Context and attachments](conversation-context.md) for the full guide.
 
-> Summarize what Neon Pilot is and tell me one useful next step.
+## Build your first extension
 
-The setup is healthy when `doctor` passes, the conversation view loads, and the agent replies. If the app opens but the agent does not reply, recheck the provider and key in **Settings** before debugging extensions or project context.
+Neon Pilot is self-extensible. If you repeat a workflow, ask your agent to turn it into an extension.
 
-## Important paths
-
-- `<state-root>` — machine-local runtime state. Default: `$XDG_STATE_HOME/neon-pilot` when `XDG_STATE_HOME` is set, otherwise `~/.local/state/neon-pilot`
-- `<config-root>` — machine-local config. Default: `$XDG_CONFIG_HOME/neon-pilot` when set, otherwise `<state-root>/config`
-- `<knowledge-root>` — durable knowledge root. See [Configuration](configuration.md) for override order and channel-specific state roots.
-
-## First run checklist
-
-1. Follow the guided tour, or open **Settings** and confirm your model provider and default model.
-2. Start a new conversation and verify the agent replies to a small prompt.
-3. Attach a file or folder when the task needs project context.
-4. Ask for a bounded first task, such as summarizing a file, explaining a code path, or drafting a plan.
-5. Open **Extensions** to inspect built-in capabilities and install or build workflow-specific extensions.
-6. Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.
-7. Use conversation attachments, projects, and knowledge files when you want reusable context.
-
-## What to try next
-
-- Ask Neon Pilot to inspect a local repo and explain its structure.
-- Attach a folder and ask for a bug fix or documentation update.
-- Queue a follow-up while the agent is working.
-- Install an optional extension from **Settings -> Extensions**.
-- Ask the agent to build a small extension for a repeated workflow.
-
-For source builds and repo development, use [Development workflow](development.md).
+Start with [Build an extension](build-an-extension.md).
 
 ## Next steps
 
-- [Views](views.md) — understand Conversation and Workbench layout modes
-- [Conversations](conversations.md) — how to work with agent conversations
-- [Desktop App](desktop-app.md) — Electron shell and shortcuts
-- [Configuration](configuration.md) — config files and environment variables
+- [Desktop app](desktop-app.md) explains the main app layout.
+- [Conversations](conversations.md) explains messages, follow-ups, branches, and shortcuts.
+- [Install with another agent](agent-bootstrap.md) shows how to delegate setup to Claude Code, Codex, or another local coding agent.

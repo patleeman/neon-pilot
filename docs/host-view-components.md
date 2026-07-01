@@ -46,7 +46,7 @@ The UI loads the extension frontend entry and resolves `CustomArtifactDetailPane
 }
 ```
 
-The UI loads the host renderer from `packages/desktop/ui/src/extensions/hostViewComponents.tsx`. The extension frontend is not loaded for this surface unless the manifest also declares overrides.
+The UI loads the host renderer from the host component registry. The extension frontend is not loaded for this surface unless the manifest also declares overrides.
 
 ## Customization model
 
@@ -113,7 +113,7 @@ Before host components, an extension that wanted to slightly change the artifact
 }
 ```
 
-That component then imported the workbench SDK, artifact data hooks, renderers, markdown/code renderers, and local layout code. It worked, but every extension that did this carried its own copy of a complex UI path. Tiny customizations became giant bundle and maintenance cliffs. Classic haunted house architecture, but with React.
+That component then imported the workbench SDK, artifact data hooks, renderers, markdown/code renderers, and local layout code. It worked, but every extension that did this carried its own copy of a complex UI path. Tiny customizations became large bundle and maintenance costs.
 
 After host components, the extension keeps the contribution but delegates the view to the host:
 
@@ -176,16 +176,16 @@ Agents can inspect the catalog through the Extension Manager UI once the extensi
 
 ## Runtime split
 
-- Host component references load from `packages/desktop/ui/src/extensions/hostViewComponents.tsx`.
+- Host component references load from the host component registry.
 - Custom string components still load the extension frontend entry.
 - Host references with overrides load the host component and then load only the extension override exports.
 - Server manifest validation rejects unknown host ids and unknown override slots before the UI can render a broken surface.
 
 ## Adding a new host component
 
-1. Add metadata to `packages/extensions/src/host-view-components.ts`, choosing locations from `main`, `sidebar`, `rightRail`, and `workbench`.
-2. Add the UI loader in `packages/desktop/ui/src/extensions/hostViewComponents.tsx`.
+1. Add metadata to the host component catalog, choosing locations from `main`, `sidebar`, `rightRail`, and `workbench`.
+2. Add the host UI loader.
 3. If the component needs configuration, define JSON-serializable `propsSchema` in the catalog.
 4. If it needs customization, add named override slots to the catalog and make the host component read `slotOverrides`.
 5. Update this doc's catalog table.
-6. Run `pnpm run build:extensions`, `pnpm run check:extensions`, `pnpm run check:types`, and `pnpm --dir packages/desktop run build:ui`.
+6. Run the extension build, extension checks, type checks, and desktop UI build before publishing the new host component.

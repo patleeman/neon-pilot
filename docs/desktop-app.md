@@ -1,123 +1,84 @@
-# Desktop App
+# Desktop app
 
-The Electron desktop app is the primary Neon Pilot operator UI. It hosts the React renderer, manages the local daemon lifecycle, and provides the full feature surface.
+Neon Pilot is a macOS desktop app for running and extending AI agent workflows.
 
-## Starting
+The app gives you a local conversation workspace, a workbench beside the conversation, Settings, Extensions, and background work surfaces.
 
-```bash
-# Stable production build
-pnpm run desktop:start
+## Main areas
 
-# Development mode with hot reload
-pnpm run desktop:dev
+| Area            | What it is for                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| Left navigation | Move between conversations, extensions, settings, and installed product surfaces.                            |
+| Conversation    | Chat with the agent, attach files, inspect tool output, and continue saved work.                             |
+| Composer        | Send prompts, attach files, choose models, queue follow-ups, and use commands.                               |
+| Workbench       | Inspect files, artifacts, browser pages, terminal output, extension panels, and other side-by-side surfaces. |
+| Settings        | Configure providers, models, app preferences, extensions, commands, and local readiness.                     |
+| Extensions      | Enable, disable, inspect, install, or build app-grade capabilities.                                          |
 
-# Demo mode with seeded data
-pnpm run desktop:demo
-```
+## Conversation and workbench modes
 
-Both `desktop:start` and `desktop:dev` build the Electron shell and launch it through `packages/desktop/scripts/launch-dev-app.mjs`.
+Neon Pilot has two common layouts:
 
-For packaged builds, launch `Neon Pilot.app` from the output directory. RC builds launch as `Neon Pilot RC.app` so they can coexist with the stable app.
+| State                | Shortcut | Description                                     |
+| -------------------- | -------- | ----------------------------------------------- |
+| Conversation focused | `F1`     | Single conversation pane with the left sidebar. |
+| Workbench open       | `F2`     | Conversation plus a right-side workbench.       |
 
-## Runtime Model
+Toggle the left sidebar with `Cmd+/` or `Ctrl+/`.
 
-```
-Electron main process
-    │
-    ├── Renderer (React) ── neon-pilot://app/
-    │       │
-    │       ├── Conversation routes
-    │       ├── Knowledge
-    │       ├── Automations
-    │       └── Settings
-    │
-    ├── Backend child process
-    │       │
-    │       ├── Local API
-    │       ├── Session parsing and search
-    │       ├── Git/checkpoint operations
-    │       ├── Knowledge base reads/writes
-    │       ├── Extension backend host
-    │       └── Daemon runtime
-    │             │
-    │       ├── Scheduled tasks
-    │       ├── Wakeups
-    │       └── Follow-up queue
-```
+Toggle the workbench with `Cmd+\` or `Ctrl+\`.
 
-- Electron owns the UI surface through the `neon-pilot://app/` protocol
-- Keep the startup path tiny: the main-process hot bundle should only create the window, register protocol/IPC, and schedule deferred work
-- Freeze-prone local API work runs in the backend child process; do not import or execute heavy desktop server capabilities directly on the Electron main thread
-- Avoid `spawnSync`/`execSync` in desktop main-process flows
-- The daemon owns durable background behavior inside the backend child and starts after the renderer has had a chance to paint; user actions that need it can force-start it immediately
-- The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions, automations, and daemon status after startup settles
+## Workbench
 
-## Layout
+The workbench is the side-by-side space for context and outputs. Depending on what you have opened or installed, it can show:
 
-| State          | Shortcut | Description                          |
-| -------------- | -------- | ------------------------------------ |
-| Workbench off  | `F1`     | Single-pane layout with left sidebar |
-| Workbench open | `F2`     | Conversation plus tabbed workbench   |
+- file explorer;
+- rendered artifacts;
+- browser pages;
+- terminal views;
+- knowledge or context views;
+- extension-provided tools and panels.
 
-Toggle the left sidebar with `Cmd+/` (or `Ctrl+/`). Toggle the workbench with `Cmd+\` (or `Ctrl+\`).
+Use the workbench when the agent's work needs inspection, files, previews, or controls beside the transcript.
 
-## Workbench Tabs
+## Settings
 
-The workbench new tab page includes:
+Use Settings to manage:
 
-| Tab           | Description                   |
-| ------------- | ----------------------------- |
-| File Explorer | Project file tree browser     |
-| Artifacts     | Rendered HTML, Mermaid, LaTeX |
-| Browser       | Embedded webview              |
+- model providers and default models;
+- API keys and provider credentials;
+- extension settings;
+- keyboard shortcuts and command bindings;
+- desktop preferences;
+- local readiness items.
 
-Knowledge is also a primary left-sidebar page. Extension-contributed workbench tools can appear on the new tab page. Tabs are context-sensitive; artifacts open from transcript cards and do not appear as a generic new-tab option. Checkpoint diffs and background work render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial renderer bundle.
+Provider keys should be stored through Settings or another safe credential path. Do not paste provider keys into conversations.
 
-## Keyboard Shortcuts
+## Extensions
 
-Desktop menu shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings → Commands. Defaults:
+Extensions are first-class app capabilities. They can add pages, panels, tools, commands, settings, background services, setup checks, transcript renderers, and provider-aware behavior.
 
-| Action                    | Default            |
-| ------------------------- | ------------------ |
-| Show Neon Pilot           | `Cmd/Ctrl+Shift+A` |
-| New conversation          | `Cmd/Ctrl+N`       |
-| Close tab                 | `Cmd/Ctrl+W`       |
-| Reopen closed tab         | `Cmd+Shift+N`      |
-| Previous conversation     | `Cmd/Ctrl+[`       |
-| Next conversation         | `Cmd/Ctrl+]`       |
-| Toggle pinned             | `Cmd/Ctrl+Alt+P`   |
-| Archive / restore         | `Cmd/Ctrl+Alt+A`   |
-| Rename conversation       | `Cmd/Ctrl+Alt+R`   |
-| Focus composer            | `Cmd/Ctrl+L`       |
-| Edit working directory    | `Cmd/Ctrl+Shift+L` |
-| Find on page              | `Cmd/Ctrl+F`       |
-| Settings                  | `Cmd/Ctrl+,`       |
-| Quit                      | `Cmd/Ctrl+Q`       |
-| Conversation mode         | `F1`               |
-| Workbench mode            | `F2`               |
-| New workbench tab         | `Cmd/Ctrl+T`       |
-| Close workbench tab       | `Cmd/Ctrl+Shift+W` |
-| Close workbench file      | `Cmd/Ctrl+Alt+W`   |
-| Refresh workbench file    | `F5`               |
-| Toggle workbench explorer | `Cmd/Ctrl+B`       |
-| Toggle workbench diff     | `Cmd/Ctrl+Shift+D` |
-| Toggle left sidebar       | `Cmd/Ctrl+/`       |
-| Toggle right sidebar      | `Cmd/Ctrl+\`       |
+Neon Pilot ships with bundled system extensions. You can also install optional extensions or ask your agent to build one for your own workflow.
 
-## Routes
+## Keyboard shortcuts
 
-| Route                | Page                                                                          |
-| -------------------- | ----------------------------------------------------------------------------- |
-| `/conversations`     | Active or new conversation redirect                                           |
-| `/conversations/new` | New conversation                                                              |
-| `/conversations/:id` | Existing conversation                                                         |
-| `/knowledge`         | Knowledge browser                                                             |
-| `/automations`       | Automation list                                                               |
-| `/automations/:id`   | Automation detail                                                             |
-| `/settings`          | Settings panel                                                                |
-| `/telemetry`         | Telemetry traces page                                                         |
-| `/gateways`          | Gateway connections when installed; otherwise redirects to a new conversation |
+Default shortcuts:
 
-## Demo Mode
+| Action               | Shortcut     |
+| -------------------- | ------------ |
+| New conversation     | `Cmd/Ctrl+N` |
+| Focus composer       | `Cmd/Ctrl+L` |
+| Find on page         | `Cmd/Ctrl+F` |
+| Settings             | `Cmd/Ctrl+,` |
+| Conversation focused | `F1`         |
+| Workbench open       | `F2`         |
+| Toggle left sidebar  | `Cmd/Ctrl+/` |
+| Toggle workbench     | `Cmd/Ctrl+\` |
 
-`pnpm run desktop:demo` creates an isolated temporary state root with seeded conversations, automations, executions, and assets for UI development and testing. Seeded content includes conversations with artifacts, checkpoints, reminders, subagent demos, and pathological fixtures.
+Shortcuts are configurable in Settings when the owning command supports keybinding changes.
+
+## Related pages
+
+- [Conversations](conversations.md)
+- [Context and attachments](conversation-context.md)
+- [Build an extension](build-an-extension.md)

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Extension SDK · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="active" href="./extension-sdk.html">Extension SDK</a
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="extension-sdk">Extension SDK</h1>
+        <p>
+          The Neon Pilot extension SDK is the public surface for building native extensions. Use it instead of importing desktop or core
+          internals.
+        </p>
+        <p>
+          The normal path is still agent-first: ask your agent to build the extension, then use this page to understand what the agent can
+          use and what is available to you.
+        </p>
+        <h2 id="main-imports">Main imports</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Import</th>
+              <th>Use it for</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>@neon-pilot/extensions</code></td>
+              <td>
+                Manifest types, surface props, frontend client types, backend context types, contribution types, and shared extension
+                contracts.
+              </td>
+            </tr>
+            <tr>
+              <td><code>@neon-pilot/extensions/ui</code></td>
+              <td>
+                Shared UI primitives for extension pages, rails, lists, forms, empty/error/loading states, dialogs, resource pickers, chat
+                views, and workbench chrome.
+              </td>
+            </tr>
+            <tr>
+              <td><code>@neon-pilot/extensions/settings</code></td>
+              <td>Settings-page primitives such as panels, rows, switches, selects, text inputs, and settings helpers.</td>
+            </tr>
+            <tr>
+              <td><code>@neon-pilot/extensions/backend/*</code></td>
+              <td>
+                Backend host capabilities such as conversations, settings, storage, shell, git, browser, MCP, model gateway, prompt
+                assembly, telemetry, and extension registry access.
+              </td>
+            </tr>
+            <tr>
+              <td><code>@neon-pilot/extensions/host-view-components</code></td>
+              <td>Catalog of host-owned UI components an extension can reference instead of bundling a custom React surface.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Extension runtime code should not import from <code>packages/desktop</code>, <code>packages/core</code>, or app internals.</p>
+        <h2 id="package-shape">Package shape</h2>
+        <p>A native extension package usually looks like this:</p>
+        <pre><code>my-extension/
+  extension.json
+  package.json
+  README.md
+  src/
+    frontend.tsx
+    backend.ts
+    styles.css
+  dist/
+    frontend.js
+    frontend.css
+    backend.mjs</code></pre>
+        <p><code>src/</code> is the editable source. <code>dist/</code> is generated output loaded by packaged Neon Pilot builds.</p>
+        <h2 id="manifest-contributions">Manifest contributions</h2>
+        <p>The manifest declares what the extension adds to Neon Pilot.</p>
+        <p>Common contributions:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Contribution</th>
+              <th>What it adds</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>views</code></td>
+              <td>Main pages, sidebars, right rails, workbench panels, and other React surfaces.</td>
+            </tr>
+            <tr>
+              <td><code>nav</code></td>
+              <td>App navigation entries and route-owned sidebar/right-rail bindings.</td>
+            </tr>
+            <tr>
+              <td><code>commands</code></td>
+              <td>Command palette actions and app-level commands.</td>
+            </tr>
+            <tr>
+              <td><code>cliCommands</code></td>
+              <td><code>neon-pilot</code> CLI commands contributed by the extension.</td>
+            </tr>
+            <tr>
+              <td><code>tools</code></td>
+              <td>Agent-callable tools.</td>
+            </tr>
+            <tr>
+              <td><code>skills</code></td>
+              <td>Agent skills packaged with the extension.</td>
+            </tr>
+            <tr>
+              <td><code>settings</code></td>
+              <td>Scalar settings shown in Settings.</td>
+            </tr>
+            <tr>
+              <td><code>settingsComponent</code></td>
+              <td>A custom Settings panel rendered by the extension.</td>
+            </tr>
+            <tr>
+              <td><code>secrets</code></td>
+              <td>Secret declarations for provider keys or integration credentials.</td>
+            </tr>
+            <tr>
+              <td><code>setupItems</code></td>
+              <td>Host-rendered readiness checks and actions.</td>
+            </tr>
+            <tr>
+              <td><code>modelProfiles</code></td>
+              <td>Provider/model-specific behavior hooks.</td>
+            </tr>
+            <tr>
+              <td><code>mentions</code></td>
+              <td><code>@</code> mention providers for composer context.</td>
+            </tr>
+            <tr>
+              <td><code>quickOpen</code> and <code>searchProviders</code></td>
+              <td>Command palette scopes and backend-powered search.</td>
+            </tr>
+            <tr>
+              <td><code>transcriptRenderers</code> and <code>transcriptBlocks</code></td>
+              <td>Custom transcript rendering.</td>
+            </tr>
+            <tr>
+              <td><code>composerControls</code>, <code>composerShelves</code>, <code>toolbarActions</code></td>
+              <td>Composer UI extensions.</td>
+            </tr>
+            <tr>
+              <td><code>subscriptions</code> and backend services</td>
+              <td>Background behavior and event-driven work.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>See <a href="./extensions.html">Extension authoring</a> for the full manifest contract.</p>
+        <h2 id="frontend-surfaces">Frontend surfaces</h2>
+        <p>
+          Frontend components receive <code>ExtensionSurfaceProps</code>. The important object is <code>pa</code>, the Neon Pilot client
+          passed to extension UI.
+        </p>
+        <p>Use <code>pa</code> to:</p>
+        <ul>
+          <li>call extension backend actions;</li>
+          <li>read and update route selection;</li>
+          <li>work with conversation context;</li>
+          <li>invoke host capabilities exposed through the extension API;</li>
+          <li>subscribe to supported runtime changes;</li>
+          <li>invalidate or refresh extension-owned data.</li>
+        </ul>
+        <p>
+          Use <code>@neon-pilot/extensions/ui</code> for visible UI. Do not clone app chrome with local markup when a shared primitive
+          exists.
+        </p>
+        <p>Good first choices:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Need</th>
+              <th>Use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Page shell</td>
+              <td>App/page layout primitives from <code>@neon-pilot/extensions/ui</code>.</td>
+            </tr>
+            <tr>
+              <td>Toolbar action</td>
+              <td><code>ToolbarButton</code> or <code>IconButton</code>.</td>
+            </tr>
+            <tr>
+              <td>Empty, loading, or error state</td>
+              <td>Shared <code>EmptyState</code>, <code>LoadingState</code>, or <code>ErrorState</code> primitives.</td>
+            </tr>
+            <tr>
+              <td>Table or list actions</td>
+              <td>Data table/list primitives and action groups.</td>
+            </tr>
+            <tr>
+              <td>Resource selection</td>
+              <td>Resource picker primitives.</td>
+            </tr>
+            <tr>
+              <td>Compact workbench rail</td>
+              <td>Rail/workbench primitives.</td>
+            </tr>
+            <tr>
+              <td>Chat-like extension UI</td>
+              <td><code>ChatView</code> or <code>ExtensionChatRail</code>.</td>
+            </tr>
+            <tr>
+              <td>Settings rows</td>
+              <td><code>@neon-pilot/extensions/settings</code> row-list primitives.</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2 id="backend-actions-and-tools">Backend actions and tools</h2>
+        <p>Backend code exports handlers declared in <code>extension.json</code>.</p>
+        <p>Use backend actions for UI calls, setup checks, settings saves, search providers, and integration logic.</p>
+        <p>Use tools when the agent should call the capability during a turn.</p>
+        <p>Backend handlers receive an <code>ExtensionBackendContext</code>. Use that context instead of Node or app internals.</p>
+        <p>Common backend capabilities include:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>Use it for</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ctx.storage</code></td>
+              <td>Extension key-value storage.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.database</code></td>
+              <td>Extension-owned SQLite data.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.filesystem</code></td>
+              <td>Scoped file access.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.shell</code></td>
+              <td>Host-owned process execution.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.git</code></td>
+              <td>Git operations through the host boundary.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.conversations</code></td>
+              <td>Conversation reads, writes, transcript blocks, and related actions.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.models</code></td>
+              <td>Provider/model reads and host-owned provider writes.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.events</code></td>
+              <td>Publish or subscribe to extension/runtime events.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.notify</code></td>
+              <td>User-visible notifications.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.secrets</code></td>
+              <td>Extension-declared secrets.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.telemetry</code></td>
+              <td>Extension telemetry records.</td>
+            </tr>
+            <tr>
+              <td><code>ctx.ui</code></td>
+              <td>Invalidate or refresh UI surfaces.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Direct <code>child_process</code>, <code>worker_threads</code>, and desktop server imports are blocked for normal extension
+          backend code. Use host capabilities so Neon Pilot can apply policy, diagnostics, and future isolation.
+        </p>
+        <h2 id="settings-and-secrets">Settings and secrets</h2>
+        <p>Use manifest <code>settings</code> for simple scalar preferences.</p>
+        <p>
+          Use <code>settingsComponent</code> when the extension needs a richer settings UI, such as account connection state, model
+          downloads, path pickers, or multi-row configuration.
+        </p>
+        <p>
+          Use <code>secrets</code> for API keys and integration credentials. Secrets should not be stored in plain extension settings or
+          logged into transcripts.
+        </p>
+        <h2 id="provider-and-model-behavior">Provider and model behavior</h2>
+        <p>Use <code>modelProfiles</code> when an extension needs behavior tied to a provider or model.</p>
+        <p>Examples:</p>
+        <ul>
+          <li>expose a patch-edit tool for one coding model family;</li>
+          <li>start a local runtime before a local model request;</li>
+          <li>disable network-heavy tools for local-only models;</li>
+          <li>add vision-specific tools for vision-capable models.</li>
+        </ul>
+        <p>Model profiles match provider/model refs such as <code>openai-codex/*</code> or <code>*/gpt-5.5</code>.</p>
+        <h2 id="host-view-components">Host view components</h2>
+        <p>Use host view components when you want a standard Neon Pilot UI surface with small customization.</p>
+        <p>
+          For example, an extension can reference a host-owned conversation page or workbench detail component instead of bundling a copy of
+          the same UI.
+        </p>
+        <p>See <a href="./host-view-components.html">Host view components</a>.</p>
+        <h2 id="build-and-validate">Build and validate</h2>
+        <p>Build extensions before loading them in packaged Neon Pilot:</p>
+        <pre><code>pnpm run extension:build -- /path/to/my-extension</code></pre>
+        <p>Validate with the extension doctor or Extension Manager diagnostics when available.</p>
+        <p>
+          For UI extensions, always open the contributed route, sidebar, settings section, workbench panel, composer control, or transcript
+          renderer in the app. A build is not enough.
+        </p>
+        <h2 id="related-pages">Related pages</h2>
+        <ul>
+          <li><a href="./build-an-extension.html">Build an extension</a></li>
+          <li><a href="./extensions.html">Extension authoring</a></li>
+          <li><a href="./host-view-components.html">Host view components</a></li>
+          <li><a href="./extension-distribution.html">Extension distribution</a></li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-sdk.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#main-imports">Main imports</a><a href="#package-shape">Package shape</a
+        ><a href="#manifest-contributions">Manifest contributions</a><a href="#frontend-surfaces">Frontend surfaces</a
+        ><a href="#backend-actions-and-tools">Backend actions and tools</a><a href="#settings-and-secrets">Settings and secrets</a
+        ><a href="#provider-and-model-behavior">Provider and model behavior</a><a href="#host-view-components">Host view components</a
+        ><a href="#build-and-validate">Build and validate</a><a href="#related-pages">Related pages</a>
+      </aside>
+    </main>
+  </body>
+</html>

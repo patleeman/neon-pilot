@@ -1,64 +1,85 @@
-# Conversation Context
+# Context and attachments
 
-Conversations can carry durable context through file references, attached docs, and binary uploads. The agent sees this context alongside the conversation history.
+Neon Pilot conversations can include files, folders, images, PDFs, videos, screenshots, and extension-provided context. The agent sees this context alongside your message and the conversation history.
 
-## File References
+## Reference files with `@`
 
-Type `@` in the composer to fuzzy-search workspace files. Matching files appear in a dropdown. Select one to insert a reference.
+Type `@` in the composer to search files and other available context.
 
-The referenced file content is injected into the prompt when the message is sent. The agent sees the full file contents, not just the path.
+Select an item to insert a reference. When you send the message, Neon Pilot adds that referenced content to the agent's context.
 
+Example:
+
+```text
+@src/auth.ts Review this file and suggest one simplification.
 ```
-User: @src/auth.ts Can you review this file?
-      @src/auth.test.ts And its tests?
 
-Agent sees: contents of auth.ts + auth.test.ts + the prompt
-```
+Use file references when you want the agent to focus on specific files instead of scanning a whole folder.
 
-## Attached Context Docs
+## Attach files and folders
 
-Drag a markdown file into the composer or use the attach button to pin it as conversation-scoped durable context.
+Use the attachment button or drag files into the composer.
 
-Attached docs:
+Attach a folder when the agent needs broader project context. Attach individual files when you want a narrower review.
 
-- Persist across all turns in the conversation
-- Appear in the Knowledge tree when the workbench is open
-- Are loaded by the agent on every turn
-- Do not modify the knowledge base — they are scoped to the conversation
+Good uses:
 
-Multiple docs can be attached to a single conversation. Remove an attached doc from the Knowledge tree.
+- ask for a bug fix in a local project;
+- summarize a document;
+- compare two files;
+- review a screenshot or design;
+- ask the agent to update docs from a folder of source files.
 
-## Binary Attachments
+## Attach images
 
-Images, PDFs, and other binary files can be attached to individual messages:
+Paste or drag images into the composer.
 
-| Method      | How                                       |
-| ----------- | ----------------------------------------- |
-| Paste       | `Ctrl+V` (macOS) or `Ctrl+V` (Windows)    |
-| Drag        | Drag file into the composer               |
-| File picker | Use the attachment button in the composer |
+Image-capable models can inspect images directly. Text-only models may use Neon Pilot's local image probe tools when a vision model is configured.
 
-Images are sent to image-capable models as image content. The composer downscales large images before upload, and text-only image probing caps each prompt at 8 images / 8 MiB per image. For text-only models, Neon Pilot saves the images locally, assigns stable `img_<hash>` IDs, and injects the `probe_image` tool only when a preferred vision model is configured in Settings. The agent calls `probe_image` with one or more image IDs and a focused question; multi-image calls handle comparisons. Other binary formats are stored as conversation attachments but may not be visible to all models.
+Use images for:
 
-Videos are attached by local file path rather than copied into prompt storage. Neon Pilot records path-backed metadata, assigns stable `vid_<hash>` IDs, and injects a video attachment notice into the prompt. Agents inspect video content with `extract_video_frame`, `sample_video_frames`, and `transcribe_video`; transcript segment timestamps remain absolute to the original video.
+- UI feedback;
+- visual bug reports;
+- screenshots of errors;
+- diagrams or sketches;
+- generated assets you want the agent to inspect.
 
-Existing conversations can also reopen saved drawings through the `Open Drawing Picker` conversation command, then attach the latest revision or a specific saved revision back into the composer.
+## Attach videos
 
-## Context Loading Order
+Attach videos when the agent needs to inspect a recording. Neon Pilot stores video references locally and exposes tools for frame sampling and transcription when available.
 
-When the agent builds context for a turn, it merges inputs in this order:
+Use videos for:
 
-1. **Instruction files** — standing behavior and policy from the knowledge base, `~/.config/agents`, config, or project discovery
-2. **Attached context docs** — durable docs pinned to this conversation
-3. **Inline `@` file references** — files referenced in the current message
-4. **Binary attachments** — images and files attached to the current message
-5. **Conversation history** — previous turns in this thread
+- reproducing UI bugs;
+- reviewing animations;
+- inspecting screen recordings;
+- extracting notes from recorded walkthroughs.
 
-Later entries have higher priority for conflicting instructions.
+## Use standing instructions
 
-## Use Cases
+Neon Pilot can include standing instructions from project files such as `AGENTS.md`, from configured local instruction files, and from extension-provided context.
 
-- **Project setup** — attach a `CONTEXT.md` doc that describes the project
-- **Code review** — `@` reference specific files for the agent to analyze
-- **Design feedback** — paste a screenshot and ask for visual feedback
-- **Multi-file changes** — reference several files and ask for coordinated edits
+Use standing instructions for durable preferences and project rules. Use conversation attachments for context that belongs only to the current thread.
+
+## Context priority
+
+When several context sources apply, the current message is usually the most specific instruction. Use clear wording in the prompt when a file or screenshot should override older context.
+
+In practice:
+
+- put the task in the message;
+- attach only the files the task needs;
+- use `@` references for the most important files;
+- keep durable instructions short and stable.
+
+## Privacy and locality
+
+Context is stored locally by Neon Pilot. Model providers receive the prompt and context needed for the request you send to them.
+
+If a file should not be sent to a model provider, do not attach or reference it in the prompt.
+
+## Related pages
+
+- [Conversations](conversations.md)
+- [Providers and models](providers-and-models.md)
+- [Local data and permissions](sandboxing.md)

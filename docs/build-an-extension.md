@@ -33,7 +33,7 @@ Use this sequence when an agent helps a user create a new extension:
 
 Use this as the no-ambiguity loop for an agent building an extension in a repo checkout:
 
-1. Read this guide, [`docs/extensions.md`](extensions.md), [`packages/extensions/README.md`](../packages/extensions/README.md), and the closest existing extension `README.md`.
+1. Read this guide, [Extension SDK](extension-sdk.md), [Extension authoring](extensions.md), and the closest existing extension `README.md`.
 2. Inspect existing extension ids, routes, nav labels, action ids, commands, settings components, and tools before choosing names.
 3. Write a short UX brief before implementation:
    - **Primary user and job**: who uses it, what they are trying to accomplish, and what they should inspect or change first.
@@ -213,7 +213,7 @@ Acceptance criteria for agent-built extensions:
 ## Reference
 
 - [Extension authoring reference](extensions.md)
-- [Extension SDK/API reference](../packages/extensions/README.md)
+- [Extension SDK](extension-sdk.md)
 - [Extension Manager behavior](../extensions/system-extension-manager/README.md)
 - [System extension examples](../extensions)
 - [First-party optional extension repo](https://github.com/patleeman/neon-pilot-extensions)

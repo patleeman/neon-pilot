@@ -25,116 +25,80 @@
         <section>
           <h2>Start here</h2>
           <a class="" href="./">Overview</a><a class="active" href="./getting-started.html">Getting Started</a
-          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a
-          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
-        </section>
-        <section>
-          <h2>Runtime</h2>
-          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
-          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
-          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
-          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
-          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
-          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
-        </section>
-        <section>
-          <h2>Developers</h2>
-          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
-          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
-          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
       </aside>
       <article class="docs-content">
         <h1 id="getting-started">Getting Started</h1>
-        <p>Install the packaged Neon Pilot app and verify the setup.</p>
+        <p>Install Neon Pilot, connect a model provider, and send your first message.</p>
         <h2 id="install-the-app">Install the app</h2>
+        <p>Download the latest signed macOS build:</p>
         <p>
-          Download the latest macOS <code>.dmg</code> from
-          <a href="https://github.com/patleeman/neon-pilot/releases/latest">GitHub Releases</a>, open it, and drag
-          <strong>Neon Pilot.app</strong> into Applications.
+          <a href="https://github.com/patleeman/neon-pilot/releases/download/v0.11.38/Neon-Pilot-0.11.38-mac-arm64.dmg"
+            >Download the latest DMG</a
+          >
         </p>
-        <p>For agent-driven setup, use the packaged installer script:</p>
+        <p>Open the <code>.dmg</code>, then drag <strong>Neon Pilot.app</strong> into <strong>Applications</strong>.</p>
+        <p>You can also install and bootstrap from Terminal:</p>
         <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code></pre>
-        <p>Use <code>--channel rc</code> when you want the release-candidate app.</p>
-        <h2 id="configure-a-model-provider">Configure a model provider</h2>
         <p>
-          Open <strong>Neon Pilot.app</strong>. The desktop app manages the local daemon automatically. On a fresh install, Neon Pilot
-          starts a short guided tour over the real app pages instead of a separate setup wizard.
+          Use the Terminal command when you want the CLI installed at the same time, or when you want another local agent to run the install
+          for you.
         </p>
+        <h2 id="open-neon-pilot">Open Neon Pilot</h2>
+        <p>Open <strong>Neon Pilot.app</strong> from Applications.</p>
         <p>
-          In the app, open <strong>Settings</strong> and confirm the model provider and default model you want to use. If you installed the
-          CLI, you can do the same setup from a terminal:
+          On first launch, Neon Pilot starts a short guided tour over the real app. The app also starts and manages its local background
+          services for you.
         </p>
-        <pre><code>neon-pilot bootstrap configure --secrets-provider keychain --provider openai-codex --model gpt-5.4
-printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key openai --stdin</code></pre>
+        <h2 id="connect-a-model-provider">Connect a model provider</h2>
+        <p>Open <strong>Settings</strong>, then choose the provider and model you want to use.</p>
         <p>
-          Provider keys must not be passed in command arguments. Use stdin, Keychain, OAuth/device login, or another configured secrets
-          backend.
+          Neon Pilot supports the providers available through Pi. Bring your own API keys and store them through the app. Do not paste API
+          keys into chat messages or command history.
         </p>
-        <h2 id="verify-the-install">Verify the install</h2>
-        <p>Use both checks when the CLI is installed:</p>
-        <pre><code>neon-pilot bootstrap doctor</code></pre>
-        <p>Then open <strong>Neon Pilot.app</strong>, start a new conversation, and send a small first prompt such as:</p>
-        <p>&gt; Summarize what Neon Pilot is and tell me one useful next step.</p>
-        <p>
-          The setup is healthy when <code>doctor</code> passes, the conversation view loads, and the agent replies. If the app opens but the
-          agent does not reply, recheck the provider and key in <strong>Settings</strong> before debugging extensions or project context.
-        </p>
-        <h2 id="important-paths">Important paths</h2>
+        <p>For more detail, see <a href="./providers-and-models.html">Providers and models</a>.</p>
+        <h2 id="send-a-first-message">Send a first message</h2>
+        <p>Create a new conversation and send a small prompt:</p>
+        <pre><code>Summarize what Neon Pilot is and suggest one useful next step.</code></pre>
+        <p>The setup is working when the conversation loads and the agent replies.</p>
+        <h2 id="add-useful-context">Add useful context</h2>
+        <p>When the agent needs local context, add it from the composer:</p>
         <ul>
+          <li>Type <code>@</code> to reference workspace files.</li>
+          <li>Drag files or screenshots into the composer.</li>
+          <li>Attach a folder when the task needs a whole project.</li>
           <li>
-            <code>&lt;state-root&gt;</code> — machine-local runtime state. Default: <code>$XDG_STATE_HOME/neon-pilot</code> when
-            <code>XDG_STATE_HOME</code> is set, otherwise <code>~/.local/state/neon-pilot</code>
-          </li>
-          <li>
-            <code>&lt;config-root&gt;</code> — machine-local config. Default: <code>$XDG_CONFIG_HOME/neon-pilot</code> when set, otherwise
-            <code>&lt;state-root&gt;/config</code>
-          </li>
-          <li>
-            <code>&lt;knowledge-root&gt;</code> — durable knowledge root. See <a href="./configuration.html">Configuration</a> for override
-            order and channel-specific state roots.
+            Use the workbench to inspect files, artifacts, browser views, terminal output, and extension surfaces beside the conversation.
           </li>
         </ul>
-        <h2 id="first-run-checklist">First run checklist</h2>
-        <ol>
-          <li>Follow the guided tour, or open <strong>Settings</strong> and confirm your model provider and default model.</li>
-          <li>Start a new conversation and verify the agent replies to a small prompt.</li>
-          <li>Attach a file or folder when the task needs project context.</li>
-          <li>Ask for a bounded first task, such as summarizing a file, explaining a code path, or drafting a plan.</li>
-          <li>Open <strong>Extensions</strong> to inspect built-in capabilities and install or build workflow-specific extensions.</li>
-          <li>Use the Workbench to inspect files, artifacts, browser views, extensions, and other surfaces beside the conversation.</li>
-          <li>Use conversation attachments, projects, and knowledge files when you want reusable context.</li>
-        </ol>
-        <h2 id="what-to-try-next">What to try next</h2>
-        <ul>
-          <li>Ask Neon Pilot to inspect a local repo and explain its structure.</li>
-          <li>Attach a folder and ask for a bug fix or documentation update.</li>
-          <li>Queue a follow-up while the agent is working.</li>
-          <li>Install an optional extension from <strong>Settings -&gt; Extensions</strong>.</li>
-          <li>Ask the agent to build a small extension for a repeated workflow.</li>
-        </ul>
-        <p>For source builds and repo development, use <a href="./development.html">Development workflow</a>.</p>
+        <p>See <a href="./conversation-context.html">Context and attachments</a> for the full guide.</p>
+        <h2 id="build-your-first-extension">Build your first extension</h2>
+        <p>Neon Pilot is self-extensible. If you repeat a workflow, ask your agent to turn it into an extension.</p>
+        <p>Start with <a href="./build-an-extension.html">Build an extension</a>.</p>
         <h2 id="next-steps">Next steps</h2>
         <ul>
-          <li><a href="./views.html">Views</a> — understand Conversation and Workbench layout modes</li>
-          <li><a href="./conversations.html">Conversations</a> — how to work with agent conversations</li>
-          <li><a href="./desktop-app.html">Desktop App</a> — Electron shell and shortcuts</li>
-          <li><a href="./configuration.html">Configuration</a> — config files and environment variables</li>
+          <li><a href="./desktop-app.html">Desktop app</a> explains the main app layout.</li>
+          <li><a href="./conversations.html">Conversations</a> explains messages, follow-ups, branches, and shortcuts.</li>
+          <li>
+            <a href="./agent-bootstrap.html">Install with another agent</a> shows how to delegate setup to Claude Code, Codex, or another
+            local coding agent.
+          </li>
         </ul>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/getting-started.md">Edit this page on GitHub →</a>
@@ -142,9 +106,9 @@ printf '%s' &quot;$OPENAI_API_KEY&quot; | neon-pilot bootstrap provider set-key 
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#install-the-app">Install the app</a><a href="#configure-a-model-provider">Configure a model provider</a
-        ><a href="#verify-the-install">Verify the install</a><a href="#important-paths">Important paths</a
-        ><a href="#first-run-checklist">First run checklist</a><a href="#what-to-try-next">What to try next</a
+        <a href="#install-the-app">Install the app</a><a href="#open-neon-pilot">Open Neon Pilot</a
+        ><a href="#connect-a-model-provider">Connect a model provider</a><a href="#send-a-first-message">Send a first message</a
+        ><a href="#add-useful-context">Add useful context</a><a href="#build-your-first-extension">Build your first extension</a
         ><a href="#next-steps">Next steps</a>
       </aside>
     </main>

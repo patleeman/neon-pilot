@@ -25,528 +25,134 @@
         <section>
           <h2>Start here</h2>
           <a class="active" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
-          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a
-          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
-        </section>
-        <section>
-          <h2>Runtime</h2>
-          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
-          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
-          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
-          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
-          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
-          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
-        </section>
-        <section>
-          <h2>Developers</h2>
-          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
-          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
-          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
       </aside>
       <article class="docs-content">
-        <h1 id="neon-pilot-documentation">Neon Pilot Documentation</h1>
+        <h1 id="overview">Overview</h1>
         <p>
-          Neon Pilot is a durable AI agent runtime with a desktop app, background automation, and knowledge management. It wraps an LLM with
-          persistent state, tools, and async workflows.
+          Neon Pilot is a local macOS app for running AI agents. It is built around a self-extensible harness: your agent can help build,
+          install, inspect, modify, and run extensions for the same app it works inside.
         </p>
-        <h2 id="quick-start">Quick start</h2>
-        <p>
-          Download the latest macOS app from <a href="https://github.com/patleeman/neon-pilot/releases/latest">GitHub Releases</a>, or let
-          an agent install and bootstrap the packaged app:
-        </p>
-        <pre><code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code></pre>
-        <p>
-          After install, open <strong>Neon Pilot.app</strong> and create a conversation. If you installed the CLI, verify the runtime with:
-        </p>
-        <pre><code>neon-pilot bootstrap doctor</code></pre>
-        <p>
-          See <a href="./getting-started.html">Getting Started</a> for the user setup flow, or
-          <a href="./development.html">Development workflow</a> for building from source.
-        </p>
-        <h2 id="start-here">Start here</h2>
-        <p>Pick the shortest path for what you are doing:</p>
+        <p>Use Neon Pilot when you want an agent workspace that is local first, provider-flexible, open source, and customizable.</p>
+        <h2 id="what-you-can-do">What you can do</h2>
         <table>
           <thead>
             <tr>
-              <th>Audience</th>
-              <th>First docs to read</th>
-              <th>Success check</th>
+              <th>Task</th>
+              <th>Start here</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>New user</strong></td>
-              <td>
-                <a href="./getting-started.html">Getting Started</a>, then <a href="./views.html">Views</a> and
-                <a href="./conversations.html">Conversations</a>
-              </td>
-              <td>App opens, provider is configured, and a first conversation gets a reply.</td>
+              <td>Install Neon Pilot on your Mac</td>
+              <td><a href="./getting-started.html">Getting Started</a></td>
             </tr>
             <tr>
-              <td><strong>Power user organizing context</strong></td>
-              <td>
-                <a href="./conversation-context.html">Conversation context</a>, <a href="./knowledge-base.html">Knowledge files</a>,
-                <a href="./projects.html">Projects</a>
-              </td>
-              <td>Useful files, notes, and project records are available to conversations.</td>
+              <td>Let another coding agent install it for you</td>
+              <td><a href="./agent-bootstrap.html">Install with another agent</a></td>
             </tr>
             <tr>
-              <td><strong>External agent or script author</strong></td>
-              <td>
-                <a href="./agent-bootstrap.html">Agent bootstrap</a>, <a href="./cli.html">Neon Pilot CLI</a>,
-                <a href="./cli-reference.html">CLI reference</a>
-              </td>
-              <td><code>neon-pilot bootstrap doctor</code> passes and reports usable provider setup.</td>
+              <td>Configure models and API keys</td>
+              <td><a href="./providers-and-models.html">Providers and models</a></td>
             </tr>
             <tr>
-              <td><strong>Extension builder</strong></td>
-              <td>
-                <a href="./build-an-extension.html">Build an extension with your agent</a>, then
-                <a href="./extensions.html">Extension authoring</a>
-              </td>
-              <td>The agent-built extension installs, its route/action works through the app, and its build passes.</td>
+              <td>Start and manage agent conversations</td>
+              <td><a href="./conversations.html">Conversations</a></td>
             </tr>
             <tr>
-              <td><strong>Repo contributor</strong></td>
-              <td><a href="./development.html">Development workflow</a>, then the owning package or extension README</td>
-              <td>Focused validation passes and the app can still start when touched code affects startup.</td>
+              <td>Attach files, screenshots, and context</td>
+              <td><a href="./conversation-context.html">Context and attachments</a></td>
             </tr>
             <tr>
-              <td><strong>Release operator</strong></td>
-              <td>
-                <a href="./release-cycle.html">Release cycle</a>, <a href="./release-qa.html">Release QA</a>,
-                <a href="./release-test-inventory.html">Release test inventory</a>
-              </td>
-              <td>Release doctor, hardening tests, and hands-on smoke notes are complete.</td>
+              <td>Understand the app layout</td>
+              <td><a href="./desktop-app.html">Desktop app</a></td>
+            </tr>
+            <tr>
+              <td>Build a workflow-specific extension</td>
+              <td><a href="./build-an-extension.html">Build an extension</a></td>
+            </tr>
+            <tr>
+              <td>Read the extension manifest and SDK reference</td>
+              <td><a href="./extensions.html">Extension authoring</a></td>
             </tr>
           </tbody>
         </table>
-        <h2 id="common-tasks">Common Tasks</h2>
-        <ul>
-          <li>
-            <strong>Install and verify Neon Pilot</strong> — use <a href="./getting-started.html">Getting Started</a>, then run the first
-            conversation.
-          </li>
-          <li>
-            <strong>Give the agent useful context</strong> — use <a href="./conversation-context.html">Conversation context</a> for files,
-            folders, images, drawings, and generated context.
-          </li>
-          <li>
-            <strong>Keep work organized</strong> — use <a href="./conversations.html">Conversations</a>,
-            <a href="./projects.html">Projects</a>, and knowledge files.
-          </li>
-          <li>
-            <strong>Let work continue later</strong> — use <a href="./conversations.html">Conversations</a> for follow-ups/deferred resumes
-            and <a href="./daemon.html">Daemon</a> for background runtime behavior.
-          </li>
-          <li>
-            <strong>Install more capabilities</strong> — use <a href="./extension-distribution.html">Extension distribution</a> and the
-            first-party optional extension repo.
-          </li>
-          <li>
-            <strong>Build a custom capability</strong> — start with
-            <a href="./build-an-extension.html">Build an extension with your agent</a>.
-          </li>
-          <li>
-            <strong>Inspect setup and runtime health</strong> — use <a href="./setup-readiness-audit.html">Setup readiness audit</a>,
-            <a href="./telemetry.html">Telemetry</a>, and <a href="./performance-diagnostics.html">Performance diagnostics</a>.
-          </li>
-        </ul>
-        <h2 id="reference">Reference</h2>
-        <ul>
-          <li>
-            <a href="./agent-bootstrap.html">Agent bootstrap</a> — packaged install, CLI setup, provider configuration, and external-agent
-            verification
-          </li>
-          <li><a href="./projects.html">Projects</a> — project records and workspace metadata</li>
-          <li><a href="./configuration.html">Configuration</a> — file-based config and settings stores</li>
-          <li>
-            <a href="./cli.html">Neon Pilot CLI</a> — local control plane; extensions add administration commands with
-            <code>contributes.cliCommands</code>
-          </li>
-          <li><a href="./cli-reference.html">CLI reference</a> — generated command contract reference for automation and scripts</li>
-          <li>
-            <a href="./telemetry.html">Telemetry</a> — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime
-            producers
-          </li>
-          <li>
-            <a href="./activity-tree.html">Activity tree</a> — shared model for conversations, executions, and future sidebar sub-items
-          </li>
-          <li>
-            <a href="./performance-diagnostics.html">Performance diagnostics</a> — renderer timing tripwires for conversation load and API
-            latency
-          </li>
-          <li><a href="./sqlite-migrations.html">SQLite migrations</a> — shared versioned schema migration framework</li>
-          <li>
-            <a href="./setup-readiness-audit.html">Setup readiness audit</a> — readiness indicator contract, registered setup items, and
-            app-path QA expectations
-          </li>
-          <li><a href="./release-qa.html">Release QA</a> — required release gate and hands-on smoke checklist</li>
-          <li><a href="./release-test-inventory.html">Release test inventory</a> — broad release-risk checklist</li>
-          <li>
-            <a href="./feature-inventory.html">Feature inventory</a> — user-perspective feature list for QA planning and coverage mapping
-          </li>
-        </ul>
+        <h2 id="core-ideas">Core ideas</h2>
+        <h3 id="self-extensible">Self-extensible</h3>
         <p>
-          The public website docs are built from the page list in
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/apps/site/build-docs.mjs"><code>apps/site/build-docs.mjs</code></a
-          >. Update that list when a repo doc should appear on neonpilot.net; keep this README as the human and agent map for the source
-          tree.
-        </p>
-        <h2 id="builder-and-architecture-docs">Builder and Architecture Docs</h2>
-        <ul>
-          <li>
-            <a href="./build-an-extension.html">Build an extension with your agent</a> — agent-first guide for asking Neon Pilot to create,
-            build, reload, validate, and test native extensions
-          </li>
-          <li>
-            <a href="./extensions.html">Extension authoring</a> — native extension manifests, frontend/backend entries, tools, skills, agent
-            hooks, event bus, notifications, stable SDK imports, and integration testing
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md">Extension API types</a> — SDK package
-            with exported types for frontend and backend code
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/extension-templates/README.md">Extension templates</a> —
-            copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
-          </li>
-          <li>
-            <a href="./design-system.html">Design system</a> — shared UI package, Storybook, and extension-friendly component guidance
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/design/neon-pilot-taste.md">Neon Pilot taste</a> — mandatory UI
-            taste and control-selection guidance for app and extension work
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/design/extension-visual-refinement.md"
-              >Extension visual refinement</a
-            >
-            — screenshot-backed iteration loop for generated extension UI
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/design/examples/README.md">Design examples</a> — positive and
-            negative visual anchors
-          </li>
-          <li><a href="./development.html">Development workflow</a> — validation, UI QA, checkpoints, and secret scanning</li>
-          <li>
-            <a href="./client-workflow-tests.html">Client workflow tests</a> — frontend workflow coverage matrix for chat, sidebar,
-            extensions, settings, geometry, and recovery paths
-          </li>
-          <li>
-            <a href="./desktop-api-boundary.html">Desktop API Boundary</a> — HTTP data plane, WebSocket realtime plane, and native-only IPC
-            policy
-          </li>
-          <li><a href="./daemon.html">Daemon</a> — background process and runtime lifecycle</li>
-          <li>
-            <a href="./sandboxing.html">Sandboxing</a> — shared process execution launcher, wrapper extensions, and direct process API
-            policy
-          </li>
-          <li>
-            <a href="./filesystem-authority.html">Filesystem Authority</a> — shared scoped filesystem boundary, backend seam, policy hooks,
-            and command-sandbox root grants
-          </li>
-          <li>
-            <a href="./renderer-isolation.html">Renderer isolation</a> — process ownership, critical lanes, and transcript projection
-            boundaries
-          </li>
-          <li>
-            <a href="./product-extension-process-split.html">Product runtime and extension host split</a> — architecture and validation for
-            the product/extension process boundary
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions">System extensions</a> — feature-owned docs and
-            implementation packages
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions">First-party optional extensions</a> — optional packages distributed
-            from GitHub release artifacts
-          </li>
-        </ul>
-        <h2 id="extension-docs">Extension docs</h2>
-        <p>
-          Neon Pilot product features live in extensions. The product is self-extensible: the normal way to create one is to ask your agent
-          to build it, then install, inspect, modify, and run it through the same local app. Start with
-          <a href="./build-an-extension.html">Build an extension with your agent</a>. Agents should use this README as the map: read the
-          owning extension's <code>README.md</code> before changing feature behavior, and read
-          <a href="./extensions.html">Extension authoring</a> plus
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md">Extension API types</a> before changing
-          extension APIs.
+          Traditional extensible software asks you to install packages or write a large amount of framework code yourself. Neon Pilot takes
+          the Pi idea further: the agent can build extensions for its own harness, then you can enable, inspect, modify, and keep using them
+          locally.
         </p>
         <p>
-          System extensions are bundled under <code>extensions/system-*</code>. Optional first-party extensions live in
-          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a
-          >, are not bundled or auto-loaded, and become normal user extensions only after installation into
-          <code>&lt;state-root&gt;/extensions/{extension-id}</code>. Users install released optional extensions from
-          <strong>Settings → Extensions → Install</strong>; after installing, check the main extension registry to enable and inspect the
-          extension.
+          Extensions can add pages, workbench panels, settings, commands, tools, storage, setup checks, transcript renderers, provider-aware
+          behavior, and background services.
         </p>
-        <p>Feature-specific documentation lives beside the owning extension package.</p>
-        <p>Bundled system extensions:</p>
-        <ul>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-artifacts/README.md">Artifacts</a> — rendered
-            artifacts beside the active conversation
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-agent-plugins/README.md">Agent Plugins</a> — Codex
-            and Claude plugin import, update tracking, and compatibility reports
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-alerts/README.md">Alerts</a> — native notifications
-            and sound for agent attention alerts
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-ast-grep/README.md">AST Grep</a> — syntax-aware
-            structural code search through ast-grep
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-automations/README.md">Automations</a> — scheduled
-            and conversation-bound automations
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-runs/README.md">Background Work</a> — background
-            commands and subagents linked to conversations
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-browser/README.md">Browser</a> — Workbench browser
-            views and browser automation
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-caffeinate/README.md">Caffeinate</a> — macOS
-            caffeinate top-bar control
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-codex-profile/README.md">Codex Profile</a> —
-            Codex/OpenAI tool profile, including <code>apply_patch</code> and image generation
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-composer-attachments/README.md"
-              >Composer Attachments</a
-            >
-            — composer attachment controls
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-context-hardening/README.md">Context Hardening</a>
-            — tool-output bounds before agent context
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-context-usage/README.md">Context Usage</a> —
-            composer status for context-window usage
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-conversation-tools/README.md"
-              >Conversation Tools</a
-            >
-            — conversation inspection, titles, working directories, and CLI commands
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-computer-use/README.md">Computer Use</a> — Cua
-            Driver-backed native desktop app capture and control
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-diffs/README.md">Diffs</a> — checkpoint and
-            workspace diff inspection
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-dynamic-workflows/README.md">Dynamic Workflows</a>
-            — model-authored workflow coordinators that fan out daemon-backed subagents
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-excalidraw-input/README.md">Excalidraw Input</a> —
-            composer drawing input
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-extension-manager/README.md">Extension Manager</a>
-            — extension registry, validation, import/export, and diagnostics
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-files/README.md">File Explorer</a> — workspace file
-            browsing
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-gateways/README.md">Gateways</a> — external
-            messaging gateway registration and bridge surfaces
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-git-status/README.md">Git Status</a> — branch and
-            diff status in the composer
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-auto-mode/README.md">Goal Mode</a> — persisted goal
-            tracking and automatic continuation
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-hashline-edit/README.md">Hashline Edit</a> —
-            hash-anchored read and edit tools for guarded line operations
-          </li>
-          <li><a href="./host-view-components.html">Host view components</a> — host-owned UI components reusable by extensions</li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-image-probe/README.md">Multimedia Probe</a> — image
-            and video attachment inspection with a vision agent
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-video-probe/README.md">Video Probe</a> —
-            lower-level local video frame sampling and transcription tools
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-local-dictation/README.md">Local Dictation</a> —
-            Whisper.cpp dictation controls and settings
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-mcp/README.md">MCP</a> — configured MCP server
-            inspection, auth, and calls
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-model-arena/README.md">Model Arena</a> — blind
-            challenger model duels and local preference stats
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-model-gateway/README.md">AI Gateway</a> — opt-in
-            local Responses API proxy for external coding agents
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-model-picker/README.md">Model Picker</a> — composer
-            model and thinking controls
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-neon-pilot-admin-cli/README.md">Neon Pilot CLI</a>
-            — unified CLI control plane for internal agents and external callers
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-onboarding/README.md">Onboarding</a> — first-run
-            guided tour over real app pages
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-prompt-assembly/README.md">Prompt Assembly</a> —
-            prompt inputs, capabilities, and diagnostics inspection
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-reply-actions/README.md">Reply Actions</a> —
-            transcript selection actions and draft starters
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-routines/README.md">Routines</a> — prompt-based
-            lifecycle workflow blocks
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-settings/README.md">Settings</a> — native
-            first-party settings routes
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-skill-search/README.md">Skill Search</a> — trusted
-            skill discovery, quarantine preview, vetting, and installation
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-skills/README.md">Skills</a> — backend
-            compatibility actions for agent skills
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-telemetry/README.md">Telemetry extension</a> — app
-            traces, model usage, tool health, and performance
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-terminal/README.md">Terminal</a> — PTY-backed
-            terminal panel
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-todo/README.md">Todos</a> — conversation-scoped
-            execution todos
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-web-tools/README.md">Web Fetch</a> — web content
-            fetch tool
-          </li>
-        </ul>
+        <h3 id="local-first">Local first</h3>
         <p>
-          Optional first-party extensions from
-          <a href="https://github.com/patleeman/neon-pilot-extensions"><code>patleeman/neon-pilot-extensions</code></a
-          >:
+          Neon Pilot runs as a macOS desktop app. Conversations, settings, installed extensions, runtime state, and extension data live on
+          your machine.
         </p>
-        <ul>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser">Agent Browser</a> — agent-browser
-            CLI integration
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-auto-router">Auto Router</a> — judge-based model
-            routing controls
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search">DuckDuckGo Search</a> — web
-            search using DuckDuckGo's HTML page
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-dynamic-workflows">Dynamic Workflows</a> — workflow
-            coordinators that fan out daemon-backed subagents
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4">DS4</a> — local DeepSeek V4 Flash
-            provider/profile for antirez/ds4
-          </li>
-          <li><a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search">Exa Search</a> — Exa web search</li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge">Knowledge</a> — legacy
-            knowledge/reference browsing and editing
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-suggested-context">Suggested Context</a> — related
-            conversation suggestions
-          </li>
-          <li>
-            <a href="https://github.com/patleeman/neon-pilot-extensions/tree/main/system-writing-studio">Writing Studio</a> — document-first
-            collaborative writing surface
-          </li>
-        </ul>
-        <h2 id="docs-maintenance-checklist">Docs maintenance checklist</h2>
-        <p>When behavior, setup, or workflow changes, update the docs in the same change:</p>
-        <ul>
-          <li>Update the smallest owning doc first, then this README only if navigation changes.</li>
-          <li>Keep first-run docs accurate: install path, provider setup, first task verification, and recovery hints.</li>
-          <li>Update the owning extension README before changing extension behavior.</li>
-          <li>
-            Add public website coverage by updating
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/apps/site/build-docs.mjs"><code>apps/site/build-docs.mjs</code></a>
-            only when a repo doc should appear on neonpilot.net.
-          </li>
-          <li>
-            Prefer user-facing terms from <a href="https://github.com/patleeman/neon-pilot/blob/main/CONTEXT.md"><code>CONTEXT.md</code></a
-            >; keep implementation details in architecture docs, not onboarding docs.
-          </li>
-          <li>
-            For docs-only edits, run formatting checks rather than the full product suite unless examples or generated references changed.
-          </li>
-        </ul>
-        <h2 id="source-docs-scope">Source Docs Scope</h2>
+        <p>The app uses the network only through the model providers, MCP servers, tools, and integrations you configure.</p>
+        <h3 id="provider-flexible">Provider-flexible</h3>
         <p>
-          Treat root docs, <code>docs/</code>, <code>extensions/*/README.md</code>, <code>packages/*/README.md</code>, and benchmark docs as
-          source documentation. Ignore generated or packaged copies under <code>dist/</code>, <code>packages/*/dist/</code>, app bundles,
-          and other build outputs during docs audits unless the task is specifically about packaged resources.
+          Neon Pilot uses the providers supported by Pi. Bring your own API keys, choose the model you want, and switch providers without
+          moving your work into a different harness.
         </p>
-        <p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/README.md">Edit this page on GitHub →</a></p>
+        <h3 id="open-source">Open source</h3>
+        <p>Neon Pilot is MIT licensed. You can audit it, fork it, change it, and use it as the base for your own agent harness.</p>
+        <h2 id="common-workflows">Common workflows</h2>
+        <h3 id="work-in-a-conversation">Work in a conversation</h3>
+        <p>
+          Start a conversation, attach the files or screenshots the agent needs, and ask for the task. Neon Pilot keeps the transcript, tool
+          calls, outputs, and branch state locally so you can return to the work later.
+        </p>
+        <h3 id="continue-work-in-the-background">Continue work in the background</h3>
+        <p>
+          Longer tasks can continue as background runs, follow-ups, scheduled tasks, or extension-owned services. You can inspect visible
+          run state instead of losing work when a single chat reply ends.
+        </p>
+        <h3 id="turn-repeated-work-into-an-extension">Turn repeated work into an extension</h3>
+        <p>
+          If you repeat a workflow, ask the agent to build an extension. A small extension might add a tool. A larger one might add a full
+          page, settings panel, command palette actions, storage, and backend automation.
+        </p>
+        <h3 id="use-neon-pilot-from-another-agent">Use Neon Pilot from another agent</h3>
+        <p>
+          If you already use Claude Code, Codex, or another local coding agent, use
+          <a href="./agent-bootstrap.html">Install with another agent</a>. That page gives you a prompt and commands to let the other agent
+          install Neon Pilot, configure it, and verify that it works.
+        </p>
+        <h2 id="where-to-go-next">Where to go next</h2>
+        <ul>
+          <li><a href="./getting-started.html">Getting Started</a> for a human install path.</li>
+          <li><a href="./providers-and-models.html">Providers and models</a> to connect your model provider.</li>
+          <li><a href="./build-an-extension.html">Build an extension</a> to create your first self-extensible workflow.</li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/site-overview.md">Edit this page on GitHub →</a>
+        </p>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#quick-start">Quick start</a><a href="#start-here">Start here</a><a href="#common-tasks">Common Tasks</a
-        ><a href="#reference">Reference</a><a href="#builder-and-architecture-docs">Builder and Architecture Docs</a
-        ><a href="#extension-docs">Extension docs</a><a href="#docs-maintenance-checklist">Docs maintenance checklist</a
-        ><a href="#source-docs-scope">Source Docs Scope</a>
+        <a href="#what-you-can-do">What you can do</a><a href="#core-ideas">Core ideas</a><a href="#common-workflows">Common workflows</a
+        ><a href="#where-to-go-next">Where to go next</a>
       </aside>
     </main>
   </body>

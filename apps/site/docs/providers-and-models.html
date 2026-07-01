@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Providers and models · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="active" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="providers-and-models">Providers and models</h1>
+        <p>
+          Neon Pilot lets you bring your own model provider. It uses the providers supported by Pi, so you can switch models without moving
+          your work to a different agent harness.
+        </p>
+        <h2 id="configure-a-provider">Configure a provider</h2>
+        <p>Open <strong>Settings</strong>, then open the provider or model section.</p>
+        <p>Use this page to:</p>
+        <ul>
+          <li>choose the default provider and model for new conversations;</li>
+          <li>add or update API keys;</li>
+          <li>configure provider-specific options;</li>
+          <li>choose model defaults such as reasoning level or service tier when available;</li>
+          <li>add custom provider definitions when you use a compatible API.</li>
+        </ul>
+        <h2 id="bring-your-own-api-key">Bring your own API key</h2>
+        <p>Neon Pilot does not require a hosted Neon Pilot account for model access. You use your own provider account and credentials.</p>
+        <p>Store keys through the app when possible. Do not paste API keys into messages, shell history, screenshots, or shared logs.</p>
+        <h2 id="provider-flexibility">Provider flexibility</h2>
+        <p>
+          Provider support follows Pi's provider layer. Depending on your local configuration and installed extensions, you can use hosted
+          models, local runtimes, gateway providers, or custom OpenAI-compatible endpoints.
+        </p>
+        <p>
+          Use the model picker in the composer when you want a different model for one conversation. Use Settings when you want to change
+          defaults.
+        </p>
+        <h2 id="local-gateway">Local gateway</h2>
+        <p>
+          The AI Gateway extension can expose your configured Neon Pilot models through a local API for external coding agents. This is
+          useful when another tool expects an OpenAI-compatible endpoint but you want Neon Pilot to own provider configuration and local
+          runtime state.
+        </p>
+        <p>The gateway is opt-in. Enable and configure it from Settings or the Extensions page before using it from another tool.</p>
+        <h2 id="model-specific-extension-behavior">Model-specific extension behavior</h2>
+        <p>
+          Extensions can contribute model profiles. A model profile lets an enabled extension change tools, instructions, or runtime
+          behavior for matching providers or models.
+        </p>
+        <p>
+          For example, an extension can expose a safer edit tool for one model family, add vision-specific tools for vision models, or
+          prepare a local runtime before a request starts.
+        </p>
+        <h2 id="troubleshooting">Troubleshooting</h2>
+        <p>If the agent does not reply:</p>
+        <ol>
+          <li>Open <strong>Settings</strong> and confirm that a provider and model are selected.</li>
+          <li>Confirm that the provider key is present and valid.</li>
+          <li>Try a small prompt in a new conversation.</li>
+          <li>If you installed the CLI, run:</li>
+        </ol>
+        <p>``<code>bash neon-pilot bootstrap doctor </code>``</p>
+        <ol>
+          <li>Check whether an extension-specific model profile is enabled or disabled if the issue only affects one model family.</li>
+        </ol>
+        <h2 id="related-pages">Related pages</h2>
+        <ul>
+          <li><a href="./getting-started.html">Getting Started</a></li>
+          <li><a href="./conversations.html">Conversations</a></li>
+          <li><a href="./agent-bootstrap.html">Install with another agent</a></li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/providers-and-models.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#configure-a-provider">Configure a provider</a><a href="#bring-your-own-api-key">Bring your own API key</a
+        ><a href="#provider-flexibility">Provider flexibility</a><a href="#local-gateway">Local gateway</a
+        ><a href="#model-specific-extension-behavior">Model-specific extension behavior</a><a href="#troubleshooting">Troubleshooting</a
+        ><a href="#related-pages">Related pages</a>
+      </aside>
+    </main>
+  </body>
+</html>

@@ -25,39 +25,22 @@
         <section>
           <h2>Start here</h2>
           <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
-          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="active" href="./build-an-extension.html">Build an Extension</a
+          <a class="active" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
           ><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a
-          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
-        </section>
-        <section>
-          <h2>Runtime</h2>
-          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
-          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
-          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
-          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
-          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
-          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
-        </section>
-        <section>
-          <h2>Developers</h2>
-          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
-          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
-          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -114,11 +97,8 @@ After I approve the direction, build the extension, reload it, test the real app
         <p>Use this as the no-ambiguity loop for an agent building an extension in a repo checkout:</p>
         <ol>
           <li>
-            Read this guide, <a href="./extensions.html"><code>docs/extensions.md</code></a
-            >,
-            <a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md"
-              ><code>packages/extensions/README.md</code></a
-            >, and the closest existing extension <code>README.md</code>.
+            Read this guide, <a href="./extension-sdk.html">Extension SDK</a>, <a href="./extensions.html">Extension authoring</a>, and the
+            closest existing extension <code>README.md</code>.
           </li>
           <li>
             Inspect existing extension ids, routes, nav labels, action ids, commands, settings components, and tools before choosing names.
@@ -422,7 +402,7 @@ neon-pilot-extension build /path/to/my-extension</code></pre>
         <h2 id="reference">Reference</h2>
         <ul>
           <li><a href="./extensions.html">Extension authoring reference</a></li>
-          <li><a href="https://github.com/patleeman/neon-pilot/blob/main/packages/extensions/README.md">Extension SDK/API reference</a></li>
+          <li><a href="./extension-sdk.html">Extension SDK</a></li>
           <li>
             <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-extension-manager/README.md"
               >Extension Manager behavior</a

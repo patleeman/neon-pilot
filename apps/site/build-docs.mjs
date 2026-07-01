@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import prettier from 'prettier';
 
@@ -9,45 +9,20 @@ const outRoot = path.join(root, 'apps/site/docs');
 const prettierOptions = { ...(await prettier.resolveConfig(path.join(root, 'apps/site/docs/index.html'))), parser: 'html' };
 
 const pages = [
-  { file: 'README.md', slug: 'index', title: 'Overview', group: 'Start here' },
+  { file: 'site-overview.md', slug: 'index', title: 'Overview', group: 'Start here' },
   { file: 'getting-started.md', slug: 'getting-started', title: 'Getting Started', group: 'Start here' },
-  { file: 'agent-bootstrap.md', slug: 'agent-bootstrap', title: 'Agent Bootstrap', group: 'Start here' },
+  { file: 'agent-bootstrap.md', slug: 'agent-bootstrap', title: 'Install with another agent', group: 'Start here' },
   { file: 'desktop-app.md', slug: 'desktop-app', title: 'Desktop App', group: 'Product' },
   { file: 'views.md', slug: 'views', title: 'Views', group: 'Product' },
   { file: 'conversations.md', slug: 'conversations', title: 'Conversations', group: 'Product' },
-  { file: 'conversation-context.md', slug: 'conversation-context', title: 'Conversation Context', group: 'Product' },
-  { file: 'projects.md', slug: 'projects', title: 'Projects', group: 'Product' },
-  { file: 'knowledge-base.md', slug: 'knowledge-base', title: 'Knowledge Base', group: 'Product' },
-  { file: 'activity-tree.md', slug: 'activity-tree', title: 'Activity Tree', group: 'Product' },
-  { file: 'feature-inventory.md', slug: 'feature-inventory', title: 'Feature Inventory', group: 'Product' },
-  { file: 'design-system.md', slug: 'design-system', title: 'Design System', group: 'Product' },
-  { file: 'host-view-components.md', slug: 'host-view-components', title: 'Host View Components', group: 'Product' },
+  { file: 'conversation-context.md', slug: 'conversation-context', title: 'Context and attachments', group: 'Product' },
+  { file: 'providers-and-models.md', slug: 'providers-and-models', title: 'Providers and models', group: 'Product' },
+  { file: 'sandboxing.md', slug: 'sandboxing', title: 'Local data and permissions', group: 'Product' },
   { file: 'build-an-extension.md', slug: 'build-an-extension', title: 'Build an Extension', group: 'Extensions' },
+  { file: 'extension-sdk.md', slug: 'extension-sdk', title: 'Extension SDK', group: 'Extensions' },
   { file: 'extensions.md', slug: 'extensions', title: 'Extension Authoring', group: 'Extensions' },
+  { file: 'host-view-components.md', slug: 'host-view-components', title: 'Host View Components', group: 'Extensions' },
   { file: 'extension-distribution.md', slug: 'extension-distribution', title: 'Extension Distribution', group: 'Extensions' },
-  {
-    file: 'product-extension-process-split.md',
-    slug: 'product-extension-process-split',
-    title: 'Product Extension Split',
-    group: 'Extensions',
-  },
-  { file: 'desktop-api-boundary.md', slug: 'desktop-api-boundary', title: 'Desktop API Boundary', group: 'Runtime' },
-  { file: 'configuration.md', slug: 'configuration', title: 'Configuration', group: 'Runtime' },
-  { file: 'daemon.md', slug: 'daemon', title: 'Daemon', group: 'Runtime' },
-  { file: 'sandboxing.md', slug: 'sandboxing', title: 'Sandboxing', group: 'Runtime' },
-  { file: 'filesystem-authority.md', slug: 'filesystem-authority', title: 'Filesystem Authority', group: 'Runtime' },
-  { file: 'performance-diagnostics.md', slug: 'performance-diagnostics', title: 'Performance Diagnostics', group: 'Runtime' },
-  { file: 'renderer-isolation.md', slug: 'renderer-isolation', title: 'Renderer Isolation', group: 'Runtime' },
-  { file: 'telemetry.md', slug: 'telemetry', title: 'Telemetry', group: 'Runtime' },
-  { file: 'sqlite-migrations.md', slug: 'sqlite-migrations', title: 'SQLite Migrations', group: 'Runtime' },
-  { file: 'setup-readiness-audit.md', slug: 'setup-readiness-audit', title: 'Setup Readiness', group: 'Runtime' },
-  { file: 'cli.md', slug: 'cli', title: 'Neon Pilot CLI', group: 'Developers' },
-  { file: 'cli-reference.md', slug: 'cli-reference', title: 'CLI Reference', group: 'Developers' },
-  { file: 'client-workflow-tests.md', slug: 'client-workflow-tests', title: 'Client Workflow Tests', group: 'Developers' },
-  { file: 'development.md', slug: 'development', title: 'Development', group: 'Developers' },
-  { file: 'release-cycle.md', slug: 'release-cycle', title: 'Release Cycle', group: 'Developers' },
-  { file: 'release-qa.md', slug: 'release-qa', title: 'Release QA', group: 'Developers' },
-  { file: 'release-test-inventory.md', slug: 'release-test-inventory', title: 'Release Test Inventory', group: 'Developers' },
 ];
 
 function escapeHtml(value) {
@@ -235,6 +210,11 @@ function shell(page, body, toc) {
 }
 
 await mkdir(outRoot, { recursive: true });
+for (const entry of await readdir(outRoot, { withFileTypes: true })) {
+  if (entry.isFile() && entry.name.endsWith('.html')) {
+    await unlink(path.join(outRoot, entry.name));
+  }
+}
 for (const page of pages) {
   const markdown = await readFile(path.join(docsRoot, page.file), 'utf8');
   const { html, toc } = markdownToHtml(markdown);

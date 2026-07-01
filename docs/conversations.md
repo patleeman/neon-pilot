@@ -1,264 +1,99 @@
 # Conversations
 
-Conversations are live or saved agent threads. Each conversation has a transcript, a composer, access to tools, and full message history.
+Conversations are saved agent threads. Each conversation has a transcript, a composer, tools, attachments, model settings, and local history.
 
-## Starting a Conversation
+## Start a conversation
 
-Create a new conversation from the sidebar (`+` button) or navigate to `/conversations/new`. The composer appears at the bottom of the transcript pane.
+Create a new conversation from the sidebar, then type a message in the composer.
 
-Type a message and press Enter to send it to the agent. The agent processes the prompt, calls tools as needed, and streams the response.
+Press Enter to send. The agent can respond, call tools, create files, inspect context, and stream progress into the transcript.
 
-## Composer
+## Composer basics
 
-The composer is the text input area at the bottom of the conversation view. Image attachments are read into the draft as soon as they are added, so temporary screenshots can still be sent after their original files are cleaned up.
+| Action                   | How                                                    |
+| ------------------------ | ------------------------------------------------------ |
+| Send message             | Enter                                                  |
+| Add a new line           | Shift+Enter                                            |
+| Mention files or context | Type `@`                                               |
+| Open slash commands      | Type `/`                                               |
+| Attach an image or file  | Drag it into the composer or use the attachment button |
+| Paste an image           | Paste from the clipboard                               |
+| Cancel active work       | Escape                                                 |
 
-| Feature            | How                                                           |
-| ------------------ | ------------------------------------------------------------- |
-| Send message       | Enter                                                         |
-| New line           | Shift+Enter                                                   |
-| File / note / task | Type `@` to fuzzy-search files, notes, automations, or skills |
-| Slash commands     | Type `/` to open the command menu                             |
-| Run bash command   | Type `!<command>` to run a shell command inline               |
-| Image paste        | Ctrl+V or drag image into composer                            |
-| Binary attachment  | Drag file into composer                                       |
-| Reply quoting      | Select text in a message, then click "Reply" to quote it      |
-| Clear composer     | Ctrl+C when composer is focused                               |
-| Recall history     | ↑/↓ cycles through recent prompts                             |
+## Choose a model
 
-## Conversation Lifecycle
+Use the model controls in the composer or Settings to choose the provider and model for the conversation.
 
-Conversations are saved automatically. Every message, tool call, and tool result is persisted. Past conversations appear in the left sidebar. Click any conversation to resume it.
+Neon Pilot supports Pi-backed provider configuration, so you can bring your own API keys and use the provider that fits the work.
 
-| State      | Behavior                              |
-| ---------- | ------------------------------------- |
-| Active     | Agent is processing a prompt          |
-| Compacting | Context is being summarized/trimmed   |
-| Idle       | Waiting for user input                |
-| Saved      | Persisted to disk, visible in sidebar |
+See [Providers and models](providers-and-models.md).
 
-Threads can be locked from the sidebar context menu or command palette. A locked thread stays visible with a lock marker and cannot be closed or archived until it is unlocked.
+## Add context
 
-Live conversations emit explicit `compaction_start` and `compaction_end` stream events. The desktop reducer uses them to show and clear the compaction state, while successful compactions also surface as compaction summary blocks in the transcript.
+You can add context in several ways:
 
-Long saved conversations open on their latest transcript segment. When earlier history is hidden, the transcript renders an inline cutoff marker with the visible percentage range; the whole marker is the **Load previous** action. Earlier transcript pages load only when that action is clicked; scrolling near the top does not auto-load hidden history. If the supported local history window is exhausted for a very large transcript, the marker switches to a disabled limit state instead of remaining clickable. Implementation counts such as block totals and windowed chunks stay out of the main UI.
+- reference files with `@`;
+- attach files, images, PDFs, or videos;
+- attach folders when a task needs a workspace;
+- add standing instructions through your project files;
+- use extension-provided context tools.
 
-Saved-conversation summaries are cache-first. UI and suggested-context reads only return summaries already present in the local conversation context DB; they must not generate missing summaries on the request path. New closed conversations enqueue summary generation immediately. Older missing/stale summaries are discovered by a delayed, metered background queue after startup grace, processed one at a time with a short gap between jobs, and skipped for live/running conversations. This keeps old profiles useful over time without turning app launch or list rendering into a whole-profile summarization burst.
+See [Context and attachments](conversation-context.md).
 
-Conversation read models live in `<state-root>/sync/pi-agent/conversations.db`. JSONL transcript files remain the append-only source of truth for recovery/export, but list/search/summary/detail request paths should use the SQLite read models instead of scanning transcript files.
+## Queue follow-up work
 
-### Sidebar and Hydration
+While the agent is working, you can queue another message.
 
-The backend is the source of truth for sidebar conversation state. The desktop UI hydrates the sidebar from `GET /api/sidebar/conversations`, which returns one coherent projection: open IDs, pinned IDs, archived IDs, locked IDs, active ID, workspace metadata, and the session rows needed to render them. The projection filters stale workspace IDs that no longer resolve to known conversations, so the frontend must not create durable ghost rows for unknown IDs. Temporary optimistic UI is allowed only while a new conversation is being reserved or sent.
+| Mode      | How to use it                                       | What it does                                            |
+| --------- | --------------------------------------------------- | ------------------------------------------------------- |
+| Steer     | Send while the agent is still working               | Adds guidance to the current turn when possible.        |
+| Follow-up | Hold Option/Alt and send while the agent is working | Queues the next prompt after the current work finishes. |
 
-Conversation placement is canonical even though legacy response shapes still expose separate arrays. A conversation is exactly one of `closed`, `open`, `pinned`, or `archived`; pinned, open, and archived membership must not conflict. When old or out-of-order payloads contain conflicts, normalization resolves them into one placement before the sidebar or route state reacts.
+Queued messages appear above the composer so you can inspect or restore them.
 
-The backend is also the source of truth for durable conversation runtime state such as whether a conversation is running. Backend publishers emit revisioned `conversation_state_changed` records for running state; `session_meta_changed` only signals metadata refresh and must not carry or author running state. Frontend live-stream hooks may render transcript deltas and local loading affordances, but they must not author global conversation state. Running indicators in the sidebar, command palette, activity tree, and conversation chrome read backend-published state from the shared conversation projection. A derived conversation activity status may combine that backend runtime record with backend task/execution snapshots for background-work badges, but it is presentation-only and cannot mark a conversation itself as running.
+## Branch and revisit work
 
-Conversation workspace writes go through `/api/conversation-workspace` and `/api/conversation-workspace/operation`. The older `/api/ui/open-conversations` route has been removed; new code must use the semantic workspace routes.
+Conversations are saved locally. You can reopen them from the sidebar.
 
-The renderer may keep presentation-only seeds such as saved workspace path labels for first paint, but those seeds must be refreshed from the sidebar projection and must not decide whether a conversation exists or is open.
+When you want to try a different path, use conversation actions such as fork, rewind, or duplicate when available. These actions keep the original work intact while giving you a new place to continue.
 
-Opening a conversation is a read. The frontend asks for conversation state/bootstrap by ID and the backend decides whether the conversation is already live, can be read from transcript state, or is missing. If a requested conversation ID is unknown, the UI should show the conversation error state instead of redirecting to `/conversations/new`.
+## Inline shell commands
 
-Conversation route state uses an aggregate model for the transcript snapshot plus durable activity/runtime state. The initial load is HTTP; live changes arrive as revisioned WebSocket deltas with `fromRevision` and `toRevision`. If the renderer misses a delta, it first requests the missing aggregate delta range from `/api/conversations/:id/aggregate/deltas?after=<revision>` and applies those patches in memory. Only expired or too-large gaps should fall back to a full aggregate snapshot refresh.
+For quick local checks, start a composer message with `!`:
 
-The desktop renderer keeps a shared in-memory write-through conversation state cache for aggregate snapshots, realtime deltas, prefetches, optimistic sends, aborts, and manual refreshes. Conversation views subscribe to that cache instead of deciding whether state came from transcript storage, bootstrap data, or a live stream. This keeps route swaps and remounts from dropping visible user messages or reprocessing transcript Markdown unnecessarily.
-
-Sending or explicitly resuming a saved conversation is semantic from the frontend's perspective. The UI calls the conversation message/resume API; the backend may hydrate a live session from the transcript internally when needed. Frontend code should not call recovery/hydration endpoints or branch on recovery details.
-
-Conversation-adjacent UI should keep this same split:
-
-- Conversation content state is read through the shared conversation-state hooks or backend projections. Extension chat rails should not perform their own delayed hydration loops after sending; the hook owns refresh/reconnect behavior.
-- Sidebar presentation preferences such as grouping, sorting, collapsed groups, manual group order, and custom labels are local presentation state. Locks are backend-owned workspace state because they change whether a conversation can be closed or archived.
-- App-wide event handling should derive snapshot refreshes from event topics before touching stores. A `runs` or `executions` invalidation refreshes both projections because the visible execution list is derived from run state.
-- Workspace/file-tree request lifecycles should invalidate stale async responses by generation or request id when the workspace, selected file, or directory expansion changes.
-
-Runtime code should not import `conversations/sessions.js` directly. Normal callers use `conversationService.ts` and extension-facing capabilities. The only allowed direct transcript seams are:
-
-- `conversationService.ts` — read-model service boundary with targeted transcript fallback and cache writes.
-- `conversationTranscriptOps.ts` — explicit raw transcript operations for import/export, live topology metadata, and bounded indexer/reconciler scans.
-- `conversationDisplayBlocks.ts` — display-block conversion compatibility seam.
-- `conversationTypes.ts` — type-only compatibility seam.
-
-The storage-boundary guard (`scripts/check-conversation-storage-boundary.mjs`) enforces that new product/extension code does not add direct `sessions.js` imports.
-
-## Branching
-
-Conversations support tree-style branching. Each turn creates a node in the conversation tree.
-
-Conversation files also keep file-level lineage. When a saved conversation is branched, forked, rewound, duplicated, or created as a side/subagent conversation, its metadata can point at the parent conversation and source message. The left sidebar renders that file-level lineage inline: parent conversations with child branches get an expander, child conversations appear nested under the parent, and the conversation context menu includes **Go to Parent Conversation** when a parent is available.
-
-The transcript treats explicit branch actions (`fork`, `rewind`, `duplicate`) as timeline landmarks anchored after the source message when known. Tool-created side work stays with the tool call that created it: subagents, artifacts, checkpoints, prompts, and visual captures are pinned as compact rows inside the **Internal work** shelf so they remain visible even when low-level tool-call plumbing is collapsed.
-
-### /fork
-
-Create a new conversation from a previous user message. The new conversation starts fresh but carries the context up to that point.
-From the transcript action buttons, forking a user prompt opens a child conversation with that prompt restored in the composer; forking an assistant reply keeps the transcript through that reply.
-
-```
-Original conversation:
-
-  ┌─ msg1 ─ msg2 ─ msg3 ─ msg4 (current)
-
-Fork from msg2:
-
-  ┌─ msg1 ─ msg2 (forked)
-                └─ msg5 ─ msg6 (new conversation)
-```
-
-### /tree
-
-Navigate the conversation tree to any previous point and continue from there without creating a new file.
-Transcript rewind actions create a new conversation file at the selected point. Rewinding from an assistant reply cuts before the reply and restores the preceding user prompt in the composer so it can be resent or edited.
-
-```
-  ┌─ msg1 ─ msg2 ─ msg3 ─ msg4 (branch A, current)
-  │
-  └─ msg5 ─ msg6 (branch B)
-
-/tree navigates to msg5, continue from there.
-```
-
-### /clone
-
-Duplicate the current active branch into a new conversation file. Useful before making experimental changes.
-
-## Send Modifiers
-
-The send button changes behavior based on streaming state and modifier keys. You can also hold a modifier when pressing Enter.
-
-| Modifier                 | While idle                          | While streaming                     |
-| ------------------------ | ----------------------------------- | ----------------------------------- |
-| Enter (no modifier)      | Send message                        | Steer (interrupts current turn)     |
-| **Alt+Enter**            | Follow-up (queues after completion) | Follow-up (queues after completion) |
-| **Ctrl+Enter / ⌘+Enter** | Send/steer (same as Enter)          | Send/steer (same as Enter)          |
-
-The button label reflects the current mode: **Send** → **Steer** → **Follow up**.
-
-## Async Follow-Through
-
-While the agent is processing, you can queue additional messages. The composer remains active during streaming.
-
-| Mode      | How to send                                                  | What happens                                                                                                                                          |
-| --------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Steer     | Press Enter while the agent is streaming                     | Queues guidance for the current turn. It is injected after the current assistant turn finishes its tool calls, before the next LLM call.              |
-| Follow-up | Hold Option/Alt and press Enter while the agent is streaming | Queues a new prompt after the agent completes all current work. Use this when the next instruction should not interrupt the current chain of thought. |
-
-When the run mode has a pending continuation (Nudge/Mission/Loop), normal submits become follow-ups.
-
-Queued steer and follow-up prompts appear in the queue shelf above the composer. Use `restore` to pull a queued prompt back into the composer. Press Escape to abort the active response, clear local queued steer/follow-up prompts, and restore their text to the composer; agent-created queued text is annotated with `[Queued by agent]` so it is not mistaken for user-authored draft text. Press Alt+Up to retrieve queued messages back.
-
-Deferred resumes (`/resume`, `/defer`) also appear in the activity shelf above the composer. They are tied to the saved conversation and can be fired now, cancelled, or auto-resumed when the conversation is reopened.
-
-Interrupted prompts are not replayed automatically after an app restart. Durable run state is used for status and explicit recovery surfaces only; startup recovery must not silently resend the last prompt.
-
-## Provider transport
-
-Desktop conversations force pi's provider transport to SSE at session creation. pi's OpenAI Codex `auto` mode prefers cached WebSockets, but intermittent mid-turn 1006 closes can happen after tools have already run; at that point replaying through SSE is unsafe because it can duplicate side effects. SSE is slower than cached WebSockets, but it keeps conversation/tool execution reliable.
-
-## Goal mode / Auto Mode
-
-The composer exposes a run-mode selector with four states:
-
-| Mode    | Behavior                                                                             |
-| ------- | ------------------------------------------------------------------------------------ |
-| Manual  | No automatic continuation.                                                           |
-| Nudge   | Hidden review turn decides whether useful work remains.                              |
-| Mission | Goal-driven mode with an AI-managed task list via the `run_state` tool.              |
-| Loop    | Fixed-count mode. The same prompt is repeated until the iteration counter reaches N. |
-
-See [Auto Mode](../extensions/system-auto-mode/README.md) for the full nudge, mission, and loop flows.
-
-### Goal Mode (legacy)
-
-The `goal` tool provides the legacy goal-mode path. Continuations are scheduled only after `agent_end`, Stop pauses an active goal instead of completing it, and repeated `goal { status: "complete" }` calls are idempotent. This is separate from the run-mode selector; only one loop controller can drive a conversation at a time.
-
-## Slash Commands
-
-Type `/` in the composer to open the command menu. Slash commands are intercepted by the UI. Some run local UI actions; others convert into prompts sent to the agent.
-
-| Command           | Action                                                           |
-| ----------------- | ---------------------------------------------------------------- |
-| `/compact`        | Manually compact conversation context (optionally pass guidance) |
-| `/export [path]`  | Export conversation to HTML file                                 |
-| `/name <title>`   | Set conversation display name                                    |
-| `/run <cmd>`      | Send "Run this shell command: …" to the agent                    |
-| `/search <query>` | Send "Search the web for: …" to the agent                        |
-| `/summarize`      | Send "Summarize our conversation so far" to the agent            |
-| `/think [topic]`  | Send "Think step-by-step about: …" to the agent                  |
-| `/copy`           | Copy the last agent message to clipboard                         |
-
-Several of these send a prompt to the agent instead of executing locally: `/run`, `/search`, `/summarize`, `/think`.
-
-Commands accessible through dedicated desktop UI rather than the `/` menu include: `/model` (model picker in composer preferences row), `/fork` (message action menu), `/new` (sidebar + button), `/reload` (Extension Manager), `/clear` (Escape to cancel), `/image` (attachment button), `/draw` (composer input tool), `/session` (info display).
-
-## Bash Commands
-
-The composer supports inline bash execution. The entire input line must start with `!` or `!!`.
-
-| Syntax        | Behavior                                                                                  |
-| ------------- | ----------------------------------------------------------------------------------------- |
-| `!<command>`  | Runs the shell command. Output streams into the conversation.                             |
-| `!!<command>` | Same, but excludes the command and output from the agent's context (reduces token usage). |
-
-Examples:
-
-```
+```text
 !git status
+```
+
+Use `!!` when you want the command output to stay out of the agent's context:
+
+```text
 !!npm test
 ```
 
-Bash commands create or reuse a live session in the conversation's working directory.
+Normal agent-selected shell tool calls still appear as tool output in the transcript.
 
-These direct `!` / `!!` commands render as terminal-style transcript output. Regular agent-selected `bash` tool calls stay grouped with the rest of the agent's internal work, and expanding that cluster shows the normal tool disclosure card for the bash step.
+## Slash commands
 
-## Mention Menu
+Type `/` to open the command menu. Commands can compact context, export a conversation, rename a conversation, run a local action, or send a structured prompt to the agent depending on what is installed.
 
-Type `@` in the composer to search and reference items. The menu surfaces:
+Extensions can add their own commands.
 
-- **Files** — workspace files by path
-- **Notes** — memory documents by title
-- **Tasks** — named automations by ID
-- **Skills** — registered skills
+## Keyboard shortcuts
 
-Select an item to insert its reference (`@<id>`). The referenced content is injected into the agent's context when the message is sent.
+| Action                | Shortcut     |
+| --------------------- | ------------ |
+| New conversation      | `Cmd/Ctrl+N` |
+| Submit message        | Enter        |
+| New line in composer  | Shift+Enter  |
+| Cancel agent response | Escape       |
+| Hide workbench        | `F1`         |
+| Show workbench        | `F2`         |
+| Toggle sidebar        | `Cmd/Ctrl+/` |
+| Toggle workbench      | `Cmd/Ctrl+\` |
 
-## Reply Quoting
+## Related pages
 
-Select any portion of text in a conversation message. A **Reply** action appears that quotes the selection into the composer as a blockquote, making it easy to reference or respond to specific parts of a response.
-
-## Conversation Inspect
-
-The agent can read other conversation transcripts using the `conversation` action `inspect` tool. This provides read-only access to message history, tool calls, and results across conversations. Live and running scopes include other currently active conversations, not just persisted conversation files. See [Conversation Inspect](../extensions/system-conversation-tools/README.md).
-
-## Keyboard Shortcuts
-
-| Action                   | Shortcut              |
-| ------------------------ | --------------------- |
-| New conversation         | `Cmd+N`               |
-| Hide workbench           | `F1`                  |
-| Show workbench           | `F2`                  |
-| Toggle sidebar           | `Cmd+/` (or `Ctrl+/`) |
-| Toggle workbench         | `Cmd+\` (or `Ctrl+\`) |
-| Submit message           | Enter                 |
-| New line in composer     | Shift+Enter           |
-| Cancel agent response    | Escape                |
-| Retrieve queued messages | Alt+Up                |
-
-Default desktop shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings → Commands.
-
-## Routes
-
-The desktop app and system extensions register these routes:
-
-| Route                | Page                                |
-| -------------------- | ----------------------------------- |
-| `/conversations`     | Active or new conversation redirect |
-| `/conversations/new` | New conversation                    |
-| `/conversations/:id` | Existing conversation               |
-| `/settings`          | Settings page                       |
-| `/knowledge`         | Knowledge browser                   |
-| `/automations`       | Automation list                     |
-| `/automations/:id`   | Automation detail                   |
-| `/telemetry`         | Telemetry traces                    |
-| `/gateways`          | Gateway connections                 |
+- [Desktop app](desktop-app.md)
+- [Context and attachments](conversation-context.md)
+- [Providers and models](providers-and-models.md)

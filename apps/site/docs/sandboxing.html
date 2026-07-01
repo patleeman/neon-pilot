@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#05070b" />
-    <title>Sandboxing · Neon Pilot Docs</title>
+    <title>Local data and permissions · Neon Pilot Docs</title>
     <link rel="icon" href="../mark.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="../styles.css" />
   </head>
@@ -25,131 +25,93 @@
         <section>
           <h2>Start here</h2>
           <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
-          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="active" href="./sandboxing.html">Local data and permissions</a>
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a
-          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
-        </section>
-        <section>
-          <h2>Runtime</h2>
-          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
-          ><a class="" href="./daemon.html">Daemon</a><a class="active" href="./sandboxing.html">Sandboxing</a
-          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
-          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
-          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
-          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
-        </section>
-        <section>
-          <h2>Developers</h2>
-          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
-          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
-          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
       </aside>
       <article class="docs-content">
-        <h1 id="sandboxing-and-process-execution">Sandboxing and Process Execution</h1>
-        <p>
-          Neon Pilot routes host-owned process execution through a shared process launcher so sandboxing extensions can wrap commands
-          consistently. Filesystem access should converge on the same authority model through the
-          <a href="./filesystem-authority.html">Filesystem Authority</a>: direct file APIs and command sandboxes should share scoped root
-          grants instead of inventing separate policy vocabularies.
-        </p>
-        <h2 id="execution-boundary">Execution boundary</h2>
-        <p>Extensions and core code should not spawn processes directly. Use the host APIs that route through the shared launcher:</p>
+        <h1 id="local-data-and-permissions">Local data and permissions</h1>
+        <p>Neon Pilot is local first. Conversations, settings, installed extensions, extension data, and runtime state live on your Mac.</p>
+        <p>Network access happens through the model providers, MCP servers, tools, and integrations you choose to configure.</p>
+        <h2 id="what-stays-local">What stays local</h2>
+        <p>Neon Pilot stores these on your machine:</p>
         <ul>
-          <li>live-session bash tool</li>
-          <li>extension <code>ctx.shell</code> and <code>ctx.git</code></li>
-          <li>daemon/background run launches</li>
-          <li>automation command tasks</li>
+          <li>conversations and transcript history;</li>
+          <li>app settings and local runtime state;</li>
+          <li>installed extensions;</li>
+          <li>extension settings and extension-owned data;</li>
+          <li>local files and folders you attach or reference;</li>
+          <li>generated artifacts and checkpoints;</li>
+          <li>background work state.</li>
         </ul>
+        <p>Provider API keys should be stored through Settings, macOS Keychain, or another supported credential path.</p>
+        <h2 id="what-can-leave-your-machine">What can leave your machine</h2>
         <p>
-          When a wrapper is active, tool UI should expose the wrapper metadata, for example a human label or the extension id. This is a
-          visibility contract: users and agents should be able to tell which execution boundary handled a command.
+          Model providers receive the prompt and context needed for the message you send. This can include conversation history, attached
+          files, referenced files, images, screenshots, or tool results when they are part of the request.
         </p>
-        <h2 id="registering-a-process-wrapper">Registering a process wrapper</h2>
-        <p>Agent extensions can register a process wrapper from their backend agent extension export:</p>
-        <pre><code>export function mySandboxAgentExtension(pi) {
-  pi.registerBashProcessWrapper(
-    'my-sandbox-extension',
-    (context) =&gt; ({
-      ...context,
-      command: '/path/to/sandbox',
-      args: ['run', '--', context.command, ...context.args],
-      shell: false,
-    }),
-    { label: 'My Sandbox' },
-  );
-}</code></pre>
-        <p>
-          The wrapper receives <code>{ command, args, cwd, env, shell, wrappers }</code> and returns the launch context to execute. Wrappers
-          are applied in registration order. Use stable extension ids for wrapper ids.
-        </p>
-        <h2 id="filesystem-root-grants">Filesystem root grants</h2>
-        <p>
-          Process wrappers should eventually receive the Filesystem Authority grants for the subject they are launching for. That lets a
-          sandbox wrapper mount or expose the same roots that direct file APIs would allow: workspace read/write, extension private storage,
-          artifact output, temp workspaces, knowledge access, or secrets. The process launcher remains the execution boundary; the
-          Filesystem Authority owns root identity, grants, policy decisions, and audit vocabulary.
-        </p>
-        <h2 id="speculative-workspaces">Speculative workspaces</h2>
-        <p>
-          Speculative agent runs, including Model Arena challenger runs, should not write directly into the user's active workspace. Use the
-          host-owned speculative workspace boundary instead:
-        </p>
-        <ol>
-          <li>create a temporary workspace from the source directory;</li>
-          <li>prefer APFS clone copies on macOS and fall back to a normal recursive copy when clone support is unavailable;</li>
-          <li>run the challenger command in the temporary workspace;</li>
-          <li>
-            use the generated macOS <code>sandbox-exec</code> profile when available to deny writes outside the temporary workspace and
-            explicit writable temp roots;
-          </li>
-          <li>collect a file-tree diff against the source workspace;</li>
-          <li>apply the selected change set back to the source workspace only after the user chooses that run;</li>
-          <li>dispose of the temporary workspace on cancel, rejection, or completion.</li>
-        </ol>
-        <p>
-          The first implementation lives in <code>packages/desktop/server/filesystem/speculativeWorkspace.ts</code>. It intentionally does
-          not depend on AgentFS, Treebeard, git worktrees, or an external filesystem daemon. AgentFS-style systems can be tested later as
-          alternative adapters behind the same boundary, but Model Arena should target Neon Pilot's speculative workspace contract rather
-          than a third-party command shape.
-        </p>
-        <h2 id="extension-process-api-policy">Extension process API policy</h2>
-        <p>
-          Extension backend code must use <code>ctx.shell</code> for process execution. Direct Node process APIs are blocked during backend
-          builds and bundle loading for normal extension code:
-        </p>
+        <p>Other configured tools may also use the network. For example:</p>
         <ul>
-          <li><code>child_process</code> / <code>node:child_process</code></li>
-          <li><code>cluster</code> / <code>node:cluster</code></li>
-          <li><code>worker_threads</code> / <code>node:worker_threads</code></li>
+          <li>an MCP server may call a remote service;</li>
+          <li>a browser tool may load a website;</li>
+          <li>an extension may connect to an integration you enabled;</li>
+          <li>a model gateway may serve local API requests to another tool.</li>
         </ul>
+        <p>Review what you attach and which extensions you enable.</p>
+        <h2 id="extension-permissions">Extension permissions</h2>
         <p>
-          This is a guardrail against accidental bypasses, not a hostile-code security boundary. Unknown or hostile extension code still
-          requires out-of-process isolation or a VM/workspace sandbox.
+          Extensions declare the capabilities they need. Depending on the extension, this can include storage, backend actions, tools,
+          settings, commands, process execution, or provider-aware behavior.
         </p>
+        <p>Use the Extensions page to inspect installed extensions, enable or disable them, and review diagnostics.</p>
+        <h2 id="process-execution">Process execution</h2>
+        <p>
+          Some agent work needs to run shell commands. Neon Pilot routes process execution through host-owned APIs so extensions and tools
+          use the same visible execution boundary.
+        </p>
+        <p>When a command runs, inspect the transcript or background-work surface to see what ran and what it returned.</p>
+        <h2 id="filesystem-access">Filesystem access</h2>
+        <p>The agent can work with files you attach, folders you select, and workspace paths you make available.</p>
+        <p>Keep sensitive files out of prompts unless the model provider and enabled tools are allowed to see them.</p>
+        <h2 id="practical-safety-habits">Practical safety habits</h2>
+        <ul>
+          <li>Store provider keys through Settings or a supported credential flow.</li>
+          <li>Do not paste secrets into chat messages.</li>
+          <li>Attach the smallest file set that solves the task.</li>
+          <li>Inspect new extensions before enabling them.</li>
+          <li>Disable extensions you are not using.</li>
+          <li>Use local-only providers or tools when a task must not reach hosted services.</li>
+        </ul>
+        <h2 id="related-pages">Related pages</h2>
+        <ul>
+          <li><a href="./providers-and-models.html">Providers and models</a></li>
+          <li><a href="./conversation-context.html">Context and attachments</a></li>
+          <li><a href="./build-an-extension.html">Build an extension</a></li>
+        </ul>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/sandboxing.md">Edit this page on GitHub →</a>
         </p>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#execution-boundary">Execution boundary</a><a href="#registering-a-process-wrapper">Registering a process wrapper</a
-        ><a href="#filesystem-root-grants">Filesystem root grants</a><a href="#speculative-workspaces">Speculative workspaces</a
-        ><a href="#extension-process-api-policy">Extension process API policy</a>
+        <a href="#what-stays-local">What stays local</a><a href="#what-can-leave-your-machine">What can leave your machine</a
+        ><a href="#extension-permissions">Extension permissions</a><a href="#process-execution">Process execution</a
+        ><a href="#filesystem-access">Filesystem access</a><a href="#practical-safety-habits">Practical safety habits</a
+        ><a href="#related-pages">Related pages</a>
       </aside>
     </main>
   </body>

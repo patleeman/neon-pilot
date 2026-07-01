@@ -25,39 +25,22 @@
         <section>
           <h2>Start here</h2>
           <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
-          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
           ><a class="active" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a
-          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
-        </section>
-        <section>
-          <h2>Runtime</h2>
-          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
-          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
-          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
-          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
-          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
-          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
-        </section>
-        <section>
-          <h2>Developers</h2>
-          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
-          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
-          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -476,12 +459,12 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
             <tr>
               <td><code>activityTreeItemElements</code></td>
               <td>Custom content in thread/activity tree rows</td>
-              <td><a href="./activity-tree.html">Activity tree</a></td>
+              <td><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/activity-tree.md">Activity tree</a></td>
             </tr>
             <tr>
               <td><code>activityTreeItemStyles</code></td>
               <td>Custom row styling for thread/activity tree items</td>
-              <td><a href="./activity-tree.html">Activity tree</a></td>
+              <td><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/activity-tree.md">Activity tree</a></td>
             </tr>
             <tr>
               <td><code>quickOpen</code></td>
@@ -1015,7 +998,7 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           <code>updateGatewayConnectionStatus(...)</code> when credentials or transport state changes,
           <code>attachGatewayConversation(...)</code> when an external chat is bound to a conversation,
           <code>detachGatewayConversation(...)</code> when a binding is removed, and <code>recordGatewayEvent(...)</code> for user-visible
-          gateway activity. Extension code must not import <code>packages/desktop/server/gateways/*</code> directly.
+          gateway activity. Extension code must use the gateway SDK seam rather than importing host gateway internals directly.
         </p>
         <p>Gateway runtimes or other extensions that need speech-to-text should call the host transcription seam:</p>
         <pre><code>import { transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
@@ -1140,8 +1123,7 @@ const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fi
         </p>
         <p>
           Each command should include a human-readable <code>description</code>; add <code>usage</code> and <code>examples</code> when the
-          command accepts arguments or flags. <code>pnpm run check:cli:surface</code> validates command discovery and help output for all
-          system extension CLI commands.
+          command accepts arguments or flags. System extension CLI commands should be covered by command discovery and help-output checks.
         </p>
         <p>
           System extension CLI commands must also declare a contract: <code>argsSchema</code>, <code>flagsSchema</code>, <code>mode</code>,
@@ -1962,16 +1944,13 @@ export function MyPanel({ pa, context }: ExtensionSurfaceProps) {
           lazy-load background-run support only when the action actually starts or inspects background work.
         </p>
         <p>
-          The backend API is deliberately two-layered: public stubs under <code>packages/extensions/src/backend/*.ts</code>, and host
-          implementations under <code>packages/desktop/server/extensions/backendApi/*.ts</code>. Extension source imports only
-          <code>@neon-pilot/extensions</code> and <code>@neon-pilot/extensions/backend/{name}</code>. It must not import desktop server
-          files, <code>@neon-pilot/core</code>, <code>@neon-pilot/daemon</code>, or agent-runtime internals directly. System extension
-          source should use the public <code>ExtensionAPI</code> type from <code>@neon-pilot/extensions</code> for agent lifecycle hooks,
-          and any missing host capability should become a focused SDK/backend seam. Host backend API modules should be thin adapters;
-          lazy-load heavy desktop/runtime modules inside functions so packaged extension bundles do not accidentally drag in half the app.
-          If a backend API wraps process-local host state and may run in the backend worker, it must use the worker capability bridge
-          instead of importing that state directly in the worker. <code>pnpm run check:extensions</code> enforces this with
-          <code>scripts/check-extension-backend-api.mjs</code> and packaged source/bundle checks before packaged bundle checks run.
+          The backend API is deliberately two-layered: public SDK stubs under <code>@neon-pilot/extensions/backend/*</code>, and host
+          implementations inside the desktop runtime. Extension source imports only <code>@neon-pilot/extensions</code> and
+          <code>@neon-pilot/extensions/backend/{name}</code>. It must not import desktop server files, <code>@neon-pilot/core</code>,
+          <code>@neon-pilot/daemon</code>, or agent-runtime internals directly. System extension source should use the public
+          <code>ExtensionAPI</code> type from <code>@neon-pilot/extensions</code> for agent lifecycle hooks, and any missing host capability
+          should become a focused SDK/backend seam. Host backend APIs should stay thin, lazy-load heavy host/runtime code, and use the
+          worker capability bridge when a capability may run in an extension backend worker.
         </p>
         <p>
           Backend seam permission model: seams that run user-visible privileged workflows still require explicit extension permissions
@@ -2325,8 +2304,9 @@ const enabled = settings['myExt.featureEnabled'] === true;</code></pre>
           <li>Use <strong>database</strong> (<code>ctx.database</code>) for extension-owned SQLite tables,</li>
           <p>migrations, indexes, queues, and query-heavy state.</p>
           <li>
-            Use the <a href="./filesystem-authority.html">Filesystem Authority</a> for extension-owned files/blobs, workspace files, temp
-            workspaces, artifacts, and any path addressed by a user, agent, archive, or external protocol.
+            Use the <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/filesystem-authority.md">Filesystem Authority</a> for
+            extension-owned files/blobs, workspace files, temp workspaces, artifacts, and any path addressed by a user, agent, archive, or
+            external protocol.
           </li>
           <li>Settings are discoverable (all extensions contribute to a unified schema);</li>
           <p>storage is private to each extension.</p>
@@ -3026,8 +3006,8 @@ await cacheFiles.writeJson('remote-index.json', index);</code></pre>
         <ol>
           <li>Build the extension release artifacts with <code>pnpm run extension:build -- extensions/&lt;id&gt;</code>.</li>
           <li>
-            For frontend, route, nav, sidebar, manifest, or shared UI changes, run <code>pnpm --dir packages/desktop run build:ui</code> so
-            the desktop renderer sees the current source and contributions.
+            For frontend, route, nav, sidebar, manifest, or shared UI changes, run the desktop UI build so the renderer sees the current
+            source and contributions.
           </li>
           <li>
             Restart the dev app before visual QA; otherwise stale renderer chunks or cached component registrations can make the app show

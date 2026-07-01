@@ -25,39 +25,22 @@
         <section>
           <h2>Start here</h2>
           <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
-          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
-          ><a class="" href="./design-system.html">Design System</a
-          ><a class="active" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a
-          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
-        </section>
-        <section>
-          <h2>Runtime</h2>
-          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
-          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
-          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
-          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
-          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
-          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
-        </section>
-        <section>
-          <h2>Developers</h2>
-          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
-          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
-          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="active" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -101,8 +84,8 @@
   }
 }</code></pre>
         <p>
-          The UI loads the host renderer from <code>packages/desktop/ui/src/extensions/hostViewComponents.tsx</code>. The extension frontend
-          is not loaded for this surface unless the manifest also declares overrides.
+          The UI loads the host renderer from the host component registry. The extension frontend is not loaded for this surface unless the
+          manifest also declares overrides.
         </p>
         <h2 id="customization-model">Customization model</h2>
         <p>
@@ -168,8 +151,8 @@ export function CustomArtifactDetailWrapper({ HostComponent, ...props }: HostWra
 }</code></pre>
         <p>
           That component then imported the workbench SDK, artifact data hooks, renderers, markdown/code renderers, and local layout code. It
-          worked, but every extension that did this carried its own copy of a complex UI path. Tiny customizations became giant bundle and
-          maintenance cliffs. Classic haunted house architecture, but with React.
+          worked, but every extension that did this carried its own copy of a complex UI path. Tiny customizations became large bundle and
+          maintenance costs.
         </p>
         <p>After host components, the extension keeps the contribution but delegates the view to the host:</p>
         <pre><code>{
@@ -248,7 +231,7 @@ export function ArtifactDetailWrapper({ HostComponent, ...props }: ArtifactDetai
         </p>
         <h2 id="runtime-split">Runtime split</h2>
         <ul>
-          <li>Host component references load from <code>packages/desktop/ui/src/extensions/hostViewComponents.tsx</code>.</li>
+          <li>Host component references load from the host component registry.</li>
           <li>Custom string components still load the extension frontend entry.</li>
           <li>Host references with overrides load the host component and then load only the extension override exports.</li>
           <li>Server manifest validation rejects unknown host ids and unknown override slots before the UI can render a broken surface.</li>
@@ -256,19 +239,16 @@ export function ArtifactDetailWrapper({ HostComponent, ...props }: ArtifactDetai
         <h2 id="adding-a-new-host-component">Adding a new host component</h2>
         <ol>
           <li>
-            Add metadata to <code>packages/extensions/src/host-view-components.ts</code>, choosing locations from <code>main</code>,
-            <code>sidebar</code>, <code>rightRail</code>, and <code>workbench</code>.
+            Add metadata to the host component catalog, choosing locations from <code>main</code>, <code>sidebar</code>,
+            <code>rightRail</code>, and <code>workbench</code>.
           </li>
-          <li>Add the UI loader in <code>packages/desktop/ui/src/extensions/hostViewComponents.tsx</code>.</li>
+          <li>Add the host UI loader.</li>
           <li>If the component needs configuration, define JSON-serializable <code>propsSchema</code> in the catalog.</li>
           <li>
             If it needs customization, add named override slots to the catalog and make the host component read <code>slotOverrides</code>.
           </li>
           <li>Update this doc's catalog table.</li>
-          <li>
-            Run <code>pnpm run build:extensions</code>, <code>pnpm run check:extensions</code>, <code>pnpm run check:types</code>, and
-            <code>pnpm --dir packages/desktop run build:ui</code>.
-          </li>
+          <li>Run the extension build, extension checks, type checks, and desktop UI build before publishing the new host component.</li>
         </ol>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/host-view-components.md">Edit this page on GitHub →</a>

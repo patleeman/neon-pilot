@@ -25,106 +25,68 @@
         <section>
           <h2>Start here</h2>
           <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
-          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+          ><a class="" href="./agent-bootstrap.html">Install with another agent</a>
         </section>
         <section>
           <h2>Product</h2>
           <a class="active" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
-          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
-          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
-          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./conversations.html">Conversations</a
+          ><a class="" href="./conversation-context.html">Context and attachments</a
+          ><a class="" href="./providers-and-models.html">Providers and models</a
+          ><a class="" href="./sandboxing.html">Local data and permissions</a>
         </section>
         <section>
           <h2>Extensions</h2>
-          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a
-          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
-        </section>
-        <section>
-          <h2>Runtime</h2>
-          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
-          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
-          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
-          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
-          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
-          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
-        </section>
-        <section>
-          <h2>Developers</h2>
-          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
-          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
-          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extension-sdk.html">Extension SDK</a
+          ><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./host-view-components.html">Host View Components</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
         </section>
       </aside>
       <article class="docs-content">
-        <h1 id="desktop-app">Desktop App</h1>
+        <h1 id="desktop-app">Desktop app</h1>
+        <p>Neon Pilot is a macOS desktop app for running and extending AI agent workflows.</p>
         <p>
-          The Electron desktop app is the primary Neon Pilot operator UI. It hosts the React renderer, manages the local daemon lifecycle,
-          and provides the full feature surface.
+          The app gives you a local conversation workspace, a workbench beside the conversation, Settings, Extensions, and background work
+          surfaces.
         </p>
-        <h2 id="starting">Starting</h2>
-        <pre><code># Stable production build
-pnpm run desktop:start
-
-# Development mode with hot reload
-pnpm run desktop:dev
-
-# Demo mode with seeded data
-pnpm run desktop:demo</code></pre>
-        <p>
-          Both <code>desktop:start</code> and <code>desktop:dev</code> build the Electron shell and launch it through
-          <code>packages/desktop/scripts/launch-dev-app.mjs</code>.
-        </p>
-        <p>
-          For packaged builds, launch <code>Neon Pilot.app</code> from the output directory. RC builds launch as
-          <code>Neon Pilot RC.app</code> so they can coexist with the stable app.
-        </p>
-        <h2 id="runtime-model">Runtime Model</h2>
-        <pre><code>Electron main process
-    │
-    ├── Renderer (React) ── neon-pilot://app/
-    │       │
-    │       ├── Conversation routes
-    │       ├── Knowledge
-    │       ├── Automations
-    │       └── Settings
-    │
-    ├── Backend child process
-    │       │
-    │       ├── Local API
-    │       ├── Session parsing and search
-    │       ├── Git/checkpoint operations
-    │       ├── Knowledge base reads/writes
-    │       ├── Extension backend host
-    │       └── Daemon runtime
-    │             │
-    │       ├── Scheduled tasks
-    │       ├── Wakeups
-    │       └── Follow-up queue</code></pre>
-        <ul>
-          <li>Electron owns the UI surface through the <code>neon-pilot://app/</code> protocol</li>
-          <li>
-            Keep the startup path tiny: the main-process hot bundle should only create the window, register protocol/IPC, and schedule
-            deferred work
-          </li>
-          <li>
-            Freeze-prone local API work runs in the backend child process; do not import or execute heavy desktop server capabilities
-            directly on the Electron main thread
-          </li>
-          <li>Avoid <code>spawnSync</code>/<code>execSync</code> in desktop main-process flows</li>
-          <li>
-            The daemon owns durable background behavior inside the backend child and starts after the renderer has had a chance to paint;
-            user actions that need it can force-start it immediately
-          </li>
-          <li>
-            The desktop app loads initial readonly snapshots first, then connects to server-pushed events for conversations, executions,
-            automations, and daemon status after startup settles
-          </li>
-        </ul>
-        <h2 id="layout">Layout</h2>
+        <h2 id="main-areas">Main areas</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>What it is for</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Left navigation</td>
+              <td>Move between conversations, extensions, settings, and installed product surfaces.</td>
+            </tr>
+            <tr>
+              <td>Conversation</td>
+              <td>Chat with the agent, attach files, inspect tool output, and continue saved work.</td>
+            </tr>
+            <tr>
+              <td>Composer</td>
+              <td>Send prompts, attach files, choose models, queue follow-ups, and use commands.</td>
+            </tr>
+            <tr>
+              <td>Workbench</td>
+              <td>Inspect files, artifacts, browser pages, terminal output, extension panels, and other side-by-side surfaces.</td>
+            </tr>
+            <tr>
+              <td>Settings</td>
+              <td>Configure providers, models, app preferences, extensions, commands, and local readiness.</td>
+            </tr>
+            <tr>
+              <td>Extensions</td>
+              <td>Enable, disable, inspect, install, or build app-grade capabilities.</td>
+            </tr>
+          </tbody>
+        </table>
+        <h2 id="conversation-and-workbench-modes">Conversation and workbench modes</h2>
+        <p>Neon Pilot has two common layouts:</p>
         <table>
           <thead>
             <tr>
@@ -135,107 +97,69 @@ pnpm run desktop:demo</code></pre>
           </thead>
           <tbody>
             <tr>
-              <td>Workbench off</td>
+              <td>Conversation focused</td>
               <td><code>F1</code></td>
-              <td>Single-pane layout with left sidebar</td>
+              <td>Single conversation pane with the left sidebar.</td>
             </tr>
             <tr>
               <td>Workbench open</td>
               <td><code>F2</code></td>
-              <td>Conversation plus tabbed workbench</td>
+              <td>Conversation plus a right-side workbench.</td>
             </tr>
           </tbody>
         </table>
+        <p>Toggle the left sidebar with <code>Cmd+/</code> or <code>Ctrl+/</code>.</p>
+        <p>Toggle the workbench with <code>Cmd+\</code> or <code>Ctrl+\</code>.</p>
+        <h2 id="workbench">Workbench</h2>
+        <p>The workbench is the side-by-side space for context and outputs. Depending on what you have opened or installed, it can show:</p>
+        <ul>
+          <li>file explorer;</li>
+          <li>rendered artifacts;</li>
+          <li>browser pages;</li>
+          <li>terminal views;</li>
+          <li>knowledge or context views;</li>
+          <li>extension-provided tools and panels.</li>
+        </ul>
+        <p>Use the workbench when the agent's work needs inspection, files, previews, or controls beside the transcript.</p>
+        <h2 id="settings">Settings</h2>
+        <p>Use Settings to manage:</p>
+        <ul>
+          <li>model providers and default models;</li>
+          <li>API keys and provider credentials;</li>
+          <li>extension settings;</li>
+          <li>keyboard shortcuts and command bindings;</li>
+          <li>desktop preferences;</li>
+          <li>local readiness items.</li>
+        </ul>
         <p>
-          Toggle the left sidebar with <code>Cmd+/</code> (or <code>Ctrl+/</code>). Toggle the workbench with <code>Cmd+\</code> (or
-          <code>Ctrl+\</code>).
+          Provider keys should be stored through Settings or another safe credential path. Do not paste provider keys into conversations.
         </p>
-        <h2 id="workbench-tabs">Workbench Tabs</h2>
-        <p>The workbench new tab page includes:</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Tab</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>File Explorer</td>
-              <td>Project file tree browser</td>
-            </tr>
-            <tr>
-              <td>Artifacts</td>
-              <td>Rendered HTML, Mermaid, LaTeX</td>
-            </tr>
-            <tr>
-              <td>Browser</td>
-              <td>Embedded webview</td>
-            </tr>
-          </tbody>
-        </table>
+        <h2 id="extensions">Extensions</h2>
         <p>
-          Knowledge is also a primary left-sidebar page. Extension-contributed workbench tools can appear on the new tab page. Tabs are
-          context-sensitive; artifacts open from transcript cards and do not appear as a generic new-tab option. Checkpoint diffs and
-          background work render inline in the transcript. Heavy workbench panels are lazy-loaded so they do not inflate the initial
-          renderer bundle.
+          Extensions are first-class app capabilities. They can add pages, panels, tools, commands, settings, background services, setup
+          checks, transcript renderers, and provider-aware behavior.
         </p>
-        <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
         <p>
-          Desktop menu shortcuts are configurable in Settings → Desktop. Host and extension command keybindings are configurable in Settings
-          → Commands. Defaults:
+          Neon Pilot ships with bundled system extensions. You can also install optional extensions or ask your agent to build one for your
+          own workflow.
         </p>
+        <h2 id="keyboard-shortcuts">Keyboard shortcuts</h2>
+        <p>Default shortcuts:</p>
         <table>
           <thead>
             <tr>
               <th>Action</th>
-              <th>Default</th>
+              <th>Shortcut</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Show Neon Pilot</td>
-              <td><code>Cmd/Ctrl+Shift+A</code></td>
-            </tr>
             <tr>
               <td>New conversation</td>
               <td><code>Cmd/Ctrl+N</code></td>
             </tr>
             <tr>
-              <td>Close tab</td>
-              <td><code>Cmd/Ctrl+W</code></td>
-            </tr>
-            <tr>
-              <td>Reopen closed tab</td>
-              <td><code>Cmd+Shift+N</code></td>
-            </tr>
-            <tr>
-              <td>Previous conversation</td>
-              <td><code>Cmd/Ctrl+[</code></td>
-            </tr>
-            <tr>
-              <td>Next conversation</td>
-              <td><code>Cmd/Ctrl+]</code></td>
-            </tr>
-            <tr>
-              <td>Toggle pinned</td>
-              <td><code>Cmd/Ctrl+Alt+P</code></td>
-            </tr>
-            <tr>
-              <td>Archive / restore</td>
-              <td><code>Cmd/Ctrl+Alt+A</code></td>
-            </tr>
-            <tr>
-              <td>Rename conversation</td>
-              <td><code>Cmd/Ctrl+Alt+R</code></td>
-            </tr>
-            <tr>
               <td>Focus composer</td>
               <td><code>Cmd/Ctrl+L</code></td>
-            </tr>
-            <tr>
-              <td>Edit working directory</td>
-              <td><code>Cmd/Ctrl+Shift+L</code></td>
             </tr>
             <tr>
               <td>Find on page</td>
@@ -246,113 +170,39 @@ pnpm run desktop:demo</code></pre>
               <td><code>Cmd/Ctrl+,</code></td>
             </tr>
             <tr>
-              <td>Quit</td>
-              <td><code>Cmd/Ctrl+Q</code></td>
-            </tr>
-            <tr>
-              <td>Conversation mode</td>
+              <td>Conversation focused</td>
               <td><code>F1</code></td>
             </tr>
             <tr>
-              <td>Workbench mode</td>
+              <td>Workbench open</td>
               <td><code>F2</code></td>
-            </tr>
-            <tr>
-              <td>New workbench tab</td>
-              <td><code>Cmd/Ctrl+T</code></td>
-            </tr>
-            <tr>
-              <td>Close workbench tab</td>
-              <td><code>Cmd/Ctrl+Shift+W</code></td>
-            </tr>
-            <tr>
-              <td>Close workbench file</td>
-              <td><code>Cmd/Ctrl+Alt+W</code></td>
-            </tr>
-            <tr>
-              <td>Refresh workbench file</td>
-              <td><code>F5</code></td>
-            </tr>
-            <tr>
-              <td>Toggle workbench explorer</td>
-              <td><code>Cmd/Ctrl+B</code></td>
-            </tr>
-            <tr>
-              <td>Toggle workbench diff</td>
-              <td><code>Cmd/Ctrl+Shift+D</code></td>
             </tr>
             <tr>
               <td>Toggle left sidebar</td>
               <td><code>Cmd/Ctrl+/</code></td>
             </tr>
             <tr>
-              <td>Toggle right sidebar</td>
+              <td>Toggle workbench</td>
               <td><code>Cmd/Ctrl+\</code></td>
             </tr>
           </tbody>
         </table>
-        <h2 id="routes">Routes</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Route</th>
-              <th>Page</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>/conversations</code></td>
-              <td>Active or new conversation redirect</td>
-            </tr>
-            <tr>
-              <td><code>/conversations/new</code></td>
-              <td>New conversation</td>
-            </tr>
-            <tr>
-              <td><code>/conversations/:id</code></td>
-              <td>Existing conversation</td>
-            </tr>
-            <tr>
-              <td><code>/knowledge</code></td>
-              <td>Knowledge browser</td>
-            </tr>
-            <tr>
-              <td><code>/automations</code></td>
-              <td>Automation list</td>
-            </tr>
-            <tr>
-              <td><code>/automations/:id</code></td>
-              <td>Automation detail</td>
-            </tr>
-            <tr>
-              <td><code>/settings</code></td>
-              <td>Settings panel</td>
-            </tr>
-            <tr>
-              <td><code>/telemetry</code></td>
-              <td>Telemetry traces page</td>
-            </tr>
-            <tr>
-              <td><code>/gateways</code></td>
-              <td>Gateway connections when installed; otherwise redirects to a new conversation</td>
-            </tr>
-          </tbody>
-        </table>
-        <h2 id="demo-mode">Demo Mode</h2>
-        <p>
-          <code>pnpm run desktop:demo</code> creates an isolated temporary state root with seeded conversations, automations, executions,
-          and assets for UI development and testing. Seeded content includes conversations with artifacts, checkpoints, reminders, subagent
-          demos, and pathological fixtures.
-        </p>
+        <p>Shortcuts are configurable in Settings when the owning command supports keybinding changes.</p>
+        <h2 id="related-pages">Related pages</h2>
+        <ul>
+          <li><a href="./conversations.html">Conversations</a></li>
+          <li><a href="./conversation-context.html">Context and attachments</a></li>
+          <li><a href="./build-an-extension.html">Build an extension</a></li>
+        </ul>
         <p class="edit-link">
           <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/desktop-app.md">Edit this page on GitHub →</a>
         </p>
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#starting">Starting</a><a href="#runtime-model">Runtime Model</a><a href="#layout">Layout</a
-        ><a href="#workbench-tabs">Workbench Tabs</a><a href="#keyboard-shortcuts">Keyboard Shortcuts</a><a href="#routes">Routes</a
-        ><a href="#demo-mode">Demo Mode</a>
+        <a href="#main-areas">Main areas</a><a href="#conversation-and-workbench-modes">Conversation and workbench modes</a
+        ><a href="#workbench">Workbench</a><a href="#settings">Settings</a><a href="#extensions">Extensions</a
+        ><a href="#keyboard-shortcuts">Keyboard shortcuts</a><a href="#related-pages">Related pages</a>
       </aside>
     </main>
   </body>

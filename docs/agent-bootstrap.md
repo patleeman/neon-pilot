@@ -1,63 +1,71 @@
-# Agent Bootstrap
+# Install with another agent
 
-Neon Pilot must be installable, configurable, and verifiable by an external agent without manual file edits.
+Use this page when you want Claude Code, Codex, or another local coding agent to install Neon Pilot for you.
 
-## Install
+The primary reader is you. The copy-paste prompt is for the agent.
 
-Use the packaged macOS installer script. It installs the signed app from GitHub releases, launches it once, installs the CLI when available, and reports machine-readable status.
+## Copy-paste prompt
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap --json
+Paste this into your current coding agent:
+
+```text
+Install Neon Pilot on this Mac.
+
+Use the packaged installer script:
+
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap
+
+After install, open or verify the app, check that the CLI is available, and tell me exactly what passed or failed. Do not put provider API keys in command arguments, logs, transcripts, or config files. If a provider key is needed, ask me to enter it through Neon Pilot Settings or through a stdin-based command.
 ```
 
-Use `--channel rc` for release-candidate builds.
+## What the agent should do
 
-## Configure
+The agent should:
 
-Run bootstrap commands through the live app CLI. Use JSON output only for automation scripts and health gates that parse results.
+1. Run the installer script.
+2. Confirm that **Neon Pilot.app** is installed.
+3. Confirm that the `neon-pilot` CLI is available when the CLI install succeeds.
+4. Run a health check when the CLI is available.
+5. Ask you to configure a provider in the app, or use a safe stdin-based command if you explicitly want terminal setup.
+6. Report what worked and what still needs your attention.
+
+## Useful commands
+
+The installer command is:
 
 ```bash
-neon-pilot bootstrap configure \
-  --secrets-provider keychain \
-  --provider openai-codex \
-  --model gpt-5.4 \
-  --cwd "$HOME/workingdir" \
-  --json
+curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap
 ```
 
-Provider keys must not be passed in argv. Use stdin:
+When the CLI is installed, the agent can check readiness with:
 
 ```bash
-printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin --json
+neon-pilot bootstrap doctor
 ```
 
-Custom providers and models can be created from the CLI:
+Use JSON only when the agent is writing a script or needs machine-readable output:
 
 ```bash
-neon-pilot bootstrap provider save openrouter --base-url https://openrouter.ai/api/v1 --api openai --json
-neon-pilot bootstrap provider model openrouter openai/gpt-5.4 --context-window 272000 --json
-```
-
-## Verify
-
-An agent should not report setup complete until these checks pass:
-
-```bash
-neon-pilot cli status --json
-neon-pilot commands
 neon-pilot bootstrap doctor --json
-neon-pilot control-plane doctor --json
-neon-pilot protocol neon-pilot-agent capabilities --json
-neon-pilot protocol neon-pilot-agent run --prompt "Reply with ready." --tools none --json
 ```
 
-Neon Pilot self-administration is through `neon-pilot` for external agents and the canonical `neon_pilot` tool for internal agents. Do not configure Neon Pilot admin through MCP.
+## Provider keys
 
-## Rules For Agents
+Provider keys should not appear in command arguments or chat transcripts.
 
-- Prefer CLI commands over editing runtime files directly.
-- Use human output for orientation; use `--json` only for scripted health gates and parsed automation.
-- Never put provider API keys in command arguments, logs, transcripts, or config files.
-- Use `--stdin`, Keychain, or OAuth/device login for credentials.
-- Use `neon-pilot bootstrap doctor --json` after every install or settings change.
-- Report exactly which verification commands passed or failed.
+Use one of these paths instead:
+
+- Enter the key in **Settings** inside Neon Pilot.
+- Pipe the key through stdin when you intentionally use the CLI.
+- Use OAuth or device login when the provider supports it.
+- Use macOS Keychain-backed storage when available.
+
+Example stdin pattern:
+
+```bash
+printf '%s' "$OPENAI_API_KEY" | neon-pilot bootstrap provider set-key openai --stdin
+```
+
+## When to use the normal install page
+
+If you are installing Neon Pilot yourself, use [Getting Started](getting-started.md). It skips automation details and focuses on the human setup path.
