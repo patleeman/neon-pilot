@@ -394,6 +394,20 @@ function normalizeRoutine(value: unknown, fallbackOrder = 0): Routine | null {
   };
 }
 
+function validateRoutine(routine: Routine): string | null {
+  if (!routine.hookId.trim() || !routine.name.trim()) return 'Routine name and event are required.';
+  if (routine.type !== 'decision') return null;
+  if (routine.outcomes.length === 0) return 'Choose-path routines need at least one path.';
+  const seen = new Set<string>();
+  for (const outcome of routine.outcomes) {
+    const id = outcome.id.trim();
+    if (!id) return 'Each path needs an enum value.';
+    if (seen.has(id)) return `Path enum values must be unique. "${id}" is used more than once.`;
+    seen.add(id);
+  }
+  return null;
+}
+
 function runStepStatusValue(value: unknown): RoutineRunStep['status'] {
   return value === 'warned' || value === 'blocked' || value === 'failed' || value === 'skipped' ? value : 'passed';
 }
@@ -576,7 +590,9 @@ export async function registerHookPoint(input: unknown, ctx: ExtensionBackendCon
 
 export async function saveRoutine(input: unknown, ctx: ExtensionBackendContext) {
   const candidate = normalizeRoutine(input);
-  if (!candidate) throw new Error('Routine name and hook are required.');
+  if (!candidate) throw new Error('Routine name and event are required.');
+  const validationError = validateRoutine(candidate);
+  if (validationError) throw new Error(validationError);
   const state = await readState(ctx);
   const existing = state.routines.find((routine) => routine.id === candidate.id);
   const nextRoutine: Routine = {

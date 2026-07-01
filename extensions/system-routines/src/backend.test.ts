@@ -86,6 +86,49 @@ describe('system-routines backend', () => {
     expect(result.routines.length).toBeGreaterThan(0);
   });
 
+  it('rejects choose-path routines without usable paths', async () => {
+    const ctx = createCtx();
+
+    await expect(
+      saveRoutine(
+        {
+          id: 'empty-decision',
+          hookId: 'checkpoint',
+          position: 'before',
+          type: 'decision',
+          name: 'Empty decision',
+          instruction: 'Choose one',
+          enabled: true,
+          order: 0,
+          failureBehavior: 'block',
+          outcomes: [],
+        },
+        ctx,
+      ),
+    ).rejects.toThrow('at least one path');
+
+    await expect(
+      saveRoutine(
+        {
+          id: 'duplicate-decision',
+          hookId: 'checkpoint',
+          position: 'before',
+          type: 'decision',
+          name: 'Duplicate decision',
+          instruction: 'Choose one',
+          enabled: true,
+          order: 0,
+          failureBehavior: 'block',
+          outcomes: [
+            { id: 'pass', label: 'Pass', target: 'Continue', behavior: 'continue' },
+            { id: 'pass', label: 'Pass again', target: 'Continue again', behavior: 'continue' },
+          ],
+        },
+        ctx,
+      ),
+    ).rejects.toThrow('must be unique');
+  });
+
   it('blocks a hook when a decision routine returns a blocking enum outcome', async () => {
     runAgentTaskMock.mockResolvedValue({ text: 'OUTCOME: issues_found\nBug found.' });
     const result = (await runHook({ hookId: 'checkpoint', position: 'before', context: { cwd: '/repo' } }, createCtx())) as {

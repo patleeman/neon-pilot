@@ -17,8 +17,8 @@ import {
   MenuItem,
   MenuShell,
   PositionedMenu,
-  SectionLabel,
   Select,
+  SidebarSection,
   Textarea,
   TextButton,
   TextInput,
@@ -210,6 +210,20 @@ function routineFailureLabel(routine: Routine): string {
   return 'if this fails: keep going';
 }
 
+function validateRoutineDraft(routine: Routine): string | null {
+  if (!routine.hookId.trim() || !routine.name.trim()) return 'Routine name and event are required.';
+  if (routine.type !== 'decision') return null;
+  if (routine.outcomes.length === 0) return 'Choose-path routines need at least one path.';
+  const seen = new Set<string>();
+  for (const outcome of routine.outcomes) {
+    const id = outcome.id.trim();
+    if (!id) return 'Each path needs an enum value.';
+    if (seen.has(id)) return `Path enum values must be unique. "${id}" is used more than once.`;
+    seen.add(id);
+  }
+  return null;
+}
+
 function ownerLabel(ownerExtensionId: string): string {
   if (ownerExtensionId === 'core') return 'Built in';
   return ownerExtensionId
@@ -279,6 +293,23 @@ function publishRoutinesState(state: StateResult) {
   window.dispatchEvent(new CustomEvent<StateResult>('neon-pilot-routines-state', { detail: state }));
 }
 
+function summarizeHookForUi(hookId: string, routines: Routine[]): string {
+  const enabled = routines.filter((routine) => routine.hookId === hookId && routine.enabled);
+  if (enabled.length === 0) return 'No routines';
+  return enabled
+    .sort((left, right) => left.position.localeCompare(right.position) || left.order - right.order)
+    .slice(0, 2)
+    .map((routine) => routine.name)
+    .join(', ');
+}
+
+function withHookSummaries(state: StateResult): StateResult {
+  return {
+    ...state,
+    hooks: state.hooks.map((hook) => ({ ...hook, summary: summarizeHookForUi(hook.id, state.routines) })),
+  };
+}
+
 function RoutineHookList({
   hooks,
   selectedHookId,
@@ -317,36 +348,18 @@ function RoutineHookList({
   });
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-transparent">
-      <div className="px-4 pb-0.5 pt-1">
-        <div className="flex items-center justify-between gap-2">
-          <SectionLabel className="block">Routines</SectionLabel>
-          <IconButton
-            compact
-            type="button"
-            aria-label={showAllHooks ? 'Done adding routine event' : 'Add routine event'}
-            title={showAllHooks ? 'Done' : 'Add event'}
-            onClick={() => onShowAllHooksChange(!showAllHooks)}
-          >
-            <RoutineSidebarIcon name={showAllHooks ? 'check' : 'plus'} />
-          </IconButton>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-3">
-        <ActivityTreeView
-          items={treeItems}
-          activeItemId={selectedHookId}
-          ariaLabel="Routines"
-          emptyMessage={showAllHooks ? 'No events available.' : 'No routines yet. Add an event to start.'}
-          onOpenItem={(item: ActivityTreeItem) => {
-            if (item.kind !== 'group') {
-              onSelect(item.id);
-              if (showAllHooks) onShowAllHooksChange(false);
-            }
-          }}
-        />
-      </div>
-    </div>
+    <ActivityTreeView
+      items={treeItems}
+      activeItemId={selectedHookId}
+      ariaLabel="Routines"
+      emptyMessage={showAllHooks ? 'No events available.' : 'No routines yet. Add an event to start.'}
+      onOpenItem={(item: ActivityTreeItem) => {
+        if (item.kind !== 'group') {
+          onSelect(item.id);
+          if (showAllHooks) onShowAllHooksChange(false);
+        }
+      }}
+    />
   );
 }
 
@@ -381,13 +394,25 @@ export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
   if (!data) return <RoutinesLoadingState />;
 
   return (
-    <RoutineHookList
-      hooks={data.hooks}
-      selectedHookId={selectedHookId}
-      showAllHooks={showAllHooks}
-      onSelect={(hookId) => void navigateRoutines(pa, hookId)}
-      onShowAllHooksChange={setShowAllHooks}
-    />
+    <SidebarSection
+      title="Routines"
+      actionItems={[
+        {
+          id: 'add-event',
+          label: showAllHooks ? 'Done adding routine event' : 'Add routine event',
+          icon: <RoutineSidebarIcon name={showAllHooks ? 'check' : 'plus'} />,
+          onClick: () => setShowAllHooks((current) => !current),
+        },
+      ]}
+    >
+      <RoutineHookList
+        hooks={data.hooks}
+        selectedHookId={selectedHookId}
+        showAllHooks={showAllHooks}
+        onSelect={(hookId) => void navigateRoutines(pa, hookId)}
+        onShowAllHooksChange={setShowAllHooks}
+      />
+    </SidebarSection>
   );
 }
 
@@ -450,13 +475,6 @@ export function RoutinesContextRail({ pa, context }: ExtensionSurfaceProps) {
     });
     return () => subscription.unsubscribe();
   }, [load, pa]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      void load();
-    }, 2500);
-    return () => window.clearInterval(timer);
-  }, [load]);
 
   if (error) return <div className="p-4 text-[12px] text-danger">{error}</div>;
   if (!data) return <RoutinesLoadingState />;
@@ -692,6 +710,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
   const save = useCallback(async () => {
     if (!draft) return;
+    const validationError = validateRoutineDraft(draft);
+    if (validationError) {
+      setActionError(validationError);
+      return;
+    }
     setSaving(true);
     setActionError(null);
     try {
@@ -722,7 +745,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       const confirmed = await pa.ui.confirm({ message: `Delete “${routine.name}”?` });
       if (!confirmed) return;
       if (unsavedRoutineIds.has(routine.id)) {
-        setData((current) => (current ? { ...current, routines: current.routines.filter((item) => item.id !== routine.id) } : current));
+        const next = data ? withHookSummaries({ ...data, routines: data.routines.filter((item) => item.id !== routine.id) }) : data;
         setUnsavedRoutineIds((current) => {
           const next = new Set(current);
           next.delete(routine.id);
@@ -731,6 +754,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         setSelectedRoutineId(null);
         setDraft(null);
         setOpenRoutineMenuId(null);
+        setData(next);
+        if (next) publishRoutinesState(next);
         return;
       }
       const result = (await pa.extension.invoke('deleteRoutine', { routineId: routine.id })) as StateResult;
@@ -740,7 +765,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       setDraft(null);
       setOpenRoutineMenuId(null);
     },
-    [data?.routines, pa, selectedHookId, unsavedRoutineIds],
+    [data, pa, selectedHookId, unsavedRoutineIds],
   );
 
   const addRoutine = useCallback(
@@ -757,9 +782,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       setPendingScrollRoutineId(routine.id);
       setDraft(routine);
       setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
-      setData((current) => (current ? { ...current, routines: [...current.routines, routine] } : current));
+      const next = data ? withHookSummaries({ ...data, routines: [...data.routines, routine] }) : data;
+      setData(next);
+      if (next) publishRoutinesState(next);
     },
-    [hookRoutines, selectedHook],
+    [data, hookRoutines, selectedHook],
   );
 
   const addCheckpointExample = useCallback(() => {
@@ -773,8 +800,10 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     setPendingScrollRoutineId(routine.id);
     setDraft({ ...routine, outcomes: routine.outcomes.map((outcome) => ({ ...outcome })) });
     setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
-    setData((current) => (current ? { ...current, routines: [...current.routines, routine] } : current));
-  }, [data?.hooks]);
+    const next = data ? withHookSummaries({ ...data, routines: [...data.routines, routine] }) : data;
+    setData(next);
+    if (next) publishRoutinesState(next);
+  }, [data]);
 
   const moveRoutineById = useCallback(
     async (

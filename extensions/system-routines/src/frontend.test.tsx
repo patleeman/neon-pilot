@@ -257,6 +257,32 @@ describe('RoutinesPage', () => {
     expect(screen.getByRole('button', { name: 'Done adding routine event' })).toBeTruthy();
   });
 
+  it('keeps the context rail aligned when a checkpoint example is added locally', async () => {
+    const { pa, state } = createPa();
+    state.routines = [];
+    state.hooks = state.hooks.map((hook) => ({ ...hook, summary: 'No routines' }));
+
+    render(
+      <>
+        <RoutinesSidebar {...propsWithContext(pa, { surfaceId: 'routines-sidebar' })} />
+        <RoutinesPage {...props(pa)} />
+        <RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />
+      </>,
+    );
+
+    await screen.findByText('No events added');
+    expect(screen.getByText('No event selected')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Use checkpoint example'));
+
+    expect(await screen.findByText('When Checkpoint runs')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('No event selected')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('No routines yet. Add an event to start.')).toBeNull());
+    expect(screen.getAllByText('Checkpoint').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Before').length).toBeGreaterThan(0);
+  });
+
   it('edits paths inline and collapses the form after save', async () => {
     const { pa, invoke } = createPa();
     render(<RoutinesPage {...props(pa)} />);
@@ -273,6 +299,20 @@ describe('RoutinesPage', () => {
     await waitFor(() => expect(screen.queryByDisplayValue('needs_qa')).toBeNull());
     expect(screen.getByText('needs_qa')).toBeTruthy();
     expect(screen.getByText('Run QA')).toBeTruthy();
+  });
+
+  it('keeps choose-path routines from saving after every path is removed', async () => {
+    const { pa, invoke } = createPa();
+    render(<RoutinesPage {...props(pa)} />);
+    await screen.findByText('When Checkpoint runs');
+
+    editReviewRoutine();
+    fireEvent.click(screen.getByText('Remove'));
+    fireEvent.click(screen.getByText('Save'));
+
+    expect(await screen.findByText('Choose-path routines need at least one path.')).toBeTruthy();
+    expect(invoke).not.toHaveBeenCalledWith('saveRoutine', expect.anything());
+    expect(screen.getByText('Unsaved changes')).toBeTruthy();
   });
 
   it('shows a next-routine selector for branch paths', async () => {
@@ -387,39 +427,5 @@ describe('RoutinesPage', () => {
     expect(await screen.findByText(/Routine model call failed \(429\): The usage limit has been reached/)).toBeTruthy();
     expect(screen.queryByText(/X-Codex/)).toBeNull();
     expect(screen.queryByText(/headers/)).toBeNull();
-  });
-
-  it('polls run history while the context rail is open', async () => {
-    const { pa, state } = createPa();
-    render(<RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />);
-    await screen.findByText('Routine context');
-
-    expect(screen.getByText('No routine runs yet.')).toBeTruthy();
-
-    state.runs.unshift({
-      id: 'run-polled',
-      hookId: 'checkpoint',
-      position: 'before',
-      status: 'warned',
-      startedAt: '2026-01-01T00:02:00.000Z',
-      completedAt: '2026-01-01T00:02:00.000Z',
-      context: {},
-      steps: [
-        {
-          routineId: 'r1',
-          routineName: 'Review code changes',
-          status: 'warned',
-          message: 'Polled run',
-          skillRefs: [],
-        },
-      ],
-    } satisfies RoutineRunRecord);
-
-    await act(async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 2600));
-    });
-
-    expect(await screen.findByText(/Review code changes: warned/)).toBeTruthy();
-    expect(screen.getByText(/Polled run/)).toBeTruthy();
   });
 });
