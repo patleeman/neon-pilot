@@ -294,6 +294,19 @@ async function waitForBodyText(cdp, child, label, expectedText, timeoutMs = 30_0
   throw new Error(`${label} did not render expected text: ${lastMissing.join(', ')}. Last body text tail:\n${lastBody.slice(-1200)}`);
 }
 
+async function waitForBodyWithout(cdp, child, label, pattern, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastBody = '';
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`App exited while waiting for ${label}.`);
+    const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
+    lastBody = body;
+    if (!pattern.test(body)) return body;
+    await sleep(250);
+  }
+  throw new Error(`Timed out waiting for ${label}. Last body text:\n${lastBody.slice(-1200)}`);
+}
+
 async function assertRequiredExtensions(cdp, matrix) {
   const registry = await fetchFromRenderer(cdp, '/api/extensions/registry');
   if (!registry.ok) throw new Error(`/api/extensions/registry returned ${registry.status}: ${JSON.stringify(registry.body)}`);
@@ -407,7 +420,9 @@ async function suppressOnboardingTour(cdp, child, returnPath = '/conversations/n
     throw new Error(`Could not seed skipped onboarding state for release smoke: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  await evalJs(
+  await sleep(1_500);
+
+  const clickedSkip = await evalJs(
     cdp,
     `(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
@@ -416,8 +431,14 @@ async function suppressOnboardingTour(cdp, child, returnPath = '/conversations/n
       return Boolean(skipButton);
     })()`,
   );
+  if (clickedSkip) {
+    await waitForBodyWithout(cdp, child, 'onboarding overlay to close', /TOUR \d+ OF \d+|Skip tour/i);
+  }
+
+  await postJson(cdp, '/api/extensions/system-onboarding/actions/update', { status: 'skipped', stepIndex: 0 });
   await cdp.send('Page.navigate', { url: `neon-pilot://app${returnPath}` });
   await waitForLoadedBody(cdp, child, 'post-onboarding release smoke route');
+  await waitForBodyWithout(cdp, child, 'post-onboarding release smoke route', /TOUR \d+ OF \d+|Skip tour/i);
 }
 
 async function assertAgentTools(cdp, child, matrix) {
