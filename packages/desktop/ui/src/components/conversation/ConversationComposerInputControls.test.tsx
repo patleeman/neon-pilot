@@ -219,6 +219,72 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('aria-label="Send"');
   });
 
+  it('accepts multimedia probe file types from the hidden composer input', () => {
+    const rendered = renderInteractive(
+      <ConversationComposerInputControls
+        fileInputRef={{ current: null }}
+        textareaRef={{ current: null }}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={800}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        currentServiceTier=""
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={vi.fn()}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    try {
+      const fileInput = rendered.container.querySelector<HTMLInputElement>('input[type="file"]');
+      expect(fileInput).toBeTruthy();
+      const accepted = fileInput!.accept.split(',').map((value) => value.trim());
+
+      expect(accepted).toEqual(
+        expect.arrayContaining([
+          'image/*',
+          'video/*',
+          'audio/*',
+          '.pdf',
+          '.docx',
+          '.xlsx',
+          '.pptx',
+          '.md',
+          '.jsonl',
+          '.excalidraw',
+          'application/pdf',
+        ]),
+      );
+    } finally {
+      rendered.unmount();
+    }
+  });
+
   it('falls back to core composer controls when extension registry controls are unavailable', () => {
     extensionRegistryState.composerControls = [];
     extensionRegistryState.composerInputTools = [];

@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   base64ToFile,
   buildComposerFilePreparationNotices,
+  buildPromptAudios,
+  buildPromptDocuments,
   type ComposerDrawingAttachment,
   type ComposerImageAttachment,
   type ComposerVideoAttachment,
@@ -14,6 +16,8 @@ import {
   isPotentialExcalidrawFile,
   prepareComposerFiles,
   readComposerTransferFiles,
+  removeComposerAudioFileAtIndex,
+  removeComposerDocumentFileAtIndex,
   removeComposerDrawingAttachmentByLocalId,
   removeComposerImageFileAtIndex,
   removeComposerVideoFileAtIndex,
@@ -127,7 +131,7 @@ describe('promptAttachments', () => {
       size: 5,
       sizeBytes: 5,
     } satisfies ComposerVideoAttachment;
-    const rejected = new File(['notes'], 'notes.txt', { type: 'text/plain' });
+    const rejected = new File(['archive'], 'archive.zip', { type: 'application/zip' });
 
     const result = await prepareComposerFiles(
       [image, video, parsedDrawing, brokenDrawing, rejected],
@@ -145,7 +149,7 @@ describe('promptAttachments', () => {
     expect(result.videoAttachments).toEqual([videoAttachment]);
     expect(result.drawingAttachments).toEqual([drawing]);
     expect(result.drawingParseFailures).toEqual([{ fileName: 'broken.excalidraw', message: 'Invalid scene' }]);
-    expect(result.rejectedFileNames).toEqual(['notes.txt']);
+    expect(result.rejectedFileNames).toEqual(['archive.zip']);
     expect(result.imageReadFailures).toEqual([]);
   });
 
@@ -185,6 +189,114 @@ describe('promptAttachments', () => {
       }),
     ]);
     expect(result.videoReadFailures).toEqual([]);
+  });
+
+  it('prepares fixture-like audio and document files into prompt attachments', async () => {
+    const audio = new File([new Uint8Array([0xff, 0xf3, 0x18, 0xc4])], 'voice-note.mp3', { type: 'audio/mpeg' });
+    const pdf = new File(['%PDF-1.7\nfixture pdf\n%%EOF'], 'brief.pdf', { type: 'application/pdf' });
+    const markdown = new File(['# Fixture\n\nHello probe.'], 'notes.md', { type: '' });
+    Object.defineProperty(audio, 'path', { value: '/tmp/fixtures/voice-note.mp3' });
+    Object.defineProperty(pdf, 'path', { value: '/tmp/fixtures/brief.pdf' });
+    Object.defineProperty(markdown, 'path', { value: '/tmp/fixtures/notes.md' });
+
+    const result = await prepareComposerFiles([audio, pdf, markdown]);
+
+    expect(result.audioReadFailures).toEqual([]);
+    expect(result.documentReadFailures).toEqual([]);
+    expect(result.rejectedFileNames).toEqual([]);
+    expect(result.audioAttachments).toEqual([
+      expect.objectContaining({
+        name: 'voice-note.mp3',
+        mimeType: 'audio/mpeg',
+        path: '/tmp/fixtures/voice-note.mp3',
+        size: 4,
+        sizeBytes: 4,
+      }),
+    ]);
+    expect(result.documentAttachments).toEqual([
+      expect.objectContaining({
+        name: 'brief.pdf',
+        mimeType: 'application/pdf',
+        path: '/tmp/fixtures/brief.pdf',
+        sizeBytes: pdf.size,
+      }),
+      expect.objectContaining({
+        name: 'notes.md',
+        mimeType: 'text/markdown',
+        path: '/tmp/fixtures/notes.md',
+        sizeBytes: markdown.size,
+      }),
+    ]);
+    expect(buildPromptAudios(result.audioAttachments)).toEqual([
+      {
+        name: 'voice-note.mp3',
+        mimeType: 'audio/mpeg',
+        path: '/tmp/fixtures/voice-note.mp3',
+        sizeBytes: 4,
+      },
+    ]);
+    expect(buildPromptDocuments(result.documentAttachments)).toEqual([
+      {
+        name: 'brief.pdf',
+        mimeType: 'application/pdf',
+        path: '/tmp/fixtures/brief.pdf',
+        sizeBytes: pdf.size,
+      },
+      {
+        name: 'notes.md',
+        mimeType: 'text/markdown',
+        path: '/tmp/fixtures/notes.md',
+        sizeBytes: markdown.size,
+      },
+    ]);
+  });
+
+  it('detects extension-only audio and office document fixtures', async () => {
+    const audio = new File(['opus audio bytes'], 'meeting.opus', { type: '' });
+    const docx = new File(['PK\x03\x04docx fixture'], 'proposal.docx', { type: '' });
+    Object.defineProperty(audio, 'path', { value: '/tmp/fixtures/meeting.opus' });
+    Object.defineProperty(docx, 'path', { value: '/tmp/fixtures/proposal.docx' });
+
+    const result = await prepareComposerFiles([audio, docx]);
+
+    expect(result.audioAttachments).toEqual([
+      expect.objectContaining({
+        name: 'meeting.opus',
+        mimeType: 'audio/*',
+        path: '/tmp/fixtures/meeting.opus',
+      }),
+    ]);
+    expect(result.documentAttachments).toEqual([
+      expect.objectContaining({
+        name: 'proposal.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        path: '/tmp/fixtures/proposal.docx',
+      }),
+    ]);
+  });
+
+  it('reports audio and document path failures separately', async () => {
+    const audio = new File(['audio'], 'voice-note.wav', { type: 'audio/wav' });
+    const pdf = new File(['pdf'], 'brief.pdf', { type: 'application/pdf' });
+
+    const result = await prepareComposerFiles([audio, pdf]);
+
+    expect(result.audioAttachments).toEqual([]);
+    expect(result.documentAttachments).toEqual([]);
+    expect(result.audioReadFailures).toEqual([
+      {
+        fileName: 'voice-note.wav',
+        message:
+          'Audio attachment "voice-note.wav" needs a local file path. Attach a file from the desktop picker so Neon Pilot can probe it locally.',
+      },
+    ]);
+    expect(result.documentReadFailures).toEqual([
+      {
+        fileName: 'brief.pdf',
+        message:
+          'Document attachment "brief.pdf" needs a local file path. Attach a file from the desktop picker so Neon Pilot can probe it locally.',
+      },
+    ]);
   });
 
   it('reports video path resolution failures as attachment read failures', async () => {
@@ -388,6 +500,10 @@ describe('promptAttachments', () => {
     expect(removeComposerImageFileAtIndex([firstImage, secondImage], 0)).toEqual([secondImage]);
     expect(removeComposerImageFileAtIndex([firstImage, secondImage], 9)).toEqual([firstImage, secondImage]);
     expect(removeComposerVideoFileAtIndex([{ localId: 'video-1', mimeType: 'video/mp4', path: '/tmp/a.mp4', size: 1 }], 0)).toEqual([]);
+    expect(removeComposerAudioFileAtIndex([{ localId: 'audio-1', mimeType: 'audio/mpeg', path: '/tmp/a.mp3', size: 1 }], 0)).toEqual([]);
+    expect(
+      removeComposerDocumentFileAtIndex([{ localId: 'document-1', mimeType: 'application/pdf', path: '/tmp/a.pdf', size: 1 }], 0),
+    ).toEqual([]);
     expect(removeComposerDrawingAttachmentByLocalId([firstDrawing, secondDrawing], 'drawing-2')).toEqual([firstDrawing]);
     expect(removeComposerDrawingAttachmentByLocalId([firstDrawing], 'missing')).toEqual([firstDrawing]);
   });
@@ -400,11 +516,15 @@ describe('promptAttachments', () => {
         imageReadFailures: [{ fileName: 'gone.png', message: 'Could not read image attachment "gone.png": missing' }],
         videoAttachments: [{ localId: 'video-1', name: 'screen.mp4', mimeType: 'video/mp4', path: '/tmp/screen.mp4', size: 5 }],
         videoReadFailures: [],
+        audioAttachments: [{ localId: 'audio-1', name: 'voice.mp3', mimeType: 'audio/mpeg', path: '/tmp/voice.mp3', size: 5 }],
+        documentAttachments: [{ localId: 'document-1', name: 'brief.pdf', mimeType: 'application/pdf', path: '/tmp/brief.pdf', size: 5 }],
         rejectedFileNames: ['a.txt', 'b.mov', 'c.zip', 'd.bin'],
       }),
     ).toEqual([
       { tone: 'accent', text: 'Attached 1 drawing.' },
       { tone: 'accent', text: 'Attached 1 video.' },
+      { tone: 'accent', text: 'Attached 1 audio file.' },
+      { tone: 'accent', text: 'Attached 1 document.' },
       { tone: 'danger', text: 'Failed to parse broken.excalidraw: Invalid scene', durationMs: 4000 },
       { tone: 'danger', text: 'Could not read image attachment "gone.png": missing', durationMs: 4000 },
       { tone: 'danger', text: 'Unsupported file type: a.txt, b.mov, c.zip, +1 more', durationMs: 4000 },
