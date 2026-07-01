@@ -1,12 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { runAgentTaskMock, getImageProbeAttachmentsMock, getImageProbeAttachmentsByIdMock, getImageProbeAttachmentsByIdFromAnySessionMock } =
-  vi.hoisted(() => ({
-    runAgentTaskMock: vi.fn(),
-    getImageProbeAttachmentsMock: vi.fn(),
-    getImageProbeAttachmentsByIdMock: vi.fn(),
-    getImageProbeAttachmentsByIdFromAnySessionMock: vi.fn(),
-  }));
+const {
+  runAgentTaskMock,
+  getImageProbeAttachmentsMock,
+  getImageProbeAttachmentsByIdMock,
+  getImageProbeAttachmentsByIdFromAnySessionMock,
+  getVideoProbeAttachmentsMock,
+  getVideoProbeAttachmentsByIdMock,
+  getVideoProbeAttachmentsByIdFromAnySessionMock,
+  sampleVideoFramesMock,
+  transcribeVideoMock,
+} = vi.hoisted(() => ({
+  runAgentTaskMock: vi.fn(),
+  getImageProbeAttachmentsMock: vi.fn(),
+  getImageProbeAttachmentsByIdMock: vi.fn(),
+  getImageProbeAttachmentsByIdFromAnySessionMock: vi.fn(),
+  getVideoProbeAttachmentsMock: vi.fn(),
+  getVideoProbeAttachmentsByIdMock: vi.fn(),
+  getVideoProbeAttachmentsByIdFromAnySessionMock: vi.fn(),
+  sampleVideoFramesMock: vi.fn(),
+  transcribeVideoMock: vi.fn(),
+}));
 
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
 vi.mock('@neon-pilot/extensions/backend/images', () => ({
@@ -14,8 +28,15 @@ vi.mock('@neon-pilot/extensions/backend/images', () => ({
   getImageProbeAttachmentsById: getImageProbeAttachmentsByIdMock,
   getImageProbeAttachmentsByIdFromAnySession: getImageProbeAttachmentsByIdFromAnySessionMock,
 }));
+vi.mock('@neon-pilot/extensions/backend/videos', () => ({
+  getVideoProbeAttachments: getVideoProbeAttachmentsMock,
+  getVideoProbeAttachmentsById: getVideoProbeAttachmentsByIdMock,
+  getVideoProbeAttachmentsByIdFromAnySession: getVideoProbeAttachmentsByIdFromAnySessionMock,
+  sampleVideoFrames: sampleVideoFramesMock,
+  transcribeVideo: transcribeVideoMock,
+}));
 
-import { probeImage } from './backend.js';
+import { probeImage, probeMedia } from './backend.js';
 
 const attachment = {
   id: 'img_a1b2c3d4e5f6',
@@ -25,6 +46,16 @@ const attachment = {
   name: 'screenshot.png',
   path: '/tmp/screenshot.png',
   sizeBytes: 3,
+};
+
+const video = {
+  id: 'vid_a1b2c3d4e5f6',
+  path: '/tmp/video.mp4',
+  mimeType: 'video/mp4',
+  name: 'video.mp4',
+  sizeBytes: 10,
+  durationMs: 5000,
+  hasAudio: true,
 };
 
 function createCtx(overrides?: Record<string, unknown>) {
@@ -91,5 +122,66 @@ describe('system-image-probe backend', () => {
     await expect(probeImage({ imageIds: ['img_a1b2c3d4e5f6'], question: '?' }, createCtx())).rejects.toThrow(
       'None of the requested image IDs are available',
     );
+  });
+
+  it('probes video attachments by passing sampled frames to the vision task', async () => {
+    getImageProbeAttachmentsMock.mockReturnValue([]);
+    getImageProbeAttachmentsByIdMock.mockReturnValue([]);
+    getVideoProbeAttachmentsMock.mockReturnValue([video]);
+    getVideoProbeAttachmentsByIdMock.mockReturnValue([video]);
+    sampleVideoFramesMock.mockResolvedValue({
+      text: 'sampled frames',
+      content: [
+        { type: 'text', text: 'sampled frames' },
+        { type: 'image', data: 'frame-1', mimeType: 'image/png' },
+        { type: 'image', data: 'frame-2', mimeType: 'image/png' },
+      ],
+      details: {
+        videoId: 'vid_a1b2c3d4e5f6',
+        frames: [
+          { timestampMs: 0, mimeType: 'image/png', sizeBytes: 7 },
+          { timestampMs: 5000, mimeType: 'image/png', sizeBytes: 7 },
+        ],
+      },
+    });
+    transcribeVideoMock.mockResolvedValue({
+      text: 'music and footsteps',
+      content: [{ type: 'text', text: 'music and footsteps' }],
+      details: { videoId: 'vid_a1b2c3d4e5f6', startMs: 0, segments: [] },
+    });
+    runAgentTaskMock.mockResolvedValue({ text: 'The video shows people dancing.', model: 'gpt-4-vision', provider: 'provider' });
+
+    const result = await probeMedia(
+      {
+        videoIds: ['vid_a1b2c3d4e5f6'],
+        question: 'What is going on?',
+        startSec: 0,
+        endSec: 5,
+        frameCount: 2,
+      },
+      createCtx(),
+    );
+
+    expect(result.text).toBe('The video shows people dancing.');
+    expect(sampleVideoFramesMock).toHaveBeenCalledWith({ videoId: 'vid_a1b2c3d4e5f6', startSec: 0, endSec: 5, count: 2 });
+    expect(transcribeVideoMock).toHaveBeenCalledWith({ videoId: 'vid_a1b2c3d4e5f6', startSec: 0, endSec: 5 });
+    expect(runAgentTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        images: [
+          { type: 'image', data: 'frame-1', mimeType: 'image/png' },
+          { type: 'image', data: 'frame-2', mimeType: 'image/png' },
+        ],
+        prompt: expect.stringContaining('frame at 0.000s'),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('rejects video frame labels as image ids and points callers at probe_media', async () => {
+    await expect(probeMedia({ imageIds: ['img_0.000s'], question: 'Describe the frame' }, createCtx())).rejects.toThrow(
+      'Invalid image ID: img_0.000s',
+    );
+    expect(sampleVideoFramesMock).not.toHaveBeenCalled();
+    expect(runAgentTaskMock).not.toHaveBeenCalled();
   });
 });

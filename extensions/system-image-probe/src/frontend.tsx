@@ -8,7 +8,7 @@ function formatModelLabel(model: ModelOption): string {
   return `${model.name} · ${model.provider}`;
 }
 
-export function ImageProbeSettings() {
+export function MultimediaProbeSettings() {
   const { data: modelState, loading, error } = useApi(api.models);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -61,8 +61,8 @@ export function ImageProbeSettings() {
             saving
               ? 'Saving vision model…'
               : selectedVisionModel
-                ? `Image questions use ${selectedVisionModel}.`
-                : 'Choose a vision model before asking about uploaded images from text-only chats.'
+                ? `Media questions use ${selectedVisionModel}.`
+                : 'Choose a vision model before asking about uploaded images or video frames from text-only chats.'
           }
         >
           <Select

@@ -40,7 +40,7 @@
         "id": "extract-video-frame",
         "name": "extract_video_frame",
         "title": "Extract video frame",
-        "description": "Extract one screenshot from a local video attachment at a timestamp.",
+        "description": "Extract one screenshot from a local video attachment at a timestamp. For content questions, use probe_media with videoIds instead of passing frame labels to probe_image.",
         "action": "extractVideoFrame",
         "inputSchema": {
           "type": "object",
@@ -62,7 +62,7 @@
         "id": "sample-video-frames",
         "name": "sample_video_frames",
         "title": "Sample video frames",
-        "description": "Sample screenshots between two timestamps in a local video attachment.",
+        "description": "Sample screenshots between two timestamps in a local video attachment. For content questions, use probe_media with videoIds instead of passing frame labels to probe_image.",
         "action": "sampleVideoFrames",
         "inputSchema": {
           "type": "object",

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-image-probe",
-  "name": "Image questions",
+  "name": "Multimedia probe",
   "packageType": "system",
-  "description": "Let the agent answer questions about attached screenshots and images when the current chat model cannot see them.",
+  "description": "Let the agent answer questions about attached images and videos when the current chat model cannot see them.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -19,24 +19,89 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "probeMedia",
+        "handler": "probeMedia",
+        "title": "Ask about media",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
   "contributes": {
     "settingsComponent": {
       "id": "image-probe-settings",
-      "component": "ImageProbeSettings",
+      "component": "MultimediaProbeSettings",
       "sectionId": "settings-image-probe",
-      "label": "Image questions",
-      "description": "Choose the vision model Neon Pilot uses to answer questions about attached images and screenshots. You only need this if image analysis gives poor answers or uses the wrong model.",
+      "label": "Multimedia probe",
+      "description": "Choose the vision model Neon Pilot uses to answer questions about attached images, screenshots, and sampled video frames.",
       "order": 20
     },
     "tools": [
       {
+        "id": "probe-media",
+        "name": "probe_media",
+        "title": "Ask about media",
+        "description": "Ask the configured vision model about selected image or video attachments. Use this for videos instead of manually chaining video frame sampling into probe_image.",
+        "action": "probeMedia",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "imageIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^img_[a-f0-9]{12}$"
+              },
+              "maxItems": 8
+            },
+            "videoIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^vid_[a-f0-9]{12}$"
+              },
+              "maxItems": 3
+            },
+            "question": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8000
+            },
+            "startSec": {
+              "type": "number",
+              "minimum": 0
+            },
+            "endSec": {
+              "type": "number",
+              "minimum": 0
+            },
+            "frameCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            },
+            "includeAudio": {
+              "type": "boolean"
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            }
+          },
+          "required": ["question"],
+          "anyOf": [{ "required": ["imageIds"] }, { "required": ["videoIds"] }],
+          "additionalProperties": false
+        }
+      },
+      {
         "id": "probe-image",
         "name": "probe_image",
         "title": "Ask about image",
-        "description": "Ask the configured vision model about selected image attachments when the current chat model cannot see images.",
+        "description": "Ask the configured vision model about selected image attachments when the current chat model cannot see images. Do not use this for sampled video frame labels; use probe_media with videoIds instead.",
         "action": "probeImage",
         "inputSchema": {
           "type": "object",
@@ -62,5 +127,5 @@
       }
     ]
   },
-  "permissions": ["images:read", "agent:run"]
+  "permissions": ["images:read", "videos:read", "agent:run"]
 }

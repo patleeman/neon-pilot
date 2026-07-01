@@ -107,8 +107,8 @@ Bundled system extensions:
 - [Git Status](../extensions/system-git-status/README.md) — branch and diff status in the composer
 - [Goal Mode](../extensions/system-auto-mode/README.md) — persisted goal tracking and automatic continuation
 - [Host view components](host-view-components.md) — host-owned UI components reusable by extensions
-- [Image Probe](../extensions/system-image-probe/README.md) — image attachment inspection with a vision agent
-- [Video Probe](../extensions/system-video-probe/README.md) — local video frame sampling and transcription tools
+- [Multimedia Probe](../extensions/system-image-probe/README.md) — image and video attachment inspection with a vision agent
+- [Video Probe](../extensions/system-video-probe/README.md) — lower-level local video frame sampling and transcription tools
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
 - [AI Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API proxy for external coding agents
