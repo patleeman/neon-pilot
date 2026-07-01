@@ -16,34 +16,34 @@ After install, open **Neon Pilot.app** and create a conversation. If you install
 neon-pilot bootstrap doctor
 ```
 
-See [Getting Started](getting-started.md) for the user setup flow, or [Development workflow](development.md) for building from source.
+See [Getting Started](public/00-start-here/10-getting-started.md) for the user setup flow, or [Development workflow](development.md) for building from source.
 
 ## Start here
 
 Pick the shortest path for what you are doing:
 
-| Audience                            | First docs to read                                                                                                  | Success check                                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **New user**                        | [Getting Started](getting-started.md), then [Views](views.md) and [Conversations](conversations.md)                 | App opens, provider is configured, and a first conversation gets a reply.                         |
-| **Power user organizing context**   | [Conversation context](conversation-context.md), [Knowledge files](knowledge-base.md), [Projects](projects.md)      | Useful files, notes, and project records are available to conversations.                          |
-| **External agent or script author** | [Agent bootstrap](agent-bootstrap.md), [Neon Pilot CLI](cli.md), [CLI reference](cli-reference.md)                  | `neon-pilot bootstrap doctor` passes and reports usable provider setup.                           |
-| **Extension builder**               | [Build an extension with your agent](build-an-extension.md), then [Extension authoring](extensions.md)              | The agent-built extension installs, its route/action works through the app, and its build passes. |
-| **Repo contributor**                | [Development workflow](development.md), then the owning package or extension README                                 | Focused validation passes and the app can still start when touched code affects startup.          |
-| **Release operator**                | [Release cycle](release-cycle.md), [Release QA](release-qa.md), [Release test inventory](release-test-inventory.md) | Release doctor, hardening tests, and hands-on smoke notes are complete.                           |
+| Audience                            | First docs to read                                                                                                                                                    | Success check                                                                                     |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **New user**                        | [Getting Started](public/00-start-here/10-getting-started.md), then [Views](public/10-product/10-views.md) and [Conversations](public/10-product/20-conversations.md) | App opens, provider is configured, and a first conversation gets a reply.                         |
+| **Power user organizing context**   | [Conversation context](public/10-product/30-conversation-context.md), [Knowledge files](knowledge-base.md), [Projects](projects.md)                                   | Useful files, notes, and project records are available to conversations.                          |
+| **External agent or script author** | [Agent bootstrap](public/00-start-here/20-agent-bootstrap.md), [Neon Pilot CLI](cli.md), [CLI reference](cli-reference.md)                                            | `neon-pilot bootstrap doctor` passes and reports usable provider setup.                           |
+| **Extension builder**               | [Build an extension with your agent](public/20-extensions/00-build-an-extension.md), then [Extension authoring](public/20-extensions/20-extensions.md)                | The agent-built extension installs, its route/action works through the app, and its build passes. |
+| **Repo contributor**                | [Development workflow](development.md), then the owning package or extension README                                                                                   | Focused validation passes and the app can still start when touched code affects startup.          |
+| **Release operator**                | [Release cycle](release-cycle.md), [Release QA](release-qa.md), [Release test inventory](release-test-inventory.md)                                                   | Release doctor, hardening tests, and hands-on smoke notes are complete.                           |
 
 ## Common Tasks
 
-- **Install and verify Neon Pilot** — use [Getting Started](getting-started.md), then run the first conversation.
-- **Give the agent useful context** — use [Conversation context](conversation-context.md) for files, folders, images, drawings, and generated context.
-- **Keep work organized** — use [Conversations](conversations.md), [Projects](projects.md), and knowledge files.
-- **Let work continue later** — use [Conversations](conversations.md) for follow-ups/deferred resumes and [Daemon](daemon.md) for background runtime behavior.
-- **Install more capabilities** — use [Extension distribution](extension-distribution.md) and the first-party optional extension repo.
-- **Build a custom capability** — start with [Build an extension with your agent](build-an-extension.md).
+- **Install and verify Neon Pilot** — use [Getting Started](public/00-start-here/10-getting-started.md), then run the first conversation.
+- **Give the agent useful context** — use [Conversation context](public/10-product/30-conversation-context.md) for files, folders, images, drawings, and generated context.
+- **Keep work organized** — use [Conversations](public/10-product/20-conversations.md), [Projects](projects.md), and knowledge files.
+- **Let work continue later** — use [Conversations](public/10-product/20-conversations.md) for follow-ups/deferred resumes and [Daemon](daemon.md) for background runtime behavior.
+- **Install more capabilities** — use [Extension distribution](public/20-extensions/40-extension-distribution.md) and the first-party optional extension repo.
+- **Build a custom capability** — start with [Build an extension with your agent](public/20-extensions/00-build-an-extension.md).
 - **Inspect setup and runtime health** — use [Setup readiness audit](setup-readiness-audit.md), [Telemetry](telemetry.md), and [Performance diagnostics](performance-diagnostics.md).
 
 ## Reference
 
-- [Agent bootstrap](agent-bootstrap.md) — packaged install, CLI setup, provider configuration, and external-agent verification
+- [Agent bootstrap](public/00-start-here/20-agent-bootstrap.md) — packaged install, CLI setup, provider configuration, and external-agent verification
 - [Projects](projects.md) — project records and workspace metadata
 - [Configuration](configuration.md) — file-based config and settings stores
 - [Neon Pilot CLI](cli.md) — local control plane; extensions add administration commands with `contributes.cliCommands`
@@ -57,12 +57,12 @@ Pick the shortest path for what you are doing:
 - [Release test inventory](release-test-inventory.md) — broad release-risk checklist
 - [Feature inventory](feature-inventory.md) — user-perspective feature list for QA planning and coverage mapping
 
-The public website docs are built from the page list in [`apps/site/build-docs.mjs`](../apps/site/build-docs.mjs). Update that list when a repo doc should appear on neonpilot.net; keep this README as the human and agent map for the source tree.
+The public website docs are built by scanning [`docs/public`](public). Put human-facing product docs there when they should appear on neonpilot.net. Keep maintainer notes, runtime internals, release checklists, architecture docs, and repo development docs outside `docs/public` unless they are ready to publish.
 
 ## Builder and Architecture Docs
 
-- [Build an extension with your agent](build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions
-- [Extension authoring](extensions.md) — native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
+- [Build an extension with your agent](public/20-extensions/00-build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions
+- [Extension authoring](public/20-extensions/20-extensions.md) — native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
 - [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
@@ -73,7 +73,7 @@ The public website docs are built from the page list in [`apps/site/build-docs.m
 - [Client workflow tests](client-workflow-tests.md) — frontend workflow coverage matrix for chat, sidebar, extensions, settings, geometry, and recovery paths
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
 - [Daemon](daemon.md) — background process and runtime lifecycle
-- [Sandboxing](sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy
+- [Sandboxing](public/10-product/50-sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy
 - [Filesystem Authority](filesystem-authority.md) — shared scoped filesystem boundary, backend seam, policy hooks, and command-sandbox root grants
 - [Renderer isolation](renderer-isolation.md) — process ownership, critical lanes, and transcript projection boundaries
 - [Product runtime and extension host split](product-extension-process-split.md) — architecture and validation for the product/extension process boundary
@@ -82,7 +82,7 @@ The public website docs are built from the page list in [`apps/site/build-docs.m
 
 ## Extension docs
 
-Neon Pilot product features live in extensions. The product is self-extensible: the normal way to create one is to ask your agent to build it, then install, inspect, modify, and run it through the same local app. Start with [Build an extension with your agent](build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
+Neon Pilot product features live in extensions. The product is self-extensible: the normal way to create one is to ask your agent to build it, then install, inspect, modify, and run it through the same local app. Start with [Build an extension with your agent](public/20-extensions/00-build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](public/20-extensions/20-extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
 
 System extensions are bundled under `extensions/system-*`. Optional first-party extensions live in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions), are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`. Users install released optional extensions from **Settings → Extensions → Install**; after installing, check the main extension registry to enable and inspect the extension.
 
@@ -113,7 +113,7 @@ Bundled system extensions:
 - [Git Status](../extensions/system-git-status/README.md) — branch and diff status in the composer
 - [Goal Mode](../extensions/system-auto-mode/README.md) — persisted goal tracking and automatic continuation
 - [Hashline Edit](../extensions/system-hashline-edit/README.md) — hash-anchored read and edit tools for guarded line operations
-- [Host view components](host-view-components.md) — host-owned UI components reusable by extensions
+- [Host view components](public/20-extensions/30-host-view-components.md) — host-owned UI components reusable by extensions
 - [Multimedia Probe](../extensions/system-image-probe/README.md) — image and video attachment inspection with a vision agent
 - [Video Probe](../extensions/system-video-probe/README.md) — lower-level local video frame sampling and transcription tools
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
@@ -153,10 +153,10 @@ When behavior, setup, or workflow changes, update the docs in the same change:
 - Update the smallest owning doc first, then this README only if navigation changes.
 - Keep first-run docs accurate: install path, provider setup, first task verification, and recovery hints.
 - Update the owning extension README before changing extension behavior.
-- Add public website coverage by updating [`apps/site/build-docs.mjs`](../apps/site/build-docs.mjs) only when a repo doc should appear on neonpilot.net.
+- Add public website coverage by moving or creating a human-facing page under [`docs/public`](public).
 - Prefer user-facing terms from [`CONTEXT.md`](../CONTEXT.md); keep implementation details in architecture docs, not onboarding docs.
 - For docs-only edits, run formatting checks rather than the full product suite unless examples or generated references changed.
 
 ## Source Docs Scope
 
-Treat root docs, `docs/`, `extensions/*/README.md`, `packages/*/README.md`, and benchmark docs as source documentation. Ignore generated or packaged copies under `dist/`, `packages/*/dist/`, app bundles, and other build outputs during docs audits unless the task is specifically about packaged resources.
+Treat root docs, `docs/`, `extensions/*/README.md`, `packages/*/README.md`, and benchmark docs as source documentation. The generated public site publishes only `docs/public`. Ignore generated or packaged copies under `dist/`, `packages/*/dist/`, app bundles, and other build outputs during docs audits unless the task is specifically about packaged resources.

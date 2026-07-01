@@ -214,6 +214,6 @@ Acceptance criteria for agent-built extensions:
 
 - [Extension authoring reference](extensions.md)
 - [Extension SDK](extension-sdk.md)
-- [Extension Manager behavior](../extensions/system-extension-manager/README.md)
-- [System extension examples](../extensions)
+- [Extension Manager behavior](../../extensions/system-extension-manager/README.md)
+- [System extension examples](../../extensions)
 - [First-party optional extension repo](https://github.com/patleeman/neon-pilot-extensions)

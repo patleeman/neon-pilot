@@ -1,49 +1,98 @@
 #!/usr/bin/env node
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import prettier from 'prettier';
 
 const root = path.resolve(new URL('../..', import.meta.url).pathname);
 const docsRoot = path.join(root, 'docs');
+const docsPublicRoot = path.join(docsRoot, 'public');
 const outRoot = path.join(root, 'apps/site/docs');
 const prettierOptions = { ...(await prettier.resolveConfig(path.join(root, 'apps/site/docs/index.html'))), parser: 'html' };
 
-const pages = [
-  { file: 'site-overview.md', slug: 'index', title: 'Overview', group: 'Start here' },
-  { file: 'getting-started.md', slug: 'getting-started', title: 'Getting Started', group: 'Start here' },
-  { file: 'agent-bootstrap.md', slug: 'agent-bootstrap', title: 'Install with another agent', group: 'Start here' },
-  { file: 'desktop-app.md', slug: 'desktop-app', title: 'Desktop App', group: 'Product' },
-  { file: 'views.md', slug: 'views', title: 'Views', group: 'Product' },
-  { file: 'conversations.md', slug: 'conversations', title: 'Conversations', group: 'Product' },
-  { file: 'conversation-context.md', slug: 'conversation-context', title: 'Context and attachments', group: 'Product' },
-  { file: 'providers-and-models.md', slug: 'providers-and-models', title: 'Providers and models', group: 'Product' },
-  { file: 'sandboxing.md', slug: 'sandboxing', title: 'Local data and permissions', group: 'Product' },
-  { file: 'build-an-extension.md', slug: 'build-an-extension', title: 'Build an Extension', group: 'Extensions' },
-  { file: 'extension-sdk.md', slug: 'extension-sdk', title: 'Extension SDK', group: 'Extensions' },
-  { file: 'extensions.md', slug: 'extensions', title: 'Extension Authoring', group: 'Extensions' },
-  { file: 'host-view-components.md', slug: 'host-view-components', title: 'Host View Components', group: 'Extensions' },
-  { file: 'extension-distribution.md', slug: 'extension-distribution', title: 'Extension Distribution', group: 'Extensions' },
-];
+const repoUrl = 'https://github.com/patleeman/neon-pilot/blob/main';
 
 function escapeHtml(value) {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
-function inlineMd(text) {
+function stripOrderPrefix(value) {
+  return value.replace(/^\d+[-_]/, '');
+}
+
+function titleize(value) {
+  return stripOrderPrefix(value)
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+async function collectMarkdownFiles(dir) {
+  const files = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectMarkdownFiles(entryPath)));
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      files.push(entryPath);
+    }
+  }
+  return files.sort((a, b) => a.localeCompare(b));
+}
+
+function firstHeading(markdown, fallback) {
+  const match = markdown.match(/^#\s+(.+)$/m);
+  if (!match) return titleize(fallback);
+  return match[1].replace(/\s+#+$/, '').replace(/`/g, '');
+}
+
+function slugFromPublicPath(publicPath) {
+  const basename = stripOrderPrefix(path.posix.basename(publicPath, '.md'));
+  return basename === 'index' ? 'index' : stripOrderPrefix(basename);
+}
+
+function groupFromPublicPath(publicPath) {
+  const parts = publicPath.split('/');
+  return parts.length > 1 ? titleize(parts[0]) : 'Start here';
+}
+
+function outputHref(page) {
+  return page.slug === 'index' ? './' : `./${page.slug}.html`;
+}
+
+function inlineMd(text, currentPage) {
   return escapeHtml(text)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, label, href) => `<a href="${rewriteHref(href)}">${label}</a>`)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, label, href) => `<a href="${rewriteHref(href, currentPage)}">${label}</a>`)
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 }
 
-function rewriteHref(href) {
-  if (/^(https?:|#)/.test(href)) return href;
+let pages = [];
+let pagesByPublicPath = new Map();
+let pagesByBasename = new Map();
+
+function rewriteExternalHref(hrefPath, suffix, currentPage) {
+  const localPath = path.posix.normalize(path.posix.join(path.posix.dirname(currentPage.sourcePath), hrefPath.replace(/^\.\//, '')));
+  if (existsSync(path.join(root, localPath))) return `${repoUrl}/${localPath}${suffix}`;
+
+  const docsRelativeFallback = path.posix.normalize(path.posix.join('docs', hrefPath.replace(/^\.\.\/+/, '').replace(/^\.\//, '')));
+  if (existsSync(path.join(root, docsRelativeFallback))) return `${repoUrl}/${docsRelativeFallback}${suffix}`;
+
+  return `${repoUrl}/${localPath}${suffix}`;
+}
+
+function rewriteHref(href, currentPage) {
+  if (/^(https?:|#|mailto:)/.test(href)) return href;
   const [hrefPath, suffix = ''] = href.split(/(?=[#?])/);
-  const clean = path.posix.normalize(path.posix.join('docs', hrefPath.replace(/^\.\//, ''))).replace(/^docs\//, '');
-  const page = pages.find((p) => p.file === clean || p.file === clean.replace(/^docs\//, ''));
-  if (page) return `${page.slug === 'index' ? './' : `./${page.slug}.html`}${suffix}`;
-  const repoPath = path.posix.normalize(path.posix.join('docs', hrefPath.replace(/^\.\//, '')));
-  return `https://github.com/patleeman/neon-pilot/blob/main/${repoPath}${suffix}`;
+  const cleanPath = hrefPath.replace(/^\.\//, '');
+  const relativePublicPath = path.posix.normalize(path.posix.join(path.posix.dirname(currentPage.publicPath), cleanPath));
+  const page =
+    pagesByPublicPath.get(relativePublicPath) ||
+    pagesByPublicPath.get(relativePublicPath.replace(/^docs\/public\//, '')) ||
+    pagesByBasename.get(path.posix.basename(cleanPath));
+  if (page) return `${outputHref(page)}${suffix}`;
+  return rewriteExternalHref(hrefPath, suffix, currentPage);
 }
 
 function slugify(text) {
@@ -54,7 +103,7 @@ function slugify(text) {
     .replace(/^-|-$/g, '');
 }
 
-function markdownToHtml(markdown) {
+function markdownToHtml(markdown, page) {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const out = [];
   const toc = [];
@@ -66,7 +115,7 @@ function markdownToHtml(markdown) {
 
   const flushPara = () => {
     if (!para.length) return;
-    out.push(`<p>${inlineMd(para.join(' '))}</p>`);
+    out.push(`<p>${inlineMd(para.join(' '), page)}</p>`);
     para = [];
   };
   const closeList = () => {
@@ -76,8 +125,8 @@ function markdownToHtml(markdown) {
   };
   const flushTable = () => {
     if (!table) return;
-    const head = table.headers.map((cell) => `<th>${inlineMd(cell)}</th>`).join('');
-    const rows = table.rows.map((row) => `<tr>${row.map((cell) => `<td>${inlineMd(cell)}</td>`).join('')}</tr>`).join('\n');
+    const head = table.headers.map((cell) => `<th>${inlineMd(cell, page)}</th>`).join('');
+    const rows = table.rows.map((row) => `<tr>${row.map((cell) => `<td>${inlineMd(cell, page)}</td>`).join('')}</tr>`).join('\n');
     out.push(`<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`);
     table = null;
   };
@@ -119,7 +168,7 @@ function markdownToHtml(markdown) {
       const text = heading[2].replace(/\s+#+$/, '');
       const id = slugify(text);
       if (level <= 2) toc.push({ id, text, level });
-      out.push(`<h${level} id="${id}">${inlineMd(text)}</h${level}>`);
+      out.push(`<h${level} id="${id}">${inlineMd(text, page)}</h${level}>`);
       continue;
     }
 
@@ -133,7 +182,7 @@ function markdownToHtml(markdown) {
         out.push(`<${listTag}>`);
         list = listTag;
       }
-      out.push(`<li>${inlineMd(item[2])}</li>`);
+      out.push(`<li>${inlineMd(item[2], page)}</li>`);
       continue;
     }
 
@@ -169,8 +218,7 @@ function sidebar(activeSlug) {
       const links = pages
         .filter((p) => p.group === group)
         .map((p) => {
-          const href = p.slug === 'index' ? './' : `./${p.slug}.html`;
-          return `<a class="${p.slug === activeSlug ? 'active' : ''}" href="${href}">${p.title}</a>`;
+          return `<a class="${p.slug === activeSlug ? 'active' : ''}" href="${outputHref(p)}">${p.title}</a>`;
         })
         .join('');
       return `<section><h2>${group}</h2>${links}</section>`;
@@ -201,7 +249,7 @@ function shell(page, body, toc) {
     </header>
     <main class="docs-layout">
       <aside class="docs-sidebar"><h1>Docs</h1>${sidebar(page.slug)}</aside>
-      <article class="docs-content">${body}<p class="edit-link"><a href="https://github.com/patleeman/neon-pilot/blob/main/docs/${page.file}">Edit this page on GitHub →</a></p></article>
+      <article class="docs-content">${body}<p class="edit-link"><a href="${repoUrl}/${page.sourcePath}">Edit this page on GitHub →</a></p></article>
       <aside class="docs-toc"><h2>On this page</h2>${tocLinks || '<span>Overview</span>'}</aside>
     </main>
   </body>
@@ -215,9 +263,38 @@ for (const entry of await readdir(outRoot, { withFileTypes: true })) {
     await unlink(path.join(outRoot, entry.name));
   }
 }
+
+const pageSources = await Promise.all(
+  (await collectMarkdownFiles(docsPublicRoot)).map(async (absolutePath) => {
+    const publicPath = path.relative(docsPublicRoot, absolutePath).split(path.sep).join('/');
+    const sourcePath = path.relative(root, absolutePath).split(path.sep).join('/');
+    const markdown = await readFile(absolutePath, 'utf8');
+    const slug = slugFromPublicPath(publicPath);
+    return {
+      absolutePath,
+      publicPath,
+      sourcePath,
+      slug,
+      title: firstHeading(markdown, slug),
+      group: groupFromPublicPath(publicPath),
+      markdown,
+    };
+  }),
+);
+pages = pageSources.sort((a, b) => a.publicPath.localeCompare(b.publicPath));
+pagesByPublicPath = new Map(pages.map((page) => [page.publicPath, page]));
+pagesByBasename = new Map(
+  pages.flatMap((page) => {
+    const basename = path.posix.basename(page.publicPath);
+    return [
+      [basename, page],
+      [stripOrderPrefix(basename), page],
+    ];
+  }),
+);
+
 for (const page of pages) {
-  const markdown = await readFile(path.join(docsRoot, page.file), 'utf8');
-  const { html, toc } = markdownToHtml(markdown);
+  const { html, toc } = markdownToHtml(page.markdown, page);
   const output = await prettier.format(shell(page, html, toc), prettierOptions);
   await writeFile(path.join(outRoot, page.slug === 'index' ? 'index.html' : `${page.slug}.html`), output);
 }
