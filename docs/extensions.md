@@ -1593,7 +1593,7 @@ Long-lived backend services are declared under `backend.services` so the host ca
 }
 ```
 
-Event subscriptions are declared under `contributes.subscriptions` for host-owned event sources such as workspace files, knowledge files, settings, conversations, routes, and selection changes. The host dispatches these through the extension event bus as `host:{source}` events; `pattern` narrows the event name. Current built-in producers include `host:workspaceFiles` for workspace writes/deletes/renames/moves, `host:settings` for settings updates, frontend `host:selection` notifications when shared selection changes, and `host:conversation:*` lifecycle events for live transcript/stream state.
+Event subscriptions are declared under `contributes.subscriptions` for host-owned event sources such as workspace files, knowledge files, settings, conversations, alerts, routes, and selection changes. The host dispatches these through the extension event bus as `host:{source}` events; `pattern` narrows the event name. Current built-in producers include `host:workspaceFiles` for workspace writes/deletes/renames/moves, `host:settings` for settings updates, `host:alerts:*` for agent-attention alerts, frontend `host:selection` notifications when shared selection changes, and `host:conversation:*` lifecycle events for live transcript/stream state.
 
 ```json
 {
@@ -1602,6 +1602,19 @@ Event subscriptions are declared under `contributes.subscriptions` for host-owne
   }
 }
 ```
+
+Agent-attention notifications should subscribe to alerts rather than reaching into core storage:
+
+```json
+{
+  "contributes": {
+    "subscriptions": [{ "id": "agent-attention", "source": "alerts", "pattern": "upserted", "handler": "onAlertUpserted" }]
+  },
+  "permissions": ["ui:notify"]
+}
+```
+
+The subscription payload shape is `{ type, alert }`, where `type` is `upserted`, `acknowledged`, or `dismissed`, and `alert` contains the core alert record (`kind`, `severity`, `status`, `title`, `body`, optional `conversationId`, `requiresAck`, and source fields). Extensions should filter for active alerts that match their policy, then use `ctx.notify.system(...)`, `ctx.notify.setBadge(...)`, or a host-mediated process/audio capability for local sound playback.
 
 Secrets are public manifest API, not an internal convention:
 

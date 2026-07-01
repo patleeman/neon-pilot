@@ -14,6 +14,8 @@ import {
 } from '@neon-pilot/core';
 import { loadDaemonConfig, markDeferredResumeConversationRunSnoozed, resolveDaemonPaths } from '@neon-pilot/daemon';
 
+import { publishAlertAcknowledged, publishAlertDismissed } from './alertEvents.js';
+
 export interface AlertSummary extends AlertRecord {}
 
 export interface AlertSnapshot {
@@ -121,11 +123,17 @@ export function getAlertForProfile(profile: string, alertId: string): AlertSumma
 
 export function acknowledgeAlertForProfile(profile: string, alertId: string): AlertSummary | undefined {
   const record = acknowledgeAlert({ profile, alertId });
+  if (record) {
+    publishAlertAcknowledged(record);
+  }
   return record ? toSummary(record) : undefined;
 }
 
 export function dismissAlertForProfile(profile: string, alertId: string): AlertSummary | undefined {
   const record = dismissAlert({ profile, alertId });
+  if (record) {
+    publishAlertDismissed(record);
+  }
   return record ? toSummary(record) : undefined;
 }
 
@@ -180,6 +188,7 @@ export async function snoozeAlertForProfile(
   if (!acknowledged) {
     throw new Error('Alert disappeared while snoozing.');
   }
+  publishAlertAcknowledged(acknowledged);
 
   return {
     alert: toSummary(acknowledged),

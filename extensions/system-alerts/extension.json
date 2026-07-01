@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "id": "system-alerts",
+  "name": "Alerts",
+  "packageType": "system",
+  "description": "Native notifications and optional sound when Neon Pilot needs attention.",
+  "version": "0.1.0",
+  "frontend": {
+    "entry": "dist/frontend.js",
+    "styles": []
+  },
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "readSettings", "handler": "readSettings", "title": "Read alert settings", "worker": { "enabled": true } },
+      { "id": "updateSettings", "handler": "updateSettings", "title": "Update alert settings", "worker": { "enabled": true } },
+      { "id": "sendTestAlert", "handler": "sendTestAlert", "title": "Send test alert", "worker": { "enabled": true } }
+    ]
+  },
+  "contributes": {
+    "subscriptions": [{ "id": "agent-attention", "source": "alerts", "pattern": "upserted", "handler": "onAlertUpserted" }],
+    "settingsComponent": {
+      "id": "alerts",
+      "component": "AlertsSettingsPanel",
+      "sectionId": "settings-alerts",
+      "label": "Alerts",
+      "description": "Send macOS notifications and play a sound when an agent or automation needs attention.",
+      "order": 28
+    }
+  },
+  "permissions": ["storage:readwrite", "ui:notify", "shell:execute"]
+}

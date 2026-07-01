@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding, upsertAlert } from '@neon-pilot/core';
+import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding } from '@neon-pilot/core';
 import {
   type AutomationActivityEntry,
   createStoredAutomation,
@@ -17,6 +17,7 @@ import {
 import { readConversationSessionMeta } from '../conversations/conversationService.js';
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { upsertAlertAndPublish } from './alertEvents.js';
 import { loadScheduledTasksForProfile, type TaskRuntimeEntry, toScheduledTaskMetadata } from './scheduledTasks.js';
 import {
   applyScheduledTaskThreadBinding,
@@ -186,7 +187,7 @@ export function readScheduledTaskSchedulerHealth(profile: string) {
   });
 
   if (status === 'stale') {
-    upsertAlert({
+    upsertAlertAndPublish({
       profile,
       alert: {
         id: 'automation-scheduler-stale',

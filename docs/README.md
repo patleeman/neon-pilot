@@ -101,6 +101,7 @@ Bundled system extensions:
 - [Dynamic Workflows](../extensions/system-dynamic-workflows/README.md) — model-authored workflow coordinators that fan out daemon-backed subagents
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
 - [Agent Plugins](../extensions/system-agent-plugins/README.md) — Codex and Claude plugin import, update tracking, and compatibility reports
+- [Alerts](../extensions/system-alerts/README.md) — native notifications and sound for agent attention alerts
 - [Browser](../extensions/system-browser/README.md) — Workbench browser views and browser automation
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing

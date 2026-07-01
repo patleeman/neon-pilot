@@ -6,9 +6,10 @@ import {
   getConversationProjectLink,
   readSessionConversationId,
   setActivityConversationLinks,
-  upsertAlert,
   writeProfileActivityEntry,
 } from '@neon-pilot/core';
+
+import { upsertAlertAndPublish } from '../automation/alertEvents.js';
 
 function sanitizeIdSegment(value: string): string {
   const sanitized = value
@@ -171,7 +172,7 @@ export function surfaceReadyDeferredResume(input: {
   });
   const existing = getAlert({ stateRoot: input.stateRoot, profile: input.profile, alertId });
   if (!existing || shouldRefreshExistingAlert(existing, nextAlert)) {
-    upsertAlert({
+    upsertAlertAndPublish({
       stateRoot: input.stateRoot,
       profile: input.profile,
       alert: nextAlert,

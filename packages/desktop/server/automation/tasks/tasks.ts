@@ -4,7 +4,6 @@ import {
   loadAttentionEventsState,
   resolveAttentionEventsStateFile,
   saveAttentionEventsState,
-  upsertAlert,
 } from '@neon-pilot/core';
 import { randomUUID } from 'crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
@@ -26,6 +25,7 @@ import {
   scanDurableRunsForRecovery,
 } from '../../runs/store.js';
 import { invalidateAppTopics, publishAppEvent } from '../../shared/appEvents.js';
+import { upsertAlertAndPublish } from '../alertEvents.js';
 import {
   appendAutomationActivityEntry,
   deleteStoredAutomation,
@@ -377,7 +377,7 @@ function upsertSkippedTaskAlert(input: {
   body: string;
   activityId?: string;
 }): void {
-  upsertAlert({
+  upsertAlertAndPublish({
     stateRoot: input.stateRoot,
     profile: input.task.profile,
     alert: {
@@ -405,7 +405,7 @@ function upsertTaskRunFailureAlert(input: {
   message: string;
   activityId?: string;
 }): void {
-  upsertAlert({
+  upsertAlertAndPublish({
     stateRoot: input.stateRoot,
     profile: input.task.profile,
     alert: {
