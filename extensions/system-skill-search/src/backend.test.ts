@@ -190,6 +190,78 @@ describe('system-skill-search backend', () => {
     expect([...store.keys()].filter((key) => key.startsWith('candidates/'))).toHaveLength(1);
   });
 
+  it('serves fresh marketplace browse results from cache without refetching upstream sources', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+      if (textUrl.includes('/repos/openai/skills/git/trees/main')) {
+        return jsonResponse({ tree: [{ path: 'skills/.curated/pdf/SKILL.md', type: 'blob' }] });
+      }
+      if (textUrl.includes('/repos/openai/skills/contents/skills/.curated/pdf/SKILL.md')) {
+        return textResponse('---\nname: pdf\ndescription: Read, inspect, and verify PDF files.\n---\nUse for PDFs.');
+      }
+      if (textUrl.includes('/repos/openai/skills')) return jsonResponse({ default_branch: 'main' });
+      return jsonResponse({});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { ctx } = createCtx();
+
+    const first = (await browseSkills({ sourceId: 'openai', query: 'pdf', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ title: string }>;
+      cache: { status: string };
+    };
+    const upstreamCalls = fetchMock.mock.calls.length;
+    const second = (await browseSkills({ sourceId: 'openai', query: 'pdf', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ title: string }>;
+      cache: { status: string; stale: boolean };
+    };
+
+    expect(first.cache.status).toBe('miss');
+    expect(second.cache).toMatchObject({ status: 'hit', stale: false });
+    expect(second.candidates).toEqual(first.candidates);
+    expect(fetchMock).toHaveBeenCalledTimes(upstreamCalls);
+  });
+
+  it('returns stale marketplace cache immediately and refreshes it in the background', async () => {
+    let skillName = 'pdf';
+    const fetchMock = vi.fn(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+      if (textUrl.includes('/repos/openai/skills/git/trees/main')) {
+        return jsonResponse({ tree: [{ path: `skills/.curated/${skillName}/SKILL.md`, type: 'blob' }] });
+      }
+      if (textUrl.includes(`/repos/openai/skills/contents/skills/.curated/${skillName}/SKILL.md`)) {
+        return textResponse(`---\nname: ${skillName}\ndescription: ${skillName} skill.\n---\nUse for ${skillName}.`);
+      }
+      if (textUrl.includes('/repos/openai/skills')) return jsonResponse({ default_branch: 'main' });
+      return jsonResponse({});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { ctx, store } = createCtx();
+
+    await browseSkills({ sourceId: 'openai', limit: 10 }, ctx as never);
+    const cacheKey = [...store.keys()].find((key) => key.startsWith('browse-cache/'));
+    expect(cacheKey).toBeTruthy();
+    store.set(cacheKey!, { ...(store.get(cacheKey!) as object), cachedAt: new Date(0).toISOString() });
+    skillName = 'documents';
+
+    const stale = (await browseSkills({ sourceId: 'openai', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ title: string }>;
+      cache: { status: string; stale: boolean; refreshStarted: boolean };
+    };
+
+    expect(stale.candidates).toEqual([expect.objectContaining({ title: 'Pdf' })]);
+    expect(stale.cache).toMatchObject({ status: 'hit', stale: true, refreshStarted: true });
+    await vi.waitFor(() => expect(ctx.ui.invalidate).toHaveBeenCalledWith(['skills']));
+
+    const refreshed = (await browseSkills({ sourceId: 'openai', limit: 10 }, ctx as never)) as {
+      candidates: Array<{ title: string }>;
+      cache: { status: string; stale: boolean };
+    };
+    expect(refreshed.cache).toMatchObject({ status: 'hit', stale: false });
+    expect(refreshed.candidates).toEqual([expect.objectContaining({ title: 'Documents' })]);
+  });
+
   it('browses community marketplace records with approval metadata', async () => {
     vi.stubGlobal(
       'fetch',

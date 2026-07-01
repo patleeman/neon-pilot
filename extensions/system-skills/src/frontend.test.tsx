@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SkillsPage } from './SkillsPage';
 
@@ -96,6 +96,10 @@ const allBrowse = {
   candidates: [...openAiBrowse.candidates, ...hermesBrowse.candidates],
 };
 
+beforeEach(() => {
+  window.sessionStorage.clear();
+});
+
 function createPa({
   invoke = vi.fn(async (action: string) => {
     if (action === 'listSkills') return { ok: true, skills };
@@ -110,13 +114,16 @@ function createPa({
     if (action === 'installSkill') return { ok: true, message: 'Installed PDF.' };
     return { ok: true };
   }),
+  selection,
 }: {
   invoke?: ReturnType<typeof vi.fn>;
   callAction?: ReturnType<typeof vi.fn>;
+  selection?: { subscribe: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
 } = {}) {
   return {
     extension: { invoke },
     extensions: { callAction },
+    selection,
   };
 }
 
@@ -170,7 +177,7 @@ describe('SkillsPage', () => {
 
     await screen.findByText('PDF');
     fireEvent.change(screen.getByPlaceholderText('Search marketplace skills'), { target: { value: 'zzzz-no-such-skill-ga' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search skills' }));
 
     await screen.findByText('No marketplace skills match the current search.');
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
@@ -187,7 +194,7 @@ describe('SkillsPage', () => {
 
     await screen.findByText('PDF');
     fireEvent.change(screen.getByPlaceholderText('Search marketplace skills'), { target: { value: 'release' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search skills' }));
 
     expect(screen.getByRole('button', { name: 'Clear search' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
@@ -232,6 +239,48 @@ describe('SkillsPage', () => {
     expect(screen.getByRole('button', { name: 'Capability ↓' })).toBeTruthy();
   });
 
+  it('forces a background marketplace refresh from the toolbar', async () => {
+    const pa = createPa();
+
+    render(<SkillsPage pa={pa as never} context={{} as never} />);
+
+    await screen.findByText('PDF');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh skills' }));
+
+    await waitFor(() =>
+      expect(pa.extensions.callAction).toHaveBeenLastCalledWith('system-skill-search', 'browseSkills', {
+        sourceId: 'all',
+        query: '',
+        limit: 60,
+        refresh: 'force',
+      }),
+    );
+    expect(screen.getByText('PDF')).toBeTruthy();
+  });
+
+  it('hydrates marketplace rows from the session snapshot on page revisit', async () => {
+    const pa = createPa();
+    const { unmount } = render(<SkillsPage pa={pa as never} context={{} as never} />);
+
+    await screen.findByText('PDF');
+    unmount();
+
+    const slowPa = createPa({
+      invoke: vi.fn(async (action: string) => {
+        if (action === 'listSkills') return new Promise(() => undefined);
+        return { ok: true };
+      }),
+      callAction: vi.fn(async (_extensionId: string, action: string) => {
+        if (action === 'browseSkills') return new Promise(() => undefined);
+        return { ok: true };
+      }),
+    });
+    render(<SkillsPage pa={slowPa as never} context={{} as never} />);
+
+    expect(screen.getByText('PDF')).toBeTruthy();
+    expect(screen.queryByText('Loading marketplace skills...')).toBeNull();
+  });
+
   it('installs a marketplace candidate and refreshes both data sources', async () => {
     const pa = createPa();
 
@@ -243,6 +292,34 @@ describe('SkillsPage', () => {
     await screen.findByText('Installed PDF.');
     expect(pa.extensions.callAction).toHaveBeenCalledWith('system-skill-search', 'installSkill', { candidateId: 'pdf-candidate' });
     expect(pa.extension.invoke).toHaveBeenCalledWith('listSkills', {});
+  });
+
+  it('opens marketplace skill details through the route right sidebar selection', async () => {
+    const selectionSet = vi.fn();
+    const pa = createPa({
+      selection: {
+        subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
+        set: selectionSet,
+      },
+    });
+
+    render(<SkillsPage pa={pa as never} context={{} as never} />);
+
+    await screen.findByText('PDF');
+    fireEvent.click(screen.getByRole('button', { name: 'Details for PDF' }));
+
+    expect(selectionSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'resource',
+        resource: expect.objectContaining({
+          type: 'skill',
+          id: 'marketplace:pdf-candidate',
+          label: 'PDF',
+          source: 'marketplace',
+        }),
+      }),
+    );
+    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull();
   });
 
   it('keeps installed skill management usable when marketplace browsing fails', async () => {

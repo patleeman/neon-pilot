@@ -46,7 +46,9 @@
         "label": "Skills",
         "route": "/skills",
         "icon": "sparkle",
-        "section": "settings"
+        "pageType": "table",
+        "section": "settings",
+        "rightSidebarView": "skills-context-rail"
       }
     ],
     "views": [
@@ -56,9 +58,17 @@
         "location": "main",
         "route": "/skills",
         "component": "SkillsPage",
+        "activation": "on-route"
+      },
+      {
+        "id": "skills-context-rail",
+        "title": "Skill details",
+        "location": "rightRail",
+        "route": "/skills",
+        "component": "SkillsContextRail",
         "placement": "primary",
         "scope": "global",
-        "activation": "on-route"
+        "activation": "on-open"
       }
     ],
     "commands": [

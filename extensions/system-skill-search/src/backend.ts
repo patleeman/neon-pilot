@@ -135,6 +135,14 @@ interface MarketplaceSourceSummary {
   installPolicy: 'direct-after-vetting' | 'approval-after-vetting';
 }
 
+interface BrowseCacheRecord {
+  query: string;
+  sourceId: string;
+  limit: number;
+  cachedAt: string;
+  candidates: SkillCandidate[];
+}
+
 const TRUSTED_GITHUB_SOURCES: GitHubSource[] = [
   { id: 'openai-skills-curated', label: 'OpenAI Skills', repo: 'openai/skills', paths: ['skills/.curated/'], trustLevel: 'trusted' },
   { id: 'openai-skills-system', label: 'OpenAI System Skills', repo: 'openai/skills', paths: ['skills/.system/'], trustLevel: 'trusted' },
@@ -147,6 +155,7 @@ const HERMES_INDEX_URL = 'https://hermes-agent.nousresearch.com/docs/api/skills-
 const CANDIDATE_KEY = 'candidates/';
 const PREVIEW_KEY = 'previews/';
 const INSTALLED_KEY = 'installed/';
+const BROWSE_CACHE_KEY = 'browse-cache/';
 const INSTALLED_DIR = 'installed-skills';
 const QUARANTINE_DIR = 'quarantine';
 const SEARCH_TIMEOUT_MS = 25_000;
@@ -163,6 +172,10 @@ const MAX_BUNDLE_BYTES = 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 25 * 1024 * 1024;
 const MAX_ARCHIVE_UNPACKED_BYTES = 100 * 1024 * 1024;
 const COMMUNITY_APPROVAL_TIMEOUT_MS = 60_000;
+const BROWSE_CACHE_TTL_MS = 15 * 60_000;
+const MAX_BROWSE_CACHE_AGE_MS = 24 * 60 * 60_000;
+
+const browseRefreshes = new Map<string, Promise<void>>();
 
 const MARKETPLACE_SOURCES: MarketplaceSourceSummary[] = [
   {
@@ -217,7 +230,30 @@ export async function browseSkills(input: unknown, ctx: ExtensionBackendContext)
   const query = readString(body.query);
   const sourceId = readString(body.sourceId) || 'openai';
   const limit = clampInteger(body.limit, 40, 1, MAX_SEARCH_RESULTS * 4);
-  const candidates = await browseAndStoreCandidates({ query, sourceId, limit, ctx });
+  const refresh = readString(body.refresh);
+  const forceRefresh = body.forceRefresh === true || refresh === 'force';
+  const maxAgeMs = clampInteger(body.maxAgeMs, BROWSE_CACHE_TTL_MS, 1, MAX_BROWSE_CACHE_AGE_MS);
+  const cacheKey = browseCacheKey({ query, sourceId, limit });
+  const cached = await ctx.storage.get<BrowseCacheRecord>(cacheKey);
+  const cachedAtMs = cached ? Date.parse(cached.cachedAt) : 0;
+  const cacheStale = !cachedAtMs || Date.now() - cachedAtMs > maxAgeMs;
+
+  let candidates: SkillCandidate[];
+  let cacheStatus: 'hit' | 'miss' | 'refresh' = 'miss';
+  let refreshStarted = false;
+
+  if (!forceRefresh && cached) {
+    candidates = cached.candidates;
+    cacheStatus = 'hit';
+    if (cacheStale) {
+      refreshStarted = refreshBrowseCache({ cacheKey, query, sourceId, limit, ctx, existingCache: cached });
+    }
+  } else {
+    candidates = await browseAndStoreCandidates({ query, sourceId, limit, ctx });
+    await writeBrowseCache(ctx, cacheKey, { query, sourceId, limit, candidates });
+    cacheStatus = forceRefresh ? 'refresh' : 'miss';
+  }
+
   const installedRows = await ctx.storage.list<InstalledSkillRecord>(INSTALLED_KEY);
   return {
     ok: true,
@@ -238,6 +274,13 @@ export async function browseSkills(input: unknown, ctx: ExtensionBackendContext)
       requiresApproval: candidate.trustLevel === 'community',
     })),
     installed: installedRows.map((row) => row.value),
+    cache: {
+      status: cacheStatus,
+      cachedAt: cacheStatus === 'hit' ? cached?.cachedAt : new Date().toISOString(),
+      stale: cacheStatus === 'hit' ? cacheStale : false,
+      refreshStarted,
+      maxAgeMs,
+    },
   };
 }
 
@@ -497,6 +540,54 @@ async function browseAndStoreCandidates({
   ).slice(0, limit);
   await Promise.all(candidates.map((candidate) => ctx.storage.put(`${CANDIDATE_KEY}${candidate.id}`, candidate)));
   return candidates;
+}
+
+function browseCacheKey(input: { query: string; sourceId: string; limit: number }): string {
+  return `${BROWSE_CACHE_KEY}${hashObject(input).slice(0, 24)}`;
+}
+
+async function writeBrowseCache(
+  ctx: ExtensionBackendContext,
+  cacheKey: string,
+  input: { query: string; sourceId: string; limit: number; candidates: SkillCandidate[] },
+) {
+  await ctx.storage.put(cacheKey, {
+    query: input.query,
+    sourceId: input.sourceId,
+    limit: input.limit,
+    cachedAt: new Date().toISOString(),
+    candidates: input.candidates,
+  } satisfies BrowseCacheRecord);
+}
+
+function refreshBrowseCache({
+  cacheKey,
+  query,
+  sourceId,
+  limit,
+  ctx,
+  existingCache,
+}: {
+  cacheKey: string;
+  query: string;
+  sourceId: string;
+  limit: number;
+  ctx: ExtensionBackendContext;
+  existingCache: BrowseCacheRecord;
+}): boolean {
+  if (browseRefreshes.has(cacheKey)) return false;
+  const refresh = browseAndStoreCandidates({ query, sourceId, limit, ctx })
+    .then(async (candidates) => {
+      if (candidates.length === 0 && existingCache.candidates.length > 0) return;
+      await writeBrowseCache(ctx, cacheKey, { query, sourceId, limit, candidates });
+      ctx.ui.invalidate(['skills']);
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      browseRefreshes.delete(cacheKey);
+    });
+  browseRefreshes.set(cacheKey, refresh);
+  return true;
 }
 
 function marketplaceSources(): MarketplaceSourceSummary[] {

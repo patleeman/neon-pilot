@@ -9,7 +9,7 @@ describe('system-skills manifest', () => {
         id: 'skills-page',
         route: '/skills',
         component: 'SkillsPage',
-        placement: 'primary',
+        location: 'main',
       }),
     );
     expect(manifest.contributes.nav).toContainEqual(
@@ -29,9 +29,11 @@ describe('system-skills manifest', () => {
     );
   });
 
-  it('is the only user-facing Skills management surface for this extension', () => {
+  it('keeps Skills management on the page plus the route context rail', () => {
     expect(manifest.contributes.settingsComponent).toBeUndefined();
-    expect(manifest.contributes.views).toHaveLength(1);
-    expect(manifest.contributes.views?.[0]?.route).toBe('/skills');
+    expect(manifest.contributes.views).toContainEqual(expect.objectContaining({ id: 'skills-page', route: '/skills', location: 'main' }));
+    expect(manifest.contributes.views).toContainEqual(
+      expect.objectContaining({ id: 'skills-context-rail', route: '/skills', location: 'rightRail' }),
+    );
   });
 });

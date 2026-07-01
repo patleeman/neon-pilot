@@ -3,6 +3,9 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
   DataTable,
   DataTableActionGroup,
   DataTableBody,
@@ -10,25 +13,28 @@ import {
   DataTableEmptyRow,
   DataTableHead,
   DataTableHeaderCell,
+  DataTablePagination,
   DataTableRow,
+  DataTableToolbar,
   EmptyState,
   ErrorState,
-  FilterToolbar,
   IconButton,
-  InlineSelect,
-  LoadingState,
+  KeyValueItem,
+  KeyValueList,
   Notice,
+  QuietLoadingState,
   ResourceList,
   ResourceListRow,
   SearchInput,
-  SupportingText,
+  Select,
   Switch,
   TabButton,
   TabList,
   TabPanel,
+  ToolbarButton,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type SkillSource = 'extension' | 'knowledge' | 'project' | string;
 type SkillView = 'marketplace' | 'installed';
@@ -38,6 +44,35 @@ type MarketplaceFilter = 'all' | string;
 type MarketplaceStateFilter = 'all' | 'available' | 'approval-required' | 'installed';
 type MarketplaceSortKey = 'title' | 'capability' | 'source' | 'state';
 type SortDirection = 'ascending' | 'descending';
+const MARKETPLACE_PAGE_SIZE = 12;
+
+function SkillsToolbarIcon({ name }: { name: 'clear' | 'refresh' | 'search' }) {
+  const paths = {
+    clear: ['M18 6 6 18', 'M6 6l12 12'],
+    refresh: ['M21 12a9 9 0 1 1-3-6.7', 'M21 3v6h-6'],
+    search: ['m21 21-4.3-4.3', 'M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z'],
+  } satisfies Record<string, string[]>;
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      {paths[name].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+function SkillDetailIcon({ name }: { name: 'open' }) {
+  const paths = {
+    open: ['M14 5h5v5', 'M10 14 19 5', 'M19 14v5H5V5h5'],
+  } satisfies Record<string, string[]>;
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      {paths[name].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
 
 interface SkillItem {
   id: string;
@@ -99,6 +134,70 @@ interface BrowseSkillsResult {
   sources?: MarketplaceSource[];
   candidates?: MarketplaceCandidate[];
   installed?: InstalledSkillRecord[];
+  cache?: {
+    status?: 'hit' | 'miss' | 'refresh';
+    cachedAt?: string;
+    stale?: boolean;
+    refreshStarted?: boolean;
+    maxAgeMs?: number;
+  };
+}
+
+interface MarketplaceSnapshot {
+  query: string;
+  sources: MarketplaceSource[];
+  candidates: MarketplaceCandidate[];
+  installed: InstalledSkillRecord[];
+}
+
+const MARKETPLACE_SNAPSHOT_SESSION_KEY = 'system-skills.marketplaceSnapshot.v1';
+
+function readMarketplaceSnapshot(): MarketplaceSnapshot | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const parsed = JSON.parse(
+      window.sessionStorage.getItem(MARKETPLACE_SNAPSHOT_SESSION_KEY) || 'null',
+    ) as Partial<MarketplaceSnapshot> | null;
+    if (!parsed || typeof parsed.query !== 'string') return null;
+    if (!Array.isArray(parsed.sources) || !Array.isArray(parsed.candidates) || !Array.isArray(parsed.installed)) return null;
+    return {
+      query: parsed.query,
+      sources: parsed.sources as MarketplaceSource[],
+      candidates: parsed.candidates as MarketplaceCandidate[],
+      installed: parsed.installed as InstalledSkillRecord[],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeMarketplaceSnapshot(snapshot: MarketplaceSnapshot) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(MARKETPLACE_SNAPSHOT_SESSION_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Snapshot caching is a UI fast path; backend storage remains authoritative.
+  }
+}
+
+type SkillSelectionData =
+  | {
+      kind: 'marketplace';
+      candidate: MarketplaceCandidate;
+      installed: boolean;
+      capability: string;
+      state: { label: string; className: string };
+    }
+  | { kind: 'installed'; skill: SkillItem };
+
+function skillResourceId(kind: SkillSelectionData['kind'], id: string): string {
+  return `${kind}:${id}`;
+}
+
+function isSkillSelection(value: unknown): value is { resource: { type: 'skill'; id: string; data?: SkillSelectionData } } {
+  if (!value || typeof value !== 'object') return false;
+  const resource = (value as { resource?: unknown }).resource;
+  return Boolean(resource && typeof resource === 'object' && (resource as { type?: unknown }).type === 'skill');
 }
 
 const DEFAULT_SOURCES: MarketplaceSource[] = [
@@ -198,10 +297,12 @@ function compareText(left: string, right: string): number {
 }
 
 export function SkillsPage({ pa }: ExtensionSurfaceProps) {
+  const initialMarketplaceSnapshot = readMarketplaceSnapshot()?.query === '' ? readMarketplaceSnapshot() : null;
+  const hydrateMarketplaceInBackgroundRef = useRef(Boolean(initialMarketplaceSnapshot));
   const [skills, setSkills] = useState<SkillItem[]>([]);
-  const [sources, setSources] = useState<MarketplaceSource[]>(DEFAULT_SOURCES);
-  const [candidates, setCandidates] = useState<MarketplaceCandidate[]>([]);
-  const [installedUpstream, setInstalledUpstream] = useState<InstalledSkillRecord[]>([]);
+  const [sources, setSources] = useState<MarketplaceSource[]>(() => initialMarketplaceSnapshot?.sources ?? DEFAULT_SOURCES);
+  const [candidates, setCandidates] = useState<MarketplaceCandidate[]>(() => initialMarketplaceSnapshot?.candidates ?? []);
+  const [installedUpstream, setInstalledUpstream] = useState<InstalledSkillRecord[]>(() => initialMarketplaceSnapshot?.installed ?? []);
   const [view, setView] = useState<SkillView>('marketplace');
   const [marketplaceQueryDraft, setMarketplaceQueryDraft] = useState('');
   const [installedQueryDraft, setInstalledQueryDraft] = useState('');
@@ -211,13 +312,16 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   const [stateFilter, setStateFilter] = useState<MarketplaceStateFilter>('all');
   const [sortKey, setSortKey] = useState<MarketplaceSortKey>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('ascending');
+  const [marketplacePage, setMarketplacePage] = useState(1);
   const [loadingSkills, setLoadingSkills] = useState(true);
-  const [loadingMarketplace, setLoadingMarketplace] = useState(true);
+  const [loadingMarketplace, setLoadingMarketplace] = useState(() => !initialMarketplaceSnapshot);
+  const [refreshingMarketplace, setRefreshingMarketplace] = useState(false);
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [busySkillId, setBusySkillId] = useState<string | null>(null);
   const [skillsError, setSkillsError] = useState<string | null>(null);
   const [marketplaceError, setMarketplaceError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'warning' | 'danger' | 'info'; message: string } | null>(null);
+  const [selectedSkillResourceId, setSelectedSkillResourceId] = useState<string | null>(null);
 
   const loadSkills = useCallback(async () => {
     setSkillsError(null);
@@ -233,23 +337,37 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   }, [pa]);
 
   const browseMarketplace = useCallback(
-    async (nextQuery = query) => {
+    async (nextQuery = query, options: { forceRefresh?: boolean; background?: boolean } = {}) => {
       setMarketplaceError(null);
-      setLoadingMarketplace(true);
+      if (options.background) {
+        setRefreshingMarketplace(true);
+      } else {
+        setLoadingMarketplace(true);
+      }
       try {
-        const result = (await pa.extensions.callAction('system-skill-search', 'browseSkills', {
+        const request: Record<string, unknown> = {
           sourceId: 'all',
           query: nextQuery,
           limit: 60,
-        })) as BrowseSkillsResult;
-        setSources(normalizeSources(result.sources));
-        setCandidates(result.candidates ?? []);
-        setInstalledUpstream(result.installed ?? []);
+        };
+        if (options.forceRefresh) request.refresh = 'force';
+        const result = (await pa.extensions.callAction('system-skill-search', 'browseSkills', request)) as BrowseSkillsResult;
+        const nextSources = normalizeSources(result.sources);
+        const nextCandidates = result.candidates ?? [];
+        const nextInstalled = result.installed ?? [];
+        writeMarketplaceSnapshot({ query: nextQuery, sources: nextSources, candidates: nextCandidates, installed: nextInstalled });
+        setSources(nextSources);
+        setCandidates(nextCandidates);
+        setInstalledUpstream(nextInstalled);
       } catch (error) {
-        setCandidates([]);
+        if (!options.background) setCandidates([]);
         setMarketplaceError(readError(error));
       } finally {
-        setLoadingMarketplace(false);
+        if (options.background) {
+          setRefreshingMarketplace(false);
+        } else {
+          setLoadingMarketplace(false);
+        }
       }
     },
     [pa, query],
@@ -260,8 +378,18 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   }, [loadSkills]);
 
   useEffect(() => {
-    void browseMarketplace(query);
+    const background = hydrateMarketplaceInBackgroundRef.current && query === '';
+    hydrateMarketplaceInBackgroundRef.current = false;
+    void browseMarketplace(query, { background });
   }, [browseMarketplace, query]);
+
+  useEffect(() => {
+    if (!pa.selection) return;
+    const subscription = pa.selection.subscribe((selection) => {
+      setSelectedSkillResourceId(isSkillSelection(selection) ? selection.resource.id : null);
+    });
+    return () => subscription.unsubscribe();
+  }, [pa]);
 
   const filteredSkills = useMemo(() => {
     const normalizedQuery = installedQueryDraft.trim().toLowerCase();
@@ -324,6 +452,20 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
       });
   }, [candidates, capabilityFilter, installedUpstream, sortDirection, sortKey, sourceFilter, stateFilter]);
 
+  const marketplacePageCount = Math.max(1, Math.ceil(marketplaceRows.length / MARKETPLACE_PAGE_SIZE));
+  const pagedMarketplaceRows = useMemo(() => {
+    const start = (marketplacePage - 1) * MARKETPLACE_PAGE_SIZE;
+    return marketplaceRows.slice(start, start + MARKETPLACE_PAGE_SIZE);
+  }, [marketplacePage, marketplaceRows]);
+
+  useEffect(() => {
+    setMarketplacePage(1);
+  }, [capabilityFilter, query, sourceFilter, stateFilter]);
+
+  useEffect(() => {
+    setMarketplacePage((current) => Math.min(current, marketplacePageCount));
+  }, [marketplacePageCount]);
+
   const hasMarketplaceFilters = capabilityFilter !== 'all' || sourceFilter !== 'all' || stateFilter !== 'all';
   const marketplaceFilterSummary =
     candidates.length === marketplaceRows.length
@@ -353,6 +495,7 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
     setCapabilityFilter('all');
     setSourceFilter('all');
     setStateFilter('all');
+    setMarketplacePage(1);
   }, []);
 
   const toggleSort = useCallback((nextSortKey: MarketplaceSortKey) => {
@@ -377,8 +520,28 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   const refresh = useCallback(() => {
     setNotice(null);
     void loadSkills();
-    void browseMarketplace(query);
+    void browseMarketplace(query, { forceRefresh: true, background: true });
   }, [browseMarketplace, loadSkills, query]);
+
+  const selectSkill = useCallback(
+    (data: SkillSelectionData) => {
+      const id =
+        data.kind === 'marketplace'
+          ? skillResourceId('marketplace', data.candidate.candidateId)
+          : skillResourceId('installed', `${data.skill.source}:${data.skill.id}:${data.skill.path}`);
+      pa.selection?.set({
+        kind: 'resource',
+        resource: {
+          type: 'skill',
+          id,
+          label: data.kind === 'marketplace' ? data.candidate.title : data.skill.name,
+          source: data.kind,
+          data,
+        },
+      });
+    },
+    [pa],
+  );
 
   const installCandidate = useCallback(
     async (candidate: MarketplaceCandidate) => {
@@ -424,28 +587,18 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
     [pa],
   );
 
-  if (loadingSkills && loadingMarketplace) return <LoadingState label="Loading skills..." />;
   if (skillsError && marketplaceError) return <ErrorState title="Skills unavailable" message={`${skillsError} ${marketplaceError}`} />;
 
   return (
     <AppPageLayout contentClassName="space-y-5">
-      <AppPageIntro
-        title="Skills"
-        actions={
-          <div className="flex items-center gap-2">
-            <IconButton aria-label="Refresh skills" title="Refresh skills" onClick={refresh} disabled={loadingSkills || loadingMarketplace}>
-              <span aria-hidden="true">↻</span>
-            </IconButton>
-          </div>
-        }
-      />
+      <AppPageIntro title="Skills" />
 
       {notice ? <Notice tone={notice.tone}>{notice.message}</Notice> : null}
       {skillsError ? <Notice tone="warning">Installed skill management is unavailable: {skillsError}</Notice> : null}
 
-      <FilterToolbar
-        filters={
-          <TabList ariaLabel="Skill views">
+      <DataTableToolbar
+        tabs={
+          <TabList ariaLabel="Skill views" variant="underline">
             <TabButton active={view === 'marketplace'} onClick={() => setView('marketplace')}>
               Browse
             </TabButton>
@@ -453,6 +606,63 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
               Installed <span className="text-dim">{skillCounts.installed}</span>
             </TabButton>
           </TabList>
+        }
+        summary={
+          view === 'marketplace'
+            ? `Searching ${sources.length} marketplace sources · ${marketplaceFilterSummary}${refreshingMarketplace ? ' · Refreshing' : ''}`
+            : `${skillCounts.enabled} enabled · ${skillCounts.disabled} disabled`
+        }
+        filters={
+          view === 'marketplace' ? (
+            <>
+              <label className="flex items-center gap-2 text-[12px] text-secondary">
+                Capability
+                <Select
+                  aria-label="Filter by capability"
+                  value={capabilityFilter}
+                  onChange={(event) => setCapabilityFilter(event.target.value)}
+                  className="min-w-32"
+                >
+                  <option value="all">All</option>
+                  {capabilityOptions.map((capability) => (
+                    <option key={capability} value={capability}>
+                      {capability}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="flex items-center gap-2 text-[12px] text-secondary">
+                Source
+                <Select
+                  aria-label="Filter by source"
+                  value={sourceFilter}
+                  onChange={(event) => setSourceFilter(event.target.value)}
+                  className="min-w-36"
+                >
+                  <option value="all">All</option>
+                  {sourceOptions.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="flex items-center gap-2 text-[12px] text-secondary">
+                State
+                <Select
+                  aria-label="Filter by state"
+                  value={stateFilter}
+                  onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
+                  className="min-w-36"
+                >
+                  <option value="all">All</option>
+                  <option value="available">Available</option>
+                  <option value="approval-required">Approval required</option>
+                  <option value="installed">Installed</option>
+                </Select>
+              </label>
+            </>
+          ) : null
         }
         search={
           <form className="flex min-w-0 items-center gap-2" onSubmit={submitSearch}>
@@ -466,40 +676,47 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                 }
               }}
               placeholder={view === 'marketplace' ? 'Search marketplace skills' : 'Search installed skills'}
-              className="w-full md:w-80"
+              className="w-80 max-w-full"
             />
             {(view === 'marketplace' ? marketplaceQueryDraft || query : installedQueryDraft) ? (
-              <Button variant="ghost" type="button" onClick={clearSearch} aria-label="Clear search" title="Clear search">
-                Clear
-              </Button>
+              <IconButton compact type="button" onClick={clearSearch} aria-label="Clear search" title="Clear search">
+                <SkillsToolbarIcon name="clear" />
+              </IconButton>
             ) : null}
-            <Button variant="toolbar" type="submit" title="Search skills">
-              <span aria-hidden="true">⌕</span>
-              Search
-            </Button>
+            <IconButton compact type="submit" aria-label="Search skills" title="Search skills">
+              <SkillsToolbarIcon name="search" />
+            </IconButton>
           </form>
+        }
+        actions={
+          <IconButton
+            compact
+            aria-label="Refresh skills"
+            title="Refresh skills"
+            onClick={refresh}
+            disabled={loadingSkills || refreshingMarketplace}
+          >
+            <SkillsToolbarIcon name="refresh" />
+          </IconButton>
         }
       />
 
       {view === 'marketplace' ? (
         <TabPanel>
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <SupportingText>
-                Searching {sources.length} marketplace sources · {marketplaceFilterSummary}
-              </SupportingText>
-              {hasMarketplaceFilters ? (
-                <Button variant="ghost" type="button" onClick={clearMarketplaceFilters}>
+            {hasMarketplaceFilters ? (
+              <div>
+                <ToolbarButton type="button" onClick={clearMarketplaceFilters} title="Clear filters">
+                  <SkillsToolbarIcon name="clear" />
                   Clear filters
-                </Button>
-              ) : null}
-            </div>
+                </ToolbarButton>
+              </div>
+            ) : null}
             {marketplaceError ? (
               <Notice tone="danger" title="Marketplace unavailable">
                 {marketplaceError}
               </Notice>
             ) : null}
-            {loadingMarketplace ? <LoadingState label="Loading marketplace skills..." /> : null}
             <DataTable
               tableClassName="table-fixed"
               columns={
@@ -520,62 +737,19 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                     </Button>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell aria-sort={sortKey === 'capability' ? sortDirection : 'none'}>
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Button variant="ghost" type="button" onClick={() => toggleSort('capability')}>
-                        Capability{sortIndicator('capability')}
-                      </Button>
-                      <InlineSelect
-                        aria-label="Filter by capability"
-                        value={capabilityFilter}
-                        onChange={(event) => setCapabilityFilter(event.target.value)}
-                        className="max-w-28"
-                      >
-                        <option value="all">All</option>
-                        {capabilityOptions.map((capability) => (
-                          <option key={capability} value={capability}>
-                            {capability}
-                          </option>
-                        ))}
-                      </InlineSelect>
-                    </div>
+                    <Button variant="ghost" type="button" onClick={() => toggleSort('capability')}>
+                      Capability{sortIndicator('capability')}
+                    </Button>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell aria-sort={sortKey === 'source' ? sortDirection : 'none'}>
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Button variant="ghost" type="button" onClick={() => toggleSort('source')}>
-                        Source{sortIndicator('source')}
-                      </Button>
-                      <InlineSelect
-                        aria-label="Filter by source"
-                        value={sourceFilter}
-                        onChange={(event) => setSourceFilter(event.target.value)}
-                        className="max-w-32"
-                      >
-                        <option value="all">All</option>
-                        {sourceOptions.map((source) => (
-                          <option key={source} value={source}>
-                            {source}
-                          </option>
-                        ))}
-                      </InlineSelect>
-                    </div>
+                    <Button variant="ghost" type="button" onClick={() => toggleSort('source')}>
+                      Source{sortIndicator('source')}
+                    </Button>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell aria-sort={sortKey === 'state' ? sortDirection : 'none'}>
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Button variant="ghost" type="button" onClick={() => toggleSort('state')}>
-                        State{sortIndicator('state')}
-                      </Button>
-                      <InlineSelect
-                        aria-label="Filter by state"
-                        value={stateFilter}
-                        onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
-                        className="max-w-28"
-                      >
-                        <option value="all">All</option>
-                        <option value="available">Available</option>
-                        <option value="approval-required">Approval required</option>
-                        <option value="installed">Installed</option>
-                      </InlineSelect>
-                    </div>
+                    <Button variant="ghost" type="button" onClick={() => toggleSort('state')}>
+                      State{sortIndicator('state')}
+                    </Button>
                   </DataTableHeaderCell>
                   <DataTableHeaderCell className="text-right">Action</DataTableHeaderCell>
                 </DataTableRow>
@@ -590,10 +764,21 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                         : 'No installable skills returned.'}
                   </DataTableEmptyRow>
                 ) : null}
-                {marketplaceRows.map(({ candidate, installed, capability, state }) => {
+                {loadingMarketplace ? (
+                  <DataTableEmptyRow colSpan={5} cellClassName="py-8 text-left">
+                    Loading marketplace skills...
+                  </DataTableEmptyRow>
+                ) : null}
+                {pagedMarketplaceRows.map(({ candidate, installed, capability, state }) => {
                   const busy = installingId === candidate.candidateId;
+                  const selected = selectedSkillResourceId === skillResourceId('marketplace', candidate.candidateId);
+                  const selectionData: SkillSelectionData = { kind: 'marketplace', candidate, installed, capability, state };
                   return (
-                    <DataTableRow key={candidate.candidateId}>
+                    <DataTableRow
+                      key={candidate.candidateId}
+                      className={selected ? 'ui-selected-row-accent' : undefined}
+                      onClick={() => selectSkill(selectionData)}
+                    >
                       <DataTableCell className="min-w-0 py-2 pr-4">
                         <div className="truncate text-[13px] font-medium text-primary">{candidate.title}</div>
                         {candidate.description ? <div className="truncate text-[12px] text-secondary">{candidate.description}</div> : null}
@@ -609,13 +794,24 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                           <Button
                             variant={installed ? 'ghost' : 'action'}
                             disabled={busy || installed}
-                            onClick={() => void installCandidate(candidate)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void installCandidate(candidate);
+                            }}
                           >
                             {busy ? 'Installing...' : installed ? 'Installed' : 'Install'}
                           </Button>
-                          <Button variant="ghost" onClick={() => window.open(candidate.url, '_blank', 'noopener,noreferrer')}>
-                            Details
-                          </Button>
+                          <IconButton
+                            compact
+                            title={`Details for ${candidate.title}`}
+                            aria-label={`Details for ${candidate.title}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              selectSkill(selectionData);
+                            }}
+                          >
+                            <span aria-hidden="true">ⓘ</span>
+                          </IconButton>
                         </DataTableActionGroup>
                       </DataTableCell>
                     </DataTableRow>
@@ -623,46 +819,183 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
                 })}
               </DataTableBody>
             </DataTable>
+            {marketplaceRows.length > MARKETPLACE_PAGE_SIZE ? (
+              <DataTablePagination
+                page={marketplacePage}
+                pageCount={marketplacePageCount}
+                totalLabel={`${marketplaceRows.length} results`}
+                onPrevious={() => setMarketplacePage((current) => Math.max(1, current - 1))}
+                onNext={() => setMarketplacePage((current) => Math.min(marketplacePageCount, current + 1))}
+              />
+            ) : null}
           </div>
         </TabPanel>
       ) : (
         <TabPanel>
           <div className="space-y-3">
-            <div className="text-[12px] text-secondary">
-              {skillCounts.enabled} enabled · {skillCounts.disabled} disabled · {installedUpstream.length} upstream records
-            </div>
-            {loadingSkills ? <LoadingState label="Loading installed skills..." /> : null}
+            {loadingSkills ? <QuietLoadingState label="Loading installed skills" className="min-h-12" /> : null}
             {!loadingSkills && filteredSkills.length === 0 ? (
               <EmptyState title="No installed skills" body="No installed skills match the current search." />
             ) : null}
             {filteredSkills.length > 0 ? (
               <ResourceList>
-                {filteredSkills.map((skill) => (
-                  <ResourceListRow
-                    key={`${skill.source}:${skill.id}:${skill.path}`}
-                    title={skill.name}
-                    detail={skill.description || sourceLabel(skill)}
-                    meta={<span className="text-[12px] text-secondary">{sourceLabel(skill)}</span>}
-                    titleClassName="text-[13px]"
-                    detailClassName="text-[12px] text-secondary"
-                    actions={
-                      <Switch
-                        checked={skill.enabled}
-                        disabled={busySkillId === skill.id}
-                        aria-label={skill.enabled ? `Disable ${skill.name}` : `Enable ${skill.name}`}
-                        label={skill.enabled ? 'On' : 'Off'}
-                        onClick={() => void toggleSkill(skill)}
-                      />
-                    }
-                  >
-                    <div className="mt-1 truncate text-[11px] text-dim">{skill.enabled ? 'Enabled for agents' : 'Disabled'}</div>
-                  </ResourceListRow>
-                ))}
+                {filteredSkills.map((skill) => {
+                  const selectionData: SkillSelectionData = { kind: 'installed', skill };
+                  const selected = selectedSkillResourceId === skillResourceId('installed', `${skill.source}:${skill.id}:${skill.path}`);
+                  return (
+                    <ResourceListRow
+                      key={`${skill.source}:${skill.id}:${skill.path}`}
+                      className={selected ? 'ui-selected-row-accent' : undefined}
+                      title={skill.name}
+                      detail={skill.description || sourceLabel(skill)}
+                      meta={<span className="text-[12px] text-secondary">{sourceLabel(skill)}</span>}
+                      titleClassName="text-[13px]"
+                      detailClassName="text-[12px] text-secondary"
+                      onClick={() => selectSkill(selectionData)}
+                      actions={
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={skill.enabled}
+                            disabled={busySkillId === skill.id}
+                            aria-label={skill.enabled ? `Disable ${skill.name}` : `Enable ${skill.name}`}
+                            label={skill.enabled ? 'On' : 'Off'}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void toggleSkill(skill);
+                            }}
+                          />
+                          <IconButton
+                            compact
+                            title={`Details for ${skill.name}`}
+                            aria-label={`Details for ${skill.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              selectSkill(selectionData);
+                            }}
+                          >
+                            <span aria-hidden="true">ⓘ</span>
+                          </IconButton>
+                        </div>
+                      }
+                    >
+                      <div className="mt-1 truncate text-[11px] text-dim">{skill.enabled ? 'Enabled for agents' : 'Disabled'}</div>
+                    </ResourceListRow>
+                  );
+                })}
               </ResourceList>
             ) : null}
           </div>
         </TabPanel>
       )}
     </AppPageLayout>
+  );
+}
+
+export function SkillsContextRail({ pa }: ExtensionSurfaceProps) {
+  const [selection, setSelection] = useState<SkillSelectionData | null>(null);
+
+  useEffect(() => {
+    if (!pa.selection) return;
+    const subscription = pa.selection.subscribe((nextSelection) => {
+      if (!isSkillSelection(nextSelection)) {
+        setSelection(null);
+        return;
+      }
+      const data = nextSelection.resource.data;
+      setSelection(isSkillSelectionData(data) ? data : null);
+    });
+    return () => subscription.unsubscribe();
+  }, [pa]);
+
+  return (
+    <ContextRail>
+      <ContextRailHeader
+        eyebrow="Skill details"
+        title={selection ? (selection.kind === 'marketplace' ? selection.candidate.title : selection.skill.name) : 'No skill selected'}
+      />
+      <ContextRailBody>
+        {!selection ? (
+          <EmptyState
+            eyebrow="Context rail"
+            title="No skill selected"
+            body="Select a skill to inspect its source, trust level, install state, and local path."
+            steps={['Pick a skill from the table.', 'Review its details here.', 'Install or manage it from the row actions.']}
+            align="start"
+          />
+        ) : selection.kind === 'marketplace' ? (
+          <MarketplaceSkillDetails selection={selection} />
+        ) : (
+          <InstalledSkillDetails skill={selection.skill} />
+        )}
+      </ContextRailBody>
+    </ContextRail>
+  );
+}
+
+function isSkillSelectionData(value: unknown): value is SkillSelectionData {
+  if (!value || typeof value !== 'object') return false;
+  const kind = (value as { kind?: unknown }).kind;
+  if (kind === 'marketplace') {
+    const candidate = (value as { candidate?: unknown }).candidate;
+    return Boolean(candidate && typeof candidate === 'object' && typeof (candidate as { candidateId?: unknown }).candidateId === 'string');
+  }
+  if (kind === 'installed') {
+    const skill = (value as { skill?: unknown }).skill;
+    return Boolean(skill && typeof skill === 'object' && typeof (skill as { id?: unknown }).id === 'string');
+  }
+  return false;
+}
+
+function MarketplaceSkillDetails({ selection }: { selection: Extract<SkillSelectionData, { kind: 'marketplace' }> }) {
+  const { candidate, installed, capability, state } = selection;
+  return (
+    <div className="space-y-5">
+      <header className="space-y-2">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate text-[16px] font-semibold text-primary">{candidate.title}</h3>
+            <div className={`mt-1 text-[12px] ${state.className}`}>{state.label}</div>
+          </div>
+          {candidate.url ? (
+            <IconButton
+              compact
+              type="button"
+              aria-label="Open skill source"
+              title="Open skill source"
+              onClick={() => window.open(candidate.url, '_blank', 'noopener,noreferrer')}
+            >
+              <SkillDetailIcon name="open" />
+            </IconButton>
+          ) : null}
+        </div>
+        {candidate.description ? <p className="text-[12px] leading-5 text-secondary">{candidate.description}</p> : null}
+      </header>
+
+      <KeyValueList>
+        <KeyValueItem label="Capability" value={capability} />
+        <KeyValueItem label="Source" value={candidate.sourceLabel} />
+        <KeyValueItem label="Trust" value={candidate.trustLevel === 'community' ? 'Community' : 'Trusted'} />
+        <KeyValueItem label="State" value={installed ? 'Installed' : candidate.requiresApproval ? 'Approval required' : 'Available'} />
+        <KeyValueItem label="Identifier" value={candidate.identifier} />
+      </KeyValueList>
+    </div>
+  );
+}
+
+function InstalledSkillDetails({ skill }: { skill: SkillItem }) {
+  return (
+    <div className="space-y-5">
+      <header className="space-y-2">
+        <h3 className="truncate text-[16px] font-semibold text-primary">{skill.name}</h3>
+        {skill.description ? <p className="text-[12px] leading-5 text-secondary">{skill.description}</p> : null}
+      </header>
+
+      <KeyValueList>
+        <KeyValueItem label="Source" value={sourceLabel(skill)} />
+        <KeyValueItem label="State" value={skill.enabled ? 'Enabled' : 'Disabled'} />
+        <KeyValueItem label="Path" value={skill.path} />
+        {skill.extensionId ? <KeyValueItem label="Extension" value={skill.extensionId} /> : null}
+      </KeyValueList>
+    </div>
   );
 }
