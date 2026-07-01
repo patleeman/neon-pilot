@@ -128,12 +128,10 @@ describe('SkillsPage', () => {
 
     await screen.findByText('PDF');
     expect(screen.getByText('Browse')).toBeTruthy();
-    expect(screen.getByText('Skill')).toBeTruthy();
-    expect(screen.getByText('Capability')).toBeTruthy();
-    expect(screen.getByText('State')).toBeTruthy();
-    expect(
-      screen.getByText('Searching 2 marketplace sources. Trusted skills install after vetting; community skills require approval.'),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Skill ↑' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Capability' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'State' })).toBeTruthy();
+    expect(document.body.textContent).toContain('Searching 2 marketplace sources · 2 results');
     expect(screen.getByText('Read and verify PDF files.')).toBeTruthy();
     expect(pa.extensions.callAction).toHaveBeenCalledWith('system-skill-search', 'browseSkills', {
       sourceId: 'all',
@@ -149,8 +147,8 @@ describe('SkillsPage', () => {
 
     await screen.findByText('Release QA');
     expect(screen.getByText('Community release QA checklist.')).toBeTruthy();
-    expect(screen.getByText('Hermes Skills Index')).toBeTruthy();
-    expect(screen.getByText('Approval required')).toBeTruthy();
+    expect(screen.getAllByText('Hermes Skills Index').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Approval required').length).toBeGreaterThan(0);
     expect(pa.extensions.callAction).toHaveBeenCalledWith('system-skill-search', 'browseSkills', {
       sourceId: 'all',
       query: '',
@@ -175,8 +173,39 @@ describe('SkillsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
     await screen.findByText('No marketplace skills match the current search.');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    await screen.findByText('PDF');
+    expect((screen.getByPlaceholderText('Search marketplace skills') as HTMLInputElement).value).toBe('');
     fireEvent.click(screen.getByRole('tab', { name: /Installed/ }));
     expect(screen.getByText('Documents')).toBeTruthy();
+  });
+
+  it('filters and sorts marketplace results without switching sources', async () => {
+    const pa = createPa();
+
+    render(<SkillsPage pa={pa as never} context={{} as never} />);
+
+    await screen.findByText('PDF');
+    fireEvent.change(screen.getByLabelText('Filter by capability'), { target: { value: 'Coding' } });
+
+    expect(screen.getByText('Release QA')).toBeTruthy();
+    expect(screen.queryByText('PDF')).toBeNull();
+    expect(document.body.textContent).toContain('1 of 2 results');
+
+    fireEvent.change(screen.getByLabelText('Filter by source'), { target: { value: 'Hermes Skills Index' } });
+    expect(screen.getByText('Release QA')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Filter by state'), { target: { value: 'available' } });
+    expect(screen.getByText('No marketplace skills match the current filters.')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByText('PDF')).toBeTruthy();
+    expect(screen.getByText('Release QA')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Capability' }));
+    expect(screen.getByRole('button', { name: 'Capability ↑' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Capability ↑' }));
+    expect(screen.getByRole('button', { name: 'Capability ↓' })).toBeTruthy();
   });
 
   it('installs a marketplace candidate and refreshes both data sources', async () => {

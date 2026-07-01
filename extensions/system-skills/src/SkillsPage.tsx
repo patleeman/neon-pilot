@@ -20,6 +20,7 @@ import {
   ResourceList,
   ResourceListRow,
   SearchInput,
+  Select,
   SupportingText,
   Switch,
   TabButton,
@@ -33,6 +34,10 @@ type SkillSource = 'extension' | 'knowledge' | 'project' | string;
 type SkillView = 'marketplace' | 'installed';
 type TrustLevel = 'builtin' | 'trusted' | 'community';
 type SourceKind = 'github' | 'hermes-index';
+type MarketplaceFilter = 'all' | string;
+type MarketplaceStateFilter = 'all' | 'available' | 'approval-required' | 'installed';
+type MarketplaceSortKey = 'title' | 'capability' | 'source' | 'state';
+type SortDirection = 'ascending' | 'descending';
 
 interface SkillItem {
   id: string;
@@ -182,6 +187,16 @@ function candidateState(candidate: MarketplaceCandidate, installed: boolean): { 
   return { label: 'Available', className: 'text-secondary' };
 }
 
+function candidateStateValue(candidate: MarketplaceCandidate, installed: boolean): Exclude<MarketplaceStateFilter, 'all'> {
+  if (installed) return 'installed';
+  if (candidate.requiresApproval) return 'approval-required';
+  return 'available';
+}
+
+function compareText(left: string, right: string): number {
+  return left.localeCompare(right, undefined, { sensitivity: 'base' });
+}
+
 export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [sources, setSources] = useState<MarketplaceSource[]>(DEFAULT_SOURCES);
@@ -191,6 +206,11 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   const [marketplaceQueryDraft, setMarketplaceQueryDraft] = useState('');
   const [installedQueryDraft, setInstalledQueryDraft] = useState('');
   const [query, setQuery] = useState('');
+  const [capabilityFilter, setCapabilityFilter] = useState<MarketplaceFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<MarketplaceFilter>('all');
+  const [stateFilter, setStateFilter] = useState<MarketplaceStateFilter>('all');
+  const [sortKey, setSortKey] = useState<MarketplaceSortKey>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('ascending');
   const [loadingSkills, setLoadingSkills] = useState(true);
   const [loadingMarketplace, setLoadingMarketplace] = useState(true);
   const [installingId, setInstallingId] = useState<string | null>(null);
@@ -262,6 +282,54 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
     [skills],
   );
 
+  const capabilityOptions = useMemo(() => {
+    return Array.from(new Set(candidates.map((candidate) => candidateCategory(candidate)))).sort(compareText);
+  }, [candidates]);
+
+  const sourceOptions = useMemo(() => {
+    return Array.from(new Set(candidates.map((candidate) => candidate.sourceLabel).filter(Boolean))).sort(compareText);
+  }, [candidates]);
+
+  const marketplaceRows = useMemo(() => {
+    return candidates
+      .map((candidate) => {
+        const installed = isCandidateInstalled(candidate, installedUpstream);
+        const capability = candidateCategory(candidate);
+        const state = candidateState(candidate, installed);
+        const stateValue = candidateStateValue(candidate, installed);
+        return { candidate, installed, capability, state, stateValue };
+      })
+      .filter((row) => capabilityFilter === 'all' || row.capability === capabilityFilter)
+      .filter((row) => sourceFilter === 'all' || row.candidate.sourceLabel === sourceFilter)
+      .filter((row) => stateFilter === 'all' || row.stateValue === stateFilter)
+      .sort((left, right) => {
+        const direction = sortDirection === 'ascending' ? 1 : -1;
+        const leftValue =
+          sortKey === 'title'
+            ? left.candidate.title
+            : sortKey === 'capability'
+              ? left.capability
+              : sortKey === 'source'
+                ? left.candidate.sourceLabel
+                : left.state.label;
+        const rightValue =
+          sortKey === 'title'
+            ? right.candidate.title
+            : sortKey === 'capability'
+              ? right.capability
+              : sortKey === 'source'
+                ? right.candidate.sourceLabel
+                : right.state.label;
+        return compareText(leftValue, rightValue) * direction;
+      });
+  }, [candidates, capabilityFilter, installedUpstream, sortDirection, sortKey, sourceFilter, stateFilter]);
+
+  const hasMarketplaceFilters = capabilityFilter !== 'all' || sourceFilter !== 'all' || stateFilter !== 'all';
+  const marketplaceFilterSummary =
+    candidates.length === marketplaceRows.length
+      ? `${candidates.length} results`
+      : `${marketplaceRows.length} of ${candidates.length} results`;
+
   const submitSearch = useCallback(
     (event?: { preventDefault(): void }) => {
       event?.preventDefault();
@@ -270,6 +338,40 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
       }
     },
     [marketplaceQueryDraft, view],
+  );
+
+  const clearSearch = useCallback(() => {
+    if (view === 'marketplace') {
+      setMarketplaceQueryDraft('');
+      setQuery('');
+    } else {
+      setInstalledQueryDraft('');
+    }
+  }, [view]);
+
+  const clearMarketplaceFilters = useCallback(() => {
+    setCapabilityFilter('all');
+    setSourceFilter('all');
+    setStateFilter('all');
+  }, []);
+
+  const toggleSort = useCallback((nextSortKey: MarketplaceSortKey) => {
+    setSortKey((currentSortKey) => {
+      if (currentSortKey === nextSortKey) {
+        setSortDirection((currentDirection) => (currentDirection === 'ascending' ? 'descending' : 'ascending'));
+        return currentSortKey;
+      }
+      setSortDirection('ascending');
+      return nextSortKey;
+    });
+  }, []);
+
+  const sortIndicator = useCallback(
+    (key: MarketplaceSortKey) => {
+      if (sortKey !== key) return '';
+      return sortDirection === 'ascending' ? ' ↑' : ' ↓';
+    },
+    [sortDirection, sortKey],
   );
 
   const refresh = useCallback(() => {
@@ -366,6 +468,11 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
               placeholder={view === 'marketplace' ? 'Search marketplace skills' : 'Search installed skills'}
               className="w-full md:w-80"
             />
+            {(view === 'marketplace' ? marketplaceQueryDraft || query : installedQueryDraft) ? (
+              <Button variant="ghost" type="button" onClick={clearSearch}>
+                Clear
+              </Button>
+            ) : null}
             <Button variant="toolbar" type="submit" title="Search skills">
               <span aria-hidden="true">⌕</span>
               Search
@@ -377,9 +484,55 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
       {view === 'marketplace' ? (
         <TabPanel>
           <div className="space-y-3">
-            <SupportingText>
-              Searching {sources.length} marketplace sources. Trusted skills install after vetting; community skills require approval.
-            </SupportingText>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <SupportingText>
+                Searching {sources.length} marketplace sources · {marketplaceFilterSummary}
+              </SupportingText>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  aria-label="Filter by capability"
+                  value={capabilityFilter}
+                  onChange={(event) => setCapabilityFilter(event.target.value)}
+                  className="h-8 w-36 text-[12px]"
+                >
+                  <option value="all">All capabilities</option>
+                  {capabilityOptions.map((capability) => (
+                    <option key={capability} value={capability}>
+                      {capability}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  aria-label="Filter by source"
+                  value={sourceFilter}
+                  onChange={(event) => setSourceFilter(event.target.value)}
+                  className="h-8 w-40 text-[12px]"
+                >
+                  <option value="all">All sources</option>
+                  {sourceOptions.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  aria-label="Filter by state"
+                  value={stateFilter}
+                  onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
+                  className="h-8 w-36 text-[12px]"
+                >
+                  <option value="all">All states</option>
+                  <option value="available">Available</option>
+                  <option value="approval-required">Approval required</option>
+                  <option value="installed">Installed</option>
+                </Select>
+                {hasMarketplaceFilters ? (
+                  <Button variant="ghost" type="button" onClick={clearMarketplaceFilters}>
+                    Clear filters
+                  </Button>
+                ) : null}
+              </div>
+            </div>
             {marketplaceError ? (
               <Notice tone="danger" title="Marketplace unavailable">
                 {marketplaceError}
@@ -400,30 +553,48 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
             >
               <DataTableHead>
                 <DataTableRow>
-                  <DataTableHeaderCell>Skill</DataTableHeaderCell>
-                  <DataTableHeaderCell>Capability</DataTableHeaderCell>
-                  <DataTableHeaderCell>Source</DataTableHeaderCell>
-                  <DataTableHeaderCell>State</DataTableHeaderCell>
+                  <DataTableHeaderCell aria-sort={sortKey === 'title' ? sortDirection : 'none'}>
+                    <Button variant="ghost" type="button" onClick={() => toggleSort('title')}>
+                      Skill{sortIndicator('title')}
+                    </Button>
+                  </DataTableHeaderCell>
+                  <DataTableHeaderCell aria-sort={sortKey === 'capability' ? sortDirection : 'none'}>
+                    <Button variant="ghost" type="button" onClick={() => toggleSort('capability')}>
+                      Capability{sortIndicator('capability')}
+                    </Button>
+                  </DataTableHeaderCell>
+                  <DataTableHeaderCell aria-sort={sortKey === 'source' ? sortDirection : 'none'}>
+                    <Button variant="ghost" type="button" onClick={() => toggleSort('source')}>
+                      Source{sortIndicator('source')}
+                    </Button>
+                  </DataTableHeaderCell>
+                  <DataTableHeaderCell aria-sort={sortKey === 'state' ? sortDirection : 'none'}>
+                    <Button variant="ghost" type="button" onClick={() => toggleSort('state')}>
+                      State{sortIndicator('state')}
+                    </Button>
+                  </DataTableHeaderCell>
                   <DataTableHeaderCell className="text-right">Action</DataTableHeaderCell>
                 </DataTableRow>
               </DataTableHead>
               <DataTableBody>
-                {!loadingMarketplace && !marketplaceError && candidates.length === 0 ? (
+                {!loadingMarketplace && !marketplaceError && marketplaceRows.length === 0 ? (
                   <DataTableEmptyRow colSpan={5} cellClassName="py-8">
-                    {query ? 'No marketplace skills match the current search.' : 'No installable skills returned.'}
+                    {query && !hasMarketplaceFilters
+                      ? 'No marketplace skills match the current search.'
+                      : query || hasMarketplaceFilters
+                        ? 'No marketplace skills match the current filters.'
+                        : 'No installable skills returned.'}
                   </DataTableEmptyRow>
                 ) : null}
-                {candidates.map((candidate) => {
-                  const installed = isCandidateInstalled(candidate, installedUpstream);
+                {marketplaceRows.map(({ candidate, installed, capability, state }) => {
                   const busy = installingId === candidate.candidateId;
-                  const state = candidateState(candidate, installed);
                   return (
                     <DataTableRow key={candidate.candidateId}>
                       <DataTableCell className="min-w-0 py-2 pr-4">
                         <div className="truncate text-[13px] font-medium text-primary">{candidate.title}</div>
                         {candidate.description ? <div className="truncate text-[12px] text-secondary">{candidate.description}</div> : null}
                       </DataTableCell>
-                      <DataTableCell className="py-2 text-[12px] text-secondary">{candidateCategory(candidate)}</DataTableCell>
+                      <DataTableCell className="py-2 text-[12px] text-secondary">{capability}</DataTableCell>
                       <DataTableCell className="min-w-0 py-2 text-[12px] text-secondary">
                         <div className="truncate">{candidate.sourceLabel}</div>
                         <div className="truncate text-dim">{candidate.trustLevel === 'community' ? 'Community' : 'Trusted'}</div>
