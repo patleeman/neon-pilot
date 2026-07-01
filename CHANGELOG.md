@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.38 — 2026-07-01
+
+### Highlights
+
+- Publishes a follow-up maintenance build after `0.11.37` so desktop updater metadata, notarized app artifacts, and first-party extension release assets stay aligned on a fresh patch version.
+- Carries forward the `0.11.37` release hardening fixes for packaged extension smoke cleanup, long-transcript recovery budgets, and conversation-switch performance budgets.
+
+### Notes
+
+- Maintenance release cut immediately after `0.11.37`; no additional product changes beyond versioned release artifacts.
+
 ## 0.11.37 — 2026-07-01
 
 ### Highlights
