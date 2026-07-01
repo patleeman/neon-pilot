@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#05070b" />
     <meta
       name="description"
-      content="Reshape Neon Pilot with extensions — custom tools, surfaces, automations, hardware integration, and everything in between."
+      content="Build self-extensible Neon Pilot extensions: local app surfaces, tools, commands, backend actions, setup flows, and provider-aware workflows."
     />
     <title>Extensions · Neon Pilot</title>
     <link rel="icon" href="./mark.svg" type="image/svg+xml" />
@@ -35,16 +35,16 @@
     <main id="main">
       <section class="hero" aria-labelledby="ext-hero-title">
         <div class="hero-copy">
-          <h1 id="ext-hero-title">Make Neon Pilot <br />your own.</h1>
+          <h1 id="ext-hero-title">The harness your agent can extend itself.</h1>
           <p class="section-copy">
-            Extensions are self-contained packages that add tools, surfaces, automations, hardware support, or integrations to Neon Pilot.
-            The app ships with 40+ bundled system extensions, optional first-party extensions can be installed from release artifacts, and
-            experimental system integrations stay opt-in until their upstream dependencies are ready. You can build your own in minutes —
-            just ask your agent.
+            Neon Pilot extensions are self-contained local applications for agent workflows. The app ships with 40+ bundled system
+            extensions, optional first-party extensions can be installed from release artifacts, and your agent can build new extensions for
+            the harness while you work.
           </p>
           <p class="ext-quote">
-            Inspired by Pi's extension architecture, Neon Pilot takes extensions beyond Claude Code or Codex-style skills and hooks: an
-            extension can become a full local application with UI, storage, commands, tools, backend actions, setup flows, and settings.
+            Inspired by Pi's self-extensible architecture, Neon Pilot takes extensions beyond Claude Code or Codex-style skills and hooks:
+            an extension can become a full local application with UI, storage, commands, tools, backend actions, setup flows, provider
+            behavior, and settings.
           </p>
           <div class="cta-row">
             <a class="btn primary" href="./docs/build-an-extension.html">Build an extension</a>
@@ -60,8 +60,8 @@
             <h2>Add agent tools</h2>
           </div>
           <p>
-            Teach the agent new capabilities by registering executable tools. Tools appear in the agent's toolbelt alongside built-in
-            commands like <code>bash</code> and <code>read</code> — no special prompting needed.
+            Teach the agent new capabilities by registering executable tools. Your agent can build the extension, expose the tool, document
+            it, and then use it from future conversations.
           </p>
           <ul class="ext-ideas">
             <li>Query your database schema or run read-only queries</li>
@@ -80,7 +80,7 @@
           </div>
           <p>
             Extensions own full pages, side panels, and workbench detail views — anything beyond the conversation. Render custom React
-            components that feel native to the app.
+            components that feel native to the app and can be edited again when the workflow changes.
           </p>
           <ul class="ext-ideas">
             <li>A kanban board for agent-managed tasks and workflows</li>
@@ -136,8 +136,8 @@
             <h2>Automate &amp; schedule</h2>
           </div>
           <p>
-            Backend services, scheduled tasks, lifecycle hooks, and turn-context providers let extensions run code on their own schedule or
-            in response to events.
+            Backend services, scheduled tasks, lifecycle hooks, and turn-context providers let extensions run code locally on their own
+            schedule or in response to events.
           </p>
           <ul class="ext-ideas">
             <li>Daily summary digests emailed or posted to Slack</li>
@@ -171,8 +171,8 @@
             <h2>Adapt the agent per model</h2>
           </div>
           <p>
-            Model profiles let extensions switch tool surfaces, instructions, and hooks based on which model is running — without global
-            config changes.
+            Model profiles let extensions switch tool surfaces, instructions, and hooks based on which Pi-supported provider or model is
+            running — without global config changes or vendor lock-in.
           </p>
           <ul class="ext-ideas">
             <li>Expose Codex-style patch tools for OpenAI coding models</li>
@@ -208,7 +208,8 @@
           <h2 id="bundled-extension-title">System extensions cover the product surface.</h2>
           <p>
             These extensions ship from the Neon Pilot app repo and represent the current built-in feature set. Core stays small; the
-            extension host, app shell, routing, persistence, and security boundaries make these product surfaces feel native.
+            extension host, app shell, routing, persistence, and security boundaries make these product surfaces feel native while keeping
+            them inspectable and replaceable.
           </p>
         </div>
         <div class="catalog-grid">
@@ -511,11 +512,12 @@
             </p>
           </details>
           <details>
-            <summary>How are extensions different from Pi skills or tools?</summary>
+            <summary>How are Neon Pilot extensions different from older extensible software?</summary>
             <p>
-              Skills are markdown instructions the agent reads. Tools are callable backend actions. Extensions are the full package — they
-              can include skills, tools, UI surfaces, backend services, storage, permissions, and lifecycle hooks all in one self-contained
-              bundle.
+              Older extensible software usually means users manually install packages or spend a lot of framework time building one. Neon
+              Pilot is self-extensible: the agent can help build, install, inspect, and modify extensions for its own harness. Extensions
+              can include skills, tools, UI surfaces, backend services, storage, permissions, provider behavior, and lifecycle hooks all in
+              one self-contained bundle.
             </p>
           </details>
           <details>

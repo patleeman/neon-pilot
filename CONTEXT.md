@@ -71,6 +71,12 @@ A package that contributes product features on top of core: pages, panels, tools
 
 Extensions are Neon Pilot's product concept for installable capabilities. A native extension is implemented directly against the Neon Pilot extension API; an imported extension may wrap another ecosystem's package format, such as a Codex plugin, Claude skill package, MCP bundle, instruction pack, or prompt template pack.
 
+### Self-extensible harness
+
+A harness whose agent can build, install, modify, and run its own extensions from inside the product workflow.
+
+Use **self-extensible** when contrasting Neon Pilot and Pi-style agent extension systems with older extension models where users manually install packages or perform substantial framework work themselves.
+
 ### Plugin
 
 An external ecosystem's package format that can be imported or wrapped by a Neon Pilot extension.

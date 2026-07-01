@@ -22,14 +22,14 @@ See [Getting Started](getting-started.md) for the user setup flow, or [Developme
 
 Pick the shortest path for what you are doing:
 
-| Audience                            | First docs to read                                                                                                  | Success check                                                                            |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **New user**                        | [Getting Started](getting-started.md), then [Views](views.md) and [Conversations](conversations.md)                 | App opens, provider is configured, and a first conversation gets a reply.                |
-| **Power user organizing context**   | [Conversation context](conversation-context.md), [Knowledge files](knowledge-base.md), [Projects](projects.md)      | Useful files, notes, and project records are available to conversations.                 |
-| **External agent or script author** | [Agent bootstrap](agent-bootstrap.md), [Neon Pilot CLI](cli.md), [CLI reference](cli-reference.md)                  | `neon-pilot bootstrap doctor` passes and reports usable provider setup.                  |
-| **Extension builder**               | [Build an extension with your agent](build-an-extension.md), then [Extension authoring](extensions.md)              | The extension installs, its route/action works through the app, and its build passes.    |
-| **Repo contributor**                | [Development workflow](development.md), then the owning package or extension README                                 | Focused validation passes and the app can still start when touched code affects startup. |
-| **Release operator**                | [Release cycle](release-cycle.md), [Release QA](release-qa.md), [Release test inventory](release-test-inventory.md) | Release doctor, hardening tests, and hands-on smoke notes are complete.                  |
+| Audience                            | First docs to read                                                                                                  | Success check                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **New user**                        | [Getting Started](getting-started.md), then [Views](views.md) and [Conversations](conversations.md)                 | App opens, provider is configured, and a first conversation gets a reply.                         |
+| **Power user organizing context**   | [Conversation context](conversation-context.md), [Knowledge files](knowledge-base.md), [Projects](projects.md)      | Useful files, notes, and project records are available to conversations.                          |
+| **External agent or script author** | [Agent bootstrap](agent-bootstrap.md), [Neon Pilot CLI](cli.md), [CLI reference](cli-reference.md)                  | `neon-pilot bootstrap doctor` passes and reports usable provider setup.                           |
+| **Extension builder**               | [Build an extension with your agent](build-an-extension.md), then [Extension authoring](extensions.md)              | The agent-built extension installs, its route/action works through the app, and its build passes. |
+| **Repo contributor**                | [Development workflow](development.md), then the owning package or extension README                                 | Focused validation passes and the app can still start when touched code affects startup.          |
+| **Release operator**                | [Release cycle](release-cycle.md), [Release QA](release-qa.md), [Release test inventory](release-test-inventory.md) | Release doctor, hardening tests, and hands-on smoke notes are complete.                           |
 
 ## Common Tasks
 
@@ -82,7 +82,7 @@ The public website docs are built from the page list in [`apps/site/build-docs.m
 
 ## Extension docs
 
-Neon Pilot product features live in extensions. The normal way to create one is to ask your agent to build it; start with [Build an extension with your agent](build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
+Neon Pilot product features live in extensions. The product is self-extensible: the normal way to create one is to ask your agent to build it, then install, inspect, modify, and run it through the same local app. Start with [Build an extension with your agent](build-an-extension.md). Agents should use this README as the map: read the owning extension's `README.md` before changing feature behavior, and read [Extension authoring](extensions.md) plus [Extension API types](../packages/extensions/README.md) before changing extension APIs.
 
 System extensions are bundled under `extensions/system-*`. Optional first-party extensions live in [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions), are not bundled or auto-loaded, and become normal user extensions only after installation into `<state-root>/extensions/{extension-id}`. Users install released optional extensions from **Settings → Extensions → Install**; after installing, check the main extension registry to enable and inspect the extension.
 

@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#f7f7f4" />
     <meta
       name="description"
-      content="Neon Pilot is a local macOS agent runtime and workbench for durable conversations, background runs, extensions, and knowledge."
+      content="Neon Pilot is a local-first, self-extensible macOS harness for AI agents, with Pi-compatible providers, app-grade extensions, and MIT-licensed source."
     />
-    <title>Neon Pilot - local AI agent runtime and workbench</title>
+    <title>Neon Pilot - self-extensible local AI agent harness</title>
     <link rel="icon" href="./mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,28 +35,25 @@
     <main id="main">
       <section class="hero" id="product" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Local macOS runtime</p>
-          <h1 id="hero-title">The local AI agent runtime and workbench.</h1>
+          <p class="eyebrow">Self-extensible local harness</p>
+          <h1 id="hero-title">The local agent harness that can extend itself.</h1>
           <p class="hero-lede">
-            Neon Pilot gives coding agents a durable desktop home: conversations, background work, tools, extensions, screenshots, local
-            knowledge, checkpoints, and inspectable runtime state in one app.
+            Neon Pilot takes Pi's self-extensible architecture into a full macOS workbench: local-first conversations, any Pi-supported
+            model provider, app-grade extensions, background work, knowledge, checkpoints, and inspectable runtime state.
           </p>
 
           <div class="proof-list" aria-label="Primary product guarantees">
             <div>
-              <strong>Local by default</strong>
-              <span>Conversations, data, and runtime state stay on your machine.</span>
+              <strong>Self-extensible</strong>
+              <span>Ask the agent to build an extension, then enable, inspect, modify, and run it in the same app.</span>
             </div>
             <div>
-              <strong>Long-running work</strong>
-              <span>Follow-ups, schedules, routines, model duels, and daemon-backed jobs keep moving after one reply ends.</span>
+              <strong>Local first</strong>
+              <span>Your conversations, data, settings, extensions, and runtime state live on your machine.</span>
             </div>
             <div>
-              <strong>Application-grade extensions</strong>
-              <span
-                >Add pages, panels, tools, settings, commands, skills, plugins, setup flows, and MCP servers as first-class
-                capabilities.</span
-              >
+              <strong>Bring any Pi provider</strong>
+              <span>Use the model providers Pi supports with your own API keys instead of locking work to one vendor.</span>
             </div>
           </div>
 
@@ -93,103 +90,101 @@
       <section class="capability-strip" aria-label="Core capabilities">
         <article>
           <span aria-hidden="true">01</span>
-          <strong>Local by Default</strong>
-          <p>Your agent workspace runs from a macOS desktop app with local state, config, and files.</p>
+          <strong>Self-Extensible</strong>
+          <p>The agent can create and evolve extensions, not just consume extensions someone else packaged.</p>
         </article>
         <article>
           <span aria-hidden="true">02</span>
-          <strong>Background Runs</strong>
-          <p>Let tasks continue as daemon-backed work, scheduled automations, follow-ups, routines, or deferred resumes.</p>
+          <strong>Local First</strong>
+          <p>No hosted web app is required. Network access only happens through the providers and tools you configure.</p>
         </article>
         <article>
           <span aria-hidden="true">03</span>
-          <strong>Extensions</strong>
-          <p>Install or build native capabilities with commands, tools, pages, settings, skills, plugins, and docs.</p>
+          <strong>Provider Freedom</strong>
+          <p>Bring your own keys for any Pi-supported provider and switch models without changing harnesses.</p>
         </article>
         <article>
           <span aria-hidden="true">04</span>
-          <strong>Knowledge</strong>
-          <p>Attach files, projects, instruction layers, generated context, and git-backed knowledge.</p>
+          <strong>Open Source</strong>
+          <p>MIT licensed and fully inspectable, so the harness can be audited, forked, and reshaped.</p>
         </article>
       </section>
 
       <section class="explain split-section" aria-labelledby="what-title">
         <div>
           <p class="eyebrow">What it is</p>
-          <h2 id="what-title">A desktop shell for agent work that should survive the chat turn.</h2>
+          <h2 id="what-title">A local workbench where the harness itself is part of the agent's workspace.</h2>
         </div>
         <div class="text-column">
           <p>
-            Neon Pilot is not another hosted chat surface. It is a local runtime around the agent: transcript storage, workspace context,
-            background execution, extension hosting, model/provider settings, browser control, MCP tools, terminal access, telemetry, and
-            reusable workflow surfaces.
+            Neon Pilot is not another hosted chat surface. It is a local runtime around the agent: transcript storage, provider settings,
+            workspace context, background execution, extension hosting, browser control, MCP tools, terminal access, telemetry, and reusable
+            workflow surfaces.
           </p>
-          <p>Use it when a task needs files, tools, follow-through, and durable state instead of a single disposable answer.</p>
+          <p>
+            Use it when the agent should be able to change the harness around the work: add a page, wire a tool, expose a setting, schedule
+            a follow-up, or turn a repeated workflow into a first-class local extension.
+          </p>
         </div>
       </section>
 
       <section class="feature-matrix" aria-labelledby="feature-matrix-title">
         <div class="section-heading">
           <p class="eyebrow">Feature set</p>
-          <h2 id="feature-matrix-title">The pieces agents need when work gets real.</h2>
+          <h2 id="feature-matrix-title">The pieces a self-extensible harness needs.</h2>
           <p>
-            Neon Pilot is built around the full loop: gather context, run tools, inspect output, continue in the background, and turn useful
-            patterns into reusable capabilities.
+            Neon Pilot is built around the full loop: gather local context, choose the right provider, run tools, inspect output, continue
+            in the background, and let agents turn useful patterns into reusable extensions.
           </p>
         </div>
         <div class="matrix-grid">
           <article>
-            <h3>Workbench conversations</h3>
+            <h3>Local workbench</h3>
             <p>
-              Durable transcripts, file attachments, screenshots, drawings, model controls, todos, diffs, artifacts, and branch-aware
-              status.
+              Durable transcripts, file attachments, screenshots, drawings, model controls, todos, diffs, artifacts, and branch-aware status
+              stored on your machine.
             </p>
+          </article>
+          <article>
+            <h3>Provider choice</h3>
+            <p>Use any Pi-supported model provider with your own API keys, provider setup, model picker controls, and local gateway.</p>
+          </article>
+          <article>
+            <h3>Small core</h3>
+            <p>The core owns runtime, storage, routing, security, and shared primitives; product workflows live in extensions.</p>
           </article>
           <article>
             <h3>Background execution</h3>
             <p>Daemon-backed runs, scheduled automations, routines, goal mode, subagents, native alerts, and visible run state.</p>
           </article>
           <article>
-            <h3>Local toolbelt</h3>
-            <p>Terminal, browser, computer-use, ast-grep, hashline editing, web fetch, video and image probes, and MCP server calls.</p>
-          </article>
-          <article>
-            <h3>Model operations</h3>
+            <h3>Everything as extensions</h3>
             <p>
-              Provider setup, model picker controls, local gateway, prompt assembly diagnostics, context usage, and blind Model Arena duels.
+              System and user features use extension primitives: pages, panels, tools, settings, setup flows, commands, and host-view
+              components.
             </p>
           </article>
           <article>
-            <h3>Extension platform</h3>
-            <p>
-              Native extensions go beyond skills and hooks with routes, backend actions, tools, settings, setup readiness, commands, and
-              host-view components.
-            </p>
-          </article>
-          <article>
-            <h3>Agent plugins and skills</h3>
-            <p>
-              Import Codex and Claude plugin packages, search trusted skill sources, preview and vet skills, then install them into the
-              runtime.
-            </p>
+            <h3>Open and ownable</h3>
+            <p>MIT licensed, inspectable, forkable, and designed so the editor and harness can be customized into your own agent system.</p>
           </article>
         </div>
       </section>
 
       <section class="platform-compare split-section" aria-labelledby="platform-title">
         <div>
-          <p class="eyebrow">Beyond skills and hooks</p>
-          <h2 id="platform-title">Extensions are a full application platform for agent workflows.</h2>
+          <p class="eyebrow">Beyond extensible</p>
+          <h2 id="platform-title">Self-extensible means the agent can grow the harness while it works.</h2>
         </div>
         <div class="text-column">
           <p>
-            Claude Code and Codex-style harnesses give agents useful skills, hooks, and command surfaces. Neon Pilot extensions go further:
-            they can own pages, sidebars, workbench panels, settings, backend actions, setup readiness items, tools, commands, storage, and
-            host-view components.
+            Traditional extensible software asks the user to install packages or spend serious engineering time inside a framework. Pi moved
+            the model forward by making the agent self-extensible: it can build extensions for itself and then run with them.
           </p>
           <p>
-            The architecture is inspired by Pi's extension model, then pushed into a full desktop client so a workflow can become a real
-            local application instead of another prompt layer.
+            Neon Pilot carries that idea into a full desktop client. Extensions are not just skills and hooks: they can own pages, sidebars,
+            workbench panels, settings, backend actions, setup readiness items, tools, commands, storage, transcript rendering, and provider
+            behavior.
           </p>
         </div>
       </section>
@@ -197,18 +192,18 @@
       <section class="workflow" aria-label="Workflow from conversation to reusable capability">
         <div class="workflow-step">
           <span>Ask</span>
-          <strong>Start with a conversation</strong>
-          <p>Attach files or folders, choose a model, and ask the agent to inspect, write, debug, plan, or automate.</p>
+          <strong>Ask for the workflow</strong>
+          <p>Attach files or folders, pick any configured Pi-supported provider, and describe the tool or surface you need.</p>
         </div>
         <div class="workflow-step">
-          <span>Run</span>
-          <strong>Let work continue</strong>
-          <p>Promote longer tasks into background runs, follow-ups, scheduled automations, and checkpointed changes.</p>
+          <span>Build</span>
+          <strong>Let the agent extend the harness</strong>
+          <p>The agent can create pages, tools, settings, commands, backend actions, docs, and tests as a local extension.</p>
         </div>
         <div class="workflow-step">
-          <span>Keep</span>
-          <strong>Turn patterns into tools</strong>
-          <p>When a workflow repeats, make it an extension with commands, UI, backend actions, docs, and tests.</p>
+          <span>Own</span>
+          <strong>Keep the result local and editable</strong>
+          <p>Enable it, disable it, inspect it, modify it, fork it, or keep evolving it as part of your own MIT-licensed harness.</p>
         </div>
       </section>
 
@@ -253,7 +248,7 @@
       <section class="deep-grid" aria-label="Product principles">
         <article>
           <p class="eyebrow">Extension-first</p>
-          <h2>Keep core small. Add workflows as extensions.</h2>
+          <h2>Keep core small. Make the product out of extensions.</h2>
           <p>
             Neon Pilot's product surface is built around bundled, optional, and user extensions. Inspired by Pi's extension architecture, a
             capability can contribute pages, sidebar views, settings, commands, agent tools, skills, setup readiness items, and backend
@@ -262,39 +257,41 @@
           <a href="./docs/extensions.html">Read extension docs</a>
         </article>
         <article>
-          <p class="eyebrow">Durable work</p>
-          <h2>Give agents somewhere to continue.</h2>
+          <p class="eyebrow">Provider freedom</p>
+          <h2>Bring the providers Pi supports.</h2>
           <p>
-            Conversations, branches, artifacts, checkpoints, automations, routines, model duels, and daemon-backed runs persist across app
-            restarts, so useful work can keep moving outside one synchronous response.
+            Use your own API keys and provider configuration instead of binding your workspace to one model vendor. Model controls, local
+            gateway support, prompt diagnostics, and Model Arena all live in the same local workbench.
+          </p>
+          <a href="./docs/agent-bootstrap.html">Read provider setup docs</a>
+        </article>
+        <article>
+          <p class="eyebrow">Local first</p>
+          <h2>Your harness runs on your machine.</h2>
+          <p>
+            Conversations, branches, artifacts, checkpoints, automations, routines, extension data, and runtime settings persist locally.
+            Network access comes from the providers, MCP servers, and tools you choose to configure.
           </p>
           <a href="./docs/conversations.html">Read conversation docs</a>
         </article>
         <article>
-          <p class="eyebrow">Context</p>
-          <h2>Bring the right workspace into the turn.</h2>
+          <p class="eyebrow">Open source</p>
+          <h2>MIT licensed and fully inspectable.</h2>
           <p>
-            Files, folders, projects, instruction layers, skills, generated context, screenshots, and knowledge sync give agents practical
-            operating context without rebuilding it from scratch each time.
+            Neon Pilot is free for everyone to use, audit, modify, and fork. The editor is designed to be customized, so teams can turn it
+            into their own harness instead of renting one they cannot change.
           </p>
-          <a href="./docs/conversation-context.html">Read context docs</a>
-        </article>
-        <article>
-          <p class="eyebrow">Inspection</p>
-          <h2>See what the runtime is doing.</h2>
-          <p>
-            Telemetry, prompt assembly diagnostics, context usage, background work, setup readiness, and extension diagnostics make agent
-            behavior inspectable instead of mysterious.
-          </p>
-          <a href="./docs/telemetry.html">Read telemetry docs</a>
+          <a href="https://github.com/patleeman/neon-pilot">View source</a>
         </article>
       </section>
 
       <section class="closing">
         <div>
           <p class="eyebrow">macOS today</p>
-          <h2>Install the local workbench and make it your own.</h2>
-          <p>Download the app, bootstrap the CLI, then add the workflows and extensions your workspace needs.</p>
+          <h2>Install the local self-extensible harness and make it your own.</h2>
+          <p>
+            Download the app, bootstrap the CLI, bring your provider keys, then ask your agent to build the extensions your workspace needs.
+          </p>
         </div>
         <div class="closing-actions">
           <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>

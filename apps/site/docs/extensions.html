@@ -79,10 +79,12 @@
           not native app extensions.
         </p>
         <p>
-          Neon Pilot extensions are intentionally larger than the skills-and-hooks model in Claude Code, Codex, and similar agent harnesses.
-          Inspired by Pi's extension architecture, a native extension can become a complete local application: pages, sidebar/workbench
-          panels, backend actions, tools, commands, settings, setup readiness checks, storage, transcript renderers, prompt/context
-          providers, lifecycle hooks, and optional skills in one package.
+          Neon Pilot is a <strong>self-extensible harness</strong>: the agent can build, install, inspect, modify, and run extensions for
+          the harness from inside the normal product workflow. This takes Pi's self-extensible architecture into a local desktop client
+          where extensions are intentionally larger than the skills-and-hooks model in Claude Code, Codex, and similar agent harnesses. A
+          native extension can become a complete local application: pages, sidebar/workbench panels, backend actions, tools, commands,
+          settings, setup readiness checks, storage, transcript renderers, prompt/context providers, provider-aware model behavior,
+          lifecycle hooks, and optional skills in one package.
         </p>
         <h2 id="contents">Contents</h2>
         <ul>
@@ -191,7 +193,7 @@ Implement it with editable source files, build it, reload it, visually test the 
         <p>
           Neon Pilot core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event
           stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security
-          boundaries, desktop/web shell, routing, install/update plumbing, and shared UI primitives.
+          boundaries, desktop/web shell, routing, install/update plumbing, Pi-supported provider integration, and shared UI primitives.
         </p>
         <p>
           Everything user-facing, domain-specific, or workflow-specific should be an extension: pages, panels, tool renderers, slash/command
@@ -200,7 +202,9 @@ Implement it with editable source files, build it, reload it, visually test the 
         </p>
         <p>
           When a feature cannot be built cleanly as an extension, add a general-purpose extension API or SDK primitive to core rather than
-          hardcoding a one-off app feature. Core should make features possible; extensions should be where features live.
+          hardcoding a one-off app feature. Core should make features possible; extensions should be where features live. That boundary is
+          what makes the product self-extensible instead of merely installable: the same extension primitives used by system features are
+          available to user extensions and agent-built workflows.
         </p>
         <p>
           Some bundled extensions are <strong>required system extensions</strong> because they own platform repair or configuration surfaces

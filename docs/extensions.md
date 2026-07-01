@@ -6,7 +6,7 @@ This reference covers the extension package contract: manifests, frontend/backen
 
 Terminology: **extensions** are Neon Pilot app packages that can add UI, tools, backend actions, settings, and skills. **Agent plugins** are portable Codex/Claude-style capability packages, often with files such as `.codex-plugin/plugin.json`; the bundled Agent Plugins extension imports them from Git or local directories, tracks updates, and exposes compatible skills, docs, hooks, and MCP declarations through Neon Pilot-managed wrappers. Agent plugins are not native app extensions.
 
-Neon Pilot extensions are intentionally larger than the skills-and-hooks model in Claude Code, Codex, and similar agent harnesses. Inspired by Pi's extension architecture, a native extension can become a complete local application: pages, sidebar/workbench panels, backend actions, tools, commands, settings, setup readiness checks, storage, transcript renderers, prompt/context providers, lifecycle hooks, and optional skills in one package.
+Neon Pilot is a **self-extensible harness**: the agent can build, install, inspect, modify, and run extensions for the harness from inside the normal product workflow. This takes Pi's self-extensible architecture into a local desktop client where extensions are intentionally larger than the skills-and-hooks model in Claude Code, Codex, and similar agent harnesses. A native extension can become a complete local application: pages, sidebar/workbench panels, backend actions, tools, commands, settings, setup readiness checks, storage, transcript renderers, prompt/context providers, provider-aware model behavior, lifecycle hooks, and optional skills in one package.
 
 ## Contents
 
@@ -67,11 +67,11 @@ Before calling an extension done, an agent must be able to answer each item with
 
 ## Core vs extensions
 
-Neon Pilot core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security boundaries, desktop/web shell, routing, install/update plumbing, and shared UI primitives.
+Neon Pilot core is the small, stable platform: agent and conversation runtime, model/tool execution protocol, transcript/event stream, durable storage primitives, knowledge/system-prompt assembly, extension host/manifest/API/permissions, security boundaries, desktop/web shell, routing, install/update plumbing, Pi-supported provider integration, and shared UI primitives.
 
 Everything user-facing, domain-specific, or workflow-specific should be an extension: pages, panels, tool renderers, slash/command surfaces, integrations, context providers, automations, import/export flows, diagnostics views, settings sections, and opinionated UX built on top of the platform.
 
-When a feature cannot be built cleanly as an extension, add a general-purpose extension API or SDK primitive to core rather than hardcoding a one-off app feature. Core should make features possible; extensions should be where features live.
+When a feature cannot be built cleanly as an extension, add a general-purpose extension API or SDK primitive to core rather than hardcoding a one-off app feature. Core should make features possible; extensions should be where features live. That boundary is what makes the product self-extensible instead of merely installable: the same extension primitives used by system features are available to user extensions and agent-built workflows.
 
 Some bundled extensions are **required system extensions** because they own platform repair or configuration surfaces such as extension management, Settings, Prompt Assembly inspection, Terminal, or background work. They still live behind the extension API, but the core extension host treats their availability as infrastructure: stale disabled config is ignored, user/API disable attempts fail, and circuit-breaker failures are recorded without quarantining the extension.
 
