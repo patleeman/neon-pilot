@@ -41,6 +41,8 @@ import {
   isLive as isLocalLive,
   manageParallelPromptJob,
   prewarmLiveSessionLoader,
+  type PromptAudioAttachment,
+  type PromptDocumentAttachment,
   type PromptImageAttachment,
   type PromptVideoAttachment,
   queuePromptContext,
@@ -95,6 +97,8 @@ export interface CreateLiveSessionCapabilityInput {
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -157,6 +161,8 @@ export interface SubmitLiveSessionPromptCapabilityInput {
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -170,6 +176,8 @@ export interface SubmitLiveSessionParallelPromptCapabilityInput {
   cwd?: string;
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -500,6 +508,73 @@ function normalizePromptVideos(value: unknown): PromptVideoAttachment[] | undefi
   return videos.length > 0 ? videos : undefined;
 }
 
+function normalizePromptAudios(value: unknown): PromptAudioAttachment[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const audios = value.flatMap((audio) => {
+    if (!audio || typeof audio !== 'object') {
+      return [];
+    }
+
+    const path = typeof (audio as { path?: unknown }).path === 'string' ? (audio as { path: string }).path.trim() : '';
+    const mimeType = typeof (audio as { mimeType?: unknown }).mimeType === 'string' ? (audio as { mimeType: string }).mimeType.trim() : '';
+    if (!path || !mimeType.toLowerCase().startsWith('audio/')) {
+      return [];
+    }
+
+    const sizeBytes = (audio as { sizeBytes?: unknown }).sizeBytes;
+    return [
+      {
+        type: 'audio' as const,
+        path,
+        mimeType,
+        ...(typeof (audio as { name?: unknown }).name === 'string' && (audio as { name: string }).name.trim().length > 0
+          ? { name: (audio as { name: string }).name.trim() }
+          : {}),
+        ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes: Number(sizeBytes) } : {}),
+      },
+    ];
+  });
+
+  return audios.length > 0 ? audios : undefined;
+}
+
+function normalizePromptDocuments(value: unknown): PromptDocumentAttachment[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const documents = value.flatMap((document) => {
+    if (!document || typeof document !== 'object') {
+      return [];
+    }
+
+    const path = typeof (document as { path?: unknown }).path === 'string' ? (document as { path: string }).path.trim() : '';
+    const mimeType =
+      typeof (document as { mimeType?: unknown }).mimeType === 'string' ? (document as { mimeType: string }).mimeType.trim() : '';
+    if (!path || !mimeType) {
+      return [];
+    }
+
+    const sizeBytes = (document as { sizeBytes?: unknown }).sizeBytes;
+    return [
+      {
+        type: 'document' as const,
+        path,
+        mimeType,
+        ...(typeof (document as { name?: unknown }).name === 'string' && (document as { name: string }).name.trim().length > 0
+          ? { name: (document as { name: string }).name.trim() }
+          : {}),
+        ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes: Number(sizeBytes) } : {}),
+      },
+    ];
+  });
+
+  return documents.length > 0 ? documents : undefined;
+}
+
 function normalizePromptBehavior(value: unknown): 'steer' | 'followUp' | undefined {
   return value === 'steer' || value === 'followUp' ? value : undefined;
 }
@@ -770,6 +845,8 @@ interface PreparedLiveSessionPrompt {
   normalizedContextMessages: Array<{ customType: string; content: string }>;
   promptImages: PromptImageAttachment[] | undefined;
   promptVideos: PromptVideoAttachment[] | undefined;
+  promptAudios: PromptAudioAttachment[] | undefined;
+  promptDocuments: PromptDocumentAttachment[] | undefined;
   backgroundRunContextEntries: Array<{ id: string; prompt: string }>;
   sourceSessionFile?: string;
 }
@@ -810,6 +887,8 @@ async function prepareLiveSessionPrompt(
     text?: string;
     images?: Array<{ data: string; mimeType: string; name?: string }>;
     videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+    audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+    documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
     attachmentRefs?: unknown;
     contextMessages?: unknown;
     surfaceId?: string;
@@ -826,13 +905,17 @@ async function prepareLiveSessionPrompt(
   const promptContextMessages = normalizePromptContextMessages(input.contextMessages);
   const promptImages = normalizePromptImages(input.images);
   const promptVideos = normalizePromptVideos(input.videos);
+  const promptAudios = normalizePromptAudios(input.audios);
+  const promptDocuments = normalizePromptDocuments(input.documents);
   if (
     !text &&
     (!promptImages || promptImages.length === 0) &&
     (!promptVideos || promptVideos.length === 0) &&
+    (!promptAudios || promptAudios.length === 0) &&
+    (!promptDocuments || promptDocuments.length === 0) &&
     normalizedAttachmentRefs.length === 0
   ) {
-    throw new LiveSessionCapabilityInputError('text, images, videos, or attachmentRefs required');
+    throw new LiveSessionCapabilityInputError('text, images, videos, audio, documents, or attachmentRefs required');
   }
 
   const surfaceId = typeof input.surfaceId === 'string' && input.surfaceId.trim().length > 0 ? input.surfaceId.trim() : undefined;
@@ -947,6 +1030,8 @@ async function prepareLiveSessionPrompt(
     normalizedContextMessages,
     promptImages,
     promptVideos,
+    promptAudios,
+    promptDocuments,
     backgroundRunContextEntries,
     sourceSessionFile: sessionFile,
   };
@@ -995,6 +1080,8 @@ export async function submitLiveSessionPromptCapability(
       promptLength: prepared.text.length,
       imageCount: prepared.promptImages?.length ?? 0,
       videoCount: prepared.promptVideos?.length ?? 0,
+      audioCount: prepared.promptAudios?.length ?? 0,
+      documentCount: prepared.promptDocuments?.length ?? 0,
       contextMessageCount: promptContextMessages.length,
       relatedConversationCount: (input.relatedConversationIds as string[] | undefined)?.length ?? 0,
       referencedTaskCount: prepared.promptReferences.taskIds.length,
@@ -1037,6 +1124,8 @@ export async function submitLiveSessionPromptCapability(
           ...(behavior ? { behavior } : {}),
           ...(prepared.promptImages && prepared.promptImages.length > 0 ? { images: prepared.promptImages } : {}),
           ...(prepared.promptVideos && prepared.promptVideos.length > 0 ? { videos: prepared.promptVideos } : {}),
+          ...(prepared.promptAudios && prepared.promptAudios.length > 0 ? { audios: prepared.promptAudios } : {}),
+          ...(prepared.promptDocuments && prepared.promptDocuments.length > 0 ? { documents: prepared.promptDocuments } : {}),
           ...(promptContextMessages.length > 0
             ? {
                 contextMessages: promptContextMessages,
@@ -1067,6 +1156,8 @@ export async function submitLiveSessionPromptCapability(
     behavior,
     prepared.promptImages,
     prepared.promptVideos,
+    prepared.promptAudios,
+    prepared.promptDocuments,
     prepared.surfaceId,
   );
   const submittedAtMs = performance.now();
@@ -1079,8 +1170,12 @@ export async function submitLiveSessionPromptCapability(
       delivery: submittedPrompt.acceptedAs,
       imageCount: prepared.promptImages?.length ?? 0,
       videoCount: prepared.promptVideos?.length ?? 0,
+      audioCount: prepared.promptAudios?.length ?? 0,
+      documentCount: prepared.promptDocuments?.length ?? 0,
       ...(prepared.promptImages && prepared.promptImages.length > 0 ? { images: prepared.promptImages } : {}),
       ...(prepared.promptVideos && prepared.promptVideos.length > 0 ? { videos: prepared.promptVideos } : {}),
+      ...(prepared.promptAudios && prepared.promptAudios.length > 0 ? { audios: prepared.promptAudios } : {}),
+      ...(prepared.promptDocuments && prepared.promptDocuments.length > 0 ? { documents: prepared.promptDocuments } : {}),
       ...(promptContextMessages.length > 0 ? { contextMessages: promptContextMessages } : {}),
       ...(input.attachmentRefs !== undefined ? { attachmentRefs: input.attachmentRefs } : {}),
       contextMessageCount: promptContextMessages.length,
@@ -1215,6 +1310,8 @@ export async function submitLiveSessionParallelPromptCapability(
       text: prepared.text,
       images: prepared.promptImages,
       videos: prepared.promptVideos,
+      audios: prepared.promptAudios,
+      documents: prepared.promptDocuments,
       attachmentRefs: prepared.referencedAttachments.map((attachment) => `${attachment.attachmentId} (rev ${attachment.revision})`),
       contextMessages: promptContextMessages,
       ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),

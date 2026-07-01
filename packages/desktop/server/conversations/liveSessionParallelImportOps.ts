@@ -11,7 +11,7 @@ import {
   replacePersistedParallelJob,
   type ResolveParallelChildSession,
 } from './liveSessionParallelReconciliation.js';
-import type { PromptImageAttachment, PromptVideoAttachment } from './liveSessionQueue.js';
+import type { PromptAudioAttachment, PromptDocumentAttachment, PromptImageAttachment, PromptVideoAttachment } from './liveSessionQueue.js';
 
 export interface LiveSessionParallelImportHost {
   sessionId: string;
@@ -57,6 +57,8 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     text: string;
     images?: PromptImageAttachment[];
     videos?: PromptVideoAttachment[];
+    audios?: PromptAudioAttachment[];
+    documents?: PromptDocumentAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
     cwd?: string;
@@ -84,6 +86,8 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
       behavior?: 'steer' | 'followUp',
       images?: PromptImageAttachment[],
       videos?: PromptVideoAttachment[],
+      audios?: PromptAudioAttachment[],
+      documents?: PromptDocumentAttachment[],
     ) => Promise<{ acceptedAs: 'started' | 'queued'; completion: Promise<void> }>;
     resolveDefaultServiceTier: (entry: TEntry) => LiveSessionLoaderOptions['initialServiceTier'];
     hasQueuedOrActiveStaleTurn: (entry: TEntry) => boolean;
@@ -95,8 +99,14 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
   },
 ): Promise<{ jobId: string; childConversationId: string }> {
   const text = input.text.trim();
-  if (!text && (!input.images || input.images.length === 0) && (!input.videos || input.videos.length === 0)) {
-    throw new Error('text, images, or videos required');
+  if (
+    !text &&
+    (!input.images || input.images.length === 0) &&
+    (!input.videos || input.videos.length === 0) &&
+    (!input.audios || input.audios.length === 0) &&
+    (!input.documents || input.documents.length === 0)
+  ) {
+    throw new Error('text, images, videos, audio, or documents required');
   }
 
   const sourceSessionFile = entry.session.sessionFile?.trim();
@@ -171,7 +181,15 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
       await callbacks.queuePromptContext(childConversationId, message.customType, message.content);
     }
 
-    const submitted = await callbacks.submitPromptSession(childConversationId, text, undefined, input.images, input.videos);
+    const submitted = await callbacks.submitPromptSession(
+      childConversationId,
+      text,
+      undefined,
+      input.images,
+      input.videos,
+      input.audios,
+      input.documents,
+    );
     const completionInput = {
       sourceSessionFile,
       jobId: job.id,

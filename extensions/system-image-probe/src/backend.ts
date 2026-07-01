@@ -1,6 +1,22 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
 import {
+  type AudioProbeTranscriptionResult,
+  getAudioProbeAttachments,
+  getAudioProbeAttachmentsById,
+  getAudioProbeAttachmentsByIdFromAnySession,
+  type StoredAudioProbeAttachment,
+  transcribeAudioAttachment,
+} from '@neon-pilot/extensions/backend/audio';
+import {
+  type DocumentProbeExtractionResult,
+  extractDocumentText,
+  getDocumentProbeAttachments,
+  getDocumentProbeAttachmentsById,
+  getDocumentProbeAttachmentsByIdFromAnySession,
+  type StoredDocumentProbeAttachment,
+} from '@neon-pilot/extensions/backend/documents';
+import {
   getImageProbeAttachments,
   getImageProbeAttachmentsById,
   getImageProbeAttachmentsByIdFromAnySession,
@@ -24,6 +40,8 @@ interface ProbeImageInput {
 
 interface ProbeMediaInput extends ProbeImageInput {
   videoIds?: unknown;
+  audioIds?: unknown;
+  documentIds?: unknown;
   startSec?: unknown;
   endSec?: unknown;
   frameCount?: unknown;
@@ -45,6 +63,20 @@ interface VideoProbeContext {
   frames: VideoFrameProbeAttachment[];
   transcript?: string;
   transcriptError?: string;
+}
+
+interface AudioProbeContext {
+  audio: StoredAudioProbeAttachment;
+  transcript?: string;
+  transcriptError?: string;
+}
+
+interface DocumentProbeContext {
+  document: StoredDocumentProbeAttachment;
+  text?: string;
+  extractionError?: string;
+  extractor?: string;
+  truncated?: boolean;
 }
 
 interface ProbeFailureDetails {
@@ -83,6 +115,20 @@ function readOptionalVideoIds(value: unknown): string[] {
   if (!Array.isArray(value)) throw new Error('videoIds must be an array when provided.');
   if (value.length > 3) throw new Error('Probe media supports at most 3 video IDs at once.');
   return readIdArray(value, /^vid_[a-f0-9]{12}$/, 'video ID');
+}
+
+function readOptionalAudioIds(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error('audioIds must be an array when provided.');
+  if (value.length > 6) throw new Error('Probe media supports at most 6 audio IDs at once.');
+  return readIdArray(value, /^aud_[a-f0-9]{12}$/, 'audio ID');
+}
+
+function readOptionalDocumentIds(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error('documentIds must be an array when provided.');
+  if (value.length > 8) throw new Error('Probe media supports at most 8 document IDs at once.');
+  return readIdArray(value, /^doc_[a-f0-9]{12}$/, 'document ID');
 }
 
 function readQuestion(value: unknown): string {
@@ -168,11 +214,17 @@ function buildProbePrompt(attachments: StoredImageProbeAttachment[], question: s
   ].join('\n');
 }
 
-function buildMediaProbePrompt(images: StoredImageProbeAttachment[], videos: VideoProbeContext[], question: string): string {
+function buildMediaProbePrompt(
+  images: StoredImageProbeAttachment[],
+  videos: VideoProbeContext[],
+  audios: AudioProbeContext[],
+  documents: DocumentProbeContext[],
+  question: string,
+): string {
   const lines = [
     'You are a multimedia probe for a text-only agent.',
     '',
-    'The calling agent cannot see the attached images or video frames. Act as its eyes and ears.',
+    'The calling agent cannot see the attached images, video frames, audio, or documents directly. Act as its multimedia probe.',
     'Fully describe the relevant visual parts of the media, then answer the question directly.',
     'Include enough visual detail and evidence for the calling agent to reason from your answer without seeing the media.',
     '',
@@ -208,6 +260,36 @@ function buildMediaProbePrompt(images: StoredImageProbeAttachment[], videos: Vid
         lines.push(`  - audio transcript unavailable: ${videoContext.transcriptError}`);
       } else if (videoContext.video.hasAudio === false) {
         lines.push('  - audio transcript: no audio track was detected');
+      }
+    }
+    lines.push('');
+  }
+
+  if (audios.length > 0) {
+    lines.push('Selected audio:');
+    for (const audioContext of audios) {
+      const label = audioContext.audio.name?.trim() || audioContext.audio.path;
+      lines.push(`- ${audioContext.audio.id}: ${label} (${audioContext.audio.mimeType})`);
+      if (audioContext.transcript) {
+        lines.push(`  - transcript: ${audioContext.transcript}`);
+      } else if (audioContext.transcriptError) {
+        lines.push(`  - transcript unavailable: ${audioContext.transcriptError}`);
+      }
+    }
+    lines.push('');
+  }
+
+  if (documents.length > 0) {
+    lines.push('Selected documents:');
+    for (const documentContext of documents) {
+      const label = documentContext.document.name?.trim() || documentContext.document.path;
+      lines.push(`- ${documentContext.document.id}: ${label} (${documentContext.document.mimeType})`);
+      if (documentContext.text) {
+        lines.push(`  - extracted text${documentContext.extractor ? ` via ${documentContext.extractor}` : ''}:`);
+        lines.push(documentContext.text);
+        if (documentContext.truncated) lines.push('  - note: extracted text was truncated');
+      } else if (documentContext.extractionError) {
+        lines.push(`  - text extraction unavailable: ${documentContext.extractionError}`);
       }
     }
     lines.push('');
@@ -264,7 +346,37 @@ async function resolveVideoAttachments(sessionId: string, videoIds: string[]) {
   return { availableVideos, videos };
 }
 
-function assertAllRequestedFound(kind: 'image' | 'video', requestedIds: string[], foundIds: string[]): void {
+async function resolveAudioAttachments(sessionId: string, audioIds: string[]) {
+  const [availableAudios, sessionAudios] = await Promise.all([
+    getAudioProbeAttachments(sessionId) as Promise<StoredAudioProbeAttachment[]>,
+    getAudioProbeAttachmentsById(sessionId, audioIds) as Promise<StoredAudioProbeAttachment[]>,
+  ]);
+  let audios = sessionAudios;
+  if (audios.length !== audioIds.length) {
+    const allSessionAudios = (await getAudioProbeAttachmentsByIdFromAnySession(audioIds)) as StoredAudioProbeAttachment[];
+    if (allSessionAudios.length > 0) {
+      audios = allSessionAudios;
+    }
+  }
+  return { availableAudios, audios };
+}
+
+async function resolveDocumentAttachments(sessionId: string, documentIds: string[]) {
+  const [availableDocuments, sessionDocuments] = await Promise.all([
+    getDocumentProbeAttachments(sessionId) as Promise<StoredDocumentProbeAttachment[]>,
+    getDocumentProbeAttachmentsById(sessionId, documentIds) as Promise<StoredDocumentProbeAttachment[]>,
+  ]);
+  let documents = sessionDocuments;
+  if (documents.length !== documentIds.length) {
+    const allSessionDocuments = (await getDocumentProbeAttachmentsByIdFromAnySession(documentIds)) as StoredDocumentProbeAttachment[];
+    if (allSessionDocuments.length > 0) {
+      documents = allSessionDocuments;
+    }
+  }
+  return { availableDocuments, documents };
+}
+
+function assertAllRequestedFound(kind: 'image' | 'video' | 'audio' | 'document', requestedIds: string[], foundIds: string[]): void {
   if (requestedIds.length === 0) return;
   if (foundIds.length === 0) throw new Error(`None of the requested ${kind} IDs are available to probe for this conversation.`);
   if (foundIds.length !== requestedIds.length) {
@@ -333,6 +445,87 @@ async function buildVideoProbeContexts(input: {
   return contexts;
 }
 
+async function buildAudioProbeContexts(input: { audios: StoredAudioProbeAttachment[]; language?: string }): Promise<AudioProbeContext[]> {
+  const contexts: AudioProbeContext[] = [];
+  for (const audio of input.audios) {
+    let transcript: string | undefined;
+    let transcriptError: string | undefined;
+    try {
+      const transcription = (await transcribeAudioAttachment({
+        audioId: audio.id,
+        ...(input.language ? { language: input.language } : {}),
+      })) as AudioProbeTranscriptionResult;
+      transcript = transcription.text.trim();
+    } catch (error) {
+      transcriptError = error instanceof Error ? error.message : String(error);
+    }
+    contexts.push({ audio, ...(transcript ? { transcript } : {}), ...(transcriptError ? { transcriptError } : {}) });
+  }
+  return contexts;
+}
+
+async function buildDocumentProbeContexts(input: { documents: StoredDocumentProbeAttachment[] }): Promise<DocumentProbeContext[]> {
+  const contexts: DocumentProbeContext[] = [];
+  for (const document of input.documents) {
+    let text: string | undefined;
+    let extractionError: string | undefined;
+    let extractor: string | undefined;
+    let truncated: boolean | undefined;
+    try {
+      const extraction = (await extractDocumentText({ documentId: document.id })) as DocumentProbeExtractionResult;
+      text = extraction.text.trim();
+      extractor = extraction.details.extractor;
+      truncated = extraction.details.truncated;
+    } catch (error) {
+      extractionError = error instanceof Error ? error.message : String(error);
+    }
+    contexts.push({
+      document,
+      ...(text ? { text } : {}),
+      ...(extractionError ? { extractionError } : {}),
+      ...(extractor ? { extractor } : {}),
+      ...(typeof truncated === 'boolean' ? { truncated } : {}),
+    });
+  }
+  return contexts;
+}
+
+function buildTextOnlyMediaProbeResult(input: {
+  audioContexts: AudioProbeContext[];
+  documentContexts: DocumentProbeContext[];
+  question: string;
+}) {
+  const lines = ['Probe media extracted text-only context for the calling agent.', '', `Question: ${input.question}`, ''];
+  if (input.audioContexts.length > 0) {
+    lines.push('Audio transcripts:');
+    for (const context of input.audioContexts) {
+      lines.push(`- ${context.audio.id}: ${context.audio.name?.trim() || 'unnamed audio'} (${context.audio.mimeType})`);
+      lines.push(context.transcript ? context.transcript : `Transcript unavailable: ${context.transcriptError ?? 'unknown error'}`);
+    }
+    lines.push('');
+  }
+  if (input.documentContexts.length > 0) {
+    lines.push('Document text:');
+    for (const context of input.documentContexts) {
+      lines.push(`- ${context.document.id}: ${context.document.name?.trim() || 'unnamed document'} (${context.document.mimeType})`);
+      lines.push(context.text ? context.text : `Text extraction unavailable: ${context.extractionError ?? 'unknown error'}`);
+      if (context.truncated) lines.push('[Document text was truncated.]');
+    }
+  }
+  const text = lines.join('\n').trim();
+  return {
+    text,
+    content: [{ type: 'text' as const, text }],
+    details: {
+      audioIds: input.audioContexts.map((context) => context.audio.id),
+      documentIds: input.documentContexts.map((context) => context.document.id),
+      documentExtractors: input.documentContexts.flatMap((context) =>
+        context.extractor ? [{ documentId: context.document.id, extractor: context.extractor }] : [],
+      ),
+    },
+  };
+}
+
 export async function probeImage(input: ProbeImageInput, ctx: ExtensionBackendContext) {
   const preferredVisionModel = ctx.toolContext?.preferredVisionModel?.trim();
   if (!preferredVisionModel) throw new Error('Probe image requires a configured preferred vision model.');
@@ -378,13 +571,16 @@ export async function probeImage(input: ProbeImageInput, ctx: ExtensionBackendCo
 
 export async function probeMedia(input: ProbeMediaInput, ctx: ExtensionBackendContext) {
   const preferredVisionModel = ctx.toolContext?.preferredVisionModel?.trim();
-  if (!preferredVisionModel) throw new Error('Probe media requires a configured preferred vision model.');
   const sessionId = ctx.toolContext?.sessionId ?? ctx.toolContext?.conversationId;
   if (!sessionId) throw new Error('Probe media requires an active conversation.');
 
   const imageIds = readOptionalImageIds(input.imageIds);
   const videoIds = readOptionalVideoIds(input.videoIds);
-  if (imageIds.length === 0 && videoIds.length === 0) throw new Error('Probe media requires at least one image ID or video ID.');
+  const audioIds = readOptionalAudioIds(input.audioIds);
+  const documentIds = readOptionalDocumentIds(input.documentIds);
+  if (imageIds.length === 0 && videoIds.length === 0 && audioIds.length === 0 && documentIds.length === 0) {
+    throw new Error('Probe media requires at least one image ID, video ID, audio ID, or document ID.');
+  }
   const question = readQuestion(input.question);
   const startSec = readOptionalSeconds(input.startSec, 'startSec');
   const endSec = readOptionalSeconds(input.endSec, 'endSec');
@@ -397,10 +593,20 @@ export async function probeMedia(input: ProbeMediaInput, ctx: ExtensionBackendCo
   if (imageIds.length + videoIds.length * frameCount > 8) {
     throw new Error('Probe media supports at most 8 total images and sampled video frames per request.');
   }
+  if ((imageIds.length > 0 || videoIds.length > 0) && !preferredVisionModel) {
+    throw new Error('Probe media requires a configured preferred vision model for images and video frames.');
+  }
 
-  const [{ availableAttachments, attachments }, { availableVideos, videos }] = await Promise.all([
+  const [
+    { availableAttachments, attachments },
+    { availableVideos, videos },
+    { availableAudios, audios },
+    { availableDocuments, documents },
+  ] = await Promise.all([
     resolveImageAttachments(sessionId, imageIds),
     resolveVideoAttachments(sessionId, videoIds),
+    resolveAudioAttachments(sessionId, audioIds),
+    resolveDocumentAttachments(sessionId, documentIds),
   ]);
   assertAllRequestedFound(
     'image',
@@ -412,15 +618,29 @@ export async function probeMedia(input: ProbeMediaInput, ctx: ExtensionBackendCo
     videoIds,
     videos.map((video) => video.id),
   );
+  assertAllRequestedFound(
+    'audio',
+    audioIds,
+    audios.map((audio) => audio.id),
+  );
+  assertAllRequestedFound(
+    'document',
+    documentIds,
+    documents.map((document) => document.id),
+  );
 
-  const videoContexts = await buildVideoProbeContexts({
-    videos,
-    startSec,
-    endSec,
-    frameCount,
-    includeAudio,
-    ...(language ? { language } : {}),
-  });
+  const [videoContexts, audioContexts, documentContexts] = await Promise.all([
+    buildVideoProbeContexts({
+      videos,
+      startSec,
+      endSec,
+      frameCount,
+      includeAudio,
+      ...(language ? { language } : {}),
+    }),
+    buildAudioProbeContexts({ audios, ...(language ? { language } : {}) }),
+    buildDocumentProbeContexts({ documents }),
+  ]);
   const mediaImages = [
     ...attachments.map((image) => ({ type: 'image' as const, data: image.data, mimeType: image.mimeType })),
     ...videoContexts.flatMap((videoContext) =>
@@ -428,12 +648,29 @@ export async function probeMedia(input: ProbeMediaInput, ctx: ExtensionBackendCo
     ),
   ];
 
+  if (mediaImages.length === 0) {
+    return {
+      ...buildTextOnlyMediaProbeResult({ audioContexts, documentContexts, question }),
+      details: {
+        audioIds: audios.map((audio) => audio.id),
+        availableAudioIds: availableAudios.map((audio) => audio.id),
+        audioPaths: audios.map((audio) => audio.path),
+        documentIds: documents.map((document) => document.id),
+        availableDocumentIds: availableDocuments.map((document) => document.id),
+        documentPaths: documents.map((document) => document.path),
+        documentExtractors: documentContexts.flatMap((context) =>
+          context.extractor ? [{ documentId: context.document.id, extractor: context.extractor }] : [],
+        ),
+      },
+    };
+  }
+
   try {
     const result = await runAgentTask(
       {
         cwd: ctx.toolContext?.cwd,
         modelRef: preferredVisionModel,
-        prompt: buildMediaProbePrompt(attachments, videoContexts, question),
+        prompt: buildMediaProbePrompt(attachments, videoContexts, audioContexts, documentContexts, question),
         images: mediaImages,
         tools: 'none',
       },
@@ -450,6 +687,12 @@ export async function probeMedia(input: ProbeMediaInput, ctx: ExtensionBackendCo
         videoIds: videos.map((video) => video.id),
         availableVideoIds: availableVideos.map((video) => video.id),
         videoPaths: videos.map((video) => video.path),
+        audioIds: audios.map((audio) => audio.id),
+        availableAudioIds: availableAudios.map((audio) => audio.id),
+        audioPaths: audios.map((audio) => audio.path),
+        documentIds: documents.map((document) => document.id),
+        availableDocumentIds: availableDocuments.map((document) => document.id),
+        documentPaths: documents.map((document) => document.path),
         sampledFrames: videoContexts.flatMap((videoContext) =>
           videoContext.frames.map((frame) => ({ videoId: frame.videoId, timestampMs: frame.timestampMs, mimeType: frame.mimeType })),
         ),
@@ -469,6 +712,12 @@ export async function probeMedia(input: ProbeMediaInput, ctx: ExtensionBackendCo
         videoIds: videos.map((video) => video.id),
         availableVideoIds: availableVideos.map((video) => video.id),
         videoPaths: videos.map((video) => video.path),
+        audioIds: audios.map((audio) => audio.id),
+        availableAudioIds: availableAudios.map((audio) => audio.id),
+        audioPaths: audios.map((audio) => audio.path),
+        documentIds: documents.map((document) => document.id),
+        availableDocumentIds: availableDocuments.map((document) => document.id),
+        documentPaths: documents.map((document) => document.path),
       },
       isError: true,
     };

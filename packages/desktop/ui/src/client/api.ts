@@ -48,6 +48,8 @@ import type {
   ModelProviderState,
   ModelState,
   PromptAttachmentRefInput,
+  PromptAudioInput,
+  PromptDocumentInput,
   PromptImageInput,
   PromptVideoInput,
   ProviderAuthState,
@@ -336,7 +338,7 @@ export const api = {
     id: string;
     name: string;
     description?: string;
-    template?: 'main-page' | 'right-rail' | 'workbench-detail';
+    template?: 'main-page' | 'route-sidebar' | 'route-right-sidebar' | 'route-shell' | 'right-rail' | 'workbench-detail';
   }) => extensionPost<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions', input),
   importExtension: async (input: { zipPath: string }) =>
     extensionPost<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions/import', input),
@@ -1088,6 +1090,8 @@ export const api = {
       behavior?: 'steer' | 'followUp';
       images?: Array<{ data: string; mimeType: string; name?: string }>;
       videos?: PromptVideoInput[];
+      audios?: PromptAudioInput[];
+      documents?: PromptDocumentInput[];
       attachmentRefs?: unknown;
       contextMessages?: Array<{ customType: string; content: string }>;
       relatedConversationIds?: unknown;
@@ -1106,6 +1110,8 @@ export const api = {
       ...(options?.behavior !== undefined ? { behavior: options.behavior } : {}),
       ...(options?.images !== undefined ? { images: options.images } : {}),
       ...(options?.videos !== undefined ? { videos: options.videos } : {}),
+      ...(options?.audios !== undefined ? { audios: options.audios } : {}),
+      ...(options?.documents !== undefined ? { documents: options.documents } : {}),
       ...(options?.attachmentRefs !== undefined ? { attachmentRefs: options.attachmentRefs } : {}),
       ...(options?.contextMessages !== undefined ? { contextMessages: options.contextMessages } : {}),
       ...(options?.relatedConversationIds !== undefined ? { relatedConversationIds: options.relatedConversationIds } : {}),
@@ -1143,6 +1149,8 @@ export const api = {
     behavior?: 'steer' | 'followUp',
     images?: PromptImageInput[],
     videos?: PromptVideoInput[],
+    audios?: PromptAudioInput[],
+    documents?: PromptDocumentInput[],
     attachmentRefs?: PromptAttachmentRefInput[],
     surfaceId?: string,
     contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
@@ -1165,6 +1173,8 @@ export const api = {
       ...(surfaceId ? { surfaceId } : {}),
       images,
       videos,
+      audios,
+      documents,
       attachmentRefs,
       contextMessages,
       relatedConversationIds,
@@ -1177,6 +1187,8 @@ export const api = {
         promptLength: text.length,
         imageCount: images?.length ?? 0,
         videoCount: videos?.length ?? 0,
+        audioCount: audios?.length ?? 0,
+        documentCount: documents?.length ?? 0,
         contextMessageCount: contextMessages?.length ?? 0,
         relatedConversationCount: relatedConversationIds?.length ?? 0,
         serverPerf: result.perf ?? null,
@@ -1191,6 +1203,8 @@ export const api = {
     behavior?: 'steer' | 'followUp',
     images?: PromptImageInput[],
     videos?: PromptVideoInput[],
+    audios?: PromptAudioInput[],
+    documents?: PromptDocumentInput[],
     attachmentRefs?: PromptAttachmentRefInput[],
     surfaceId?: string,
     contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>,
@@ -1213,6 +1227,8 @@ export const api = {
       ...(surfaceId ? { surfaceId } : {}),
       images,
       videos,
+      audios,
+      documents,
       attachmentRefs,
       contextMessages,
       relatedConversationIds,
@@ -1225,6 +1241,8 @@ export const api = {
         promptLength: text.length,
         imageCount: images?.length ?? 0,
         videoCount: videos?.length ?? 0,
+        audioCount: audios?.length ?? 0,
+        documentCount: documents?.length ?? 0,
         contextMessageCount: contextMessages?.length ?? 0,
         relatedConversationCount: relatedConversationIds?.length ?? 0,
         serverPerf: result.perf ?? null,

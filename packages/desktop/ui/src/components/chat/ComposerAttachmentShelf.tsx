@@ -35,6 +35,20 @@ interface ComposerVideoAttachment {
   size: number;
 }
 
+interface ComposerAudioAttachment {
+  localId: string;
+  name?: string;
+  mimeType: string;
+  size: number;
+}
+
+interface ComposerDocumentAttachment {
+  localId: string;
+  name?: string;
+  mimeType: string;
+  size: number;
+}
+
 interface ComposerPreviewImage {
   alt: string;
   src: string;
@@ -45,11 +59,15 @@ interface ComposerPreviewImage {
 interface ComposerAttachmentShelfProps {
   attachments: ComposerImageAttachment[];
   videoAttachments?: ComposerVideoAttachment[];
+  audioAttachments?: ComposerAudioAttachment[];
+  documentAttachments?: ComposerDocumentAttachment[];
   drawingAttachments: ComposerAttachmentShelfDrawingAttachment[];
   drawingsBusy?: boolean;
   drawingsError?: string | null;
   onRemoveAttachment: (index: number) => void;
   onRemoveVideoAttachment?: (index: number) => void;
+  onRemoveAudioAttachment?: (index: number) => void;
+  onRemoveDocumentAttachment?: (index: number) => void;
   onEditDrawing: (localId: string) => void;
   onRemoveDrawingAttachment: (localId: string) => void;
 }
@@ -59,6 +77,7 @@ const FILE_ICONS: Record<string, string> = {
   'text/': '📄',
   'application/json': '{ }',
   'application/pdf': '📕',
+  'audio/': '♪',
   'video/': '🎬',
 };
 
@@ -178,20 +197,32 @@ function ComposerImagePreviewModal({ image, onClose }: { image: ComposerPreviewI
 export function ComposerAttachmentShelf({
   attachments,
   videoAttachments = [],
+  audioAttachments = [],
+  documentAttachments = [],
   drawingAttachments,
   drawingsBusy = false,
   drawingsError = null,
   onRemoveAttachment,
   onRemoveVideoAttachment,
+  onRemoveAudioAttachment,
+  onRemoveDocumentAttachment,
   onEditDrawing,
   onRemoveDrawingAttachment,
 }: ComposerAttachmentShelfProps) {
   const [previewImage, setPreviewImage] = useState<ComposerPreviewImage | null>(null);
   const firstPreviewableAttachment =
     attachments.find((attachment) => attachment.mimeType.startsWith('image/') && Boolean(attachment.previewUrl)) ?? null;
-  const firstAttachment = attachments[0] ?? null;
+  const firstAttachment = attachments[0] ?? videoAttachments[0] ?? audioAttachments[0] ?? documentAttachments[0] ?? null;
+  const firstAttachmentKind = attachments[0]
+    ? 'image'
+    : videoAttachments[0]
+      ? 'video'
+      : audioAttachments[0]
+        ? 'audio'
+        : documentAttachments[0]
+          ? 'document'
+          : null;
   const firstDrawing = drawingAttachments[0] ?? null;
-  const firstAttachmentIndex = firstAttachment ? attachments.indexOf(firstAttachment) : -1;
 
   useEffect(
     () => () => {
@@ -251,13 +282,23 @@ export function ComposerAttachmentShelf({
   }, [firstPreviewableAttachment, openAttachmentPreview]);
 
   useEffect(() => {
-    if (!firstAttachment || firstAttachmentIndex < 0) return;
+    if (!firstAttachment) return;
     function handleRemoveFirstAttachmentCommand() {
-      onRemoveAttachment(firstAttachmentIndex);
+      if (firstAttachmentKind === 'image') onRemoveAttachment(0);
+      else if (firstAttachmentKind === 'video') onRemoveVideoAttachment?.(0);
+      else if (firstAttachmentKind === 'audio') onRemoveAudioAttachment?.(0);
+      else if (firstAttachmentKind === 'document') onRemoveDocumentAttachment?.(0);
     }
     window.addEventListener(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT, handleRemoveFirstAttachmentCommand);
     return () => window.removeEventListener(COMPOSER_REMOVE_FIRST_ATTACHMENT_COMMAND_EVENT, handleRemoveFirstAttachmentCommand);
-  }, [firstAttachment, firstAttachmentIndex, onRemoveAttachment]);
+  }, [
+    firstAttachment,
+    firstAttachmentKind,
+    onRemoveAttachment,
+    onRemoveAudioAttachment,
+    onRemoveDocumentAttachment,
+    onRemoveVideoAttachment,
+  ]);
 
   useEffect(() => {
     if (!firstDrawing) return;
@@ -288,9 +329,15 @@ export function ComposerAttachmentShelf({
 
   return (
     <>
-      {(attachments.length > 0 || videoAttachments.length > 0 || drawingAttachments.length > 0 || drawingsBusy || drawingsError) && (
+      {(attachments.length > 0 ||
+        videoAttachments.length > 0 ||
+        audioAttachments.length > 0 ||
+        documentAttachments.length > 0 ||
+        drawingAttachments.length > 0 ||
+        drawingsBusy ||
+        drawingsError) && (
         <div className="border-b border-border-subtle/60 bg-base/20 px-4 py-3">
-          {(attachments.length > 0 || videoAttachments.length > 0) && (
+          {(attachments.length > 0 || videoAttachments.length > 0 || audioAttachments.length > 0 || documentAttachments.length > 0) && (
             <div className="flex flex-wrap gap-1.5">
               {attachments.map((file, index) => {
                 const fileName = file.name || 'Image attachment';
@@ -354,11 +401,67 @@ export function ComposerAttachmentShelf({
                   </AttachmentChip>
                 );
               })}
+              {audioAttachments.map((file, index) => {
+                const fileName = file.name || 'Audio attachment';
+                const summary = (
+                  <>
+                    <span className="shrink-0">{fileIcon(file.mimeType)}</span>
+                    <span className="truncate text-secondary">{fileName}</span>
+                    <span className="shrink-0 text-dim">{formatBytes(file.size)}</span>
+                  </>
+                );
+
+                return (
+                  <AttachmentChip key={file.localId || `${fileName}-${file.size}-${index}`} className="max-w-[240px]">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1">{summary}</div>
+                    <IconButton
+                      compact
+                      onClick={() => onRemoveAudioAttachment?.(index)}
+                      className="mr-1 shrink-0 leading-none"
+                      title={`Remove ${fileName}`}
+                      aria-label={`Remove ${fileName}`}
+                    >
+                      ×
+                    </IconButton>
+                  </AttachmentChip>
+                );
+              })}
+              {documentAttachments.map((file, index) => {
+                const fileName = file.name || 'Document attachment';
+                const summary = (
+                  <>
+                    <span className="shrink-0">{fileIcon(file.mimeType)}</span>
+                    <span className="truncate text-secondary">{fileName}</span>
+                    <span className="shrink-0 text-dim">{formatBytes(file.size)}</span>
+                  </>
+                );
+
+                return (
+                  <AttachmentChip key={file.localId || `${fileName}-${file.size}-${index}`} className="max-w-[260px]">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1">{summary}</div>
+                    <IconButton
+                      compact
+                      onClick={() => onRemoveDocumentAttachment?.(index)}
+                      className="mr-1 shrink-0 leading-none"
+                      title={`Remove ${fileName}`}
+                      aria-label={`Remove ${fileName}`}
+                    >
+                      ×
+                    </IconButton>
+                  </AttachmentChip>
+                );
+              })}
             </div>
           )}
 
           {drawingAttachments.length > 0 && (
-            <div className={cx('flex flex-wrap gap-1.5', (attachments.length > 0 || videoAttachments.length > 0) && 'mt-2')}>
+            <div
+              className={cx(
+                'flex flex-wrap gap-1.5',
+                (attachments.length > 0 || videoAttachments.length > 0 || audioAttachments.length > 0 || documentAttachments.length > 0) &&
+                  'mt-2',
+              )}
+            >
               {drawingAttachments.map((attachment) => {
                 const label = buildDrawingPreviewTitle(attachment);
                 return (

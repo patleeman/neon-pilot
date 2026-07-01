@@ -503,7 +503,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/*,.excalidraw,application/json"
+        accept="image/*,video/*,audio/*,.pdf,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.html,.htm,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.log,.excalidraw,application/json,application/pdf"
         multiple
         className="hidden"
         onChange={(event) => {

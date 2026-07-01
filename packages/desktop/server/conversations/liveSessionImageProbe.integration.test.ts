@@ -11,6 +11,18 @@ const { readSavedModelPreferencesMock, runAgentTaskMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
+vi.mock('@neon-pilot/extensions/backend/audio', () => ({
+  getAudioProbeAttachments: vi.fn(() => []),
+  getAudioProbeAttachmentsById: vi.fn(() => []),
+  getAudioProbeAttachmentsByIdFromAnySession: vi.fn(() => []),
+  transcribeAudioAttachment: vi.fn(),
+}));
+vi.mock('@neon-pilot/extensions/backend/documents', () => ({
+  extractDocumentText: vi.fn(),
+  getDocumentProbeAttachments: vi.fn(() => []),
+  getDocumentProbeAttachmentsById: vi.fn(() => []),
+  getDocumentProbeAttachmentsByIdFromAnySession: vi.fn(() => []),
+}));
 
 vi.mock('../models/modelPreferences.js', () => ({
   readSavedModelPreferences: readSavedModelPreferencesMock,
@@ -68,6 +80,8 @@ describe('text-only live session image probing flow', () => {
       'What does this screenshot show?',
       undefined,
       [{ type: 'image', data: originalImageData, mimeType: 'image/png', name: 'screen.png' }],
+      undefined,
+      undefined,
       undefined,
       {
         repairLiveSessionTranscriptTail: vi.fn(),

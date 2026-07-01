@@ -204,7 +204,13 @@ interface ExtensionBackendCapabilityConversations {
     extensionId: string,
     conversationId: string,
     text: string,
-    options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
+    options?: {
+      steer?: boolean;
+      images?: Array<{ data: string; mimeType: string; name?: string }>;
+      videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+    },
   ): Promise<unknown> | unknown;
   startParallelPrompt?(
     extensionId: string,
@@ -212,6 +218,9 @@ interface ExtensionBackendCapabilityConversations {
     input: {
       text: string;
       images?: Array<{ data: string; mimeType: string; name?: string }>;
+      videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
       model?: string | null;
       thinkingLevel?: string | null;
       serviceTier?: string | null;
@@ -243,6 +252,8 @@ interface ExtensionBackendCapabilityConversations {
       text: string;
       images?: Array<{ data: string; mimeType: string; name?: string }>;
       videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
       attachmentRefs?: unknown;
       contextMessages?: unknown;
       relatedConversationIds?: unknown;
@@ -1877,12 +1888,57 @@ function normalizeConversationImages(value: unknown): Array<{ data: string; mime
   });
 }
 
-function normalizeConversationSendOptions(
-  input: Record<string, unknown>,
-): { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> } | undefined {
+function normalizeConversationPathBackedAttachments(
+  value: unknown,
+  label: string,
+  options: { mimePrefix?: string },
+): Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }> | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array when provided.`);
+  return value.flatMap((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`${label} ${index + 1} must be an object.`);
+    const path = requireString((item as { path?: unknown }).path, `${label} ${index + 1} path`);
+    const mimeType = requireString((item as { mimeType?: unknown }).mimeType, `${label} ${index + 1} MIME type`);
+    if (options.mimePrefix && !mimeType.toLowerCase().startsWith(options.mimePrefix)) {
+      throw new Error(`${label} ${index + 1} MIME type must start with ${options.mimePrefix}.`);
+    }
+    const sizeBytes = (item as { sizeBytes?: unknown }).sizeBytes;
+    const name =
+      (item as { name?: unknown }).name !== undefined
+        ? optionalString((item as { name?: unknown }).name, `${label} ${index + 1} name`)
+        : undefined;
+    return [
+      {
+        path,
+        mimeType,
+        ...(name ? { name } : {}),
+        ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes: Number(sizeBytes) } : {}),
+      },
+    ];
+  });
+}
+
+function normalizeConversationSendOptions(input: Record<string, unknown>):
+  | {
+      steer?: boolean;
+      images?: Array<{ data: string; mimeType: string; name?: string }>;
+      videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+    }
+  | undefined {
   const options = {
     ...(input.steer !== undefined ? { steer: optionalBoolean(input.steer, 'Conversation steer') } : {}),
     ...(input.images !== undefined ? { images: normalizeConversationImages(input.images) } : {}),
+    ...(input.videos !== undefined
+      ? { videos: normalizeConversationPathBackedAttachments(input.videos, 'Conversation videos', { mimePrefix: 'video/' }) }
+      : {}),
+    ...(input.audios !== undefined
+      ? { audios: normalizeConversationPathBackedAttachments(input.audios, 'Conversation audio', { mimePrefix: 'audio/' }) }
+      : {}),
+    ...(input.documents !== undefined
+      ? { documents: normalizeConversationPathBackedAttachments(input.documents, 'Conversation documents', {}) }
+      : {}),
   };
   return Object.keys(options).length > 0 ? options : undefined;
 }
@@ -2531,7 +2587,7 @@ export function createExtensionBackendCapabilityDispatcher(
       _extensionId: string,
       conversationId: string,
       text: string,
-      options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
+      options?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['sendMessage']>[2],
     ) => createExtensionConversationsCapability().sendMessage(conversationId, text, options),
     startParallelPrompt: (
       extensionId: string,

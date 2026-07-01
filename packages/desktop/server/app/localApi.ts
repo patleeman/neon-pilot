@@ -3300,6 +3300,8 @@ export async function createDesktopLiveSession(input: {
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
@@ -3366,6 +3368,8 @@ export async function submitDesktopLiveSessionPrompt(input: {
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
@@ -3388,6 +3392,8 @@ export async function submitDesktopConversationMessage(input: {
   behavior?: 'steer' | 'followUp';
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;
@@ -3425,6 +3431,8 @@ export async function submitDesktopLiveSessionParallelPrompt(input: {
   text?: string;
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: Array<{ customType: string; content: string }>;
   relatedConversationIds?: unknown;

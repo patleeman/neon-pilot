@@ -3,7 +3,7 @@
   "id": "system-image-probe",
   "name": "Multimedia probe",
   "packageType": "system",
-  "description": "Let the agent answer questions about attached images and videos when the current chat model cannot see them.",
+  "description": "Let the agent answer questions about attached images, videos, audio, and documents when the current chat model cannot inspect them directly.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -44,7 +44,7 @@
         "id": "probe-media",
         "name": "probe_media",
         "title": "Ask about media",
-        "description": "Ask the configured vision model about selected image or video attachments. Use this for videos instead of manually chaining video frame sampling into probe_image.",
+        "description": "Ask about selected image, video, audio, or document attachments. Use this unified multimedia probe instead of manually chaining video frames, audio transcripts, or document extraction.",
         "action": "probeMedia",
         "inputSchema": {
           "type": "object",
@@ -64,6 +64,22 @@
                 "pattern": "^vid_[a-f0-9]{12}$"
               },
               "maxItems": 3
+            },
+            "audioIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^aud_[a-f0-9]{12}$"
+              },
+              "maxItems": 6
+            },
+            "documentIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^doc_[a-f0-9]{12}$"
+              },
+              "maxItems": 8
             },
             "question": {
               "type": "string",
@@ -93,7 +109,12 @@
             }
           },
           "required": ["question"],
-          "anyOf": [{ "required": ["imageIds"] }, { "required": ["videoIds"] }],
+          "anyOf": [
+            { "required": ["imageIds"] },
+            { "required": ["videoIds"] },
+            { "required": ["audioIds"] },
+            { "required": ["documentIds"] }
+          ],
           "additionalProperties": false
         }
       },
@@ -127,5 +148,5 @@
       }
     ]
   },
-  "permissions": ["images:read", "videos:read", "agent:run"]
+  "permissions": ["images:read", "videos:read", "audio:read", "documents:read", "agent:run"]
 }

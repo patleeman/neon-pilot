@@ -58,6 +58,9 @@ export interface ExtensionConversationSendOptions {
   steer?: boolean;
   /** Image attachments to send with the prompt. */
   images?: Array<{ data: string; mimeType: string; name?: string }>;
+  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
 }
 
 export interface ExtensionConversationSendResult {
@@ -68,7 +71,6 @@ export interface ExtensionConversationSendResult {
 export interface ExtensionConversationStartParallelPromptOptions extends ExtensionConversationSendOptions {
   /** Cwd override used by the child challenger conversation. */
   cwd?: string;
-  videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -123,6 +125,8 @@ export interface ExtensionConversationStartParallelPromptOptions {
   text: string;
   images?: Array<{ data: string; mimeType: string; name?: string }>;
   videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+  documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
   attachmentRefs?: unknown;
   contextMessages?: unknown;
   relatedConversationIds?: unknown;
@@ -775,6 +779,9 @@ export function createExtensionConversationsCapability(
             text,
             behavior: options?.steer ? 'steer' : undefined,
             images: options?.images,
+            videos: options?.videos,
+            audios: options?.audios,
+            documents: options?.documents,
             injectedTurn: {
               source: { type: 'extension', id: extensionId },
               reason: 'Extension conversation API sent this prompt.',
@@ -800,6 +807,8 @@ export function createExtensionConversationsCapability(
             text: input.text,
             ...(input.images ? { images: input.images } : {}),
             ...(input.videos ? { videos: input.videos } : {}),
+            ...(input.audios ? { audios: input.audios } : {}),
+            ...(input.documents ? { documents: input.documents } : {}),
             ...(input.attachmentRefs !== undefined ? { attachmentRefs: input.attachmentRefs } : {}),
             ...(input.contextMessages !== undefined ? { contextMessages: input.contextMessages } : {}),
             ...(input.relatedConversationIds !== undefined ? { relatedConversationIds: input.relatedConversationIds } : {}),

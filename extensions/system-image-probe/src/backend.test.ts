@@ -5,6 +5,14 @@ const {
   getImageProbeAttachmentsMock,
   getImageProbeAttachmentsByIdMock,
   getImageProbeAttachmentsByIdFromAnySessionMock,
+  getAudioProbeAttachmentsMock,
+  getAudioProbeAttachmentsByIdMock,
+  getAudioProbeAttachmentsByIdFromAnySessionMock,
+  transcribeAudioAttachmentMock,
+  extractDocumentTextMock,
+  getDocumentProbeAttachmentsMock,
+  getDocumentProbeAttachmentsByIdMock,
+  getDocumentProbeAttachmentsByIdFromAnySessionMock,
   getVideoProbeAttachmentsMock,
   getVideoProbeAttachmentsByIdMock,
   getVideoProbeAttachmentsByIdFromAnySessionMock,
@@ -15,6 +23,14 @@ const {
   getImageProbeAttachmentsMock: vi.fn(),
   getImageProbeAttachmentsByIdMock: vi.fn(),
   getImageProbeAttachmentsByIdFromAnySessionMock: vi.fn(),
+  getAudioProbeAttachmentsMock: vi.fn(() => []),
+  getAudioProbeAttachmentsByIdMock: vi.fn(() => []),
+  getAudioProbeAttachmentsByIdFromAnySessionMock: vi.fn(() => []),
+  transcribeAudioAttachmentMock: vi.fn(),
+  extractDocumentTextMock: vi.fn(),
+  getDocumentProbeAttachmentsMock: vi.fn(() => []),
+  getDocumentProbeAttachmentsByIdMock: vi.fn(() => []),
+  getDocumentProbeAttachmentsByIdFromAnySessionMock: vi.fn(() => []),
   getVideoProbeAttachmentsMock: vi.fn(),
   getVideoProbeAttachmentsByIdMock: vi.fn(),
   getVideoProbeAttachmentsByIdFromAnySessionMock: vi.fn(),
@@ -27,6 +43,18 @@ vi.mock('@neon-pilot/extensions/backend/images', () => ({
   getImageProbeAttachments: getImageProbeAttachmentsMock,
   getImageProbeAttachmentsById: getImageProbeAttachmentsByIdMock,
   getImageProbeAttachmentsByIdFromAnySession: getImageProbeAttachmentsByIdFromAnySessionMock,
+}));
+vi.mock('@neon-pilot/extensions/backend/audio', () => ({
+  getAudioProbeAttachments: getAudioProbeAttachmentsMock,
+  getAudioProbeAttachmentsById: getAudioProbeAttachmentsByIdMock,
+  getAudioProbeAttachmentsByIdFromAnySession: getAudioProbeAttachmentsByIdFromAnySessionMock,
+  transcribeAudioAttachment: transcribeAudioAttachmentMock,
+}));
+vi.mock('@neon-pilot/extensions/backend/documents', () => ({
+  extractDocumentText: extractDocumentTextMock,
+  getDocumentProbeAttachments: getDocumentProbeAttachmentsMock,
+  getDocumentProbeAttachmentsById: getDocumentProbeAttachmentsByIdMock,
+  getDocumentProbeAttachmentsByIdFromAnySession: getDocumentProbeAttachmentsByIdFromAnySessionMock,
 }));
 vi.mock('@neon-pilot/extensions/backend/videos', () => ({
   getVideoProbeAttachments: getVideoProbeAttachmentsMock,

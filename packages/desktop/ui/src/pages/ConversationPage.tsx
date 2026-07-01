@@ -275,8 +275,12 @@ import {
 } from '../conversation/pendingInitialPromptLogic';
 import {
   buildComposerFilePreparationNotices,
+  buildPromptAudios,
+  buildPromptDocuments,
   buildPromptImages,
   buildPromptVideos,
+  type ComposerAudioAttachment,
+  type ComposerDocumentAttachment,
   type ComposerDrawingAttachment,
   type ComposerImageAttachment,
   type ComposerVideoAttachment,
@@ -285,6 +289,8 @@ import {
   drawingAttachmentToPromptRef,
   prepareComposerFiles,
   readComposerTransferFiles,
+  removeComposerAudioFileAtIndex,
+  removeComposerDocumentFileAtIndex,
   removeComposerDrawingAttachmentByLocalId,
   removeComposerImageFileAtIndex,
   removeComposerVideoFileAtIndex,
@@ -2401,6 +2407,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const keyboardInset = useVisualViewportKeyboardInset();
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
   const [videoAttachments, setVideoAttachments] = useState<ComposerVideoAttachment[]>([]);
+  const [audioAttachments, setAudioAttachments] = useState<ComposerAudioAttachment[]>([]);
+  const [documentAttachments, setDocumentAttachments] = useState<ComposerDocumentAttachment[]>([]);
   const showTextOnlyImageHint =
     attachments.length > 0 && selectedComposerModel !== null && !selectedComposerModel.input?.includes('image') && !defaultVisionModel;
 
@@ -2477,6 +2485,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
     setAttachments(restoreComposerImageFiles(storedAttachments.images, fallbackNamePrefix));
     setVideoAttachments([]);
+    setAudioAttachments([]);
+    setDocumentAttachments([]);
     setDrawingAttachments(storedAttachments.drawings);
     setDrawingsPickerOpen(false);
     setConversationAttachments([]);
@@ -2536,6 +2546,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       nextInput: string,
       nextAttachments: ComposerImageAttachment[],
       nextVideoAttachments: ComposerVideoAttachment[],
+      nextAudioAttachments: ComposerAudioAttachment[],
+      nextDocumentAttachments: ComposerDocumentAttachment[],
       nextDrawingAttachments: ComposerDrawingAttachment[],
     ) => {
       try {
@@ -2561,6 +2573,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       setInput(nextInput);
       setAttachments(nextAttachments);
       setVideoAttachments(nextVideoAttachments);
+      setAudioAttachments(nextAudioAttachments);
+      setDocumentAttachments(nextDocumentAttachments);
       setDrawingAttachments(nextDrawingAttachments);
     },
     [draft, id, setInput],
@@ -4018,6 +4032,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       input.length > 0 ||
       attachments.length > 0 ||
       videoAttachments.length > 0 ||
+      audioAttachments.length > 0 ||
+      documentAttachments.length > 0 ||
       drawingAttachments.length > 0
     ) {
       return;
@@ -4751,6 +4767,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           normalizeConversationComposerBehavior(preparedInitialPrompt.behavior, allowQueuedPrompts),
           preparedInitialPrompt.images,
           preparedInitialPrompt.videos,
+          preparedInitialPrompt.audios,
+          preparedInitialPrompt.documents,
           preparedInitialPrompt.attachmentRefs,
           preparedInitialPrompt.contextMessages,
           normalizePendingRelatedConversationIds(preparedInitialPrompt),
@@ -4969,7 +4987,17 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
             detail: { conversationId: newSessionId },
           }),
         );
-        await api.promptSession(newSessionId, editedText, undefined, undefined, undefined, undefined, currentSurfaceId);
+        await api.promptSession(
+          newSessionId,
+          editedText,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          currentSurfaceId,
+        );
         showNotice('accent', 'Conversation rerunning from edited prompt.');
       } catch (error) {
         showNotice('danger', formatConversationMessageActionFailure('Edit', error));
@@ -5215,15 +5243,27 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     setVideoAttachments((prev) => appendIfPresent(prev, nextVideoAttachments));
   }
 
+  function addAudioAttachments(nextAudioAttachments: ComposerAudioAttachment[]) {
+    setAudioAttachments((prev) => appendIfPresent(prev, nextAudioAttachments));
+  }
+
+  function addDocumentAttachments(nextDocumentAttachments: ComposerDocumentAttachment[]) {
+    setDocumentAttachments((prev) => appendIfPresent(prev, nextDocumentAttachments));
+  }
+
   async function addComposerFiles(files: File[]) {
     const {
       imageAttachments: nextImageAttachments,
       videoAttachments: nextVideoAttachments,
+      audioAttachments: nextAudioAttachments,
+      documentAttachments: nextDocumentAttachments,
       drawingAttachments: nextDrawingAttachments,
       rejectedFileNames,
       drawingParseFailures,
       imageReadFailures,
       videoReadFailures,
+      audioReadFailures,
+      documentReadFailures,
     } = await prepareComposerFiles(files);
 
     if (nextImageAttachments.length > 0) {
@@ -5234,6 +5274,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       addVideoAttachments(nextVideoAttachments);
     }
 
+    if (nextAudioAttachments.length > 0) {
+      addAudioAttachments(nextAudioAttachments);
+    }
+
+    if (nextDocumentAttachments.length > 0) {
+      addDocumentAttachments(nextDocumentAttachments);
+    }
+
     if (nextDrawingAttachments.length > 0) {
       setDrawingAttachments((current) => appendIfPresent(current, nextDrawingAttachments));
     }
@@ -5241,9 +5289,13 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     for (const notice of buildComposerFilePreparationNotices({
       drawingAttachments: nextDrawingAttachments,
       videoAttachments: nextVideoAttachments,
+      audioAttachments: nextAudioAttachments,
+      documentAttachments: nextDocumentAttachments,
       drawingParseFailures,
       imageReadFailures,
       videoReadFailures,
+      audioReadFailures,
+      documentReadFailures,
       rejectedFileNames,
     })) {
       showNotice(notice.tone, notice.text, notice.durationMs);
@@ -6577,6 +6629,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     const inputSnapshot = textareaRef.current?.value ?? input;
     const pendingImageAttachments = attachments;
     const pendingVideoAttachments = videoAttachments;
+    const pendingAudioAttachments = audioAttachments;
+    const pendingDocumentAttachments = documentAttachments;
     const pendingDrawingAttachments = drawingAttachments;
     const pendingAttachedContextDocs = attachedContextDocs;
     const pendingBrowserCommentsSnapshot = pendingBrowserComments;
@@ -6588,6 +6642,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         !text &&
         pendingImageAttachments.length === 0 &&
         pendingVideoAttachments.length === 0 &&
+        pendingAudioAttachments.length === 0 &&
+        pendingDocumentAttachments.length === 0 &&
         pendingDrawingAttachments.length === 0 &&
         pendingBrowserCommentsSnapshot.length === 0
       ) {
@@ -6598,6 +6654,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       if (
         pendingImageAttachments.length === 0 &&
         pendingVideoAttachments.length === 0 &&
+        pendingAudioAttachments.length === 0 &&
+        pendingDocumentAttachments.length === 0 &&
         pendingDrawingAttachments.length === 0 &&
         pendingBrowserCommentsSnapshot.length === 0
       ) {
@@ -6662,6 +6720,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       const drawingPromptImages = pendingDrawingAttachments.map((drawing) => drawingAttachmentToPromptImage(drawing));
       const promptImages = [...filePromptImages, ...drawingPromptImages];
       const promptVideos = buildPromptVideos(pendingVideoAttachments);
+      const promptAudios = buildPromptAudios(pendingAudioAttachments);
+      const promptDocuments = buildPromptDocuments(pendingDocumentAttachments);
       const textToSend = slashTextToSend ?? text;
       const browserContextStartedAtMs = performance.now();
       const browserChangedContextMessage = await readBrowserChangedContextMessage(id ?? 'draft');
@@ -6680,6 +6740,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }
       setAttachments([]);
       setVideoAttachments([]);
+      setAudioAttachments([]);
+      setDocumentAttachments([]);
       setDrawingAttachments([]);
       setPendingBrowserComments([]);
       setDrawingsError(null);
@@ -6716,7 +6778,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         const pendingBash = pendingWholeLineBashRef.current;
         if (!pendingBash) {
           showNotice('danger', 'Bash is still finishing. Try sending again in a moment.', 4000);
-          await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingVideoAttachments, pendingDrawingAttachments);
+          await restoreComposerDraft(
+            inputSnapshot,
+            pendingImageAttachments,
+            pendingVideoAttachments,
+            pendingAudioAttachments,
+            pendingDocumentAttachments,
+            pendingDrawingAttachments,
+          );
           setPendingBrowserComments(pendingBrowserCommentsSnapshot);
           return;
         }
@@ -6729,6 +6798,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           behavior: queuedBehavior ?? 'followUp',
           images: promptImages,
           videos: promptVideos,
+          audios: promptAudios,
+          documents: promptDocuments,
           attachmentRefs,
           contextMessages: browserContextMessages,
         };
@@ -6773,6 +6844,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               behavior: queuedBehavior,
               images: promptImages,
               videos: promptVideos,
+              audios: promptAudios,
+              documents: promptDocuments,
               attachmentRefs,
               contextMessages: browserContextMessages,
               relatedConversationIds: selectedRelatedThreadIdsSnapshot,
@@ -6787,6 +6860,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               initialPrompt.behavior,
               initialPrompt.images,
               initialPrompt.videos,
+              initialPrompt.audios,
+              initialPrompt.documents,
               initialPrompt.attachmentRefs,
               undefined,
               initialPrompt.contextMessages,
@@ -6837,7 +6912,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
               await api.destroySession(createdSessionId).catch(() => {});
             }
             showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-            await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingVideoAttachments, pendingDrawingAttachments);
+            await restoreComposerDraft(
+              inputSnapshot,
+              pendingImageAttachments,
+              pendingVideoAttachments,
+              pendingAudioAttachments,
+              pendingDocumentAttachments,
+              pendingDrawingAttachments,
+            );
             setPendingBrowserComments(pendingBrowserCommentsSnapshot);
           } finally {
             setPreparingRelatedThreadContext(false);
@@ -6853,6 +6935,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
             behavior: queuedBehavior,
             images: promptImages,
             videos: promptVideos,
+            audios: promptAudios,
+            documents: promptDocuments,
             attachmentRefs: [],
             contextMessages: browserContextMessages,
           });
@@ -6911,6 +6995,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
             behavior: queuedBehavior,
             images: promptImages,
             videos: promptVideos,
+            audios: promptAudios,
+            documents: promptDocuments,
             attachmentRefs,
             contextMessages: browserContextMessages,
           };
@@ -6948,6 +7034,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                 ...(prompt?.behavior !== undefined ? { behavior: prompt.behavior } : {}),
                 ...(prompt?.images !== undefined ? { images: prompt.images } : {}),
                 ...(prompt?.videos !== undefined ? { videos: prompt.videos } : {}),
+                ...(prompt?.audios !== undefined ? { audios: prompt.audios } : {}),
+                ...(prompt?.documents !== undefined ? { documents: prompt.documents } : {}),
                 ...(prompt?.attachmentRefs !== undefined ? { attachmentRefs: prompt.attachmentRefs } : {}),
                 ...(prompt?.contextMessages !== undefined ? { contextMessages: prompt.contextMessages } : {}),
                 ...(() => {
@@ -7031,7 +7119,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           setPendingAssistantStatusLabel(null);
           setDraftPendingPrompt(null);
           showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
-          await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingVideoAttachments, pendingDrawingAttachments);
+          await restoreComposerDraft(
+            inputSnapshot,
+            pendingImageAttachments,
+            pendingVideoAttachments,
+            pendingAudioAttachments,
+            pendingDocumentAttachments,
+            pendingDrawingAttachments,
+          );
           setPendingBrowserComments(pendingBrowserCommentsSnapshot);
         }
         return;
@@ -7043,7 +7138,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
       if (!isLiveSession && !visibleSessionDetail) {
         showNotice('danger', 'Conversation is still loading. Try sending again in a moment.', 4000);
-        await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingVideoAttachments, pendingDrawingAttachments);
+        await restoreComposerDraft(
+          inputSnapshot,
+          pendingImageAttachments,
+          pendingVideoAttachments,
+          pendingAudioAttachments,
+          pendingDocumentAttachments,
+          pendingDrawingAttachments,
+        );
         setPendingBrowserComments(pendingBrowserCommentsSnapshot);
         return;
       }
@@ -7061,7 +7163,16 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
 
         try {
           const streamSendStartedAtMs = performance.now();
-          await stream.send(textToSend, queuedBehavior, promptImages, promptVideos, attachmentRefs, browserContextMessages);
+          await stream.send(
+            textToSend,
+            queuedBehavior,
+            promptImages,
+            promptVideos,
+            promptAudios,
+            promptDocuments,
+            attachmentRefs,
+            browserContextMessages,
+          );
           recordSubmitPhase('streamSend', streamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
         } catch (error) {
           if (!isConversationSessionNotLiveError(error)) {
@@ -7072,7 +7183,16 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           stream.reconnect();
           setPendingAssistantStatusLabel('Resuming…');
           const recoveredStreamSendStartedAtMs = performance.now();
-          await stream.send(textToSend, queuedBehavior, promptImages, promptVideos, attachmentRefs, browserContextMessages);
+          await stream.send(
+            textToSend,
+            queuedBehavior,
+            promptImages,
+            promptVideos,
+            promptAudios,
+            promptDocuments,
+            attachmentRefs,
+            browserContextMessages,
+          );
           recordSubmitPhase('streamSendAfterReconnect', recoveredStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
         }
 
@@ -7094,7 +7214,16 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           );
           setPendingAssistantStatusLabel('Working…');
           const resumedStreamSendStartedAtMs = performance.now();
-          await stream.send(textToSend, queuedBehavior, promptImages, promptVideos, attachmentRefs, browserContextMessages);
+          await stream.send(
+            textToSend,
+            queuedBehavior,
+            promptImages,
+            promptVideos,
+            promptAudios,
+            promptDocuments,
+            attachmentRefs,
+            browserContextMessages,
+          );
           recordSubmitPhase('streamSendSavedConversation', resumedStreamSendStartedAtMs, { conversationId: id, behavior: queuedBehavior });
           const refetchAttachmentsStartedAtMs = performance.now();
           await refetchConversationAttachments();
@@ -7105,7 +7234,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         } catch (error) {
           console.error('Auto-resume failed:', error);
           setPendingAssistantStatusLabel(null);
-          await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingVideoAttachments, pendingDrawingAttachments);
+          await restoreComposerDraft(
+            inputSnapshot,
+            pendingImageAttachments,
+            pendingVideoAttachments,
+            pendingAudioAttachments,
+            pendingDocumentAttachments,
+            pendingDrawingAttachments,
+          );
           setPendingBrowserComments(pendingBrowserCommentsSnapshot);
           showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
           addNotification({
@@ -7119,7 +7255,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     } catch (error) {
       console.error('Failed to prepare attachments:', error);
       setPendingAssistantStatusLabel(null);
-      await restoreComposerDraft(inputSnapshot, pendingImageAttachments, pendingVideoAttachments, pendingDrawingAttachments);
+      await restoreComposerDraft(
+        inputSnapshot,
+        pendingImageAttachments,
+        pendingVideoAttachments,
+        pendingAudioAttachments,
+        pendingDocumentAttachments,
+        pendingDrawingAttachments,
+      );
       setPendingBrowserComments(pendingBrowserCommentsSnapshot);
       showNotice('danger', error instanceof Error ? error.message : String(error), 4000);
       addNotification({
@@ -7307,7 +7450,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       shiftKey: e.shiftKey,
       isComposing,
       composerInput,
-      attachmentCount: attachments.length,
+      attachmentCount: attachments.length + videoAttachments.length + audioAttachments.length + documentAttachments.length,
       drawingAttachmentCount: drawingAttachments.length,
     });
     if (clearShortcut.shouldClear || clearShortcut.shouldRememberInput) {
@@ -7318,6 +7461,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         e.preventDefault();
         composerController.clear();
         setAttachments([]);
+        setVideoAttachments([]);
+        setAudioAttachments([]);
+        setDocumentAttachments([]);
         setDrawingAttachments([]);
       }
       return;
@@ -7352,7 +7498,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       hasPendingQuestion: Boolean(pendingAskUserQuestion),
       questionSubmitting: composerQuestionSubmitting,
       composerInputLength: composerInput.length,
-      attachmentCount: attachments.length,
+      attachmentCount: attachments.length + videoAttachments.length + audioAttachments.length + documentAttachments.length,
       drawingAttachmentCount: drawingAttachments.length,
       activeOptionCount: composerActiveQuestion?.options.length ?? 0,
     });
@@ -7447,6 +7593,14 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     setVideoAttachments((prev) => removeComposerVideoFileAtIndex(prev, i));
   }
 
+  function removeAudioAttachment(i: number) {
+    setAudioAttachments((prev) => removeComposerAudioFileAtIndex(prev, i));
+  }
+
+  function removeDocumentAttachment(i: number) {
+    setDocumentAttachments((prev) => removeComposerDocumentFileAtIndex(prev, i));
+  }
+
   async function saveAttachedContextDocs(nextDocs: ConversationContextDocRef[]) {
     const normalized = dedupeConversationContextDocs(nextDocs);
 
@@ -7524,6 +7678,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     input.trim().length > 0 ||
     attachments.length > 0 ||
     videoAttachments.length > 0 ||
+    audioAttachments.length > 0 ||
+    documentAttachments.length > 0 ||
     drawingAttachments.length > 0 ||
     pendingBrowserComments.length > 0;
   const composerShowsQuestionSubmit = shouldShowQuestionSubmitAsPrimaryComposerAction(
@@ -7745,6 +7901,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   const hasComposerAttachmentShelfContent =
     attachments.length > 0 ||
     videoAttachments.length > 0 ||
+    audioAttachments.length > 0 ||
+    documentAttachments.length > 0 ||
     drawingAttachments.length > 0 ||
     drawingsBusy ||
     Boolean(drawingsError) ||
@@ -8485,11 +8643,15 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                   <ComposerAttachmentShelf
                     attachments={attachments}
                     videoAttachments={videoAttachments}
+                    audioAttachments={audioAttachments}
+                    documentAttachments={documentAttachments}
                     drawingAttachments={drawingAttachments}
                     drawingsBusy={drawingsBusy}
                     drawingsError={drawingsError}
                     onRemoveAttachment={removeAttachment}
                     onRemoveVideoAttachment={removeVideoAttachment}
+                    onRemoveAudioAttachment={removeAudioAttachment}
+                    onRemoveDocumentAttachment={removeDocumentAttachment}
                     onEditDrawing={editDrawing}
                     onRemoveDrawingAttachment={removeDrawingAttachment}
                   />
@@ -8509,7 +8671,8 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                     <div className="border-b border-border-subtle/60 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
                         <SectionLabel tone="muted">Browser comments</SectionLabel>
-                        <ToolbarButton className="px-2 py-1 text-[11px]" onClick={() => setPendingBrowserComments([])}>
+                        <ToolbarButton onClick={() => setPendingBrowserComments([])}>
+                          <span aria-hidden="true">×</span>
                           Clear
                         </ToolbarButton>
                       </div>

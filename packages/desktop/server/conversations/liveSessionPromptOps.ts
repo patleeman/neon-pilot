@@ -1,10 +1,12 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
+import { rememberAudioProbeAttachments, type StoredAudioProbeAttachment } from '../extensions/audioProbeAttachmentStore.js';
+import { rememberDocumentProbeAttachments, type StoredDocumentProbeAttachment } from '../extensions/documentProbeAttachmentStore.js';
 import { rememberImageProbeAttachments, type StoredImageProbeAttachment } from '../extensions/imageProbeAttachmentStore.js';
 import { rememberVideoProbeAttachments, type StoredVideoProbeAttachment } from '../extensions/videoProbeAttachmentStore.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
-import type { PromptImageAttachment, PromptVideoAttachment } from './liveSessionQueue.js';
+import type { PromptAudioAttachment, PromptDocumentAttachment, PromptImageAttachment, PromptVideoAttachment } from './liveSessionQueue.js';
 
 export interface LiveSessionPromptHost {
   sessionId: string;
@@ -19,6 +21,8 @@ function buildPromptStartupKey(
   text: string,
   images: PromptImageAttachment[] | undefined,
   videos: PromptVideoAttachment[] | undefined,
+  audios: PromptAudioAttachment[] | undefined,
+  documents: PromptDocumentAttachment[] | undefined,
 ): string {
   return JSON.stringify({
     text,
@@ -34,6 +38,20 @@ function buildPromptStartupKey(
       name: video.name ?? '',
       path: video.path,
       sizeBytes: video.sizeBytes ?? 0,
+    })),
+    audios: (audios ?? []).map((audio) => ({
+      type: audio.type,
+      mimeType: audio.mimeType,
+      name: audio.name ?? '',
+      path: audio.path,
+      sizeBytes: audio.sizeBytes ?? 0,
+    })),
+    documents: (documents ?? []).map((document) => ({
+      type: document.type,
+      mimeType: document.mimeType,
+      name: document.name ?? '',
+      path: document.path,
+      sizeBytes: document.sizeBytes ?? 0,
     })),
   });
 }
@@ -157,12 +175,55 @@ function appendVideoProbeNotice(text: string, videos: StoredVideoProbeAttachment
   return `${text.trim()}\n\n${notice}`.trim();
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function appendAudioProbeNotice(text: string, audios: StoredAudioProbeAttachment[]): string {
+  if (audios.length === 0) return text;
+  const names = audios
+    .map((audio) => `- ${audio.id}: ${audio.name?.trim() || 'unnamed audio'} (${audio.mimeType}, ${formatBytes(audio.sizeBytes)})`)
+    .join('\n');
+  const notice = [
+    '[Audio attachments received]',
+    `The user attached ${audios.length} local audio file${audios.length === 1 ? '' : 's'}. You cannot hear audio directly.`,
+    'Use probe_media with explicit audioIds to transcribe and inspect these audio files before answering audio-specific questions.',
+    names ? `Attached audio IDs:\n${names}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return `${text.trim()}\n\n${notice}`.trim();
+}
+
+function appendDocumentProbeNotice(text: string, documents: StoredDocumentProbeAttachment[]): string {
+  if (documents.length === 0) return text;
+  const names = documents
+    .map(
+      (document) =>
+        `- ${document.id}: ${document.name?.trim() || 'unnamed document'} (${document.mimeType}, ${formatBytes(document.sizeBytes)})`,
+    )
+    .join('\n');
+  const notice = [
+    '[Document attachments received]',
+    `The user attached ${documents.length} local document${documents.length === 1 ? '' : 's'}. You cannot read the file contents directly.`,
+    'Use probe_media with explicit documentIds to extract text from these documents before answering document-specific questions.',
+    names ? `Attached document IDs:\n${names}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return `${text.trim()}\n\n${notice}`.trim();
+}
+
 export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>(
   entry: TEntry,
   text: string,
   behavior: LiveSessionPromptBehavior,
   images: PromptImageAttachment[] | undefined,
   videos: PromptVideoAttachment[] | undefined,
+  audios: PromptAudioAttachment[] | undefined,
+  documents: PromptDocumentAttachment[] | undefined,
   callbacks: {
     repairLiveSessionTranscriptTail: (sessionId: string) => unknown;
     broadcastQueueState: (entry: TEntry, force?: boolean) => void;
@@ -171,12 +232,18 @@ export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>
   const { session } = entry;
   const hasImages = Boolean(images && images.length > 0);
   const hasVideos = Boolean(videos && videos.length > 0);
+  const hasAudios = Boolean(audios && audios.length > 0);
+  const hasDocuments = Boolean(documents && documents.length > 0);
   const shouldUseTextOnlyImageHandling = hasImages && !liveSessionModelAcceptsImages(session.model);
   const preferredVisionModel = shouldUseTextOnlyImageHandling ? getPreferredVisionModel() : '';
   const storedImages = hasImages && images ? rememberImageProbeAttachments(entry.sessionId, images) : [];
   const storedVideos = hasVideos && videos ? await rememberVideoProbeAttachments(entry.sessionId, videos) : [];
+  const storedAudios = hasAudios && audios ? rememberAudioProbeAttachments(entry.sessionId, audios) : [];
+  const storedDocuments = hasDocuments && documents ? rememberDocumentProbeAttachments(entry.sessionId, documents) : [];
   const imagePromptText = shouldUseTextOnlyImageHandling ? appendImageProbeNotice(text, storedImages, preferredVisionModel) : text;
-  const promptText = appendVideoProbeNotice(imagePromptText, storedVideos);
+  const videoPromptText = appendVideoProbeNotice(imagePromptText, storedVideos);
+  const audioPromptText = appendAudioProbeNotice(videoPromptText, storedAudios);
+  const promptText = appendDocumentProbeNotice(audioPromptText, storedDocuments);
 
   if (behavior === undefined || !session.isStreaming) {
     callbacks.repairLiveSessionTranscriptTail(entry.sessionId);
@@ -220,6 +287,8 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
   behavior: LiveSessionPromptBehavior,
   images: PromptImageAttachment[] | undefined,
   videos: PromptVideoAttachment[] | undefined,
+  audios: PromptAudioAttachment[] | undefined,
+  documents: PromptDocumentAttachment[] | undefined,
   callbacks: {
     runPromptOnLiveEntry: (
       entry: TEntry,
@@ -227,6 +296,8 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
       behavior: LiveSessionPromptBehavior,
       images?: PromptImageAttachment[],
       videos?: PromptVideoAttachment[],
+      audios?: PromptAudioAttachment[],
+      documents?: PromptDocumentAttachment[],
     ) => Promise<void>;
   },
 ): Promise<{ acceptedAs: 'started' | 'queued'; completion: Promise<void> }> {
@@ -234,6 +305,8 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
     behavior === 'followUp' &&
     (!images || images.length === 0) &&
     (!videos || videos.length === 0) &&
+    (!audios || audios.length === 0) &&
+    (!documents || documents.length === 0) &&
     hasActivePromptText(entry.session, text)
   ) {
     return {
@@ -243,14 +316,14 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
   }
 
   if (behavior === 'steer' || behavior === 'followUp') {
-    await callbacks.runPromptOnLiveEntry(entry, text, behavior, images, videos);
+    await callbacks.runPromptOnLiveEntry(entry, text, behavior, images, videos, audios, documents);
     return {
       acceptedAs: 'queued',
       completion: Promise.resolve(),
     };
   }
 
-  const startupKey = buildPromptStartupKey(text, images, videos);
+  const startupKey = buildPromptStartupKey(text, images, videos, audios, documents);
   const pendingStartup = pendingPromptStartupByEntry.get(entry);
   if (pendingStartup?.key === startupKey) {
     return {
@@ -258,7 +331,13 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
       completion: pendingStartup.completion,
     };
   }
-  if ((!images || images.length === 0) && (!videos || videos.length === 0) && hasActivePromptText(entry.session, text)) {
+  if (
+    (!images || images.length === 0) &&
+    (!videos || videos.length === 0) &&
+    (!audios || audios.length === 0) &&
+    (!documents || documents.length === 0) &&
+    hasActivePromptText(entry.session, text)
+  ) {
     return {
       acceptedAs: 'started',
       completion: Promise.resolve(),
@@ -267,7 +346,7 @@ export async function submitPromptOnLiveEntry<TEntry extends LiveSessionPromptHo
 
   const completion = new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
-      void callbacks.runPromptOnLiveEntry(entry, text, behavior, images, videos).then(resolve, reject);
+      void callbacks.runPromptOnLiveEntry(entry, text, behavior, images, videos, audios, documents).then(resolve, reject);
     }, 250);
     timer.unref?.();
   });

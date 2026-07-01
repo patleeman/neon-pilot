@@ -65,7 +65,9 @@ describe('desktop server bundle lazy module entries', () => {
 
   it('packages every relative backend API lazy module used by extension wrappers', () => {
     const backendApiFiles = [
+      'audio.ts',
       'automations.ts',
+      'documents.ts',
       'events.ts',
       'gateways.ts',
       'images.ts',

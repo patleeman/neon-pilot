@@ -23,6 +23,22 @@ export interface PromptVideoAttachment {
   sizeBytes?: number;
 }
 
+export interface PromptAudioAttachment {
+  type: 'audio';
+  path: string;
+  mimeType: string;
+  name?: string;
+  sizeBytes?: number;
+}
+
+export interface PromptDocumentAttachment {
+  type: 'document';
+  path: string;
+  mimeType: string;
+  name?: string;
+  sizeBytes?: number;
+}
+
 export interface InternalQueuedAgentMessage {
   role?: string;
   content?: unknown;

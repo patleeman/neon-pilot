@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import * as artifactApi from './artifacts.js';
+import * as audioApi from './audio.js';
 import * as checkpointApi from './checkpoints.js';
+import * as documentApi from './documents.js';
 import * as imageApi from './images.js';
 
 describe('backend api reexports', () => {
@@ -34,6 +36,29 @@ describe('backend api reexports', () => {
         getImageProbeAttachmentsById: expect.any(Function),
         getImageProbeAttachmentsByIdFromAnySession: expect.any(Function),
         rememberImageProbeAttachments: expect.any(Function),
+      }),
+    );
+  });
+
+  it('reexports audio and document probe attachment store operations', () => {
+    expect(audioApi).toEqual(
+      expect.objectContaining({
+        clearAudioProbeAttachmentCacheForTests: expect.any(Function),
+        getAudioProbeAttachments: expect.any(Function),
+        getAudioProbeAttachmentsById: expect.any(Function),
+        getAudioProbeAttachmentsByIdFromAnySession: expect.any(Function),
+        rememberAudioProbeAttachments: expect.any(Function),
+        transcribeAudioAttachment: expect.any(Function),
+      }),
+    );
+    expect(documentApi).toEqual(
+      expect.objectContaining({
+        clearDocumentProbeAttachmentCacheForTests: expect.any(Function),
+        extractDocumentText: expect.any(Function),
+        getDocumentProbeAttachments: expect.any(Function),
+        getDocumentProbeAttachmentsById: expect.any(Function),
+        getDocumentProbeAttachmentsByIdFromAnySession: expect.any(Function),
+        rememberDocumentProbeAttachments: expect.any(Function),
       }),
     );
   });

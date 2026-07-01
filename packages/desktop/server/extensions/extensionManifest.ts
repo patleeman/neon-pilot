@@ -87,6 +87,8 @@ export const EXTENSION_PERMISSIONS = [
   'images:read',
   'images:write',
   'videos:read',
+  'audio:read',
+  'documents:read',
   'knowledge:read',
   'knowledge:write',
   'knowledge:readwrite',
@@ -423,7 +425,7 @@ export interface ExtensionContextMenuContribution {
   when?: string;
 }
 
-export type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange';
+export type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange' | 'resource';
 
 export interface ExtensionSelectionActionContribution {
   id: string;
@@ -586,20 +588,33 @@ export type ExtensionComponentReference = string | ExtensionHostComponentReferen
 export interface ExtensionViewContribution {
   id: string;
   title: string;
+  /**
+   * Host region for this view.
+   * - `main`: required route page content; a nav route must match a main view route.
+   *   `placement` and `scope` are invalid on main views.
+   * - `sidebar`: optional route-owned middle-left contextual area, bound from nav with `sidebarView`.
+   * - `rightRail`: either a route-owned context rail (`placement: "primary"`), bound from nav with
+   *   `rightSidebarView`, or a tab-local workbench rail.
+   * - `workbench`: large detail content paired with a tab-local rail.
+   */
   location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
+  /** Side-region instance boundary. Invalid on `main` views. */
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
   icon?: ExtensionIconName;
+  /** Side-region placement. Invalid on `main` views; route context rails use `primary`. */
   placement?: ExtensionViewPlacement;
   activation?: ExtensionViewActivation;
   defaultOpen?: boolean;
   persistOpen?: boolean;
-  /** For rightRail views, optional paired workbench view id rendered in the center pane while this rail tool is active. */
+  /** For tab-local `rightRail` views, optional paired workbench view id rendered in the detail pane while this rail tool is active. */
   detailView?: string;
   /** Optional host layout behaviors enabled when this main view's route is active. */
   routeCapabilities?: ExtensionRouteCapability[];
 }
+
+export type ExtensionPageType = 'conversation' | 'table' | 'editor' | 'settings' | 'dashboard' | 'setup';
 
 export interface ExtensionNavContribution {
   id: string;
@@ -607,7 +622,19 @@ export interface ExtensionNavContribution {
   route: string;
   icon?: ExtensionIconName;
   badgeAction?: string;
+  /** Optional sidebar view id for the route-owned middle-left contextual area. Omit to leave that area blank. */
   sidebarView?: string;
+  /**
+   * Optional primary `rightRail` view id for the route-owned right-sidebar context rail.
+   * `scope` is optional for route-owned context rails and defaults through the host.
+   * Omit to hide the toggle.
+   */
+  rightSidebarView?: string;
+  /**
+   * Optional design-system page type annotation. This is inventory metadata while
+   * the page-type taxonomy is being vetted; it does not change routing behavior.
+   */
+  pageType?: ExtensionPageType;
   section?: 'primary' | 'settings';
 }
 

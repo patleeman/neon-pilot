@@ -5,7 +5,7 @@ import {
   serializeExcalidrawScene,
 } from '../content/excalidrawUtils';
 import { getDesktopBridge } from '../desktop/desktopBridge';
-import type { PromptAttachmentRefInput, PromptImageInput, PromptVideoInput } from '../shared/types';
+import type { PromptAttachmentRefInput, PromptAudioInput, PromptDocumentInput, PromptImageInput, PromptVideoInput } from '../shared/types';
 import type { DraftConversationDrawingAttachment } from './draftConversation';
 
 export type ComposerDrawingAttachment = DraftConversationDrawingAttachment;
@@ -16,6 +16,16 @@ export interface ComposerImageAttachment extends PromptImageInput {
 }
 
 export interface ComposerVideoAttachment extends PromptVideoInput {
+  localId: string;
+  size: number;
+}
+
+export interface ComposerAudioAttachment extends PromptAudioInput {
+  localId: string;
+  size: number;
+}
+
+export interface ComposerDocumentAttachment extends PromptDocumentInput {
   localId: string;
   size: number;
 }
@@ -240,7 +250,7 @@ function isPromptVideoFile(file: File): boolean {
   return /\.(mp4|mov|m4v|webm|mkv|avi|mpeg|mpg)$/i.test(file.name.trim());
 }
 
-function readLocalFilePath(file: File): string {
+function readLocalFilePath(file: File, kind = 'Attachment'): string {
   const desktopBridge = getDesktopBridge();
   let candidate: unknown;
 
@@ -256,7 +266,7 @@ function readLocalFilePath(file: File): string {
 
   if (typeof candidate !== 'string' || !candidate.trim()) {
     throw new Error(
-      `Video attachment "${file.name || 'Unnamed file'}" needs a local file path. Attach a file from the desktop picker so Neon Pilot can probe it locally.`,
+      `${kind} "${file.name || 'Unnamed file'}" needs a local file path. Attach a file from the desktop picker so Neon Pilot can probe it locally.`,
     );
   }
   return candidate.trim();
@@ -274,7 +284,82 @@ function preparePromptVideo(file: File): ComposerVideoAttachment {
     localId: createComposerVideoLocalId(),
     name: file.name,
     mimeType: normalizePromptVideoMimeType(file),
-    path: readLocalFilePath(file),
+    path: readLocalFilePath(file, 'Video attachment'),
+    size: file.size,
+    sizeBytes: file.size,
+  };
+}
+
+function isPromptAudioFile(file: File): boolean {
+  if (file.type.startsWith('audio/')) {
+    return true;
+  }
+  return /\.(mp3|m4a|aac|wav|wave|ogg|oga|opus|flac|webm)$/i.test(file.name.trim());
+}
+
+function normalizePromptAudioMimeType(file: File): string {
+  if (file.type.startsWith('audio/')) {
+    return file.type;
+  }
+  return 'audio/*';
+}
+
+function preparePromptAudio(file: File): ComposerAudioAttachment {
+  return {
+    localId: createComposerAudioLocalId(),
+    name: file.name,
+    mimeType: normalizePromptAudioMimeType(file),
+    path: readLocalFilePath(file, 'Audio attachment'),
+    size: file.size,
+    sizeBytes: file.size,
+  };
+}
+
+function isPromptDocumentFile(file: File): boolean {
+  const normalizedName = file.name.trim().toLowerCase();
+  const normalizedType = file.type.trim().toLowerCase();
+  if (normalizedType.startsWith('text/')) return true;
+  if (
+    [
+      'application/pdf',
+      'application/json',
+      'application/rtf',
+      'application/xml',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ].includes(normalizedType)
+  ) {
+    return true;
+  }
+  return /\.(pdf|txt|md|markdown|csv|tsv|json|jsonl|yaml|yml|xml|html|htm|rtf|doc|docx|xls|xlsx|ppt|pptx|log)$/i.test(normalizedName);
+}
+
+function normalizePromptDocumentMimeType(file: File): string {
+  if (file.type.trim()) {
+    return file.type.trim();
+  }
+  const name = file.name.trim().toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.json')) return 'application/json';
+  if (name.endsWith('.csv')) return 'text/csv';
+  if (name.endsWith('.md') || name.endsWith('.markdown')) return 'text/markdown';
+  if (name.endsWith('.html') || name.endsWith('.htm')) return 'text/html';
+  if (name.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (name.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if (name.endsWith('.pptx')) return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+  return 'application/octet-stream';
+}
+
+function preparePromptDocument(file: File): ComposerDocumentAttachment {
+  return {
+    localId: createComposerDocumentLocalId(),
+    name: file.name,
+    mimeType: normalizePromptDocumentMimeType(file),
+    path: readLocalFilePath(file, 'Document attachment'),
     size: file.size,
     sizeBytes: file.size,
   };
@@ -380,14 +465,36 @@ export function buildPromptVideos(attachments: ComposerVideoAttachment[]): Promp
   }));
 }
 
+export function buildPromptAudios(attachments: ComposerAudioAttachment[]): PromptAudioInput[] {
+  return attachments.map(({ name, mimeType, path, sizeBytes }) => ({
+    ...(name ? { name } : {}),
+    mimeType,
+    path,
+    ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes } : {}),
+  }));
+}
+
+export function buildPromptDocuments(attachments: ComposerDocumentAttachment[]): PromptDocumentInput[] {
+  return attachments.map(({ name, mimeType, path, sizeBytes }) => ({
+    ...(name ? { name } : {}),
+    mimeType,
+    path,
+    ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes } : {}),
+  }));
+}
+
 export interface PreparedComposerFiles {
   imageAttachments: ComposerImageAttachment[];
   videoAttachments: ComposerVideoAttachment[];
+  audioAttachments: ComposerAudioAttachment[];
+  documentAttachments: ComposerDocumentAttachment[];
   drawingAttachments: ComposerDrawingAttachment[];
   rejectedFileNames: string[];
   drawingParseFailures: Array<{ fileName: string; message: string }>;
   imageReadFailures: Array<{ fileName: string; message: string }>;
   videoReadFailures: Array<{ fileName: string; message: string }>;
+  audioReadFailures: Array<{ fileName: string; message: string }>;
+  documentReadFailures: Array<{ fileName: string; message: string }>;
 }
 
 export interface ComposerFilePreparationNotice {
@@ -411,14 +518,20 @@ export async function prepareComposerFiles(
   buildDrawing: (file: File) => Promise<ComposerDrawingAttachment> = buildComposerDrawingFromFile,
   buildImage: (file: File) => Promise<ComposerImageAttachment> = preparePromptImage,
   buildVideo: (file: File) => ComposerVideoAttachment = preparePromptVideo,
+  buildAudio: (file: File) => ComposerAudioAttachment = preparePromptAudio,
+  buildDocument: (file: File) => ComposerDocumentAttachment = preparePromptDocument,
 ): Promise<PreparedComposerFiles> {
   const imageAttachments: ComposerImageAttachment[] = [];
   const videoAttachments: ComposerVideoAttachment[] = [];
+  const audioAttachments: ComposerAudioAttachment[] = [];
+  const documentAttachments: ComposerDocumentAttachment[] = [];
   const drawingAttachments: ComposerDrawingAttachment[] = [];
   const rejectedFileNames: string[] = [];
   const drawingParseFailures: PreparedComposerFiles['drawingParseFailures'] = [];
   const imageReadFailures: PreparedComposerFiles['imageReadFailures'] = [];
   const videoReadFailures: PreparedComposerFiles['videoReadFailures'] = [];
+  const audioReadFailures: PreparedComposerFiles['audioReadFailures'] = [];
+  const documentReadFailures: PreparedComposerFiles['documentReadFailures'] = [];
 
   for (const file of files) {
     if (isPotentialExcalidrawFile(file)) {
@@ -461,17 +574,45 @@ export async function prepareComposerFiles(
       continue;
     }
 
+    if (isPromptAudioFile(file)) {
+      try {
+        audioAttachments.push(buildAudio(file));
+      } catch (error) {
+        audioReadFailures.push({
+          fileName: file.name || 'Unnamed file',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+      continue;
+    }
+
+    if (isPromptDocumentFile(file)) {
+      try {
+        documentAttachments.push(buildDocument(file));
+      } catch (error) {
+        documentReadFailures.push({
+          fileName: file.name || 'Unnamed file',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+      continue;
+    }
+
     rejectedFileNames.push(file.name || 'Unnamed file');
   }
 
   return {
     imageAttachments,
     videoAttachments,
+    audioAttachments,
+    documentAttachments,
     drawingAttachments,
     rejectedFileNames,
     drawingParseFailures,
     imageReadFailures,
     videoReadFailures,
+    audioReadFailures,
+    documentReadFailures,
   };
 }
 
@@ -479,16 +620,29 @@ export function buildComposerFilePreparationNotices(
   prepared: Partial<
     Pick<
       PreparedComposerFiles,
-      'drawingAttachments' | 'drawingParseFailures' | 'imageReadFailures' | 'videoAttachments' | 'videoReadFailures' | 'rejectedFileNames'
+      | 'drawingAttachments'
+      | 'drawingParseFailures'
+      | 'imageReadFailures'
+      | 'videoAttachments'
+      | 'videoReadFailures'
+      | 'audioAttachments'
+      | 'audioReadFailures'
+      | 'documentAttachments'
+      | 'documentReadFailures'
+      | 'rejectedFileNames'
     >
   >,
 ): ComposerFilePreparationNotice[] {
   const notices: ComposerFilePreparationNotice[] = [];
   const drawingAttachments = prepared.drawingAttachments ?? [];
   const videoAttachments = prepared.videoAttachments ?? [];
+  const audioAttachments = prepared.audioAttachments ?? [];
+  const documentAttachments = prepared.documentAttachments ?? [];
   const drawingParseFailures = prepared.drawingParseFailures ?? [];
   const imageReadFailures = prepared.imageReadFailures ?? [];
   const videoReadFailures = prepared.videoReadFailures ?? [];
+  const audioReadFailures = prepared.audioReadFailures ?? [];
+  const documentReadFailures = prepared.documentReadFailures ?? [];
   const rejectedFileNames = prepared.rejectedFileNames ?? [];
 
   if (drawingAttachments.length > 0) {
@@ -502,6 +656,20 @@ export function buildComposerFilePreparationNotices(
     notices.push({
       tone: 'accent',
       text: `Attached ${videoAttachments.length} video${videoAttachments.length === 1 ? '' : 's'}.`,
+    });
+  }
+
+  if (audioAttachments.length > 0) {
+    notices.push({
+      tone: 'accent',
+      text: `Attached ${audioAttachments.length} audio file${audioAttachments.length === 1 ? '' : 's'}.`,
+    });
+  }
+
+  if (documentAttachments.length > 0) {
+    notices.push({
+      tone: 'accent',
+      text: `Attached ${documentAttachments.length} document${documentAttachments.length === 1 ? '' : 's'}.`,
     });
   }
 
@@ -522,6 +690,22 @@ export function buildComposerFilePreparationNotices(
   }
 
   for (const failure of videoReadFailures) {
+    notices.push({
+      tone: 'danger',
+      text: failure.message.includes(failure.fileName) ? failure.message : `Could not attach ${failure.fileName}: ${failure.message}`,
+      durationMs: 4000,
+    });
+  }
+
+  for (const failure of audioReadFailures) {
+    notices.push({
+      tone: 'danger',
+      text: failure.message.includes(failure.fileName) ? failure.message : `Could not attach ${failure.fileName}: ${failure.message}`,
+      durationMs: 4000,
+    });
+  }
+
+  for (const failure of documentReadFailures) {
     notices.push({
       tone: 'danger',
       text: failure.message.includes(failure.fileName) ? failure.message : `Could not attach ${failure.fileName}: ${failure.message}`,
@@ -550,6 +734,17 @@ export function removeComposerVideoFileAtIndex(attachments: ComposerVideoAttachm
   return attachments.filter((_, index) => index !== indexToRemove);
 }
 
+export function removeComposerAudioFileAtIndex(attachments: ComposerAudioAttachment[], indexToRemove: number): ComposerAudioAttachment[] {
+  return attachments.filter((_, index) => index !== indexToRemove);
+}
+
+export function removeComposerDocumentFileAtIndex(
+  attachments: ComposerDocumentAttachment[],
+  indexToRemove: number,
+): ComposerDocumentAttachment[] {
+  return attachments.filter((_, index) => index !== indexToRemove);
+}
+
 export function removeComposerDrawingAttachmentByLocalId(
   attachments: ComposerDrawingAttachment[],
   localId: string,
@@ -563,6 +758,14 @@ function createComposerImageLocalId(): string {
 
 function createComposerVideoLocalId(): string {
   return `video-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createComposerAudioLocalId(): string {
+  return `audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createComposerDocumentLocalId(): string {
+  return `document-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function createComposerDrawingLocalId(): string {

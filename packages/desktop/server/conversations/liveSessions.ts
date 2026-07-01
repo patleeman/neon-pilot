@@ -103,6 +103,8 @@ import { ensureLiveSessionSurfaceCanControl, takeOverLiveSessionControl } from '
 import { runPromptOnLiveEntry as runPromptOnLiveEntryWithCallbacks, submitPromptOnLiveEntry } from './liveSessionPromptOps.js';
 import {
   normalizeQueuedPromptBehavior,
+  type PromptAudioAttachment,
+  type PromptDocumentAttachment,
   type PromptImageAttachment,
   type PromptVideoAttachment,
   type QueuedPromptPreview,
@@ -168,7 +170,13 @@ export {
   type LiveSessionPresenceState,
   type LiveSessionSurfaceType,
 } from './liveSessionPresence.js';
-export { type PromptImageAttachment, type PromptVideoAttachment, type QueuedPromptPreview } from './liveSessionQueue.js';
+export {
+  type PromptAudioAttachment,
+  type PromptDocumentAttachment,
+  type PromptImageAttachment,
+  type PromptVideoAttachment,
+  type QueuedPromptPreview,
+} from './liveSessionQueue.js';
 export { isPlaceholderConversationTitle, resolveStableSessionTitle } from './liveSessionTitle.js';
 
 export function prewarmLiveSessionToolSelection(): void {
@@ -933,6 +941,8 @@ export async function startParallelPromptSession(
     text: string;
     images?: PromptImageAttachment[];
     videos?: PromptVideoAttachment[];
+    audios?: PromptAudioAttachment[];
+    documents?: PromptDocumentAttachment[];
     attachmentRefs?: string[];
     contextMessages?: Array<{ customType: string; content: string }>;
     cwd?: string;
@@ -1026,13 +1036,15 @@ async function runPromptOnLiveEntry(
   behavior: 'steer' | 'followUp' | undefined,
   images?: PromptImageAttachment[],
   videos?: PromptVideoAttachment[],
+  audios?: PromptAudioAttachment[],
+  documents?: PromptDocumentAttachment[],
 ): Promise<void> {
   if (behavior === undefined) {
     publishOptimisticPromptRunningState(entry);
   }
 
   try {
-    await runPromptOnLiveEntryWithCallbacks(entry, text, behavior, images, videos, {
+    await runPromptOnLiveEntryWithCallbacks(entry, text, behavior, images, videos, audios, documents, {
       repairLiveSessionTranscriptTail,
       broadcastQueueState,
     });
@@ -1074,6 +1086,8 @@ export async function promptSession(
   behavior?: 'steer' | 'followUp',
   images?: PromptImageAttachment[],
   videos?: PromptVideoAttachment[],
+  audios?: PromptAudioAttachment[],
+  documents?: PromptDocumentAttachment[],
   _surfaceId?: string,
   injectedTurn?: InjectedTurnEnvelopeOptions,
 ): Promise<void> {
@@ -1084,7 +1098,7 @@ export async function promptSession(
   // clicked send continue even if this surface disconnects a moment later.
   const normalizedBehavior = resolvePromptBehavior(entry, behavior);
   const submittedText = injectedTurn ? wrapInjectedTurnMessage(text, { ...injectedTurn, delivery: normalizedBehavior ?? 'started' }) : text;
-  await runPromptOnLiveEntry(entry, submittedText, normalizedBehavior, images, videos);
+  await runPromptOnLiveEntry(entry, submittedText, normalizedBehavior, images, videos, audios, documents);
 }
 
 export async function submitPromptSession(
@@ -1093,13 +1107,15 @@ export async function submitPromptSession(
   behavior?: 'steer' | 'followUp',
   images?: PromptImageAttachment[],
   videos?: PromptVideoAttachment[],
+  audios?: PromptAudioAttachment[],
+  documents?: PromptDocumentAttachment[],
   _surfaceId?: string,
 ): Promise<{ acceptedAs: 'started' | 'queued'; completion: Promise<void> }> {
   const entry = registry.get(sessionId);
   if (!entry) throw new Error(`Session ${sessionId} is not live`);
 
   const normalizedBehavior = resolvePromptBehavior(entry, behavior);
-  const submitted = await submitPromptOnLiveEntry(entry, text, normalizedBehavior, images, videos, {
+  const submitted = await submitPromptOnLiveEntry(entry, text, normalizedBehavior, images, videos, audios, documents, {
     runPromptOnLiveEntry,
   });
   if (submitted.acceptedAs === 'started') {

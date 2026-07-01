@@ -1,12 +1,21 @@
 import { clearConversationComposerDraft } from '../conversation/forking';
 import { clearStoredState, getSessionStorage, persistStoredState, readStoredState, type StorageLike } from '../local/reloadState';
-import type { InjectedPromptMessage, PromptAttachmentRefInput, PromptImageInput, PromptVideoInput } from '../shared/types';
+import type {
+  InjectedPromptMessage,
+  PromptAttachmentRefInput,
+  PromptAudioInput,
+  PromptDocumentInput,
+  PromptImageInput,
+  PromptVideoInput,
+} from '../shared/types';
 
 export interface PendingConversationPrompt {
   text: string;
   behavior?: 'steer' | 'followUp';
   images: PromptImageInput[];
   videos?: PromptVideoInput[];
+  audios?: PromptAudioInput[];
+  documents?: PromptDocumentInput[];
   attachmentRefs: PromptAttachmentRefInput[];
   contextMessages?: Array<Pick<InjectedPromptMessage, 'customType' | 'content'>>;
   relatedConversationIds?: string[];
@@ -157,34 +166,50 @@ function normalizePendingPromptImages(value: unknown): PromptImageInput[] {
   });
 }
 
-function normalizePendingPromptVideos(value: unknown): PromptVideoInput[] {
+function normalizePendingPromptPathBackedAttachments<T extends PromptVideoInput | PromptAudioInput | PromptDocumentInput>(
+  value: unknown,
+  options: { mimePrefix?: string },
+): T[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.flatMap((video) => {
-    if (!video || typeof video !== 'object') {
+  return value.flatMap((attachment) => {
+    if (!attachment || typeof attachment !== 'object') {
       return [];
     }
 
-    const path = typeof (video as { path?: unknown }).path === 'string' ? (video as { path: string }).path.trim() : '';
-    const mimeType = typeof (video as { mimeType?: unknown }).mimeType === 'string' ? (video as { mimeType: string }).mimeType.trim() : '';
-    if (!path || !mimeType.toLowerCase().startsWith('video/')) {
+    const path = typeof (attachment as { path?: unknown }).path === 'string' ? (attachment as { path: string }).path.trim() : '';
+    const mimeType =
+      typeof (attachment as { mimeType?: unknown }).mimeType === 'string' ? (attachment as { mimeType: string }).mimeType.trim() : '';
+    if (!path || !mimeType || (options.mimePrefix && !mimeType.toLowerCase().startsWith(options.mimePrefix))) {
       return [];
     }
 
-    const sizeBytes = (video as { sizeBytes?: unknown }).sizeBytes;
+    const sizeBytes = (attachment as { sizeBytes?: unknown }).sizeBytes;
     return [
       {
-        ...(typeof (video as { name?: unknown }).name === 'string' && (video as { name: string }).name.trim().length > 0
-          ? { name: (video as { name: string }).name.trim() }
+        ...(typeof (attachment as { name?: unknown }).name === 'string' && (attachment as { name: string }).name.trim().length > 0
+          ? { name: (attachment as { name: string }).name.trim() }
           : {}),
         mimeType,
         path,
         ...(Number.isSafeInteger(sizeBytes) && Number(sizeBytes) >= 0 ? { sizeBytes: Number(sizeBytes) } : {}),
-      },
+      } as T,
     ];
   });
+}
+
+function normalizePendingPromptVideos(value: unknown): PromptVideoInput[] {
+  return normalizePendingPromptPathBackedAttachments<PromptVideoInput>(value, { mimePrefix: 'video/' });
+}
+
+function normalizePendingPromptAudios(value: unknown): PromptAudioInput[] {
+  return normalizePendingPromptPathBackedAttachments<PromptAudioInput>(value, { mimePrefix: 'audio/' });
+}
+
+function normalizePendingPromptDocuments(value: unknown): PromptDocumentInput[] {
+  return normalizePendingPromptPathBackedAttachments<PromptDocumentInput>(value, {});
 }
 
 function normalizePendingPromptImagePreviewUrl(value: unknown): string | undefined {
@@ -255,11 +280,15 @@ function normalizePendingConversationPrompt(prompt: PendingConversationPrompt): 
   const attachmentRefs = normalizePendingPromptAttachmentRefs(prompt.attachmentRefs);
   const images = normalizePendingPromptImages(prompt.images);
   const videos = normalizePendingPromptVideos(prompt.videos);
+  const audios = normalizePendingPromptAudios(prompt.audios);
+  const documents = normalizePendingPromptDocuments(prompt.documents);
   const nextPrompt: PendingConversationPrompt = {
     text: prompt.text,
     ...(prompt.behavior ? { behavior: prompt.behavior } : {}),
     images,
     ...(videos.length > 0 ? { videos } : {}),
+    ...(audios.length > 0 ? { audios } : {}),
+    ...(documents.length > 0 ? { documents } : {}),
     attachmentRefs,
     ...(contextMessages.length > 0 ? { contextMessages } : {}),
     ...(relatedConversationIds.length > 0 ? { relatedConversationIds } : {}),
@@ -269,6 +298,8 @@ function normalizePendingConversationPrompt(prompt: PendingConversationPrompt): 
     nextPrompt.text.trim().length > 0 ||
     images.length > 0 ||
     videos.length > 0 ||
+    audios.length > 0 ||
+    documents.length > 0 ||
     attachmentRefs.length > 0 ||
     contextMessages.length > 0 ||
     relatedConversationIds.length > 0;
@@ -285,6 +316,8 @@ function deserializePendingConversationPrompt(raw: string): PendingConversationP
     ...(parsed.behavior === 'steer' || parsed.behavior === 'followUp' ? { behavior: parsed.behavior } : {}),
     images: normalizePendingPromptImages(parsed.images),
     videos: normalizePendingPromptVideos(parsed.videos),
+    audios: normalizePendingPromptAudios(parsed.audios),
+    documents: normalizePendingPromptDocuments(parsed.documents),
     attachmentRefs: normalizePendingPromptAttachmentRefs(parsed.attachmentRefs),
     contextMessages: normalizePendingPromptContextMessages(parsed.contextMessages),
     relatedConversationIds: normalizePendingRelatedConversationIds(parsed.relatedConversationIds),

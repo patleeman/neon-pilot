@@ -22,6 +22,20 @@ export interface PromptVideoInput {
   sizeBytes?: number;
 }
 
+export interface PromptAudioInput {
+  name?: string;
+  mimeType: string;
+  path: string;
+  sizeBytes?: number;
+}
+
+export interface PromptDocumentInput {
+  name?: string;
+  mimeType: string;
+  path: string;
+  sizeBytes?: number;
+}
+
 export interface PromptAttachmentRefInput {
   attachmentId: string;
   revision?: number;

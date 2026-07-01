@@ -75,6 +75,10 @@
       "types": "./dist/backend/agent.d.ts",
       "default": "./dist/backend/agent.js"
     },
+    "./backend/audio": {
+      "types": "./dist/backend/audio.d.ts",
+      "default": "./dist/backend/audio.js"
+    },
     "./backend/automations": {
       "types": "./dist/backend/automations.d.ts",
       "default": "./dist/backend/automations.js"
@@ -90,6 +94,10 @@
     "./backend/conversations": {
       "types": "./dist/backend/conversations.d.ts",
       "default": "./dist/backend/conversations.js"
+    },
+    "./backend/documents": {
+      "types": "./dist/backend/documents.d.ts",
+      "default": "./dist/backend/documents.js"
     },
     "./backend/compaction": {
       "types": "./dist/backend/compaction.d.ts",

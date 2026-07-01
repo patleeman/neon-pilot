@@ -96,7 +96,7 @@ export interface NativeExtensionClient {
     diff(cwd: string, path: string): Promise<unknown>;
     uncommittedDiff(cwd: string): Promise<unknown>;
   };
-  /** Workbench split-pane state sharing between a tab-local rail view and its paired detail view. */
+  /** Workbench split-pane state sharing between a tab-local `rightRail` view and its paired detail view. */
   workbench: {
     getDetailState<T = unknown>(surfaceId: string): T | null;
     setDetailState(surfaceId: string, state: unknown): void;
@@ -245,6 +245,8 @@ export type ExtensionPermission =
   | 'images:read'
   | 'images:write'
   | 'videos:read'
+  | 'audio:read'
+  | 'documents:read'
   | 'knowledge:read'
   | 'knowledge:write'
   | 'knowledge:readwrite'
@@ -295,6 +297,14 @@ export type ExtensionComponentReference = string | ExtensionHostComponentReferen
 export interface ExtensionViewContribution {
   id: string;
   title: string;
+  /**
+   * Host region for this view.
+   * - `main`: required route page content; a nav route must match a main view route.
+   * - `sidebar`: optional route-owned middle-left contextual area, bound from nav with `sidebarView`.
+   * - `rightRail`: either a route-owned context rail (`placement: "primary"`), bound from nav with
+   *   `rightSidebarView`, or a tab-local workbench rail.
+   * - `workbench`: large detail content paired with a tab-local rail.
+   */
   location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
@@ -306,7 +316,7 @@ export interface ExtensionViewContribution {
   activation?: ExtensionViewActivation;
   defaultOpen?: boolean;
   persistOpen?: boolean;
-  /** For rightRail views, optional paired workbench view id rendered in the tab's detail pane while this rail tool is active. */
+  /** For tab-local `rightRail` views, optional paired workbench view id rendered in the detail pane while this rail tool is active. */
   detailView?: string;
   /** Optional host layout behaviors enabled when this main view's route is active. */
   routeCapabilities?: Array<'contextRail' | 'workbench' | 'workbenchFilePane' | 'knowledgeFiles' | 'settingsSection'>;
@@ -328,14 +338,31 @@ export interface ExtensionWebappContribution {
   spaFallback?: boolean;
 }
 
+export type ExtensionPageType = 'conversation' | 'table' | 'editor' | 'settings' | 'dashboard' | 'setup';
+
 export interface ExtensionNavContribution {
   id: string;
   label: string;
   route: string;
   icon?: ExtensionIconName;
   badgeAction?: string;
-  /** Optional view id to render in the left sidebar body while this nav item is active. */
+  /**
+   * Optional sidebar view id to render in the route-owned middle-left contextual area.
+   * If omitted, the global nav remains and the contextual area is blank.
+   */
   sidebarView?: string;
+  /**
+   * Optional `rightRail` view id to render as this route's right-sidebar context rail.
+   * The referenced view must use `location: "rightRail"` and `placement: "primary"`.
+   * `scope` is optional for route-owned context rails and defaults through the host.
+   * If omitted, the shell hides the right-sidebar toggle for this route.
+   */
+  rightSidebarView?: string;
+  /**
+   * Optional design-system page type annotation. Used for inventory and
+   * conformance audits while the taxonomy is being vetted.
+   */
+  pageType?: ExtensionPageType;
   /** Nav section. Default 'primary'. Use 'settings' for items in the settings area. */
   section?: 'primary' | 'settings';
 }
@@ -777,7 +804,7 @@ export interface ExtensionContextMenuContribution {
   when?: string;
 }
 
-export type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange';
+export type ExtensionSelectionKind = 'text' | 'messages' | 'files' | 'transcriptRange' | 'resource';
 
 export interface ExtensionSelectionActionContribution {
   id: string;
@@ -1190,6 +1217,20 @@ export interface ExtensionSelectionState {
   messageBlockIds?: string[];
   files?: Array<{ cwd: string; path: string }>;
   transcriptRange?: { conversationId: string; startBlockId: string; endBlockId: string };
+  /**
+   * Route page selection for context rails. Main page views publish the selected
+   * row/object here so their route-owned right sidebar can render details without
+   * opening a modal. The host clears resource selections when the active route
+   * shell changes; pages should republish the current selection after navigation
+   * or render a compact empty rail when no resource is selected.
+   */
+  resource?: {
+    type: string;
+    id: string;
+    label?: string;
+    source?: string;
+    data?: unknown;
+  };
   conversationId?: string | null;
   cwd?: string | null;
   updatedAt: string;
@@ -1532,7 +1573,13 @@ export interface ExtensionBackendContext {
     sendMessage(
       conversationId: string,
       text: string,
-      options?: { steer?: boolean; images?: Array<{ data: string; mimeType: string; name?: string }> },
+      options?: {
+        steer?: boolean;
+        images?: Array<{ data: string; mimeType: string; name?: string }>;
+        videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+        audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+        documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+      },
     ): Promise<{ accepted: boolean; delivery?: 'started' | 'queued' }>;
     startParallelPrompt(
       conversationId: string,
@@ -1540,6 +1587,9 @@ export interface ExtensionBackendContext {
         text: string;
         cwd?: string;
         images?: Array<{ data: string; mimeType: string; name?: string }>;
+        videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+        audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+        documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
         model?: string | null;
         thinkingLevel?: string | null;
         serviceTier?: string | null;
@@ -1573,6 +1623,8 @@ export interface ExtensionBackendContext {
         cwd?: string;
         images?: Array<{ data: string; mimeType: string; name?: string }>;
         videos?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+        audios?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
+        documents?: Array<{ path: string; mimeType: string; name?: string; sizeBytes?: number }>;
         attachmentRefs?: unknown;
         contextMessages?: unknown;
         relatedConversationIds?: unknown;
