@@ -2,6 +2,7 @@
 /* eslint-env node */
 
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
@@ -567,8 +568,9 @@ export async function runGoldenSmoke({ appPath, matrixPath = defaultMatrixPath, 
       child.kill('SIGTERM');
       await sleep(1_000);
       if (child.exitCode === null) child.kill('SIGKILL');
+      await Promise.race([once(child, 'close'), sleep(5_000)]);
     }
-    if (!preserveState) rmSync(tempRoot, { recursive: true, force: true });
+    if (!preserveState) rmSync(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 }
 
