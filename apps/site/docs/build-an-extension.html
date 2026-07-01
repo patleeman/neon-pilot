@@ -32,14 +32,15 @@
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
           ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
           <a class="active" href="./build-an-extension.html">Build an Extension</a
           ><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a
+          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -47,13 +48,16 @@
           ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
           ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
           ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
+          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
+          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
         </section>
         <section>
           <h2>Developers</h2>
           <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
-          ><a class="" href="./release-qa.html">Release QA</a>
+          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
+          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
+          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -122,16 +126,16 @@ After I approve the direction, build the extension, reload it, test the real app
           <li>Write a short UX brief before implementation:</li>
           <p>
             - <strong>Primary user and job</strong>: who uses it, what they are trying to accomplish, and what they should inspect or change
-            first. - <strong>Primary surface</strong>: exactly one first-version surface: <code>main-page</code>, <code>right-rail</code>,
-            <code>workbench-detail</code>, <code>settingsComponent</code>, backend tool/action, or theme. -
-            <strong>Information architecture</strong>: the core sections, list/detail structure, controls, and command-backed actions. -
-            <strong>State model</strong>: default, empty, loading, error, success, disabled, and long-running states. -
-            <strong>Primitive plan</strong>: which <code>@neon-pilot/extensions/ui</code> components will be used for page shell,
-            lists/tables, forms, feedback, dialogs, runtime status, rails, or workbench chrome. For Settings components, use
-            <code>@neon-pilot/extensions/settings</code> row-list primitives (<code>SettingsPanel</code>, <code>SettingsRow</code>,
-            <code>Switch</code>, <code>Select</code>, <code>TextInput</code>, <code>ToolbarButton</code>) and autosave normal preferences. -
-            <strong>Visual acceptance</strong>: what must be visible in the app screenshot or manual inspection before calling the UI
-            correct.
+            first. - <strong>Primary surface</strong>: exactly one first-version surface: main route, route-owned right sidebar, tab-local
+            workbench rail/detail, <code>settingsComponent</code>, backend tool/action, or theme. If the feature has a route, state whether
+            it is main-only, left+main, or table+right-detail. - <strong>Information architecture</strong>: the core sections, list/detail
+            structure, controls, and command-backed actions. - <strong>State model</strong>: default, empty, loading, error, success,
+            disabled, and long-running states. - <strong>Primitive plan</strong>: which <code>@neon-pilot/extensions/ui</code> components
+            will be used for page shell, lists/tables, forms, feedback, dialogs, runtime status, rails, or workbench chrome. For Settings
+            components, use <code>@neon-pilot/extensions/settings</code> row-list primitives (<code>SettingsPanel</code>,
+            <code>SettingsRow</code>, <code>Switch</code>, <code>Select</code>, <code>TextInput</code>, <code>ToolbarButton</code>) and
+            autosave normal preferences. - <strong>Visual acceptance</strong>: what must be visible in the app screenshot or manual
+            inspection before calling the UI correct.
           </p>
           <li>
             Ask focused questions for unresolved UX/product decisions before writing code. If the user gave enough detail, state the
@@ -163,7 +167,8 @@ After I approve the direction, build the extension, reload it, test the real app
           <li>Reload extensions from Settings -&gt; Extensions, or restart the desktop app when reload is unavailable.</li>
           <li>
             Run <code>neon-pilot extensions smoke &lt;extension-id&gt;</code> when the app is running, then validate through the same
-            surface the user will use: open the route, rail, Settings section, command, composer control, or agent tool.
+            surface the user will use: open the route, route-owned right sidebar, tab-local workbench rail, Settings section, command,
+            composer control, or agent tool.
           </li>
           <p>
             For a Settings component, open <code>/settings#&lt;sectionId&gt;</code> and inspect it beside neighboring Settings sections for
@@ -218,7 +223,7 @@ After I approve the direction, build the extension, reload it, test the real app
                   ><code>crud-page</code></a
                 >
               </td>
-              <td>List + slide-in form editor. Full CRUD.</td>
+              <td>Main-only list with inline editor flow. Full CRUD.</td>
             </tr>
             <tr>
               <td>
@@ -243,15 +248,23 @@ After I approve the direction, build the extension, reload it, test the real app
           <tbody>
             <tr>
               <td>A full app, dashboard, or workflow</td>
-              <td><code>main-page</code> extension</td>
+              <td>Main route extension</td>
+            </tr>
+            <tr>
+              <td>A route with object navigation</td>
+              <td>Main route plus <code>sidebarView</code></td>
+            </tr>
+            <tr>
+              <td>A table/list with persistent selected-item details</td>
+              <td>Main route plus <code>rightSidebarView</code></td>
             </tr>
             <tr>
               <td>Context inside a workbench tab-local rail</td>
-              <td><code>right-rail</code> extension</td>
+              <td>Tab-local workbench rail</td>
             </tr>
             <tr>
               <td>A compact rail panel plus workbench pane detail view</td>
-              <td><code>workbench-detail</code> extension</td>
+              <td>Tab-local workbench rail plus detail view</td>
             </tr>
             <tr>
               <td>Something the agent can call</td>
@@ -275,7 +288,11 @@ After I approve the direction, build the extension, reload it, test the real app
             </tr>
           </tbody>
         </table>
-        <p>When unsure, tell the agent the user experience you want and let it choose the smallest surface that fits.</p>
+        <p>
+          When unsure, tell the agent the user experience you want and let it choose the smallest surface that fits. Do not use a tab-local
+          workbench rail as a substitute for a route-owned right sidebar; if the context belongs beside an extension page, declare
+          <code>rightSidebarView</code>.
+        </p>
         <h2 id="what-your-agent-should-do">What your agent should do</h2>
         <p>For a new extension, the agent should:</p>
         <ol>
@@ -287,7 +304,7 @@ After I approve the direction, build the extension, reload it, test the real app
           <li>Build outside the desktop app using repo or CLI extension tooling.</li>
           <li>Validate and fix Extension Manager diagnostics.</li>
           <li>Reload extensions.</li>
-          <li>Open the contributed page/panel and visually inspect UI changes.</li>
+          <li>Open the contributed route, right sidebar, tab-local workbench rail, panel, or tool and visually inspect UI changes.</li>
           <li>Add or update the extension <code>README.md</code> when behavior is non-obvious.</li>
           <li>
             If publishing through an extension repo, build release artifacts; source folders plus <code>neon.extensions.json</code> are not
@@ -339,8 +356,8 @@ gh release create v0.9.1-rc.6 \
           assets can be inspected, but normal users cannot install its packages through the GitHub install flow.
         </p>
         <h2 id="good-extension-requests">Good extension requests</h2>
-        <pre><code>Build a tab-local right-rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.</code></pre>
-        <pre><code>Build a main-page extension for reviewing background work. It should list recent executions, show status and duration, and open background command or subagent logs in a detail pane.</code></pre>
+        <pre><code>Build a tab-local workbench rail extension that shows a checklist for the current conversation. It should let me add, complete, and delete items, and persist per conversation.</code></pre>
+        <pre><code>Build a main-route extension for reviewing background work. It should list recent executions, show status and duration, and open background command or subagent logs in a route-owned right sidebar.</code></pre>
         <pre><code>Build an extension that adds an agent-callable tool for looking up snippets from my local workspace glossary. Include a small settings panel for the glossary path.</code></pre>
         <pre><code>Build a theme-only extension with a calm dark palette. Install it, reload extensions, and tell me how to enable it.</code></pre>
         <h2 id="build-reload-validate">Build, reload, validate</h2>

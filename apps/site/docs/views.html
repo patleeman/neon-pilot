@@ -32,13 +32,14 @@
           <a class="" href="./desktop-app.html">Desktop App</a><a class="active" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
           ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
           <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a
+          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -46,32 +47,55 @@
           ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
           ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
           ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
+          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
+          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
         </section>
         <section>
           <h2>Developers</h2>
           <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
-          ><a class="" href="./release-qa.html">Release QA</a>
+          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
+          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
+          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
         </section>
       </aside>
       <article class="docs-content">
         <h1 id="views">Views</h1>
+        <p>Neon Pilot routes use one shell model:</p>
+        <ul>
+          <li><strong>Global left navigation</strong> — persistent app navigation at the top and bottom.</li>
+          <li>
+            <strong>Contextual left area</strong> — route-owned selection/navigation content, blank when undeclared while the global
+            top/bottom nav remains.
+          </li>
+          <li><strong>Main page</strong> — the primary route surface.</li>
+          <li><strong>Right sidebar</strong> — optional route-owned context rail, hidden when undeclared.</li>
+        </ul>
         <p>
-          Neon Pilot has a conversation layout with an optional workbench panel. Toggle the workbench with the right-side top-bar button or
-          <code>Cmd+\</code> (or <code>Ctrl+\</code>).
+          Chat uses the contextual left area for Threads and the right sidebar for Workbench. Other routes can declare their own contextual
+          left area and right sidebar through extension nav bindings.
         </p>
-        <h2 id="conversation-view">Conversation View</h2>
+        <h2 id="chat-view">Chat View</h2>
         <p>
-          The default layout when the workbench is hidden. A single conversation pane with the left sidebar for conversation navigation.
+          Chat is the conversation route. It owns the Threads contextual left area, transcript/composer main page, and Workbench right
+          sidebar.
         </p>
         <ul>
-          <li><strong>Left sidebar</strong> — conversation list, toggle with <code>Cmd+/</code> (or <code>Ctrl+/</code>)</li>
-          <li><strong>Center</strong> — transcript and composer</li>
-          <li>Use this for focused single-thread work</li>
+          <li><strong>Global left navigation</strong> — app routes and settings remain visible.</li>
+          <li>
+            <strong>Contextual left area</strong> — Threads conversation list, toggle with <code>Cmd+/</code> (or <code>Ctrl+/</code>).
+          </li>
+          <li><strong>Main page</strong> — transcript and composer.</li>
+          <li>
+            <strong>Right sidebar</strong> — Workbench, toggle with the right-side top-bar button or <code>Cmd+\</code> (or
+            <code>Ctrl+\</code>).
+          </li>
         </ul>
         <h2 id="workbench">Workbench</h2>
-        <p>A tabbed panel for working alongside knowledge and tools. Available on conversation routes.</p>
+        <p>
+          Workbench is Chat's right-sidebar content: a tabbed panel for working alongside a conversation. It is available on conversation
+          routes, not as a generic name for every route's right sidebar.
+        </p>
         <p>The new tab page includes:</p>
         <table>
           <thead>
@@ -107,15 +131,17 @@
             </tr>
           </tbody>
         </table>
-        <p>Knowledge also appears as a left-sidebar route. Extension-contributed workbench tools can appear on the new tab page.</p>
+        <p>Extension-contributed workbench tools can appear on the new tab page.</p>
         <p>
-          For extension authors, an extension rail is for compact contextual tools inside a workbench tab. If a feature needs the rail to
-          select something and the main area to render the large detail view, pair the rail view with a
-          <code>location: &quot;workbench&quot;</code> detail view. See
-          <a href="https://github.com/patleeman/neon-pilot/blob/main/extensions/system-extension-manager/README.md#surface-selection"
-            >Extensions</a
-          >
-          for the surface decision guide.
+          For extension authors, a tab-local workbench rail is for compact contextual tools inside a workbench tab. If a feature needs the
+          rail to select something and the main area to render the large detail view, pair the rail view with a
+          <code>location: &quot;workbench&quot;</code> detail view.
+        </p>
+        <p>
+          Route-owned right sidebars are different: declare a <code>views[].location: &quot;rightRail&quot;</code> view with
+          <code>placement: &quot;primary&quot;</code> and bind it from <code>nav[].rightSidebarView</code>. Use route-owned context rails
+          for selected-object details, inspectors, setup output, logs, previews, validation, and secondary actions beside a main page. See
+          <a href="./extensions.html#route-shell-regions">Extension route shell regions</a>.
         </p>
         <h3 id="workbench-behavior">Workbench Behavior</h3>
         <ul>
@@ -126,6 +152,29 @@
           <li>Background commands and subagents render as inline transcript execution cards</li>
           <li>Browser loads pages alongside the conversation</li>
         </ul>
+        <h2 id="extension-route-shells">Extension Route Shells</h2>
+        <p>Extension routes should declare only the regions they own:</p>
+        <ul>
+          <li>A <code>main</code> view with a route is required.</li>
+          <li>
+            A <code>sidebar</code> view can be bound with <code>sidebarView</code> when the route has a natural selector or navigator.
+          </li>
+          <li>
+            A <code>rightRail</code> view with <code>placement: &quot;primary&quot;</code> can be bound with
+            <code>rightSidebarView</code> when the route needs contextual details beside the main page.
+          </li>
+        </ul>
+        <p><code>placement</code> and <code>scope</code> are side-region fields; do not put them on <code>main</code> views.</p>
+        <p>
+          If a route omits <code>sidebarView</code>, the middle-left area stays blank rather than showing Threads. If a route omits
+          <code>rightSidebarView</code>, the right-sidebar toggle is hidden for that route.
+        </p>
+        <p>
+          Main pages that own row or object selection should publish route context with
+          <code>pa.selection.set({ kind: &quot;resource&quot;, resource: { type, id, label, source, data } })</code>. The route-owned right
+          sidebar should render that selected object's details, inspector, setup output, logs, preview, validation, or secondary actions.
+          Use modals for blocking or transient flows, not normal object inspection.
+        </p>
         <h2 id="layout-shortcuts">Layout Shortcuts</h2>
         <table>
           <thead>
@@ -136,11 +185,11 @@
           </thead>
           <tbody>
             <tr>
-              <td>Hide workbench</td>
+              <td>Hide workbench / right sidebar</td>
               <td><code>F1</code></td>
             </tr>
             <tr>
-              <td>Show workbench</td>
+              <td>Show workbench / right sidebar</td>
               <td><code>F2</code></td>
             </tr>
             <tr>
@@ -148,7 +197,7 @@
               <td><code>Cmd+/</code> (or <code>Ctrl+/</code>)</td>
             </tr>
             <tr>
-              <td>Toggle workbench</td>
+              <td>Toggle route right sidebar</td>
               <td><code>Cmd+\</code> (or <code>Ctrl+\</code>)</td>
             </tr>
           </tbody>
@@ -161,7 +210,8 @@
       </article>
       <aside class="docs-toc">
         <h2>On this page</h2>
-        <a href="#conversation-view">Conversation View</a><a href="#workbench">Workbench</a><a href="#layout-shortcuts">Layout Shortcuts</a>
+        <a href="#chat-view">Chat View</a><a href="#workbench">Workbench</a><a href="#extension-route-shells">Extension Route Shells</a
+        ><a href="#layout-shortcuts">Layout Shortcuts</a>
       </aside>
     </main>
   </body>

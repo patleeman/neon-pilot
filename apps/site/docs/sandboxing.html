@@ -32,13 +32,14 @@
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
           ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
           <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a
+          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -46,13 +47,16 @@
           ><a class="" href="./daemon.html">Daemon</a><a class="active" href="./sandboxing.html">Sandboxing</a
           ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
           ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
+          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
+          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
         </section>
         <section>
           <h2>Developers</h2>
           <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
-          ><a class="" href="./release-qa.html">Release QA</a>
+          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
+          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
+          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -100,6 +104,29 @@
           artifact output, temp workspaces, knowledge access, or secrets. The process launcher remains the execution boundary; the
           Filesystem Authority owns root identity, grants, policy decisions, and audit vocabulary.
         </p>
+        <h2 id="speculative-workspaces">Speculative workspaces</h2>
+        <p>
+          Speculative agent runs, including Model Arena challenger runs, should not write directly into the user's active workspace. Use the
+          host-owned speculative workspace boundary instead:
+        </p>
+        <ol>
+          <li>create a temporary workspace from the source directory;</li>
+          <li>prefer APFS clone copies on macOS and fall back to a normal recursive copy when clone support is unavailable;</li>
+          <li>run the challenger command in the temporary workspace;</li>
+          <li>
+            use the generated macOS <code>sandbox-exec</code> profile when available to deny writes outside the temporary workspace and
+            explicit writable temp roots;
+          </li>
+          <li>collect a file-tree diff against the source workspace;</li>
+          <li>apply the selected change set back to the source workspace only after the user chooses that run;</li>
+          <li>dispose of the temporary workspace on cancel, rejection, or completion.</li>
+        </ol>
+        <p>
+          The first implementation lives in <code>packages/desktop/server/filesystem/speculativeWorkspace.ts</code>. It intentionally does
+          not depend on AgentFS, Treebeard, git worktrees, or an external filesystem daemon. AgentFS-style systems can be tested later as
+          alternative adapters behind the same boundary, but Model Arena should target Neon Pilot's speculative workspace contract rather
+          than a third-party command shape.
+        </p>
         <h2 id="extension-process-api-policy">Extension process API policy</h2>
         <p>
           Extension backend code must use <code>ctx.shell</code> for process execution. Direct Node process APIs are blocked during backend
@@ -121,7 +148,7 @@
       <aside class="docs-toc">
         <h2>On this page</h2>
         <a href="#execution-boundary">Execution boundary</a><a href="#registering-a-process-wrapper">Registering a process wrapper</a
-        ><a href="#filesystem-root-grants">Filesystem root grants</a
+        ><a href="#filesystem-root-grants">Filesystem root grants</a><a href="#speculative-workspaces">Speculative workspaces</a
         ><a href="#extension-process-api-policy">Extension process API policy</a>
       </aside>
     </main>

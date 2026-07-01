@@ -38,8 +38,8 @@
           <p class="eyebrow">Local macOS runtime</p>
           <h1 id="hero-title">The local AI agent runtime and workbench.</h1>
           <p class="hero-lede">
-            Neon Pilot gives coding agents a durable desktop home: conversations, background work, tools, extensions, knowledge, and
-            checkpoints in one local app.
+            Neon Pilot gives coding agents a durable desktop home: conversations, background work, tools, extensions, screenshots, local
+            knowledge, checkpoints, and inspectable runtime state in one app.
           </p>
 
           <div class="proof-list" aria-label="Primary product guarantees">
@@ -49,11 +49,11 @@
             </div>
             <div>
               <strong>Built for long work</strong>
-              <span>Run follow-ups, scheduled tasks, and daemon-backed jobs after one reply ends.</span>
+              <span>Run follow-ups, scheduled tasks, model duels, and daemon-backed jobs after one reply ends.</span>
             </div>
             <div>
               <strong>Extensible by design</strong>
-              <span>Add commands, pages, tools, settings, and skills as first-class extensions.</span>
+              <span>Add commands, pages, tools, settings, skills, plugins, and MCP servers as first-class capabilities.</span>
             </div>
           </div>
 
@@ -79,7 +79,7 @@
         <figure class="hero-shot">
           <img
             src="./screenshots/dark/extensions.png"
-            alt="Neon Pilot desktop app showing the local extension manager with built-in capabilities, routes, commands, and enabled states."
+            alt="Neon Pilot desktop app showing a staged local agent conversation with workbench panels, tools, and progress state."
             width="1440"
             height="960"
             fetchpriority="high"
@@ -96,12 +96,12 @@
         <article>
           <span aria-hidden="true">02</span>
           <strong>Background Runs</strong>
-          <p>Let tasks continue as daemon-backed work, scheduled automations, follow-ups, or deferred resumes.</p>
+          <p>Let tasks continue as daemon-backed work, scheduled automations, follow-ups, routines, or deferred resumes.</p>
         </article>
         <article>
           <span aria-hidden="true">03</span>
           <strong>Extensions</strong>
-          <p>Install or build native capabilities with commands, tools, pages, settings, skills, and docs.</p>
+          <p>Install or build native capabilities with commands, tools, pages, settings, skills, plugins, and docs.</p>
         </article>
         <article>
           <span aria-hidden="true">04</span>
@@ -118,9 +118,58 @@
         <div class="text-column">
           <p>
             Neon Pilot is not another hosted chat surface. It is a local runtime around the agent: transcript storage, workspace context,
-            background execution, extension hosting, model/provider settings, and reusable workflow surfaces.
+            background execution, extension hosting, model/provider settings, browser control, MCP tools, terminal access, telemetry, and
+            reusable workflow surfaces.
           </p>
           <p>Use it when a task needs files, tools, follow-through, and durable state instead of a single disposable answer.</p>
+        </div>
+      </section>
+
+      <section class="feature-matrix" aria-labelledby="feature-matrix-title">
+        <div class="section-heading">
+          <p class="eyebrow">Feature set</p>
+          <h2 id="feature-matrix-title">The pieces agents need when work gets real.</h2>
+          <p>
+            Neon Pilot is built around the full loop: gather context, run tools, inspect output, continue in the background, and turn useful
+            patterns into reusable capabilities.
+          </p>
+        </div>
+        <div class="matrix-grid">
+          <article>
+            <h3>Workbench conversations</h3>
+            <p>
+              Durable transcripts, file attachments, screenshots, drawings, model controls, todos, diffs, artifacts, and branch-aware
+              status.
+            </p>
+          </article>
+          <article>
+            <h3>Background execution</h3>
+            <p>Daemon-backed runs, scheduled automations, routines, goal mode, subagents, native alerts, and visible run state.</p>
+          </article>
+          <article>
+            <h3>Local toolbelt</h3>
+            <p>Terminal, browser, computer-use, ast-grep, hashline editing, web fetch, video and image probes, and MCP server calls.</p>
+          </article>
+          <article>
+            <h3>Model operations</h3>
+            <p>
+              Provider setup, model picker controls, local gateway, prompt assembly diagnostics, context usage, and blind Model Arena duels.
+            </p>
+          </article>
+          <article>
+            <h3>Extension platform</h3>
+            <p>
+              Native extensions contribute routes, backend actions, tools, skills, settings, CLI commands, setup items, and host-view
+              components.
+            </p>
+          </article>
+          <article>
+            <h3>Agent plugins and skills</h3>
+            <p>
+              Import Codex and Claude plugin packages, search trusted skill sources, preview and vet skills, then install them into the
+              runtime.
+            </p>
+          </article>
         </div>
       </section>
 
@@ -146,30 +195,36 @@
         <figure class="screen-main">
           <img
             src="./screenshots/dark/settings.png"
-            alt="Neon Pilot settings showing appearance and provider configuration."
+            alt="Neon Pilot settings showing provider, model, extension, readiness, and runtime configuration."
             width="1440"
             height="960"
             loading="lazy"
           />
           <figcaption>
             <strong>Configure the runtime</strong>
-            <span>Providers, models, appearance, workspace behavior, commands, and desktop settings live in one app.</span>
+            <span>Providers, models, appearance, readiness, extension sources, permissions, and desktop settings live in one app.</span>
           </figcaption>
         </figure>
         <div class="screen-stack">
           <figure>
             <img
-              src="./screenshots/dark/workbench.png"
-              alt="Neon Pilot new conversation screen with sidebar, composer, model control, and workspace controls."
+              src="./screenshots/dark/extensions.png"
+              alt="Neon Pilot extension manager showing bundled capabilities, status, diagnostics, and install controls."
               width="1440"
               height="960"
               loading="lazy"
             />
-            <figcaption>Conversation workbench</figcaption>
+            <figcaption>Extension manager</figcaption>
           </figure>
           <figure>
-            <img src="./screenshots/dark/command-palette.png" alt="Neon Pilot command palette." width="1440" height="960" loading="lazy" />
-            <figcaption>Command palette</figcaption>
+            <img
+              src="./screenshots/dark/command-palette.png"
+              alt="Neon Pilot command palette with extension commands."
+              width="1440"
+              height="960"
+              loading="lazy"
+            />
+            <figcaption>Command palette and extension actions</figcaption>
           </figure>
         </div>
       </section>
@@ -179,8 +234,8 @@
           <p class="eyebrow">Extension-first</p>
           <h2>Keep core small. Add workflows as extensions.</h2>
           <p>
-            Neon Pilot's product surface is built around first-party and user extensions. A capability can contribute pages, sidebar views,
-            settings, commands, agent tools, skills, and backend actions without bloating the runtime core.
+            Neon Pilot's product surface is built around bundled, optional, and user extensions. A capability can contribute pages, sidebar
+            views, settings, commands, agent tools, skills, setup readiness items, and backend actions without bloating the runtime core.
           </p>
           <a href="./docs/extensions.html">Read extension docs</a>
         </article>
@@ -188,7 +243,7 @@
           <p class="eyebrow">Durable work</p>
           <h2>Give agents somewhere to continue.</h2>
           <p>
-            Conversations, branches, artifacts, checkpoints, automations, scheduled tasks, and daemon-backed runs persist across app
+            Conversations, branches, artifacts, checkpoints, automations, routines, model duels, and daemon-backed runs persist across app
             restarts, so useful work can keep moving outside one synchronous response.
           </p>
           <a href="./docs/conversations.html">Read conversation docs</a>
@@ -201,6 +256,15 @@
             operating context without rebuilding it from scratch each time.
           </p>
           <a href="./docs/conversation-context.html">Read context docs</a>
+        </article>
+        <article>
+          <p class="eyebrow">Inspection</p>
+          <h2>See what the runtime is doing.</h2>
+          <p>
+            Telemetry, prompt assembly diagnostics, context usage, background work, setup readiness, and extension diagnostics make agent
+            behavior inspectable instead of mysterious.
+          </p>
+          <a href="./docs/telemetry.html">Read telemetry docs</a>
         </article>
       </section>
 

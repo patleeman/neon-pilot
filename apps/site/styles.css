@@ -362,8 +362,8 @@ h1 {
   width: 100%;
   aspect-ratio: 1.56;
   cursor: zoom-in;
-  object-fit: cover;
-  object-position: top left;
+  object-fit: contain;
+  object-position: top center;
 }
 
 .capability-strip {
@@ -478,6 +478,37 @@ h2 {
   line-height: 1.6;
 }
 
+.feature-matrix {
+  padding: 58px 0 10px;
+}
+
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.matrix-grid article {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.matrix-grid h3 {
+  color: var(--ink);
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.matrix-grid p {
+  margin-top: 8px;
+  color: #59606a;
+  font-size: 0.82rem;
+  line-height: 1.56;
+}
+
 .screens {
   display: grid;
   grid-template-columns: 1.18fr 0.82fr;
@@ -537,12 +568,13 @@ h2 {
 
 .deep-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
   padding: 50px 0 26px;
 }
 
 .deep-grid article,
+.matrix-grid article,
 .ext-card,
 .extension-catalog,
 .extension-repo,
@@ -994,6 +1026,7 @@ th {
 
   .capability-strip,
   .workflow,
+  .matrix-grid,
   .deep-grid,
   .ext-grid,
   .catalog-grid,
@@ -1085,6 +1118,7 @@ th {
 
   .capability-strip,
   .workflow,
+  .matrix-grid,
   .deep-grid,
   .ext-grid,
   .catalog-grid,

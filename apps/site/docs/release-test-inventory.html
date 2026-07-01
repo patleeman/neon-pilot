@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05070b" />
+    <title>Release Test Inventory · Neon Pilot Docs</title>
+    <link rel="icon" href="../mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="docs-body">
+    <header>
+      <a class="brand" href="../"
+        ><span class="brand-mark"><img src="../mark.svg" alt="" /></span><span>Neon Pilot</span></a
+      >
+      <nav aria-label="Primary">
+        <a href="../#overview">Overview</a><a href="./">Docs</a><a href="../extensions.html">Extensions</a
+        ><a href="https://github.com/patleeman/neon-pilot">GitHub ↗</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+    </header>
+    <main class="docs-layout">
+      <aside class="docs-sidebar">
+        <h1>Docs</h1>
+        <section>
+          <h2>Start here</h2>
+          <a class="" href="./">Overview</a><a class="" href="./getting-started.html">Getting Started</a
+          ><a class="" href="./agent-bootstrap.html">Agent Bootstrap</a>
+        </section>
+        <section>
+          <h2>Product</h2>
+          <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
+          ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
+          ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
+        </section>
+        <section>
+          <h2>Extensions</h2>
+          <a class="" href="./build-an-extension.html">Build an Extension</a><a class="" href="./extensions.html">Extension Authoring</a
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a
+          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
+        </section>
+        <section>
+          <h2>Runtime</h2>
+          <a class="" href="./desktop-api-boundary.html">Desktop API Boundary</a><a class="" href="./configuration.html">Configuration</a
+          ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
+          ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
+          ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
+          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
+          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
+        </section>
+        <section>
+          <h2>Developers</h2>
+          <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
+          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
+          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
+          ><a class="active" href="./release-test-inventory.html">Release Test Inventory</a>
+        </section>
+      </aside>
+      <article class="docs-content">
+        <h1 id="release-test-inventory">Release test inventory</h1>
+        <p>
+          This is the release checklist source of truth: every page, extension, context, agent tool, command, and user-facing interaction
+          that should be covered before shipping Neon Pilot.
+        </p>
+        <p>
+          Use this as an inventory, not a test script. Each row implies happy path, error path, loading/empty state, persistence after
+          reload, keyboard accessibility, and visual regression checks where UI exists.
+        </p>
+        <h2 id="app-shell-and-global-contexts">App shell and global contexts</h2>
+        <h3 id="desktop-app-shell">Desktop app shell</h3>
+        <ul>
+          <li>App launch, runtime boot, daemon connection, reconnect after daemon restart.</li>
+          <li>First window creation, close-to-hide behavior, reopen behavior, quit confirmation, external daemon warning.</li>
+          <li>Menu bar/tray presence and context menu.</li>
+          <li>Application menus: app menu, File, Edit, View, Window; Settings menu item; layout mode switchers.</li>
+          <li>Auto-update dialogs: unsupported build OK, no update OK, update available Later, Restart to Update, update error OK.</li>
+          <li>Deep links into conversations, pages, and extension views.</li>
+          <li>Desktop shortcuts delivered into the active conversation window.</li>
+          <li>Window layout modes: Conversation view and Workbench view.</li>
+          <li>Navigation: sidebar, extension nav items, back/forward route behavior, refresh/reload.</li>
+          <li>Theme/branding: Neon Pilot name, icon assets, light/dark/system themes.</li>
+        </ul>
+        <h3 id="conversation-workbench-core">Conversation/workbench core</h3>
+        <ul>
+          <li>
+            Routes: <code>/</code>, <code>/conversations</code>, <code>/conversations/new</code>, <code>/conversations/:id</code>, and
+            extension fallback routes.
+          </li>
+          <li>Conversation list: create, open, search/palette, duplicate, archive/delete if available, title updates.</li>
+          <li>
+            Left sidebar: conversation grouping, archived section, hover quick actions, close/archive controls, working directory quick
+            select modal, new conversation button.
+          </li>
+          <li>
+            Command palette: open/archived conversations scope, files/quick-open scope, extension commands, extension search providers,
+            keyboard navigation, empty/search/error states.
+          </li>
+          <li>
+            Composer: send prompt, multiline input, submit shortcuts, disabled/loading states, model selection, cwd display, context
+            attachments, image/file attachments, dictation input, Excalidraw input.
+          </li>
+          <li>Bash shortcut parsing: whole-line <code>!command</code> and <code>!!command</code>; empty/inline bang ignored.</li>
+          <li>
+            Streaming transcript: user messages, assistant text, tool calls, tool results, errors, collapsed/expanded shelves, pinned tool
+            rows.
+          </li>
+          <li>Stop/cancel running agent, retry/try again, continue/resume, compact/context-hardening flows.</li>
+          <li>Branching/topology: alternate replies, branch navigation, transcript-native topology events.</li>
+          <li>Conversation context menu: duplicate conversation, copy working directory, copy conversation ID, copy deeplink.</li>
+          <li>Conversation header actions contributed by extensions, including Import Session when enabled.</li>
+          <li>Working directory group context menu: copy working directory and grouped conversation behavior.</li>
+          <li>Selection context menu: copy/selection actions.</li>
+          <li>Workbench tool tabs and tab-local rails: open, close, switch tabs, detail panes, preserved sizing.</li>
+          <li>Conversation resume after app restart: pending tool calls, background work, bash output, agent state.</li>
+        </ul>
+        <h3 id="agent-tool-execution-baseline">Agent tool execution baseline</h3>
+        <ul>
+          <li>Tool permission display and transcript rendering for every built-in tool.</li>
+          <li>Successful call, invalid input validation, thrown error, long-running call, cancellation if supported.</li>
+          <li>JSON/schema rendering in transcript shelves.</li>
+          <li>Tool availability changes when extensions are enabled/disabled.</li>
+        </ul>
+        <h2 id="built-in-pages-and-extension-surfaces">Built-in pages and extension surfaces</h2>
+        <h3 id="settings-settings-panels-system-settings"><code>/settings</code> — Settings panels (<code>system-settings</code>)</h3>
+        <ul>
+          <li>Nav item: Settings.</li>
+          <li>Command: <code>open-settings</code>.</li>
+          <li>Pages/views: Settings, Provider settings, Desktop settings.</li>
+          <li>
+            Settings keys: <code>secrets.provider</code> (<code>keychain</code>, <code>file</code>, <code>env-only</code>),
+            <code>conversation.transcriptDisclosure</code> (<code>auto</code>, <code>expanded</code>),
+            <code>conversation.diffDisclosure</code>, and <code>conversation.pinnedToolCalls</code>.
+          </li>
+          <li>
+            Test provider add/edit/remove, model/provider validation, secrets redaction, desktop preferences, keyboard shortcut preferences,
+            persistence after restart.
+          </li>
+          <li>
+            Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image
+            Probe, AI Gateway, Neon Pilot CLI.
+          </li>
+        </ul>
+        <h3 id="settings-providers-provider-settings"><code>/settings/providers</code> — Provider settings</h3>
+        <ul>
+          <li>Provider list, add/edit provider, default model, API key/secret handling, invalid credential messaging.</li>
+          <li>Model availability refresh and selected model propagation to composer/model picker.</li>
+        </ul>
+        <h3 id="settings-desktop-desktop-settings"><code>/settings/desktop</code> — Desktop settings</h3>
+        <ul>
+          <li>App mode preferences, keyboard shortcut validation, startup/runtime behavior, theme/display preferences.</li>
+        </ul>
+        <h3 id="extensions-extension-manager-system-extension-manager">
+          <code>/extensions</code> — Extension Manager (<code>system-extension-manager</code>)
+        </h3>
+        <ul>
+          <li>Nav item: Extensions.</li>
+          <li>
+            Actions: <code>listExtensions</code>, <code>createExtension</code>, <code>snapshotExtension</code>,
+            <code>reloadExtension</code>, <code>validateExtension</code>, <code>listHostViewComponents</code>, <code>readSearchPaths</code>,
+            <code>updateSearchPaths</code>, <code>manageExtension</code>.
+          </li>
+          <li>
+            Page controls: extension list, enable/disable, reload, validate, snapshot, create extension, search paths editor, host component
+            list.
+          </li>
+          <li>States: bundled system extension, installed user extension, invalid manifest, missing build artifact, action failure.</li>
+          <li>Skills: <code>skills-and-capabilities</code>, <code>local-extension-development</code>.</li>
+        </ul>
+        <h3 id="knowledge-and-knowledge-rail-detail-system-knowledge-installable">
+          <code>/knowledge</code> and knowledge rail/detail (<code>system-knowledge</code>, installable)
+        </h3>
+        <ul>
+          <li>Nav item: Knowledge after installation.</li>
+          <li>
+            Views: Knowledge page, Knowledge left-sidebar file browser, Knowledge tree tab-local rail, Knowledge file workbench detail.
+          </li>
+          <li>
+            Actions: <code>readState</code>, <code>updateState</code>, <code>sync</code>, <code>knowledgeListFiles</code>,
+            <code>knowledgeTree</code>, <code>knowledgeReadFile</code>, <code>knowledgeWriteFile</code>, <code>knowledgeCreateFolder</code>,
+            <code>knowledgeDeleteFile</code>, <code>knowledgeRename</code>, <code>knowledgeMove</code>, <code>knowledgeBacklinks</code>,
+            <code>knowledgeSearch</code>, <code>knowledgeUploadImage</code>, <code>knowledgeImportUrl</code>,
+            <code>resolvePromptReferences</code>.
+          </li>
+          <li>Prompt reference provider: <code>knowledge-files</code>.</li>
+          <li>Quick open provider: <code>knowledge-files</code> in the command palette files section.</li>
+          <li>Mentions provider: <code>knowledge-files</code> in the conversation <code>@</code> menu for note, folder, and file kinds.</li>
+          <li>Settings component: <code>knowledge-base</code> / Knowledge Base.</li>
+          <li>
+            Test file tree, open file, edit/save, create folder, rename, move, delete, backlinks, search, image upload, URL import, sync
+            status, conflict/error states.
+          </li>
+          <li>Context menu: knowledge entry actions.</li>
+        </ul>
+        <h3 id="automations-automations-system-automations"><code>/automations</code> — Automations (<code>system-automations</code>)</h3>
+        <ul>
+          <li>Nav item: Automations.</li>
+          <li>
+            Agent tool: <code>scheduled_task</code> with actions <code>list</code>, <code>get</code>, <code>save</code>,
+            <code>delete</code>, <code>validate</code>, <code>run</code>.
+          </li>
+          <li>Actions: <code>scheduledTask</code>, <code>deferredResume</code>.</li>
+          <li>
+            Page controls: automation list, create/edit automation, enable/disable, cron schedule, one-shot <code>at</code>, validate, run
+            now, delete.
+          </li>
+          <li>
+            Delivery modes: conversation callback, background-agent target, dedicated/existing/no conversation binding, steer vs follow-up,
+            notify success/failure, require ack, auto-resume-if-open.
+          </li>
+          <li>Catch-up windows, timeouts, cwd/model/profile fields, missed schedule behavior.</li>
+          <li>Skills: <code>async-attention</code>, <code>scheduled-tasks</code>.</li>
+        </ul>
+        <h3 id="telemetry-telemetry-system-telemetry"><code>/telemetry</code> — Telemetry (<code>system-telemetry</code>)</h3>
+        <ul>
+          <li>Nav item: Telemetry.</li>
+          <li>
+            Test event list, filters, route timing records, extension/runtime producers, empty state, malformed log handling,
+            export/inspection if available.
+          </li>
+          <li>
+            Backend report routes/functions: summary, model usage, cost by conversation, tool health, context, agent loop, daily tokens,
+            tool flow, cache efficiency, system prompt, auto mode, context pointers, session integrity.
+          </li>
+        </ul>
+        <h3 id="workflows-dynamic-workflows-system-dynamic-workflows-default-disabled">
+          <code>/workflows</code> — Dynamic Workflows (<code>system-dynamic-workflows</code>, default disabled)
+        </h3>
+        <ul>
+          <li>Nav item: Workflows when enabled.</li>
+          <li>Agent tool/action: <code>workflow</code>.</li>
+          <li>
+            Actions: <code>workflow</code>, <code>listWorkflows</code>, <code>getWorkflow</code>, <code>cancelWorkflow</code>,
+            <code>listWorkflowTemplates</code>, <code>saveWorkflow</code>, <code>listSavedWorkflows</code>,
+            <code>deleteSavedWorkflow</code>, <code>runSavedWorkflow</code>.
+          </li>
+          <li>
+            Settings keys: default agent model, default allowed tools, max concurrent agents, max total agents, node timeout, workflow
+            timeout.
+          </li>
+          <li>
+            Test workflow template list, run/cancel, saved workflow create/delete/run, transcript block rendering, concurrent subagent
+            limits, invalid JavaScript, timeout, and persisted run history.
+          </li>
+          <li>Skill: <code>dynamic-workflows</code>.</li>
+        </ul>
+        <h3 id="gateways-telegram-gateway-system-gateways-bundled-first-party-extension">
+          <code>/gateways</code> — Telegram Gateway (<code>system-gateways</code>, bundled first-party extension)
+        </h3>
+        <ul>
+          <li>Nav item: Gateways.</li>
+          <li>Gateway provider: <code>telegram</code>.</li>
+          <li>Secret: <code>telegramBotToken</code>.</li>
+          <li>
+            Test Telegram setup state, token save/redaction, safe bot token check, approved user/chat ID persistence, start/stop/status,
+            invalid token, incoming command routing, gateway sidebar, empty/error states, and extension disable cleanup.
+          </li>
+          <li>
+            Test Hermes-style Telegram UX: BotFather command menu publishing, <code>/help</code>, <code>/whoami</code>,
+            <code>/threads</code>, <code>/switch</code>, <code>/model</code> with inline keyboards, callback handling, separate streamed
+            tool-call messages, working-message edit into final replies, failed prompt edit into error text, voice-note
+            transcription/echo/prompt injection, HTML/rich markdown rendering, table/task-list normalization, link-preview suppression, and
+            long-reply chunking.
+          </li>
+          <li>
+            Live smoke with real credentials: save bot token, add the tester's Telegram user ID or chat ID, run Test bot, send
+            <code>/whoami</code>, <code>/threads</code>, tap a thread button, send <code>/model</code> and tap a model, send a text prompt
+            that uses at least one visible tool and confirm the bot sends a separate brief tool-status message before final response, send a
+            markdown/table/task-list prompt, send a short voice note and confirm the bot echoes the transcript before the agent reply, and
+            confirm an unapproved chat is rejected.
+          </li>
+        </ul>
+        <h3 id="prompt-assembly-runtime-inspection-system-prompt-assembly">
+          Prompt Assembly runtime inspection (<code>system-prompt-assembly</code>)
+        </h3>
+        <ul>
+          <li>
+            Product surface: Settings -&gt; Extensions and Extension Manager details. Prompt Assembly does not contribute a standalone nav
+            item or <code>/prompt-assembly</code> route.
+          </li>
+          <li>
+            Actions: <code>inspectAgentRuntime</code>, <code>inspectPromptAssembly</code>, <code>updatePromptAssemblySkillEnabled</code>,
+            <code>updateRuntimeCapability</code>.
+          </li>
+          <li>
+            Test runtime capability inventory, instruction layers, skill enable/disable, runtime capability toggles, diagnostics display,
+            reload persistence, and failure isolation.
+          </li>
+        </ul>
+        <h2 id="workbench-rails-workbench-details-and-transcript-renderers">
+          Workbench rails, workbench details, and transcript renderers
+        </h2>
+        <h3 id="artifacts-system-artifacts">Artifacts (<code>system-artifacts</code>)</h3>
+        <ul>
+          <li>Views: Artifact workbench detail.</li>
+          <li>
+            Agent tool/action: <code>artifact</code> with <code>save</code>, <code>get</code>, <code>list</code>, <code>delete</code>; kinds
+            <code>html</code>, <code>mermaid</code>, <code>latex</code>; <code>open</code> behavior.
+          </li>
+          <li>Transcript renderer: artifact tool block.</li>
+          <li>Test create/update/open/delete, list ordering, malformed artifact content, sandboxing, render errors.</li>
+        </ul>
+        <h3 id="checkpoints-system-diffs">Checkpoints (<code>system-diffs</code>)</h3>
+        <ul>
+          <li>
+            Agent tool/action: <code>checkpoint</code> with <code>save</code>, <code>get</code>, <code>list</code>; targeted
+            <code>paths</code>, <code>message</code>, <code>checkpointId</code>.
+          </li>
+          <li>Transcript renderer: checkpoint pinned/tool block.</li>
+          <li>
+            Test targeted commits only, no unrelated files, get/list, diff rendering, large diff, binary file, error from dirty/conflicting
+            state.
+          </li>
+        </ul>
+        <h3 id="background-work-system-runs">Background work (<code>system-runs</code>)</h3>
+        <ul>
+          <li>Views: activity shelf and inline transcript execution cards.</li>
+          <li>Agent tools/actions: <code>bash</code>, <code>background_bash</code>, <code>subagent</code>.</li>
+          <li><code>bash</code>: foreground command, background command, timeout, task slug, cwd, deliver result to conversation.</li>
+          <li>
+            <code>background_bash</code>: <code>list</code>, <code>get</code>, <code>logs</code>, <code>start</code>, <code>rerun</code>,
+            <code>cancel</code>.
+          </li>
+          <li>
+            <code>subagent</code>: <code>list</code>, <code>get</code>, <code>logs</code>, <code>start</code>, <code>rerun</code>,
+            <code>follow_up</code>, <code>cancel</code>; loop options; allowed tools.
+          </li>
+          <li>
+            Test durable execution creation, logs tailing, rerun, cancel, completion delivery, failure delivery, linked conversation, reload
+            recovery, activity shelf pinning.
+          </li>
+          <li>Skills: <code>runs</code>.</li>
+        </ul>
+        <h3 id="file-explorer-system-files">File Explorer (<code>system-files</code>)</h3>
+        <ul>
+          <li>Views: Workspace files tab-local rail, workspace file detail.</li>
+          <li>
+            Test tree load, cwd switching, file open, large file, binary/image file, diff view, readonly mode, missing file, permission
+            errors.
+          </li>
+        </ul>
+        <h3 id="terminal-system-terminal">Terminal (<code>system-terminal</code>)</h3>
+        <ul>
+          <li>View: PTY-backed terminal panel in the Workbench rail.</li>
+          <li>
+            Actions: <code>terminalCreate</code>, <code>terminalWrite</code>, <code>terminalDrain</code>, <code>terminalResize</code>,
+            <code>terminalClose</code>; stream route <code>/stream</code>.
+          </li>
+          <li>
+            Test create/write/read/resize/close, SSE output stream, cwd handling, shell startup failure, long output, process cleanup, and
+            app reload cleanup.
+          </li>
+        </ul>
+        <h3 id="browser-system-browser">Browser (<code>system-browser</code>)</h3>
+        <ul>
+          <li>Views: Browser workbench tabs.</li>
+          <li>
+            Commands/buttons/keybindings: open browser (<code>mod+shift+b</code>), new tab (<code>mod+t</code>), reopen closed tab
+            (<code>mod+shift+t</code>), close tab (<code>mod+w</code>), focus location bar (<code>mod+l</code>).
+          </li>
+          <li>Agent tools/actions: <code>browser_snapshot</code>, <code>browser_cdp</code>, <code>browser_screenshot</code>.</li>
+          <li>Transcript renderers: snapshot, CDP, screenshot tool blocks.</li>
+          <li>
+            Test navigation, address entry, tabs, close/reopen, page load errors, snapshots with element list, screenshots, CDP
+            single/batched commands, invalid CDP, tab targeting, shared-browser warning boundary vs agent-browser.
+          </li>
+          <li>Skill: <code>browser</code>.</li>
+        </ul>
+        <h2 id="composer-and-inline-extension-features">Composer and inline extension features</h2>
+        <h3 id="model-picker-system-model-picker">Model Picker (<code>system-model-picker</code>)</h3>
+        <ul>
+          <li>Composer control: model preferences / model picker.</li>
+          <li>Test selected model display, model change, persistence per conversation/global default, unavailable model handling.</li>
+        </ul>
+        <h3 id="composer-attachments-system-composer-attachments">Composer Attachments (<code>system-composer-attachments</code>)</h3>
+        <ul>
+          <li>Composer action: attach files.</li>
+          <li>
+            Test file picker, multiple files, remove attachment, prompt inclusion, missing/deleted file, large file, unsupported/binary
+            files.
+          </li>
+        </ul>
+        <h3 id="context-usage-system-context-usage">Context Usage (<code>system-context-usage</code>)</h3>
+        <ul>
+          <li>Composer context usage indicator.</li>
+          <li>Test token/usage display, warning/overflow states, updates as attachments/context/model changes.</li>
+        </ul>
+        <h3 id="git-status-system-git-status">Git Status (<code>system-git-status</code>)</h3>
+        <ul>
+          <li>Composer git status indicator.</li>
+          <li>Test clean/dirty repo, branch display, untracked files, non-git cwd, permission errors.</li>
+        </ul>
+        <h3 id="suggested-context-system-suggested-context-first-party-optional">
+          Suggested Context (<code>system-suggested-context</code>, first-party optional)
+        </h3>
+        <ul>
+          <li>Installable new-conversation suggested context UI and prompt context provider.</li>
+          <li>Action: <code>warmPointers</code>.</li>
+          <li>
+            Test install from the Settings → Extensions install dialog, enable/disable, pointer warming, suggestions list, accept/remove
+            suggestion, stale/missing files, prompt injection.
+          </li>
+        </ul>
+        <h3 id="reply-actions-system-reply-actions">Reply Actions (<code>system-reply-actions</code>)</h3>
+        <ul>
+          <li>Reply buttons/actions: agree, disagree, question, think harder, try again, do it.</li>
+          <li>Test each action generates the expected follow-up prompt, disabled/running states, transcript placement.</li>
+        </ul>
+        <h3 id="goal-mode-system-auto-mode">Goal Mode (<code>system-auto-mode</code>)</h3>
+        <ul>
+          <li>Agent tool: <code>goal</code> with <code>objective</code>, <code>status</code>.</li>
+          <li>Slash command: <code>/goal</code> for set/view/pause/resume/clear.</li>
+          <li>Test start/replace goal, complete goal, invalid premature complete, conversation persistence, auto-mode behavior.</li>
+          <li>Skill: <code>goal-mode</code>.</li>
+        </ul>
+        <h3 id="context-hardening-system-context-hardening">Context Hardening (<code>system-context-hardening</code>)</h3>
+        <ul>
+          <li>Extension ID: <code>system-context-hardening</code>.</li>
+          <li>Test compact/context-hardening behavior from the conversation flow, context summaries, and failure/retry states.</li>
+        </ul>
+        <h3 id="excalidraw-input-system-excalidraw-input">Excalidraw input (<code>system-excalidraw-input</code>)</h3>
+        <ul>
+          <li>Composer action: Excalidraw.</li>
+          <li>Command/hotkey: <code>composer.createDrawing</code> (<code>Cmd/Ctrl+Shift+X</code> default when available).</li>
+          <li>
+            Test open editor modal, draw/save/cancel, insert into composer, image/reference handling, reload after draft if supported.
+          </li>
+        </ul>
+        <h3 id="local-dictation-system-local-dictation">Local Dictation (<code>system-local-dictation</code>)</h3>
+        <ul>
+          <li>Dictation composer/control surface.</li>
+          <li>Command/hotkey: <code>dictation.toggle</code> (<code>Cmd/Ctrl+Shift+M</code> default when available).</li>
+          <li>
+            Actions: <code>readSettings</code>, <code>updateSettings</code>, <code>modelStatus</code>, <code>installModel</code>,
+            <code>transcribeFile</code>.
+          </li>
+          <li>
+            Test settings, model installed/missing/installing/error, recording/transcribe file, cancellation, microphone unavailable,
+            inserted text.
+          </li>
+        </ul>
+        <h3 id="caffeinate-system-caffeinate">Caffeinate (<code>system-caffeinate</code>)</h3>
+        <ul>
+          <li>Top bar element: <code>caffeinate-toggle</code> / Caffeinate toggle.</li>
+          <li>
+            Actions: <code>caffeinateStatus</code>, <code>caffeinateStart</code>, <code>caffeinateStop</code>,
+            <code>caffeinateToggle</code>.
+          </li>
+          <li>Test start/stop/toggle/status, app sleep prevention indication, cleanup on quit.</li>
+        </ul>
+        <h3 id="onboarding-top-bar-system-onboarding">Onboarding top bar (<code>system-onboarding</code>)</h3>
+        <ul>
+          <li>Top bar element: <code>onboarding-bootstrap</code> / Onboarding bootstrap.</li>
+          <li>Action: <code>ensure</code> / Ensure onboarding conversation.</li>
+          <li>Test first-run onboarding bootstrap, existing-user no-op, interrupted onboarding, generated conversation state.</li>
+        </ul>
+        <h2 id="agent-tools-without-major-pages">Agent tools without major pages</h2>
+        <h3 id="conversation-tool-system-conversation-tools">Conversation tool (<code>system-conversation-tools</code>)</h3>
+        <ul>
+          <li>Agent tool: <code>ask_user</code>.</li>
+          <li>
+            Actions: ask user question, conversation inspection/title/cwd helpers, deferred resume, duplicate conversation, copy working
+            directory, copy conversation ID, copy deeplink.
+          </li>
+          <li>
+            Command/keybindings: <code>open-thread-palette</code> (<code>mod+p</code>) and
+            <code>open-command-palette</code> (<code>mod+shift+p</code>).
+          </li>
+          <li>
+            Conversation list context menu IDs: <code>duplicate-conversation</code>, <code>copy-working-directory</code>,
+            <code>copy-conversation-id</code>, <code>copy-deeplink</code>.
+          </li>
+          <li>Transcript renderer: terminal bash tool block.</li>
+          <li>
+            Tool/action operations to test: ask-user single and structured questions, inspect/list/search/query/diff/outline/read-window,
+            title changes, cwd changes with optional continue prompt, deferred resume delay/at triggers, and conversation open-list state.
+          </li>
+        </ul>
+        <h3 id="web-search-image-tools">Web/search/image tools</h3>
+        <ul>
+          <li>
+            <code>web_fetch</code> (<code>system-web-tools</code>): URL fetch, raw HTML option, invalid URL, network failure, large page.
+          </li>
+          <li>
+            <code>web_search</code> (<code>system-duckduckgo-search</code>): DuckDuckGo HTML page search, query, count, page,
+            empty/no-result, network failure.
+          </li>
+          <li><code>web_search</code> (<code>system-exa-search</code>): query, count, page, API/config failure.</li>
+          <li><code>probe_image</code> (<code>system-image-probe</code>): image IDs, question, missing image, multiple images.</li>
+        </ul>
+        <h3 id="mcp-system-mcp">MCP (<code>system-mcp</code>)</h3>
+        <ul>
+          <li>
+            Agent tool: <code>mcp</code> actions <code>list</code>, <code>get/info</code>, <code>grep</code>, <code>call</code>,
+            <code>auth</code>, <code>logout</code>.
+          </li>
+          <li>
+            Actions: <code>mcpTool</code>, <code>inspectSettings</code>, <code>saveExplicitConfig</code>, <code>testServer</code>,
+            <code>authServer</code>, <code>logoutServer</code>.
+          </li>
+          <li>Settings component/section: MCP tools.</li>
+          <li>
+            Test server list with/without probe, tool info, glob search, tool call arguments JSON, OAuth auth/logout, failing server, config
+            save, test server.
+          </li>
+        </ul>
+        <h3 id="codex-compatibility-system-codex-profile">Codex Compatibility (<code>system-codex-profile</code>)</h3>
+        <ul>
+          <li>Agent tools/actions: <code>apply_patch</code>, <code>image</code>.</li>
+          <li>Model profile: <code>codex-compatible</code>.</li>
+          <li>Image tool: generate/edit, size, quality, background, source selection/count, transparent/opaque, failures.</li>
+          <li>Test patch success, patch failure, write new file, overwrite file, invalid path, permissions, transcript output.</li>
+        </ul>
+        <h3 id="skills-system-skills">Skills (<code>system-skills</code>)</h3>
+        <ul>
+          <li>Actions: <code>listSkills</code>, <code>updateSkillEnabled</code>.</li>
+          <li>Skills page/surface: list skills, enable/disable, search/filter if present, persistence, prompt assembly integration.</li>
+        </ul>
+        <h3 id="neon-pilot-cli-system-neon-pilot-admin-cli">Neon Pilot CLI (<code>system-neon-pilot-admin-cli</code>)</h3>
+        <ul>
+          <li>Agent tool: <code>neon_pilot</code>.</li>
+          <li>
+            CLI commands: app update, app commands, control-plane doctor, heartbeats, bootstrap configure/doctor/defaults/provider setup.
+          </li>
+          <li>Settings component: Neon Pilot CLI.</li>
+          <li>Skill: <code>neon-pilot-admin-cli</code>.</li>
+          <li>
+            Test command discovery, doctor output, bootstrap dry-run/setup flows, provider key stdin handling, app-command list/run,
+            heartbeat start/list/stop, and structured JSON error output.
+          </li>
+        </ul>
+        <h3 id="ai-gateway-system-model-gateway-default-disabled">AI Gateway (<code>system-model-gateway</code>, default disabled)</h3>
+        <ul>
+          <li>Settings component: AI Gateway.</li>
+          <li>Actions: <code>status</code>, <code>updateSettings</code>, <code>clearLogs</code>.</li>
+          <li>
+            Test disabled default, enable/start status, Responses-compatible loopback URL, client config copy, settings persistence, log
+            clearing, port conflict, and disable cleanup.
+          </li>
+        </ul>
+        <h2 id="external-gateway-commands">External gateway commands</h2>
+        <h3 id="telegram">Telegram</h3>
+        <ul>
+          <li>
+            <code>/start</code>, <code>/help</code>, <code>/stop</code>, <code>/pause</code>, <code>/new</code>,
+            <code>/model &lt;model&gt;</code>, <code>/rename &lt;title&gt;</code>.
+          </li>
+          <li>Bot mention variants, unknown command rejection, incomplete command rejection.</li>
+          <li>Conversation attachment and force-new behavior.</li>
+        </ul>
+        <h2 id="cross-cutting-release-checks">Cross-cutting release checks</h2>
+        <ul>
+          <li>
+            Extension enable/disable/reload changes nav, tools, skills, transcript renderers, and settings without restart where supported.
+          </li>
+          <li>Repo installable extensions are not visible in fresh profiles until installed into runtime state.</li>
+          <li>All pages handle empty state, loading state, failure state, narrow window, and dark/light mode.</li>
+          <li>All destructive actions ask for confirmation or are clearly reversible where intended.</li>
+          <li>Secrets are never shown in transcript, logs, telemetry, exported sessions, or screenshots.</li>
+          <li>Background/async work survives app reload and daemon restart.</li>
+          <li>File-system operations respect scoped filesystem authority and sandbox policy.</li>
+          <li>Telemetry records route views and important actions without sensitive payloads.</li>
+          <li>Docs and skills linked from each extension remain loadable.</li>
+          <li>Release build loads only prebuilt extension artifacts; missing artifacts fail loudly and understandably.</li>
+        </ul>
+        <h2 id="manifest-contribution-id-audit">Manifest contribution ID audit</h2>
+        <p>
+          Every contributed manifest ID below must appear in a release test plan. This section exists to catch exact
+          buttons/actions/renderers by stable ID, even when the human-readable sections above describe them by title.
+        </p>
+        <p>
+          Bundled system-extension entries are derived from local <code>extensions/*/extension.json</code> manifests. First-party optional
+          packages are listed separately because their manifests live in installable release artifacts; validate their exact IDs from the
+          installed package manifest during release QA.
+        </p>
+        <h3 id="bundled-system-extensions">Bundled system extensions</h3>
+        <h3 id="system-artifacts-artifacts">system-artifacts — Artifacts</h3>
+        <ul>
+          <li>skills: artifacts</li>
+          <li>tools: artifact/artifact</li>
+          <li>transcriptRenderers: artifact-tool-block for artifact</li>
+          <li>views: conversation-artifacts, artifact-detail</li>
+          <li>backend actions: artifact</li>
+        </ul>
+        <h3 id="system-auto-mode-goal-mode">system-auto-mode — Goal Mode</h3>
+        <ul>
+          <li>slashCommands: goal</li>
+          <li>skills: goal-mode</li>
+          <li>tools: goal/goal</li>
+          <li>backend actions: handleSlashGoal</li>
+        </ul>
+        <h3 id="system-automations-automations">system-automations — Automations</h3>
+        <ul>
+          <li>cliCommands: tasks-list, tasks-get, tasks-save, tasks-delete, tasks-validate, tasks-run</li>
+          <li>nav: nav (/automations)</li>
+          <li>skills: async-attention, scheduled-tasks</li>
+          <li>tools: scheduled-task/scheduled_task</li>
+          <li>views: page (/automations)</li>
+          <li>backend actions: scheduledTask, deferredResume</li>
+        </ul>
+        <h3 id="system-caffeinate-caffeinate">system-caffeinate — Caffeinate</h3>
+        <ul>
+          <li>commands: caffeinate.toggle</li>
+          <li>keybindings: caffeinate.toggle [mod+shift+c]</li>
+          <li>settings: caffeinate.autoStart</li>
+          <li>topBarElements: caffeinate-toggle</li>
+          <li>backend actions: caffeinateStatus, caffeinateStartup, caffeinateStart, caffeinateStop, caffeinateToggle</li>
+        </ul>
+        <h3 id="system-codex-profile-codex-compatibility">system-codex-profile — Codex Compatibility</h3>
+        <ul>
+          <li>modelProfiles: codex-compatible</li>
+          <li>tools: apply-patch/apply_patch, image/image</li>
+          <li>backend actions: applyPatch, image</li>
+        </ul>
+        <h3 id="system-composer-attachments-composer-attachments">system-composer-attachments — Composer Attachments</h3>
+        <ul>
+          <li>composerControls: attach-files</li>
+        </ul>
+        <h3 id="system-context-hardening-context-hardening">system-context-hardening — Context Hardening</h3>
+        <ul>
+          <li>agent extension: createContextHardeningAgentExtension</li>
+        </ul>
+        <h3 id="system-context-usage-context-usage">system-context-usage — Context Usage</h3>
+        <ul>
+          <li>statusBarItems: composer-context-usage</li>
+        </ul>
+        <h3 id="system-conversation-tools-conversation-tools">system-conversation-tools — Conversation Tools</h3>
+        <ul>
+          <li>
+            cliCommands: conversations-list, conversations-search, conversations-activity, conversations-connections, conversations-inspect,
+            conversations-transcript-read, conversations-create, ask, conversations-title, conversations-cwd, conversations-ensure-live,
+            conversations-send, conversations-run-turn, conversations-abort, conversations-compact, conversations-fork, conversations-tools,
+            conversations-rollback, conversations-workspace, conversations-workspace-update, conversations-open-list,
+            conversations-open-add, conversations-open-remove, conversations-open-pin, conversations-open-unpin, conversations-open-active,
+            conversations-archive, conversations-unarchive, conversations-delete, conversations-retention-prune,
+            conversations-transcript-append, conversations-transcript-update
+          </li>
+          <li>commands: open-thread-palette, open-command-palette</li>
+          <li>contextMenus: duplicate-conversation, copy-working-directory, copy-conversation-id, copy-deeplink</li>
+          <li>keybindings: open-thread-palette [mod+p], open-command-palette [mod+shift+p]</li>
+          <li>tools: ask_user/ask_user</li>
+          <li>transcriptRenderers: terminal-bash-tool-block for bash</li>
+          <li>
+            backend actions: conversationTool, askUser, conversationInspect, conversationTitle, conversationCwd, deferredResume,
+            duplicateConversation, copyWorkingDirectory, copyConversationId, copyDeeplink
+          </li>
+        </ul>
+        <h3 id="system-diffs-diffs">system-diffs — Diffs</h3>
+        <ul>
+          <li>tools: checkpoint/checkpoint</li>
+          <li>transcriptRenderers: checkpoint-tool-block for checkpoint</li>
+          <li>backend actions: checkpoint</li>
+        </ul>
+        <h3 id="system-dynamic-workflows-dynamic-workflows-default-disabled">
+          system-dynamic-workflows — Dynamic Workflows (default disabled)
+        </h3>
+        <ul>
+          <li>nav: workflows-nav (/workflows)</li>
+          <li>
+            settings: dynamicWorkflows.defaultAgentModel, dynamicWorkflows.defaultAgentAllowedTools, dynamicWorkflows.maxConcurrentAgents,
+            dynamicWorkflows.maxTotalAgents, dynamicWorkflows.nodeTimeoutMinutes, dynamicWorkflows.workflowTimeoutMinutes
+          </li>
+          <li>skills: dynamic-workflows</li>
+          <li>tools: workflow/workflow</li>
+          <li>transcriptBlocks: dynamic_workflow</li>
+          <li>views: page (/workflows)</li>
+          <li>
+            backend actions: workflow, listWorkflows, getWorkflow, cancelWorkflow, listWorkflowTemplates, saveWorkflow, listSavedWorkflows,
+            deleteSavedWorkflow, runSavedWorkflow
+          </li>
+        </ul>
+        <h3 id="system-excalidraw-input-excalidraw-input">system-excalidraw-input — Excalidraw input</h3>
+        <ul>
+          <li>composerInputTools: excalidraw</li>
+          <li>keybindings: excalidraw.createDrawing [mod+shift+x]</li>
+          <li>views: drawings, drawing-detail</li>
+        </ul>
+        <h3 id="system-agent-plugins-agent-plugins">system-agent-plugins — Agent Plugins</h3>
+        <ul>
+          <li>settingsComponent: agent-plugins (settings-capabilities)</li>
+          <li>
+            backend actions: listPlugins, addPlugin, setPluginEnabled, setPluginAutoUpdate, checkPluginUpdates, updatePlugin, removePlugin
+          </li>
+        </ul>
+        <h3 id="system-extension-manager-extension-manager">system-extension-manager — Extension Manager</h3>
+        <ul>
+          <li>
+            cliCommands: extensions-list, extensions-create, extensions-snapshot, extensions-delete, extensions-catalog, extensions-install,
+            extensions-update, extensions-install-url, extensions-validate, extensions-reload, extensions-smoke, extensions-enable,
+            extensions-disable, extensions-paths, extensions-sources
+          </li>
+          <li>nav: extensions-nav (/extensions)</li>
+          <li>settingsComponent: extension-repositories (settings-extension-repositories)</li>
+          <li>skills: skills-and-capabilities, local-extension-development</li>
+          <li>views: extensions-page (/extensions)</li>
+          <li>
+            backend actions: listExtensions, createExtension, snapshotExtension, reloadExtension, smokeExtension, validateExtension,
+            listInstallableExtensions, installCatalogExtension, installExtensionFromUrl, updateCatalogExtension, listHostViewComponents,
+            readSearchPaths, updateSearchPaths, readExtensionSources, updateExtensionSources, reloadExtensions, manageExtension
+          </li>
+        </ul>
+        <h3 id="system-files-file-explorer">system-files — File Explorer</h3>
+        <ul>
+          <li>settings: systemFiles.transcriptPathLinkTarget</li>
+          <li>views: workspace-files, workspace-file-detail</li>
+        </ul>
+        <h3 id="system-gateways-telegram-gateway-bundled-first-party-extension">
+          system-gateways — Telegram Gateway (bundled first-party extension)
+        </h3>
+        <ul>
+          <li>gatewayProviders: telegram</li>
+          <li>nav: gateways-nav (/gateways)</li>
+          <li>secrets: telegramBotToken</li>
+          <li>views: page (/gateways), gateways-sidebar</li>
+        </ul>
+        <h3 id="system-git-status-git-status">system-git-status — Git Status</h3>
+        <ul>
+          <li>statusBarItems: composer-git-status</li>
+        </ul>
+        <h3 id="system-image-probe-image-probe">system-image-probe — Image Probe</h3>
+        <ul>
+          <li>settingsComponent: image-probe-settings (settings-image-probe)</li>
+          <li>tools: probe-image/probe_image</li>
+          <li>backend actions: probeImage</li>
+        </ul>
+        <h3 id="system-local-dictation-local-dictation">system-local-dictation — Local Dictation</h3>
+        <ul>
+          <li>composerControls: dictation</li>
+          <li>keybindings: dictation.toggle [mod+shift+m]</li>
+          <li>settingsComponent: dictation (settings-dictation)</li>
+          <li>backend actions: readSettings, updateSettings, modelStatus, installModel, transcribeFile</li>
+        </ul>
+        <h3 id="system-mcp-mcp">system-mcp — MCP</h3>
+        <ul>
+          <li>settingsComponent: mcp-tools (settings-capabilities)</li>
+          <li>tools: mcp/mcp</li>
+          <li>backend actions: mcpTool, inspectSettings, saveExplicitConfig, testServer, authServer, logoutServer</li>
+        </ul>
+        <h3 id="system-model-gateway-ai-gateway-default-disabled">system-model-gateway — AI Gateway (default disabled)</h3>
+        <ul>
+          <li>settingsComponent: model-gateway-settings (settings-model-gateway)</li>
+          <li>backend actions: status, updateSettings, clearLogs</li>
+        </ul>
+        <h3 id="system-model-picker-model-picker">system-model-picker — Model Picker</h3>
+        <ul>
+          <li>composerControls: model-preferences</li>
+        </ul>
+        <h3 id="system-neon-pilot-admin-cli-neon-pilot-cli">system-neon-pilot-admin-cli — Neon Pilot CLI</h3>
+        <ul>
+          <li>
+            cliCommands: app-update, app-commands-list, app-commands-run, control-plane-doctor, heartbeats-start, heartbeats-list,
+            heartbeats-stop, bootstrap-doctor, bootstrap-configure, bootstrap-defaults-set, bootstrap-provider-set-key,
+            bootstrap-provider-save, bootstrap-provider-model
+          </li>
+          <li>settingsComponent: neon-pilot-cli (neon-pilot-cli)</li>
+          <li>skills: neon-pilot-admin-cli</li>
+          <li>tools: neon-pilot-admin/neon_pilot</li>
+          <li>
+            backend actions: neonPilotAdmin, manageAppCommands, controlPlaneDoctor, neonPilotTool, neonPilotAgent, readSettings,
+            updateSettings
+          </li>
+        </ul>
+        <h3 id="system-onboarding-onboarding">system-onboarding — Onboarding</h3>
+        <ul>
+          <li>topBarElements: onboarding-bootstrap</li>
+          <li>backend actions: ensure</li>
+        </ul>
+        <h3 id="system-prompt-assembly-prompt-assembly">system-prompt-assembly — Prompt Assembly</h3>
+        <ul>
+          <li>backend actions: inspectAgentRuntime, inspectPromptAssembly, updatePromptAssemblySkillEnabled, updateRuntimeCapability</li>
+        </ul>
+        <h3 id="system-reply-actions-reply-actions">system-reply-actions — Reply Actions</h3>
+        <ul>
+          <li>settings: systemReplyActions.emojiPickerItems</li>
+          <li>selectionActions: emoji-picker-item</li>
+        </ul>
+        <h3 id="system-runs-background-work">system-runs — Background Work</h3>
+        <ul>
+          <li>
+            cliCommands: background-commands-list, background-commands-get, background-commands-logs, background-commands-start,
+            background-commands-rerun, background-commands-cancel
+          </li>
+          <li>composerShelves: activity-shelf</li>
+          <li>skills: runs</li>
+          <li>tools: bash-background/bash, background-bash/background_bash, subagent/subagent</li>
+          <li>backend actions: bash, background_bash, subagent</li>
+        </ul>
+        <h3 id="system-settings-settings-panels">system-settings — Settings panels</h3>
+        <ul>
+          <li>cliCommands: settings-list, settings-schema, settings-get, settings-set, settings-reset</li>
+          <li>commands: open-settings</li>
+          <li>nav: settings-nav (/settings)</li>
+          <li>settings: secrets.provider, conversation.transcriptDisclosure, conversation.diffDisclosure, conversation.pinnedToolCalls</li>
+          <li>views: settings (/settings), providers (/settings/providers), desktop (/settings/desktop), settings-sidebar</li>
+          <li>backend actions: manageSettings, manageCli</li>
+        </ul>
+        <h3 id="system-skills-skills">system-skills — Skills</h3>
+        <ul>
+          <li>backend actions: listSkills, updateSkillEnabled</li>
+        </ul>
+        <h3 id="system-telemetry-telemetry">system-telemetry — Telemetry</h3>
+        <ul>
+          <li>nav: telemetry-nav (/telemetry)</li>
+          <li>views: page (/telemetry)</li>
+          <li>backend actions: getTelemetryData</li>
+        </ul>
+        <h3 id="system-terminal-terminal">system-terminal — Terminal</h3>
+        <ul>
+          <li>views: terminal-panel</li>
+          <li>backend actions: terminalCreate, terminalWrite, terminalDrain, terminalResize, terminalClose</li>
+        </ul>
+        <h3 id="system-todo-todos">system-todo — Todos</h3>
+        <ul>
+          <li>composerShelves: todos</li>
+          <li>conversationConnectionProviders: todos</li>
+          <li>tools: todo/todo</li>
+          <li>turnContextProviders: todos</li>
+          <li>
+            backend actions: getState, addItem, updateItem, deleteItem, clearItems, setPlan, todoTool, provideTurnContext,
+            listTodoConnections
+          </li>
+        </ul>
+        <h3 id="system-web-tools-web-fetch">system-web-tools — Web fetch</h3>
+        <ul>
+          <li>tools: web-fetch/web_fetch</li>
+          <li>backend actions: webFetch</li>
+        </ul>
+        <h3 id="first-party-optional-catalog">First-party optional catalog</h3>
+        <p>Validate these by installing from the catalog or release artifact and reading the installed extension manifest:</p>
+        <ul>
+          <li>system-agent-browser — Agent Browser</li>
+          <li>system-auto-router — Auto Router</li>
+          <li>system-ds4 — DS4</li>
+          <li>system-duckduckgo-search — DuckDuckGo Search</li>
+          <li>system-dynamic-workflows — Dynamic Workflows</li>
+          <li>system-exa-search — Exa Search</li>
+          <li>system-knowledge — Knowledge</li>
+          <li>system-suggested-context — Suggested Context</li>
+          <li>system-video-probe — Video Probe</li>
+          <li>system-writing-studio — Writing Studio</li>
+        </ul>
+        <p class="edit-link">
+          <a href="https://github.com/patleeman/neon-pilot/blob/main/docs/release-test-inventory.md">Edit this page on GitHub →</a>
+        </p>
+      </article>
+      <aside class="docs-toc">
+        <h2>On this page</h2>
+        <a href="#app-shell-and-global-contexts">App shell and global contexts</a
+        ><a href="#built-in-pages-and-extension-surfaces">Built-in pages and extension surfaces</a
+        ><a href="#workbench-rails-workbench-details-and-transcript-renderers"
+          >Workbench rails, workbench details, and transcript renderers</a
+        ><a href="#composer-and-inline-extension-features">Composer and inline extension features</a
+        ><a href="#agent-tools-without-major-pages">Agent tools without major pages</a
+        ><a href="#external-gateway-commands">External gateway commands</a
+        ><a href="#cross-cutting-release-checks">Cross-cutting release checks</a
+        ><a href="#manifest-contribution-id-audit">Manifest contribution ID audit</a>
+      </aside>
+    </main>
+  </body>
+</html>

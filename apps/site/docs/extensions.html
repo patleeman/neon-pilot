@@ -32,14 +32,15 @@
           <a class="" href="./desktop-app.html">Desktop App</a><a class="" href="./views.html">Views</a
           ><a class="" href="./conversations.html">Conversations</a><a class="" href="./conversation-context.html">Conversation Context</a
           ><a class="" href="./projects.html">Projects</a><a class="" href="./knowledge-base.html">Knowledge Base</a
-          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./design-system.html">Design System</a
-          ><a class="" href="./host-view-components.html">Host View Components</a>
+          ><a class="" href="./activity-tree.html">Activity Tree</a><a class="" href="./feature-inventory.html">Feature Inventory</a
+          ><a class="" href="./design-system.html">Design System</a><a class="" href="./host-view-components.html">Host View Components</a>
         </section>
         <section>
           <h2>Extensions</h2>
           <a class="" href="./build-an-extension.html">Build an Extension</a
           ><a class="active" href="./extensions.html">Extension Authoring</a
-          ><a class="" href="./extension-distribution.html">Extension Distribution</a>
+          ><a class="" href="./extension-distribution.html">Extension Distribution</a
+          ><a class="" href="./product-extension-process-split.html">Product Extension Split</a>
         </section>
         <section>
           <h2>Runtime</h2>
@@ -47,13 +48,16 @@
           ><a class="" href="./daemon.html">Daemon</a><a class="" href="./sandboxing.html">Sandboxing</a
           ><a class="" href="./filesystem-authority.html">Filesystem Authority</a
           ><a class="" href="./performance-diagnostics.html">Performance Diagnostics</a
-          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a>
+          ><a class="" href="./renderer-isolation.html">Renderer Isolation</a><a class="" href="./telemetry.html">Telemetry</a
+          ><a class="" href="./sqlite-migrations.html">SQLite Migrations</a
+          ><a class="" href="./setup-readiness-audit.html">Setup Readiness</a>
         </section>
         <section>
           <h2>Developers</h2>
           <a class="" href="./cli.html">Neon Pilot CLI</a><a class="" href="./cli-reference.html">CLI Reference</a
-          ><a class="" href="./development.html">Development</a><a class="" href="./release-cycle.html">Release Cycle</a
-          ><a class="" href="./release-qa.html">Release QA</a>
+          ><a class="" href="./client-workflow-tests.html">Client Workflow Tests</a><a class="" href="./development.html">Development</a
+          ><a class="" href="./release-cycle.html">Release Cycle</a><a class="" href="./release-qa.html">Release QA</a
+          ><a class="" href="./release-test-inventory.html">Release Test Inventory</a>
         </section>
       </aside>
       <article class="docs-content">
@@ -100,7 +104,7 @@ Before implementation, produce a short UX brief and ask me focused product/desig
 
 Use the extension manager/template if helpful. Pick the right surface:
 - main page for a full app/workflow
-- tab-local right rail for a compact conversation-specific tool panel inside the workbench
+- tab-local workbench rail for a compact conversation-specific tool panel inside the workbench
 - workbench detail for split-pane workflows
 
 Implement it with editable source files, build it, reload it, visually test the exact user path, fix any layout or interaction problems you see, and checkpoint the changes.</code></pre>
@@ -112,8 +116,8 @@ Implement it with editable source files, build it, reload it, visually test the 
         <p>Before calling an extension done, an agent must be able to answer each item with evidence from the repo or app:</p>
         <ul>
           <li>
-            <strong>Surface chosen</strong>: the extension has one clear primary surface for the first version: main page, workbench
-            rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
+            <strong>Surface chosen</strong>: the extension has one clear primary surface for the first version: main page, route-owned right
+            sidebar, tab-local workbench rail/detail, Settings component, backend action/tool, composer/control contribution, or theme.
           </li>
           <li>
             <strong>Product choices clarified</strong>: ambiguous workflow, data/action, persistence, and visual design decisions were
@@ -146,8 +150,8 @@ Implement it with editable source files, build it, reload it, visually test the 
             boundary work also runs <code>pnpm run check:extensions:static</code>.
           </li>
           <li>
-            <strong>User path validated</strong>: the route, rail, Settings section, command, composer control, or tool invocation was
-            opened or invoked through the app/extension host.
+            <strong>User path validated</strong>: the route, route-owned right sidebar, tab-local workbench rail, Settings section, command,
+            composer control, or tool invocation was opened or invoked through the app/extension host.
           </li>
           <li>
             <strong>States covered</strong>: UI surfaces show useful loading, empty, error, and success states; backend-only extensions
@@ -163,8 +167,9 @@ Implement it with editable source files, build it, reload it, visually test the 
             command palette, be invoked programmatically, and be hot-keyed with default or user-editable keybindings when appropriate.
           </li>
           <li>
-            <strong>Visual pass recorded</strong>: the app route, rail, Settings section, composer control, or transcript renderer was
-            visually inspected for density, wrapping, focus/keyboard behavior, responsive constraints, and obvious overlap or clipping.
+            <strong>Visual pass recorded</strong>: the app route, right sidebar, tab-local workbench rail, Settings section, composer
+            control, or transcript renderer was visually inspected for density, wrapping, focus/keyboard behavior, responsive constraints,
+            and obvious overlap or clipping.
           </li>
           <li>
             <strong>Docs local</strong>: the extension has or updates a <code>README.md</code> with build, reload, validation, and usage
@@ -315,8 +320,8 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
           <tbody>
             <tr>
               <td><code>views</code></td>
-              <td>UI surfaces (pages, panels, sidebar replacements)</td>
-              <td>See <code>docs/views.md</code></td>
+              <td>UI surfaces: main pages, route sidebar bodies, route context rails, and workbench panels</td>
+              <td>See <a href="#views">Views</a></td>
             </tr>
             <tr>
               <td><code>webapps</code></td>
@@ -325,8 +330,8 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
             </tr>
             <tr>
               <td><code>nav</code></td>
-              <td>Left sidebar navigation items; can reference a sidebar view with <code>sidebarView</code></td>
-              <td></td>
+              <td>App navigation items; can bind route-owned <code>sidebarView</code> and <code>rightSidebarView</code> regions</td>
+              <td><a href="#route-shell-regions">See below</a></td>
             </tr>
             <tr>
               <td><code>commands</code></td>
@@ -435,7 +440,7 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
             </tr>
             <tr>
               <td><code>conversationConnectionProviders</code></td>
-              <td>Conversation-attached state/work/assets for shelves, right rail, and CLI</td>
+              <td>Conversation-attached state/work/assets for shelves, context rails, and CLI</td>
               <td><a href="#conversation-connection-providers-conversationconnectionproviders">See below</a></td>
             </tr>
             <tr>
@@ -502,6 +507,11 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
               <td><code>topBarElements</code></td>
               <td>Top bar indicator icons</td>
               <td><a href="#top-bar-elements-topbarelements">See below</a></td>
+            </tr>
+            <tr>
+              <td><code>setupItems</code></td>
+              <td>Host-rendered setup/readiness checks with fixed actions</td>
+              <td><a href="#setup-items-setupitems">See below</a></td>
             </tr>
             <tr>
               <td><code>conversationHeaderElements</code></td>
@@ -678,15 +688,20 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           the desktop runtime.
         </p>
         <h3 id="views">Views</h3>
-        <p>Views are the primary way to add UI. Three locations:</p>
+        <p>Views are the primary way to add UI. Four locations:</p>
         <ul>
           <li>
             <strong><code>main</code></strong
             >: Full-page view at a custom route (<code>/ext/your-id</code>).
           </li>
           <li>
+            <strong><code>sidebar</code></strong
+            >: Route-owned contextual body in the left sidebar, bound from a nav item with <code>sidebarView</code>.
+          </li>
+          <li>
             <strong><code>rightRail</code></strong
-            >: Tab-local rail inside the workbench, usually used as a compact selector/context panel.
+            >: Either a route-owned context rail bound from a nav item with <code>rightSidebarView</code>, or a tab-local rail inside the
+            workbench.
           </li>
           <li>
             <strong><code>workbench</code></strong
@@ -702,6 +717,12 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
   &quot;icon&quot;: &quot;app&quot;,
   &quot;activation&quot;: &quot;on-open&quot;
 }</code></pre>
+        <p>
+          For route-owned right sidebars, set <code>location: &quot;rightRail&quot;</code>, <code>placement: &quot;primary&quot;</code>, and
+          bind the view from the route's nav item with <code>rightSidebarView</code>. <code>scope</code> is optional for route-owned context
+          rails and defaults through the host. Tab-local workbench rails use <code>placement: &quot;workbench-tool&quot;</code> or omit
+          <code>placement</code>.
+        </p>
         <p>
           <strong><code>activation</code></strong> controls when the component loads:
         </p>
@@ -719,6 +740,7 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           <li><code>&quot;workspace&quot;</code> — one per workspace/cwd.</li>
           <li><code>&quot;global&quot;</code> — single instance.</li>
         </ul>
+        <p>Route-owned right sidebars can omit <code>scope</code>; use it only when the view needs an explicit instance boundary.</p>
         <h3 id="webapps">Webapps</h3>
         <p>
           Use <code>contributes.webapps</code> when an extension needs a locally hosted webpage sidecar instead of a native React view
@@ -1209,6 +1231,38 @@ const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fi
             below the first viewport.
           </li>
         </ul>
+        <h3 id="setup-items-setupitems">Setup Items (<code>setupItems</code>)</h3>
+        <p>
+          Use <code>contributes.setupItems</code> when an extension needs a host-rendered setup/readiness check, such as installing a shell
+          link, downloading a model, signing in to a provider, or repairing local prerequisites. The host owns the top-bar readiness
+          indicator, popover UI, dismissal state, and refresh behavior. Extensions provide data only: copy, severity, a status action, and
+          optional fixed actions. Do not render arbitrary setup UI in the app shell.
+        </p>
+        <p>
+          The <code>statusAction</code> backend action should be fast and idempotent. It returns an object such as
+          <code
+            >{ &quot;status&quot;: &quot;needs_setup&quot;, &quot;detail&quot;: &quot;Shell link is missing.&quot;, &quot;actions&quot;:
+            [&quot;install&quot;] }</code
+          >. Supported statuses are <code>ready</code>, <code>needs_setup</code>, <code>blocked</code>, and <code>not_applicable</code>;
+          failures are shown as <code>unknown</code> without breaking the whole popover. Action ids in the returned
+          <code>actions</code> array filter the manifest-declared buttons.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;setupItems&quot;: [
+      {
+        &quot;id&quot;: &quot;cli-shell-link&quot;,
+        &quot;title&quot;: &quot;Install the Neon Pilot shell command&quot;,
+        &quot;description&quot;: &quot;Adds the neon-pilot command to your user shell path.&quot;,
+        &quot;severity&quot;: &quot;recommended&quot;,
+        &quot;statusAction&quot;: &quot;cliShellLinkSetupStatus&quot;,
+        &quot;actions&quot;: [{ &quot;id&quot;: &quot;install&quot;, &quot;label&quot;: &quot;Install&quot;, &quot;action&quot;: &quot;installCliShellLink&quot;, &quot;tone&quot;: &quot;primary&quot; }],
+        &quot;dismissible&quot;: true,
+        &quot;order&quot;: 10
+      }
+    ]
+  }
+}</code></pre>
         <h3 id="composer-controls-composercontrols">Composer Controls (<code>composerControls</code>)</h3>
         <p>
           Add component-backed controls in the composer bottom row. Core owns the row layout and passes composer state/actions through
@@ -1225,10 +1279,12 @@ const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fi
         <p>
           Slots are <code>leading</code>, <code>preferences</code>, and <code>actions</code>. Controls sort by
           <code>priority</code> ascending, then extension id, then contribution id. The component receives <code>pa</code> and
-          <code>controlContext</code>. <code>controlContext.renderMode</code> is <code>inline</code> or <code>menu</code>;
-          <code>insertText(text)</code> inserts at the current composer selection; <code>appendText(text)</code> inserts at the end when
-          available; <code>openFilePicker()</code> opens the core-owned attachment input; and model/goal fields expose the current composer
-          preference state.
+          <code>controlContext</code>. <code>controlContext.composerId</code> identifies the host composer instance,
+          <code>composerActive</code> marks the current target for composer-scoped commands, and <code>activateComposer()</code> lets a
+          control claim that target before handling an interaction. <code>controlContext.renderMode</code> is <code>inline</code> or
+          <code>menu</code>; <code>insertText(text)</code> inserts at the current composer selection; <code>appendText(text)</code> inserts
+          at the end when available; <code>openFilePicker()</code> opens the core-owned attachment input; and model/goal fields expose the
+          current composer preference state.
         </p>
         <h3 id="composer-input-tools-composerinputtools">Composer Input Tools (<code>composerInputTools</code>)</h3>
         <p>
@@ -1430,6 +1486,100 @@ const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fi
           The component receives <code>{ pa, actionContext }</code>; <code>actionContext</code> includes
           <code>activeConversationId</code> and <code>cwd</code> when available.
         </p>
+        <h3 id="route-shell-regions">Route shell regions</h3>
+        <p>Extension nav routes can declare the shell regions they own:</p>
+        <ul>
+          <li><code>views[].location: &quot;main&quot;</code> is the required primary page for the route.</li>
+          <li>
+            <code>nav[].pageType</code> records the approved page template for route pages: <code>&quot;conversation&quot;</code>,
+            <code>&quot;table&quot;</code>, <code>&quot;editor&quot;</code>, <code>&quot;settings&quot;</code>,
+            <code>&quot;dashboard&quot;</code>, or <code>&quot;setup&quot;</code>.
+          </li>
+          <li><code>nav[].sidebarView</code> optionally replaces the middle-left contextual sidebar body while the route is active.</li>
+          <li>
+            <code>nav[].rightSidebarView</code> optionally renders a route-owned right-sidebar context rail and makes the shell toggle
+            visible for that route.
+          </li>
+        </ul>
+        <p>
+          If <code>sidebarView</code> is omitted, the global left navigation remains and the middle-left contextual area is blank. Threads
+          do not appear outside Chat as filler. If <code>rightSidebarView</code> is omitted, the shell hides the right-sidebar toggle for
+          that route.
+        </p>
+        <p>
+          Every <code>nav[].route</code> must match a <code>views[]</code> entry with the same <code>route</code> and
+          <code>location: &quot;main&quot;</code>. Side regions never create a page by themselves; they attach to the active main route.
+        </p>
+        <p>
+          Main views own only the primary route surface. Do not put <code>placement</code> or <code>scope</code> on
+          <code>location: &quot;main&quot;</code> views; manifest validation rejects those fields there. Put side-region metadata on the
+          <code>sidebar</code> or <code>rightRail</code> view, then bind that view from the route's nav item.
+        </p>
+        <p>
+          Route-owned right-sidebar views must use <code>location: &quot;rightRail&quot;</code> and
+          <code>placement: &quot;primary&quot;</code>; <code>scope</code> is optional and defaults through the host. Tab-local workbench
+          rails should not be bound with <code>rightSidebarView</code>; open those through workbench rail commands instead.
+        </p>
+        <pre><code>{
+  &quot;views&quot;: [
+    {
+      &quot;id&quot;: &quot;sessions-page&quot;,
+      &quot;title&quot;: &quot;Hermes Sessions&quot;,
+      &quot;location&quot;: &quot;main&quot;,
+      &quot;route&quot;: &quot;/ext/hermes&quot;,
+      &quot;component&quot;: &quot;HermesSessionsPage&quot;
+    },
+    {
+      &quot;id&quot;: &quot;sessions-sidebar&quot;,
+      &quot;title&quot;: &quot;Hermes Sessions&quot;,
+      &quot;location&quot;: &quot;sidebar&quot;,
+      &quot;component&quot;: &quot;HermesSessionsSidebar&quot;
+    },
+    {
+      &quot;id&quot;: &quot;session-inspector&quot;,
+      &quot;title&quot;: &quot;Session Inspector&quot;,
+      &quot;location&quot;: &quot;rightRail&quot;,
+      &quot;placement&quot;: &quot;primary&quot;,
+      &quot;component&quot;: &quot;HermesSessionInspector&quot;
+    }
+  ],
+  &quot;nav&quot;: [
+    {
+      &quot;id&quot;: &quot;hermes&quot;,
+      &quot;label&quot;: &quot;Hermes&quot;,
+      &quot;icon&quot;: &quot;sparkle&quot;,
+      &quot;route&quot;: &quot;/ext/hermes&quot;,
+      &quot;pageType&quot;: &quot;table&quot;,
+      &quot;sidebarView&quot;: &quot;sessions-sidebar&quot;,
+      &quot;rightSidebarView&quot;: &quot;session-inspector&quot;
+    }
+  ]
+}</code></pre>
+        <p>
+          Use the contextual left area for selection/navigation. Use the right sidebar for selected-item details, inspectors, setup help,
+          metadata, activity, logs, previews, validation, and secondary actions. Do not use the right sidebar as a second primary page
+          column. The <code>pageType</code> annotation records the approved template; it does not change routing behavior.
+        </p>
+        <p>Common route shapes:</p>
+        <ul>
+          <li>
+            Main-only: declare one <code>main</code> route view and a matching <code>nav</code> item. Use it when the route can do its work
+            without a contextual navigator or persistent details.
+          </li>
+          <li>
+            Left+main: add a <code>sidebar</code> view and bind it with <code>sidebarView</code>. Use it when the left area is the route's
+            natural object, section, or workflow navigator.
+          </li>
+          <li>
+            Table+right-detail: add a primary <code>rightRail</code> view and bind it with <code>rightSidebarView</code>. Use it when row
+            selection should show details, logs, metadata, preview, validation, or secondary actions beside the list.
+          </li>
+          <li>
+            Full route shell: add <code>main</code>, <code>sidebar</code>, and primary <code>rightRail</code> views. Use it when the left
+            area selects objects or sections and the right sidebar inspects the current selection. Start from the
+            <code>route-shell</code> starter template rather than hand-building the three regions.
+          </li>
+        </ul>
         <h3 id="sidebar-views-views-location-sidebar">Sidebar Views (<code>views[].location: &quot;sidebar&quot;</code>)</h3>
         <p>
           Add a native extension surface that replaces the thread list area in the left sidebar while an extension nav item is active. Use
@@ -1437,6 +1587,13 @@ const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fi
         </p>
         <pre><code>{
   &quot;views&quot;: [
+    {
+      &quot;id&quot;: &quot;hermes-page&quot;,
+      &quot;title&quot;: &quot;Hermes&quot;,
+      &quot;location&quot;: &quot;main&quot;,
+      &quot;route&quot;: &quot;/ext/hermes&quot;,
+      &quot;component&quot;: &quot;HermesPage&quot;
+    },
     {
       &quot;id&quot;: &quot;sessions-sidebar&quot;,
       &quot;title&quot;: &quot;Hermes Sessions&quot;,
@@ -1455,9 +1612,140 @@ const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fi
   ]
 }</code></pre>
         <p>
-          The host still owns the fixed app navigation stack and bottom settings area. The sidebar view owns only the body below the nav
-          item list, so it should render its own header, filters, empty/loading/error states, and row actions.
+          The host still owns the fixed app navigation stack and bottom settings area. The sidebar view owns only the middle contextual
+          body, so it should render its own compact section header, empty/loading/error states, and row actions through the sidebar template
+          primitives. Do not render custom <code>aside</code> chrome, large panels, page titles, or Threads-like fallback content.
         </p>
+        <p>
+          Sidebar frontend components must use the shared left-region primitives from <code>@neon-pilot/extensions/ui</code>:
+          <code>SidebarSection</code>, <code>SidebarActionHeader</code>, <code>SidebarList</code>, <code>SidebarTemplateList</code>,
+          <code>SidebarRow</code>, and <code>SidebarMessage</code>. Use <code>SidebarList</code> for normal navigators and
+          <code>SidebarMessage</code> for compact empty/loading/error copy.
+        </p>
+        <pre><code>import { SidebarList, SidebarMessage, SidebarSection } from '@neon-pilot/extensions/ui';
+
+export function HermesSessionsSidebar({ pa }: ExtensionSurfaceProps) {
+  const sessions = useSessions();
+
+  return (
+    &lt;SidebarSection title=&quot;Sessions&quot;&gt;
+      &lt;SidebarList
+        items={sessions.map((session) =&gt; ({
+          id: session.id,
+          title: session.title,
+          meta: session.state,
+        }))}
+        selectedId={activeSessionId}
+        emptyMessage=&quot;No sessions yet.&quot;
+        onSelect={(item) =&gt; {
+          pa.selection.set({
+            kind: 'resource',
+            resource: { type: 'session', id: item.id, label: String(item.title), source: 'hermes' },
+          });
+        }}
+      /&gt;
+    &lt;/SidebarSection&gt;
+  );
+}</code></pre>
+        <h3 id="route-context-rails-views-location-rightrail">
+          Route context rails (<code>views[].location: &quot;rightRail&quot;</code>)
+        </h3>
+        <p>
+          Add a native extension surface that appears in the shell's right sidebar while an extension route is active. Use this for
+          selected-object details, inspectors, setup output, recent activity, logs, previews, validation, and secondary actions that should
+          stay adjacent to the main page.
+        </p>
+        <pre><code>{
+  &quot;views&quot;: [
+    {
+      &quot;id&quot;: &quot;hermes-page&quot;,
+      &quot;title&quot;: &quot;Hermes&quot;,
+      &quot;location&quot;: &quot;main&quot;,
+      &quot;route&quot;: &quot;/ext/hermes&quot;,
+      &quot;component&quot;: &quot;HermesPage&quot;
+    },
+    {
+      &quot;id&quot;: &quot;session-inspector&quot;,
+      &quot;title&quot;: &quot;Session Inspector&quot;,
+      &quot;location&quot;: &quot;rightRail&quot;,
+      &quot;placement&quot;: &quot;primary&quot;,
+      &quot;component&quot;: &quot;HermesSessionInspector&quot;
+    }
+  ],
+  &quot;nav&quot;: [
+    {
+      &quot;id&quot;: &quot;hermes&quot;,
+      &quot;label&quot;: &quot;Hermes&quot;,
+      &quot;route&quot;: &quot;/ext/hermes&quot;,
+      &quot;pageType&quot;: &quot;table&quot;,
+      &quot;rightSidebarView&quot;: &quot;session-inspector&quot;
+    }
+  ]
+}</code></pre>
+        <p>
+          The right-sidebar toggle appears only on routes that declare <code>rightSidebarView</code>. Route-owned context rails open through
+          route navigation plus that shell toggle; they are not standalone Workbench tools or command-palette panels. Main pages that drive
+          row or object selection should publish selection state so the right sidebar can render the active object. Resource selections are
+          cleared when the active route shell changes, so each route should publish its own selected resource instead of relying on stale
+          global state:
+        </p>
+        <p>
+          Right-sidebar frontend components must use the shared rail primitives from <code>@neon-pilot/extensions/ui</code>:
+          <code>ContextRail</code>, <code>ContextRailHeader</code>, <code>ContextRailBody</code>, and <code>ContextRailSection</code>. Do
+          not hand-roll route-owned rail roots, headers, scroll containers, or section chrome; the shell and shared primitive own the
+          background, divider, spacing, and typography.
+        </p>
+        <pre><code>pa.selection.set({
+  kind: 'resource',
+  resource: {
+    type: 'session',
+    id: session.id,
+    label: session.title,
+    source: 'hermes',
+    data: { sessionId: session.id },
+  },
+});</code></pre>
+        <p>The right sidebar should subscribe to the same state and render a compact empty state when no matching object is selected:</p>
+        <pre><code>const selection = pa.selection.get();
+const session = selection?.kind === 'resource' &amp;&amp; selection.resource?.type === 'session' ? selection.resource : null;</code></pre>
+        <p>Use the right-sidebar component template:</p>
+        <pre><code>import {
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
+  EmptyState,
+  KeyValueItem,
+  KeyValueList,
+} from '@neon-pilot/extensions/ui';
+
+export function HermesSessionInspector({ pa }: ExtensionSurfaceProps) {
+  const session = useSelectedSession(pa);
+
+  return (
+    &lt;ContextRail&gt;
+      &lt;ContextRailHeader eyebrow=&quot;Session details&quot; title={session?.title ?? 'Select a session'} subtitle={session?.id} /&gt;
+      &lt;ContextRailBody&gt;
+        {!session ? (
+          &lt;EmptyState
+            align=&quot;start&quot;
+            title=&quot;Pick a row to inspect&quot;
+            body=&quot;Select a session in the main page to inspect its state here.&quot;
+            steps={['Pick a session from the table.', 'Review its status here.', 'Use row actions for short-lived work.']}
+          /&gt;
+        ) : (
+          &lt;ContextRailSection title=&quot;Status&quot;&gt;
+            &lt;KeyValueList&gt;
+              &lt;KeyValueItem label=&quot;State&quot; value={session.state} /&gt;
+              &lt;KeyValueItem label=&quot;Last run&quot; value={session.lastRunLabel} /&gt;
+            &lt;/KeyValueList&gt;
+          &lt;/ContextRailSection&gt;
+        )}
+      &lt;/ContextRailBody&gt;
+    &lt;/ContextRail&gt;
+  );
+}</code></pre>
+        <p>Use modals for blocking or transient flows, not normal object inspection.</p>
         <h3 id="status-bar-items-statusbaritems">Status Bar Items (<code>statusBarItems</code>)</h3>
         <p>Add labels in the status bar below the composer. Action-based — no frontend entry needed.</p>
         <pre><code>{
@@ -1770,7 +2058,7 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
             selection, and <code>ChatView</code>/<code>ExtensionChatRail</code> for chat surfaces.
           </li>
           <li>
-            Right-rail and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers
+            Right-sidebar and panel views are compact tools, not full pages. Use tighter padding, smaller type, and avoid page-scale headers
             there.
           </li>
         </ul>
@@ -2246,17 +2534,32 @@ await ctx.conversations.updateTranscriptBlock({ conversationId, blockId, blockTy
 }</code></pre>
         <p>
           Event subscriptions are declared under <code>contributes.subscriptions</code> for host-owned event sources such as workspace
-          files, knowledge files, settings, conversations, routes, and selection changes. The host dispatches these through the extension
-          event bus as <code>host:{source}</code> events; <code>pattern</code> narrows the event name. Current built-in producers include
-          <code>host:workspaceFiles</code> for workspace writes/deletes/renames/moves, <code>host:settings</code> for settings updates,
-          frontend <code>host:selection</code> notifications when shared selection changes, and <code>host:conversation:*</code> lifecycle
-          events for live transcript/stream state.
+          files, knowledge files, settings, conversations, alerts, routes, and selection changes. The host dispatches these through the
+          extension event bus as <code>host:{source}</code> events; <code>pattern</code> narrows the event name. Current built-in producers
+          include <code>host:workspaceFiles</code> for workspace writes/deletes/renames/moves, <code>host:settings</code> for settings
+          updates, <code>host:alerts:*</code> for agent-attention alerts, frontend <code>host:selection</code> notifications when shared
+          selection changes, and <code>host:conversation:*</code> lifecycle events for live transcript/stream state.
         </p>
         <pre><code>{
   &quot;contributes&quot;: {
     &quot;subscriptions&quot;: [{ &quot;id&quot;: &quot;watch-notes&quot;, &quot;source&quot;: &quot;knowledgeFiles&quot;, &quot;pattern&quot;: &quot;notes/**&quot;, &quot;handler&quot;: &quot;onKnowledgeChange&quot; }]
   }
 }</code></pre>
+        <p>Agent-attention notifications should subscribe to alerts rather than reaching into core storage:</p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;subscriptions&quot;: [{ &quot;id&quot;: &quot;agent-attention&quot;, &quot;source&quot;: &quot;alerts&quot;, &quot;pattern&quot;: &quot;upserted&quot;, &quot;handler&quot;: &quot;onAlertUpserted&quot; }]
+  },
+  &quot;permissions&quot;: [&quot;ui:notify&quot;]
+}</code></pre>
+        <p>
+          The subscription payload shape is <code>{ type, alert }</code>, where <code>type</code> is <code>upserted</code>,
+          <code>acknowledged</code>, or <code>dismissed</code>, and <code>alert</code> contains the core alert record (<code>kind</code>,
+          <code>severity</code>, <code>status</code>, <code>title</code>, <code>body</code>, optional <code>conversationId</code>,
+          <code>requiresAck</code>, and source fields). Extensions should filter for active alerts that match their policy, then use
+          <code>ctx.notify.system(...)</code>, <code>ctx.notify.setBadge(...)</code>, or a host-mediated process/audio capability for local
+          sound playback.
+        </p>
         <p>Secrets are public manifest API, not an internal convention:</p>
         <pre><code>{
   &quot;contributes&quot;: {
@@ -2674,8 +2977,7 @@ await cacheFiles.writeJson('remote-index.json', index);</code></pre>
             (<code>patleeman/neon-pilot-extensions/system-agent-browser</code>)
           </li>
           <li>
-            <strong><code>system-browser</code></strong> — Experimental browser automation tool + views
-            (<code>patleeman/neon-pilot-extensions/system-browser</code>)
+            <strong><code>system-browser</code></strong> — Workbench browser views and browser automation
           </li>
           <li>
             <strong><code>system-writing-studio</code></strong> — Document-first writing surface with hosted chat, file tree sidebar, and
@@ -2728,7 +3030,7 @@ await cacheFiles.writeJson('remote-index.json', index);</code></pre>
           <li>
             Compare the full app frame against the closest existing product surface before calling the UI done. If a feature is modeled on
             Automations, Settings, Diffs, or Runs, inspect that surface in the app and align shell spacing, toolbar treatment, sidebar
-            behavior, typography, and right-rail density.
+            behavior, typography, and context-rail density.
           </li>
         </ol>
         <p>

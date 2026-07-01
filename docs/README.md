@@ -39,6 +39,7 @@ Pick the shortest path for what you are doing:
 - **Let work continue later** — use [Conversations](conversations.md) for follow-ups/deferred resumes and [Daemon](daemon.md) for background runtime behavior.
 - **Install more capabilities** — use [Extension distribution](extension-distribution.md) and the first-party optional extension repo.
 - **Build a custom capability** — start with [Build an extension with your agent](build-an-extension.md).
+- **Inspect setup and runtime health** — use [Setup readiness audit](setup-readiness-audit.md), [Telemetry](telemetry.md), and [Performance diagnostics](performance-diagnostics.md).
 
 ## Reference
 
@@ -51,6 +52,7 @@ Pick the shortest path for what you are doing:
 - [Activity tree](activity-tree.md) — shared model for conversations, executions, and future sidebar sub-items
 - [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
 - [SQLite migrations](sqlite-migrations.md) — shared versioned schema migration framework
+- [Setup readiness audit](setup-readiness-audit.md) — readiness indicator contract, registered setup items, and app-path QA expectations
 - [Release QA](release-qa.md) — required release gate and hands-on smoke checklist
 - [Release test inventory](release-test-inventory.md) — broad release-risk checklist
 - [Feature inventory](feature-inventory.md) — user-perspective feature list for QA planning and coverage mapping
@@ -89,36 +91,43 @@ Feature-specific documentation lives beside the owning extension package.
 Bundled system extensions:
 
 - [Artifacts](../extensions/system-artifacts/README.md) — rendered artifacts beside the active conversation
+- [Agent Plugins](../extensions/system-agent-plugins/README.md) — Codex and Claude plugin import, update tracking, and compatibility reports
+- [Alerts](../extensions/system-alerts/README.md) — native notifications and sound for agent attention alerts
+- [AST Grep](../extensions/system-ast-grep/README.md) — syntax-aware structural code search through ast-grep
 - [Automations](../extensions/system-automations/README.md) — scheduled and conversation-bound automations
 - [Background Work](../extensions/system-runs/README.md) — background commands and subagents linked to conversations
+- [Browser](../extensions/system-browser/README.md) — Workbench browser views and browser automation
 - [Caffeinate](../extensions/system-caffeinate/README.md) — macOS caffeinate top-bar control
 - [Codex Profile](../extensions/system-codex-profile/README.md) — Codex/OpenAI tool profile, including `apply_patch` and image generation
 - [Composer Attachments](../extensions/system-composer-attachments/README.md) — composer attachment controls
 - [Context Hardening](../extensions/system-context-hardening/README.md) — tool-output bounds before agent context
 - [Context Usage](../extensions/system-context-usage/README.md) — composer status for context-window usage
 - [Conversation Tools](../extensions/system-conversation-tools/README.md) — conversation inspection, titles, working directories, and CLI commands
+- [Computer Use](../extensions/system-computer-use/README.md) — Cua Driver-backed native desktop app capture and control
 - [Diffs](../extensions/system-diffs/README.md) — checkpoint and workspace diff inspection
 - [Dynamic Workflows](../extensions/system-dynamic-workflows/README.md) — model-authored workflow coordinators that fan out daemon-backed subagents
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
-- [Agent Plugins](../extensions/system-agent-plugins/README.md) — Codex and Claude plugin import, update tracking, and compatibility reports
-- [Alerts](../extensions/system-alerts/README.md) — native notifications and sound for agent attention alerts
-- [Browser](../extensions/system-browser/README.md) — Workbench browser views and browser automation
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing
+- [Gateways](../extensions/system-gateways/README.md) — external messaging gateway registration and bridge surfaces
 - [Git Status](../extensions/system-git-status/README.md) — branch and diff status in the composer
 - [Goal Mode](../extensions/system-auto-mode/README.md) — persisted goal tracking and automatic continuation
+- [Hashline Edit](../extensions/system-hashline-edit/README.md) — hash-anchored read and edit tools for guarded line operations
 - [Host view components](host-view-components.md) — host-owned UI components reusable by extensions
 - [Multimedia Probe](../extensions/system-image-probe/README.md) — image and video attachment inspection with a vision agent
 - [Video Probe](../extensions/system-video-probe/README.md) — lower-level local video frame sampling and transcription tools
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
+- [Model Arena](../extensions/system-model-arena/README.md) — blind challenger model duels and local preference stats
 - [AI Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API proxy for external coding agents
 - [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
 - [Neon Pilot CLI](../extensions/system-neon-pilot-admin-cli/README.md) — unified CLI control plane for internal agents and external callers
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run guided tour over real app pages
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md) — transcript selection actions and draft starters
+- [Routines](../extensions/system-routines/README.md) — prompt-based lifecycle workflow blocks
 - [Settings](../extensions/system-settings/README.md) — native first-party settings routes
+- [Skill Search](../extensions/system-skill-search/README.md) — trusted skill discovery, quarantine preview, vetting, and installation
 - [Skills](../extensions/system-skills/README.md) — backend compatibility actions for agent skills
 - [Telemetry extension](../extensions/system-telemetry/README.md) — app traces, model usage, tool health, and performance
 - [Terminal](../extensions/system-terminal/README.md) — PTY-backed terminal panel
