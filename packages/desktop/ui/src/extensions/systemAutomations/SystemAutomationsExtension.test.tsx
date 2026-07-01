@@ -204,7 +204,7 @@ describe('AutomationsPage', () => {
     const { container } = await renderPage(pa);
 
     expect(container.querySelector('table')).not.toBeNull();
-    expect(container.textContent).toContain('No automations yet');
+    expect(container.textContent).toContain('Schedule work into a conversation');
     expect(
       Array.from(container.querySelectorAll('button')).filter((button) => button.textContent?.includes('New automation')),
     ).toHaveLength(2);
