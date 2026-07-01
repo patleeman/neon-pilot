@@ -53,15 +53,11 @@
 - Hide advanced/internal identifiers unless they help recovery or debugging. If shown, label them as advanced details, for example `Advanced name: EXA_API_KEY`.
 - When touching a page, opportunistically fix adjacent confusing copy in the same surface if it is low-risk and covered by the same validation path.
 
-## UI design bans
+## UI design rules
 
-- Before creating or modifying user-visible app or extension UI, read `docs/design/neon-pilot-taste.md`. For generated extension UI, also read `benchmarks/extension-quality/visual-rubric.md` and use `docs/design/extension-visual-refinement.md` when iterating with screenshot-backed judges.
-- Design-system first. If a shared primitive exists, use it. Raw `<button>`, `<select>`, `<input>`, custom toggle/segmented controls, ad hoc menu chrome, locally styled table/list/card chrome, and one-off loading/empty/error treatments are banned unless the existing primitives cannot express the workflow; document that exception near the code and update the guardrail or docs if the pattern should recur.
-- Always choose the most user-friendly control for the job. Prefer constrained controls such as dropdowns, segmented controls, checkboxes, toggles, sliders, steppers, pickers, and resource choosers over free-form text inputs when the valid values are known. Prefer key/value or structured row editors for individual settings over a raw JSON textarea unless the data is genuinely large, deeply nested, or expert-only.
-- User-reachable actions should be command-backed so they can appear in the command palette and be hot-keyed. Add command contributions for meaningful buttons, navigation actions, workflow operations, and toolbar actions; wire default or user-editable keybindings when a shortcut is part of the expected workflow.
-- Avoid nested bordered containers/cards unless truly unavoidable.
-- Avoid decorative pills/chips as a default treatment; use spacing, typography, and alignment for hierarchy.
-- Keep pages visually consistent; do not design in isolation.
+- Before creating or modifying user-visible app or extension UI, read and follow `docs/design/neon-pilot-taste.md`; treat it as the source of truth for layout, density, control choice, surface treatment, negative smells, and screenshot-backed taste review.
+- For generated extension UI, also read `benchmarks/extension-quality/visual-rubric.md` and use `docs/design/extension-visual-refinement.md` when iterating with screenshot-backed judges.
+- Keep design-system and command-palette guardrails hard: use shared primitives before local markup, document narrow exceptions near the code, update guardrails/docs when a pattern should recur, and make meaningful user-reachable actions command-backed.
 
 ## Workflow references
 
