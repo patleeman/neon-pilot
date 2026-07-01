@@ -6,6 +6,8 @@ This reference covers the extension package contract: manifests, frontend/backen
 
 Terminology: **extensions** are Neon Pilot app packages that can add UI, tools, backend actions, settings, and skills. **Agent plugins** are portable Codex/Claude-style capability packages, often with files such as `.codex-plugin/plugin.json`; the bundled Agent Plugins extension imports them from Git or local directories, tracks updates, and exposes compatible skills, docs, hooks, and MCP declarations through Neon Pilot-managed wrappers. Agent plugins are not native app extensions.
 
+Neon Pilot extensions are intentionally larger than the skills-and-hooks model in Claude Code, Codex, and similar agent harnesses. Inspired by Pi's extension architecture, a native extension can become a complete local application: pages, sidebar/workbench panels, backend actions, tools, commands, settings, setup readiness checks, storage, transcript renderers, prompt/context providers, lifecycle hooks, and optional skills in one package.
+
 ## Contents
 
 - [Agent-first workflow](#agent-first-workflow)

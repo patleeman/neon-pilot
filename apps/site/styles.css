@@ -214,19 +214,19 @@ h1 {
 
 .proof-list div {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  column-gap: 10px;
+  grid-template-columns: 10px minmax(0, 1fr);
+  column-gap: 12px;
   row-gap: 2px;
 }
 
 .proof-list div::before {
   content: '';
-  width: 14px;
-  height: 14px;
-  margin-top: 4px;
-  border: 1px solid #1c2430;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #fff, #f0f1ee);
+  width: 6px;
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: var(--blue);
+  box-shadow: 0 0 0 4px var(--blue-soft);
 }
 
 .proof-list strong {
@@ -362,8 +362,8 @@ h1 {
   width: 100%;
   aspect-ratio: 1.56;
   cursor: zoom-in;
-  object-fit: contain;
-  object-position: top center;
+  object-fit: cover;
+  object-position: top left;
 }
 
 .capability-strip {
@@ -1094,6 +1094,14 @@ th {
     margin-top: 0;
   }
 
+  .hero-copy > .section-copy {
+    order: 3;
+  }
+
+  .hero-copy > .ext-quote {
+    order: 4;
+  }
+
   .hero-shot {
     order: 4;
   }
@@ -1112,8 +1120,8 @@ th {
 
   .hero-shot img {
     aspect-ratio: 1.5;
-    object-fit: contain;
-    object-position: top center;
+    object-fit: cover;
+    object-position: top left;
   }
 
   .capability-strip,
