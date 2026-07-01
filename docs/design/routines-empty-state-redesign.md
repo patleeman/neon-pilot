@@ -39,9 +39,9 @@ The strongest direction is **Concept A: Learn, then start** from the companion c
 
 - Keep `AppPageIntro` concise, with the feature job in one sentence.
 - Add an educational first-run panel with three compact concepts: `Events`, `Before / After`, and `Routine blocks`.
-- Render lifecycle events as selectable rows grouped by category.
-- Keep a fast-start action near the explanation: `Use checkpoint example`.
-- Keep manual start nearby: `Add event` or event rows.
+- Put concrete examples directly under the explanation instead of a separate manual event chooser.
+- Write example labels as jobs the user recognizes, such as `Check before checkpoint` or `Ask before risky background work`.
+- Let examples create editable starter routines.
 - Make the context rail quiet until an event is selected.
 - Keep the left contextual sidebar compact: section title, plus action, and a one-line message.
 
@@ -56,8 +56,12 @@ Main page:
 - Body heading: `Teach Neon Pilot what to do around key moments`
 - Body copy: `Routines are prompt blocks that run before or after lifecycle events, such as checkpoint saves or background commands.`
 - Educational model: `1 Event -> 2 Before/After lanes -> 3 Routine blocks -> 4 Run history`
-- Fast-start action: `Use checkpoint example`
-- Manual start: grouped event rows such as `Checkpoint`, `Before agent starts`, `Background command`.
+- Example starts:
+  - `Check before checkpoint`
+  - `Write a checkpoint handoff`
+  - `Ask before risky background work`
+  - `Choose a path before agent start`
+- Optional toolbar action: `Add event` for advanced/manual setup.
 
 Left sidebar:
 
@@ -92,9 +96,11 @@ Use compact operational copy:
 - `Events are moments Neon Pilot can react to.`
 - `Before runs setup checks. After runs follow-up work.`
 - `Routine blocks run prompts, choose paths, ask you, warn, or stop the event.`
-- `Use checkpoint example`
-- `Choose a lifecycle event`
-- `Start with the event where automation should run.`
+- `Try a ready-made routine`
+- `Check before checkpoint`
+- `Write a checkpoint handoff`
+- `Ask before risky background work`
+- `Choose a path before agent start`
 - `Before`
 - `After`
 - `Runs appear after this event executes.`
@@ -105,13 +111,15 @@ Avoid:
 - `Editor page`
 - Long unstructured "Routines let..." definitions inside the editor.
 - Numbered steps when they repeat visible controls, but do use a compact model sequence when it teaches the feature.
+- A second generic chooser under the examples.
+- Group labels like `Common` or `Background work` in the first-run body when concrete examples would teach more clearly.
 - Repeating "Add an event" in the page, sidebar, and context rail.
 
 ## Implementation Notes
 
 - Keep using shared primitives from `@neon-pilot/extensions/ui`.
 - The likely production change is in `extensions/system-routines/src/RoutinesPage.tsx`.
-- Replace the no-selected-hook `AppPageEmptyState` with a compact educational section plus event chooser.
+- Replace the no-selected-hook `AppPageEmptyState` with a compact educational section plus starter examples.
 - Replace the selected-hook no-routine `EmptyState` with inline lane empty rows inside Before and After.
 - Consider changing `RoutinesContextRail` so the no-selection rail is either hidden by route contribution state or uses a single quiet header/body note.
 - Coordinate with the setup tour so it does not cover route-owned context rails when possible.

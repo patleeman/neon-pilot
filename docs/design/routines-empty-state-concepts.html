@@ -412,11 +412,24 @@
         font-size: 13px;
       }
 
-      .fast-start span {
+      .fast-start > div span {
         display: block;
         margin-top: 3px;
         color: var(--secondary);
         font-size: 12px;
+      }
+
+      .fast-start .pill {
+        display: inline-flex;
+        margin-top: 0;
+      }
+
+      .example-list {
+        padding: 12px 14px 14px;
+      }
+
+      .example-list .group-label {
+        margin-bottom: 8px;
       }
 
       .event-group {
@@ -605,7 +618,7 @@
       <section class="concept">
         <div class="concept-title">
           <h2>Concept A: Learn, Then Start</h2>
-          <p>Best default. It teaches what Routines are, then gives a one-click example and manual event choices.</p>
+          <p>Best default. It teaches the model, then shows concrete routines the user can create.</p>
         </div>
         <div class="window">
           <div class="topbar">
@@ -676,37 +689,42 @@
                   </div>
                   <div class="fast-start">
                     <div>
-                      <strong>Fast start with a checkpoint routine</strong>
-                      <span>Adds a review prompt before checkpoint and a short handoff after checkpoint.</span>
+                      <strong>Try a ready-made routine</strong>
+                      <span>Pick an example below, then edit the prompts and lanes after it is created.</span>
                     </div>
-                    <span class="button primary">Use checkpoint example</span>
+                    <span class="pill">Examples</span>
                   </div>
-                </div>
-              </section>
-              <section class="chooser" style="margin-top: 18px">
-                <div class="note">
-                  <span>Choose an event manually when you already know where the routine should run.</span>
-                  <span>Before and After lanes appear after selection.</span>
-                </div>
-                <div class="event-group">
-                  <div class="group-label">Common</div>
-                  <div class="row-list">
-                    <div class="event-row">
-                      <div><div class="row-title">Checkpoint</div><div class="row-meta">Run review, summary, or validation prompts before saving work.</div></div>
-                      <span class="button">Use event</span>
-                    </div>
-                    <div class="event-row">
-                      <div><div class="row-title">Before agent starts</div><div class="row-meta">Prepare context or ask for confirmation before a run begins.</div></div>
-                      <span class="button">Use event</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="event-group">
-                  <div class="group-label">Background work</div>
-                  <div class="row-list">
-                    <div class="event-row">
-                      <div><div class="row-title">Background command</div><div class="row-meta">Gate or annotate daemon commands before they execute.</div></div>
-                      <span class="button">Use event</span>
+                  <div class="example-list">
+                    <div class="group-label">Useful starts</div>
+                    <div class="row-list">
+                      <div class="event-row">
+                        <div>
+                          <div class="row-title">Check before checkpoint</div>
+                          <div class="row-meta">Review changed files before saving a checkpoint, then warn if something looks unfinished.</div>
+                        </div>
+                        <span class="button primary">Create</span>
+                      </div>
+                      <div class="event-row">
+                        <div>
+                          <div class="row-title">Write a checkpoint handoff</div>
+                          <div class="row-meta">After a checkpoint saves, summarize what changed and what still needs attention.</div>
+                        </div>
+                        <span class="button">Create</span>
+                      </div>
+                      <div class="event-row">
+                        <div>
+                          <div class="row-title">Ask before risky background work</div>
+                          <div class="row-meta">Pause background commands that match risky patterns and ask before they run.</div>
+                        </div>
+                        <span class="button">Create</span>
+                      </div>
+                      <div class="event-row">
+                        <div>
+                          <div class="row-title">Choose a path before agent start</div>
+                          <div class="row-meta">Inspect the request, then route the run through review, implementation, or planning instructions.</div>
+                        </div>
+                        <span class="button">Create</span>
+                      </div>
                     </div>
                   </div>
                 </div>
