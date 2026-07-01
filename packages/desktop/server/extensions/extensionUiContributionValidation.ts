@@ -32,7 +32,11 @@ export function validateSetupItemContributions(value: unknown): void {
       for (const [actionIndex, action] of assertRecordArray(item.actions, `contributes.setupItems[${index}].actions`).entries()) {
         requireString(action.id, `contributes.setupItems[${index}].actions[${actionIndex}].id`);
         requireString(action.label, `contributes.setupItems[${index}].actions[${actionIndex}].label`);
-        requireString(action.action, `contributes.setupItems[${index}].actions[${actionIndex}].action`);
+        validateOptionalString(action.action, `contributes.setupItems[${index}].actions[${actionIndex}].action`);
+        validateOptionalString(action.route, `contributes.setupItems[${index}].actions[${actionIndex}].route`);
+        if (typeof action.action !== 'string' && typeof action.route !== 'string') {
+          throw new Error(`Extension manifest contributes.setupItems[${index}].actions[${actionIndex}] must define action or route.`);
+        }
         if (action.tone !== undefined)
           validateEnum(action.tone, ['default', 'primary', 'danger'], `contributes.setupItems[${index}].actions[${actionIndex}].tone`);
       }

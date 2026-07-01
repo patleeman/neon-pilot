@@ -185,11 +185,13 @@ describe('system-neon-pilot-admin-cli backend', () => {
       linkTarget: '/usr/local/bin/other',
     });
 
-    await expect(cliShellLinkSetupStatus()).resolves.toMatchObject({
+    const status = await cliShellLinkSetupStatus();
+    expect(status).toMatchObject({
       status: 'blocked',
-      detail: expect.stringContaining('/usr/local/bin/other'),
       actions: [],
     });
+    expect(status.detail).toContain('/usr/local/bin/other');
+    expect(status.detail).toContain('Remove or rename that file');
   });
 
   it('installs the CLI shell link through the shared host API', async () => {

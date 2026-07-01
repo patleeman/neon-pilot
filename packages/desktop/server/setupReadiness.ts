@@ -19,6 +19,7 @@ export interface SetupReadinessAction {
   id: string;
   label: string;
   tone: SetupReadinessActionTone;
+  route?: string;
 }
 
 export interface SetupReadinessItem {
@@ -118,10 +119,21 @@ function normalizeAction(action: ExtensionSetupItemActionContribution): SetupRea
     id: action.id,
     label: action.label,
     tone: action.tone === 'primary' || action.tone === 'danger' ? action.tone : 'default',
+    ...(typeof action.route === 'string' && action.route.trim().startsWith('/') ? { route: action.route.trim() } : {}),
+  };
+}
+
+function fallbackActionFor(extensionId: string): SetupReadinessAction {
+  return {
+    id: 'open-extension-settings',
+    label: 'Open Settings',
+    tone: 'default',
+    route: `/settings/extensions/${encodeURIComponent(extensionId)}`,
   };
 }
 
 function filterActions(
+  extensionId: string,
   contribution: ExtensionSetupItemContribution,
   result: StatusActionResult,
   status: SetupReadinessStatus,
@@ -130,7 +142,8 @@ function filterActions(
   const actionIds = Array.isArray(result.actions)
     ? new Set(result.actions.filter((action): action is string => typeof action === 'string'))
     : null;
-  return (contribution.actions ?? []).filter((action) => !actionIds || actionIds.has(action.id)).map(normalizeAction);
+  const actions = (contribution.actions ?? []).filter((action) => !actionIds || actionIds.has(action.id)).map(normalizeAction);
+  return actions.length > 0 ? actions : [fallbackActionFor(extensionId)];
 }
 
 function countsFor(items: SetupReadinessItem[]): SetupReadinessCounts {
@@ -197,7 +210,7 @@ export async function readSetupReadiness(context: ServerRouteContext, deps: Setu
           detail: typeof result.detail === 'string' ? result.detail : undefined,
           dismissed: Boolean(state.dismissed[key]),
           dismissible: contribution.dismissible !== false,
-          actions: filterActions(contribution, result, status),
+          actions: filterActions(extensionId, contribution, result, status),
           checkedAt,
           order: contribution.order ?? 0,
         });
@@ -215,7 +228,7 @@ export async function readSetupReadiness(context: ServerRouteContext, deps: Setu
           error: error instanceof Error ? error.message : String(error),
           dismissed,
           dismissible: contribution.dismissible !== false,
-          actions: [],
+          actions: [fallbackActionFor(extensionId)],
           checkedAt,
           order: contribution.order ?? 0,
         });
@@ -249,6 +262,8 @@ export async function runSetupReadinessAction(
   const found = await findSetupItem({ client, extensionId: input.extensionId, itemId: input.itemId });
   const action = found?.contribution.actions?.find((candidate) => candidate.id === input.actionId);
   if (!found || !action) throw new Error(`Setup action "${input.actionId}" is not declared for "${input.extensionId}:${input.itemId}".`);
+  if (!action.action)
+    throw new Error(`Setup action "${input.actionId}" for "${input.extensionId}:${input.itemId}" does not declare a backend action.`);
   const response = await client.invokeAction({
     extensionId: input.extensionId,
     actionId: action.action,

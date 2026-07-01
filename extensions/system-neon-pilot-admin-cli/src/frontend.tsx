@@ -1,4 +1,5 @@
-import { api, ErrorState, LoadingState, SettingsRow, Switch, ToolbarButton, useApi } from '@neon-pilot/extensions/settings';
+import { api, Button, ErrorState, MetaLabel, SettingsRow, Switch, useApi } from '@neon-pilot/extensions/settings';
+import { QuietLoadingState } from '@neon-pilot/extensions/ui';
 import { useEffect, useState } from 'react';
 
 type Settings = {
@@ -7,6 +8,12 @@ type Settings = {
 
 type SettingsState = {
   settings: Settings;
+};
+
+type CliShellLinkSetupState = {
+  status: 'ready' | 'needs_setup' | 'blocked' | 'not_applicable' | 'unknown';
+  detail?: string;
+  actions?: string[];
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -23,12 +30,31 @@ async function updateAgentSettings(patch: Partial<Settings>): Promise<SettingsSt
   return response.result as SettingsState;
 }
 
+async function readCliShellLinkSetupStatus(): Promise<CliShellLinkSetupState> {
+  const response = await api.invokeExtensionAction('system-neon-pilot-admin-cli', 'cliShellLinkSetupStatus', {});
+  return response.result as CliShellLinkSetupState;
+}
+
+async function installCliShellLink(): Promise<{ ok: boolean; detail?: string }> {
+  const response = await api.invokeExtensionAction('system-neon-pilot-admin-cli', 'installCliShellLink', {});
+  return response.result as { ok: boolean; detail?: string };
+}
+
 export function NeonPilotAgentSettingsPanel() {
   const { data, loading, error, refetch } = useApi(readAgentSettings, 'system-neon-pilot-cli-settings');
+  const {
+    data: shellLink,
+    loading: shellLinkLoading,
+    error: shellLinkError,
+    refetch: refetchShellLink,
+  } = useApi(readCliShellLinkSetupStatus, 'system-neon-pilot-cli-shell-link-setup');
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
+  const [installing, setInstalling] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [shellLinkMessage, setShellLinkMessage] = useState<string | null>(null);
+  const [shellLinkSaveError, setShellLinkSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (data?.settings) setSettings(data.settings);
@@ -53,10 +79,65 @@ export function NeonPilotAgentSettingsPanel() {
     }
   }
 
+  async function installShellLink() {
+    setInstalling(true);
+    setShellLinkMessage(null);
+    setShellLinkSaveError(null);
+    try {
+      const result = await installCliShellLink();
+      if (!result.ok) throw new Error(result.detail ?? 'The shell command could not be installed.');
+      setShellLinkMessage(result.detail ?? 'Shell command installed.');
+      await refetchShellLink();
+    } catch (err) {
+      setShellLinkSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setInstalling(false);
+    }
+  }
+
+  const canInstallShellLink = Array.isArray(shellLink?.actions) && shellLink.actions.includes('install');
+
   return (
     <div className="space-y-3">
-      {loading ? <LoadingState label="Loading settings..." /> : null}
+      {loading ? <QuietLoadingState label="Loading settings" className="min-h-12" /> : null}
       {error ? <ErrorState title="Settings failed to load" body={error instanceof Error ? error.message : String(error)} /> : null}
+      <SettingsRow
+        title={
+          <span className="flex items-center gap-2">
+            <span>Shell command</span>
+            {shellLink?.status ? (
+              <MetaLabel tone={shellLink.status === 'ready' ? 'success' : shellLink.status === 'blocked' ? 'danger' : 'muted'}>
+                {shellLink.status === 'ready' ? 'Ready' : shellLink.status === 'blocked' ? 'Blocked' : 'Needs setup'}
+              </MetaLabel>
+            ) : null}
+          </span>
+        }
+        description={
+          shellLinkError
+            ? shellLinkError instanceof Error
+              ? shellLinkError.message
+              : String(shellLinkError)
+            : (shellLink?.detail ?? 'Install the neon-pilot command in your user shell path.')
+        }
+        disabled={shellLinkLoading || installing}
+        actionsClassName="max-w-none"
+      >
+        <div className="flex items-center gap-2">
+          <Button
+            aria-label="Check shell command setup again"
+            title="Check shell command setup again"
+            disabled={shellLinkLoading || installing}
+            onClick={() => void refetchShellLink()}
+          >
+            <span aria-hidden="true">↻</span>
+          </Button>
+          {canInstallShellLink ? (
+            <Button disabled={shellLinkLoading || installing} onClick={() => void installShellLink()}>
+              {installing ? 'Installing' : 'Install'}
+            </Button>
+          ) : null}
+        </div>
+      </SettingsRow>
       <SettingsRow
         title="CLI entrypoint"
         description="Allows neon-pilot to administer Neon Pilot, run delegated tasks, start subagents, and inspect runs."
@@ -64,9 +145,14 @@ export function NeonPilotAgentSettingsPanel() {
         actionsClassName="max-w-none"
       >
         <div className="flex items-center gap-2">
-          <ToolbarButton disabled={saving} onClick={() => void refetch()}>
-            Refresh
-          </ToolbarButton>
+          <Button
+            aria-label="Refresh CLI entrypoint settings"
+            title="Refresh CLI entrypoint settings"
+            disabled={saving}
+            onClick={() => void refetch()}
+          >
+            <span aria-hidden="true">↻</span>
+          </Button>
           <Switch
             checked={settings.cliEnabled}
             disabled={saving}
@@ -78,6 +164,8 @@ export function NeonPilotAgentSettingsPanel() {
       <div className="flex items-center gap-2 text-[12px] text-secondary">
         {message ? <span className="text-success">{message}</span> : null}
         {saveError ? <span className="text-danger">{saveError}</span> : null}
+        {shellLinkMessage ? <span className="text-success">{shellLinkMessage}</span> : null}
+        {shellLinkSaveError ? <span className="text-danger">{shellLinkSaveError}</span> : null}
       </div>
     </div>
   );

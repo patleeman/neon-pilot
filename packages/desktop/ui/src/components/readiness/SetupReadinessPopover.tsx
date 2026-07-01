@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import type { SetupReadinessItem, SetupReadinessSnapshot, SetupReadinessStatus } from '../../shared/types';
-import { cx, IconButton, MetaLabel, SegmentedControl, Spinner, StatusDot, type StatusDotTone, TextButton, ToolbarButton } from '../ui';
+import type { SetupReadinessAction, SetupReadinessItem, SetupReadinessSnapshot, SetupReadinessStatus } from '../../shared/types';
+import { cx, IconButton, Select, Spinner, StatusDot, type StatusDotTone, TaskListItem, ToolbarButton } from '../ui';
 
 type Filter = 'incomplete' | 'all' | 'dismissed';
 
@@ -28,12 +29,18 @@ function itemIsIncomplete(item: SetupReadinessItem): boolean {
 function EmptyState({ filter }: { filter: Filter }) {
   const text = filter === 'dismissed' ? 'No dismissed setup items' : filter === 'all' ? 'No setup items registered' : 'Everything is ready';
   return (
-    <div className="flex h-full items-center justify-center px-6 text-center">
-      <div>
-        <StatusDot tone={filter === 'incomplete' ? 'success' : 'muted'} size="md" className="mx-auto" />
-        <p className="mt-3 text-[12px] text-secondary">{text}</p>
-      </div>
+    <div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-secondary">
+      <StatusDot tone={filter === 'incomplete' ? 'success' : 'muted'} size="xs" />
+      <span className="ml-2">{text}</span>
     </div>
+  );
+}
+
+function SmallIcon({ d }: { d: string }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d={d} />
+    </svg>
   );
 }
 
@@ -46,57 +53,67 @@ function SetupReadinessRow({
 }: {
   item: SetupReadinessItem;
   busy: boolean;
-  onRunAction: (item: SetupReadinessItem, actionId: string) => void;
+  onRunAction: (item: SetupReadinessItem, action: SetupReadinessAction) => void;
   onDismiss: (item: SetupReadinessItem) => void;
   onRestore: (item: SetupReadinessItem) => void;
 }) {
+  const detail = [item.error ?? item.detail, item.extensionName, item.dismissed ? 'Dismissed' : null].filter(Boolean).join(' · ');
+
   return (
-    <div className={cx('ui-setup-readiness-row', item.dismissed && 'opacity-60')}>
-      <div className="flex min-w-0 items-start gap-2">
-        <StatusDot tone={STATUS_TONE[item.status]} size="xs" className="mt-1" />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <h3 className="truncate text-[12px] font-semibold text-primary">{item.title}</h3>
-            <MetaLabel tone={item.status === 'ready' ? 'success' : item.status === 'blocked' ? 'danger' : 'muted'}>
-              {STATUS_LABEL[item.status]}
-            </MetaLabel>
-          </div>
-          <p className="mt-0.5 text-[11px] leading-[17px] text-secondary">{item.description}</p>
-          {item.detail || item.error ? (
-            <p className={cx('mt-1 text-[10px] leading-[16px]', item.error ? 'text-danger' : 'text-dim')}>{item.error ?? item.detail}</p>
+    <TaskListItem
+      checked={item.status === 'ready' || item.status === 'not_applicable'}
+      className={cx('px-2 py-1.5', item.dismissed && 'opacity-60')}
+      control={<StatusDot tone={STATUS_TONE[item.status]} size="xs" />}
+      label={
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate">{item.title}</span>
+          <span className="shrink-0 text-[10px] font-medium text-dim">{STATUS_LABEL[item.status]}</span>
+        </span>
+      }
+      detail={detail}
+      actions={
+        <>
+          {item.dismissed ? (
+            <IconButton
+              compact
+              size="sm"
+              type="button"
+              onClick={() => onRestore(item)}
+              disabled={busy}
+              aria-label="Restore setup item"
+              title="Restore"
+            >
+              <SmallIcon d="M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13" />
+            </IconButton>
           ) : null}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <MetaLabel tone="muted">{item.extensionName}</MetaLabel>
-            <MetaLabel tone="muted">{item.severity}</MetaLabel>
-            {item.dismissed ? <MetaLabel tone="secondary">Dismissed</MetaLabel> : null}
-          </div>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-        {item.dismissed ? (
-          <TextButton type="button" className="px-1.5 py-0.5 text-[10px]" onClick={() => onRestore(item)} disabled={busy}>
-            Restore
-          </TextButton>
-        ) : null}
-        {!item.dismissed && item.dismissible && itemIsIncomplete(item) ? (
-          <TextButton type="button" className="px-1.5 py-0.5 text-[10px]" onClick={() => onDismiss(item)} disabled={busy}>
-            Dismiss
-          </TextButton>
-        ) : null}
-        {item.actions.map((action) => (
-          <ToolbarButton
-            key={action.id}
-            type="button"
-            className={cx('px-2 py-1 text-[10px]', action.tone === 'primary' && 'text-accent', action.tone === 'danger' && 'text-danger')}
-            onClick={() => onRunAction(item, action.id)}
-            disabled={busy}
-          >
-            {busy ? <Spinner size="xs" /> : null}
-            {action.label}
-          </ToolbarButton>
-        ))}
-      </div>
-    </div>
+          {!item.dismissed && item.dismissible && itemIsIncomplete(item) ? (
+            <IconButton
+              compact
+              size="sm"
+              type="button"
+              onClick={() => onDismiss(item)}
+              disabled={busy}
+              aria-label="Dismiss setup item"
+              title="Dismiss"
+            >
+              <SmallIcon d="M18 6 6 18M6 6l12 12" />
+            </IconButton>
+          ) : null}
+          {item.actions.map((action) => (
+            <ToolbarButton
+              key={action.id}
+              type="button"
+              className={cx(action.tone === 'primary' && 'text-accent', action.tone === 'danger' && 'text-danger')}
+              onClick={() => onRunAction(item, action)}
+              disabled={busy}
+            >
+              {busy ? <Spinner size="xs" /> : null}
+              {action.label}
+            </ToolbarButton>
+          ))}
+        </>
+      }
+    />
   );
 }
 
@@ -119,6 +136,7 @@ export function SetupReadinessPopover({
   onDismiss: (extensionId: string, itemId: string) => Promise<void>;
   onRestore: (extensionId: string, itemId: string) => Promise<void>;
 }) {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>('incomplete');
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const items = snapshot?.items ?? [];
@@ -154,6 +172,15 @@ export function SetupReadinessPopover({
     });
   };
 
+  const runSetupAction = (item: SetupReadinessItem, action: SetupReadinessAction) => {
+    if (action.route) {
+      navigate(action.route);
+      onClose();
+      return;
+    }
+    void runWithBusy(item.key, () => onRunAction(item.extensionId, item.id, action.id));
+  };
+
   return (
     <div
       className="fixed inset-0 z-[110]"
@@ -165,7 +192,7 @@ export function SetupReadinessPopover({
       }}
     >
       <aside className="ui-setup-readiness-popover">
-        <div className="flex shrink-0 items-start justify-between border-b border-border-subtle px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-4 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-[13px] font-semibold text-primary">Setup Readiness</h2>
@@ -173,11 +200,18 @@ export function SetupReadinessPopover({
                 <span className="ui-notification-badge">{snapshot.counts.actionable}</span>
               ) : null}
             </div>
-            <p className="mt-1 text-[11px] leading-[17px] text-secondary">
-              Complete setup items extensions need before their features work reliably.
-            </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Select
+              aria-label="Setup readiness filter"
+              value={filter}
+              onChange={(event) => setFilter(event.currentTarget.value as Filter)}
+              className="h-7 w-[116px] text-[11px]"
+            >
+              <option value="incomplete">Incomplete</option>
+              <option value="all">All</option>
+              <option value="dismissed">Dismissed</option>
+            </Select>
             <IconButton
               compact
               size="sm"
@@ -192,7 +226,7 @@ export function SetupReadinessPopover({
                 <path d="M21 3v6h-6" />
               </svg>
             </IconButton>
-            <IconButton compact size="sm" type="button" onClick={onClose} aria-label="Close setup readiness">
+            <IconButton compact size="sm" type="button" onClick={onClose} aria-label="Close setup readiness" title="Close setup readiness">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M18 6 6 18" />
                 <path d="m6 6 12 12" />
@@ -200,19 +234,12 @@ export function SetupReadinessPopover({
             </IconButton>
           </div>
         </div>
-        <div className="flex shrink-0 items-center border-b border-border-subtle px-4 py-2">
-          <SegmentedControl
-            ariaLabel="Setup readiness filter"
-            value={filter}
-            options={[
-              { value: 'incomplete', label: 'Incomplete' },
-              { value: 'all', label: 'All' },
-              { value: 'dismissed', label: 'Dismissed' },
-            ]}
-            onChange={setFilter}
-          />
-          {loading ? <Spinner size="xs" className="ml-auto" /> : null}
-        </div>
+        {loading ? (
+          <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-4 py-2 text-[11px] text-dim">
+            <Spinner size="xs" />
+            <span>Checking setup</span>
+          </div>
+        ) : null}
         {error ? (
           <div className="mx-4 mt-3 rounded-md border border-danger/20 bg-danger/5 px-3 py-2 text-[11px] text-danger">{error}</div>
         ) : null}
@@ -230,7 +257,7 @@ export function SetupReadinessPopover({
                   key={item.key}
                   item={item}
                   busy={busyKey === item.key}
-                  onRunAction={(row, actionId) => void runWithBusy(row.key, () => onRunAction(row.extensionId, row.id, actionId))}
+                  onRunAction={runSetupAction}
                   onDismiss={(row) => void runWithBusy(row.key, () => onDismiss(row.extensionId, row.id))}
                   onRestore={restoreItem}
                 />

@@ -2,6 +2,8 @@
 
 Setup readiness items should cover extension features that are enabled but need host-machine setup before they work reliably. They are not a replacement for normal settings pages; use them for missing binaries, local model downloads, native runtime dependencies, OS permissions, and external services that make the enabled feature unusable until resolved.
 
+Incomplete setup items must remain actionable. Prefer state-specific actions such as Install, Authenticate, Download, or Run Doctor. If an incomplete item has no action for its current state, the host injects an Open Settings action to the owning extension's settings/details page so the popover never leaves the user at a dead end.
+
 Current checked-in setup readiness registrations:
 
 | Extension                     | Item              | Covers                                                                |

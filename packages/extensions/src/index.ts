@@ -599,7 +599,8 @@ export type ExtensionSetupItemActionTone = 'default' | 'primary' | 'danger';
 export interface ExtensionSetupItemActionContribution {
   id: string;
   label: string;
-  action: string;
+  action?: string;
+  route?: string;
   tone?: ExtensionSetupItemActionTone;
 }
 

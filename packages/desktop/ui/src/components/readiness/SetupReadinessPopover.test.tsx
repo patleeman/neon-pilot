@@ -2,6 +2,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { SetupReadinessSnapshot } from '../../shared/types';
@@ -61,23 +62,34 @@ function renderPopover(overrides: Partial<React.ComponentProps<typeof SetupReadi
     onRestore: vi.fn(async () => undefined),
     ...overrides,
   };
-  render(<SetupReadinessPopover {...props} />);
+  function LocationProbe() {
+    const location = useLocation();
+    return <span data-testid="current-path">{location.pathname}</span>;
+  }
+  render(
+    <MemoryRouter>
+      <SetupReadinessPopover {...props} />
+      <LocationProbe />
+    </MemoryRouter>,
+  );
   return props;
 }
 
 describe('SetupReadinessPopover', () => {
   it('renders incomplete setup items without throwing', () => {
     const html = renderToStaticMarkup(
-      <SetupReadinessPopover
-        snapshot={snapshot}
-        loading={false}
-        error={null}
-        onClose={() => undefined}
-        onRefresh={() => undefined}
-        onRunAction={async () => undefined}
-        onDismiss={async () => undefined}
-        onRestore={async () => undefined}
-      />,
+      <MemoryRouter>
+        <SetupReadinessPopover
+          snapshot={snapshot}
+          loading={false}
+          error={null}
+          onClose={() => undefined}
+          onRefresh={() => undefined}
+          onRunAction={async () => undefined}
+          onDismiss={async () => undefined}
+          onRestore={async () => undefined}
+        />
+      </MemoryRouter>,
     );
 
     expect(html).toContain('Setup Readiness');
@@ -95,9 +107,29 @@ describe('SetupReadinessPopover', () => {
     await waitFor(() => expect((screen.getByText('Install') as HTMLButtonElement).disabled).toBe(false));
 
     await act(async () => {
-      fireEvent.click(screen.getByText('Dismiss'));
+      fireEvent.click(screen.getByLabelText('Dismiss setup item'));
     });
     expect(props.onDismiss).toHaveBeenCalledWith('ext', 'cli');
+  });
+
+  it('navigates route actions without invoking a backend setup action', () => {
+    const routeSnapshot = {
+      ...snapshot,
+      items: [
+        {
+          ...snapshot.items[0],
+          status: 'blocked' as const,
+          actions: [{ id: 'open-extension-settings', label: 'Open Settings', tone: 'default' as const, route: '/settings/extensions/ext' }],
+        },
+      ],
+    };
+    const props = renderPopover({ snapshot: routeSnapshot });
+
+    fireEvent.click(screen.getByText('Open Settings'));
+
+    expect(props.onRunAction).not.toHaveBeenCalled();
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('current-path').textContent).toBe('/settings/extensions/ext');
   });
 
   it('shows all and dismissed filters with restore action', async () => {
@@ -109,14 +141,14 @@ describe('SetupReadinessPopover', () => {
     const props = renderPopover({ snapshot: dismissedSnapshot });
 
     expect(screen.queryByText('Install the Neon Pilot shell command')).toBeNull();
-    fireEvent.click(screen.getByText('Dismissed'));
+    fireEvent.change(screen.getByLabelText('Setup readiness filter'), { target: { value: 'dismissed' } });
     await act(async () => {
-      fireEvent.click(screen.getByText('Restore'));
+      fireEvent.click(screen.getByLabelText('Restore setup item'));
     });
     expect(props.onRestore).toHaveBeenCalledWith('ext', 'cli');
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Incomplete' }).getAttribute('aria-selected')).toBe('true'));
+    await waitFor(() => expect((screen.getByLabelText('Setup readiness filter') as HTMLSelectElement).value).toBe('incomplete'));
 
-    fireEvent.click(screen.getByText('All'));
+    fireEvent.change(screen.getByLabelText('Setup readiness filter'), { target: { value: 'all' } });
     expect(screen.getByText('Ready item')).toBeTruthy();
   });
 

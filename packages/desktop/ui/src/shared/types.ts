@@ -949,6 +949,7 @@ export interface SetupReadinessAction {
   id: string;
   label: string;
   tone: SetupReadinessActionTone;
+  route?: string;
 }
 
 export interface SetupReadinessItem {

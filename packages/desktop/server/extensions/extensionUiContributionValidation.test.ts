@@ -55,5 +55,13 @@ describe('extensionUiContributionValidation', () => {
         { id: 'setup', title: 'Setup', statusAction: 'status', actions: [{ id: 'install', action: 'install' }] },
       ]),
     ).toThrow('Extension manifest contributes.setupItems[0].actions[0].label must be a non-empty string.');
+    expect(() =>
+      validateSetupItemContributions([{ id: 'setup', title: 'Setup', statusAction: 'status', actions: [{ id: 'open', label: 'Open' }] }]),
+    ).toThrow('Extension manifest contributes.setupItems[0].actions[0] must define action or route.');
+    expect(() =>
+      validateSetupItemContributions([
+        { id: 'setup', title: 'Setup', statusAction: 'status', actions: [{ id: 'open', label: 'Open', route: '/settings' }] },
+      ]),
+    ).not.toThrow();
   });
 });

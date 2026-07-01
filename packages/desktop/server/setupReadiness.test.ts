@@ -136,6 +136,18 @@ describe('setupReadiness', () => {
     expect(JSON.parse(readFileSync(join(root, 'setup-readiness.json'), 'utf8')).dismissed['ext:item']).toBeTruthy();
   });
 
+  it('adds an extension settings action when an incomplete item has no declared action for its state', async () => {
+    const root = tempRoot();
+    const host = client({ statusResult: { status: 'blocked', detail: 'A local file is in the way.', actions: [] } });
+
+    const snapshot = await readSetupReadiness(context(root), { extensionHostClient: host });
+
+    expect(snapshot.items[0]).toMatchObject({
+      status: 'blocked',
+      actions: [{ id: 'open-extension-settings', label: 'Open Settings', tone: 'default', route: '/settings/extensions/ext' }],
+    });
+  });
+
   it('runs declared setup actions and clears dismissal', async () => {
     const root = tempRoot();
     const host = client({ statusResult: { status: 'ready', detail: 'Installed.' } });
@@ -160,7 +172,11 @@ describe('setupReadiness', () => {
 
     const snapshot = await readSetupReadiness(context(root), { extensionHostClient: host });
 
-    expect(snapshot.items[0]).toMatchObject({ status: 'unknown', error: 'backend unavailable' });
+    expect(snapshot.items[0]).toMatchObject({
+      status: 'unknown',
+      error: 'backend unavailable',
+      actions: [{ id: 'open-extension-settings', label: 'Open Settings', route: '/settings/extensions/ext' }],
+    });
     expect(snapshot.counts).toMatchObject({ incomplete: 1, unknown: 1 });
   });
 });

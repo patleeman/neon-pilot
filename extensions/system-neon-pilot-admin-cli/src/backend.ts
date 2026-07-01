@@ -285,7 +285,7 @@ function cliInstallDetail(status: Awaited<ReturnType<typeof readNeonPilotCliInst
   if (status.globallyInstalled) return `Shell command is linked at ${status.linkPath}.`;
   if (status.linkConflict) {
     const target = status.linkTarget ? ` It currently points to ${status.linkTarget}.` : '';
-    return `A different file already exists at ${status.linkPath}.${target}`;
+    return `A different file already exists at ${status.linkPath}.${target} Remove or rename that file, then refresh setup readiness and install the Neon Pilot shell command.`;
   }
   return `The command exists at ${status.target}, but the shell link is missing at ${status.linkPath}.`;
 }
