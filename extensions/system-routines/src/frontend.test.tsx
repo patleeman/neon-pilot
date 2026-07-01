@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RoutinesPage, RoutinesSidebar } from './RoutinesPage.js';
+import { RoutinesContextRail, RoutinesPage, RoutinesSidebar } from './RoutinesPage.js';
 import type { Routine, RoutineRunRecord } from './types.js';
 
 const baseState = {
@@ -118,7 +118,7 @@ function propsWithContext(pa: never, context: Partial<{ search: string; hash: st
     surface: {
       id: context.surfaceId ?? 'page',
       title: 'Routines',
-      location: context.surfaceId === 'routines-sidebar' ? 'sidebar' : 'main',
+      location: context.surfaceId === 'routines-sidebar' ? 'sidebar' : context.surfaceId === 'routines-context-rail' ? 'rightRail' : 'main',
       component: 'RoutinesPage',
     },
     params: {},
@@ -167,7 +167,7 @@ describe('RoutinesPage', () => {
       resolveState(cloneState());
       await statePromise;
     });
-    expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
+    expect(await screen.findByText('When Checkpoint runs')).toBeTruthy();
   });
 
   it('keeps the routines sidebar loading state silent', async () => {
@@ -190,41 +190,43 @@ describe('RoutinesPage', () => {
       resolveState(cloneState());
       await statePromise;
     });
-    expect(await screen.findByRole('searchbox')).toBeTruthy();
+    expect(await screen.findByRole('tree', { name: 'Routines' })).toBeTruthy();
+    expect(screen.queryByRole('searchbox')).toBeNull();
   });
 
   it('renders the timeline with inline route lanes', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...props(pa)} />);
-    expect(await screen.findByText('Checkpoint timeline')).toBeTruthy();
+    expect(await screen.findByText('When Checkpoint runs')).toBeTruthy();
     expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(0);
     expect(screen.getByText('Add routine ▾')).toBeTruthy();
-    expect(screen.getByText('If judge returns pass')).toBeTruthy();
+    expect(screen.getByText('If this returns pass')).toBeTruthy();
+    expect(screen.getByText('1')).toBeTruthy();
   });
 
   it('opens the add menu for the New Routine command route', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...propsWithContext(pa, { search: '?action=new' })} />);
-    await screen.findByText('Checkpoint timeline');
+    await screen.findByText('When Checkpoint runs');
 
-    expect(screen.getByText('Run an agent invocation.')).toBeTruthy();
+    expect(screen.getByText('Run one prompt before or after this event.')).toBeTruthy();
     expect(screen.getByText('Assess the event and choose a path.')).toBeTruthy();
   });
 
   it('closes transient menus from outside click and Escape', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    await screen.findByText('When Checkpoint runs');
 
     fireEvent.click(screen.getByText('Add routine ▾'));
-    expect(screen.getByText('Run an agent invocation.')).toBeTruthy();
+    expect(screen.getByText('Run one prompt before or after this event.')).toBeTruthy();
     fireEvent.pointerDown(document.body);
-    await waitFor(() => expect(screen.queryByText('Run an agent invocation.')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Run one prompt before or after this event.')).toBeNull());
 
-    fireEvent.click(screen.getByLabelText('More actions for Review code changes'));
-    expect(screen.getByText('Move to After')).toBeTruthy();
+    fireEvent.click(screen.getByText('Add routine ▾'));
+    expect(screen.getAllByText('Choose path').length).toBeGreaterThan(0);
     fireEvent.keyDown(document, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByText('Move to After')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Assess the event and choose a path.')).toBeNull());
   });
 
   it('asks before discarding an unsaved draft when the selected event changes', async () => {
@@ -232,35 +234,36 @@ describe('RoutinesPage', () => {
     const confirm = vi.mocked((pa as { ui: { confirm: ReturnType<typeof vi.fn> } }).ui.confirm);
     confirm.mockResolvedValueOnce(false);
     const { rerender } = render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    await screen.findByText('When Checkpoint runs');
 
     fireEvent.click(screen.getByText('Add routine ▾'));
-    fireEvent.click(screen.getAllByText('Instruction')[0]);
+    fireEvent.click(screen.getAllByText('Run prompt')[0]);
     rerender(<RoutinesPage {...propsWithContext(pa, { hash: '#background.command' })} />);
 
     await waitFor(() =>
       expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Discard unsaved routine') })),
     );
-    expect(screen.getByText('Checkpoint timeline')).toBeTruthy();
+    expect(screen.getByText('When Checkpoint runs')).toBeTruthy();
   });
 
-  it('renders the real routines sidebar with active event filtering', async () => {
+  it('renders the routines sidebar as navigation without a persistent search box', async () => {
     const { pa } = createPa();
     render(<RoutinesSidebar {...propsWithContext(pa, { surfaceId: 'routines-sidebar' })} />);
 
-    expect(await screen.findByRole('searchbox')).toBeTruthy();
+    expect(await screen.findByRole('tree', { name: 'Routines' })).toBeTruthy();
     expect(screen.getByText('Checkpoint')).toBeTruthy();
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'missing-event' } });
-    expect(screen.getByText('No active routine hooks match.')).toBeTruthy();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Add routine event' }));
+    expect(screen.getByRole('button', { name: 'Done adding routine event' })).toBeTruthy();
   });
 
   it('edits paths inline and collapses the form after save', async () => {
     const { pa, invoke } = createPa();
     render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    await screen.findByText('When Checkpoint runs');
 
     editReviewRoutine();
-    fireEvent.click(screen.getByText('Add route'));
+    fireEvent.click(screen.getByText('Add path'));
     expect(screen.getByDisplayValue('new_path')).toBeTruthy();
     fireEvent.change(screen.getByDisplayValue('new_path'), { target: { value: 'needs_qa' } });
     fireEvent.change(screen.getByDisplayValue('Describe this path'), { target: { value: 'Run QA' } });
@@ -275,11 +278,11 @@ describe('RoutinesPage', () => {
   it('shows a next-routine selector for branch paths', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    await screen.findByText('When Checkpoint runs');
 
     fireEvent.click(screen.getByText('Add routine ▾'));
-    fireEvent.click(screen.getAllByText('Instruction')[0]);
-    fireEvent.change(screen.getByDisplayValue('New instruction'), { target: { value: 'Linked follow-up routine' } });
+    fireEvent.click(screen.getAllByText('Run prompt')[0]);
+    fireEvent.change(screen.getByDisplayValue('New prompt'), { target: { value: 'Linked follow-up routine' } });
     fireEvent.click(screen.getByText('Save'));
     await waitFor(() => expect(screen.queryByDisplayValue('Linked follow-up routine')).toBeNull());
 
@@ -292,29 +295,24 @@ describe('RoutinesPage', () => {
     expect(screen.getByText('Linked follow-up routine (before)')).toBeTruthy();
   });
 
-  it('opens routine actions from the larger dots menu', async () => {
-    const { pa, invoke } = createPa();
+  it('keeps row actions quiet and removes duplicate move menu actions', async () => {
+    const { pa } = createPa();
     render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    await screen.findByText('When Checkpoint runs');
 
-    fireEvent.click(screen.getByLabelText('More actions for Review code changes'));
-    expect(screen.getByText('Move to After')).toBeTruthy();
-    expect(screen.queryByText('Edit routine')).toBeNull();
-    fireEvent.click(screen.getByText('Move to After'));
-
-    await waitFor(() =>
-      expect(invoke).toHaveBeenCalledWith('moveRoutine', expect.objectContaining({ routineId: 'r1', position: 'after' })),
-    );
+    expect(screen.queryByText('Move to After')).toBeNull();
+    expect(screen.queryByLabelText('More actions for Review code changes')).toBeNull();
+    expect(screen.getByLabelText('Delete Review code changes')).toBeTruthy();
   });
 
   it('inserts a skill reference and deletes a temporary routine', async () => {
     const { pa, invoke } = createPa();
     render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    await screen.findByText('When Checkpoint runs');
 
     fireEvent.click(screen.getByText('Add routine ▾'));
-    fireEvent.click(screen.getAllByText('Instruction')[0]);
-    fireEvent.change(screen.getByDisplayValue('New instruction'), { target: { value: 'Temporary instruction' } });
+    fireEvent.click(screen.getAllByText('Run prompt')[0]);
+    fireEvent.change(screen.getByDisplayValue('New prompt'), { target: { value: 'Temporary instruction' } });
     const instructionBox = screen.getByRole('textbox', { name: /instruction/i });
     fireEvent.change(instructionBox, { target: { value: 'Use /skill:' } });
     fireEvent.click(await screen.findByText('/skill:autoreview'));
@@ -323,17 +321,15 @@ describe('RoutinesPage', () => {
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('saveRoutine', expect.objectContaining({ name: 'Temporary instruction' })));
 
     await screen.findByText('Temporary instruction');
-    fireEvent.click(screen.getByLabelText('More actions for Temporary instruction'));
-    fireEvent.click(screen.getByText('Delete routine'));
+    fireEvent.click(screen.getByLabelText('Delete Temporary instruction'));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('deleteRoutine', expect.objectContaining({ routineId: expect.any(String) })));
   });
 
   it('refreshes run history when routines are invalidated', async () => {
     const { pa, state, emitInvalidation } = createPa();
-    render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    render(<RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />);
+    await screen.findByText('Routine context');
 
-    fireEvent.click(screen.getByText('Runs'));
     expect(screen.getByText('No routine runs yet.')).toBeTruthy();
 
     state.runs.unshift({
@@ -386,22 +382,18 @@ describe('RoutinesPage', () => {
       ],
     } satisfies RoutineRunRecord);
 
-    render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
-    fireEvent.click(screen.getByText('Runs'));
+    render(<RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />);
 
     expect(await screen.findByText(/Routine model call failed \(429\): The usage limit has been reached/)).toBeTruthy();
     expect(screen.queryByText(/X-Codex/)).toBeNull();
     expect(screen.queryByText(/headers/)).toBeNull();
   });
 
-  it('polls run history while the Runs view is open', async () => {
+  it('polls run history while the context rail is open', async () => {
     const { pa, state } = createPa();
-    render(<RoutinesPage {...props(pa)} />);
-    await screen.findByText('Checkpoint timeline');
+    render(<RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />);
+    await screen.findByText('Routine context');
 
-    vi.useFakeTimers();
-    fireEvent.click(screen.getByText('Runs'));
     expect(screen.getByText('No routine runs yet.')).toBeTruthy();
 
     state.runs.unshift({
@@ -424,10 +416,8 @@ describe('RoutinesPage', () => {
     } satisfies RoutineRunRecord);
 
     await act(async () => {
-      vi.advanceTimersByTime(2500);
-      await Promise.resolve();
+      await new Promise((resolve) => window.setTimeout(resolve, 2600));
     });
-    vi.useRealTimers();
 
     expect(await screen.findByText(/Review code changes: warned/)).toBeTruthy();
     expect(screen.getByText(/Polled run/)).toBeTruthy();

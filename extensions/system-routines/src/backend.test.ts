@@ -5,8 +5,54 @@ vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentT
 
 import { deleteRoutine, getState, moveRoutine, registerHookPoint, runHook, saveRoutine } from './backend.js';
 
-function createCtx() {
+function seededRoutineState() {
+  const timestamp = new Date().toISOString();
+  return {
+    version: 1,
+    hookPoints: [],
+    routines: [
+      {
+        id: 'checkpoint-review-code',
+        hookId: 'checkpoint',
+        position: 'before',
+        type: 'decision',
+        name: 'Review code changes',
+        instruction:
+          'Use /skill:autoreview to review the current diff. Choose exactly one outcome based on whether checkpointing should continue.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'block',
+        outcomes: [
+          { id: 'pass', label: 'Pass', target: 'Continue checkpoint', behavior: 'continue' },
+          { id: 'issues_found', label: 'Issues found', target: 'Block checkpoint and report issues', behavior: 'block' },
+          { id: 'needs_validation', label: 'Needs validation', target: 'Warn and continue', behavior: 'warn' },
+          { id: 'unclear', label: 'Unclear', target: 'Ask user before continuing', behavior: 'ask' },
+        ],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+      {
+        id: 'checkpoint-report',
+        hookId: 'checkpoint',
+        position: 'after',
+        type: 'instruction',
+        name: 'Report checkpoint',
+        instruction: 'Summarize the checkpoint result, included files, and follow-up work.',
+        enabled: true,
+        order: 0,
+        failureBehavior: 'continue',
+        outcomes: [],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    ],
+    runs: [],
+  };
+}
+
+function createCtx(options: { seeded?: boolean } = { seeded: true }) {
   const store = new Map<string, unknown>();
+  if (options.seeded !== false) store.set('routines-state-v1', seededRoutineState());
   return {
     storage: {
       get: vi.fn(async (key: string) => store.get(key) ?? null),
@@ -25,7 +71,16 @@ beforeEach(() => {
 });
 
 describe('system-routines backend', () => {
-  it('seeds checkpoint routines and hook summaries', async () => {
+  it('starts with no routines until the user adds one', async () => {
+    const result = (await getState({}, createCtx({ seeded: false }))) as {
+      hooks: Array<{ id: string; summary: string }>;
+      routines: unknown[];
+    };
+    expect(result.hooks.find((hook) => hook.id === 'checkpoint')?.summary).toBe('No routines');
+    expect(result.routines).toEqual([]);
+  });
+
+  it('summarizes saved checkpoint routines', async () => {
     const result = (await getState({}, createCtx())) as { hooks: Array<{ id: string; summary: string }>; routines: unknown[] };
     expect(result.hooks.find((hook) => hook.id === 'checkpoint')?.summary).toContain('Review code changes');
     expect(result.routines.length).toBeGreaterThan(0);
@@ -578,7 +633,7 @@ describe('system-routines backend', () => {
 
     await expect(
       moveRoutine({ routineId: 'checkpoint-review-code', position: 'before', parentRoutineId: 'child-judge', parentOutcomeId: 'ok' }, ctx),
-    ).rejects.toThrow('own nested routes');
+    ).rejects.toThrow('own nested paths');
   });
 
   it('moves routines between lanes and reorders the target lane', async () => {

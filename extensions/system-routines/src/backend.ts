@@ -21,7 +21,7 @@ const HOOK_POINTS: RoutineHookPoint[] = [
     id: 'agent.input',
     title: 'User prompt received',
     group: 'Agent',
-    description: 'Judge, rewrite, route, or block a user prompt before the agent runs.',
+    description: 'Choose a path, rewrite, or block a user prompt before the agent runs.',
     ownerExtensionId: 'core',
     variables: [
       { name: 'conversationId', label: 'Conversation' },
@@ -32,7 +32,7 @@ const HOOK_POINTS: RoutineHookPoint[] = [
     id: 'agent.before_start',
     title: 'Before agent starts',
     group: 'Agent',
-    description: 'Judge whether the agent should proceed or add guidance for the next turn.',
+    description: 'Decide whether the agent should proceed or add guidance for the next turn.',
     ownerExtensionId: 'core',
     variables: [{ name: 'conversationId', label: 'Conversation' }],
   },
@@ -447,46 +447,10 @@ function normalizeRunRecord(value: unknown): RoutineRunRecord | null {
 }
 
 function defaultState(): RoutinesState {
-  const timestamp = now();
   return {
     version: 1,
     hookPoints: [],
-    routines: [
-      {
-        id: 'checkpoint-review-code',
-        hookId: 'checkpoint',
-        position: 'before',
-        type: 'decision',
-        name: 'Review code changes',
-        instruction:
-          'Use /skill:autoreview to review the current diff. Choose exactly one outcome based on whether checkpointing should continue.',
-        enabled: true,
-        order: 0,
-        failureBehavior: 'block',
-        outcomes: [
-          { id: 'pass', label: 'Pass', target: 'Continue checkpoint', behavior: 'continue' },
-          { id: 'issues_found', label: 'Issues found', target: 'Block checkpoint and report issues', behavior: 'block' },
-          { id: 'needs_validation', label: 'Needs validation', target: 'Warn and continue', behavior: 'warn' },
-          { id: 'unclear', label: 'Unclear', target: 'Ask user before continuing', behavior: 'ask' },
-        ],
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      },
-      {
-        id: 'checkpoint-report',
-        hookId: 'checkpoint',
-        position: 'after',
-        type: 'instruction',
-        name: 'Report checkpoint',
-        instruction: 'Summarize the checkpoint result, included files, and follow-up work.',
-        enabled: true,
-        order: 0,
-        failureBehavior: 'continue',
-        outcomes: [],
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      },
-    ],
+    routines: [],
     runs: [],
   };
 }
@@ -675,14 +639,14 @@ export async function moveRoutine(input: unknown, ctx: ExtensionBackendContext) 
   if (!moving) throw new Error('Routine not found.');
   if (parentRoutineId === routineId) throw new Error('Routine cannot be nested inside itself.');
   if (parentRoutineId || parentOutcomeId) {
-    if (!parentRoutineId || !parentOutcomeId) throw new Error('Choose a judge route before dropping this routine.');
+    if (!parentRoutineId || !parentOutcomeId) throw new Error('Choose a path before dropping this routine.');
     const routinesById = new Map(state.routines.map((routine) => [routine.id, routine]));
     const parent = routinesById.get(parentRoutineId);
-    if (!parent || parent.type !== 'decision') throw new Error('Drop routines onto a judge route.');
+    if (!parent || parent.type !== 'decision') throw new Error('Drop routines onto a choose-path routine.');
     if (parent.hookId !== moving.hookId) throw new Error('Routines can only move within the same event.');
-    if (!parent.outcomes.some((outcome) => outcome.id === parentOutcomeId)) throw new Error('That judge route no longer exists.');
+    if (!parent.outcomes.some((outcome) => outcome.id === parentOutcomeId)) throw new Error('That path no longer exists.');
     if (routineHasAncestor(routinesById, parent.id, moving.id))
-      throw new Error('A routine cannot move inside one of its own nested routes.');
+      throw new Error('A routine cannot move inside one of its own nested paths.');
     position = parent.position;
   }
 

@@ -39,29 +39,29 @@ test('routines page supports GA editing, sidebar, runs, and drag workflows @rout
   try {
     const page = testApp.page;
     const routineName = `E2E temporary instruction ${Date.now()}`;
-    const decisionName = `E2E judge ${Date.now()}`;
+    const decisionName = `E2E path chooser ${Date.now()}`;
     const stopName = `E2E stop ${Date.now()}`;
 
-    await expect(page.locator('body')).toContainText('Checkpoint timeline', { timeout: 45_000 });
-    await expect(page.getByPlaceholder('Search routines…')).toBeVisible();
-    await page.getByPlaceholder('Search routines…').fill('checkpoint');
+    await expect(page.locator('body')).toContainText('No events added', { timeout: 45_000 });
+    await page.getByText('Use checkpoint example').click();
+    await expect(page.locator('body')).toContainText('When Checkpoint runs', { timeout: 45_000 });
+    await saveOpenRoutine(page);
+    await expect(page.getByRole('tree', { name: 'Routines' })).toBeVisible();
+    await expect(page.getByPlaceholder('Search routines…')).toHaveCount(0);
     await expect(page.locator('body')).toContainText('Checkpoint');
-    await page.getByPlaceholder('Search routines…').fill('missing-event');
-    await expect(page.locator('body')).toContainText('No active routine hooks match.');
-    await page.getByPlaceholder('Search routines…').fill('');
-    await page.getByText('Add event').click();
-    await page.getByPlaceholder('Search routines…').fill('background command');
+    await page.getByRole('button', { name: 'Add routine event' }).click();
+    await expect(page.getByRole('button', { name: 'Done adding routine event' })).toBeVisible();
     await page.getByText('Background command').click();
-    await expect(page.locator('body')).toContainText('Background command timeline');
+    await expect(page.locator('body')).toContainText('When Background command runs');
     await expect(page.locator('body')).toContainText('No routines before this event.');
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: '/routines#checkpoint' } }));
     });
-    await expect(page.locator('body')).toContainText('Checkpoint timeline', { timeout: 45_000 });
+    await expect(page.locator('body')).toContainText('When Checkpoint runs', { timeout: 45_000 });
 
     await page.getByText('Add routine ▾').click();
-    await page.getByText('Instruction', { exact: true }).click();
-    await fillInputByValue(page, 'New instruction', routineName);
+    await page.getByText('Run prompt', { exact: true }).click();
+    await fillInputByValue(page, 'New prompt', routineName);
     await page.locator('textarea').last().fill('E2E instruction /skill:');
     await page.getByRole('option', { name: /\/skill:autoreview/ }).click();
     await expect(page.locator('textarea').last()).toHaveValue('E2E instruction /skill:autoreview');
@@ -69,16 +69,16 @@ test('routines page supports GA editing, sidebar, runs, and drag workflows @rout
     await expect(page.locator('body')).toContainText(routineName);
 
     const sourceRoutine = page.locator('[data-routine-id]', { hasText: routineName }).first();
-    const targetRoutine = page.locator('[data-routine-id="checkpoint-review-code"]').first();
+    const targetRoutine = page.locator('[data-routine-id]', { hasText: 'Review code changes' }).first();
     await sourceRoutine.dragTo(targetRoutine, { targetPosition: { x: 24, y: 16 } });
     await expect
-      .poll(async () => (await routineTop(page, routineName)) < (await routineTop(page, 'id:checkpoint-review-code')), { timeout: 15_000 })
+      .poll(async () => (await routineTop(page, routineName)) < (await routineTop(page, 'Review code changes')), { timeout: 15_000 })
       .toBe(true);
 
     await page.getByText('Add routine ▾').click();
-    await page.getByText('Judge', { exact: true }).click();
-    await fillInputByValue(page, 'New judge', decisionName);
-    await page.getByRole('button', { name: 'Add route' }).click();
+    await page.getByText('Choose path', { exact: true }).click();
+    await fillInputByValue(page, 'New path chooser', decisionName);
+    await page.getByRole('button', { name: 'Add path' }).click();
     await fillInputByValue(page, 'new_path', 'needs_e2e');
     await fillInputByValue(page, 'Describe this path', 'Run the E2E branch');
     await saveOpenRoutine(page);
@@ -86,26 +86,24 @@ test('routines page supports GA editing, sidebar, runs, and drag workflows @rout
     await expect(page.locator('body')).toContainText('needs_e2e');
 
     await page.getByText('Add routine ▾').click();
-    await page.getByText('Manual stop', { exact: true }).click();
+    await page.getByRole('menuitem', { name: /Stop event/ }).click();
     await fillInputByValue(page, 'Stop event', stopName);
     await page.locator('textarea').last().fill('Stop from E2E.');
     await expect(page.locator('body')).toContainText('Unsaved changes');
     await saveOpenRoutine(page);
     await expect(page.locator('body')).toContainText(stopName);
-    await page.getByLabel(`More actions for ${stopName}`).click();
-    await page.getByText('Delete routine').click();
+    await page.getByLabel(`Delete ${stopName}`).click();
     await page.getByRole('button', { name: 'Confirm' }).click();
     await expect(page.locator('body')).not.toContainText(stopName, { timeout: 15_000 });
 
-    await page.getByText('Runs').click();
-    await expect(page.locator('body')).toContainText('No routine runs yet.');
-    await page.getByText('Timeline').click();
+    await expect(page.getByText('Routine context')).toBeVisible();
+    await expect(page.getByText('No routine runs yet.')).toBeVisible();
 
     await navigateApp(page, '/routines');
     await expect(page.locator('body')).toContainText(routineName, { timeout: 15_000 });
     await expect(page.locator('body')).toContainText(decisionName, { timeout: 15_000 });
     await expect
-      .poll(async () => (await routineTop(page, routineName)) < (await routineTop(page, 'id:checkpoint-review-code')), { timeout: 15_000 })
+      .poll(async () => (await routineTop(page, routineName)) < (await routineTop(page, 'Review code changes')), { timeout: 15_000 })
       .toBe(true);
     await testInfo.attach('routines-ga-smoke.png', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
     await expectCleanViewport(page);

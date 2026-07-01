@@ -2,16 +2,21 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import {
   type ActivityTreeItem,
   ActivityTreeView,
+  AppPageEmptyState,
   AppPageIntro,
   AppPageLayout,
   Button,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
   cx,
+  EmptyState,
   ErrorState,
   IconButton,
   MenuItem,
   MenuShell,
   PositionedMenu,
-  SearchInput,
   SectionLabel,
   Select,
   Textarea,
@@ -60,6 +65,20 @@ const DEFAULT_OUTCOMES: RoutineOutcome[] = [
 
 function RoutinesLoadingState() {
   return <div role="status" aria-label="Loading routines" />;
+}
+
+function RoutineSidebarIcon({ name }: { name: 'check' | 'plus' }) {
+  const paths = {
+    check: ['M20 6 9 17l-5-5'],
+    plus: ['M12 5v14', 'M5 12h14'],
+  } satisfies Record<string, string[]>;
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      {paths[name].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
 }
 
 function replaceLastSkillReference(instruction: string, skillId: string): string {
@@ -136,12 +155,36 @@ function nowRoutine(
     position,
     ...(parent ?? {}),
     type,
-    name: type === 'decision' ? 'New judge' : type === 'stop' ? 'Stop event' : 'New instruction',
+    name: type === 'decision' ? 'New path chooser' : type === 'stop' ? 'Stop event' : 'New prompt',
     instruction: type === 'stop' ? 'Stop this lifecycle event and explain why.' : '',
     enabled: true,
     order: 999,
     failureBehavior: type === 'instruction' ? 'continue' : 'block',
     outcomes: type === 'decision' ? DEFAULT_OUTCOMES : [],
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function checkpointExampleRoutine(hookId = 'checkpoint'): Routine {
+  const timestamp = new Date().toISOString();
+  return {
+    id: `routine-${Date.now().toString(36)}`,
+    hookId,
+    position: 'before',
+    type: 'decision',
+    name: 'Review code changes',
+    instruction:
+      'Use /skill:autoreview to review the current diff. Choose exactly one outcome based on whether checkpointing should continue.',
+    enabled: true,
+    order: 0,
+    failureBehavior: 'block',
+    outcomes: [
+      { id: 'pass', label: 'Pass', target: 'Continue checkpoint', behavior: 'continue' },
+      { id: 'issues_found', label: 'Issues found', target: 'Stop checkpoint and report issues', behavior: 'block' },
+      { id: 'needs_validation', label: 'Needs validation', target: 'Warn and continue', behavior: 'warn' },
+      { id: 'unclear', label: 'Unclear', target: 'Ask before continuing', behavior: 'ask' },
+    ],
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -154,9 +197,17 @@ function groupedHooks(hooks: HookWithSummary[]) {
 }
 
 function routineLabel(type: RoutineType): string {
-  if (type === 'decision') return 'Judge routine';
-  if (type === 'stop') return 'Manual stop';
-  return 'Instruction routine';
+  if (type === 'decision') return 'Choose path';
+  if (type === 'stop') return 'Stop event';
+  return 'Run prompt';
+}
+
+function routineFailureLabel(routine: Routine): string {
+  if (routine.type === 'stop') return 'stops event';
+  if (routine.type === 'decision') return `${routine.outcomes.length} ${routine.outcomes.length === 1 ? 'path' : 'paths'}`;
+  if (routine.failureBehavior === 'block') return 'if this fails: stop event';
+  if (routine.failureBehavior === 'warn') return 'if this fails: warn';
+  return 'if this fails: keep going';
 }
 
 function ownerLabel(ownerExtensionId: string): string {
@@ -207,6 +258,16 @@ function outcomeBehaviorDescription(behavior: RoutineOutcome['behavior']): strin
   return 'Continue follows this path.';
 }
 
+function outcomeEffect(outcome: RoutineOutcome, branchTargetName: string | null): { symbol: string; label: string; tone: string } {
+  if (outcome.behavior === 'branch') {
+    return { symbol: '+', label: branchTargetName ? `Run ${branchTargetName}` : 'Run another routine', tone: 'text-accent' };
+  }
+  if (outcome.behavior === 'block') return { symbol: 'x', label: 'Stop event', tone: 'text-danger' };
+  if (outcome.behavior === 'warn') return { symbol: '!', label: 'Warn and continue', tone: 'text-warning' };
+  if (outcome.behavior === 'ask') return { symbol: '?', label: 'Ask before continuing', tone: 'text-accent' };
+  return { symbol: '->', label: 'Continue event', tone: 'text-success' };
+}
+
 function routineTreeStatus(summary: string): ActivityTreeItem['status'] {
   if (/fail|block|warn/i.test(summary)) return 'failed';
   if (summary === 'No routines') return 'idle';
@@ -221,27 +282,18 @@ function publishRoutinesState(state: StateResult) {
 function RoutineHookList({
   hooks,
   selectedHookId,
-  query,
   showAllHooks,
-  onQueryChange,
   onSelect,
   onShowAllHooksChange,
 }: {
   hooks: HookWithSummary[];
   selectedHookId: string;
-  query: string;
   showAllHooks: boolean;
-  onQueryChange: (query: string) => void;
   onSelect: (hookId: string) => void;
   onShowAllHooksChange: (show: boolean) => void;
 }) {
-  const normalizedQuery = query.trim().toLowerCase();
-  const activeHooks = showAllHooks ? hooks : hooks.filter((hook) => hook.summary !== 'No routines' || hook.id === selectedHookId);
-  const visibleHooks = normalizedQuery
-    ? activeHooks.filter((hook) =>
-        `${hook.title} ${hook.description} ${hook.group} ${ownerLabel(hook.ownerExtensionId)}`.toLowerCase().includes(normalizedQuery),
-      )
-    : activeHooks;
+  const activeHooks = showAllHooks ? hooks : hooks.filter((hook) => hook.summary !== 'No routines');
+  const visibleHooks = activeHooks;
 
   const treeItems: ActivityTreeItem[] = groupedHooks(visibleHooks).flatMap(([group, groupHooks]) => {
     const groupId = `group:${group}`;
@@ -269,30 +321,23 @@ function RoutineHookList({
       <div className="px-4 pb-0.5 pt-1">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel className="block">Routines</SectionLabel>
-          <TextButton onClick={() => onShowAllHooksChange(!showAllHooks)}>{showAllHooks ? 'Done' : 'Add event'}</TextButton>
+          <IconButton
+            compact
+            type="button"
+            aria-label={showAllHooks ? 'Done adding routine event' : 'Add routine event'}
+            title={showAllHooks ? 'Done' : 'Add event'}
+            onClick={() => onShowAllHooksChange(!showAllHooks)}
+          >
+            <RoutineSidebarIcon name={showAllHooks ? 'check' : 'plus'} />
+          </IconButton>
         </div>
-      </div>
-      <div className="px-2 pb-1.5 pt-1">
-        <SearchInput
-          value={query}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) => onQueryChange(event.target.value)}
-          placeholder="Search routines…"
-        />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-3">
         <ActivityTreeView
           items={treeItems}
           activeItemId={selectedHookId}
           ariaLabel="Routines"
-          emptyMessage={
-            normalizedQuery
-              ? showAllHooks
-                ? 'No events match.'
-                : 'No active routine hooks match.'
-              : showAllHooks
-                ? 'No events available.'
-                : 'No routines yet. Add an event to start.'
-          }
+          emptyMessage={showAllHooks ? 'No events available.' : 'No routines yet. Add an event to start.'}
           onOpenItem={(item: ActivityTreeItem) => {
             if (item.kind !== 'group') {
               onSelect(item.id);
@@ -307,10 +352,9 @@ function RoutineHookList({
 
 export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<StateResult | null>(null);
-  const [query, setQuery] = useState('');
   const [showAllHooks, setShowAllHooks] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const selectedHookId = hookIdFromHash(context.hash) ?? 'checkpoint';
+  const selectedHookId = hookIdFromHash(context.hash) ?? '';
 
   useEffect(() => {
     let disposed = false;
@@ -340,25 +384,137 @@ export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
     <RoutineHookList
       hooks={data.hooks}
       selectedHookId={selectedHookId}
-      query={query}
       showAllHooks={showAllHooks}
-      onQueryChange={setQuery}
       onSelect={(hookId) => void navigateRoutines(pa, hookId)}
       onShowAllHooksChange={setShowAllHooks}
     />
   );
 }
 
+function RoutinesRunHistory({ selectedHook, runs }: { selectedHook: HookWithSummary; runs: RoutineRunRecord[] }) {
+  if (runs.length === 0) {
+    return <div className="py-6 text-[12px] text-secondary">No routine runs yet.</div>;
+  }
+
+  return (
+    <div className="grid gap-2">
+      {runs.map((run) => (
+        <div key={run.id} className="ui-flat-panel">
+          <div className="flex items-center justify-between gap-2">
+            <b className="text-[12px] capitalize text-primary">{run.status}</b>
+            <span className="text-[11px] text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
+          </div>
+          <div className="mt-2 grid gap-1 text-[12px] text-secondary">
+            {run.steps.length === 0 ? <div>{selectedHook.title} ran without recorded steps.</div> : null}
+            {run.steps.map((step, index) => (
+              <div key={`${step.routineId}-${index}`}>
+                {step.routineName}: {step.outcome ?? step.status}
+                {step.message ? ` — ${sanitizeRunStepMessage(step.message)}` : ''}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function RoutinesContextRail({ pa, context }: ExtensionSurfaceProps) {
+  const [data, setData] = useState<StateResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const selectedHookId = hookIdFromHash(context.hash) ?? '';
+
+  const load = useCallback(async () => {
+    try {
+      const result = (await pa.extension.invoke('getState', {})) as StateResult;
+      setData(result);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [pa]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const onState = (event: Event) => setData((event as CustomEvent<StateResult>).detail);
+    window.addEventListener('neon-pilot-routines-state', onState);
+    return () => window.removeEventListener('neon-pilot-routines-state', onState);
+  }, []);
+
+  useEffect(() => {
+    const subscription = pa.ui.subscribeInvalidations((event) => {
+      if (event.topics.some((topic) => topic === 'routines')) void load();
+    });
+    return () => subscription.unsubscribe();
+  }, [load, pa]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void load();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
+  if (error) return <div className="p-4 text-[12px] text-danger">{error}</div>;
+  if (!data) return <RoutinesLoadingState />;
+
+  const firstActiveHookId = data.routines.find((routine) => routine.enabled)?.hookId;
+  const selectedHook = data.hooks.find((hook) => hook.id === selectedHookId) ?? data.hooks.find((hook) => hook.id === firstActiveHookId);
+  if (!selectedHook) {
+    return (
+      <ContextRail>
+        <ContextRailHeader eyebrow="Routine context" title="No event selected" subtitle="Add an event to inspect routines and runs." />
+        <ContextRailBody>
+          <ContextRailSection title="Runs">
+            <div className="py-6 text-[12px] text-secondary">Run history appears here after routines execute.</div>
+          </ContextRailSection>
+        </ContextRailBody>
+      </ContextRail>
+    );
+  }
+
+  const hookRoutines = data.routines.filter((routine) => routine.hookId === selectedHook.id);
+  const selectedRuns = data.runs.filter((run) => run.hookId === selectedHook.id).slice(0, 20);
+  const beforeCount = hookRoutines.filter((routine) => routine.position === 'before').length;
+  const afterCount = hookRoutines.filter((routine) => routine.position === 'after').length;
+
+  return (
+    <ContextRail>
+      <ContextRailHeader eyebrow="Routine context" title={selectedHook.title} subtitle={ownerLabel(selectedHook.ownerExtensionId)} />
+      <ContextRailBody>
+        <ContextRailSection title="Timeline">
+          <div className="grid grid-cols-2 gap-2 text-[12px]">
+            <div className="ui-flat-panel">
+              <div className="text-[18px] font-semibold text-primary">{beforeCount}</div>
+              <div className="mt-1 text-secondary">Before</div>
+            </div>
+            <div className="ui-flat-panel">
+              <div className="text-[18px] font-semibold text-primary">{afterCount}</div>
+              <div className="mt-1 text-secondary">After</div>
+            </div>
+          </div>
+        </ContextRailSection>
+        <ContextRailSection title="Runs">
+          <RoutinesRunHistory selectedHook={selectedHook} runs={selectedRuns} />
+        </ContextRailSection>
+      </ContextRailBody>
+    </ContextRail>
+  );
+}
+
 export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [data, setData] = useState<StateResult | null>(null);
-  const [selectedHookId, setSelectedHookId] = useState(hookIdFromHash(context.hash) ?? 'checkpoint');
+  const [selectedHookId, setSelectedHookId] = useState(hookIdFromHash(context.hash) ?? '');
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Routine | null>(null);
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [models, setModels] = useState<ModelItem[]>([]);
   const [skillQuery, setSkillQuery] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [showRuns, setShowRuns] = useState(false);
+  const [showEvents, setShowEvents] = useState(false);
   const [openRoutineMenuId, setOpenRoutineMenuId] = useState<string | null>(null);
   const [pendingScrollRoutineId, setPendingScrollRoutineId] = useState<string | null>(null);
   const [unsavedRoutineIds, setUnsavedRoutineIds] = useState<Set<string>>(new Set());
@@ -382,7 +538,12 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         const result = (await pa.extension.invoke('getState', {})) as StateResult;
         setData(result);
         const initialHookId = hookIdFromHash(context.hash) ?? selectedHookId;
-        const nextHookId = result.hooks.some((hook) => hook.id === initialHookId) ? initialHookId : (result.hooks[0]?.id ?? 'checkpoint');
+        const firstActiveHookId = result.routines.find((routine) => routine.enabled)?.hookId ?? '';
+        const nextHookId = result.hooks.some((hook) => hook.id === initialHookId)
+          ? initialHookId
+          : result.hooks.some((hook) => hook.id === firstActiveHookId)
+            ? firstActiveHookId
+            : '';
         setSelectedHookId(nextHookId);
         if (options?.resetSelection) {
           setSelectedRoutineId(null);
@@ -407,14 +568,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     });
     return () => subscription.unsubscribe();
   }, [load, pa]);
-
-  useEffect(() => {
-    if (!showRuns) return;
-    const timer = window.setInterval(() => {
-      void load();
-    }, 2500);
-    return () => window.clearInterval(timer);
-  }, [load, showRuns]);
 
   useEffect(() => {
     const nextHookId = hookIdFromHash(context.hash);
@@ -449,22 +602,23 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     const actionKey = `${context.search ?? ''}:${context.hash ?? ''}`;
     if (action !== 'new' || handledSearchActionRef.current === actionKey) return;
     handledSearchActionRef.current = actionKey;
-    setShowRuns(false);
     setShowAdd(true);
   }, [context.hash, context.search]);
 
   useEffect(() => {
-    if (!showAdd && !openRoutineMenuId && skillQuery === null) return;
+    if (!showAdd && !showEvents && !openRoutineMenuId && skillQuery === null) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest('[data-routines-menu]') || target?.closest('[data-routines-skill-menu]')) return;
       setShowAdd(false);
+      setShowEvents(false);
       setOpenRoutineMenuId(null);
       setSkillQuery(null);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       setShowAdd(false);
+      setShowEvents(false);
       setOpenRoutineMenuId(null);
       setSkillQuery(null);
     };
@@ -474,7 +628,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [openRoutineMenuId, showAdd, skillQuery]);
+  }, [openRoutineMenuId, showAdd, showEvents, skillQuery]);
 
   useEffect(() => {
     void pa.extension
@@ -497,7 +651,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       .catch(() => setModels([]));
   }, [pa]);
 
-  const selectedHook = data?.hooks.find((hook) => hook.id === selectedHookId) ?? data?.hooks[0];
+  const selectedHook = selectedHookId ? data?.hooks.find((hook) => hook.id === selectedHookId) : null;
   const hookRoutines = useMemo(
     () => (data?.routines ?? []).filter((routine) => routine.hookId === selectedHookId).sort((left, right) => left.order - right.order),
     [data, selectedHookId],
@@ -505,7 +659,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const topLevelRoutines = hookRoutines.filter((routine) => !routine.parentRoutineId);
   const beforeRoutines = topLevelRoutines.filter((routine) => routine.position === 'before');
   const afterRoutines = topLevelRoutines.filter((routine) => routine.position === 'after');
-  const selectedRuns = (data?.runs ?? []).filter((run) => run.hookId === selectedHookId).slice(0, 20);
+  const hasTimelineRoutines = topLevelRoutines.length > 0;
   const savedDraft = draft ? data?.routines.find((routine) => routine.id === draft.id) : null;
   const draftIsDirty = Boolean(draft && (unsavedRoutineIds.has(draft.id) || JSON.stringify(draft) !== JSON.stringify(savedDraft ?? null)));
   const branchRoutineOptions = hookRoutines.filter((routine) => routine.id !== draft?.id);
@@ -604,10 +758,23 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       setDraft(routine);
       setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
       setData((current) => (current ? { ...current, routines: [...current.routines, routine] } : current));
-      if (hookId !== selectedHookId) void navigateRoutines(pa, hookId);
     },
-    [hookRoutines, pa, selectedHook, selectedHookId],
+    [hookRoutines, selectedHook],
   );
+
+  const addCheckpointExample = useCallback(() => {
+    const hookId = data?.hooks.some((hook) => hook.id === 'checkpoint') ? 'checkpoint' : (data?.hooks[0]?.id ?? 'checkpoint');
+    const routine = checkpointExampleRoutine(hookId);
+    setShowAdd(false);
+    setShowEvents(false);
+    setActionError(null);
+    setSelectedHookId(hookId);
+    setSelectedRoutineId(routine.id);
+    setPendingScrollRoutineId(routine.id);
+    setDraft({ ...routine, outcomes: routine.outcomes.map((outcome) => ({ ...outcome })) });
+    setUnsavedRoutineIds((current) => new Set(current).add(routine.id));
+    setData((current) => (current ? { ...current, routines: [...current.routines, routine] } : current));
+  }, [data?.hooks]);
 
   const moveRoutineById = useCallback(
     async (
@@ -619,7 +786,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       if (!routineId || routineId === targetRoutineId) return;
       if (unsavedRoutineIds.has(routineId)) {
         if (parent?.parentRoutineId === routineId) {
-          const message = 'Save the judge before moving routines into its routes.';
+          const message = 'Save the choose-path routine before moving routines into its paths.';
           setActionError(message);
           pa.ui.toast(message, 'error');
         } else {
@@ -824,7 +991,79 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
   if (loading) return <RoutinesLoadingState />;
   if (error) return <ErrorState title="Failed to load routines" message={error} />;
-  if (!data || !selectedHook) return <ErrorState title="No routine hooks" message="No lifecycle hooks are available." />;
+  if (!data) return <ErrorState title="No routine events" message="No lifecycle events are available." />;
+
+  const renderEventMenu = (align: 'left' | 'right' = 'right') => (
+    <PositionedMenu
+      placement="absolute"
+      position={align === 'right' ? { right: 0, top: '2.25rem' } : { left: 0, top: '2.25rem' }}
+      className="max-h-[28rem] w-72 overflow-y-auto"
+    >
+      {groupedHooks(data.hooks).map(([group, hooks]) => (
+        <div key={group}>
+          <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.12em] text-dim">{group}</div>
+          {hooks.map((hook) => (
+            <MenuItem
+              key={hook.id}
+              type="button"
+              className="items-start"
+              onClick={() => {
+                setShowEvents(false);
+                setSelectedHookId(hook.id);
+                void navigateRoutines(pa, hook.id);
+              }}
+            >
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-primary">{hook.title}</span>
+                <span className="block truncate text-[11px] text-secondary">{hook.description}</span>
+              </span>
+            </MenuItem>
+          ))}
+        </div>
+      ))}
+    </PositionedMenu>
+  );
+
+  if (!selectedHook) {
+    return (
+      <div className="h-full min-h-0 overflow-auto bg-app text-[13px] text-primary">
+        <AppPageLayout contentClassName="flex min-h-full w-full max-w-none flex-col gap-5">
+          <AppPageIntro
+            title="Routines"
+            summary="Attach prompt workflows to lifecycle events. A routine can run before or after an event, choose a path, ask you, warn, or stop the event."
+            actions={
+              <div className="relative" data-routines-menu="true">
+                <ToolbarButton type="button" onClick={() => setShowEvents((value) => !value)}>
+                  Add event
+                </ToolbarButton>
+                {showEvents ? renderEventMenu() : null}
+              </div>
+            }
+          />
+          <AppPageEmptyState
+            align="start"
+            eyebrow="No events added"
+            title="Choose the first lifecycle event to automate"
+            body="Events are moments like Checkpoint, Before agent starts, or Background command. Add an event, then place routines in Before or After."
+            steps={['Add a lifecycle event.', 'Add a prompt routine or choose-path routine.', 'Review recent runs in the right rail.']}
+            action={
+              <div className="flex flex-wrap gap-2">
+                <div className="relative" data-routines-menu="true">
+                  <ToolbarButton type="button" onClick={() => setShowEvents((value) => !value)}>
+                    Add event
+                  </ToolbarButton>
+                  {showEvents ? renderEventMenu('left') : null}
+                </div>
+                <Button type="button" variant="toolbar" onClick={addCheckpointExample}>
+                  Use checkpoint example
+                </Button>
+              </div>
+            }
+          />
+        </AppPageLayout>
+      </div>
+    );
+  }
 
   const renderEditor = (routine: Routine) => {
     if (!draft || draft.id !== routine.id) return null;
@@ -874,9 +1113,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     })
                   }
                 >
-                  <option value="instruction">Instruction: run a prompt</option>
-                  <option value="decision">Judge: choose a route</option>
-                  <option value="stop">Manual stop: always block</option>
+                  <option value="instruction">Run prompt</option>
+                  <option value="decision">Choose path</option>
+                  <option value="stop">Stop event</option>
                 </Select>
               </label>
               <label className="grid gap-1">
@@ -896,7 +1135,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             </div>
             {draft.type === 'stop' ? (
               <div className="ui-callout-warning">
-                Manual stop never calls a model. It always blocks this event and uses the instruction below as the explanation.
+                Stop event never calls a model. It always blocks this event and uses the instruction below as the explanation.
               </div>
             ) : null}
             <label className="grid gap-1">
@@ -1038,9 +1277,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div>
-                <div className="text-[11px] uppercase tracking-wider text-secondary">Routes</div>
+                <div className="text-[11px] uppercase tracking-wider text-secondary">Paths</div>
                 <div className="text-[12px] text-secondary">
-                  The judge must return one enum value. That value selects the matching nested route.
+                  The routine must return one enum value. That value selects the matching path.
                 </div>
               </div>
               <Button
@@ -1055,7 +1294,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   })
                 }
               >
-                Add route
+                Add path
               </Button>
             </div>
             <div className="grid gap-2">
@@ -1079,10 +1318,10 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                       />
                     </label>
                     <label className="grid gap-1">
-                      <span className="text-[10px] uppercase tracking-wider text-dim">Route meaning</span>
+                      <span className="text-[10px] uppercase tracking-wider text-dim">Path meaning</span>
                       <TextInput
                         className="w-full text-[12px]"
-                        placeholder="Route to review"
+                        placeholder="Path to review"
                         value={outcome.target}
                         onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                           setDraft({
@@ -1117,7 +1356,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                       >
                         <option value="continue">Continue</option>
                         <option value="warn">Warn and continue</option>
-                        <option value="block">Stop if this route has no next step</option>
+                        <option value="block">Stop if this path has no next step</option>
                         <option value="ask">Ask me</option>
                         <option value="branch">Branch</option>
                       </Select>
@@ -1125,9 +1364,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     </label>
                     <div className="flex items-end justify-end">
                       <Button
+                        tone="danger"
                         variant="ghost"
                         onClick={() => setDraft({ ...draft, outcomes: draft.outcomes.filter((_, itemIndex) => itemIndex !== index) })}
                       >
+                        <span aria-hidden="true">-</span>
                         Remove
                       </Button>
                     </div>
@@ -1175,26 +1416,32 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                     }}
                   >
                     <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-dim">
-                      <span>If judge returns {outcome.id}</span>
+                      <span>If this returns {outcome.id}</span>
                       <div className="flex gap-1">
-                        <TextButton
-                          className="ui-inline-action-link"
+                        <Button
+                          variant="toolbar"
+                          className="h-6 px-2 text-[11px]"
+                          title="Add run prompt routine"
                           onClick={(event) => {
                             event.stopPropagation();
                             addRoutine('instruction', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
                           }}
                         >
-                          Add instruction
-                        </TextButton>
-                        <TextButton
-                          className="ui-inline-action-link"
+                          <span aria-hidden="true">+</span>
+                          Run prompt
+                        </Button>
+                        <Button
+                          variant="toolbar"
+                          className="h-6 px-2 text-[11px]"
+                          title="Add choose path routine"
                           onClick={(event) => {
                             event.stopPropagation();
                             addRoutine('decision', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
                           }}
                         >
-                          Add judge
-                        </TextButton>
+                          <span aria-hidden="true">+</span>
+                          Choose path
+                        </Button>
                       </div>
                     </div>
                     {hookRoutines.filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id).length ? (
@@ -1202,7 +1449,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                         {hookRoutines
                           .filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id)
                           .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name))
-                          .map(renderBlock)}
+                          .map((child, childIndex) => renderBlock(child, childIndex, true))}
                       </div>
                     ) : (
                       <div className="rounded border border-dashed border-border-subtle/70 px-3 py-2 text-[11px] text-secondary">
@@ -1219,12 +1466,13 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     );
   };
 
-  const renderBlock = (routine: Routine) => {
+  const renderBlock = (routine: Routine, index = 0, nested = false) => {
     const isUnsaved = unsavedRoutineIds.has(routine.id);
     const isEditing = selectedRoutineId === routine.id && draft?.id === routine.id;
+    const stepNumber = index + 1;
     return (
       <div key={routine.id}>
-        {dragTargetRoutineId === routine.id ? <div className="ui-drop-indicator mb-2" /> : null}
+        {dragTargetRoutineId === routine.id ? <div className="ui-drop-indicator" /> : null}
         <div
           data-routine-id={routine.id}
           data-routine-position={routine.position}
@@ -1239,38 +1487,41 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             void moveRoutine(routine.position, routine.id);
           }}
           className={cx(
-            'ui-draggable-card',
-            dragId === routine.id && 'ui-draggable-card-dragging',
-            dragTargetRoutineId === routine.id && 'ui-draggable-card-target',
-            isEditing && 'ui-draggable-card-editing',
+            'rounded-md border border-border-subtle/70 bg-transparent transition-colors',
+            nested ? 'bg-surface/15' : 'bg-surface/20',
+            dragId === routine.id && 'opacity-60',
+            (dragTargetRoutineId === routine.id || isEditing) && 'ui-drop-surface-active',
           )}
         >
-          <div className="grid grid-cols-[22px_1fr_auto] gap-2 px-2 py-2">
+          <div className="grid grid-cols-[22px_28px_24px_minmax(0,1fr)_auto] gap-2 px-2 py-2">
             <TextButton
               aria-label={`Drag ${routine.name}`}
               title={`Drag ${routine.name}`}
-              className="ui-inline-action-link cursor-grab active:cursor-grabbing"
+              className="ui-inline-action-link cursor-grab text-dim active:cursor-grabbing"
               onPointerDown={(event) => startPointerDrag(event, routine)}
             >
               ⋮⋮
             </TextButton>
+            <div className="relative flex justify-center">
+              <span className="pt-1 text-[11px] font-semibold tabular-nums text-secondary">{stepNumber}</span>
+            </div>
+            <div
+              className={cx(
+                'grid size-6 place-items-center rounded text-[13px]',
+                routine.type === 'decision' ? 'text-purple-300' : routine.type === 'stop' ? 'text-danger' : 'text-accent',
+              )}
+              aria-hidden="true"
+            >
+              {routine.type === 'decision' ? '◇' : routine.type === 'stop' ? 'x' : '↳'}
+            </div>
             <div className="min-w-0">
-              <div className="flex gap-2 text-[11px] text-secondary">
-                <span className={routine.type === 'decision' ? 'text-purple-300' : routine.type === 'stop' ? 'text-danger' : 'text-accent'}>
-                  {routineLabel(routine.type)}
-                </span>
-                {routine.type === 'instruction' ? (
-                  <span>
-                    {routine.failureBehavior === 'block'
-                      ? 'blocks on fail'
-                      : routine.failureBehavior === 'warn'
-                        ? 'warns on fail'
-                        : 'continues'}
-                  </span>
-                ) : null}
-                {isUnsaved ? <span className="text-warning">unsaved</span> : null}
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <div className="truncate text-[13px] font-semibold">{routine.name}</div>
+                <div className="text-[11px] text-secondary">
+                  {routineLabel(routine.type)} · {routineFailureLabel(routine)}
+                  {isUnsaved ? <span className="text-warning"> · unsaved</span> : null}
+                </div>
               </div>
-              <div className="mt-0.5 truncate text-[13px] font-semibold">{routine.name}</div>
               <div className="truncate text-[12px] text-secondary">{routine.instruction || 'No instruction yet.'}</div>
               {routine.type !== 'stop' && (routine.modelRef || routine.fallbackModelRef) ? (
                 <div className="mt-1 truncate font-mono text-[11px] text-dim">
@@ -1302,64 +1553,28 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   {saving ? 'Saving…' : 'Save'}
                 </Button>
               ) : (
-                <>
-                  <IconButton
-                    compact
-                    aria-label={`More actions for ${routine.name}`}
-                    title={`More actions for ${routine.name}`}
-                    aria-expanded={openRoutineMenuId === routine.id}
-                    className="ui-inline-action-link text-xl leading-none text-secondary"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setOpenRoutineMenuId((current) => (current === routine.id ? null : routine.id));
-                    }}
-                  >
-                    …
-                  </IconButton>
-                  {openRoutineMenuId === routine.id ? (
-                    <PositionedMenu
-                      placement="absolute"
-                      position={{ right: 0, top: '2rem' }}
-                      className="min-w-40"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <MenuItem
-                        type="button"
-                        onClick={() => {
-                          setOpenRoutineMenuId(null);
-                          void moveRoutineById(routine.id, routine.position === 'before' ? 'after' : 'before');
-                        }}
-                      >
-                        Move to {routine.position === 'before' ? 'After' : 'Before'}
-                      </MenuItem>
-                      <MenuItem type="button" tone="danger" onClick={() => void deleteRoutine(routine)}>
-                        Delete routine
-                      </MenuItem>
-                    </PositionedMenu>
-                  ) : null}
-                </>
+                <IconButton
+                  compact
+                  aria-label={`Delete ${routine.name}`}
+                  title={`Delete ${routine.name}`}
+                  className="ui-inline-action-link text-secondary"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void deleteRoutine(routine);
+                  }}
+                >
+                  ×
+                </IconButton>
               )}
             </div>
           </div>
           {isEditing ? renderEditor(routine) : null}
           {!isEditing && routine.type === 'decision' && routine.outcomes.length ? (
-            <div className="border-t border-border-subtle px-4 py-2 text-[12px]">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.12em] text-dim">Routes</div>
-              <div className="grid gap-2 border-l border-border-subtle pl-3">
+            <div className="border-t border-border-subtle/70 px-4 py-2 text-[12px]">
+              <div className="grid gap-1 border-l border-border-subtle/70 pl-3">
                 {routine.outcomes.map((outcome) => {
                   const branchTargetName = outcome.nextRoutineId ? routineNameById.get(outcome.nextRoutineId) : null;
-                  const reaction =
-                    outcome.behavior === 'branch'
-                      ? branchTargetName
-                        ? `Route continues to ${branchTargetName}`
-                        : 'Route can continue to another routine'
-                      : outcome.behavior === 'block'
-                        ? 'Route stops here'
-                        : outcome.behavior === 'warn'
-                          ? 'Route warns and continues'
-                          : outcome.behavior === 'ask'
-                            ? 'Route asks you first'
-                            : 'Route continues';
+                  const effect = outcomeEffect(outcome, branchTargetName ?? null);
                   const routeChildren = hookRoutines
                     .filter((child) => child.parentRoutineId === routine.id && child.parentOutcomeId === outcome.id)
                     .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name));
@@ -1383,52 +1598,46 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                           void moveRoutineById(dragId, routine.position, '', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
                       }}
                     >
-                      <div className="grid grid-cols-[128px_1fr_auto] items-start gap-2">
-                        <span
-                          className={cx(
-                            'font-mono font-semibold',
-                            outcome.behavior === 'block'
-                              ? 'text-danger'
-                              : outcome.behavior === 'warn'
-                                ? 'text-warning'
-                                : outcome.behavior === 'ask' || outcome.behavior === 'branch'
-                                  ? 'text-accent'
-                                  : 'text-success',
-                          )}
-                        >
-                          {outcome.id}
+                      <div className="grid grid-cols-[minmax(80px,128px)_minmax(0,1fr)_auto_auto] items-center gap-2">
+                        <span className={cx('truncate font-mono font-semibold', effect.tone)}>{outcome.id}</span>
+                        <span className="truncate text-secondary">{outcome.target}</span>
+                        <span className={cx('font-mono text-[12px]', effect.tone)} title={effect.label} aria-label={effect.label}>
+                          {effect.symbol}
                         </span>
-                        <span className="text-secondary">{outcome.target}</span>
-                        <span className="rounded-sm bg-surface-3 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-dim">
-                          {reaction}
-                        </span>
+                        <span className="text-[11px] text-dim">{effect.label}</span>
                       </div>
                       <div className="ml-3 mt-2 border-l border-border-subtle/70 pl-3">
                         <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-dim">
-                          <span>If judge returns {outcome.id}</span>
+                          <span>If this returns {outcome.id}</span>
                           <div className="flex gap-1">
-                            <TextButton
-                              className="ui-inline-action-link"
+                            <Button
+                              variant="toolbar"
+                              className="h-6 px-2 text-[11px]"
+                              title="Add run prompt routine"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 addRoutine('instruction', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
                               }}
                             >
-                              Add instruction
-                            </TextButton>
-                            <TextButton
-                              className="ui-inline-action-link"
+                              <span aria-hidden="true">+</span>
+                              Run prompt
+                            </Button>
+                            <Button
+                              variant="toolbar"
+                              className="h-6 px-2 text-[11px]"
+                              title="Add choose path routine"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 addRoutine('decision', { parentRoutineId: routine.id, parentOutcomeId: outcome.id });
                               }}
                             >
-                              Add judge
-                            </TextButton>
+                              <span aria-hidden="true">+</span>
+                              Choose path
+                            </Button>
                           </div>
                         </div>
                         {routeChildren.length ? (
-                          <div className="grid gap-2">{routeChildren.map(renderBlock)}</div>
+                          <div className="grid gap-2">{routeChildren.map((child, childIndex) => renderBlock(child, childIndex, true))}</div>
                         ) : (
                           <div className="rounded border border-dashed border-border-subtle/70 px-3 py-2 text-[11px] text-secondary">
                             Drop a routine here, or add one.
@@ -1451,11 +1660,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       <AppPageLayout contentClassName="flex min-h-full w-full max-w-none flex-col gap-5">
         <AppPageIntro
           title={selectedHook.title}
+          summary="Routines run prompts around this lifecycle event. Put setup checks in Before, follow-up work in After, or choose a path when the event needs a decision."
           actions={
             <>
-              <ToolbarButton type="button" onClick={() => setShowRuns((value) => !value)}>
-                {showRuns ? 'Timeline' : 'Runs'}
-              </ToolbarButton>
               <div className="relative" data-routines-menu="true">
                 <ToolbarButton type="button" onClick={() => setShowAdd((value) => !value)}>
                   Add routine ▾
@@ -1464,20 +1671,20 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   <PositionedMenu placement="absolute" position={{ right: 0, top: '2.25rem' }} className="w-56">
                     <MenuItem type="button" className="items-start" onClick={() => addRoutine('instruction')}>
                       <span className="min-w-0">
-                        <span className="block text-[13px] font-medium text-primary">Instruction</span>
-                        <span className="block text-[11px] text-secondary">Run an agent invocation.</span>
+                        <span className="block text-[13px] font-medium text-primary">Run prompt</span>
+                        <span className="block text-[11px] text-secondary">Run one prompt before or after this event.</span>
                       </span>
                     </MenuItem>
                     <MenuItem type="button" className="items-start" onClick={() => addRoutine('decision')}>
                       <span className="min-w-0">
-                        <span className="block text-[13px] font-medium text-primary">Judge</span>
+                        <span className="block text-[13px] font-medium text-primary">Choose path</span>
                         <span className="block text-[11px] text-secondary">Assess the event and choose a path.</span>
                       </span>
                     </MenuItem>
                     <MenuItem type="button" className="items-start" onClick={() => addRoutine('stop')}>
                       <span className="min-w-0">
-                        <span className="block text-[13px] font-medium text-primary">Manual stop</span>
-                        <span className="block text-[11px] text-secondary">Advanced: always block this event.</span>
+                        <span className="block text-[13px] font-medium text-primary">Stop event</span>
+                        <span className="block text-[11px] text-secondary">Always block this event with a message.</span>
                       </span>
                     </MenuItem>
                   </PositionedMenu>
@@ -1489,86 +1696,78 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
         <main className="min-h-0 flex-1 overflow-hidden">
           <div className="h-full overflow-auto">
-            {showRuns ? (
-              <div className="grid min-h-full gap-2">
-                {selectedRuns.length === 0 ? (
-                  <div className="grid min-h-[24rem] place-items-center text-center">
-                    <div>
-                      <div className="text-[14px] font-medium text-primary">No routine runs yet.</div>
-                      <div className="mt-2 max-w-sm text-[12px] text-secondary">
-                        Runs appear here after a lifecycle event executes routines for {selectedHook.title.toLowerCase()}.
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-                {selectedRuns.map((run) => (
-                  <div key={run.id} className="ui-flat-panel">
-                    <div className="flex gap-2">
-                      <b>{run.status}</b>
-                      <span className="text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
-                    </div>
-                    <div className="mt-2 grid gap-1 text-[12px] text-secondary">
-                      {run.steps.map((step, index) => (
-                        <div key={`${step.routineId}-${index}`}>
-                          {step.routineName}: {step.outcome ?? step.status}{' '}
-                          {step.message ? `— ${sanitizeRunStepMessage(step.message)}` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+            <div className="grid gap-5">
+              <div>
+                <h2 className="m-0 text-[18px] font-semibold">When {selectedHook.title} runs</h2>
+                <p className="m-0 mt-1 text-[13px] text-secondary">
+                  Drag routines to set order. Choose-path routines return one enum value, then run the matching nested path.
+                </p>
               </div>
-            ) : (
-              <div className="grid gap-5">
-                <div>
-                  <h2 className="m-0 text-[18px] font-semibold">{selectedHook.title} timeline</h2>
-                  <p className="m-0 mt-1 text-[13px] text-secondary">
-                    Drag routines within Before or After. Judge routines assess a prompt, output one enum, then run the matching nested
-                    route.
-                  </p>
+              {!hasTimelineRoutines ? (
+                <EmptyState
+                  align="start"
+                  eyebrow="Editor page"
+                  title="No routines on this event"
+                  body="Routines let an event run setup work before it starts, follow-up work after it finishes, or branch through a path decision."
+                  steps={[
+                    'Add a run-prompt routine for direct work.',
+                    'Add a choose-path routine when the event needs routing.',
+                    'Drag routines between Before and After.',
+                  ]}
+                  action={
+                    <div className="flex flex-wrap gap-2">
+                      <ToolbarButton type="button" onClick={() => setShowAdd(true)}>
+                        Add routine
+                      </ToolbarButton>
+                      {selectedHook.id === 'checkpoint' ? (
+                        <Button type="button" variant="toolbar" onClick={addCheckpointExample}>
+                          Use checkpoint example
+                        </Button>
+                      ) : null}
+                    </div>
+                  }
+                  className="rounded-md border border-dashed border-border-subtle/70 bg-surface/35 px-4 py-5"
+                />
+              ) : null}
+              <section
+                data-routine-lane="before"
+                className={cx(
+                  'grid gap-2 rounded-md transition-colors',
+                  dragOverPosition === 'before' && dragId ? 'ui-drop-surface-active' : '',
+                )}
+                onDragOver={(event) => onDragOverLane(event, 'before')}
+                onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void moveRoutine('before');
+                }}
+              >
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
+                  Before
                 </div>
-                <section
-                  data-routine-lane="before"
-                  className={cx(
-                    'grid gap-2 rounded-md transition-colors',
-                    dragOverPosition === 'before' && dragId ? 'ui-drop-surface-active' : '',
-                  )}
-                  onDragOver={(event) => onDragOverLane(event, 'before')}
-                  onDragLeave={() => setDragOverPosition((current) => (current === 'before' ? null : current))}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    void moveRoutine('before');
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
-                    Before
-                  </div>
-                  {beforeRoutines.map(renderBlock)}
-                  {beforeRoutines.length === 0 ? (
-                    <div className="py-6 text-[12px] text-secondary">No routines before this event.</div>
-                  ) : null}
-                </section>
-                <section
-                  data-routine-lane="after"
-                  className={cx(
-                    'grid gap-2 rounded-md transition-colors',
-                    dragOverPosition === 'after' && dragId ? 'ui-drop-surface-active' : '',
-                  )}
-                  onDragOver={(event) => onDragOverLane(event, 'after')}
-                  onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    void moveRoutine('after');
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
-                    After
-                  </div>
-                  {afterRoutines.map(renderBlock)}
-                  {afterRoutines.length === 0 ? <div className="py-6 text-[12px] text-secondary">No routines after this event.</div> : null}
-                </section>
-              </div>
-            )}
+                {beforeRoutines.map((routine, index) => renderBlock(routine, index))}
+                {beforeRoutines.length === 0 ? <RoutineLaneEmpty position="before" /> : null}
+              </section>
+              <section
+                data-routine-lane="after"
+                className={cx(
+                  'grid gap-2 rounded-md transition-colors',
+                  dragOverPosition === 'after' && dragId ? 'ui-drop-surface-active' : '',
+                )}
+                onDragOver={(event) => onDragOverLane(event, 'after')}
+                onDragLeave={() => setDragOverPosition((current) => (current === 'after' ? null : current))}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void moveRoutine('after');
+                }}
+              >
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-secondary after:h-px after:flex-1 after:bg-border-subtle after:content-['']">
+                  After
+                </div>
+                {afterRoutines.map((routine, index) => renderBlock(routine, index))}
+                {afterRoutines.length === 0 ? <RoutineLaneEmpty position="after" /> : null}
+              </section>
+            </div>
           </div>
         </main>
       </AppPageLayout>
@@ -1578,15 +1777,23 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           <div className="mt-1 truncate text-[13px] font-semibold text-primary">{dragPreview.name}</div>
           <div className="mt-1 text-[11px] text-secondary">
             {dragTargetRoute
-              ? `Drop into ${routineNameById.get(dragTargetRoute.parentRoutineId) ?? 'judge'} → ${dragTargetRoute.parentOutcomeId}.`
+              ? `Drop into ${routineNameById.get(dragTargetRoute.parentRoutineId) ?? 'choose-path routine'} → ${dragTargetRoute.parentOutcomeId}.`
               : dragTargetRoutineId
                 ? `Drop to place before ${routineNameById.get(dragTargetRoutineId) ?? 'this routine'}.`
                 : dragOverPosition
                   ? `Drop to place at the end of ${dragOverPosition}.`
-                  : 'Move over a lane or judge route to choose where it lands.'}
+                  : 'Move over a lane or path to choose where it lands.'}
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function RoutineLaneEmpty({ position }: { position: RoutinePosition }) {
+  return (
+    <div className="rounded-md border border-dashed border-border-subtle/70 bg-surface/25 px-3 py-3 text-[12px] text-secondary">
+      No routines {position} this event.
     </div>
   );
 }

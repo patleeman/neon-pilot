@@ -55,8 +55,6 @@
         "title": "Routines",
         "location": "main",
         "route": "/routines",
-        "placement": "primary",
-        "scope": "global",
         "component": "RoutinesPage",
         "icon": "automation",
         "activation": "on-route"
@@ -70,6 +68,16 @@
         "component": "RoutinesSidebar",
         "icon": "automation",
         "activation": "on-route"
+      },
+      {
+        "id": "routines-context-rail",
+        "title": "Routine context",
+        "location": "rightRail",
+        "placement": "primary",
+        "scope": "global",
+        "component": "RoutinesContextRail",
+        "icon": "automation",
+        "activation": "on-route"
       }
     ],
     "nav": [
@@ -78,8 +86,10 @@
         "label": "Routines",
         "route": "/routines",
         "icon": "automation",
+        "pageType": "editor",
         "section": "primary",
-        "sidebarView": "routines-sidebar"
+        "sidebarView": "routines-sidebar",
+        "rightSidebarView": "routines-context-rail"
       }
     ],
     "cliCommands": [
