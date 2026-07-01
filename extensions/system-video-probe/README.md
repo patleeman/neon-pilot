@@ -4,6 +4,8 @@ Bundled system extension that gives agents deterministic tools for local video a
 
 For ordinary questions about video content, agents should use `probe_media` from the Multimedia Probe extension. `probe_media` samples video frames, optionally transcribes audio, and sends the media to the configured vision model in one step. The tools here are lower-level helpers for deterministic extraction, timestamp checks, or transcript-only workflows.
 
+When a lower-level frame tool runs inside an active conversation, sampled frames are also registered as image-probe attachments. The returned frame details include `imageId` values that can be passed to `probe_image` for follow-up questions. Do not invent IDs from timestamps such as `img_0.000s`; use the returned `img_*` IDs.
+
 Tools:
 
 - `extract_video_frame`: extract a single screenshot at `timeSec`.

@@ -16,4 +16,19 @@ describe('videoProbeAttachmentStore', () => {
     );
     expect(() => testExports.normalizeFrameTimestamps({ startSec: 0, endSec: 4.01, count: 1, durationMs: 4000 })).toThrow(/endSec exceeds/);
   });
+
+  it('includes registered image ids in frame summaries for follow-up image probing', () => {
+    expect(
+      testExports.buildFrameSummary(
+        {
+          id: 'vid_aaaaaaaaaaaa',
+          path: '/tmp/video.mp4',
+          mimeType: 'video/mp4',
+          name: 'video.mp4',
+          sizeBytes: 10,
+        },
+        [{ timestampMs: 2500, sizeBytes: 42, imageId: 'img_bbbbbbbbbbbb' }],
+      ),
+    ).toContain('image ID img_bbbbbbbbbbbb');
+  });
 });

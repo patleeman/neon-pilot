@@ -33,7 +33,7 @@ export interface VideoProbeFrameResult {
   content: Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }>;
   details: {
     videoId: string;
-    frames: Array<{ timestampMs: number; mimeType: string; sizeBytes: number }>;
+    frames: Array<{ timestampMs: number; mimeType: string; sizeBytes: number; imageId?: string; imageName?: string }>;
   };
 }
 

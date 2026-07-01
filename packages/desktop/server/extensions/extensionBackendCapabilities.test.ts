@@ -2275,6 +2275,35 @@ describe('extension backend capability dispatcher', () => {
     });
   });
 
+  it('passes active session context to video frame extraction capabilities', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['videos:read'] } });
+    const video = {
+      extractFrame: vi.fn(async () => ({ text: 'frame' })),
+      sampleFrames: vi.fn(async () => ({ text: 'frames' })),
+      transcribe: vi.fn(async () => ({ text: 'transcript' })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ video });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-video-probe',
+          capability: 'video',
+          operation: 'sampleFrames',
+          input: { videoId: 'vid_aaaaaaaaaaaa', startSec: 0, endSec: 1, count: 1 },
+          context: { toolContext: { sessionId: 'session-1' } },
+        }),
+      ),
+    ).resolves.toEqual({ text: 'frames' });
+
+    expect(video.sampleFrames).toHaveBeenCalledWith(
+      { videoId: 'vid_aaaaaaaaaaaa', startSec: 0, endSec: 1, count: 1 },
+      { sessionId: 'session-1' },
+    );
+  });
+
   it('requires image write permission before dispatching host-owned image generation', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
     const image = { generate: vi.fn(async () => ({ text: 'generated' })) };

@@ -13,6 +13,7 @@ import {
   getImageProbeAttachments,
   getImageProbeAttachmentsById,
   MAX_IMAGE_PROBE_ATTACHMENTS_PER_PROMPT,
+  rememberGeneratedImageProbeAttachments,
   rememberImageProbeAttachments,
 } from './imageProbeAttachmentStore.js';
 
@@ -102,5 +103,19 @@ describe('imageProbeAttachmentStore', () => {
       mimeType: 'image/png',
     }));
     expect(() => rememberImageProbeAttachments('session-1', tooMany)).toThrow('Image probing supports at most 8 images per prompt.');
+  });
+
+  it('stores generated probe images without applying the composer prompt limit', () => {
+    const generated = Array.from({ length: MAX_IMAGE_PROBE_ATTACHMENTS_PER_PROMPT + 2 }, (_, index) => ({
+      type: 'image' as const,
+      data: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, index, 2, 3]).toString('base64'),
+      mimeType: 'image/png',
+      name: `frame-${index + 1}.png`,
+    }));
+
+    const stored = rememberGeneratedImageProbeAttachments('session-1', generated);
+
+    expect(stored).toHaveLength(MAX_IMAGE_PROBE_ATTACHMENTS_PER_PROMPT + 2);
+    expect(getImageProbeAttachments('session-1')).toHaveLength(MAX_IMAGE_PROBE_ATTACHMENTS_PER_PROMPT + 2);
   });
 });

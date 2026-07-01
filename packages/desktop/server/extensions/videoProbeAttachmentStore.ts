@@ -15,6 +15,7 @@ import type {
 import type { PromptVideoAttachment } from '../conversations/liveSessionQueue.js';
 import { resolveFfmpegBinary } from '../transcription/audioConversion.js';
 import { transcribeAudio } from '../transcription/transcriptionService.js';
+import { rememberGeneratedImageProbeAttachments } from './imageProbeAttachmentStore.js';
 
 export type { StoredVideoProbeAttachment };
 
@@ -26,6 +27,10 @@ interface PersistedVideoProbeAttachmentDocument {
 interface RunResult {
   stdout: string;
   stderr: string;
+}
+
+interface VideoProbeInvocationContext {
+  sessionId?: string;
 }
 
 const attachmentsBySession = new Map<string, Map<string, StoredVideoProbeAttachment>>();
@@ -256,9 +261,17 @@ function resolveVideoById(videoId: string): StoredVideoProbeAttachment {
   return attachment;
 }
 
-function buildFrameSummary(video: StoredVideoProbeAttachment, frames: Array<{ timestampMs: number; sizeBytes: number }>): string {
+function buildFrameSummary(
+  video: StoredVideoProbeAttachment,
+  frames: Array<{ timestampMs: number; sizeBytes: number; imageId?: string }>,
+): string {
   const label = video.name?.trim() || basename(video.path);
-  const lines = frames.map((frame, index) => `- frame ${index + 1}: ${(frame.timestampMs / 1000).toFixed(3)}s (${frame.sizeBytes} bytes)`);
+  const lines = frames.map(
+    (frame, index) =>
+      `- frame ${index + 1}: ${(frame.timestampMs / 1000).toFixed(3)}s (${frame.sizeBytes} bytes)${
+        frame.imageId ? `, image ID ${frame.imageId}` : ''
+      }`,
+  );
   return [`Sampled ${frames.length} frame${frames.length === 1 ? '' : 's'} from ${video.id} (${label}).`, ...lines].join('\n');
 }
 
@@ -340,7 +353,7 @@ export function getVideoProbeAttachmentsByIdFromAnySession(videoIds: string[]): 
   return videoIds.map((id) => found.get(id)).filter((attachment): attachment is StoredVideoProbeAttachment => Boolean(attachment));
 }
 
-export async function sampleVideoFrames(input: unknown): Promise<VideoProbeFrameResult> {
+export async function sampleVideoFrames(input: unknown, context?: VideoProbeInvocationContext): Promise<VideoProbeFrameResult> {
   const record = input && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
   const video = resolveVideoById(normalizeVideoId(record.videoId));
   const count = normalizeFrameCount(record.count);
@@ -368,13 +381,33 @@ export async function sampleVideoFrames(input: unknown): Promise<VideoProbeFrame
         sizeBytes: data.byteLength,
       });
     }
-    const text = buildFrameSummary(video, frames);
+    const registeredFrames = context?.sessionId
+      ? rememberGeneratedImageProbeAttachments(
+          context.sessionId,
+          frames.map((frame, index) => ({
+            type: 'image' as const,
+            data: frame.data,
+            mimeType: frame.mimeType,
+            name: `${video.id}-frame-${index + 1}-${(frame.timestampMs / 1000).toFixed(3)}s.png`,
+          })),
+        )
+      : [];
+    const frameDetails = frames.map((frame, index) => {
+      const registered = registeredFrames[index];
+      return {
+        timestampMs: frame.timestampMs,
+        mimeType: frame.mimeType,
+        sizeBytes: frame.sizeBytes,
+        ...(registered ? { imageId: registered.id, imageName: registered.name } : {}),
+      };
+    });
+    const text = buildFrameSummary(video, frameDetails);
     return {
       text,
       content: [{ type: 'text', text }, ...frames.map((frame) => ({ type: 'image' as const, data: frame.data, mimeType: frame.mimeType }))],
       details: {
         videoId: video.id,
-        frames: frames.map((frame) => ({ timestampMs: frame.timestampMs, mimeType: frame.mimeType, sizeBytes: frame.sizeBytes })),
+        frames: frameDetails,
       },
     };
   } finally {
@@ -382,10 +415,10 @@ export async function sampleVideoFrames(input: unknown): Promise<VideoProbeFrame
   }
 }
 
-export async function extractVideoFrame(input: unknown): Promise<VideoProbeFrameResult> {
+export async function extractVideoFrame(input: unknown, context?: VideoProbeInvocationContext): Promise<VideoProbeFrameResult> {
   const record = input && typeof input === 'object' && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
   const timeSec = normalizeSeconds(record.timeSec ?? record.timestampSec, 'timeSec', 0);
-  return sampleVideoFrames({ videoId: record.videoId, startSec: timeSec, endSec: timeSec, count: 1 });
+  return sampleVideoFrames({ videoId: record.videoId, startSec: timeSec, endSec: timeSec, count: 1 }, context);
 }
 
 export async function transcribeVideo(input: unknown): Promise<VideoProbeTranscriptionResult> {
@@ -449,6 +482,7 @@ export function clearVideoProbeAttachmentCacheForTests(): void {
 }
 
 export const testExports = {
+  buildFrameSummary,
   parseDurationMs,
   parseFps,
   parseVideoDimensions,

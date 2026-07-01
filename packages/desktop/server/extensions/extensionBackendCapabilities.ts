@@ -130,8 +130,8 @@ interface ExtensionBackendCapabilityImage {
 }
 
 interface ExtensionBackendCapabilityVideo {
-  extractFrame(input: unknown): Promise<unknown>;
-  sampleFrames(input: unknown): Promise<unknown>;
+  extractFrame(input: unknown, context?: { sessionId?: string }): Promise<unknown>;
+  sampleFrames(input: unknown, context?: { sessionId?: string }): Promise<unknown>;
   transcribe(input: unknown): Promise<unknown>;
 }
 
@@ -1572,8 +1572,11 @@ function dispatchImageCapability(image: ExtensionBackendCapabilityImage, request
 }
 
 function dispatchVideoCapability(video: ExtensionBackendCapabilityVideo, request: ExtensionBackendWorkerCapabilityRequest): unknown {
-  if (request.operation === 'extractFrame') return video.extractFrame(request.input);
-  if (request.operation === 'sampleFrames') return video.sampleFrames(request.input);
+  const sessionId =
+    contextString(request.context?.agentToolContext, 'sessionId') ?? contextString(request.context?.toolContext, 'sessionId');
+  const context = sessionId ? { sessionId } : undefined;
+  if (request.operation === 'extractFrame') return video.extractFrame(request.input, context);
+  if (request.operation === 'sampleFrames') return video.sampleFrames(request.input, context);
   if (request.operation === 'transcribe') return video.transcribe(request.input);
   throw new Error(`Unsupported video capability operation: ${request.operation}`);
 }
@@ -2674,13 +2677,13 @@ export function createExtensionBackendCapabilityDispatcher(
   const video =
     options.video ??
     ({
-      extractFrame: async (input: unknown) => {
+      extractFrame: async (input: unknown, context?: { sessionId?: string }) => {
         const module = await import('./videoProbeAttachmentStore.js');
-        return module.extractVideoFrame(input);
+        return module.extractVideoFrame(input, context);
       },
-      sampleFrames: async (input: unknown) => {
+      sampleFrames: async (input: unknown, context?: { sessionId?: string }) => {
         const module = await import('./videoProbeAttachmentStore.js');
-        return module.sampleVideoFrames(input);
+        return module.sampleVideoFrames(input, context);
       },
       transcribe: async (input: unknown) => {
         const module = await import('./videoProbeAttachmentStore.js');

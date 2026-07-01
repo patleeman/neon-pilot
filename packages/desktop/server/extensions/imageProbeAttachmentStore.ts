@@ -171,6 +171,14 @@ export function rememberImageProbeAttachments(sessionId: string, images: PromptI
     throw new Error(`Image probing supports at most ${MAX_IMAGE_PROBE_ATTACHMENTS_PER_PROMPT} images per prompt.`);
   }
 
+  return rememberImageProbeAttachmentsWithoutPromptLimit(sessionId, images);
+}
+
+export function rememberGeneratedImageProbeAttachments(sessionId: string, images: PromptImageAttachment[]): StoredImageProbeAttachment[] {
+  return rememberImageProbeAttachmentsWithoutPromptLimit(sessionId, images);
+}
+
+function rememberImageProbeAttachmentsWithoutPromptLimit(sessionId: string, images: PromptImageAttachment[]): StoredImageProbeAttachment[] {
   const dir = resolveImageProbeSessionDir(sessionId);
   mkdirSync(dir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
