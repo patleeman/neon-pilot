@@ -29,6 +29,66 @@ export function shouldBuildAppendOnlySessionDetail(input: { knownSessionSignatur
   return Boolean(input.knownSessionSignature && input.nextSessionSignature && input.knownSessionSignature !== input.nextSessionSignature);
 }
 
+function createAbortError(): Error {
+  const error = new Error('Transcript load cancelled');
+  error.name = 'AbortError';
+  return error;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+}
+
+function abortPromise(signal?: AbortSignal): Promise<never> {
+  if (!signal) {
+    return new Promise(() => undefined);
+  }
+
+  if (signal.aborted) {
+    return Promise.reject(createAbortError());
+  }
+
+  return new Promise((_, reject) => {
+    signal.addEventListener('abort', () => reject(createAbortError()), { once: true });
+  });
+}
+
+type SessionDetailRouteReadResult = Awaited<ReturnType<typeof readSessionDetailForRoute>>;
+
+const inflightSessionDetailReads = new Map<string, Promise<SessionDetailRouteReadResult>>();
+
+function buildInflightSessionDetailReadKey(input: { sessionId: string; profile: string; tailBlocks?: number }): string {
+  return `${input.profile}::${input.sessionId}::${input.tailBlocks ?? 'all'}`;
+}
+
+function readSessionDetailForRouteCoalesced(input: {
+  sessionId: string;
+  profile: string;
+  tailBlocks?: number;
+}): Promise<SessionDetailRouteReadResult> {
+  const key = buildInflightSessionDetailReadKey(input);
+  const inflight = inflightSessionDetailReads.get(key);
+  if (inflight) {
+    return inflight;
+  }
+
+  const request = Promise.resolve()
+    .then(() =>
+      readSessionDetailForRoute({
+        conversationId: input.sessionId,
+        profile: input.profile,
+        tailBlocks: input.tailBlocks,
+      }),
+    )
+    .finally(() => {
+      inflightSessionDetailReads.delete(key);
+    });
+  inflightSessionDetailReads.set(key, request);
+  return request;
+}
+
 export async function readSessionDetailRouteResponse(input: {
   sessionId: string;
   profile: string;
@@ -37,19 +97,29 @@ export async function readSessionDetailRouteResponse(input: {
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
   knownLastBlockId?: string;
+  signal?: AbortSignal;
 }): Promise<unknown> {
   const sessionId = input.sessionId.trim();
+  throwIfAborted(input.signal);
+
   const currentSessionSignature = input.knownSessionSignature ? readConversationSessionSignature(sessionId) : null;
+  throwIfAborted(input.signal);
+
   const unchangedSessionCheck = { knownSessionSignature: input.knownSessionSignature, currentSessionSignature };
   if (shouldReturnUnchangedSessionDetail(unchangedSessionCheck)) {
     return buildUnchangedSessionDetailResponse({ sessionId, signature: unchangedSessionCheck.currentSessionSignature });
   }
 
-  const { sessionRead } = await readSessionDetailForRoute({
-    conversationId: sessionId,
-    profile: input.profile,
-    tailBlocks: input.tailBlocks,
-  });
+  const { sessionRead } = await Promise.race([
+    readSessionDetailForRouteCoalesced({
+      sessionId,
+      profile: input.profile,
+      tailBlocks: input.tailBlocks,
+    }),
+    abortPromise(input.signal),
+  ]);
+  throwIfAborted(input.signal);
+
   if (!sessionRead.detail) {
     throw new Error('Session not found');
   }
@@ -65,6 +135,8 @@ export async function readSessionDetailRouteResponse(input: {
         knownLastBlockId: input.knownLastBlockId,
       })
     : null;
+
+  throwIfAborted(input.signal);
 
   if (appendOnly) {
     return inlineConversationSessionDetailAppendOnlyAssetsCapability(sessionId, appendOnly);

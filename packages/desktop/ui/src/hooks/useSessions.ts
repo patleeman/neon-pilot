@@ -11,6 +11,7 @@ interface CachedSessionDetailEntry {
 
 interface SessionDetailOptions {
   tailBlocks?: number;
+  signal?: AbortSignal;
 }
 
 const sessionDetailCache = new Map<string, CachedSessionDetailEntry>();
@@ -57,8 +58,9 @@ export function primeSessionDetailCache(sessionId: string, detail: SessionDetail
 }
 
 export function fetchSessionDetailCached(sessionId: string, options?: SessionDetailOptions, version = 0): Promise<SessionDetail> {
-  const cacheKey = buildSessionDetailCacheKey(sessionId, options);
-  const cached = readCachedSessionDetailEntry(sessionId, options);
+  const cacheOptions = options ? { tailBlocks: options.tailBlocks } : undefined;
+  const cacheKey = buildSessionDetailCacheKey(sessionId, cacheOptions);
+  const cached = readCachedSessionDetailEntry(sessionId, cacheOptions);
   if (cached && cached.version === version) {
     return Promise.resolve(cached.detail);
   }
@@ -139,6 +141,7 @@ export function useSessionDetail(sessionId: string | undefined, options?: Sessio
     }
 
     let cancelled = false;
+    const abortController = new AbortController();
     const cached = readCachedSessionDetailEntry(sessionId, cacheOptions);
     const hasFreshCache = cached?.version === detailVersion;
 
@@ -146,7 +149,7 @@ export function useSessionDetail(sessionId: string | undefined, options?: Sessio
       return;
     }
 
-    fetchSessionDetailCached(sessionId, cacheOptions, detailVersion)
+    fetchSessionDetailCached(sessionId, { ...cacheOptions, signal: abortController.signal }, detailVersion)
       .then((data) => {
         if (cancelled) {
           return;
@@ -166,6 +169,7 @@ export function useSessionDetail(sessionId: string | undefined, options?: Sessio
 
     return () => {
       cancelled = true;
+      abortController.abort();
     };
   }, [cacheOptions?.tailBlocks, detailVersion, sessionId]);
 

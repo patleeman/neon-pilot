@@ -118,8 +118,22 @@ function isTransientNetworkError(error: unknown): boolean {
   return false;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'));
+  }
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timeout);
+        reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'));
+      },
+      { once: true },
+    );
+  });
 }
 
 async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -128,13 +142,16 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
       const res = await fetch(input, init);
       if (!res) throw new Error('fetch returned undefined');
       if (!res.ok && RETRYABLE_STATUS_CODES.includes(res.status) && attempt < RETRY_DELAYS_MS.length) {
-        await sleep(RETRY_DELAYS_MS[attempt]);
+        await sleep(RETRY_DELAYS_MS[attempt], init?.signal ?? undefined);
         continue;
       }
       return res;
     } catch (error) {
+      if (init?.signal?.aborted) {
+        throw error;
+      }
       if (isTransientNetworkError(error) && attempt < RETRY_DELAYS_MS.length) {
-        await sleep(RETRY_DELAYS_MS[attempt]);
+        await sleep(RETRY_DELAYS_MS[attempt], init?.signal ?? undefined);
         continue;
       }
       throw error;
@@ -144,11 +161,21 @@ async function fetchWithRetry(input: RequestInfo | URL, init?: RequestInit): Pro
 
 // ── API helpers ──────────────────────────────────────────────────────────────
 
-async function requestJson<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
+interface ApiRequestOptions {
+  signal?: AbortSignal;
+}
+
+async function requestJson<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown,
+  options?: ApiRequestOptions,
+): Promise<T> {
   const requestPath = buildApiPath(path);
   const startedAtMs = performance.now();
   const res = await fetchWithRetry(requestPath, {
     method,
+    ...(options?.signal ? { signal: options.signal } : {}),
     ...(method === 'GET'
       ? { cache: 'no-store' as const }
       : {
@@ -189,8 +216,8 @@ async function extensionDelete<T>(path: string): Promise<T> {
   return requestDesktopLocalApiJson<T>('DELETE', path);
 }
 
-async function get<T>(path: string): Promise<T> {
-  return requestJson<T>('GET', path);
+async function get<T>(path: string, options?: ApiRequestOptions): Promise<T> {
+  return requestJson<T>('GET', path, undefined, options);
 }
 
 async function post<T>(path: string, body?: unknown): Promise<T> {
@@ -470,19 +497,25 @@ export const api = {
     options?: {
       tailBlocks?: number;
       includeToolBlocks?: boolean;
+      signal?: AbortSignal;
     },
   ) => {
     const params = new URLSearchParams();
     if (options?.tailBlocks !== undefined) params.set('tailBlocks', String(options.tailBlocks));
     if (options?.includeToolBlocks === false) params.set('includeToolBlocks', 'false');
     const query = params.toString();
-    return get<SessionDetailResult>(`/sessions/${encodeURIComponent(id)}${query ? `?${query}` : ''}`);
+    return get<SessionDetailResult>(`/sessions/${encodeURIComponent(id)}${query ? `?${query}` : ''}`, { signal: options?.signal });
   },
-  sessionBlock: async (id: string, blockId: string) => {
-    return get<DisplayBlock>(`/sessions/${encodeURIComponent(id)}/blocks/${encodeURIComponent(blockId)}`);
+  sessionBlock: async (id: string, blockId: string, options?: { signal?: AbortSignal }) => {
+    return get<DisplayBlock>(`/sessions/${encodeURIComponent(id)}/blocks/${encodeURIComponent(blockId)}`, { signal: options?.signal });
   },
-  sessionEntryBlocks: async (id: string, entryIds: string[]) => {
-    return post<{ blocks: DisplayBlock[] }>(`/sessions/${encodeURIComponent(id)}/entry-blocks`, { entryIds });
+  sessionEntryBlocks: async (id: string, entryIds: string[], options?: { signal?: AbortSignal }) => {
+    return requestJson<{ blocks: DisplayBlock[] }>(
+      'POST',
+      `/sessions/${encodeURIComponent(id)}/entry-blocks`,
+      { entryIds },
+      { signal: options?.signal },
+    );
   },
   sessionSearchIndex: async (sessionIds: string[]) => {
     return post<{ index: Record<string, string> }>('/sessions/search-index', { sessionIds });

@@ -1237,6 +1237,10 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
     return 500;
   }
 
+  if (error.name === 'AbortError') {
+    return 499;
+  }
+
   if (error.name === 'ConversationAssetCapabilityNotFoundError' || error.name === 'ConversationDeferredResumeCapabilityNotFoundError') {
     return 404;
   }
@@ -1393,6 +1397,7 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       await readDesktopSessionDetail({
         sessionId: decodeURIComponent(sessionDetailMatch[1] ?? ''),
         tailBlocks: input.url.searchParams.has('tailBlocks') ? Number(input.url.searchParams.get('tailBlocks')) : undefined,
+        signal: input.signal,
       }),
     );
   }
@@ -3233,7 +3238,14 @@ export async function readDesktopSessionDetail(input: {
   knownBlockOffset?: number;
   knownTotalBlocks?: number;
   knownLastBlockId?: string;
+  signal?: AbortSignal;
 }) {
+  if (input.signal?.aborted) {
+    const error = new Error('Transcript load cancelled');
+    error.name = 'AbortError';
+    throw error;
+  }
+
   const context = await getLocalLiveSessionCapabilityContext();
   return readSessionDetailRouteResponse({
     ...input,
