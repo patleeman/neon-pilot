@@ -157,7 +157,7 @@ export function NotificationToaster({ suppress = false }: { suppress?: boolean }
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed left-1/2 top-4 z-[9999] flex -translate-x-1/2 flex-col items-center gap-1.5 pointer-events-none">
+    <div className="ui-notification-toaster fixed left-1/2 top-4 z-[9999] flex -translate-x-1/2 flex-col items-center gap-1.5 pointer-events-none">
       {toasts.map((toast) => (
         <div
           key={toast.id}

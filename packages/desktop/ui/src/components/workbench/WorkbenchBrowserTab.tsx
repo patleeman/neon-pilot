@@ -19,27 +19,27 @@ const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-adde
 export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.reopenTab', 'browser.closeTab', 'browser.focusLocation']);
 const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 450;
+const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
+  '[aria-modal="true"]',
+  '[role="dialog"]',
+  '.ui-overlay-backdrop',
+  '.ui-menu-shell',
+  '.ui-command-palette-shell',
+  '.ui-notification-toaster',
+  '.ui-page-search-popover',
+  '.wos-start-menu',
+  '.wos-taskbar__menu-layer',
+  '.wos-snap-preview',
+  '.wos-dialog-layer',
+].join(', ');
+const RENDERER_CHROME_BLOCKER_SELECTOR = [TRANSIENT_RENDERER_BLOCKER_SELECTOR, '.wos-taskbar'].join(', ');
 
 function hasBlockingRendererOverlay(host: HTMLElement | null): boolean {
   if (typeof document === 'undefined') {
     return false;
   }
 
-  const overlays = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      [
-        '[aria-modal="true"]',
-        '[role="dialog"]',
-        '.ui-overlay-backdrop',
-        '.ui-menu-shell',
-        '.ui-command-palette-shell',
-        '.wos-start-menu',
-        '.wos-taskbar__menu-layer',
-        '.wos-snap-preview',
-        '.wos-dialog-layer',
-      ].join(', '),
-    ),
-  );
+  const overlays = Array.from(document.querySelectorAll<HTMLElement>(TRANSIENT_RENDERER_BLOCKER_SELECTOR));
 
   return overlays.some((element) => {
     if (!isConnectedVisibleElement(element)) {
@@ -131,13 +131,14 @@ function isCoveredByWindowedChrome(host: HTMLElement | null): boolean {
     return false;
   }
 
-  const chrome = Array.from(
-    document.querySelectorAll(
-      '.windowed-os-shell .wos-taskbar, .windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .windowed-os-shell .wos-snap-preview, .windowed-os-shell .wos-dialog-layer, [aria-modal="true"]',
-    ),
-  ).filter(isConnectedVisibleElement);
+  const chrome = Array.from(document.querySelectorAll(RENDERER_CHROME_BLOCKER_SELECTOR)).filter(isConnectedVisibleElement);
 
-  return chrome.some((element) => rectsOverlap(hostRect, element.getBoundingClientRect()));
+  return chrome.some((element) => {
+    if (host.contains(element) || element.contains(host)) {
+      return false;
+    }
+    return rectsOverlap(hostRect, element.getBoundingClientRect());
+  });
 }
 
 function elementAtPoint(x: number, y: number): Element | null {

@@ -577,7 +577,7 @@ export function PageSearchBar({ rootRef, desktopShell = false }: PageSearchProps
 
   return (
     <div
-      className={cx('pointer-events-none fixed right-4 z-40 w-[min(32rem,calc(100vw-2rem))]', topClassName)}
+      className={cx('ui-page-search-popover pointer-events-none fixed right-4 z-40 w-[min(32rem,calc(100vw-2rem))]', topClassName)}
       data-page-search-ignore="true"
     >
       <MenuShell role="group" className="pointer-events-auto !static !inset-auto !mb-0 flex w-full items-center gap-2 px-2.5 py-2">
