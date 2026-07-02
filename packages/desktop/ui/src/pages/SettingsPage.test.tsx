@@ -371,11 +371,14 @@ describe('SettingsPage', () => {
     const html = renderPage('/settings', undefined, { shellPresentation: 'windowed', pathname: '/settings', hash: '' });
 
     expect(html).toContain('class="wos-page-shell settings-page-windowed"');
-    expect(html).toContain('data-layout="wide"');
+    expect(html).toContain('data-layout="two-column"');
     expect(html).toContain('>Preferences</div>');
-    expect(html).toContain('>Settings context</div>');
-    expect(html).toContain('>Sections</h3>');
+    expect(html).toContain('>Settings</span>');
     expect(html).toContain('>Appearance</h1>');
+    expect(html).not.toContain('>Settings context</div>');
+    expect(html).not.toContain('>Sections</h3>');
+    expect(html).not.toContain('wos-page-inspector');
+    expect(html).not.toContain('>Providers</h1>');
     expect(html).not.toContain('ui-app-page-shell');
   });
 

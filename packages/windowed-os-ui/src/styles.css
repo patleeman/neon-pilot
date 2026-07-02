@@ -934,6 +934,10 @@
   grid-template-columns: 168px minmax(0, 1fr) minmax(218px, 0.32fr);
 }
 
+.wos-page-shell[data-layout='two-column'] {
+  grid-template-columns: 190px minmax(0, 1fr);
+}
+
 .wos-page-rail,
 .wos-page-inspector {
   min-height: 0;

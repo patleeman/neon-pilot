@@ -98,7 +98,7 @@ export function WindowedTitleBarControls({
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;
-  layout?: 'standard' | 'wide';
+  layout?: 'standard' | 'wide' | 'two-column';
 }
 
 export function WindowedPageShell({ children, className, layout = 'standard' }: WindowedPageShellProps) {

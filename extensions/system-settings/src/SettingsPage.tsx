@@ -71,14 +71,10 @@ import {
   TextButton,
   TextInput,
   ToolbarButton,
-  WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
-  WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
-  WindowedPageSection,
   WindowedPageShell,
 } from '@neon-pilot/extensions/ui';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -2688,14 +2684,23 @@ export function SettingsPage({
   const settingsScrollRef = useRef<HTMLDivElement | null>(null);
 
   const { settingsNavLinks, visibleSectionIds } = useSettingsNavigation(sectionIds);
+  const isWindowedSettingsSurface = context?.shellPresentation === 'windowed';
   const initialQuickLinkId = settingsNavLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id;
-  const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(initialQuickLinkId);
+  const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(settingsNavLinks), [settingsNavLinks]);
+  const routeQuickLinkId = readSettingsSectionIdFromContext(context, { pathname: location.pathname, hash: location.hash });
+  const [activeQuickLinkId, setActiveQuickLinkId] = useState<SettingsQuickLinkId>(
+    visibleTocLinks.some((item) => item.id === routeQuickLinkId) ? routeQuickLinkId : initialQuickLinkId,
+  );
   const extensionLabels = useMemo(() => {
     return new Map(extensionRegistry.extensions.map((extension) => [extension.id, extension.name]));
   }, [extensionRegistry.extensions]);
-  const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(settingsNavLinks), [settingsNavLinks]);
-  const routeQuickLinkId = readSettingsSectionIdFromContext(context, { pathname: location.pathname, hash: location.hash });
-  const effectiveActiveQuickLinkId = visibleTocLinks.some((item) => item.id === routeQuickLinkId) ? routeQuickLinkId : activeQuickLinkId;
+  const effectiveActiveQuickLinkId = isWindowedSettingsSurface
+    ? visibleTocLinks.some((item) => item.id === activeQuickLinkId)
+      ? activeQuickLinkId
+      : routeQuickLinkId
+    : visibleTocLinks.some((item) => item.id === routeQuickLinkId)
+      ? routeQuickLinkId
+      : activeQuickLinkId;
   const activeRootSectionId = useMemo<SettingsQuickLinkId>(() => {
     for (const item of settingsNavLinks) {
       if (item.id === effectiveActiveQuickLinkId || item.children?.some((child) => child.id === effectiveActiveQuickLinkId)) {
@@ -2711,8 +2716,8 @@ export function SettingsPage({
     return visibleTocLinks.find((item) => item.id === effectiveActiveQuickLinkId && item.extensionId) ?? null;
   }, [effectiveActiveQuickLinkId, activeRootSectionId, visibleTocLinks]);
   const renderedSectionIds = useMemo(
-    () => visibleSectionIds ?? (routeQuickLinkId ? new Set<SettingsQuickLinkId>([activeRootSectionId]) : null),
-    [activeRootSectionId, routeQuickLinkId, visibleSectionIds],
+    () => visibleSectionIds ?? (routeQuickLinkId || isWindowedSettingsSurface ? new Set<SettingsQuickLinkId>([activeRootSectionId]) : null),
+    [activeRootSectionId, isWindowedSettingsSurface, routeQuickLinkId, visibleSectionIds],
   );
 
   useEffect(() => {
@@ -3778,19 +3783,18 @@ export function SettingsPage({
     }
   }
 
-  const isWindowedSettingsSurface = context?.shellPresentation === 'windowed';
   const activeRootLink = settingsNavLinks.find((item) => item.id === activeRootSectionId) ?? settingsNavLinks[0] ?? null;
   const activeSectionTitle = settingsQuickLinkLabelText(activeExtensionSettingsLink?.label ?? activeRootLink?.label ?? 'Settings');
   const activeSectionDescription = activeRootLink?.summary
     ? settingsQuickLinkLabelText(activeRootLink.summary)
     : 'Configure Neon Pilot preferences.';
-  const extensionSettingsCount = settingsNavLinks.find((item) => item.id === 'settings-extensions')?.children?.length ?? 0;
-  const settingsPanelCount = visibleTocLinks.length;
-  const providerCount = configuredProviderSummaries.length;
-  const modelCount = modelState?.models.length ?? 0;
 
   function focusSettingsSection(sectionId: SettingsQuickLinkId) {
     setActiveQuickLinkId(sectionId);
+    if (isWindowedSettingsSurface) {
+      settingsScrollRef.current?.scrollTo({ top: 0 });
+      return;
+    }
     scheduleSettingsSectionScroll(settingsScrollRef.current, sectionId);
   }
 
@@ -5061,11 +5065,11 @@ export function SettingsPage({
   );
 
   const settingsContent = isWindowedSettingsSurface ? (
-    <WindowedPageShell layout="wide" className="settings-page-windowed">
+    <WindowedPageShell layout="two-column" className="settings-page-windowed">
       <WindowedPageRail title="Settings" accent="settings">
-        <WindowedPageSection title="Sections" meta={`${settingsNavLinks.length} groups`}>
-          <WindowedList>
-            {settingsNavLinks.map((item) => (
+        <WindowedList>
+          {settingsNavLinks.flatMap((item) => {
+            const rootItem = (
               <WindowedListItem
                 key={item.id}
                 title={settingsQuickLinkLabelText(item.label)}
@@ -5075,46 +5079,35 @@ export function SettingsPage({
                 accent="settings"
                 onSelect={() => focusSettingsSection(item.id)}
               />
-            ))}
-          </WindowedList>
-        </WindowedPageSection>
+            );
+            const showChildren =
+              item.children &&
+              item.children.length > 0 &&
+              (item.id === activeRootSectionId || item.children.some((child) => child.id === effectiveActiveQuickLinkId));
+            if (!showChildren) return [rootItem];
+            return [
+              rootItem,
+              ...item.children.map((child) => (
+                <WindowedListItem
+                  key={child.id}
+                  title={settingsQuickLinkLabelText(child.label)}
+                  meta="Extension panel"
+                  detail={child.id === effectiveActiveQuickLinkId ? 'Selected' : undefined}
+                  active={child.id === effectiveActiveQuickLinkId}
+                  accent="extensions"
+                  onSelect={() => focusSettingsSection(child.id)}
+                />
+              )),
+            ];
+          })}
+        </WindowedList>
       </WindowedPageRail>
 
-      <WindowedPageMain
-        eyebrow="Preferences"
-        title={activeSectionTitle}
-        description={activeSectionDescription}
-        actions={
-          <WindowedPageButton type="button" onClick={() => focusSettingsSection(effectiveActiveQuickLinkId || activeRootSectionId)}>
-            Focus
-          </WindowedPageButton>
-        }
-      >
+      <WindowedPageMain eyebrow="Preferences" title={activeSectionTitle} description={activeSectionDescription}>
         <div ref={settingsScrollRef} className="settings-page-windowed-scroll h-full min-h-0 overflow-y-auto">
           {settingsSections}
         </div>
       </WindowedPageMain>
-
-      <WindowedPageInspector eyebrow="Settings context" title={activeSectionTitle}>
-        <WindowedPageSection title="Status">
-          <WindowedKeyValueList
-            items={[
-              { label: 'Sections', value: settingsPanelCount },
-              { label: 'Providers', value: providerCount },
-              { label: 'Models', value: modelCount },
-              { label: 'Extension panels', value: extensionSettingsCount },
-            ]}
-          />
-        </WindowedPageSection>
-        <WindowedPageSection title="Scope">
-          <WindowedKeyValueList
-            items={[
-              { label: 'Route', value: context?.pathname ?? location.pathname },
-              { label: 'Visible', value: renderedSectionIds ? renderedSectionIds.size : 'All' },
-            ]}
-          />
-        </WindowedPageSection>
-      </WindowedPageInspector>
     </WindowedPageShell>
   ) : (
     <div ref={settingsScrollRef} className="h-full overflow-y-auto">
