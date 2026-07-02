@@ -10,7 +10,7 @@ describe('backendApi/videos', () => {
     vi.clearAllMocks();
   });
 
-  it('routes video probe operations through the video probe attachment store', async () => {
+  it('routes video media operations through the video attachment store', async () => {
     const videos = await import('./videos.js');
     resolver.callServerModuleExport.mockResolvedValue([]);
 

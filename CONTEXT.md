@@ -97,11 +97,11 @@ The host-owned speech-to-text capability used by extensions for dictation, voice
 
 Use **transcription service** for the shared host boundary and **dictation** only for the composer microphone workflow.
 
-### Video probe
+### Multimedia probe
 
-The host-backed agent capability for inspecting local video attachments by stable `vid_<hash>` IDs.
+The bundled system extension and host-backed capability for inspecting image, video, audio, and document attachments.
 
-Use **video probe** for deterministic frame sampling and video transcription tools. Do not use it for model-backed whole-video analysis.
+Use **multimedia probe** for the product surface. Use **video media tools** when specifically referring to deterministic frame sampling and video transcription by stable `vid_<hash>` IDs.
 
 ### Required system extension
 
