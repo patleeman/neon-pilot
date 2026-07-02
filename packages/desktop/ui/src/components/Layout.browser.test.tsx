@@ -391,6 +391,54 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
   });
 
+  it('hides the native browser view when windowed taskbar geometry overlaps its host', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.classList.contains('wos-taskbar')) {
+          return { left: 0, top: 720, width: 1024, height: 48, right: 1024, bottom: 768, x: 0, y: 720, toJSON: () => ({}) };
+        }
+        if (this.closest('#browser-root')) {
+          return { left: 36, top: 92, width: 728, height: 650, right: 764, bottom: 742, x: 36, y: 92, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<div class="windowed-os-shell"><section class="wos-window" data-window-id="browser" data-focused="true" style="z-index: 10"><div id="browser-root"></div></section><footer class="wos-taskbar"></footer></div>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => browserRoot) });
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+  });
+
   it('applies delayed browser state updates to the tab that requested them', async () => {
     let resolveFirstBounds: ((value: unknown) => void) | null = null;
     const setWorkbenchBrowserBounds = vi.fn((input: { sessionKey?: string | null }) => {

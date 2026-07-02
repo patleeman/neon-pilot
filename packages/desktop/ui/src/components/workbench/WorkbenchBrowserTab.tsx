@@ -38,6 +38,10 @@ function hasWindowedShellOverlay(): boolean {
   );
 }
 
+function isConnectedVisibleElement(element: Element): element is HTMLElement {
+  return element instanceof HTMLElement && element.isConnected && isVisibleStyle(element);
+}
+
 function isInsideUnfocusedWindow(host: HTMLElement | null): boolean {
   const windowElement = host?.closest<HTMLElement>('.wos-window');
   return windowElement?.dataset.focused === 'false';
@@ -73,6 +77,25 @@ function isCoveredByWindowedWindow(host: HTMLElement | null): boolean {
     if (!isVisibleStyle(candidate)) return false;
     return rectsOverlap(hostRect, candidate.getBoundingClientRect());
   });
+}
+
+function isCoveredByWindowedChrome(host: HTMLElement | null): boolean {
+  if (!host || !host.isConnected) {
+    return false;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  if (hostRect.width < 1 || hostRect.height < 1) {
+    return false;
+  }
+
+  const chrome = Array.from(
+    document.querySelectorAll(
+      '.windowed-os-shell .wos-taskbar, .windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .windowed-os-shell .wos-snap-preview, .windowed-os-shell .wos-dialog-layer, [aria-modal="true"]',
+    ),
+  ).filter(isConnectedVisibleElement);
+
+  return chrome.some((element) => rectsOverlap(hostRect, element.getBoundingClientRect()));
 }
 
 function elementAtPoint(x: number, y: number): Element | null {
@@ -277,6 +300,7 @@ export function WorkbenchBrowserTab({
       hasWindowedShellOverlay() ||
       isInsideUnfocusedWindow(host) ||
       isCoveredByWindowedWindow(host) ||
+      isCoveredByWindowedChrome(host) ||
       isCoveredByRendererLayer(host);
 
     if (blocked) {
