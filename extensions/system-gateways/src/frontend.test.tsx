@@ -166,9 +166,10 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </nav>
   ),
-  WindowedPageSection: ({ title, children }: { title: string; children?: React.ReactNode; meta?: string }) => (
+  WindowedPageSection: ({ title, children, meta }: { title: string; children?: React.ReactNode; meta?: string }) => (
     <section>
       <h3>{title}</h3>
+      {meta ? <span>{meta}</span> : null}
       {children}
     </section>
   ),
@@ -303,6 +304,35 @@ describe('GatewaysPage', () => {
         }),
       ),
     );
+  });
+
+  it('keeps the windowed loading state inside the provider shell', async () => {
+    globalThis.fetch = vi.fn(() => new Promise<Response>(() => {})) as never;
+
+    const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
+
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(screen.getByRole('heading', { name: 'Telegram' })).toBeTruthy();
+    expect(screen.getByText('Status')).toBeTruthy();
+    expect(screen.getByText('Loading')).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading gateway settings' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Loading' })).toBeNull();
+    expect(screen.queryByText('Loading gateway settings.')).toBeNull();
+  });
+
+  it('keeps the windowed recovery state inside the provider shell', async () => {
+    globalThis.fetch = vi.fn(async () => jsonResponse({ error: 'gateway unavailable' }, 500)) as never;
+
+    const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
+
+    expect(await screen.findByText('gateway unavailable')).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(screen.getByRole('heading', { name: 'Telegram' })).toBeTruthy();
+    expect(screen.getByText('Status')).toBeTruthy();
+    expect(screen.getByText('Unavailable')).toBeTruthy();
+    expect(screen.getByText('Status unavailable')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Could not load' })).toBeNull();
   });
 
   it('saves and clears the bot token through the Telegram token route', async () => {

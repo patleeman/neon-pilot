@@ -272,15 +272,18 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
         <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Gateways" accent="gateways">
             <WindowedList>
-              <WindowedListItem title="Telegram" meta="Gateway" detail="Unavailable" active accent="gateways" />
+              <WindowedListItem title="Telegram" meta="Gateway" detail="Status unavailable" active accent="gateways" />
             </WindowedList>
           </WindowedPageRail>
           <WindowedPageMain
-            eyebrow="Gateways"
-            title="Could not load"
-            description={error ?? 'Gateway settings could not be loaded.'}
+            eyebrow="Gateway provider"
+            title="Telegram"
             actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
-          />
+          >
+            <WindowedPageSection title="Status" meta="Unavailable">
+              <div className="wos-gateway-error">{error ?? 'Gateway settings could not be loaded.'}</div>
+            </WindowedPageSection>
+          </WindowedPageMain>
         </WindowedPageShell>
       );
     }
@@ -691,7 +694,11 @@ function WindowedGatewaysLoading() {
           <WindowedListItem title="Telegram" meta="Gateway" detail="Loading settings" active accent="gateways" />
         </WindowedList>
       </WindowedPageRail>
-      <WindowedPageMain eyebrow="Gateways" title="Loading" description="Loading gateway settings." />
+      <WindowedPageMain eyebrow="Gateway provider" title="Telegram">
+        <WindowedPageSection title="Status" meta="Loading">
+          <QuietLoadingState label="Loading gateway settings" className="min-h-24" />
+        </WindowedPageSection>
+      </WindowedPageMain>
     </WindowedPageShell>
   );
 }
