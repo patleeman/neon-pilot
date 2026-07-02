@@ -25,7 +25,8 @@
         "handler": "probeMedia",
         "title": "Ask about media",
         "worker": {
-          "enabled": true
+          "enabled": true,
+          "timeoutMs": 180000
         }
       }
     ]

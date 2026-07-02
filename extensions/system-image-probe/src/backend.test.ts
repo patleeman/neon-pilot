@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it, vi } from 'vitest';
 
 const {
@@ -96,6 +98,18 @@ function createCtx(overrides?: Record<string, unknown>) {
 describe('system-image-probe backend', () => {
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('gives multimedia probes enough worker time for video frame analysis', () => {
+    const manifest = JSON.parse(readFileSync(new URL('../extension.json', import.meta.url), 'utf-8')) as {
+      backend?: { actions?: Array<{ id?: string; worker?: { timeoutMs?: number } }> };
+    };
+
+    const probeImageAction = manifest.backend?.actions?.find((action) => action.id === 'probeImage');
+    const probeMediaAction = manifest.backend?.actions?.find((action) => action.id === 'probeMedia');
+
+    expect(probeImageAction?.worker?.timeoutMs).toBeUndefined();
+    expect(probeMediaAction?.worker?.timeoutMs).toBeGreaterThanOrEqual(180_000);
   });
 
   it('runs a host-owned agent task for selected image attachments', async () => {
