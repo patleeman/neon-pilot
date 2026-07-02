@@ -1791,8 +1791,10 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             {catalogError ? <ErrorState title="Could not load installable extensions" message={catalogError} /> : null}
 
             <WindowedPageSection
-              title={selectedExtension ? 'Selected extension' : 'Selection'}
-              meta={selectedExtension?.name ?? 'No extension selected'}
+              title={selectedExtension?.name ?? 'No extension selected'}
+              meta={
+                selectedExtension ? `${extensionStatusLabel(selectedExtension)} · ${extensionSourceLabel(selectedExtension)}` : undefined
+              }
             >
               {selectedExtension ? (
                 <div className="wos-extension-detail-grid">

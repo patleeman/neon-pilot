@@ -314,7 +314,8 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getAllByRole('button', { name: /Installed/ }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Platform/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
-    expect(screen.getByText('Selected extension')).toBeTruthy();
+    expect(screen.queryByText('Selected extension')).toBeNull();
+    expect(screen.queryByText('Selection')).toBeNull();
     expect(screen.getAllByText('Applications').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /Platform/ }));
