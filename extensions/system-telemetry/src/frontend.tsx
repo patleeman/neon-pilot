@@ -33,7 +33,6 @@ import {
   WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
 } from '@neon-pilot/extensions/ui';
@@ -90,14 +89,16 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
   if (error) {
     if (context?.shellPresentation === 'windowed') {
       return (
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Diagnostics" accent="telemetry">
-            <WindowedRangeSelector value={range} onChange={setRange} />
-          </WindowedPageRail>
+        <WindowedPageShell layout="standard" className="telemetry-page-windowed">
           <WindowedPageMain
             eyebrow="Diagnostics"
             title="Diagnostics unavailable"
-            actions={<WindowedPageButton onClick={refetch}>Try again</WindowedPageButton>}
+            actions={
+              <>
+                <WindowedRangeSelector value={range} onChange={setRange} />
+                <WindowedPageButton onClick={refetch}>Try again</WindowedPageButton>
+              </>
+            }
           >
             <WindowedPageSection>
               <ErrorState message={error} />
@@ -152,9 +153,17 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
       ) : null;
 
     return (
-      <WindowedPageShell layout="two-column">
-        <WindowedPageRail title="Diagnostics" accent="telemetry">
-          <WindowedRangeSelector value={range} onChange={setRange} />
+      <WindowedPageShell layout="standard" className="telemetry-page-windowed">
+        <WindowedPageMain
+          eyebrow="Local observability"
+          title="Diagnostics"
+          actions={
+            <>
+              <WindowedRangeSelector value={range} onChange={setRange} />
+              <WindowedPageButton onClick={refetch}>{loading ? 'Refreshing' : 'Refresh'}</WindowedPageButton>
+            </>
+          }
+        >
           <WindowedPageSection title="Data" meta={loading ? 'Loading' : summary ? 'Loaded' : 'Empty'}>
             <WindowedKeyValueList
               items={[
@@ -164,13 +173,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
               ]}
             />
           </WindowedPageSection>
-        </WindowedPageRail>
 
-        <WindowedPageMain
-          eyebrow="Local observability"
-          title="Diagnostics"
-          actions={<WindowedPageButton onClick={refetch}>{loading ? 'Refreshing' : 'Refresh'}</WindowedPageButton>}
-        >
           {summary ? (
             <WindowedPageSection title="Overview" meta={range.toUpperCase()}>
               <WindowedPulseGrid summary={summary} />
