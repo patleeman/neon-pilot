@@ -327,8 +327,10 @@ describe('GatewaysPage', () => {
     const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
 
     expect(await screen.findByText('Gateway provider')).toBeTruthy();
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
+    expect(screen.getByText('Providers')).toBeTruthy();
     expect(screen.getByText('Gateway tools')).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: 'Telegram access' })).toBeNull();
     expect(screen.queryByRole('dialog', { name: 'Recent activity' })).toBeNull();
@@ -359,7 +361,8 @@ describe('GatewaysPage', () => {
 
     const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Telegram' })).toBeTruthy();
     expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Loading')).toBeTruthy();
@@ -374,11 +377,11 @@ describe('GatewaysPage', () => {
     const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
 
     expect(await screen.findByText('gateway unavailable')).toBeTruthy();
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Telegram' })).toBeTruthy();
     expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Unavailable')).toBeTruthy();
-    expect(screen.getByText('Status unavailable')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Could not load' })).toBeNull();
   });

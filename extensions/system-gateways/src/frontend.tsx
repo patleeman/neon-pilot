@@ -30,7 +30,6 @@ import {
   WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
   WindowedStateBlock,
@@ -273,12 +272,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
   if (!pageState) {
     if (windowed) {
       return (
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Gateways" accent="gateways">
-            <WindowedList>
-              <WindowedListItem title="Telegram" meta="Gateway" detail="Status unavailable" active accent="gateways" />
-            </WindowedList>
-          </WindowedPageRail>
+        <WindowedPageShell layout="standard" className="gateways-page-windowed">
           <WindowedPageMain
             eyebrow="Gateway provider"
             title="Telegram"
@@ -335,30 +329,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
 
     return (
       <div className="h-full overflow-hidden">
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Gateways" accent="gateways">
-            <WindowedList>
-              {pageState.gateway.providers.map((provider) => {
-                const connection = pageState.gateway.connections.find((candidate) => candidate.provider === provider.id);
-                const providerEnabled = Boolean(connection?.enabled);
-                return (
-                  <WindowedListItem
-                    key={provider.id}
-                    title={provider.label}
-                    meta={formatConfigurationLocation(provider.configurationLocation)}
-                    detail={connection?.statusMessage ?? provider.description ?? 'Gateway provider'}
-                    active={provider.id === TELEGRAM_PROVIDER_ID}
-                    accent="gateways"
-                    status={
-                      <WindowedBadge tone={gatewayBadgeTone(connection?.status ?? 'needs_config', tokenConfigured, providerEnabled)}>
-                        {providerEnabled ? formatGatewayStatus(connection?.status ?? 'needs_config') : 'Paused'}
-                      </WindowedBadge>
-                    }
-                  />
-                );
-              })}
-            </WindowedList>
-          </WindowedPageRail>
+        <WindowedPageShell layout="standard" className="gateways-page-windowed">
           <WindowedPageMain
             eyebrow="Gateway provider"
             title={telegramProvider?.label ?? 'Telegram'}
@@ -385,6 +356,29 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <div className="wos-gateway-notice">{notice}</div>
               </WindowedPageSection>
             ) : null}
+            <WindowedPageSection title="Providers" meta={`${pageState.gateway.providers.length} available`}>
+              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Configuration', align: 'right' }]}>
+                {pageState.gateway.providers.map((provider) => {
+                  const connection = pageState.gateway.connections.find((candidate) => candidate.provider === provider.id);
+                  const providerEnabled = Boolean(connection?.enabled);
+                  return (
+                    <WindowedDataRow
+                      key={provider.id}
+                      name={provider.label}
+                      meta={connection?.statusMessage ?? provider.description ?? 'Gateway provider'}
+                      status={
+                        <WindowedBadge tone={gatewayBadgeTone(connection?.status ?? 'needs_config', tokenConfigured, providerEnabled)}>
+                          {providerEnabled ? formatGatewayStatus(connection?.status ?? 'needs_config') : 'Paused'}
+                        </WindowedBadge>
+                      }
+                      action={
+                        <span className="wos-gateway-provider-location">{formatConfigurationLocation(provider.configurationLocation)}</span>
+                      }
+                    />
+                  );
+                })}
+              </WindowedDataTable>
+            </WindowedPageSection>
             <WindowedPageSection title="Readiness" meta={gatewayEnabled ? 'Enabled' : 'Paused'}>
               <WindowedKeyValueGrid
                 items={[
@@ -751,12 +745,7 @@ function GatewaysLoadingPage() {
 
 function WindowedGatewaysLoading() {
   return (
-    <WindowedPageShell layout="two-column">
-      <WindowedPageRail title="Gateways" accent="gateways">
-        <WindowedList>
-          <WindowedListItem title="Telegram" meta="Gateway" detail="Loading settings" active accent="gateways" />
-        </WindowedList>
-      </WindowedPageRail>
+    <WindowedPageShell layout="standard" className="gateways-page-windowed">
       <WindowedPageMain eyebrow="Gateway provider" title="Telegram">
         <WindowedPageSection title="Status" meta="Loading">
           <WindowedStateBlock>
