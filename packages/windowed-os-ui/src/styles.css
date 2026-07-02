@@ -20,14 +20,16 @@
   --wos-font-display: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
   --wos-font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --wos-font-mono: 'IBM Plex Mono', 'Geist Mono', ui-monospace, monospace;
-  --wos-text-title: 800 16px/1.22 var(--wos-font-display);
-  --wos-text-section: 800 13px/1.28 var(--wos-font-display);
-  --wos-text-row: 700 12px/1.3 var(--wos-font-display);
-  --wos-text-meta: 650 10.5px/1.3 var(--wos-font-display);
-  --wos-text-body: 400 12px/1.42 var(--wos-font-body);
-  --wos-text-eyebrow: 650 9.5px/1.35 var(--wos-font-mono);
+  --wos-text-title: 800 17px/1.25 var(--wos-font-display);
+  --wos-text-section: 800 15px/1.3 var(--wos-font-display);
+  --wos-text-subsection: 700 14px/1.3 var(--wos-font-display);
+  --wos-text-row: 700 12.5px/1.35 var(--wos-font-display);
+  --wos-text-meta: 600 11px/1.4 var(--wos-font-display);
+  --wos-text-body: 400 12px/1.5 var(--wos-font-body);
+  --wos-text-eyebrow: 700 10px/1.4 var(--wos-font-mono);
   --wos-titlebar-h: 42px;
   --wos-taskbar-h: 42px;
+  --wos-chat-rail-width: 150px;
   min-height: 100vh;
   overflow: hidden;
   background: var(--wos-surface-0);
@@ -102,7 +104,7 @@
 
 .wos-taskbar__start {
   flex-shrink: 0;
-  font-weight: 700;
+  font: var(--wos-text-row);
 }
 
 .wos-taskbar__items {
@@ -127,8 +129,7 @@
 .wos-taskbar__button {
   max-width: 220px;
   background: var(--wos-surface-2);
-  font-size: 12px;
-  font-weight: 650;
+  font: var(--wos-text-row);
 }
 
 .wos-taskbar__button[data-focused='true'] {
@@ -237,8 +238,7 @@
 }
 
 .wos-app-tile[data-variant='taskbar'] .wos-app-tile__label {
-  font-size: 12px;
-  font-weight: 650;
+  font: var(--wos-text-row);
 }
 
 .wos-app-tile__count {
@@ -259,9 +259,9 @@
   left: 8px;
   bottom: calc(var(--wos-taskbar-h) + 8px);
   z-index: 1001;
-  width: min(300px, calc(100vw - 16px));
+  width: min(260px, calc(100vw - 16px));
   border: 2px solid var(--wos-ink-900);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--wos-surface-1);
   box-shadow: var(--wos-shadow-menu);
   overflow: hidden;
@@ -274,7 +274,7 @@
   gap: 10px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-2);
-  padding: 10px;
+  padding: 8px 10px;
 }
 
 .wos-start-menu__footer {
@@ -284,8 +284,7 @@
 }
 
 .wos-start-menu__title {
-  font-size: 15px;
-  font-weight: 800;
+  font: var(--wos-text-section);
 }
 
 .wos-start-menu__search {
@@ -400,8 +399,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
-  font-weight: 800;
+  font: var(--wos-text-subsection);
 }
 
 .wos-window__controls {
@@ -572,6 +570,72 @@
 .wos-window-route-body .ui-app-page-main > section:not(.ui-app-page-intro),
 .wos-window-route-body .ui-app-page-main > div:not(.ui-app-page-intro):not(.ui-notice) {
   padding: 10px 12px;
+}
+
+.wos-window-route-body .conversation-header {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  border-bottom: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-1);
+  padding: 10px 12px 0;
+  backdrop-filter: none;
+}
+
+.wos-window-route-body .conversation-header-content {
+  max-width: none;
+  padding: 0 0 10px;
+}
+
+.wos-window-route-body .ui-conversation-title-display,
+.wos-window-route-body .ui-conversation-title-input,
+.wos-window-route-body .ui-empty-title {
+  color: var(--wos-ink-900);
+  font: var(--wos-text-title);
+  letter-spacing: 0;
+}
+
+.wos-window-route-body .ui-conversation-title-input {
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.wos-window-route-body .ui-conversation-status-strip {
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 9px;
+  background: var(--wos-surface-2);
+  padding: 4px 8px;
+  font: var(--wos-text-meta);
+}
+
+.wos-window-route-body .ui-composer-bottom-fade {
+  background: color-mix(in oklab, var(--wos-surface-1) 92%, transparent);
+  padding: 8px 12px;
+}
+
+.wos-window-route-body .ui-workbench-shell {
+  background: var(--wos-surface-2);
+}
+
+.wos-window-route-body .ui-workbench-header {
+  border-bottom: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+  padding: 8px 10px;
+}
+
+.wos-window-route-body .ui-workbench-header-title {
+  color: var(--wos-ink-900);
+  font: var(--wos-text-subsection);
+}
+
+.wos-window-route-body .ui-workbench-header-meta {
+  color: var(--wos-ink-500);
+  font: var(--wos-text-meta);
+}
+
+.wos-window-route-body .ui-workbench-footer {
+  border-top: 2px solid var(--wos-ink-900);
+  padding: 8px 10px;
 }
 
 .wos-window-route-body .ui-app-page-main > .ui-notice {
@@ -1991,7 +2055,7 @@
 
 .wos-chat-surface {
   display: grid;
-  grid-template-columns: 145px minmax(0, 1fr);
+  grid-template-columns: var(--wos-chat-rail-width) minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   background: var(--wos-surface-1);
@@ -2008,6 +2072,8 @@
 }
 
 .wos-embedded-sidebar {
+  width: var(--wos-chat-rail-width) !important;
+  flex-basis: var(--wos-chat-rail-width) !important;
   background: var(--wos-surface-2);
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);
@@ -2441,9 +2507,9 @@
 
 .windowed-os-shell :where(.wos-page-main__heading h1, .wos-window-route-body .ui-app-page-title) {
   font-family: var(--wos-font-display);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
-  line-height: 1.22;
+  line-height: 1.25;
 }
 
 .windowed-os-shell
@@ -2472,9 +2538,9 @@
     .wos-arena-challenger strong
   ) {
   font-family: var(--wos-font-display);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .windowed-os-shell
@@ -2486,9 +2552,9 @@
     .wos-chat-main__header
   ) {
   font-family: var(--wos-font-display);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
-  line-height: 1.28;
+  line-height: 1.3;
 }
 
 .windowed-os-shell
@@ -2503,9 +2569,9 @@
     .wos-arena-ranking-row__model small
   ) {
   font-family: var(--wos-font-display);
-  font-size: 10.5px;
-  font-weight: 650;
-  line-height: 1.3;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .windowed-os-shell
@@ -2523,7 +2589,7 @@
   font-family: var(--wos-font-body);
   font-size: 12px;
   font-weight: 400;
-  line-height: 1.42;
+  line-height: 1.5;
 }
 
 .windowed-os-shell
@@ -2542,10 +2608,10 @@
     .wos-chat-rail__label
   ) {
   font-family: var(--wos-font-mono);
-  font-size: 9.5px;
-  font-weight: 650;
-  line-height: 1.35;
-  letter-spacing: 0.02em;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
 }
 
 .windowed-os-shell button.wos-page-button,
@@ -2560,7 +2626,7 @@
 .windowed-os-shell .wos-window-route-body button.ui-ghost-button,
 .windowed-os-shell .wos-window-route-body button.ui-icon-button {
   font-family: var(--wos-font-display);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.35;
 }
