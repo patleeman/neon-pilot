@@ -13,6 +13,7 @@ import {
   WindowedDataTable,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
+  WindowedMenuPanel,
   WindowedMessageBubble,
   WindowedPageButton,
   WindowedPageInspector,
@@ -96,14 +97,67 @@ export const DesktopComposition: Story = {
   ),
 };
 
+export const TaskbarMenuPlacement: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 360 }}>
+      <main className="wos-desktop" style={{ height: 318 }}>
+        <WindowFrame
+          title="Chat"
+          accent="chat"
+          focused
+          style={{ left: 52, top: 32, width: 640, height: 230 }}
+          onMinimize={() => undefined}
+          onMaximize={() => undefined}
+          onClose={() => undefined}
+        >
+          <WindowedChatSurface>
+            <WindowedChatRail>
+              <WindowedThreadItem title="Release notes" active />
+              <WindowedThreadItem title="Bug triage" meta="2h" />
+            </WindowedChatRail>
+            <WindowedChatMain title="Release notes">
+              <WindowedMessageBubble>Taskbar menu placement preview.</WindowedMessageBubble>
+            </WindowedChatMain>
+          </WindowedChatSurface>
+        </WindowFrame>
+      </main>
+      <Taskbar
+        startOpen={false}
+        onToggleStart={() => undefined}
+        groups={[
+          {
+            id: 'chat',
+            title: 'Chat',
+            accent: 'chat',
+            focused: true,
+            count: 3,
+            onSelect: () => undefined,
+            menu: (
+              <WindowedMenuPanel
+                ariaLabel="Open chat windows"
+                items={[
+                  { id: 'new', label: 'New conversation', onSelect: () => undefined },
+                  { id: 'release', label: 'Release notes', onSelect: () => undefined },
+                  { id: 'bug', label: 'Bug triage', onSelect: () => undefined },
+                ]}
+              />
+            ),
+          },
+        ]}
+        items={[{ id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined }]}
+      />
+    </div>
+  ),
+};
+
 export const NavigationPrimitives: Story = {
   render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+    <div className="windowed-os-shell" style={{ minHeight: 680, padding: 24 }}>
       <WindowFrame
         title="Navigation"
         accent="extensions"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(560px, 100%)', height: 410 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(560px, 100%)', height: 540 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
@@ -124,6 +178,19 @@ export const NavigationPrimitives: Story = {
               <span className="wos-taskbar__button">
                 <WindowedAppTile label="Gateways" accent="gateways" variant="taskbar" />
               </span>
+            </div>
+          </WindowedPageSection>
+          <WindowedPageSection title="Taskbar menu">
+            <div style={{ padding: 10 }}>
+              <WindowedMenuPanel
+                ariaLabel="Story chat windows"
+                placement="inline"
+                items={[
+                  { id: 'new', label: 'New conversation', onSelect: () => undefined },
+                  { id: 'release', label: 'Release notes', onSelect: () => undefined },
+                  { id: 'deploy', label: 'Deploy check', onSelect: () => undefined },
+                ]}
+              />
             </div>
           </WindowedPageSection>
         </WindowedPageMain>

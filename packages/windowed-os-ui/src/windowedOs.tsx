@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 export type AppAccent = 'chat' | 'routines' | 'automations' | 'gateways' | 'extensions' | 'telemetry' | 'settings';
 
@@ -318,6 +318,39 @@ export function WindowedKeyValueList({ items, className }: WindowedKeyValueListP
   );
 }
 
+export interface WindowedMenuItem {
+  id: string;
+  label: string;
+  onSelect: () => void;
+  disabled?: boolean;
+}
+
+export interface WindowedMenuPanelProps {
+  items: WindowedMenuItem[];
+  ariaLabel?: string;
+  placement?: 'taskbar' | 'inline';
+  className?: string;
+}
+
+export function WindowedMenuPanel({ items, ariaLabel = 'Window menu', placement = 'taskbar', className }: WindowedMenuPanelProps) {
+  return (
+    <div className={cx('wos-menu-panel', className)} data-placement={placement} role="menu" aria-label={ariaLabel}>
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          role="menuitem"
+          className="wos-menu-panel__item"
+          disabled={item.disabled}
+          onClick={item.onSelect}
+        >
+          <span className="wos-menu-panel__label">{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export interface WindowedChatSurfaceProps {
   children: ReactNode;
   className?: string;
@@ -495,34 +528,81 @@ export interface TaskbarProps {
 }
 
 export function Taskbar({ startOpen, onToggleStart, groups = [], items }: TaskbarProps) {
+  const groupRefs = useRef(new Map<string, HTMLDivElement>());
+  const [menuAnchors, setMenuAnchors] = useState<Record<string, { left: number; bottom: number }>>({});
+
+  useLayoutEffect(() => {
+    const updateMenuAnchors = () => {
+      if (typeof window === 'undefined') return;
+      const next: Record<string, { left: number; bottom: number }> = {};
+      groups.forEach((group) => {
+        if (!group.menu) return;
+        const rect = groupRefs.current.get(group.id)?.getBoundingClientRect();
+        if (!rect) return;
+        const menuWidth = 280;
+        next[group.id] = {
+          left: Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - menuWidth - 8)),
+          bottom: Math.max(8, window.innerHeight - rect.top + 8),
+        };
+      });
+      setMenuAnchors(next);
+    };
+
+    updateMenuAnchors();
+    window.addEventListener('resize', updateMenuAnchors);
+    window.addEventListener('scroll', updateMenuAnchors, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuAnchors);
+      window.removeEventListener('scroll', updateMenuAnchors, true);
+    };
+  }, [groups]);
+
   return (
-    <footer className="wos-taskbar">
-      <button type="button" className="wos-taskbar__start" aria-haspopup="dialog" aria-expanded={startOpen} onClick={onToggleStart}>
-        <WindowedAppTile label="Start" accent="extensions" variant="taskbar" />
-      </button>
-      <nav className="wos-taskbar__items" aria-label="Open windows">
-        {groups.map((group) => (
-          <div key={group.id} className="wos-taskbar__group">
-            <button type="button" className="wos-taskbar__button" data-focused={group.focused} onClick={group.onSelect}>
-              <WindowedAppTile label={group.title} accent={group.accent} count={group.count} variant="taskbar" />
+    <>
+      <footer className="wos-taskbar">
+        <button type="button" className="wos-taskbar__start" aria-haspopup="dialog" aria-expanded={startOpen} onClick={onToggleStart}>
+          <WindowedAppTile label="Start" accent="extensions" variant="taskbar" />
+        </button>
+        <nav className="wos-taskbar__items" aria-label="Open windows">
+          {groups.map((group) => (
+            <div
+              key={group.id}
+              ref={(node) => {
+                if (node) {
+                  groupRefs.current.set(group.id, node);
+                } else {
+                  groupRefs.current.delete(group.id);
+                }
+              }}
+              className="wos-taskbar__group"
+            >
+              <button type="button" className="wos-taskbar__button" data-focused={group.focused} onClick={group.onSelect}>
+                <WindowedAppTile label={group.title} accent={group.accent} count={group.count} variant="taskbar" />
+              </button>
+            </div>
+          ))}
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="wos-taskbar__button"
+              data-focused={item.focused}
+              data-minimized={item.minimized}
+              onClick={item.onSelect}
+            >
+              <WindowedAppTile label={item.title} accent={item.accent} count={item.count} variant="taskbar" />
             </button>
+          ))}
+        </nav>
+      </footer>
+      {groups.map((group) =>
+        group.menu && menuAnchors[group.id] ? (
+          <div key={`${group.id}-menu`} className="wos-taskbar__menu-layer" style={menuAnchors[group.id]}>
             {group.menu}
           </div>
-        ))}
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className="wos-taskbar__button"
-            data-focused={item.focused}
-            data-minimized={item.minimized}
-            onClick={item.onSelect}
-          >
-            <WindowedAppTile label={item.title} accent={item.accent} count={item.count} variant="taskbar" />
-          </button>
-        ))}
-      </nav>
-    </footer>
+        ) : null,
+      )}
+    </>
   );
 }
 

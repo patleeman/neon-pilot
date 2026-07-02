@@ -1,5 +1,13 @@
-import { type AppAccent, StartMenu, type StartMenuItem, Taskbar, type TaskbarItem, WindowFrame } from '@neon-pilot/windowed-os-ui';
-import { type CSSProperties, Fragment, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type AppAccent,
+  StartMenu,
+  type StartMenuItem,
+  Taskbar,
+  type TaskbarItem,
+  WindowedMenuPanel,
+  WindowFrame,
+} from '@neon-pilot/windowed-os-ui';
+import { type CSSProperties, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
@@ -671,7 +679,10 @@ export function WindowedLayout() {
       </main>
       <Taskbar
         startOpen={launcherOpen}
-        onToggleStart={() => setLauncherOpen((open) => !open)}
+        onToggleStart={() => {
+          setChatMenuOpen(false);
+          setLauncherOpen((open) => !open);
+        }}
         groups={[
           {
             id: 'chat',
@@ -679,22 +690,22 @@ export function WindowedLayout() {
             accent: 'chat',
             focused: activeChatWindow?.id === focusedWindowId,
             count: chatWindows.length,
-            onSelect: () => setChatMenuOpen((open) => !open),
+            onSelect: () => {
+              setLauncherOpen(false);
+              setChatMenuOpen((open) => !open);
+            },
             menu: chatMenuOpen ? (
-              <div className="wos-menu-panel" role="menu">
-                {/* ui-pattern-ok raw-control reason="Windowed OS taskbar menus use package-owned native menuitem buttons so app-shell grouping stays independent of route UI primitives." */}
-                <button type="button" role="menuitem" onClick={() => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!)}>
-                  New conversation
-                </button>
-                {chatSessions.map((session) => (
-                  <Fragment key={session.id}>
-                    {/* ui-pattern-ok raw-control reason="Windowed OS taskbar menus use package-owned native menuitem buttons so each chat window can restore without importing route UI primitives." */}
-                    <button type="button" role="menuitem" onClick={() => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!, session)}>
-                      {conversationWindowTitle(session)}
-                    </button>
-                  </Fragment>
-                ))}
-              </div>
+              <WindowedMenuPanel
+                ariaLabel="Chat windows"
+                items={[
+                  { id: 'new-chat', label: 'New conversation', onSelect: () => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!) },
+                  ...chatSessions.map((session) => ({
+                    id: session.id,
+                    label: conversationWindowTitle(session),
+                    onSelect: () => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!, session),
+                  })),
+                ]}
+              />
             ) : null,
           },
         ]}

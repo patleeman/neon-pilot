@@ -38,6 +38,7 @@
 
 .wos-desktop {
   position: relative;
+  z-index: 0;
   height: calc(100vh - var(--wos-taskbar-h));
   overflow: hidden;
   background: var(--wos-surface-0);
@@ -106,6 +107,11 @@
 .wos-taskbar__group {
   position: relative;
   flex-shrink: 0;
+}
+
+.wos-taskbar__menu-layer {
+  position: fixed;
+  z-index: 1002;
 }
 
 .wos-taskbar__button {
@@ -1396,7 +1402,22 @@
   box-shadow: var(--wos-shadow-menu);
 }
 
-.wos-menu-panel button {
+.wos-menu-panel[data-placement='inline'] {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
+  width: min(280px, 100%);
+  box-shadow: none;
+}
+
+.wos-taskbar__menu-layer .wos-menu-panel[data-placement='taskbar'] {
+  position: relative;
+  bottom: auto;
+  left: auto;
+}
+
+.wos-menu-panel__item {
   display: flex;
   width: 100%;
   min-width: 0;
@@ -1412,12 +1433,23 @@
   font-weight: 700;
 }
 
-.wos-menu-panel button:last-child {
+.wos-menu-panel__item:last-child {
   border-bottom: 0;
 }
 
-.wos-menu-panel button:hover {
+.wos-menu-panel__item:hover {
   background: var(--wos-surface-2);
+}
+
+.wos-menu-panel__item:disabled {
+  color: var(--wos-ink-500);
+}
+
+.wos-menu-panel__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wos-snap-preview {
