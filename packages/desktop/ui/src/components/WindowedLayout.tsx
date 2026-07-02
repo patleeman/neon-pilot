@@ -211,6 +211,10 @@ function accentForTitle(title: string): AppAccent {
   return 'settings';
 }
 
+function accentForWindow(windowModel: Pick<DesktopWindowModel, 'kind' | 'title'>): AppAccent {
+  return windowModel.kind === 'chat' ? 'chat' : accentForTitle(windowModel.title);
+}
+
 function desktopRect(element: HTMLElement | null): DesktopRect {
   return { width: element?.clientWidth ?? window.innerWidth, height: element?.clientHeight ?? window.innerHeight };
 }
@@ -907,7 +911,7 @@ export function WindowedLayout() {
             key={windowModel.id}
             windowId={windowModel.id}
             title={windowModel.title}
-            accent={accentForTitle(windowModel.title)}
+            accent={accentForWindow(windowModel)}
             focused={windowModel.focused}
             style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
             onPointerDown={() => focusWindow(windowModel.id)}

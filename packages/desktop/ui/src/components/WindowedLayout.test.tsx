@@ -292,6 +292,7 @@ describe('WindowedLayout route windows', () => {
 
     const planningWindow = await screen.findByRole('region', { name: /planning thread/i });
     expect(planningWindow.getAttribute('data-focused')).toBe('true');
+    expect(planningWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('chat');
     expect(within(planningWindow).getByTestId('embedded-layout')).toBeTruthy();
 
     const taskbar = screen.getByRole('navigation', { name: /open windows/i });
