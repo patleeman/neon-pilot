@@ -138,7 +138,7 @@ describe('SkillsPage', () => {
 
     const { container } = render(<SkillsPage pa={pa as never} context={{ shellPresentation: 'windowed' } as never} />);
 
-    await waitFor(() => expect(screen.getAllByText('PDF').length).toBeGreaterThan(1));
+    await screen.findByText('PDF');
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
@@ -147,6 +147,11 @@ describe('SkillsPage', () => {
     expect(screen.getByRole('textbox', { name: 'Search marketplace skills' })).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Details' }).length).toBeGreaterThan(1);
     expect(document.body.textContent).not.toContain('Skill context');
+    expect(screen.queryByRole('dialog', { name: 'PDF' })).toBeNull();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
+
+    expect(await screen.findByRole('dialog', { name: 'PDF' })).toBeTruthy();
     expect(screen.getByText('Read and verify PDF files.')).toBeTruthy();
     expect(screen.getByText('Marketplace skill')).toBeTruthy();
     expect(screen.getByText('Identifier')).toBeTruthy();
