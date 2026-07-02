@@ -219,14 +219,6 @@
   font-weight: 800;
 }
 
-.wos-start-menu__meta,
-.wos-start-menu__item-meta {
-  color: var(--wos-ink-500);
-  font-family: 'IBM Plex Mono', 'Geist Mono', ui-monospace, monospace;
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
 .wos-start-menu__grid {
   display: grid;
   gap: 7px;
@@ -252,9 +244,8 @@
 }
 
 .wos-start-menu__item-copy {
-  display: grid;
+  display: block;
   min-width: 0;
-  gap: 1px;
 }
 
 .wos-start-menu__item-title {

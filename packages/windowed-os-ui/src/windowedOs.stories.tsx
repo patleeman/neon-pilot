@@ -31,10 +31,10 @@ export const DesktopComposition: Story = {
           open
           onSelectStableShell={() => undefined}
           items={[
-            { id: 'chat', title: 'Chat', accent: 'chat', meta: '3 windows', onSelect: () => undefined },
-            { id: 'automations', title: 'Automations', accent: 'automations', meta: 'Schedules', onSelect: () => undefined },
-            { id: 'gateways', title: 'Gateways', accent: 'gateways', meta: 'Models', onSelect: () => undefined },
-            { id: 'settings', title: 'Settings', accent: 'settings', meta: 'System', onSelect: () => undefined },
+            { id: 'chat', title: 'Chat', accent: 'chat', onSelect: () => undefined },
+            { id: 'automations', title: 'Automations', accent: 'automations', onSelect: () => undefined },
+            { id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined },
+            { id: 'settings', title: 'Settings', accent: 'settings', onSelect: () => undefined },
           ]}
         />
         <WindowFrame

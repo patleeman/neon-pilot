@@ -132,7 +132,6 @@ export interface StartMenuItem {
   id: string;
   title: string;
   accent?: AppAccent;
-  meta?: string;
   onSelect: () => void;
 }
 
@@ -155,7 +154,6 @@ export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) 
             <AppMonogram label={item.title} accent={item.accent} />
             <span className="wos-start-menu__item-copy">
               <span className="wos-start-menu__item-title">{item.title}</span>
-              {item.meta ? <span className="wos-start-menu__item-meta">{item.meta}</span> : null}
             </span>
           </button>
         ))}

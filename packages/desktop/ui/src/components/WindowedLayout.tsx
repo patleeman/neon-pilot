@@ -620,7 +620,6 @@ export function WindowedLayout() {
       id: item.id,
       title: item.title,
       accent: accentForTitle(item.title),
-      meta: item.kind === 'chat' ? `${chatWindows.length || 1} window${chatWindows.length === 1 ? '' : 's'}` : item.route,
       onSelect: () => openLauncherItem(item),
     }),
   );
