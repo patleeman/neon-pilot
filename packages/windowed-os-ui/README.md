@@ -15,3 +15,14 @@ Principles:
 - Dense product UI; no marketing hero treatment.
 - No gradients, blur, emoji-as-chrome, or animation as default UI language.
 - Bundle fonts locally; do not rely on runtime Google font loading.
+
+## Local Workflow
+
+Use this package as the canonical implementation target for windowed OS shell chrome and page primitives.
+
+- `pnpm --dir packages/windowed-os-ui run storybook` starts the isolated Storybook on port `6016`.
+- `pnpm --dir packages/windowed-os-ui run build:storybook` builds the canonical visual reference.
+- `pnpm --dir packages/windowed-os-ui run test` runs the package guardrails for Storybook coverage and stable-shell leakage.
+- `pnpm --dir packages/windowed-os-ui run build` type-checks the package exports.
+
+Keep stable `@neon-pilot/ui` page chrome out of canonical stories. When a desktop app needs new reusable windowed controls, add them here first, then consume them from the desktop shell or first-party extension windowed branches.
