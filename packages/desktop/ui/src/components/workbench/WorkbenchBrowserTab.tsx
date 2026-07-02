@@ -18,6 +18,7 @@ import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbenchBrowserEvents';
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.reopenTab', 'browser.closeTab', 'browser.focusLocation']);
+const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 450;
 
 function hasBlockingHtmlModal(): boolean {
   if (typeof document === 'undefined') {
@@ -207,6 +208,7 @@ export function WorkbenchBrowserTab({
   const closedRef = useRef(false);
   const tabsStateRef = useRef(tabsState);
   const lastBoundsRequestRef = useRef('');
+  const windowedShellSuspendUntilRef = useRef(0);
   const [state, setState] = useState<DesktopWorkbenchBrowserState | null>(null);
   const [status, setStatus] = useState('');
   const [surfaceKeybindings, setSurfaceKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
@@ -323,6 +325,7 @@ export function WorkbenchBrowserTab({
     }
 
     const blocked =
+      Date.now() < windowedShellSuspendUntilRef.current ||
       hasBlockingHtmlModal() ||
       hasWindowedShellOverlay() ||
       isInsideUnfocusedWindow(host) ||
@@ -370,7 +373,10 @@ export function WorkbenchBrowserTab({
   }, [bridge, browserSessionKey, hideBrowserView, syncUrlDraftFromBrowserState]);
 
   useEffect(() => {
-    const handleSuspend = () => hideBrowserView({ force: true });
+    const handleSuspend = () => {
+      windowedShellSuspendUntilRef.current = Date.now() + WINDOWED_SHELL_BROWSER_SUSPEND_MS;
+      hideBrowserView({ force: true });
+    };
     window.addEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
     return () => window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
   }, [hideBrowserView]);
