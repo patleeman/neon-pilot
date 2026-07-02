@@ -276,6 +276,48 @@ export function WindowedDataTable({ columns, children, className }: WindowedData
   );
 }
 
+export interface WindowedKeyValueItem {
+  label: string;
+  value: ReactNode;
+}
+
+export interface WindowedKeyValueGridProps {
+  items: WindowedKeyValueItem[];
+  columns?: 1 | 2 | 3 | 4;
+  className?: string;
+}
+
+export function WindowedKeyValueGrid({ items, columns = 3, className }: WindowedKeyValueGridProps) {
+  return (
+    <div className={cx('wos-key-value-grid', className)} data-columns={columns}>
+      {items.map((item) => (
+        <div key={item.label} className="wos-key-value-grid__item">
+          <div className="wos-key-value__label">{item.label}</div>
+          <div className="wos-key-value__value">{item.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export interface WindowedKeyValueListProps {
+  items: WindowedKeyValueItem[];
+  className?: string;
+}
+
+export function WindowedKeyValueList({ items, className }: WindowedKeyValueListProps) {
+  return (
+    <div className={cx('wos-key-value-list', className)}>
+      {items.map((item) => (
+        <div key={item.label} className="wos-key-value-list__item">
+          <div className="wos-key-value__label">{item.label}</div>
+          <div className="wos-key-value__value">{item.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export interface WindowedChatSurfaceProps {
   children: ReactNode;
   className?: string;

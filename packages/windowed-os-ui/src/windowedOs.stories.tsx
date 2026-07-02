@@ -11,6 +11,8 @@ import {
   WindowedChatSurface,
   WindowedDataRow,
   WindowedDataTable,
+  WindowedKeyValueGrid,
+  WindowedKeyValueList,
   WindowedMessageBubble,
   WindowedPageButton,
   WindowedPageInspector,
@@ -188,29 +190,30 @@ export const DenseAppPage: Story = {
             actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}
           >
             <WindowedPageSection title="Runtime" meta="Needs attention">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0, fontSize: 12 }}>
-                {['Token', 'Connection', 'Runtime'].map((label) => (
-                  <div key={label} style={{ borderRight: '1.5px solid var(--wos-ink-900)', padding: 10 }}>
-                    <div className="wos-page-eyebrow">{label}</div>
-                    {label === 'Runtime' ? <WindowedBadge tone="warning">Needs attention</WindowedBadge> : <strong>Configured</strong>}
-                  </div>
-                ))}
-              </div>
+              <WindowedKeyValueGrid
+                items={[
+                  { label: 'Token', value: 'Configured' },
+                  { label: 'Connection', value: 'Configured' },
+                  { label: 'Runtime', value: <WindowedBadge tone="warning">Needs attention</WindowedBadge> },
+                ]}
+              />
             </WindowedPageSection>
             <WindowedPageSection title="Approved users" meta="1 approved">
-              <div style={{ padding: 10, fontSize: 12 }}>1191448898</div>
+              <WindowedKeyValueList items={[{ label: 'User ID', value: '1191448898' }]} />
             </WindowedPageSection>
           </WindowedPageMain>
           <WindowedPageInspector eyebrow="Gateway context" title="Telegram">
             <WindowedPageSection title="Status">
-              <div style={{ display: 'grid', gap: 8, padding: 10, fontSize: 12 }}>
-                <span>Setup /gateways</span>
-                <span>Configuration Gateways page</span>
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  Enabled
-                  <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />
-                </span>
-              </div>
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Setup', value: '/gateways' },
+                  { label: 'Configuration', value: 'Gateways page' },
+                  {
+                    label: 'Enabled',
+                    value: <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />,
+                  },
+                ]}
+              />
             </WindowedPageSection>
           </WindowedPageInspector>
         </WindowedPageShell>
