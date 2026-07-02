@@ -3,12 +3,18 @@ import type { Meta, StoryObj } from '@storybook/react';
 import {
   StartMenu,
   Taskbar,
+  WindowedChatComposer,
+  WindowedChatMain,
+  WindowedChatRail,
+  WindowedChatSurface,
+  WindowedMessageBubble,
   WindowedPageButton,
   WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedThreadItem,
   WindowFrame,
 } from './windowedOs';
 
@@ -46,17 +52,20 @@ export const DesktopComposition: Story = {
           onMaximize={() => undefined}
           onClose={() => undefined}
         >
-          <div style={{ display: 'grid', height: '100%', gridTemplateColumns: '170px 1fr', color: 'var(--wos-ink-900)' }}>
-            <aside style={{ borderRight: '2px solid var(--wos-ink-900)', background: 'var(--wos-surface-2)', padding: 12 }}>
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, textTransform: 'uppercase' }}>Threads</div>
-            </aside>
-            <section style={{ padding: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 17 }}>Windowed chat surface</h2>
-              <p style={{ maxWidth: 520, fontFamily: 'system-ui', fontSize: 13, lineHeight: 1.5 }}>
-                Chat keeps its workbench attached while the shell chrome stays in the windowed OS design language.
-              </p>
-            </section>
-          </div>
+          <WindowedChatSurface>
+            <WindowedChatRail>
+              <WindowedThreadItem title="Release notes" active />
+              <WindowedThreadItem title="Bug triage" meta="2h" />
+              <WindowedThreadItem title="Onboarding copy" meta="1d" />
+              <WindowedThreadItem title="Deploy check" meta="2d" />
+            </WindowedChatRail>
+            <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
+              <WindowedMessageBubble from="user">Draft the changelog for v0.9</WindowedMessageBubble>
+              <WindowedMessageBubble>On it. Pulling merged PRs since the last tag.</WindowedMessageBubble>
+              <WindowedMessageBubble from="user">Group by extension, please.</WindowedMessageBubble>
+              <WindowedMessageBubble>Done. Six groups, linked to their extension pages.</WindowedMessageBubble>
+            </WindowedChatMain>
+          </WindowedChatSurface>
         </WindowFrame>
         <WindowFrame
           title="Gateways"

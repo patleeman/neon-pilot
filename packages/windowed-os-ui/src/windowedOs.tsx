@@ -128,6 +128,94 @@ export function WindowedPageButton({ children, onClick, tone = 'neutral', type =
   );
 }
 
+export interface WindowedChatSurfaceProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedChatSurface({ children, className }: WindowedChatSurfaceProps) {
+  return <div className={cx('wos-chat-surface', className)}>{children}</div>;
+}
+
+export interface WindowedChatRailProps {
+  title?: string;
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedChatRail({ title = 'Threads', children, className }: WindowedChatRailProps) {
+  return (
+    <aside className={cx('wos-chat-rail', className)}>
+      <div className="wos-chat-rail__label">{title}</div>
+      <div className="wos-chat-rail__list">{children}</div>
+    </aside>
+  );
+}
+
+export interface WindowedThreadItemProps {
+  title: string;
+  meta?: string;
+  active?: boolean;
+  onSelect?: () => void;
+}
+
+export function WindowedThreadItem({ title, meta, active = false, onSelect }: WindowedThreadItemProps) {
+  return (
+    <button type="button" className="wos-thread-item" data-active={active} onClick={onSelect}>
+      <span className="wos-thread-item__title">{title}</span>
+      {meta && !active ? <span className="wos-thread-item__meta">{meta}</span> : null}
+    </button>
+  );
+}
+
+export interface WindowedChatMainProps {
+  title: string;
+  children: ReactNode;
+  composer?: ReactNode;
+  className?: string;
+}
+
+export function WindowedChatMain({ title, children, composer, className }: WindowedChatMainProps) {
+  return (
+    <section className={cx('wos-chat-main', className)}>
+      <header className="wos-chat-main__header">{title}</header>
+      <div className="wos-chat-main__messages">{children}</div>
+      {composer ? <div className="wos-chat-main__composer">{composer}</div> : null}
+    </section>
+  );
+}
+
+export interface WindowedMessageBubbleProps {
+  children: ReactNode;
+  from?: 'user' | 'assistant';
+}
+
+export function WindowedMessageBubble({ children, from = 'assistant' }: WindowedMessageBubbleProps) {
+  return (
+    <div className="wos-message-bubble" data-from={from}>
+      {children}
+    </div>
+  );
+}
+
+export interface WindowedChatComposerProps {
+  placeholder?: string;
+  actionLabel?: string;
+}
+
+export function WindowedChatComposer({ placeholder = 'Message Neon Pilot...', actionLabel = 'Send' }: WindowedChatComposerProps) {
+  return (
+    <div className="wos-chat-composer">
+      <div className="wos-chat-composer__input" aria-hidden="true">
+        {placeholder}
+      </div>
+      <button type="button" className="wos-chat-composer__send">
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
 export interface StartMenuItem {
   id: string;
   title: string;

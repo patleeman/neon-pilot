@@ -914,6 +914,169 @@
   background: var(--wos-surface-3);
 }
 
+.wos-chat-surface {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+}
+
+.wos-chat-rail {
+  min-height: 0;
+  overflow: hidden;
+  border-right: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+  padding: 12px 8px;
+}
+
+.wos-chat-rail__label {
+  color: var(--wos-ink-500);
+  padding: 2px 4px 8px;
+  font-family: 'IBM Plex Mono', 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wos-chat-rail__list {
+  display: grid;
+  gap: 2px;
+}
+
+.wos-thread-item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wos-ink-700);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.wos-thread-item:hover {
+  background: var(--wos-surface-3);
+}
+
+.wos-thread-item[data-active='true'] {
+  background: var(--wos-chat);
+  color: white;
+}
+
+.wos-thread-item__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wos-thread-item__meta {
+  flex-shrink: 0;
+  color: var(--wos-ink-400);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.wos-chat-main {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--wos-surface-1);
+}
+
+.wos-chat-main__header {
+  min-width: 0;
+  overflow: hidden;
+  border-bottom: 2px solid var(--wos-ink-900);
+  padding: 10px 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.wos-chat-main__messages {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+  padding: 16px;
+}
+
+.wos-message-bubble {
+  max-width: min(72ch, 76%);
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 11px;
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-900);
+  padding: 8px 10px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.wos-message-bubble[data-from='user'] {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--wos-chat);
+  color: white;
+}
+
+.wos-message-bubble[data-from='assistant'] {
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.wos-chat-main__composer {
+  border-top: 2px solid var(--wos-ink-900);
+  padding: 10px 16px 14px;
+}
+
+.wos-chat-composer {
+  display: grid;
+  gap: 8px;
+}
+
+.wos-chat-composer__input {
+  min-height: 34px;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 11px;
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-500);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.wos-chat-composer__send {
+  justify-self: end;
+  min-height: 30px;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 9px;
+  background: var(--wos-chat);
+  color: white;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wos-chat-composer__send:hover {
+  background: var(--wos-surface-3);
+  color: var(--wos-ink-900);
+}
+
 .wos-menu-panel {
   position: absolute;
   left: 0;
