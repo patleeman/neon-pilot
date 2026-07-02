@@ -1,0 +1,483 @@
+.windowed-os-shell {
+  --wos-ink-900: oklch(20% 0.01 60);
+  --wos-ink-700: oklch(34% 0.018 60);
+  --wos-ink-500: oklch(51% 0.025 60);
+  --wos-surface-0: oklch(95% 0.022 75);
+  --wos-surface-1: oklch(99% 0.01 75);
+  --wos-surface-2: oklch(97% 0.02 75);
+  --wos-surface-3: oklch(92% 0.026 75);
+  --wos-chat: oklch(70% 0.14 245);
+  --wos-routines: oklch(72% 0.15 145);
+  --wos-automations: oklch(72% 0.14 295);
+  --wos-gateways: oklch(73% 0.12 190);
+  --wos-extensions: oklch(74% 0.17 48);
+  --wos-telemetry: oklch(72% 0.15 22);
+  --wos-settings: oklch(82% 0.035 75);
+  --wos-shadow-window: 0 22px 54px oklch(20% 0.01 60 / 0.18), 0 5px 0 oklch(20% 0.01 60 / 0.06);
+  --wos-shadow-menu: 0 24px 60px oklch(20% 0.01 60 / 0.2), 0 3px 0 oklch(20% 0.01 60 / 0.08);
+  --wos-titlebar-h: 42px;
+  --wos-taskbar-h: 42px;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--wos-surface-0);
+  color: var(--wos-ink-900);
+  font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  position: relative;
+}
+
+.windowed-os-shell *,
+.windowed-os-shell *::before,
+.windowed-os-shell *::after {
+  box-sizing: border-box;
+}
+
+.windowed-os-shell button {
+  font: inherit;
+}
+
+.wos-desktop {
+  position: relative;
+  height: calc(100vh - var(--wos-taskbar-h));
+  overflow: hidden;
+  background: radial-gradient(circle at 92% 11%, oklch(90% 0.09 48 / 0.7) 0 130px, transparent 132px), var(--wos-surface-0);
+  -webkit-app-region: drag;
+}
+
+.wos-taskbar,
+.wos-start-menu,
+.wos-window,
+.wos-window *,
+.wos-taskbar *,
+.wos-start-menu * {
+  -webkit-app-region: no-drag;
+}
+
+.wos-taskbar {
+  position: relative;
+  z-index: 1000;
+  display: flex;
+  height: var(--wos-taskbar-h);
+  align-items: center;
+  gap: 8px;
+  border-top: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-1);
+  padding: 4px 8px;
+  box-shadow: 0 -8px 24px oklch(20% 0.01 60 / 0.08);
+}
+
+.wos-taskbar__start,
+.wos-taskbar__button,
+.wos-start-menu__item,
+.wos-start-menu__stable,
+.wos-window__controls button {
+  border: 2px solid var(--wos-ink-900);
+  color: var(--wos-ink-900);
+  background: var(--wos-surface-1);
+  cursor: default;
+}
+
+.wos-taskbar__start,
+.wos-taskbar__button {
+  display: inline-flex;
+  height: 32px;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border-radius: 9px;
+  padding: 0 10px 0 6px;
+  white-space: nowrap;
+}
+
+.wos-taskbar__start {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.wos-taskbar__items {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.wos-taskbar__group {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.wos-taskbar__button {
+  max-width: 220px;
+  background: var(--wos-surface-2);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.wos-taskbar__button[data-focused='true'] {
+  background: var(--wos-settings);
+  box-shadow: inset 0 -3px 0 var(--wos-ink-900);
+}
+
+.wos-taskbar__button[data-minimized='true'] {
+  color: var(--wos-ink-500);
+}
+
+.wos-taskbar__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wos-taskbar__count {
+  margin-left: 5px;
+  color: var(--wos-ink-500);
+}
+
+.wos-app-monogram {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-settings);
+  color: var(--wos-ink-900);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.wos-app-monogram[data-accent='chat'],
+.wos-window__titlebar[data-accent='chat'] {
+  background: var(--wos-chat);
+}
+
+.wos-app-monogram[data-accent='routines'],
+.wos-window__titlebar[data-accent='routines'] {
+  background: var(--wos-routines);
+}
+
+.wos-app-monogram[data-accent='automations'],
+.wos-window__titlebar[data-accent='automations'] {
+  background: var(--wos-automations);
+}
+
+.wos-app-monogram[data-accent='gateways'],
+.wos-window__titlebar[data-accent='gateways'] {
+  background: var(--wos-gateways);
+}
+
+.wos-app-monogram[data-accent='extensions'],
+.wos-window__titlebar[data-accent='extensions'] {
+  background: var(--wos-extensions);
+}
+
+.wos-app-monogram[data-accent='telemetry'],
+.wos-window__titlebar[data-accent='telemetry'] {
+  background: var(--wos-telemetry);
+}
+
+.wos-app-monogram[data-accent='settings'],
+.wos-window__titlebar[data-accent='settings'] {
+  background: var(--wos-settings);
+}
+
+.wos-start-menu {
+  position: absolute;
+  left: 8px;
+  bottom: calc(var(--wos-taskbar-h) + 8px);
+  z-index: 1001;
+  width: min(390px, calc(100vw - 16px));
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 16px;
+  background: var(--wos-surface-1);
+  box-shadow: var(--wos-shadow-menu);
+  overflow: hidden;
+}
+
+.wos-start-menu__header,
+.wos-start-menu__footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+  padding: 10px;
+}
+
+.wos-start-menu__footer {
+  justify-content: flex-end;
+  border-top: 2px solid var(--wos-ink-900);
+  border-bottom: 0;
+}
+
+.wos-start-menu__title {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.wos-start-menu__meta,
+.wos-start-menu__item-meta {
+  color: var(--wos-ink-500);
+  font-family: 'IBM Plex Mono', 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.wos-start-menu__grid {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+}
+
+.wos-start-menu__item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border-radius: 11px;
+  padding: 8px;
+  text-align: left;
+}
+
+.wos-start-menu__item:hover,
+.wos-taskbar__button:hover,
+.wos-taskbar__start:hover,
+.wos-start-menu__stable:hover,
+.wos-window__controls button:hover {
+  background: var(--wos-surface-3);
+}
+
+.wos-start-menu__item-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.wos-start-menu__item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wos-start-menu__stable {
+  height: 30px;
+  border-radius: 9px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wos-window {
+  position: absolute;
+  isolation: isolate;
+  display: grid;
+  min-width: 360px;
+  min-height: 260px;
+  grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);
+  overflow: hidden;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 14px;
+  background: var(--wos-surface-1);
+  box-shadow: var(--wos-shadow-window);
+}
+
+.wos-window[data-focused='false'] {
+  box-shadow: 0 14px 32px oklch(20% 0.01 60 / 0.12);
+}
+
+.wos-window__titlebar {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  min-width: 0;
+  user-select: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid var(--wos-ink-900);
+  padding: 0 8px;
+  touch-action: none;
+}
+
+.wos-window__identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.wos-window__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wos-window__controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.wos-window__controls button {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.wos-window__body {
+  min-height: 0;
+  overflow: hidden;
+  background: var(--wos-surface-1);
+}
+
+.wos-window-route-body {
+  position: relative;
+  z-index: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: rgb(var(--color-base));
+  font-family: 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+}
+
+.wos-window-route-body > * {
+  min-height: 100%;
+}
+
+.wos-menu-panel {
+  position: absolute;
+  left: 0;
+  bottom: 38px;
+  z-index: 1002;
+  min-width: 280px;
+  overflow: hidden;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 14px;
+  background: var(--wos-surface-1);
+  box-shadow: var(--wos-shadow-menu);
+}
+
+.wos-menu-panel button {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  background: transparent;
+  color: var(--wos-ink-900);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wos-menu-panel button:last-child {
+  border-bottom: 0;
+}
+
+.wos-menu-panel button:hover {
+  background: var(--wos-surface-2);
+}
+
+.wos-snap-preview {
+  pointer-events: none;
+  position: absolute;
+  z-index: 900;
+  border: 2px dashed var(--wos-ink-900);
+  border-radius: 14px;
+  background: oklch(70% 0.14 245 / 0.22);
+  box-shadow: inset 0 0 0 5px oklch(99% 0.01 75 / 0.65);
+}
+
+.wos-resize-handle {
+  position: absolute;
+  z-index: 50;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+}
+
+.wos-resize-n,
+.wos-resize-s {
+  left: 18px;
+  right: 18px;
+  height: 14px;
+  cursor: ns-resize;
+}
+
+.wos-resize-e,
+.wos-resize-w {
+  top: 18px;
+  bottom: 18px;
+  width: 14px;
+  cursor: ew-resize;
+}
+
+.wos-resize-n {
+  top: 0;
+}
+
+.wos-resize-s {
+  bottom: 0;
+}
+
+.wos-resize-e {
+  right: 0;
+}
+
+.wos-resize-w {
+  left: 0;
+}
+
+.wos-resize-ne,
+.wos-resize-nw,
+.wos-resize-se,
+.wos-resize-sw {
+  width: 24px;
+  height: 24px;
+}
+
+.wos-resize-ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.wos-resize-nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.wos-resize-se {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.wos-resize-sw {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.windowed-os-shell button:focus-visible {
+  outline: 2px solid var(--wos-ink-900);
+  outline-offset: 2px;
+}

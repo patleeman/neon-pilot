@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@neon-pilot/ui': resolve(__dirname, '../../../packages/ui/src/index.ts'),
+      '@neon-pilot/windowed-os-ui': resolve(__dirname, '../../../packages/windowed-os-ui/src/index.ts'),
       '@neon-pilot/extensions/host': resolve(__dirname, 'src/extensions/host.ts'),
       '@neon-pilot/extensions/ui': resolve(__dirname, 'src/extensions/ui.ts'),
       '@neon-pilot/extensions/workbench': resolve(__dirname, 'src/extensions/workbench.ts'),

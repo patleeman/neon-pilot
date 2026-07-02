@@ -1,3 +1,4 @@
+import { type AppAccent, StartMenu, type StartMenuItem, Taskbar, type TaskbarItem, WindowFrame } from '@neon-pilot/windowed-os-ui';
 import { type CSSProperties, Fragment, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
@@ -53,7 +54,7 @@ type ResizeState = DragState & {
   edge: ResizeEdge;
 };
 
-const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-shell-windows';
+const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
 const MIN_WINDOW_HEIGHT = 260;
 
@@ -72,7 +73,7 @@ function defaultBounds(index: number, kind: WindowKind): WindowBounds {
   if (kind === 'chat') {
     return { x: 42 + offset, y: 34 + offset, width: 980, height: 680 };
   }
-  return { x: 128 + offset, y: 86 + offset, width: 820, height: 560 };
+  return { x: 112 + offset, y: 72 + offset, width: 1040, height: 650 };
 }
 
 function readStoredWindows(): DesktopWindowModel[] {
@@ -160,6 +161,17 @@ function buildLauncherItems(extensionRegistry: ReturnType<typeof useExtensionReg
   return [STATIC_LAUNCHER_ITEMS[0]!, ...dynamic, STATIC_LAUNCHER_ITEMS[1]!];
 }
 
+function accentForTitle(title: string): AppAccent {
+  const normalized = title.toLowerCase();
+  if (normalized.includes('chat') || normalized.includes('conversation')) return 'chat';
+  if (normalized.includes('routine')) return 'routines';
+  if (normalized.includes('automation')) return 'automations';
+  if (normalized.includes('gateway') || normalized.includes('model')) return 'gateways';
+  if (normalized.includes('extension')) return 'extensions';
+  if (normalized.includes('telemetry') || normalized.includes('run')) return 'telemetry';
+  return 'settings';
+}
+
 function desktopRect(element: HTMLElement | null): DesktopRect {
   return { width: element?.clientWidth ?? window.innerWidth, height: element?.clientHeight ?? window.innerHeight };
 }
@@ -217,7 +229,7 @@ function WindowRouteBody({ route }: { route: string }) {
   const isChatRoute = route.startsWith('/conversations');
 
   return (
-    <div className="windowed-shell-route-body">
+    <div className="wos-window-route-body">
       <Routes location={routeLocation(route)}>
         <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench={isChatRoute} />}>
           <Route
@@ -565,27 +577,27 @@ export function WindowedLayout() {
     const handleMouseDown = (event: MouseEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (!target) return;
-      const windowElement = target.closest<HTMLElement>('.windowed-shell-window');
+      const windowElement = target.closest<HTMLElement>('.wos-window');
       const windowId = windowElement?.dataset.windowId;
       const windowModel = windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
       if (!windowModel) return;
 
-      const resizeHandle = target.closest<HTMLElement>('.windowed-shell-resize-handle');
+      const resizeHandle = target.closest<HTMLElement>('.wos-resize-handle');
       const edge = (resizeHandle?.dataset.resizeEdge as ResizeEdge | undefined) ?? resizeEdgeForPointer(event, windowElement);
       if (edge) {
         startResize(event, windowModel, edge);
         return;
       }
 
-      if (target.closest('.windowed-shell-window-titlebar')) {
+      if (target.closest('.wos-window__titlebar')) {
         startDrag(event, windowModel);
       }
     };
     const handleDoubleClick = (event: MouseEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (!target || target.closest('button')) return;
-      const titlebar = target.closest<HTMLElement>('.windowed-shell-window-titlebar');
-      const windowElement = target.closest<HTMLElement>('.windowed-shell-window');
+      const titlebar = target.closest<HTMLElement>('.wos-window__titlebar');
+      const windowElement = target.closest<HTMLElement>('.wos-window');
       const windowId = titlebar && windowElement?.dataset.windowId;
       const windowModel = windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
       if (!windowModel) return;
@@ -603,144 +615,92 @@ export function WindowedLayout() {
 
   const activeChatWindow = chatWindows.find((windowModel) => windowModel.focused) ?? chatWindows[0] ?? null;
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
+  const startMenuItems = launcherItems.map(
+    (item): StartMenuItem => ({
+      id: item.id,
+      title: item.title,
+      accent: accentForTitle(item.title),
+      meta: item.kind === 'chat' ? `${chatWindows.length || 1} window${chatWindows.length === 1 ? '' : 's'}` : item.route,
+      onSelect: () => openLauncherItem(item),
+    }),
+  );
+  const routeTaskItems = windows
+    .filter((windowModel) => windowModel.kind !== 'chat')
+    .map(
+      (windowModel): TaskbarItem => ({
+        id: windowModel.id,
+        title: windowModel.title,
+        focused: windowModel.focused,
+        minimized: windowModel.minimized,
+        accent: accentForTitle(windowModel.title),
+        onSelect: () => focusWindow(windowModel.id),
+      }),
+    );
 
   return (
-    <div className="windowed-shell h-screen overflow-hidden bg-base text-primary">
-      <header className="windowed-shell-topbar">
-        <div className="ui-desktop-top-bar__traffic-light-gap" aria-hidden="true" />
-        <div
-          className="windowed-shell-menu"
-          onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && setLauncherOpen(false)}
-        >
-          {/* ui-pattern-ok raw-control reason="Experimental desktop chrome uses native menu buttons so window dragging and task grouping stay independent of shared app command primitives." */}
-          <button
-            type="button"
-            className="windowed-shell-menu-button"
-            aria-haspopup="menu"
-            aria-expanded={launcherOpen}
-            onClick={() => setLauncherOpen((open) => !open)}
+    <div className="windowed-os-shell h-screen overflow-hidden">
+      <StartMenu
+        open={launcherOpen}
+        items={startMenuItems}
+        onSelectStableShell={() => {
+          writeDesktopShellPresentation('stable');
+          window.location.assign('/?shell=stable');
+        }}
+      />
+      <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
+        {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
+        {visibleWindows.map((windowModel, index) => (
+          <WindowFrame
+            key={windowModel.id}
+            windowId={windowModel.id}
+            title={windowModel.title}
+            accent={accentForTitle(windowModel.title)}
+            focused={windowModel.focused}
+            style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
+            onPointerDown={() => focusWindow(windowModel.id)}
+            onMinimize={() => minimizeWindow(windowModel.id)}
+            onMaximize={() => toggleMaximize(windowModel)}
+            onClose={() => closeWindow(windowModel)}
+            restoreLabel={restoreBounds[windowModel.id] ? `Restore ${windowModel.title}` : `Maximize ${windowModel.title}`}
+            resizeHandles={(['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'] as ResizeEdge[]).map((edge) => (
+              <div key={edge} className={`wos-resize-handle wos-resize-${edge}`} data-resize-edge={edge} aria-hidden="true" />
+            ))}
           >
-            Applications
-          </button>
-          {launcherOpen ? (
-            <div className="windowed-shell-menu-panel" role="menu">
-              {launcherItems.map((item) => (
-                <Fragment key={item.id}>
-                  {/* ui-pattern-ok raw-control reason="Experimental desktop launcher menu uses native menuitem buttons inside delegated window chrome." */}
-                  <button type="button" role="menuitem" onClick={() => openLauncherItem(item)}>
-                    {item.title}
-                  </button>
-                </Fragment>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <nav className="windowed-shell-task-strip" aria-label="Open windows">
-          <div
-            className="windowed-shell-chat-group"
-            onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && setChatMenuOpen(false)}
-          >
-            {/* ui-pattern-ok raw-control reason="Experimental desktop task group uses native button chrome to group multiple chat windows." */}
-            <button
-              type="button"
-              className="windowed-shell-task-button"
-              data-focused={activeChatWindow?.id === focusedWindowId}
-              onClick={() => setChatMenuOpen((open) => !open)}
-            >
-              Chat {chatWindows.length > 0 ? `(${chatWindows.length})` : ''}
-            </button>
-            {chatMenuOpen ? (
-              <div className="windowed-shell-menu-panel windowed-shell-chat-menu" role="menu">
-                {/* ui-pattern-ok raw-control reason="Experimental desktop chat menu uses native menuitem buttons inside delegated window chrome." */}
+            <WindowRouteBody route={windowModel.route} />
+          </WindowFrame>
+        ))}
+      </main>
+      <Taskbar
+        startOpen={launcherOpen}
+        onToggleStart={() => setLauncherOpen((open) => !open)}
+        groups={[
+          {
+            id: 'chat',
+            title: 'Chat',
+            accent: 'chat',
+            focused: activeChatWindow?.id === focusedWindowId,
+            count: chatWindows.length,
+            onSelect: () => setChatMenuOpen((open) => !open),
+            menu: chatMenuOpen ? (
+              <div className="wos-menu-panel" role="menu">
+                {/* ui-pattern-ok raw-control reason="Windowed OS taskbar menus use package-owned native menuitem buttons so app-shell grouping stays independent of route UI primitives." */}
                 <button type="button" role="menuitem" onClick={() => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!)}>
                   New conversation
                 </button>
                 {chatSessions.map((session) => (
                   <Fragment key={session.id}>
-                    {/* ui-pattern-ok raw-control reason="Experimental desktop chat menu uses native menuitem buttons for per-chat window activation." */}
+                    {/* ui-pattern-ok raw-control reason="Windowed OS taskbar menus use package-owned native menuitem buttons so each chat window can restore without importing route UI primitives." */}
                     <button type="button" role="menuitem" onClick={() => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!, session)}>
                       {conversationWindowTitle(session)}
                     </button>
                   </Fragment>
                 ))}
               </div>
-            ) : null}
-          </div>
-          {windows
-            .filter((windowModel) => windowModel.kind !== 'chat')
-            .map((windowModel) => (
-              <Fragment key={windowModel.id}>
-                {/* ui-pattern-ok raw-control reason="Experimental desktop task strip uses native buttons to restore and focus route windows." */}
-                <button
-                  type="button"
-                  className="windowed-shell-task-button"
-                  data-focused={windowModel.focused}
-                  data-minimized={windowModel.minimized}
-                  onClick={() => focusWindow(windowModel.id)}
-                >
-                  {windowModel.title}
-                </button>
-              </Fragment>
-            ))}
-        </nav>
-        {/* ui-pattern-ok raw-control reason="Experimental desktop shell switcher must stay available outside shared route content primitives." */}
-        <button
-          type="button"
-          className="windowed-shell-stable-button"
-          onClick={() => {
-            writeDesktopShellPresentation('stable');
-            window.location.assign('/?shell=stable');
-          }}
-        >
-          Stable shell
-        </button>
-      </header>
-      <main ref={desktopRef} className="windowed-shell-desktop" aria-label="Windowed Neon Pilot desktop">
-        {snapPreview ? <div className="windowed-shell-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
-        {visibleWindows.map((windowModel, index) => (
-          <section
-            key={windowModel.id}
-            className="windowed-shell-window"
-            data-window-id={windowModel.id}
-            data-focused={windowModel.focused}
-            style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
-            onPointerDown={() => focusWindow(windowModel.id)}
-          >
-            <header className="windowed-shell-window-titlebar">
-              <div className="windowed-shell-window-title" title={windowModel.title}>
-                {windowModel.title}
-              </div>
-              <div className="windowed-shell-window-controls">
-                {/* ui-pattern-ok raw-control reason="Experimental desktop titlebar controls use native buttons for compact window chrome semantics." */}
-                <button type="button" aria-label={`Minimize ${windowModel.title}`} onClick={() => minimizeWindow(windowModel.id)}>
-                  -
-                </button>
-                {/* ui-pattern-ok raw-control reason="Experimental desktop titlebar controls use native buttons for compact window chrome semantics." */}
-                <button
-                  type="button"
-                  aria-label={restoreBounds[windowModel.id] ? `Restore ${windowModel.title}` : `Maximize ${windowModel.title}`}
-                  onClick={() => toggleMaximize(windowModel)}
-                >
-                  □
-                </button>
-                {/* ui-pattern-ok raw-control reason="Experimental desktop titlebar controls use native buttons for compact window chrome semantics." */}
-                <button type="button" aria-label={`Close ${windowModel.title}`} onClick={() => closeWindow(windowModel)}>
-                  ×
-                </button>
-              </div>
-            </header>
-            <WindowRouteBody route={windowModel.route} />
-            {(['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'] as ResizeEdge[]).map((edge) => (
-              <div
-                key={edge}
-                className={`windowed-shell-resize-handle windowed-shell-resize-${edge}`}
-                data-resize-edge={edge}
-                aria-hidden="true"
-              />
-            ))}
-          </section>
-        ))}
-      </main>
+            ) : null,
+          },
+        ]}
+        items={routeTaskItems}
+      />
     </div>
   );
 }

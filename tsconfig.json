@@ -18,6 +18,7 @@
       "@neon-pilot/daemon": ["./packages/desktop/server/daemon"],
       "@neon-pilot/extensions": ["./packages/extensions/src"],
       "@neon-pilot/ui": ["./packages/ui/src"],
+      "@neon-pilot/windowed-os-ui": ["./packages/windowed-os-ui/src"],
       "@neon-pilot/extensions/host": ["./packages/desktop/ui/src/extensions/host"],
       "@neon-pilot/extensions/ui": ["./packages/desktop/ui/src/extensions/ui"],
       "@neon-pilot/extensions/workbench": ["./packages/desktop/ui/src/extensions/workbench"],
@@ -32,6 +33,7 @@
     { "path": "./packages/core" },
     { "path": "./packages/extensions" },
     { "path": "./packages/ui" },
+    { "path": "./packages/windowed-os-ui" },
     { "path": "./packages/desktop" }
   ],
   "files": [],

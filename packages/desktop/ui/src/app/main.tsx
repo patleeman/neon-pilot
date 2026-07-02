@@ -10,8 +10,13 @@ import './wdyr.ts';
 
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
+import '@fontsource-variable/space-grotesk';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
 import './index.css';
 import '../../../../ui/src/styles.css';
+import '../../../../windowed-os-ui/src/styles.css';
 import '../extensions/extensionRegistryPrewarm';
 
 import { StrictMode } from 'react';
