@@ -39,7 +39,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -656,7 +655,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
     ];
 
     return (
-      <WindowedPageShell>
+      <WindowedPageShell layout="two-column">
         <WindowedPageRail title="Skills" accent="extensions">
           <WindowedPageSection title="Views" meta={view === 'marketplace' ? marketplaceFilterSummary : `${skillCounts.enabled} on`}>
             <WindowedList>
@@ -720,6 +719,17 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
               </WindowedPageButton>
             </form>
           </WindowedPageSection>
+
+          {notice ? (
+            <WindowedPageSection>
+              <Notice tone={notice.tone}>{notice.message}</Notice>
+            </WindowedPageSection>
+          ) : null}
+          {skillsError ? (
+            <WindowedPageSection>
+              <Notice tone="warning">Installed skill management is unavailable: {skillsError}</Notice>
+            </WindowedPageSection>
+          ) : null}
 
           {view === 'marketplace' ? (
             <>
@@ -900,32 +910,11 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
               )}
             </WindowedPageSection>
           )}
-        </WindowedPageMain>
 
-        <WindowedPageInspector
-          eyebrow="Skill context"
-          title={
-            selectedWindowedSelection
-              ? selectedWindowedSelection.kind === 'marketplace'
-                ? selectedWindowedSelection.candidate.title
-                : selectedWindowedSelection.skill.name
-              : 'Select a skill'
-          }
-        >
-          {notice ? (
-            <WindowedPageSection>
-              <Notice tone={notice.tone}>{notice.message}</Notice>
-            </WindowedPageSection>
-          ) : null}
-          {skillsError ? (
-            <WindowedPageSection>
-              <Notice tone="warning">Installed skill management is unavailable: {skillsError}</Notice>
-            </WindowedPageSection>
-          ) : null}
           {selectedWindowedSelection ? (
             selectedWindowedSelection.kind === 'marketplace' ? (
               <>
-                <WindowedPageSection title="Details">
+                <WindowedPageSection title={selectedWindowedSelection.candidate.title} meta="Marketplace skill">
                   {selectedWindowedSelection.candidate.description ? (
                     <p className="text-[12px] leading-5 text-secondary">{selectedWindowedSelection.candidate.description}</p>
                   ) : null}
@@ -954,7 +943,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
               </>
             ) : (
               <>
-                <WindowedPageSection title="Details">
+                <WindowedPageSection title={selectedWindowedSelection.skill.name} meta="Installed skill">
                   {selectedWindowedSelection.skill.description ? (
                     <p className="text-[12px] leading-5 text-secondary">{selectedWindowedSelection.skill.description}</p>
                   ) : null}
@@ -979,7 +968,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
               body="Select a skill to inspect its source, trust level, install state, and local path."
             />
           )}
-        </WindowedPageInspector>
+        </WindowedPageMain>
       </WindowedPageShell>
     );
   }
