@@ -26,6 +26,17 @@ import {
   QuietLoadingState,
   SegmentedControl,
   StatGrid,
+  WindowedBadge,
+  WindowedKeyValueGrid,
+  WindowedKeyValueList,
+  WindowedList,
+  WindowedListItem,
+  WindowedPageButton,
+  WindowedPageInspector,
+  WindowedPageMain,
+  WindowedPageRail,
+  WindowedPageSection,
+  WindowedPageShell,
 } from '@neon-pilot/extensions/ui';
 import React, { useState } from 'react';
 
@@ -44,7 +55,7 @@ import { TracesToolHealth } from './traces/TracesToolHealth';
 import type { TraceRange } from './traces/useTracesData';
 import { useTracesData } from './traces/useTracesData';
 
-export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
+export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
   const [range, setRange] = useState<TraceRange>('24h');
   const {
     summary,
@@ -78,6 +89,35 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
   );
 
   if (error) {
+    if (context?.shellPresentation === 'windowed') {
+      return (
+        <WindowedPageShell>
+          <WindowedPageRail title="Diagnostics" accent="telemetry">
+            <WindowedRangeSelector value={range} onChange={setRange} />
+          </WindowedPageRail>
+          <WindowedPageMain
+            eyebrow="Diagnostics"
+            title="Diagnostics unavailable"
+            actions={<WindowedPageButton onClick={refetch}>Try again</WindowedPageButton>}
+          >
+            <WindowedPageSection>
+              <ErrorState message={error} />
+            </WindowedPageSection>
+          </WindowedPageMain>
+          <WindowedPageInspector eyebrow="Data context" title="Load failed">
+            <WindowedPageSection title="Status">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Range', value: range.toUpperCase() },
+                  { label: 'State', value: 'Error' },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageInspector>
+        </WindowedPageShell>
+      );
+    }
+
     return (
       <div className="h-full overflow-y-auto">
         <AppPageLayout contentClassName="space-y-6">
@@ -89,6 +129,121 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
           </Button>
         </AppPageLayout>
       </div>
+    );
+  }
+
+  if (context?.shellPresentation === 'windowed') {
+    const usageSection =
+      loading && !summary ? (
+        <QuietLoadingState label="Loading diagnostics" className="min-h-24" />
+      ) : !summary ? (
+        <EmptyState
+          align="start"
+          title="No diagnostics yet"
+          body={
+            loading
+              ? 'Diagnostics will fill in after retained usage, tool, and context data loads.'
+              : 'Diagnostics fill in after conversations produce retained usage, tool, and context data.'
+          }
+        />
+      ) : !hasDiagnosticActivity ? (
+        <EmptyState
+          align="start"
+          title="No diagnostic activity in this range"
+          body="Diagnostics populate after conversations, tools, and model runs produce retained usage data."
+        />
+      ) : null;
+
+    return (
+      <WindowedPageShell>
+        <WindowedPageRail title="Diagnostics" accent="telemetry">
+          <WindowedRangeSelector value={range} onChange={setRange} />
+          <WindowedPageSection title="Data" meta={loading ? 'Loading' : summary ? 'Loaded' : 'Empty'}>
+            <WindowedKeyValueList
+              items={[
+                { label: 'Sessions', value: summary ? `${summary.activeSessions}` : '0' },
+                { label: 'Runs', value: summary ? `${summary.runsToday}` : '0' },
+                { label: 'Tools', value: summary ? `${summary.toolCalls}` : '0' },
+              ]}
+            />
+          </WindowedPageSection>
+        </WindowedPageRail>
+
+        <WindowedPageMain
+          eyebrow="Local observability"
+          title="Diagnostics"
+          actions={<WindowedPageButton onClick={refetch}>{loading ? 'Refreshing' : 'Refresh'}</WindowedPageButton>}
+        >
+          {summary ? (
+            <WindowedPageSection title="Overview" meta={range.toUpperCase()}>
+              <WindowedPulseGrid summary={summary} />
+            </WindowedPageSection>
+          ) : null}
+
+          {usageSection ? <WindowedPageSection title="Usage">{usageSection}</WindowedPageSection> : null}
+
+          {summary && hasDiagnosticActivity ? (
+            <>
+              <WindowedPageSection title="Usage" meta="Tokens and models">
+                <div className="space-y-4">
+                  {tokensDaily && <TracesHeatmap data={tokensDaily} />}
+                  {tokensDaily && <TracesDailyUsage data={tokensDaily} />}
+                  {modelUsage && (
+                    <TracesModelUsage
+                      models={modelUsage}
+                      throughput={throughput ?? []}
+                      totalTokens={modelUsage.reduce((total, model) => total + model.tokens, 0)}
+                      tokensInput={summary.tokensInput}
+                      tokensOutput={summary.tokensOutput}
+                      tokensCached={summary.tokensCached}
+                      tokensCachedWrite={summary.tokensCachedWrite}
+                      cacheHitRate={summary.cacheHitRate}
+                      cacheEfficiency={cacheEfficiency}
+                    />
+                  )}
+                  {tokensDaily && <TracesBraidChart data={tokensDaily} />}
+                </div>
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Tools" meta={`${summary.toolCalls} calls`}>
+                <div className="space-y-4">
+                  {toolHealth && <TracesToolHealth tools={toolHealth} />}
+                  <TracesToolFlow data={toolFlow} />
+                </div>
+              </WindowedPageSection>
+
+              <WindowedPageSection title="App activity" meta="Context and runtime">
+                <div className="space-y-4">
+                  <TracesContextPointers data={contextPointers} />
+                  <TracesAutoMode data={autoMode} />
+                  <TracesSessionIntegrity events={sessionIntegrity ?? []} />
+                  <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
+                  <TracesContextPressure sessions={contextSessions ?? []} compactions={compactions ?? []} compactionAggs={compactionAggs} />
+                  <TracesAgentLoop loop={agentLoop} />
+                </div>
+              </WindowedPageSection>
+            </>
+          ) : null}
+        </WindowedPageMain>
+
+        <WindowedPageInspector eyebrow="Diagnostics context" title={summary ? 'Current range' : 'Waiting for data'}>
+          <WindowedPageSection title="Status">
+            <WindowedKeyValueList
+              items={[
+                { label: 'Range', value: range.toUpperCase() },
+                { label: 'Activity', value: hasDiagnosticActivity ? 'Present' : 'None' },
+                { label: 'Loading', value: loading ? 'Yes' : 'No' },
+                { label: 'Errors', value: summary ? `${summary.toolErrors}` : '0' },
+              ]}
+            />
+          </WindowedPageSection>
+          <WindowedPageSection title="Health">
+            <WindowedBadge tone={summary?.toolErrors ? 'danger' : hasDiagnosticActivity ? 'positive' : 'neutral'}>
+              {summary?.toolErrors ? 'Needs attention' : hasDiagnosticActivity ? 'Active' : 'Quiet'}
+            </WindowedBadge>
+          </WindowedPageSection>
+        </WindowedPageInspector>
+      </WindowedPageShell>
     );
   }
 
@@ -203,16 +358,35 @@ export function TelemetryPage({ pa }: ExtensionSurfaceProps) {
 
 // ── Time Range Selector ──────────────────────────────────────────────────────
 
-function TimeRangeSelector({ value, onChange }: { value: TraceRange; onChange: (v: TraceRange) => void }) {
-  const options: { label: string; value: TraceRange }[] = [
-    { label: '1H', value: '1h' },
-    { label: '6H', value: '6h' },
-    { label: '24H', value: '24h' },
-    { label: '7D', value: '7d' },
-    { label: '30D', value: '30d' },
-  ];
+const TRACE_RANGE_OPTIONS: { label: string; value: TraceRange }[] = [
+  { label: '1H', value: '1h' },
+  { label: '6H', value: '6h' },
+  { label: '24H', value: '24h' },
+  { label: '7D', value: '7d' },
+  { label: '30D', value: '30d' },
+];
 
-  return <SegmentedControl ariaLabel="Telemetry time range" value={value} options={options} onChange={onChange} />;
+function WindowedRangeSelector({ value, onChange }: { value: TraceRange; onChange: (v: TraceRange) => void }) {
+  return (
+    <WindowedPageSection title="Range" meta={value.toUpperCase()}>
+      <WindowedList>
+        {TRACE_RANGE_OPTIONS.map((option) => (
+          <WindowedListItem
+            key={option.value}
+            title={option.label}
+            meta={option.value === value ? 'Selected' : 'Telemetry range'}
+            active={option.value === value}
+            accent="telemetry"
+            onSelect={() => onChange(option.value)}
+          />
+        ))}
+      </WindowedList>
+    </WindowedPageSection>
+  );
+}
+
+function TimeRangeSelector({ value, onChange }: { value: TraceRange; onChange: (v: TraceRange) => void }) {
+  return <SegmentedControl ariaLabel="Telemetry time range" value={value} options={TRACE_RANGE_OPTIONS} onChange={onChange} />;
 }
 
 function RefreshIcon() {
@@ -279,6 +453,24 @@ function PulseRow({ summary }: { summary: NonNullable<ReturnType<typeof useTrace
         />
       ))}
     </StatGrid>
+  );
+}
+
+function WindowedPulseGrid({ summary }: { summary: NonNullable<ReturnType<typeof useTracesData>['summary']> }) {
+  return (
+    <WindowedKeyValueGrid
+      columns={4}
+      items={[
+        { label: 'Sessions', value: summary.activeSessions },
+        { label: 'Runs', value: summary.runsToday },
+        { label: 'Cost', value: `$${summary.totalCost.toFixed(2)}` },
+        { label: 'Tokens', value: formatTokens(summary.tokensTotal) },
+        { label: 'Input', value: formatTokens(summary.tokensInput) },
+        { label: 'Cached', value: formatTokens(summary.tokensCached) },
+        { label: 'Output', value: formatTokens(summary.tokensOutput) },
+        { label: 'Tool errors', value: summary.toolErrors },
+      ]}
+    />
   );
 }
 
