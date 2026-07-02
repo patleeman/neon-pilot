@@ -81,6 +81,8 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.ui-app-page-shell')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeTruthy();
     expect(screen.queryByText('Diagnostics context')).toBeNull();
+    expect(screen.queryByText('Telemetry range')).toBeNull();
+    expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.getByText('Health')).toBeTruthy();
     expect(screen.getByText('Tool errors')).toBeTruthy();
     expect(refetch).toHaveBeenCalled();

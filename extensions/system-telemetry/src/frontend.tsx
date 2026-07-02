@@ -369,7 +369,6 @@ function WindowedRangeSelector({ value, onChange }: { value: TraceRange; onChang
           <WindowedListItem
             key={option.value}
             title={option.label}
-            meta={option.value === value ? 'Selected' : 'Telemetry range'}
             active={option.value === value}
             accent="telemetry"
             onSelect={() => onChange(option.value)}
