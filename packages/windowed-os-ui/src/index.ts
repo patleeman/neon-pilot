@@ -62,6 +62,8 @@ export {
   type WindowedSelectProps,
   WindowedTextarea,
   type WindowedTextareaProps,
+  WindowedTextButton,
+  type WindowedTextButtonProps,
   WindowedTextInput,
   type WindowedTextInputProps,
   WindowedThreadItem,

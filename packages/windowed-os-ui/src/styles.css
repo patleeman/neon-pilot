@@ -1894,6 +1894,151 @@
   }
 }
 
+.wos-automation-error,
+.wos-automation-empty {
+  color: var(--wos-ink-500);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.wos-automation-error {
+  color: var(--wos-telemetry);
+}
+
+.wos-automation-table {
+  overflow: hidden;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: var(--wos-surface-0);
+}
+
+.wos-automation-table__header,
+.wos-automation-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.55fr) minmax(120px, 1fr) minmax(110px, 0.9fr) minmax(120px, 0.9fr) minmax(210px, auto);
+  align-items: center;
+  min-width: 0;
+}
+
+.wos-automation-table__header {
+  min-height: 34px;
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  background: color-mix(in srgb, var(--wos-automations) 20%, var(--wos-surface-1));
+  color: var(--wos-ink-700);
+  font-family: var(--wos-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.wos-automation-table__header > span,
+.wos-automation-row > span,
+.wos-automation-row > button {
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.wos-automation-row {
+  min-height: 54px;
+  border-bottom: 1px solid rgba(44, 31, 20, 0.18);
+  color: var(--wos-ink-700);
+  font-size: 12px;
+}
+
+.wos-automation-row:last-child {
+  border-bottom: 0;
+}
+
+.wos-automation-row[data-active='true'] {
+  background: color-mix(in srgb, var(--wos-automations) 10%, transparent);
+}
+
+.wos-automation-row__identity,
+.wos-automation-row__owner {
+  display: grid;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.wos-automation-row__identity {
+  cursor: pointer;
+}
+
+.wos-automation-row__identity > span,
+.wos-automation-row__identity > small,
+.wos-automation-row__schedule,
+.wos-automation-row__owner {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-automation-row__identity > span {
+  color: var(--wos-ink-900);
+  font-weight: 700;
+}
+
+.wos-automation-row__identity > small {
+  color: var(--wos-ink-500);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.wos-automation-row__schedule {
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+}
+
+.wos-automation-row__owner {
+  cursor: pointer;
+}
+
+.wos-automation-row__owner:disabled {
+  cursor: default;
+  color: var(--wos-ink-500);
+}
+
+.wos-automation-row__actions,
+.wos-automation-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.wos-automation-row__actions {
+  justify-content: flex-end;
+}
+
+.wos-automation-inspector-actions {
+  align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+  .wos-automation-table__header {
+    display: none;
+  }
+
+  .wos-automation-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    padding: 8px 0;
+  }
+
+  .wos-automation-row > span,
+  .wos-automation-row > button {
+    padding: 4px 10px;
+  }
+
+  .wos-automation-row__actions {
+    justify-content: flex-start;
+  }
+}
+
 .wos-chat-surface {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);

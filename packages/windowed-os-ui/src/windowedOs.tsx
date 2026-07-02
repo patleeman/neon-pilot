@@ -1,4 +1,5 @@
 import {
+  type ButtonHTMLAttributes,
   type CSSProperties,
   type InputHTMLAttributes,
   type ReactNode,
@@ -201,6 +202,16 @@ export function WindowedPageButton({
 }: WindowedPageButtonProps) {
   return (
     <button type={type} className={cx('wos-page-button', className)} data-tone={tone} disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+export type WindowedTextButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
+
+export function WindowedTextButton({ children, className, type = 'button', ...props }: WindowedTextButtonProps) {
+  return (
+    <button type={type} className={cx('wos-text-button', className)} {...props}>
       {children}
     </button>
   );

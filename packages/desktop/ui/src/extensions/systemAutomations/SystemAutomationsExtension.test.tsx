@@ -89,7 +89,7 @@ function createPa(overrides: Partial<NativeExtensionClient['automations']> = {})
   } as unknown as NativeExtensionClient;
 }
 
-async function renderPage(pa = createPa(), context: { search?: string } = {}) {
+async function renderPage(pa = createPa(), context: { search?: string; shellPresentation?: 'stable' | 'windowed' } = {}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -224,6 +224,28 @@ describe('AutomationsPage', () => {
     expect(container.querySelector('button[aria-label="Open owner thread for Release watch: Release watch thread"]')).not.toBeNull();
     expect(container.textContent).toContain('Paused check');
     expect(container.textContent).toContain('Paused');
+  });
+
+  it('renders a native windowed automations surface when hosted by the windowed shell', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa, { shellPresentation: 'windowed' });
+
+    expect(container.querySelector('.wos-page-shell')).not.toBeNull();
+    expect(container.querySelector('.wos-automation-table')).not.toBeNull();
+    expect(container.textContent).toContain('Scheduled work');
+    expect(container.textContent).toContain('Task queue');
+    expect(container.textContent).toContain('Automation context');
+    expect(container.textContent).toContain('Release watch');
+    expect(container.textContent).toContain('Release watch thread');
+    expect(container.querySelector('table')).toBeNull();
+
+    await act(async () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Run')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(pa.automations.run).toHaveBeenCalledWith('release-watch');
   });
 
   it('renders selected automation details in the automation dialog panel', async () => {
