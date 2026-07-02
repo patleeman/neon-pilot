@@ -101,7 +101,7 @@ export interface WindowedPageShellProps {
   layout?: 'standard' | 'wide' | 'two-column';
 }
 
-export function WindowedPageShell({ children, className, layout = 'two-column' }: WindowedPageShellProps) {
+export function WindowedPageShell({ children, className, layout = 'standard' }: WindowedPageShellProps) {
   return (
     <div className={cx('wos-page-shell', className)} data-layout={layout}>
       {children}
