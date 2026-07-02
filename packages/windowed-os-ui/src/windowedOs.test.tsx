@@ -153,6 +153,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('ariaLabel="Extensions view"');
     expect(source).toContain('<WindowedDialog');
     expect(source).toContain('title="system-browser"');
+    expect(source).toContain('export const ExtensionsInstallDialog');
+    expect(source).toContain('title="Install extension"');
+    expect(source).toContain('wos-extension-install-dialog');
+    expect(source).toContain('title="Repositories"');
   });
 
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {

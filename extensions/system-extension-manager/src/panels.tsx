@@ -1849,7 +1849,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
         </WindowedPageShell>
 
         {installModalOpen ? (
-          <InstallExtensionModal
+          <WindowedInstallExtensionDialog
             catalogItems={visibleCatalogExtensions}
             catalogSources={catalogSources}
             catalogSourceInput={catalogSourceInput}
@@ -2170,6 +2170,154 @@ function InstallExtensionModal({
         ) : null}
       </DialogBody>
     </Dialog>
+  );
+}
+
+function WindowedInstallExtensionDialog({
+  catalogItems,
+  catalogSources,
+  catalogSourceInput,
+  catalogSourceErrors,
+  catalogBusyId,
+  onCatalogSourceInputChange,
+  onInstallCatalog,
+  onAddCatalogSource,
+  onRemoveCatalogSource,
+  onClose,
+}: {
+  catalogItems: InstallableExtensionCatalogItem[];
+  catalogSources: ExtensionCatalogSource[];
+  catalogSourceInput: string;
+  catalogSourceErrors: Array<{ sourceId: string; message: string }>;
+  catalogBusyId: string | null;
+  onCatalogSourceInputChange: (source: string) => void;
+  onInstallCatalog: (item: InstallableExtensionCatalogItem) => void;
+  onAddCatalogSource: () => void;
+  onRemoveCatalogSource: (source: ExtensionCatalogSource) => void;
+  onClose: () => void;
+}) {
+  const [marketplaceQuery, setMarketplaceQuery] = useState('');
+  const visibleCatalogItems = useMemo(() => {
+    const normalizedQuery = marketplaceQuery.trim().toLowerCase();
+    if (!normalizedQuery) return catalogItems;
+    return catalogItems.filter((item) =>
+      `${item.name} ${item.id} ${item.description ?? ''} ${item.ecosystem ?? ''} ${item.packageType ?? ''}`
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [catalogItems, marketplaceQuery]);
+
+  return (
+    <WindowedDialog
+      title="Install extension"
+      meta={`${catalogItems.length} available · ${catalogSources.length} sources`}
+      accent="extensions"
+      className="wos-extension-install-dialog"
+      onClose={onClose}
+    >
+      <div className="wos-extension-install">
+        <WindowedPageSection title="Repositories" meta={`${catalogSources.length}`}>
+          <div className="wos-extension-install__source-form">
+            <WindowedTextInput
+              value={catalogSourceInput}
+              onChange={(event) => onCatalogSourceInputChange(event.currentTarget.value)}
+              placeholder="GitHub URL or owner/name"
+              aria-label="Extension repository"
+            />
+            <WindowedPageButton disabled={catalogBusyId === 'extension-source'} onClick={onAddCatalogSource}>
+              {catalogBusyId === 'extension-source' ? 'Adding' : 'Add'}
+            </WindowedPageButton>
+          </div>
+          {catalogSources.length > 0 ? (
+            <WindowedDataTable columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+              {catalogSources.map((source) => (
+                <WindowedDataRow
+                  key={source.id}
+                  name={sourceLabel(source)}
+                  meta={`${source.owner}/${source.repo}`}
+                  status={
+                    <WindowedBadge tone={source.enabled ? 'positive' : 'neutral'}>{source.enabled ? 'Enabled' : 'Disabled'}</WindowedBadge>
+                  }
+                  action={
+                    source.id !== 'neon-pilot' ? (
+                      <WindowedPageButton
+                        disabled={catalogBusyId === `extension-source:${source.id}`}
+                        onClick={() => onRemoveCatalogSource(source)}
+                      >
+                        Remove
+                      </WindowedPageButton>
+                    ) : (
+                      <span aria-hidden="true" />
+                    )
+                  }
+                />
+              ))}
+            </WindowedDataTable>
+          ) : (
+            <PanelMessage className="py-2">No repositories configured.</PanelMessage>
+          )}
+          {catalogSourceErrors.length ? (
+            <div className="wos-extension-install__errors">
+              {catalogSourceErrors.map((error) => (
+                <p key={`${error.sourceId}:${error.message}`}>
+                  {error.sourceId}: {error.message}
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </WindowedPageSection>
+
+        <WindowedPageSection title="Available" meta={`${visibleCatalogItems.length}`}>
+          <WindowedTextInput
+            value={marketplaceQuery}
+            onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
+            placeholder="Search extensions"
+            aria-label="Search available extensions"
+          />
+          {catalogItems.length ? (
+            <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+              {visibleCatalogItems.map((item) => {
+                const itemBusy = catalogBusyId === item.id;
+                const plannedPackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
+                const unavailablePackage = plannedPackage || Boolean(item.unavailableReason);
+                const state = itemBusy
+                  ? 'Installing'
+                  : item.installed
+                    ? 'Installed'
+                    : item.unavailableReason
+                      ? 'Unavailable'
+                      : plannedPackage
+                        ? 'Planned'
+                        : 'Available';
+                const tone: 'neutral' | 'positive' | 'warning' =
+                  item.installed || itemBusy ? 'positive' : unavailablePackage ? 'warning' : 'neutral';
+                return (
+                  <WindowedDataRow
+                    key={item.id}
+                    name={item.name}
+                    meta={item.description || item.id}
+                    status={<WindowedBadge tone={tone}>{state}</WindowedBadge>}
+                    action={
+                      <WindowedPageButton
+                        disabled={item.installed || itemBusy || unavailablePackage}
+                        onClick={() => onInstallCatalog(item)}
+                      >
+                        Install
+                      </WindowedPageButton>
+                    }
+                  />
+                );
+              })}
+            </WindowedDataTable>
+          ) : (
+            <PanelMessage className="py-2">No installable extensions found.</PanelMessage>
+          )}
+          {catalogItems.length > 0 && visibleCatalogItems.length === 0 ? (
+            <PanelMessage className="py-2">No extension matches.</PanelMessage>
+          ) : null}
+        </WindowedPageSection>
+      </div>
+    </WindowedDialog>
   );
 }
 

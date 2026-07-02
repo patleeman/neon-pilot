@@ -336,6 +336,54 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('switch', { name: /Disable Settings panels/ })).toBeNull();
   });
 
+  it('opens the install flow as a native windowed child dialog', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.9.1-rc.6',
+          tag: 'v0.9.1-rc.6',
+          extensions: [
+            {
+              id: 'available-only',
+              name: 'Available Only',
+              description: 'Catalog-only extension.',
+              version: '1.0.0',
+              tag: 'v1.0.0',
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') {
+        return { sources: [{ id: 'neon-pilot', owner: 'neon-pilot', repo: 'extensions', enabled: true }] };
+      }
+      return { ok: true };
+    });
+
+    const { container } = renderWindowedPage({
+      pa: {
+        ui: { toast: vi.fn(), notify: vi.fn() },
+        commands: { list: vi.fn().mockResolvedValue([]) },
+        extensions: { callAction },
+      },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
+    expect(dialog.className).toContain('wos-dialog');
+    expect(dialog.className).toContain('wos-extension-install-dialog');
+    expect(container.querySelector('.wos-extension-install')).toBeTruthy();
+    expect(container.querySelector('.ui-dialog')).toBeNull();
+    expect(container.querySelector('.ui-resource-list')).toBeNull();
+    expect(within(dialog).getByText('Repositories')).toBeTruthy();
+    expect(within(dialog).getByText('Available Only')).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Add' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Install' })).toBeTruthy();
+    expect(within(dialog).queryByRole('switch')).toBeNull();
+  });
+
   it('starts an extension-building chat with a guided prompt', async () => {
     const appendedTexts: string[] = [];
     let clearCount = 0;

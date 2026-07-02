@@ -1409,6 +1409,86 @@ export const ExtensionsPage: Story = {
   ),
 };
 
+export const ExtensionsInstallDialog: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 560, padding: 24 }}>
+      <WindowFrame
+        title="Extensions"
+        accent="extensions"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(920px, 100%)', height: 540 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain title="Extensions" actions={<WindowedPageButton tone="accent">Install</WindowedPageButton>}>
+            <WindowedPageSection title="Installed" meta="18">
+              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+                <WindowedDataRow
+                  name="system-browser"
+                  meta="Workbench browser and browser automation"
+                  status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
+                  action={<WindowedPageButton>Details</WindowedPageButton>}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+
+        <WindowedDialog
+          title="Install extension"
+          meta="3 available · 2 sources"
+          accent="extensions"
+          className="wos-extension-install-dialog"
+          onClose={() => undefined}
+        >
+          <div className="wos-extension-install">
+            <WindowedPageSection title="Repositories" meta="2">
+              <div className="wos-extension-install__source-form">
+                <WindowedTextInput aria-label="Extension repository" placeholder="GitHub URL or owner/name" />
+                <WindowedPageButton>Add</WindowedPageButton>
+              </div>
+              <WindowedDataTable columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+                <WindowedDataRow
+                  name="Personal marketplace"
+                  meta="patrick/extensions"
+                  status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
+                  action={<WindowedPageButton>Remove</WindowedPageButton>}
+                />
+                <WindowedDataRow
+                  name="Neon Pilot"
+                  meta="neon-pilot/extensions"
+                  status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
+                  action={<span aria-hidden="true" />}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Available" meta="3">
+              <WindowedTextInput aria-label="Search available extensions" placeholder="Search extensions" />
+              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+                <WindowedDataRow
+                  name="agent-browser"
+                  meta="Browser automation surface"
+                  status={<WindowedBadge tone="neutral">available</WindowedBadge>}
+                  action={<WindowedPageButton>Install</WindowedPageButton>}
+                />
+                <WindowedDataRow
+                  name="workflow-reports"
+                  meta="Run summaries and reporting"
+                  status={<WindowedBadge tone="warning">planned</WindowedBadge>}
+                  action={<WindowedPageButton disabled>Install</WindowedPageButton>}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+          </div>
+        </WindowedDialog>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const SkillsPage: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>

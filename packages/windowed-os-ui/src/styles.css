@@ -2408,6 +2408,33 @@
   line-height: 1.45;
 }
 
+.wos-extension-install-dialog {
+  width: min(820px, 100%);
+}
+
+.wos-extension-install {
+  display: grid;
+  gap: 10px;
+}
+
+.wos-extension-install__source-form {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.wos-extension-install__errors {
+  margin-top: 8px;
+  color: oklch(42% 0.16 30);
+  font: var(--wos-text-meta);
+}
+
+.wos-extension-install__errors p {
+  margin: 0;
+}
+
 @media (max-width: 1100px) {
   .wos-automation-detail-grid {
     grid-template-columns: 1fr;
@@ -2419,6 +2446,10 @@
 
   .wos-extension-detail-actions {
     justify-content: flex-start;
+  }
+
+  .wos-extension-install__source-form {
+    grid-template-columns: 1fr;
   }
 
   .wos-automation-table__header {
