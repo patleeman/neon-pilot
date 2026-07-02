@@ -21,6 +21,28 @@ export function AppMonogram({ label, accent = 'settings', className }: AppMonogr
   );
 }
 
+export interface WindowedAppTileProps {
+  label: string;
+  accent?: AppAccent;
+  variant?: 'menu' | 'taskbar';
+  count?: number;
+  className?: string;
+}
+
+export function WindowedAppTile({ label, accent = 'settings', variant = 'menu', count, className }: WindowedAppTileProps) {
+  return (
+    <span className={cx('wos-app-tile', className)} data-variant={variant}>
+      <AppMonogram label={label} accent={accent} />
+      <span className="wos-app-tile__copy">
+        <span className="wos-app-tile__label">
+          {label}
+          {count ? <span className="wos-app-tile__count">{count}</span> : null}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;
@@ -355,10 +377,7 @@ export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) 
         {visibleItems.length > 0 ? (
           visibleItems.map((item) => (
             <button key={item.id} type="button" className="wos-start-menu__item" onClick={item.onSelect}>
-              <AppMonogram label={item.title} accent={item.accent} />
-              <span className="wos-start-menu__item-copy">
-                <span className="wos-start-menu__item-title">{item.title}</span>
-              </span>
+              <WindowedAppTile label={item.title} accent={item.accent} />
             </button>
           ))
         ) : (
@@ -405,18 +424,13 @@ export function Taskbar({ startOpen, onToggleStart, groups = [], items }: Taskba
   return (
     <footer className="wos-taskbar">
       <button type="button" className="wos-taskbar__start" aria-haspopup="dialog" aria-expanded={startOpen} onClick={onToggleStart}>
-        <AppMonogram label="Neon Pilot" accent="extensions" />
-        <span>Start</span>
+        <WindowedAppTile label="Start" accent="extensions" variant="taskbar" />
       </button>
       <nav className="wos-taskbar__items" aria-label="Open windows">
         {groups.map((group) => (
           <div key={group.id} className="wos-taskbar__group">
             <button type="button" className="wos-taskbar__button" data-focused={group.focused} onClick={group.onSelect}>
-              <AppMonogram label={group.title} accent={group.accent} />
-              <span className="wos-taskbar__label">
-                {group.title}
-                {group.count ? <span className="wos-taskbar__count">{group.count}</span> : null}
-              </span>
+              <WindowedAppTile label={group.title} accent={group.accent} count={group.count} variant="taskbar" />
             </button>
             {group.menu}
           </div>
@@ -430,11 +444,7 @@ export function Taskbar({ startOpen, onToggleStart, groups = [], items }: Taskba
             data-minimized={item.minimized}
             onClick={item.onSelect}
           >
-            <AppMonogram label={item.title} accent={item.accent} />
-            <span className="wos-taskbar__label">
-              {item.title}
-              {item.count ? <span className="wos-taskbar__count">{item.count}</span> : null}
-            </span>
+            <WindowedAppTile label={item.title} accent={item.accent} count={item.count} variant="taskbar" />
           </button>
         ))}
       </nav>

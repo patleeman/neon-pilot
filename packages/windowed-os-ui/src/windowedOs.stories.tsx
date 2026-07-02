@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import {
   StartMenu,
   Taskbar,
+  WindowedAppTile,
   WindowedBadge,
   WindowedChatComposer,
   WindowedChatMain,
@@ -88,6 +89,42 @@ export const DesktopComposition: Story = {
         groups={[{ id: 'chat', title: 'Chat', accent: 'chat', focused: true, count: 3, onSelect: () => undefined }]}
         items={[{ id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined }]}
       />
+    </div>
+  ),
+};
+
+export const NavigationPrimitives: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+      <WindowFrame
+        title="Navigation"
+        accent="extensions"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(560px, 100%)', height: 410 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageMain title="Navigation">
+          <WindowedPageSection title="Menu apps">
+            <div style={{ display: 'grid', gap: 6, padding: 10 }}>
+              <WindowedAppTile label="Chat" accent="chat" />
+              <WindowedAppTile label="Automations" accent="automations" />
+              <WindowedAppTile label="Gateways" accent="gateways" />
+            </div>
+          </WindowedPageSection>
+          <WindowedPageSection title="Taskbar apps">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: 10 }}>
+              <span className="wos-taskbar__button">
+                <WindowedAppTile label="Chat" accent="chat" count={3} variant="taskbar" />
+              </span>
+              <span className="wos-taskbar__button">
+                <WindowedAppTile label="Gateways" accent="gateways" variant="taskbar" />
+              </span>
+            </div>
+          </WindowedPageSection>
+        </WindowedPageMain>
+      </WindowFrame>
     </div>
   ),
 };

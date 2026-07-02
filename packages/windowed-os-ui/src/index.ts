@@ -10,6 +10,8 @@ export {
   type TaskbarGroup,
   type TaskbarItem,
   type TaskbarProps,
+  WindowedAppTile,
+  type WindowedAppTileProps,
   WindowedBadge,
   type WindowedBadgeProps,
   WindowedChatComposer,
