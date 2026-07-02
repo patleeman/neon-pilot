@@ -28,7 +28,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -270,7 +269,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
   if (!pageState) {
     if (windowed) {
       return (
-        <WindowedPageShell>
+        <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Gateways" accent="gateways">
             <WindowedList>
               <WindowedListItem title="Telegram" meta="Gateway" detail="Unavailable" active accent="gateways" />
@@ -282,7 +281,6 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
             description={error ?? 'Gateway settings could not be loaded.'}
             actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
           />
-          <WindowedPageInspector eyebrow="Gateway context" title="Unavailable" />
         </WindowedPageShell>
       );
     }
@@ -310,7 +308,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
   if (windowed) {
     const telegramEvents = pageState.gateway.events.filter((event) => event.provider === TELEGRAM_PROVIDER_ID).slice(0, 8);
     return (
-      <WindowedPageShell>
+      <WindowedPageShell layout="two-column">
         <WindowedPageRail title="Gateways" accent="gateways">
           <WindowedList>
             {pageState.gateway.providers.map((provider) => {
@@ -368,6 +366,16 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
               ]}
             />
             {telegramConnection?.statusMessage ? <p className="wos-gateway-status-message">{telegramConnection.statusMessage}</p> : null}
+          </WindowedPageSection>
+          <WindowedPageSection title="Setup" meta={telegramProvider?.label ?? 'Telegram'}>
+            <WindowedKeyValueList
+              items={[
+                { label: 'Setup', value: telegramProvider?.setupRoute ?? '/gateways' },
+                { label: 'Configuration', value: formatConfigurationLocation(telegramProvider?.configurationLocation) },
+                { label: 'Docs', value: 'Telegram Bot API' },
+                { label: 'Last update', value: telegramConnection?.updatedAt ? formatDate(telegramConnection.updatedAt) : 'Never' },
+              ]}
+            />
           </WindowedPageSection>
           <WindowedPageSection title="Connection">
             <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
@@ -482,18 +490,6 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
               />
             </div>
           </WindowedPageSection>
-        </WindowedPageMain>
-        <WindowedPageInspector eyebrow="Gateway context" title={telegramProvider?.label ?? 'Telegram'}>
-          <WindowedPageSection title="Status">
-            <WindowedKeyValueList
-              items={[
-                { label: 'Setup', value: telegramProvider?.setupRoute ?? '/gateways' },
-                { label: 'Configuration', value: formatConfigurationLocation(telegramProvider?.configurationLocation) },
-                { label: 'Docs', value: 'Telegram Bot API' },
-                { label: 'Last update', value: telegramConnection?.updatedAt ? formatDate(telegramConnection.updatedAt) : 'Never' },
-              ]}
-            />
-          </WindowedPageSection>
           <WindowedPageSection title="Recent activity" meta={`${telegramEvents.length} events`}>
             {telegramEvents.length > 0 ? (
               <ol className="wos-gateway-event-list">
@@ -510,7 +506,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
               <div className="wos-gateway-empty">No Telegram gateway events yet.</div>
             )}
           </WindowedPageSection>
-        </WindowedPageInspector>
+        </WindowedPageMain>
       </WindowedPageShell>
     );
   }
@@ -689,14 +685,13 @@ function GatewaysLoadingPage() {
 
 function WindowedGatewaysLoading() {
   return (
-    <WindowedPageShell>
+    <WindowedPageShell layout="two-column">
       <WindowedPageRail title="Gateways" accent="gateways">
         <WindowedList>
           <WindowedListItem title="Telegram" meta="Gateway" detail="Loading settings" active accent="gateways" />
         </WindowedList>
       </WindowedPageRail>
       <WindowedPageMain eyebrow="Gateways" title="Loading" description="Loading gateway settings." />
-      <WindowedPageInspector eyebrow="Gateway context" title="Loading" />
     </WindowedPageShell>
   );
 }

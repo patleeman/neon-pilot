@@ -179,7 +179,11 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </section>
   ),
-  WindowedPageShell: ({ children }: { children: React.ReactNode }) => <div className="wos-page-shell">{children}</div>,
+  WindowedPageShell: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
+    <div className="wos-page-shell" data-layout={layout ?? 'standard'}>
+      {children}
+    </div>
+  ),
   WindowedTextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   WindowedTimeline: ({ children }: { children: React.ReactNode }) => <ol>{children}</ol>,
   WindowedTimelineItem: ({ title, meta }: { title: string; meta?: string }) => (
@@ -290,10 +294,12 @@ describe('GatewaysPage', () => {
     const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
 
     expect(await screen.findByText('Gateway provider')).toBeTruthy();
-    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
     expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
     expect(screen.getByText('Telegram access')).toBeTruthy();
-    expect(screen.getByText('Gateway context')).toBeTruthy();
+    expect(screen.getAllByText('Setup').length).toBeGreaterThan(0);
+    expect(screen.getByText('Recent activity')).toBeTruthy();
+    expect(screen.queryByText('Gateway context')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Enable Telegram gateway'));
     await waitFor(() =>
