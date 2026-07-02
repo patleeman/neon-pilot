@@ -23,6 +23,22 @@ import {
   StatusDot,
   Switch,
   TextInput,
+  WindowedBadge,
+  WindowedDataTable,
+  WindowedField,
+  WindowedKeyValueGrid,
+  WindowedKeyValueList,
+  WindowedList,
+  WindowedListItem,
+  WindowedPageButton,
+  WindowedPageInspector,
+  WindowedPageMain,
+  WindowedPageRail,
+  WindowedPageSection,
+  WindowedPageShell,
+  WindowedSelect,
+  WindowedTextInput,
+  WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import React, { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -234,7 +250,7 @@ function publishModelArenaState(state: ArenaState) {
   window.dispatchEvent(new CustomEvent<ArenaState>('neon-pilot-model-arena-state', { detail: state }));
 }
 
-export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
+export function ModelArenaPage({ pa, context }: ExtensionSurfaceProps) {
   const [state, setState] = useState<ArenaState | null>(null);
   const [taskFilter, setTaskFilter] = useState('all');
   const [error, setError] = useState('');
@@ -282,6 +298,26 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
       .filter((model) => taskFilter === 'all' || model.votes > 0)
       .sort((a, b) => b.rating - a.rating || b.votes - a.votes);
   }, [state?.stats.models, taskFilter]);
+
+  if (context?.shellPresentation === 'windowed') {
+    return (
+      <ModelArenaWindowedPage
+        pa={pa}
+        state={state}
+        taskFilter={taskFilter}
+        tasks={tasks}
+        ranked={ranked}
+        error={error}
+        onTaskFilterChange={setTaskFilter}
+        onStateChange={(next) => {
+          setState(next);
+          publishModelArenaState(next);
+        }}
+        onErrorChange={setError}
+        onRefresh={refresh}
+      />
+    );
+  }
 
   if (error && !state) {
     return (
@@ -389,6 +425,318 @@ export function ModelArenaPage({ pa }: ExtensionSurfaceProps) {
 
         {error ? <ErrorState message={error} /> : null}
       </AppPageLayout>
+    </div>
+  );
+}
+
+function ModelArenaWindowedPage({
+  pa,
+  state,
+  taskFilter,
+  tasks,
+  ranked,
+  error,
+  onTaskFilterChange,
+  onStateChange,
+  onErrorChange,
+  onRefresh,
+}: {
+  pa: ExtensionSurfaceProps['pa'];
+  state: ArenaState | null;
+  taskFilter: string;
+  tasks: string[];
+  ranked: RankedModelRow[];
+  error: string;
+  onTaskFilterChange: (task: string) => void;
+  onStateChange: (state: ArenaState) => void;
+  onErrorChange: (error: string) => void;
+  onRefresh: () => Promise<void>;
+}) {
+  const [selectedModelRef, setSelectedModelRef] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!state) return;
+    setSelectedModelRef((current) => firstAvailableModelRef(state.models, state.settings.challengerModels, current));
+  }, [state]);
+
+  const selectableModels = useMemo(
+    () => (state?.models ?? []).filter((model) => !state?.settings.challengerModels.includes(modelRef(model))),
+    [state?.models, state?.settings.challengerModels],
+  );
+  const selectableModelGroups = useMemo(() => groupModelsByProvider(selectableModels), [selectableModels]);
+  const selectedModels = useMemo(() => {
+    const byRef = new Map((state?.models ?? []).map((model) => [modelRef(model), model]));
+    return (state?.settings.challengerModels ?? []).map((ref) => ({ ref, model: byRef.get(ref) }));
+  }, [state?.models, state?.settings.challengerModels]);
+
+  const save = async (patch: Partial<ArenaSettings> = {}) => {
+    if (!state || saving) return;
+    setSaving(true);
+    try {
+      const settings = { ...state.settings, ...patch };
+      const result = (await pa.extension.invoke('saveArenaSettings', settings)) as { settings: ArenaSettings };
+      const next = { ...state, settings: result.settings };
+      onStateChange(next);
+      setSelectedModelRef((current) => firstAvailableModelRef(state.models, result.settings.challengerModels, current));
+      onErrorChange('');
+    } catch (saveError) {
+      onErrorChange(saveError instanceof Error ? saveError.message : String(saveError));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addModel = async () => {
+    if (!state || !selectedModelRef) return;
+    await save({ challengerModels: normalizeModels([...state.settings.challengerModels, selectedModelRef]) });
+  };
+
+  const removeModel = async (ref: string) => {
+    if (!state) return;
+    await save({ challengerModels: state.settings.challengerModels.filter((model) => model !== ref) });
+  };
+
+  const topModel = ranked[0] ?? null;
+  const activeTaskLabel = taskFilter === 'all' ? 'All tasks' : taskFilter;
+  const totalVotes = ranked.reduce((sum, model) => sum + model.votes, 0) / 2;
+  const arenaReady = Boolean(state?.settings.automaticDuels && state.settings.challengerModels.length > 0);
+
+  return (
+    <div className="h-full overflow-hidden">
+      <WindowedPageShell layout="wide">
+        <WindowedPageRail title="Model Arena" accent="gateways">
+          <WindowedList>
+            <WindowedListItem
+              title="All task types"
+              meta={state ? `${ranked.length} models` : 'Loading'}
+              detail="Combined rankings"
+              active={taskFilter === 'all'}
+              accent="gateways"
+              onSelect={() => onTaskFilterChange('all')}
+            />
+            {tasks.map((task) => (
+              <WindowedListItem
+                key={task}
+                title={task}
+                meta="Task type"
+                detail="Filtered duel history"
+                active={taskFilter === task}
+                accent="gateways"
+                onSelect={() => onTaskFilterChange(task)}
+              />
+            ))}
+          </WindowedList>
+        </WindowedPageRail>
+
+        <WindowedPageMain
+          eyebrow="Blind model duels"
+          title="Model Arena"
+          actions={
+            <>
+              <WindowedBadge tone={arenaReady ? 'positive' : 'warning'}>{arenaReady ? 'Running' : 'Needs setup'}</WindowedBadge>
+              <WindowedPageButton disabled={saving} onClick={() => void onRefresh()}>
+                Refresh
+              </WindowedPageButton>
+            </>
+          }
+        >
+          {error ? (
+            <WindowedPageSection title="Action needed">
+              <div className="wos-arena-error">{error}</div>
+            </WindowedPageSection>
+          ) : null}
+
+          <WindowedPageSection title="Overview" meta={activeTaskLabel}>
+            <WindowedKeyValueGrid
+              columns={4}
+              items={[
+                { label: 'Recent duels', value: state ? String(state.duels.length) : '...' },
+                { label: 'Votes', value: state ? String(totalVotes) : '...' },
+                { label: 'Sample rate', value: state ? percent(state.settings.sampleRate) : '...' },
+                { label: 'Challengers', value: state ? String(state.settings.challengerModels.length) : '...' },
+              ]}
+            />
+          </WindowedPageSection>
+
+          <WindowedPageSection title="Rankings" meta={state ? `${ranked.length} models` : 'Loading'}>
+            {!state ? <div className="wos-arena-empty">Loading Model Arena rankings.</div> : null}
+            {state && ranked.length === 0 ? (
+              <div className="wos-arena-empty">Add challenger models and vote on duels to build rankings.</div>
+            ) : null}
+            {ranked.length > 0 ? (
+              <WindowedDataTable
+                className="wos-arena-ranking-table"
+                columns={[
+                  { label: 'Model' },
+                  { label: 'Rating', align: 'right' },
+                  { label: 'Votes', align: 'right' },
+                  { label: 'Confidence', align: 'right' },
+                ]}
+              >
+                {ranked.map((model) => (
+                  <div key={model.modelRef} className="wos-arena-ranking-row">
+                    <div className="wos-arena-ranking-row__model">
+                      <span>{model.modelRef}</span>
+                      {model.summary ? <small>{model.summary}</small> : null}
+                    </div>
+                    <span className="wos-arena-ranking-row__metric">{model.rating}</span>
+                    <span className="wos-arena-ranking-row__metric">{model.votes}</span>
+                    <span className="wos-arena-ranking-row__confidence">{confidenceLabel(model.votes)}</span>
+                  </div>
+                ))}
+              </WindowedDataTable>
+            ) : null}
+          </WindowedPageSection>
+        </WindowedPageMain>
+
+        <WindowedPageInspector eyebrow="Arena setup" title={state?.settings.automaticDuels ? 'Automatic duels on' : 'Automatic duels off'}>
+          {state ? (
+            <>
+              <WindowedPageSection title="Status">
+                <div className="wos-arena-status-row">
+                  <span>
+                    {arenaReady
+                      ? 'Comparing challenger runs against conversation models.'
+                      : state.settings.challengerModels.length === 0
+                        ? 'Add a challenger before automatic duels can run.'
+                        : 'Arena sampling is paused.'}
+                  </span>
+                  <WindowedToggle
+                    checked={state.settings.automaticDuels}
+                    disabled={saving}
+                    accent="gateways"
+                    label={state.settings.automaticDuels ? 'Disable Model Arena' : 'Enable Model Arena'}
+                    onChange={(checked) => void save({ automaticDuels: checked })}
+                  />
+                </div>
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Challengers" meta={`${selectedModels.length} selected`}>
+                <div className="wos-arena-add-row">
+                  <WindowedField label="Model" span="full">
+                    <WindowedSelect
+                      aria-label="Challenger model"
+                      value={selectedModelRef}
+                      disabled={selectableModels.length === 0 || saving}
+                      onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setSelectedModelRef(event.target.value)}
+                    >
+                      {selectableModels.length === 0 ? (
+                        <option value="">{state.models.length === 0 ? 'No runnable models available' : 'No more models available'}</option>
+                      ) : null}
+                      {selectableModelGroups.map((group) => (
+                        <optgroup key={group.provider} label={group.provider}>
+                          {group.models.map((model) => (
+                            <option key={modelRef(model)} value={modelRef(model)}>
+                              {modelOptionLabel(model)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </WindowedSelect>
+                  </WindowedField>
+                  <WindowedPageButton tone="accent" disabled={!selectedModelRef || saving} onClick={() => void addModel()}>
+                    Add
+                  </WindowedPageButton>
+                </div>
+                {selectedModels.length === 0 ? (
+                  <div className="wos-arena-empty">No challenger models selected.</div>
+                ) : (
+                  <div className="wos-arena-challenger-list">
+                    {selectedModels.map(({ ref, model }) => (
+                      <div key={ref} className="wos-arena-challenger">
+                        <div>
+                          <strong>{model ? modelLabel(model) : ref}</strong>
+                          <span>{ref}</span>
+                        </div>
+                        <WindowedPageButton disabled={saving} onClick={() => void removeModel(ref)}>
+                          Remove
+                        </WindowedPageButton>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Sampling">
+                <div className="wos-arena-settings-grid">
+                  <WindowedField label="Initial rate">
+                    <WindowedTextInput
+                      aria-label="Initial rate"
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={Math.round(state.settings.sampleRate * 100)}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                        onStateChange({ ...state, settings: { ...state.settings, sampleRate: Number(event.target.value) / 100 } })
+                      }
+                      onBlur={() => void save()}
+                    />
+                  </WindowedField>
+                  <WindowedField label="Later rate">
+                    <WindowedTextInput
+                      aria-label="Later rate"
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={Math.round(state.settings.rampedSampleRate * 100)}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                        onStateChange({ ...state, settings: { ...state.settings, rampedSampleRate: Number(event.target.value) / 100 } })
+                      }
+                      onBlur={() => void save()}
+                    />
+                  </WindowedField>
+                  <WindowedField label="Ramp after">
+                    <WindowedTextInput
+                      aria-label="Ramp after"
+                      type="number"
+                      min={0}
+                      max={5000}
+                      value={state.settings.rampDownAfterVotes}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                        onStateChange({ ...state, settings: { ...state.settings, rampDownAfterVotes: Number(event.target.value) } })
+                      }
+                      onBlur={() => void save()}
+                    />
+                  </WindowedField>
+                  <WindowedField label="Minimum prompt">
+                    <WindowedTextInput
+                      aria-label="Minimum prompt"
+                      type="number"
+                      min={0}
+                      max={2000}
+                      value={state.settings.minPromptChars}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                        onStateChange({ ...state, settings: { ...state.settings, minPromptChars: Number(event.target.value) } })
+                      }
+                      onBlur={() => void save()}
+                    />
+                  </WindowedField>
+                </div>
+              </WindowedPageSection>
+
+              <WindowedPageSection title={topModel ? 'Leader' : 'Leader'}>
+                <WindowedKeyValueList
+                  items={
+                    topModel
+                      ? [
+                          { label: 'Model', value: topModel.modelRef },
+                          { label: 'Rating', value: topModel.rating },
+                          { label: 'Record', value: `${topModel.wins}W/${topModel.losses}L/${topModel.ties}T` },
+                          { label: 'Confidence', value: confidenceLabel(topModel.votes) },
+                        ]
+                      : [{ label: 'Model', value: 'No votes yet' }]
+                  }
+                />
+              </WindowedPageSection>
+            </>
+          ) : (
+            <WindowedPageSection title="Loading">
+              <div className="wos-arena-empty">Reading arena setup.</div>
+            </WindowedPageSection>
+          )}
+        </WindowedPageInspector>
+      </WindowedPageShell>
     </div>
   );
 }

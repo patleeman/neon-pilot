@@ -859,7 +859,7 @@
 }
 
 .wos-page-shell[data-layout='wide'] {
-  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-columns: 190px minmax(0, 1fr) minmax(230px, 0.36fr);
 }
 
 .wos-page-rail,
@@ -2350,4 +2350,145 @@
 .windowed-os-shell button:focus-visible {
   outline: 2px solid var(--wos-ink-900);
   outline-offset: 2px;
+}
+
+.wos-arena-error,
+.wos-arena-empty {
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 9px;
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-600);
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.wos-arena-error {
+  background: oklch(97% 0.05 28);
+  color: oklch(36% 0.13 28);
+}
+
+.wos-arena-ranking-table .wos-data-table__header,
+.wos-arena-ranking-row {
+  grid-template-columns: minmax(0, 1fr) 74px 64px 92px;
+}
+
+.wos-arena-ranking-row {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  background: var(--wos-surface-1);
+  padding: 7px 9px;
+  color: var(--wos-ink-900);
+  font-size: 12px;
+}
+
+.wos-arena-ranking-row:last-child {
+  border-bottom: 0;
+}
+
+.wos-arena-ranking-row__model {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 1px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.wos-arena-ranking-row__model span,
+.wos-arena-ranking-row__model small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-arena-ranking-row__model small {
+  color: var(--wos-ink-500);
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.wos-arena-ranking-row__metric,
+.wos-arena-ranking-row__confidence {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.wos-arena-ranking-row__confidence {
+  color: var(--wos-ink-500);
+  font-size: 11px;
+}
+
+.wos-arena-status-row,
+.wos-arena-add-row,
+.wos-arena-challenger {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.wos-arena-status-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  color: var(--wos-ink-600);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.wos-arena-add-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.wos-arena-challenger-list {
+  display: grid;
+  overflow: hidden;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 9px;
+  background: var(--wos-surface-1);
+}
+
+.wos-arena-challenger {
+  grid-template-columns: minmax(0, 1fr) auto;
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  padding: 8px;
+}
+
+.wos-arena-challenger:last-child {
+  border-bottom: 0;
+}
+
+.wos-arena-challenger strong,
+.wos-arena-challenger span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-arena-challenger strong {
+  color: var(--wos-ink-900);
+  font-size: 12px;
+}
+
+.wos-arena-challenger span {
+  color: var(--wos-ink-500);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.wos-arena-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
