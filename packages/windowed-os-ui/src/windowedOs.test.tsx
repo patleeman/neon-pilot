@@ -41,20 +41,31 @@ describe('Windowed OS Storybook examples', () => {
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
-
-    for (const title of [
+    const canonicalTitles = [
       'Chat',
       'Automations',
       'Workflows',
-      'Extensions',
       'Gateways',
       'Model Arena',
       'Routines',
+      'Extensions',
       'Skills',
       'Diagnostics',
       'Settings',
-    ]) {
+    ];
+
+    for (const title of canonicalTitles) {
       expect(source).toContain(`title: '${title}'`);
+    }
+    expect(source).not.toContain("title: 'Prompt Assembly'");
+
+    const rosterStart = source.indexOf('const canonicalDesktopApps = [');
+    expect(rosterStart).toBeGreaterThanOrEqual(0);
+    let previousIndex = rosterStart;
+    for (const title of canonicalTitles) {
+      const nextIndex = source.indexOf(`title: '${title}'`, previousIndex);
+      expect(nextIndex).toBeGreaterThan(previousIndex);
+      previousIndex = nextIndex;
     }
   });
 });

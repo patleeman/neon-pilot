@@ -44,25 +44,24 @@ export default meta;
 
 type Story = StoryObj;
 
+const canonicalDesktopApps = [
+  { id: 'chat', title: 'Chat', accent: 'chat', meta: 'Threads', detail: 'Workbench attached' },
+  { id: 'automations', title: 'Automations', accent: 'automations', meta: 'Scheduled work', detail: 'Runs and reminders' },
+  { id: 'workflows', title: 'Workflows', accent: 'routines', meta: 'Dynamic flows', detail: 'Saved multi-agent work' },
+  { id: 'gateways', title: 'Gateways', accent: 'gateways', meta: 'Ingress', detail: 'Telegram ready' },
+  { id: 'model-arena', title: 'Model Arena', accent: 'gateways', meta: 'Duels', detail: 'Model comparisons' },
+  { id: 'routines', title: 'Routines', accent: 'routines', meta: 'Hooks', detail: 'Before and after' },
+  { id: 'extensions', title: 'Extensions', accent: 'extensions', meta: 'Installed', detail: 'Extension manager' },
+  { id: 'skills', title: 'Skills', accent: 'extensions', meta: 'Library', detail: 'Installed and marketplace' },
+  { id: 'diagnostics', title: 'Diagnostics', accent: 'telemetry', meta: 'Telemetry', detail: 'Traces and health' },
+  { id: 'settings', title: 'Settings', accent: 'settings', meta: 'Preferences', detail: 'Providers and desktop' },
+] as const;
+
 export const DesktopComposition: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 720 }}>
       <main className="wos-desktop" style={{ height: 678 }}>
-        <StartMenu
-          open
-          items={[
-            { id: 'chat', title: 'Chat', accent: 'chat', onSelect: () => undefined },
-            { id: 'automations', title: 'Automations', accent: 'automations', onSelect: () => undefined },
-            { id: 'workflows', title: 'Workflows', accent: 'routines', onSelect: () => undefined },
-            { id: 'extensions', title: 'Extensions', accent: 'extensions', onSelect: () => undefined },
-            { id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined },
-            { id: 'model-arena', title: 'Model Arena', accent: 'gateways', onSelect: () => undefined },
-            { id: 'routines', title: 'Routines', accent: 'routines', onSelect: () => undefined },
-            { id: 'skills', title: 'Skills', accent: 'extensions', onSelect: () => undefined },
-            { id: 'diagnostics', title: 'Diagnostics', accent: 'telemetry', onSelect: () => undefined },
-            { id: 'settings', title: 'Settings', accent: 'settings', onSelect: () => undefined },
-          ]}
-        />
+        <StartMenu open items={canonicalDesktopApps.map((app) => ({ ...app, onSelect: () => undefined }))} />
         <WindowFrame
           title="Chat"
           accent="chat"
@@ -423,10 +422,16 @@ export const CanonicalDensity: Story = {
           >
             <WindowedPageSection title="Open applications" meta="Taskbar-owned">
               <WindowedList>
-                <WindowedListItem title="Chat" meta="Threads" detail="Workbench attached" accent="chat" />
-                <WindowedListItem title="Automations" meta="Scheduled runs" detail="3 enabled" accent="automations" />
-                <WindowedListItem title="Gateways" meta="Ingress" detail="Telegram ready" active accent="gateways" />
-                <WindowedListItem title="Routines" meta="Hooks" detail="Before and after" accent="routines" />
+                {canonicalDesktopApps.map((app) => (
+                  <WindowedListItem
+                    key={app.id}
+                    title={app.title}
+                    meta={app.meta}
+                    detail={app.detail}
+                    active={app.id === 'gateways'}
+                    accent={app.accent}
+                  />
+                ))}
               </WindowedList>
             </WindowedPageSection>
             <WindowedPageSection title="Canonical controls" meta="8px grid">
