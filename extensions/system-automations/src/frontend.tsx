@@ -43,14 +43,10 @@ import {
   Textarea,
   TextButton,
   TextInput,
-  WindowedBadge,
   WindowedDialog,
   WindowedKeyValueGrid,
-  WindowedList,
-  WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
   WindowedTextButton,
@@ -311,13 +307,6 @@ function statusPillTone(task: TaskSummary): 'accent' | 'steel' | 'danger' | 'suc
   if (!task.enabled) return 'steel';
   if (task.lastStatus === 'failed') return 'danger';
   return 'success';
-}
-
-function windowedStatusTone(task: TaskSummary): 'neutral' | 'positive' | 'warning' | 'danger' {
-  if (task.running) return 'warning';
-  if (!task.enabled) return 'neutral';
-  if (task.lastStatus === 'failed') return 'danger';
-  return 'positive';
 }
 
 function parseCronPart(part: string, min: number, max: number): Set<number> | null {
@@ -719,26 +708,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
     return (
       <div className="h-full overflow-hidden">
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Automations" accent="automations">
-            <WindowedList>
-              {loading && visibleTasks.length === 0 ? <WindowedListItem title="Loading automations" active accent="automations" /> : null}
-              {!loading && visibleTasks.length === 0 ? <WindowedListItem title="No automations" active accent="automations" /> : null}
-              {visibleTasks.map((task) => (
-                <WindowedListItem
-                  key={task.id}
-                  title={taskTitle(task)}
-                  meta={statusLabel(task)}
-                  detail={nextRunText(task)}
-                  active={selectedTask?.id === task.id}
-                  accent="automations"
-                  status={<WindowedBadge tone={windowedStatusTone(task)}>{task.scheduleType === 'at' ? 'Once' : 'Cron'}</WindowedBadge>}
-                  onSelect={() => selectTask(task)}
-                />
-              ))}
-            </WindowedList>
-          </WindowedPageRail>
-
+        <WindowedPageShell layout="standard" className="automations-page-windowed">
           <WindowedPageMain
             eyebrow="Scheduled work"
             title="Automations"

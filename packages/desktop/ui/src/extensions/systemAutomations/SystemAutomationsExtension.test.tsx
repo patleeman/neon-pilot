@@ -231,6 +231,8 @@ describe('AutomationsPage', () => {
     const { container } = await renderPage(pa, { shellPresentation: 'windowed' });
 
     expect(container.querySelector('.wos-page-shell')).not.toBeNull();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-automation-table')).not.toBeNull();
     expect(container.textContent).toContain('Scheduled work');
     expect(container.textContent).toContain('Task queue');

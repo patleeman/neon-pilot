@@ -287,6 +287,59 @@ export const DenseAppPage: Story = {
   ),
 };
 
+export const StandardSinglePanePage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+      <WindowFrame
+        title="Automations"
+        accent="automations"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(940px, 100%)', height: 460 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Scheduled work"
+            title="Automations"
+            actions={<WindowedPageButton tone="accent">New automation</WindowedPageButton>}
+          >
+            <WindowedPageSection title="Overview" meta="3 total">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Running', value: '1' },
+                  { label: 'Failed', value: '0' },
+                  { label: 'Paused', value: '1' },
+                  { label: 'Enabled', value: '2' },
+                ]}
+              />
+            </WindowedPageSection>
+            <WindowedPageSection title="Task queue">
+              <WindowedDataTable columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Action', align: 'right' }]}>
+                <WindowedDataRow
+                  name="Release watch"
+                  meta="*/15 * * * *"
+                  enabled
+                  status={<WindowedBadge tone="positive">Cron</WindowedBadge>}
+                  action={<WindowedPageButton>Run</WindowedPageButton>}
+                />
+                <WindowedDataRow
+                  name="Paused check"
+                  meta="2026-07-03 09:00"
+                  status={<WindowedBadge tone="neutral">Once</WindowedBadge>}
+                  action={<WindowedPageButton>Resume</WindowedPageButton>}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const CanonicalDensity: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 740, padding: 24 }}>
