@@ -1,6 +1,6 @@
 import {
   formatComposerActionLabel
-} from "./chunks/chunk-TZQXEC6P.js";
+} from "./chunks/chunk-Y3ZCR76A.js";
 import {
   ContextMenu,
   createNativeExtensionClient,
@@ -8,7 +8,7 @@ import {
   getExtensionRegistryRevision,
   systemExtensionModules,
   useExtensionRegistry
-} from "./chunks/chunk-MUBCIET7.js";
+} from "./chunks/chunk-JL7YCG26.js";
 import "./chunks/chunk-4YPGCSK5.js";
 import "./chunks/chunk-24DU7J3C.js";
 import {
@@ -2056,7 +2056,7 @@ var ConversationArtifactModal = lazy(
 var ConversationDrawingsPickerModal = lazy(
   () => import("./chunks/ConversationDrawingsPickerModal-5H7TEJQ4.js").then((module) => ({ default: module.ConversationDrawingsPickerModal }))
 );
-var loadChatView = () => import("./chunks/ChatView-GRWMZN4N.js").then((module) => ({ default: module.ChatView }));
+var loadChatView = () => import("./chunks/ChatView-PVQRVGOW.js").then((module) => ({ default: module.ChatView }));
 var ChatView = lazy(loadChatView);
 var ConversationActivityShelf = lazy(
   () => import("./chunks/ConversationActivityShelf-3MRZPRJS.js").then((module) => ({ default: module.ConversationActivityShelf }))
@@ -2068,10 +2068,10 @@ var ConversationQuestionShelf = lazy(
   () => import("./chunks/ConversationQuestionShelf-YUDQWKLX.js").then((module) => ({ default: module.ConversationQuestionShelf }))
 );
 var ConversationQueueShelf = lazy(
-  () => import("./chunks/ConversationQueueShelf-6XP5IICH.js").then((module) => ({ default: module.ConversationQueueShelf }))
+  () => import("./chunks/ConversationQueueShelf-DVHS2OMR.js").then((module) => ({ default: module.ConversationQueueShelf }))
 );
 var ConversationSavedHeader = lazy(
-  () => import("./chunks/ConversationSavedHeader-63CYOAMH.js").then((module) => ({ default: module.ConversationSavedHeader }))
+  () => import("./chunks/ConversationSavedHeader-DAAMLBI3.js").then((module) => ({ default: module.ConversationSavedHeader }))
 );
 
 // packages/desktop/ui/src/extensions/SettingsPanelHost.tsx

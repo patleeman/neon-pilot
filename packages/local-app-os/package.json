@@ -1,0 +1,25 @@
+{
+  "name": "@neon-pilot/local-app-os",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "node scripts/build.mjs && tsc --noEmit",
+    "dev": "pnpm run build && electron .",
+    "start": "electron .",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "electron": "38.8.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.35",
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.7",
+    "esbuild": "0.21.5",
+    "typescript": "5.9.3"
+  }
+}

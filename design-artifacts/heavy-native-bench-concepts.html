@@ -1,0 +1,1375 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Neon Pilot Native Bench Concepts</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07090c;
+        --window: #0b0d10;
+        --titlebar: #111419;
+        --rail: #11151b;
+        --rail-2: #0d1117;
+        --main: #090b0f;
+        --panel: #10141a;
+        --panel-2: #151922;
+        --line: #252b34;
+        --line-soft: #1b2028;
+        --text: #ece8df;
+        --muted: #aaa59a;
+        --dim: #79756d;
+        --accent: #7aa7ff;
+        --green: #68d987;
+        --yellow: #d8b15f;
+        --red: #f07575;
+        --button: #1b202b;
+        --button-strong: #24314a;
+        --shadow: rgba(0, 0, 0, 0.42);
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          'SF Pro Text',
+          Inter,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #020304;
+        color: var(--text);
+      }
+
+      body {
+        padding: 28px;
+      }
+
+      .artifact {
+        max-width: 1520px;
+        margin: 0 auto;
+      }
+
+      .intro {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 18px;
+        font-weight: 650;
+        letter-spacing: 0;
+      }
+
+      .intro p {
+        max-width: 780px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .tabs {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #0c0f14;
+      }
+
+      .tabs a {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .tabs a:hover,
+      #concept-a:target ~ .intro .tabs a[href='#concept-a'],
+      #concept-b:target ~ .intro .tabs a[href='#concept-b'],
+      #concept-c:target ~ .intro .tabs a[href='#concept-c'] {
+        background: #1a2130;
+        color: var(--text);
+      }
+
+      .concept {
+        display: none;
+      }
+
+      .concept:first-of-type,
+      #concept-a:target ~ .concept-a,
+      #concept-b:target ~ .concept-b,
+      #concept-c:target ~ .concept-c {
+        display: block;
+      }
+
+      #concept-b:target ~ .concept-a,
+      #concept-c:target ~ .concept-a {
+        display: none;
+      }
+
+      .window {
+        height: min(900px, calc(100vh - 132px));
+        min-height: 720px;
+        border: 1px solid #303640;
+        border-radius: 14px;
+        background: var(--window);
+        overflow: hidden;
+        box-shadow: 0 24px 60px var(--shadow);
+      }
+
+      .titlebar {
+        height: 38px;
+        display: grid;
+        grid-template-columns: 180px 1fr 240px;
+        align-items: center;
+        gap: 12px;
+        padding: 0 13px;
+        border-bottom: 1px solid var(--line);
+        background: var(--titlebar);
+        user-select: none;
+      }
+
+      .lights {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .light {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .red {
+        background: #ff5f57;
+      }
+      .yellow {
+        background: #febc2e;
+      }
+      .green-dot {
+        background: #28c840;
+      }
+
+      .title-tools,
+      .right-tools,
+      .toolbar,
+      .statusbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .title-tools {
+        color: var(--dim);
+        font-size: 12px;
+      }
+
+      .crumb {
+        display: inline-flex;
+        align-items: center;
+        height: 22px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #171c24;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .search {
+        justify-self: center;
+        width: min(620px, 100%);
+        height: 24px;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        border: 1px solid #202631;
+        border-radius: 7px;
+        color: var(--dim);
+        background: #0b0e13;
+        font-size: 12px;
+      }
+
+      .right-tools {
+        justify-content: end;
+      }
+
+      .icon-button,
+      .toolbar-button,
+      .tiny-button {
+        border: 1px solid var(--line);
+        color: var(--muted);
+        background: var(--button);
+        font: inherit;
+        border-radius: 6px;
+      }
+
+      .icon-button {
+        width: 26px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+      }
+
+      .toolbar-button {
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
+      .tiny-button {
+        height: 24px;
+        padding: 0 8px;
+        font-size: 11px;
+      }
+
+      .app-grid {
+        height: calc(100% - 38px);
+        display: grid;
+        grid-template-columns: 230px 1fr 300px;
+        grid-template-rows: 36px 1fr 28px;
+        background: var(--main);
+      }
+
+      .left {
+        grid-row: 1 / 4;
+        border-right: 1px solid var(--line);
+        background: var(--rail-2);
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .top-strip {
+        grid-column: 2 / 4;
+        border-bottom: 1px solid var(--line);
+        background: #0d1117;
+        padding: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .main {
+        min-width: 0;
+        overflow: hidden;
+        background: var(--main);
+      }
+
+      .right {
+        border-left: 1px solid var(--line);
+        background: #0d1015;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .statusbar {
+        grid-column: 2 / 4;
+        border-top: 1px solid var(--line);
+        background: #10141a;
+        padding: 0 10px;
+        color: var(--dim);
+        font-size: 11px;
+        justify-content: space-between;
+      }
+
+      .sidebar-section {
+        padding: 12px 10px 4px;
+      }
+
+      .sidebar-label {
+        margin: 12px 8px 6px;
+        color: var(--dim);
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: 650;
+      }
+
+      .nav-row,
+      .thread-row {
+        height: 28px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 9px;
+        border-radius: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        min-width: 0;
+      }
+
+      .nav-row.active,
+      .thread-row.active {
+        color: var(--text);
+        background: #182236;
+        outline: 1px solid #2c3b58;
+      }
+
+      .row-icon {
+        width: 14px;
+        color: var(--dim);
+        text-align: center;
+        font-size: 11px;
+        flex: 0 0 auto;
+      }
+
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .dim {
+        color: var(--dim);
+      }
+
+      .spacer {
+        flex: 1;
+      }
+
+      .split-main {
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 250px;
+        min-width: 0;
+      }
+
+      .transcript {
+        padding: 18px 26px;
+        overflow: hidden;
+        min-width: 0;
+      }
+
+      .work-tabs {
+        border-left: 1px solid var(--line-soft);
+        background: #0b0e13;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .tab-header {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 8px;
+        border-bottom: 1px solid var(--line);
+        color: var(--dim);
+        font-size: 11px;
+      }
+
+      .tab-pill {
+        height: 23px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 8px;
+        border-radius: 5px;
+        color: var(--muted);
+      }
+
+      .tab-pill.active {
+        background: #171d28;
+        color: var(--text);
+      }
+
+      .page-title {
+        margin: 4px 0 18px;
+        font-size: 16px;
+        font-weight: 650;
+      }
+
+      .message {
+        max-width: 720px;
+        margin: 0 0 14px;
+        color: #d9d5cc;
+        font-size: 13px;
+        line-height: 1.48;
+      }
+
+      .message.user {
+        margin-left: auto;
+        width: max-content;
+        max-width: 540px;
+        padding: 8px 11px;
+        border-radius: 12px;
+        background: #1b2027;
+        color: var(--text);
+      }
+
+      .run-card {
+        max-width: 760px;
+        margin: 18px 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #101319;
+      }
+
+      .run-head {
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 11px;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+
+      .file-row {
+        height: 28px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 12px;
+        padding: 0 11px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .composer {
+        position: absolute;
+        left: 26px;
+        right: 26px;
+        bottom: 18px;
+        height: 78px;
+        border: 1px solid #313844;
+        border-radius: 12px;
+        background: #12161d;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.26);
+        display: grid;
+        grid-template-rows: 1fr 28px;
+        overflow: hidden;
+      }
+
+      .main-relative {
+        position: relative;
+      }
+
+      .composer-placeholder {
+        padding: 12px 14px;
+        color: var(--dim);
+        font-size: 13px;
+      }
+
+      .composer-tools {
+        border-top: 1px solid var(--line-soft);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 12px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .mini-map {
+        margin: 12px;
+        height: 150px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background:
+          linear-gradient(90deg, transparent 0 18px, rgba(122, 167, 255, 0.08) 18px 19px, transparent 19px 100%),
+          linear-gradient(#0b0e13, #10141b);
+        background-size:
+          38px 100%,
+          100% 100%;
+      }
+
+      .rail-head {
+        height: 76px;
+        padding: 14px 14px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .rail-kicker {
+        color: var(--accent);
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 9px;
+      }
+
+      .rail-title {
+        font-size: 14px;
+        font-weight: 650;
+        margin-bottom: 5px;
+      }
+
+      .rail-subtitle {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .rail-section {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .kv-row {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 8px;
+        padding: 6px 0;
+        font-size: 12px;
+      }
+
+      .kv-row span:first-child {
+        color: var(--dim);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        height: 18px;
+        padding: 0 7px;
+        border: 1px solid #2b3a5e;
+        border-radius: 999px;
+        background: #14213b;
+        color: #9dc0ff;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        display: inline-block;
+        margin-right: 6px;
+      }
+
+      .tree {
+        padding: 8px 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .tree div {
+        height: 24px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 12px;
+      }
+
+      .tree .selected {
+        background: #151c2a;
+        color: var(--text);
+      }
+
+      .platform-grid {
+        height: calc(100% - 38px);
+        display: grid;
+        grid-template-columns: 238px 1fr 320px;
+        grid-template-rows: 42px 34px 1fr 28px;
+        background: var(--main);
+      }
+
+      .platform-toolbar {
+        grid-column: 2 / 4;
+        border-bottom: 1px solid var(--line);
+        background: #12161d;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 10px;
+      }
+
+      .platform-subbar {
+        grid-column: 2 / 4;
+        border-bottom: 1px solid var(--line-soft);
+        background: #0c1016;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .platform-main {
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .platform-right {
+        border-left: 1px solid var(--line);
+        background: #0d1015;
+        min-width: 0;
+      }
+
+      .platform-status {
+        grid-column: 2 / 4;
+        border-top: 1px solid var(--line);
+        background: #12161d;
+        color: var(--dim);
+        padding: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+      }
+
+      .module-grid {
+        height: 100%;
+        display: grid;
+        grid-template-rows: 38px 1fr;
+      }
+
+      .module-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 13px;
+      }
+
+      .module-body {
+        display: grid;
+        grid-template-columns: minmax(420px, 1fr) 300px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .data-table {
+        padding: 10px 14px;
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 12px;
+      }
+
+      th {
+        height: 30px;
+        color: var(--dim);
+        text-align: left;
+        font-size: 10px;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--line);
+        font-weight: 700;
+      }
+
+      td {
+        height: 38px;
+        border-bottom: 1px solid var(--line-soft);
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      td strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .detail-editor {
+        border-left: 1px solid var(--line-soft);
+        background: #0b0e13;
+        padding: 14px;
+        overflow: hidden;
+      }
+
+      .field {
+        margin-bottom: 13px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--dim);
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      .input {
+        height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #121720;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        padding: 0 9px;
+        font-size: 12px;
+      }
+
+      .checklist {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #10141a;
+      }
+
+      .check-row {
+        min-height: 34px;
+        display: grid;
+        grid-template-columns: 18px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 0 9px;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .check-row:last-child {
+        border-bottom: 0;
+      }
+
+      .agent-grid {
+        height: calc(100% - 38px);
+        display: grid;
+        grid-template-columns: 62px 240px 1fr 330px;
+        grid-template-rows: 34px 1fr 30px;
+        background: var(--main);
+      }
+
+      .activity-bar {
+        grid-row: 1 / 4;
+        border-right: 1px solid var(--line);
+        background: #10141a;
+        padding-top: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .activity-icon {
+        width: 34px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .activity-icon.active {
+        color: var(--text);
+        background: #1b2332;
+        outline: 1px solid #2b3952;
+      }
+
+      .agent-left {
+        grid-row: 1 / 4;
+        border-right: 1px solid var(--line);
+        background: var(--rail-2);
+        min-width: 0;
+      }
+
+      .agent-toolbar {
+        grid-column: 3 / 5;
+        border-bottom: 1px solid var(--line);
+        background: #0d1117;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
+      .agent-main {
+        min-width: 0;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: 34px 1fr;
+      }
+
+      .editor-tabs {
+        border-bottom: 1px solid var(--line-soft);
+        background: #0b0e13;
+        display: flex;
+        align-items: end;
+        padding: 0 8px;
+        gap: 2px;
+      }
+
+      .editor-tab {
+        height: 27px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-bottom: 0;
+        border-radius: 6px 6px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .editor-tab.active {
+        background: var(--main);
+        border-color: var(--line-soft);
+        color: var(--text);
+      }
+
+      .console {
+        padding: 14px 18px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #c9c3b8;
+        overflow: hidden;
+      }
+
+      .console .blue {
+        color: #8bb8ff;
+      }
+      .console .green-text {
+        color: #8df0a9;
+      }
+      .console .yellow-text {
+        color: #e1c26d;
+      }
+
+      .agent-right {
+        border-left: 1px solid var(--line);
+        background: #0d1015;
+        min-width: 0;
+      }
+
+      .agent-status {
+        grid-column: 3 / 5;
+        border-top: 1px solid var(--line);
+        background: #10141a;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px;
+        color: var(--dim);
+        font-size: 11px;
+      }
+
+      .timeline {
+        padding: 12px 14px;
+      }
+
+      .timeline-row {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 8px;
+        padding: 7px 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .timeline-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .platform-note {
+        margin-top: 14px;
+        color: var(--dim);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1100px) {
+        body {
+          padding: 14px;
+        }
+
+        .intro {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .window {
+          overflow: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="artifact">
+      <span id="concept-a"></span>
+      <span id="concept-b"></span>
+      <span id="concept-c"></span>
+
+      <section class="intro">
+        <div>
+          <h1>Neon Pilot native bench concepts</h1>
+          <p>
+            Three static directions for a desktop-feeling agent platform: Codex-clean workbench, heavier application platform, and agent
+            IDE. The point is structure, density, and native affordance, not final copy.
+          </p>
+        </div>
+        <nav class="tabs" aria-label="Concepts">
+          <a href="#concept-a">Codex-native pro</a>
+          <a href="#concept-b">Dense platform</a>
+          <a href="#concept-c">Agent IDE</a>
+        </nav>
+      </section>
+
+      <section class="concept concept-a">
+        <div class="window">
+          <div class="titlebar">
+            <div class="lights">
+              <span class="light red"></span><span class="light yellow"></span><span class="light green-dot"></span
+              ><span class="crumb">PRO</span>
+            </div>
+            <div class="search">Search threads, tools, models, settings...</div>
+            <div class="right-tools">
+              <button class="icon-button" aria-label="Readiness">R</button><button class="icon-button" aria-label="Notifications">N</button
+              ><button class="icon-button" aria-label="Layout">L</button>
+            </div>
+          </div>
+          <div class="app-grid">
+            <aside class="left">
+              <div class="sidebar-section">
+                <div class="nav-row active">
+                  <span class="row-icon">[]</span><span class="truncate">Chat</span><span class="spacer"></span><span>+</span>
+                </div>
+                <div class="nav-row"><span class="row-icon">A</span><span class="truncate">Automations</span></div>
+                <div class="nav-row"><span class="row-icon">G</span><span class="truncate">Gateways</span></div>
+                <div class="nav-row"><span class="row-icon">M</span><span class="truncate">Model Arena</span></div>
+                <div class="nav-row"><span class="row-icon">R</span><span class="truncate">Routines</span></div>
+              </div>
+              <div class="sidebar-label">Threads</div>
+              <div class="sidebar-section">
+                <div class="thread-row active"><span class="truncate">Setup Readiness</span><span class="dim">4m</span></div>
+                <div class="thread-row"><span class="truncate">What is up with fonts</span><span class="dim">9m</span></div>
+                <div class="thread-row"><span class="truncate">Notification System</span><span class="dim">1h</span></div>
+                <div class="thread-row"><span class="truncate">Routine Feature</span><span class="dim">12h</span></div>
+              </div>
+              <div class="spacer"></div>
+              <div class="sidebar-section">
+                <div class="nav-row"><span class="row-icon">*</span><span>Skills</span></div>
+                <div class="nav-row"><span class="row-icon">#</span><span>Extensions</span></div>
+                <div class="nav-row"><span class="row-icon">.</span><span>Settings</span></div>
+              </div>
+            </aside>
+
+            <div class="top-strip">
+              <div class="toolbar">
+                <button class="toolbar-button">New</button>
+                <button class="toolbar-button">Review</button>
+                <button class="toolbar-button">Run</button>
+                <button class="toolbar-button">Stop</button>
+              </div>
+              <div class="title-tools">
+                <span>neon-pilot</span><span>/</span><span>setup-readiness</span><span class="badge">active</span>
+              </div>
+            </div>
+
+            <section class="main main-relative">
+              <div class="split-main">
+                <div class="transcript">
+                  <div class="page-title">Setup Readiness</div>
+                  <p class="message user">What is up with the fonts?</p>
+                  <p class="message">
+                    I see it: the type scale is heavy in the wrong places and muddy in the supporting copy. I am tracing the shared
+                    typography tokens and checking this against the running app.
+                  </p>
+                  <div class="run-card">
+                    <div class="run-head">
+                      <strong>Edited 9 files</strong><span><span class="green-text">+24</span> <span class="red">-8</span></span>
+                    </div>
+                    <div class="file-row"><span>packages/ui/src/theme/type.css</span><span class="green-text">+9</span></div>
+                    <div class="file-row"><span>packages/desktop/src/AppShell.tsx</span><span class="green-text">+6</span></div>
+                    <div class="file-row"><span>extensions/system-setup/src/page.tsx</span><span class="green-text">+4</span></div>
+                  </div>
+                  <p class="message">
+                    I found a concrete typography smell: the app loads one weight but asks the UI to render five. I am replacing that with a
+                    native-feeling stack and tightening page-title use.
+                  </p>
+                </div>
+                <aside class="work-tabs">
+                  <div class="tab-header">
+                    <span class="tab-pill active">Diff</span><span class="tab-pill">Logs</span><span class="tab-pill">Files</span>
+                  </div>
+                  <div class="mini-map"></div>
+                  <div class="tree">
+                    <div class="selected">packages/ui</div>
+                    <div>theme/type.css</div>
+                    <div>AppPageLayout.tsx</div>
+                    <div>extensions/system-setup</div>
+                    <div>README.md</div>
+                  </div>
+                </aside>
+              </div>
+              <div class="composer">
+                <div class="composer-placeholder">Ask for follow-up changes</div>
+                <div class="composer-tools">
+                  <span>+</span><span>Full access</span><span class="spacer"></span><span>GPT-5 Medium</span><span>mic</span
+                  ><span>send</span>
+                </div>
+              </div>
+            </section>
+
+            <aside class="right">
+              <div class="rail-head">
+                <div class="rail-kicker">Environment</div>
+                <div class="rail-title">Local workspace</div>
+                <div class="rail-subtitle"><span class="dot"></span>Ready for checkpoint</div>
+              </div>
+              <div class="rail-section">
+                <div class="kv-row"><span>Branch</span><strong>codex/native-bench</strong></div>
+                <div class="kv-row"><span>Changes</span><strong>9 files</strong></div>
+                <div class="kv-row"><span>Checks</span><strong>2 passed</strong></div>
+              </div>
+              <div class="rail-section">
+                <div class="rail-kicker">Subagents</div>
+                <div class="kv-row"><span>Ptolemy</span><strong>Reviewing UI</strong></div>
+                <div class="kv-row"><span>Dewey</span><strong>Finding tests</strong></div>
+              </div>
+              <div class="rail-section">
+                <div class="rail-kicker">Sources</div>
+                <div class="kv-row"><span>Docs</span><strong>design taste</strong></div>
+                <div class="kv-row"><span>Images</span><strong>8 refs</strong></div>
+              </div>
+            </aside>
+
+            <footer class="statusbar">
+              <span>Working for 1m 33s</span><span>main process ready - extension host ready - 5 tools loaded</span>
+            </footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="concept concept-b">
+        <div class="window">
+          <div class="titlebar">
+            <div class="lights">
+              <span class="light red"></span><span class="light yellow"></span><span class="light green-dot"></span
+              ><span class="crumb">PLATFORM</span>
+            </div>
+            <div class="search">Open command or module...</div>
+            <div class="right-tools">
+              <button class="icon-button">S</button><button class="icon-button">B</button><button class="icon-button">?</button>
+            </div>
+          </div>
+          <div class="platform-grid">
+            <aside class="left">
+              <div class="sidebar-section">
+                <div class="nav-row active"><span class="row-icon">W</span><span class="truncate">Workbench</span></div>
+                <div class="nav-row"><span class="row-icon">T</span><span class="truncate">Threads</span></div>
+                <div class="nav-row"><span class="row-icon">R</span><span class="truncate">Runs</span></div>
+                <div class="nav-row"><span class="row-icon">A</span><span class="truncate">Automations</span></div>
+                <div class="nav-row"><span class="row-icon">E</span><span class="truncate">Extensions</span></div>
+                <div class="nav-row"><span class="row-icon">M</span><span class="truncate">Models</span></div>
+              </div>
+              <div class="sidebar-label">Modules</div>
+              <div class="tree">
+                <div class="selected">Automation Studio</div>
+                <div>Gateway Console</div>
+                <div>Skill Catalog</div>
+                <div>Model Arena</div>
+                <div>Release QA</div>
+                <div>Diagnostics</div>
+              </div>
+            </aside>
+            <div class="platform-toolbar">
+              <button class="toolbar-button">Build</button>
+              <button class="toolbar-button">Run</button>
+              <button class="toolbar-button">Schedule</button>
+              <button class="toolbar-button">Compare</button>
+              <button class="toolbar-button">Install</button>
+              <span class="spacer"></span>
+              <button class="toolbar-button">Inspector</button>
+              <button class="toolbar-button">Logs</button>
+            </div>
+            <div class="platform-subbar">
+              <span>Automation Studio</span>
+              <span class="dim">/</span>
+              <span>Recurring jobs</span>
+              <span class="badge">6 automations</span>
+              <span class="badge">2 need attention</span>
+            </div>
+            <section class="platform-main">
+              <div class="module-grid">
+                <div class="module-head">
+                  <strong>Recurring jobs</strong>
+                  <div class="toolbar">
+                    <button class="tiny-button">Pause</button><button class="tiny-button">Duplicate</button
+                    ><button class="tiny-button">New</button>
+                  </div>
+                </div>
+                <div class="module-body">
+                  <div class="data-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style="width: 16%">State</th>
+                          <th>Automation</th>
+                          <th style="width: 20%">Schedule</th>
+                          <th style="width: 17%">Next</th>
+                          <th style="width: 14%">Owner</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span class="badge">paused</span></td>
+                          <td><strong>Recurring Time Check</strong></td>
+                          <td>*/5 * * * *</td>
+                          <td>Paused</td>
+                          <td>Setup</td>
+                        </tr>
+                        <tr>
+                          <td><span class="green-text">On</span></td>
+                          <td><strong>Quarter-Hour Chime</strong></td>
+                          <td>15,45 * * * *</td>
+                          <td>8:45 PM</td>
+                          <td>Chat</td>
+                        </tr>
+                        <tr>
+                          <td><span class="green-text">On</span></td>
+                          <td><strong>Background Buddy</strong></td>
+                          <td>Once</td>
+                          <td>Completed</td>
+                          <td>Thread</td>
+                        </tr>
+                        <tr>
+                          <td><span class="badge">paused</span></td>
+                          <td><strong>Fast Tick</strong></td>
+                          <td>*/2 * * * *</td>
+                          <td>Paused</td>
+                          <td>Test</td>
+                        </tr>
+                        <tr>
+                          <td><span class="green-text">On</span></td>
+                          <td><strong>Release Doctor</strong></td>
+                          <td>Manual</td>
+                          <td>Ready</td>
+                          <td>QA</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <aside class="detail-editor">
+                    <div class="rail-kicker">Selected job</div>
+                    <div class="rail-title">Quarter-Hour Chime</div>
+                    <div class="platform-note">
+                      Dense platform direction: visible commands and editing affordances, but no explanatory page copy.
+                    </div>
+                    <div class="field">
+                      <label>Schedule</label>
+                      <div class="input">15,45 * * * *</div>
+                    </div>
+                    <div class="field">
+                      <label>Provider</label>
+                      <div class="input">DeepSeek V4 Flash - High</div>
+                    </div>
+                    <div class="field">
+                      <label>Destination</label>
+                      <div class="input">Owner thread</div>
+                    </div>
+                    <div class="checklist">
+                      <div class="check-row">
+                        <span class="green-text">OK</span><span>Thread visible in sidebar</span><span>passed</span>
+                      </div>
+                      <div class="check-row"><span class="green-text">OK</span><span>Wakeup registered</span><span>passed</span></div>
+                      <div class="check-row"><span class="yellow-text">!</span><span>Last run had warning</span><span>inspect</span></div>
+                    </div>
+                  </aside>
+                </div>
+              </div>
+            </section>
+            <aside class="platform-right">
+              <div class="rail-head">
+                <div class="rail-kicker">Platform inspector</div>
+                <div class="rail-title">Automation Studio</div>
+                <div class="rail-subtitle">Module status and extension surfaces</div>
+              </div>
+              <div class="rail-section">
+                <div class="kv-row"><span>Runtime</span><strong>active</strong></div>
+                <div class="kv-row"><span>Routes</span><strong>4 pages</strong></div>
+                <div class="kv-row"><span>Tools</span><strong>7 commands</strong></div>
+                <div class="kv-row"><span>Events</span><strong>streaming</strong></div>
+              </div>
+              <div class="rail-section">
+                <div class="rail-kicker">Quick actions</div>
+                <div class="pill-row">
+                  <button class="tiny-button">Open logs</button><button class="tiny-button">Run smoke</button
+                  ><button class="tiny-button">Export</button><button class="tiny-button">Disable</button>
+                </div>
+              </div>
+            </aside>
+            <footer class="platform-status">
+              <span>6 jobs - 1 selected - 2 warnings</span><span>extension host connected - background scheduler idle</span>
+            </footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="concept concept-c">
+        <div class="window">
+          <div class="titlebar">
+            <div class="lights">
+              <span class="light red"></span><span class="light yellow"></span><span class="light green-dot"></span
+              ><span class="crumb">STUDIO</span>
+            </div>
+            <div class="search">Search workspace symbols, runs, logs...</div>
+            <div class="right-tools">
+              <button class="icon-button">P</button><button class="icon-button">D</button><button class="icon-button">U</button>
+            </div>
+          </div>
+          <div class="agent-grid">
+            <nav class="activity-bar" aria-label="Activity">
+              <div class="activity-icon active">C</div>
+              <div class="activity-icon">F</div>
+              <div class="activity-icon">R</div>
+              <div class="activity-icon">A</div>
+              <div class="activity-icon">M</div>
+              <div class="spacer"></div>
+              <div class="activity-icon">S</div>
+            </nav>
+            <aside class="agent-left">
+              <div class="sidebar-label">Workspace</div>
+              <div class="tree">
+                <div class="selected">neon-pilot</div>
+                <div>packages</div>
+                <div>extensions</div>
+                <div>docs</div>
+                <div>design-artifacts</div>
+              </div>
+              <div class="sidebar-label">Active runs</div>
+              <div class="sidebar-section">
+                <div class="thread-row active"><span class="truncate">Native bench redesign</span><span class="badge">run</span></div>
+                <div class="thread-row"><span class="truncate">Release QA</span><span class="dim">idle</span></div>
+                <div class="thread-row"><span class="truncate">Model Arena audit</span><span class="dim">done</span></div>
+              </div>
+              <div class="sidebar-label">Agents</div>
+              <div class="sidebar-section">
+                <div class="nav-row">
+                  <span class="row-icon">M</span><span>Main</span><span class="spacer"></span><span class="green-text">busy</span>
+                </div>
+                <div class="nav-row"><span class="row-icon">R</span><span>Reviewer</span><span class="spacer"></span><span>idle</span></div>
+                <div class="nav-row"><span class="row-icon">Q</span><span>QA</span><span class="spacer"></span><span>idle</span></div>
+              </div>
+            </aside>
+            <div class="agent-toolbar">
+              <div class="toolbar">
+                <button class="toolbar-button">Chat</button><button class="toolbar-button">Plan</button
+                ><button class="toolbar-button">Run</button><button class="toolbar-button">Review</button>
+              </div>
+              <div class="title-tools"><span>main</span><span>codex/native-bench</span><span class="badge">GPT-5 Medium</span></div>
+            </div>
+            <section class="agent-main">
+              <div class="editor-tabs">
+                <div class="editor-tab active">Transcript</div>
+                <div class="editor-tab">Plan.md</div>
+                <div class="editor-tab">Diff</div>
+                <div class="editor-tab">Preview</div>
+                <div class="editor-tab">Terminal</div>
+              </div>
+              <div class="console">
+                <div><span class="blue">user</span> I want Neon Pilot to feel like a heavy native workbench.</div>
+                <br />
+                <div>
+                  <span class="green-text">codex</span> Reading the design taste guide and comparing the current shell to the Codex
+                  reference.
+                </div>
+                <div><span class="dim">tool</span> rg "AppPageLayout|ContextRail|SidebarRow" packages extensions</div>
+                <br />
+                <div>
+                  <span class="yellow-text">finding</span> Current pages have app-frame duplication: local headers, right rails, and table
+                  chrome compete with the shell.
+                </div>
+                <div>
+                  <span class="yellow-text">proposal</span> Promote toolbar, inspector, activity, and status bar to first-class shell
+                  regions.
+                </div>
+                <br />
+                <div><span class="green-text">patch</span> packages/ui/shared/AppWorkbenchShell.tsx</div>
+                <div><span class="green-text">patch</span> packages/desktop/src/routes/automation/AutomationStudio.tsx</div>
+                <br />
+                <div>
+                  <span class="blue">status</span> Visual target: agent IDE, not dashboard. Dense enough to feel powerful, structured enough
+                  to feel native.
+                </div>
+              </div>
+            </section>
+            <aside class="agent-right">
+              <div class="rail-head">
+                <div class="rail-kicker">Run timeline</div>
+                <div class="rail-title">Native bench redesign</div>
+                <div class="rail-subtitle">Live context, tools, files, checks</div>
+              </div>
+              <div class="timeline">
+                <div class="timeline-row">
+                  <span class="green-text">OK</span>
+                  <div><strong>Repo scan</strong><br /><span class="dim">Read shell primitives and route templates</span></div>
+                </div>
+                <div class="timeline-row">
+                  <span class="green-text">OK</span>
+                  <div><strong>Concept pass</strong><br /><span class="dim">Created three visual targets</span></div>
+                </div>
+                <div class="timeline-row">
+                  <span class="yellow-text">...</span>
+                  <div><strong>Implementation map</strong><br /><span class="dim">Waiting on selected direction</span></div>
+                </div>
+              </div>
+              <div class="rail-section">
+                <div class="rail-kicker">Files</div>
+                <div class="kv-row"><span>Shell</span><strong>AppWorkbench</strong></div>
+                <div class="kv-row"><span>UI</span><strong>shared primitives</strong></div>
+                <div class="kv-row"><span>Docs</span><strong>design taste</strong></div>
+              </div>
+              <div class="rail-section">
+                <div class="rail-kicker">Checks</div>
+                <div class="checklist">
+                  <div class="check-row"><span>1</span><span>Desktop route opens</span><span>todo</span></div>
+                  <div class="check-row"><span>2</span><span>Visual screenshot pass</span><span>todo</span></div>
+                  <div class="check-row"><span>3</span><span>Extension boundary</span><span>todo</span></div>
+                </div>
+              </div>
+            </aside>
+            <footer class="agent-status">
+              <span>Agent Studio - 5 tabs - 3 active contexts</span
+              ><span>terminal idle - extension host ready - app preview available</span>
+            </footer>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
