@@ -25,7 +25,6 @@ import {
   WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
 } from '@neon-pilot/extensions/ui';
@@ -592,8 +591,47 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
 
     return (
       <div className="h-full overflow-hidden">
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Workflows" accent="routines">
+        <WindowedPageShell layout="standard" className="workflows-page-windowed">
+          <WindowedPageMain
+            eyebrow="Dynamic workflows"
+            title="Workflows"
+            description="Create, run, and inspect coordinated background agent workflows."
+            actions={
+              <>
+                <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
+                <WindowedPageButton
+                  tone="accent"
+                  onClick={() => {
+                    setSelectedId(null);
+                    setSelectedTemplateId(null);
+                    setDraft(EMPTY_DRAFT);
+                    setDraftError(null);
+                    setDraftStatus(null);
+                    setDraftOpen(true);
+                  }}
+                >
+                  New saved workflow
+                </WindowedPageButton>
+              </>
+            }
+          >
+            {error ? (
+              <WindowedPageSection title="Action needed">
+                <p className="wos-windowed-error">{error}</p>
+              </WindowedPageSection>
+            ) : null}
+
+            <WindowedPageSection title="Inventory" meta={selected?.status ?? (selectedTemplate ? 'Template selected' : 'Ready')}>
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Runs', value: workflows.length },
+                  { label: 'Saved', value: savedWorkflows.length },
+                  { label: 'Templates', value: templates.length },
+                  { label: 'Active', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
+                ]}
+              />
+            </WindowedPageSection>
+
             <WindowedPageSection title="Runs" meta={workflows.length ? `${workflows.length} total` : 'Empty'}>
               {workflowRows.length ? (
                 <WindowedList>
@@ -643,47 +681,6 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
               ) : (
                 <div className="wos-windowed-empty">No workflow templates yet.</div>
               )}
-            </WindowedPageSection>
-          </WindowedPageRail>
-
-          <WindowedPageMain
-            eyebrow="Dynamic workflows"
-            title="Workflows"
-            description="Create, run, and inspect coordinated background agent workflows."
-            actions={
-              <>
-                <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
-                <WindowedPageButton
-                  tone="accent"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setSelectedTemplateId(null);
-                    setDraft(EMPTY_DRAFT);
-                    setDraftError(null);
-                    setDraftStatus(null);
-                    setDraftOpen(true);
-                  }}
-                >
-                  New saved workflow
-                </WindowedPageButton>
-              </>
-            }
-          >
-            {error ? (
-              <WindowedPageSection title="Action needed">
-                <p className="wos-windowed-error">{error}</p>
-              </WindowedPageSection>
-            ) : null}
-
-            <WindowedPageSection title="Inventory" meta={selected?.status ?? (selectedTemplate ? 'Template selected' : 'Ready')}>
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Runs', value: workflows.length },
-                  { label: 'Saved', value: savedWorkflows.length },
-                  { label: 'Templates', value: templates.length },
-                  { label: 'Active', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
-                ]}
-              />
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
