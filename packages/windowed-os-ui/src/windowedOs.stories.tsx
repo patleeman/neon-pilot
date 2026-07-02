@@ -10,6 +10,7 @@ import {
   WindowedChatSurface,
   WindowedDataRow,
   WindowedDataTable,
+  WindowedDialog,
   WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
@@ -774,6 +775,121 @@ export const RoutinesListDetailPrimitives: Story = {
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const WorkflowsPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="Workflows"
+        accent="routines"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 612 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Dynamic workflows"
+            title="Workflows"
+            actions={
+              <>
+                <WindowedPageButton>Refresh</WindowedPageButton>
+                <WindowedPageButton tone="accent">New saved workflow</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Inventory" meta="running">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Runs', value: 4 },
+                  { label: 'Saved', value: 3 },
+                  { label: 'Templates', value: 5 },
+                  { label: 'Active', value: 'repo-audit' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Runs" meta="4 total">
+              <WindowedList>
+                <WindowedListItem
+                  title="Repo audit"
+                  meta="review"
+                  detail="Updated 2m ago"
+                  active
+                  accent="routines"
+                  status={<WindowedBadge tone="warning">running</WindowedBadge>}
+                />
+                <WindowedListItem
+                  title="Visual regression sweep"
+                  meta="/Users/patrick/workingdir/neon-pilot"
+                  detail="Completed today"
+                  accent="routines"
+                  status={<WindowedBadge tone="positive">completed</WindowedBadge>}
+                />
+                <WindowedListItem
+                  title="Extension hardening"
+                  meta="verification"
+                  detail="Failed yesterday"
+                  accent="routines"
+                  status={<WindowedBadge tone="danger">failed</WindowedBadge>}
+                />
+              </WindowedList>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Library" meta="8 workflows">
+              <WindowedList>
+                <WindowedListItem
+                  title="Code review fanout"
+                  meta="Saved workflow"
+                  detail="Review changed files in parallel"
+                  accent="routines"
+                />
+                <WindowedListItem title="Finding validation" meta="Template" detail="Validate each reported issue" accent="routines" />
+                <WindowedListItem title="Research synthesis" meta="Template" detail="Explore angles, then summarize" accent="routines" />
+              </WindowedList>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+        <WindowedDialog
+          title="Repo audit"
+          meta="running"
+          accent="routines"
+          onClose={() => undefined}
+          actions={<WindowedPageButton>Cancel</WindowedPageButton>}
+        >
+          <WindowedKeyValueGrid
+            columns={3}
+            items={[
+              { label: 'Created', value: 'Today, 10:12 AM' },
+              { label: 'Updated', value: 'Today, 10:17 AM' },
+              { label: 'Active phase', value: 'review' },
+              { label: 'Models', value: 'gpt-5.4-mini' },
+              { label: 'Agents', value: '3/8 complete, 2 running' },
+              { label: 'Completed', value: 'not completed' },
+            ]}
+          />
+          <WindowedList>
+            <WindowedListItem
+              title="reviewer"
+              meta="review · gpt-5.4-mini"
+              detail="Inspect changed desktop shell files."
+              accent="routines"
+              status={<WindowedBadge tone="warning">running</WindowedBadge>}
+            />
+            <WindowedListItem
+              title="visual-check"
+              meta="verification · gpt-5.4-mini"
+              detail="No horizontal overflow found in the Storybook target."
+              accent="routines"
+              status={<WindowedBadge tone="positive">completed</WindowedBadge>}
+            />
+          </WindowedList>
+        </WindowedDialog>
       </WindowFrame>
     </div>
   ),

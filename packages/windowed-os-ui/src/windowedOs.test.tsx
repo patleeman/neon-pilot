@@ -48,6 +48,20 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Settings sections"');
   });
 
+  it('documents the canonical Workflows desktop page and subwindow pattern', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const WorkflowsPage');
+    expect(source).toContain('title="Workflows"');
+    expect(source).toContain('eyebrow="Dynamic workflows"');
+    expect(source).toContain('title="Inventory"');
+    expect(source).toContain('title="Runs"');
+    expect(source).toContain('title="Library"');
+    expect(source).toContain('<WindowedDialog');
+    expect(source).toContain('title="Repo audit"');
+  });
+
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
