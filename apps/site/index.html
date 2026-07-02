@@ -3,16 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f7f7f4" />
+    <meta name="theme-color" content="#ffffff" />
     <meta
       name="description"
-      content="Neon Pilot is a local-first, self-extensible macOS harness for AI agents, with Pi-compatible providers, app-grade extensions, and MIT-licensed source."
+      content="Neon Pilot is a local-first, self-extensible macOS workbench for AI agents, powered by the Pi Coding Agent."
     />
-    <title>Neon Pilot - self-extensible local AI agent harness</title>
+    <title>Neon Pilot - self-extensible local AI agent workbench</title>
     <link rel="icon" href="./mark.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -20,66 +23,50 @@
 
     <header class="site-header">
       <a class="brand" href="#main" aria-label="Neon Pilot home">
-        <span class="brand-mark"><img src="./mark.svg" alt="" width="22" height="22" /></span>
+        <span class="brand-mark"><img src="./icon-color.svg" alt="" width="18" height="18" /></span>
         <span>Neon Pilot</span>
+        <span class="brand-version">v1.4</span>
+        <span class="brand-powered">powered by <strong>Pi</strong></span>
       </a>
       <nav aria-label="Primary">
-        <a href="#product">Product</a>
+        <a class="active" href="#product">Product</a>
         <a href="./docs/">Docs</a>
         <a href="./extensions.html">Extensions</a>
         <a href="https://github.com/patleeman/neon-pilot" rel="noopener">GitHub</a>
       </nav>
-      <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
+      <div class="header-meta">
+        <span>MIT · macOS</span>
+        <a class="nav-cta" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
+      </div>
     </header>
 
     <main id="main">
       <section class="hero" id="product" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Self-extensible local harness</p>
-          <h1 id="hero-title">The local agent harness that can extend itself.</h1>
+          <p class="status-pill"><span></span>Powered by the Pi Coding Agent</p>
+          <h1 id="hero-title">A workbench your agent can rebuild.</h1>
           <p class="hero-lede">
-            Neon Pilot takes Pi's self-extensible architecture into a full macOS workbench: local-first conversations, any Pi-supported
-            model provider, app-grade extensions, background work, knowledge, checkpoints, and inspectable runtime state.
+            Neon Pilot wraps the Pi Coding Agent in a durable macOS desktop app. Ask once, and your agent ships new commands,
+            tools, pages, and workbench panels as first-class extensions. Bring any provider. Keep everything on your machine.
           </p>
-
-          <div class="proof-list" aria-label="Primary product guarantees">
-            <div>
-              <strong>Self-extensible</strong>
-              <span>Ask the agent to build an extension, then enable, inspect, modify, and run it in the same app.</span>
-            </div>
-            <div>
-              <strong>Local first</strong>
-              <span>Your conversations, data, settings, extensions, and runtime state live on your machine.</span>
-            </div>
-            <div>
-              <strong>Bring any Pi provider</strong>
-              <span>Use the model providers Pi supports with your own API keys instead of locking work to one vendor.</span>
-            </div>
-          </div>
 
           <div class="cta-row">
             <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
-            <a class="btn" href="./docs/">Read the Docs</a>
+            <a class="btn" href="./docs/">Read the docs</a>
           </div>
 
           <div class="quick-install" aria-label="Install command">
-            <div class="quick-install-header">
-              <span>Install and bootstrap</span>
-              <a href="https://github.com/patleeman/neon-pilot/releases/latest">Latest release</a>
-            </div>
-            <div class="command-row">
-              <!-- prettier-ignore -->
-              <code>curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap</code>
-              <button type="button" class="copy-command" aria-label="Copy install command">Copy</button>
-            </div>
-            <p>Requires macOS. Fully open source under MIT.</p>
+            <!-- prettier-ignore -->
+            <code><span>$</span> curl -fsSL neonpilot.net/install.sh | bash -s -- --bootstrap</code>
+            <button type="button" class="copy-command" aria-label="Copy install command">Copy</button>
           </div>
         </div>
 
         <figure class="hero-shot">
+          <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
           <img
-            src="./screenshots/dark/extensions.png"
-            alt="Neon Pilot desktop app showing a staged local agent conversation with workbench panels, tools, and progress state."
+            src="./screenshots/light/workbench.png"
+            alt="Neon Pilot workbench with a conversation, workbench panels, files, and agent progress."
             width="1440"
             height="960"
             fetchpriority="high"
@@ -87,215 +74,175 @@
         </figure>
       </section>
 
-      <section class="capability-strip" aria-label="Core capabilities">
-        <article>
-          <span aria-hidden="true">01</span>
-          <strong>Self-Extensible</strong>
-          <p>The agent can create and evolve extensions, not just consume extensions someone else packaged.</p>
-        </article>
-        <article>
-          <span aria-hidden="true">02</span>
-          <strong>Local First</strong>
-          <p>No hosted web app is required. Network access only happens through the providers and tools you configure.</p>
-        </article>
-        <article>
-          <span aria-hidden="true">03</span>
-          <strong>Provider Freedom</strong>
-          <p>Bring your own keys for any Pi-supported provider and switch models without changing harnesses.</p>
-        </article>
-        <article>
-          <span aria-hidden="true">04</span>
-          <strong>Open Source</strong>
-          <p>MIT licensed and fully inspectable, so the harness can be audited, forked, and reshaped.</p>
-        </article>
+      <section class="trust-strip" aria-label="Provider support">
+        <span>Keys, subscriptions, or local</span>
+        <strong>Anthropic</strong>
+        <strong>OpenAI</strong>
+        <strong>Google</strong>
+        <strong>Ollama</strong>
+        <strong>LM Studio</strong>
+        <span class="local-first">local-first · nothing hosted</span>
       </section>
 
-      <section class="explain split-section" aria-labelledby="what-title">
-        <div>
-          <p class="eyebrow">What it is</p>
-          <h2 id="what-title">A local workbench where the harness itself is part of the agent's workspace.</h2>
-        </div>
-        <div class="text-column">
-          <p>
-            Neon Pilot is not another hosted chat surface. It is a local runtime around the agent: transcript storage, provider settings,
-            workspace context, background execution, extension hosting, browser control, MCP tools, terminal access, telemetry, and reusable
-            workflow surfaces.
-          </p>
-          <p>
-            Use it when the agent should be able to change the harness around the work: add a page, wire a tool, expose a setting, schedule
-            a follow-up, or turn a repeated workflow into a first-class local extension.
-          </p>
-        </div>
-      </section>
-
-      <section class="feature-matrix" aria-labelledby="feature-matrix-title">
-        <div class="section-heading">
-          <p class="eyebrow">Feature set</p>
-          <h2 id="feature-matrix-title">The pieces a self-extensible harness needs.</h2>
-          <p>
-            Neon Pilot is built around the full loop: gather local context, choose the right provider, run tools, inspect output, continue
-            in the background, and let agents turn useful patterns into reusable extensions.
-          </p>
-        </div>
-        <div class="matrix-grid">
+      <section class="section-block" aria-labelledby="self-extension-title">
+        <p class="eyebrow">How self-extension works</p>
+        <h2 id="self-extension-title">Ask for a capability. Get an extension that stays.</h2>
+        <div class="workflow">
           <article>
-            <h3>Local workbench</h3>
-            <p>
-              Durable transcripts, file attachments, screenshots, drawings, model controls, todos, diffs, artifacts, and branch-aware status
-              stored on your machine.
-            </p>
+            <div class="step-heading"><span>1</span><small>Ask</small></div>
+            <h3>Describe it in plain language</h3>
+            <p>"Add a panel that watches my error logs and pings me." No SDK boilerplate, no config files to hand-write.</p>
+            <code class="inline-terminal"><span>›</span> add a log-watcher panel</code>
           </article>
           <article>
-            <h3>Provider choice</h3>
-            <p>Use any Pi-supported model provider with your own API keys, provider setup, model picker controls, and local gateway.</p>
+            <div class="step-heading"><span>2</span><small>Build</small></div>
+            <h3>The agent writes a typed extension</h3>
+            <p>Commands, tools, settings, pages, panels, and workbench panes are generated against the same authoring API as core.</p>
+            <code class="file-tree">writing log-watcher/<br />├─ page.tsx<br />├─ panel.tsx<br />├─ tool.ts<br />└─ settings.ts</code>
           </article>
           <article>
-            <h3>Small core</h3>
-            <p>The core owns runtime, storage, routing, security, and shared primitives; product workflows live in extensions.</p>
-          </article>
-          <article>
-            <h3>Background execution</h3>
-            <p>Daemon-backed runs, scheduled automations, routines, goal mode, subagents, native alerts, and visible run state.</p>
-          </article>
-          <article>
-            <h3>Everything as extensions</h3>
-            <p>
-              System and user features use extension primitives: pages, panels, tools, settings, setup flows, commands, and host-view
-              components.
-            </p>
-          </article>
-          <article>
-            <h3>Open and ownable</h3>
-            <p>MIT licensed, inspectable, forkable, and designed so the editor and harness can be customized into your own agent system.</p>
+            <div class="step-heading"><span>3</span><small>Run</small></div>
+            <h3>It loads live, and it's yours</h3>
+            <p>No rebuild, no restart, no marketplace. The extension appears in the sidebar and persists across sessions.</p>
+            <code class="inline-terminal success">loaded · added to sidebar</code>
           </article>
         </div>
       </section>
 
-      <section class="platform-compare split-section" aria-labelledby="platform-title">
-        <div>
-          <p class="eyebrow">Beyond extensible</p>
-          <h2 id="platform-title">Self-extensible means the agent can grow the harness while it works.</h2>
-        </div>
-        <div class="text-column">
-          <p>
-            Traditional extensible software asks the user to install packages or spend serious engineering time inside a framework. Pi moved
-            the model forward by making the agent self-extensible: it can build extensions for itself and then run with them.
-          </p>
-          <p>
-            Neon Pilot carries that idea into a full desktop client. Extensions are not just skills and hooks: they can own pages, sidebars,
-            workbench panels, settings, backend actions, setup readiness items, tools, commands, storage, transcript rendering, and provider
-            behavior.
-          </p>
+      <section class="section-block compact" aria-labelledby="ships-title">
+        <p class="eyebrow muted">What ships in the box</p>
+        <h2 id="ships-title">The pieces a self-extensible harness needs.</h2>
+        <div class="feature-table">
+          <div>
+            <strong>Self-extensible</strong>
+            <span>The agent authors extensions: commands, tools, settings, pages, and workbench panels.</span>
+          </div>
+          <div>
+            <strong>Local-first</strong>
+            <span>Transcripts, checkpoints, keys, and runtime state persist on your machine across restarts.</span>
+          </div>
+          <div>
+            <strong>Extension-first</strong>
+            <span>Product features live in system and user extensions instead of bloating core.</span>
+          </div>
+          <div>
+            <strong>Background work</strong>
+            <span>Daemon-backed runs, scheduled automations, subagents, and always-visible run state.</span>
+          </div>
         </div>
       </section>
 
-      <section class="workflow" aria-label="Workflow from conversation to reusable capability">
-        <div class="workflow-step">
-          <span>Ask</span>
-          <strong>Ask for the workflow</strong>
-          <p>Attach files or folders, pick any configured Pi-supported provider, and describe the tool or surface you need.</p>
+      <section class="extensions-showcase" aria-labelledby="extensions-title">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Extensions</p>
+            <h2 id="extensions-title">Everything is an extension.</h2>
+          </div>
+          <a href="./extensions.html">Browse the catalog</a>
         </div>
-        <div class="workflow-step">
-          <span>Build</span>
-          <strong>Let the agent extend the harness</strong>
-          <p>The agent can create pages, tools, settings, commands, backend actions, docs, and tests as a local extension.</p>
+        <div class="extension-grid">
+          <article>
+            <span>◇</span>
+            <h3>Automations</h3>
+            <p>Scheduled, daemon-backed runs with visible state and native macOS alerts.</p>
+          </article>
+          <article>
+            <span>▤</span>
+            <h3>Knowledge base</h3>
+            <p>Git-backed durable notes, skills, and instruction files that sync across machines.</p>
+          </article>
+          <article>
+            <span>⌘</span>
+            <h3>Command palette</h3>
+            <p>Every extension contributes commands, pages, and tools to one fast launcher.</p>
+          </article>
+          <article>
+            <span>⚔</span>
+            <h3>Model Arena</h3>
+            <p>Run the same prompt across providers side by side and compare latency and cost.</p>
+          </article>
+          <article>
+            <span>◈</span>
+            <h3>Subagents</h3>
+            <p>Spawn scoped workers that report back into the main transcript when they finish.</p>
+          </article>
+          <article>
+            <span>▦</span>
+            <h3>Telemetry</h3>
+            <p>Token, latency, and cost charts for every run: local, private, never phoned home.</p>
+          </article>
         </div>
-        <div class="workflow-step">
-          <span>Own</span>
-          <strong>Keep the result local and editable</strong>
-          <p>Enable it, disable it, inspect it, modify it, fork it, or keep evolving it as part of your own MIT-licensed harness.</p>
+      </section>
+
+      <section class="section-block" aria-labelledby="providers-title">
+        <p class="eyebrow muted">Provider support</p>
+        <h2 id="providers-title">One harness. Every provider. Your keys.</h2>
+        <div class="provider-panel">
+          <div class="provider-tabs" role="tablist" aria-label="Provider examples">
+            <button type="button" class="active" data-provider="anthropic">Anthropic</button>
+            <button type="button" data-provider="openai">OpenAI</button>
+            <button type="button" data-provider="google">Google</button>
+            <button type="button" data-provider="local">Local</button>
+            <button type="button" data-provider="gateways">Gateways</button>
+          </div>
+          <div class="provider-content">
+            <div>
+              <h3><span data-provider-name>Anthropic</span><small data-provider-tag>subscription + key</small></h3>
+              <p data-provider-note>
+                Sign in with a Claude Pro or Max subscription, or bring an API key. Subscription use draws from extra usage billed per
+                token, not your plan limits.
+              </p>
+              <p class="connect-label">Connect via</p>
+              <div class="connect-list" data-provider-connect>
+                <span>Claude Pro/Max login</span>
+                <span>API key</span>
+              </div>
+            </div>
+            <div class="provider-config">
+              <p>Configure</p>
+              <code>
+                <span># Primary: configure in the app</span><br />
+                Settings › Providers › <strong data-provider-config-name>Anthropic</strong><br />
+                <span># Or from the CLI</span><br />
+                $ <strong data-provider-command>neon-pilot bootstrap provider set-key anthropic</strong>
+              </code>
+              <p data-provider-store>OAuth tokens and keys are stored locally and never leave your machine.</p>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="screens" aria-label="Product screenshots">
-        <figure class="screen-main">
+        <figure>
           <img
-            src="./screenshots/dark/settings.png"
+            src="./screenshots/light/settings.png"
             alt="Neon Pilot settings showing provider, model, extension, readiness, and runtime configuration."
             width="1440"
             height="960"
             loading="lazy"
           />
-          <figcaption>
-            <strong>Configure the runtime</strong>
-            <span>Providers, models, appearance, readiness, extension sources, permissions, and desktop settings live in one app.</span>
-          </figcaption>
+          <figcaption>Configure providers, models, extensions, readiness, and runtime settings.</figcaption>
         </figure>
-        <div class="screen-stack">
-          <figure>
-            <img
-              src="./screenshots/dark/extensions.png"
-              alt="Neon Pilot extension manager showing bundled capabilities, status, diagnostics, and install controls."
-              width="1440"
-              height="960"
-              loading="lazy"
-            />
-            <figcaption>Extension manager</figcaption>
-          </figure>
-          <figure>
-            <img
-              src="./screenshots/dark/command-palette.png"
-              alt="Neon Pilot command palette with extension commands."
-              width="1440"
-              height="960"
-              loading="lazy"
-            />
-            <figcaption>Command palette and extension actions</figcaption>
-          </figure>
-        </div>
-      </section>
-
-      <section class="deep-grid" aria-label="Product principles">
-        <article>
-          <p class="eyebrow">Extension-first</p>
-          <h2>Keep core small. Make the product out of extensions.</h2>
-          <p>
-            Neon Pilot's product surface is built around bundled, optional, and user extensions. Inspired by Pi's extension architecture, a
-            capability can contribute pages, sidebar views, settings, commands, agent tools, skills, setup readiness items, and backend
-            actions without bloating the runtime core.
-          </p>
-          <a href="./docs/extensions.html">Read extension docs</a>
-        </article>
-        <article>
-          <p class="eyebrow">Provider freedom</p>
-          <h2>Bring the providers Pi supports.</h2>
-          <p>
-            Use your own API keys and provider configuration instead of binding your workspace to one model vendor. Model controls, local
-            gateway support, prompt diagnostics, and Model Arena all live in the same local workbench.
-          </p>
-          <a href="./docs/agent-bootstrap.html">Read provider setup docs</a>
-        </article>
-        <article>
-          <p class="eyebrow">Local first</p>
-          <h2>Your harness runs on your machine.</h2>
-          <p>
-            Conversations, branches, artifacts, checkpoints, automations, routines, extension data, and runtime settings persist locally.
-            Network access comes from the providers, MCP servers, and tools you choose to configure.
-          </p>
-          <a href="./docs/conversations.html">Read conversation docs</a>
-        </article>
-        <article>
-          <p class="eyebrow">Open source</p>
-          <h2>MIT licensed and fully inspectable.</h2>
-          <p>
-            Neon Pilot is free for everyone to use, audit, modify, and fork. The editor is designed to be customized, so teams can turn it
-            into their own harness instead of renting one they cannot change.
-          </p>
-          <a href="https://github.com/patleeman/neon-pilot">View source</a>
-        </article>
+        <figure>
+          <img
+            src="./screenshots/light/extensions.png"
+            alt="Neon Pilot extension manager showing bundled capabilities, status, diagnostics, and install controls."
+            width="1440"
+            height="960"
+            loading="lazy"
+          />
+          <figcaption>Inspect, enable, disable, and build extensions locally.</figcaption>
+        </figure>
       </section>
 
       <section class="closing">
         <div>
-          <p class="eyebrow">macOS today</p>
-          <h2>Install the local self-extensible harness and make it your own.</h2>
-          <p>
-            Download the app, bootstrap the CLI, bring your provider keys, then ask your agent to build the extensions your workspace needs.
-          </p>
+          <h2>Free and open source.</h2>
+          <p>MIT licensed and local-first. Bring your own provider via key, subscription, or a local model.</p>
         </div>
         <div class="closing-actions">
           <a class="btn primary" href="https://github.com/patleeman/neon-pilot/releases/latest">Download for macOS</a>
-          <a class="btn" href="./docs/getting-started.html">Getting Started</a>
+          <a class="btn" href="https://github.com/patleeman/neon-pilot">Star on GitHub</a>
         </div>
       </section>
     </main>
@@ -306,17 +253,24 @@
     </dialog>
 
     <footer>
-      <span>Open source under MIT. Built for local macOS agent workflows.</span>
       <div>
-        <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
-        <a href="https://github.com/patleeman/neon-pilot/releases">Releases</a>
-        <a href="./docs/">Docs</a>
+        <a class="footer-brand" href="#main">
+          <span class="brand-mark"><img src="./icon-color.svg" alt="" width="18" height="18" /></span>
+          <span>Neon Pilot</span>
+        </a>
+        <p>A local, self-extensible agent workbench for macOS, powered by the Pi Coding Agent.</p>
+        <small>© 2026 Neon Pilot contributors</small>
       </div>
+      <nav aria-label="Footer">
+        <a href="https://github.com/patleeman/neon-pilot/releases/latest">Download</a>
+        <a href="./docs/">Docs</a>
+        <a href="./extensions.html">Extensions API</a>
+        <a href="https://github.com/patleeman/neon-pilot">GitHub</a>
+      </nav>
     </footer>
 
     <script>
-      const installCommand =
-        'curl -fsSL https://raw.githubusercontent.com/patleeman/neon-pilot/master/install.sh | bash -s -- --install-cli --bootstrap';
+      const installCommand = 'curl -fsSL neonpilot.net/install.sh | bash -s -- --bootstrap';
       const copyButton = document.querySelector('.copy-command');
       copyButton?.addEventListener('click', async () => {
         try {
@@ -328,6 +282,74 @@
         } catch {
           copyButton.textContent = 'Select';
         }
+      });
+
+      const providerData = {
+        anthropic: {
+          name: 'Anthropic',
+          tag: 'subscription + key',
+          note:
+            'Sign in with a Claude Pro or Max subscription, or bring an API key. Subscription use draws from extra usage billed per token, not your plan limits.',
+          connect: ['Claude Pro/Max login', 'API key'],
+          command: 'neon-pilot bootstrap provider set-key anthropic',
+          store: 'OAuth tokens and keys are stored locally and never leave your machine.',
+        },
+        openai: {
+          name: 'OpenAI',
+          tag: 'subscription + key',
+          note: 'Use a ChatGPT Plus or Pro subscription through Codex, or an OpenAI API key.',
+          connect: ['ChatGPT Plus/Pro', 'API key'],
+          command: 'neon-pilot bootstrap provider set-key openai',
+          store: 'Credentials stay on your machine. Auth-file entries take priority over environment variables.',
+        },
+        google: {
+          name: 'Google',
+          tag: 'key + cloud',
+          note: 'Connect a Gemini API key directly, or route through Google Vertex AI with application-default credentials.',
+          connect: ['Gemini API key', 'Vertex AI'],
+          command: 'neon-pilot bootstrap provider set-key google',
+          store: 'Keys and ADC credentials are read locally and never transmitted to Neon Pilot.',
+        },
+        local: {
+          name: 'Local',
+          tag: 'offline',
+          note: 'Run fully offline against Ollama, LM Studio, or vLLM: any endpoint that speaks a supported API.',
+          connect: ['Ollama', 'LM Studio', 'vLLM'],
+          command: 'neon-pilot models add ollama',
+          store: 'Everything runs on-device. Nothing is sent anywhere by design.',
+        },
+        gateways: {
+          name: 'Gateways',
+          tag: 'gateway',
+          note: 'One key fronts many vendors through OpenRouter, Vercel AI Gateway, or Cloudflare AI Gateway.',
+          connect: ['OpenRouter', 'Vercel AI Gateway', 'Cloudflare'],
+          command: 'neon-pilot bootstrap provider set-key openrouter',
+          store: 'Gateway keys live in your local auth file alongside every other provider.',
+        },
+      };
+
+      const providerButtons = document.querySelectorAll('.provider-tabs button');
+      const providerName = document.querySelector('[data-provider-name]');
+      const providerConfigName = document.querySelector('[data-provider-config-name]');
+      const providerTag = document.querySelector('[data-provider-tag]');
+      const providerNote = document.querySelector('[data-provider-note]');
+      const providerConnect = document.querySelector('[data-provider-connect]');
+      const providerCommand = document.querySelector('[data-provider-command]');
+      const providerStore = document.querySelector('[data-provider-store]');
+
+      providerButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const provider = providerData[button.dataset.provider];
+          if (!provider) return;
+          providerButtons.forEach((item) => item.classList.toggle('active', item === button));
+          providerName.textContent = provider.name;
+          providerConfigName.textContent = provider.name;
+          providerTag.textContent = provider.tag;
+          providerNote.textContent = provider.note;
+          providerCommand.textContent = provider.command;
+          providerStore.textContent = provider.store;
+          providerConnect.replaceChildren(...provider.connect.map((label) => Object.assign(document.createElement('span'), { textContent: label })));
+        });
       });
 
       const popout = document.querySelector('.image-popout');
