@@ -2006,6 +2006,17 @@
   padding: 8px;
 }
 
+.wos-embedded-sidebar {
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+}
+
+.wos-embedded-chat-thread-rail {
+  width: 100%;
+  height: 100%;
+}
+
 .wos-chat-rail__label {
   color: var(--wos-ink-500);
   padding: 1px 4px 6px;

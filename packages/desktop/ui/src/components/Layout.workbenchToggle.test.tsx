@@ -174,6 +174,19 @@ function renderLayout(pathname = '/conversations/new') {
   );
 }
 
+function renderEmbeddedWindowLayout(pathname = '/conversations/new') {
+  return render(
+    <MemoryRouter initialEntries={[pathname]}>
+      <Routes>
+        <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
+          <Route path="conversations/new" element={<div>Conversation draft</div>} />
+          <Route path="conversations/:id" element={<ConversationRouteFixture />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 describe('Layout workbench toggle', () => {
   beforeEach(() => {
     installLocalStorageShim();
@@ -227,6 +240,29 @@ describe('Layout workbench toggle', () => {
     expect(screen.getByText('Conversation draft')).toBeTruthy();
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
     expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('renders a windowed thread rail instead of the stable sidebar when embedded in a chat window', async () => {
+    seedConversationCwd('/repo/project', 'conv-1');
+    sessionStore.upsert({
+      id: 'conv-2',
+      file: '/tmp/conv-2.jsonl',
+      timestamp: '2026-07-02T12:00:00.000Z',
+      cwd: '/repo/project',
+      cwdSlug: 'project',
+      model: 'deepseek-v4-flash',
+      title: 'Second thread',
+      messageCount: 3,
+    });
+
+    renderEmbeddedWindowLayout('/conversations/conv-1');
+
+    expect(await screen.findByText('Threads')).toBeTruthy();
+    expect(screen.getByText('Workspace conversation')).toBeTruthy();
+    expect(screen.getByText('Second thread')).toBeTruthy();
+    expect(document.querySelector('[data-windowed-chat-thread-rail="true"]')).not.toBeNull();
+    expect(document.querySelector('.ui-sidebar-nav-item')).toBeNull();
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
   });
 
   it('hides the right-sidebar toggle on routes without a declared right sidebar', () => {

@@ -838,7 +838,6 @@ export function WindowFrame({
     >
       <header className="wos-window__titlebar" data-accent={accent}>
         <div className="wos-window__identity">
-          <AppMonogram label={title} accent={accent} />
           <div className="wos-window__title" title={title}>
             {title}
           </div>
