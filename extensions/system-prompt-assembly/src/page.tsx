@@ -23,6 +23,16 @@ import {
   Switch,
   Textarea,
   ToolbarButton,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedPageButton,
+  WindowedPageMain,
+  WindowedPageSection,
+  WindowedPageShell,
+  WindowedStateBlock,
+  WindowedTextarea,
+  WindowedTextInput,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -87,6 +97,7 @@ async function invokePromptAssemblyAction(pa: ExtensionSurfaceProps['pa'], actio
 }
 
 export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
+  const windowed = context.shellPresentation === 'windowed';
   const [data, setData] = useState<AgentRuntimeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -301,8 +312,140 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     runtimeScrollRef.current?.querySelector<HTMLElement>(`#${sectionId}`)?.scrollIntoView({ block: 'start' });
   }
 
-  if (error) return <ErrorState title="Failed to load prompt assembly" message={error} />;
-  if (!data) return <QuietLoadingState label="Loading prompt assembly" className="h-full" />;
+  if (error) {
+    if (windowed) {
+      return (
+        <WindowedPageShell layout="standard" className="prompt-assembly-page-windowed">
+          <WindowedPageMain
+            eyebrow="Settings"
+            title="Prompt Assembly"
+            actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
+          >
+            <WindowedPageSection title="Status" meta="Unavailable">
+              <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      );
+    }
+    return <ErrorState title="Failed to load prompt assembly" message={error} />;
+  }
+  if (!data) {
+    if (windowed) {
+      return (
+        <WindowedPageShell layout="standard" className="prompt-assembly-page-windowed">
+          <WindowedPageMain eyebrow="Settings" title="Prompt Assembly">
+            <WindowedPageSection title="Status" meta="Loading">
+              <WindowedStateBlock>Loading prompt assembly.</WindowedStateBlock>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      );
+    }
+    return <QuietLoadingState label="Loading prompt assembly" className="h-full" />;
+  }
+
+  if (windowed) {
+    return (
+      <WindowedPageShell layout="standard" className="prompt-assembly-page-windowed">
+        <WindowedPageMain
+          eyebrow="Settings"
+          title="Prompt Assembly"
+          actions={<WindowedPageButton onClick={() => void load()}>Refresh</WindowedPageButton>}
+        >
+          <WindowedPageSection
+            title="Template"
+            meta={savingSystemPromptTemplate ? 'Saving' : systemPromptTemplateDirty ? 'Pending' : 'Saved'}
+          >
+            {systemPromptTemplateLoading && !systemPromptTemplateState ? (
+              <WindowedStateBlock>Loading template.</WindowedStateBlock>
+            ) : systemPromptTemplateError && !systemPromptTemplateState ? (
+              <WindowedStateBlock tone="danger">
+                {formatPromptAssemblyError(
+                  systemPromptTemplateError,
+                  'Could not load the instruction template. Refresh Prompt Assembly or reopen Settings.',
+                )}
+              </WindowedStateBlock>
+            ) : systemPromptTemplateState ? (
+              <div className="wos-prompt-template">
+                <div className="wos-prompt-template__path">
+                  Configured in {formatPromptAssemblyDisplayPath(systemPromptTemplateState.configFile, data)}
+                </div>
+                <WindowedTextarea
+                  id="agent-runtime-system-prompt-template"
+                  value={systemPromptTemplateDraft}
+                  onChange={(event) => {
+                    setSystemPromptTemplateDraft(event.target.value);
+                    if (systemPromptTemplateSaveError) {
+                      setSystemPromptTemplateSaveError(null);
+                    }
+                  }}
+                  className="wos-prompt-template__editor"
+                  spellCheck={false}
+                  disabled={savingSystemPromptTemplate}
+                />
+                <div className="wos-prompt-template__status">
+                  <span>
+                    {savingSystemPromptTemplate ? 'Saving...' : systemPromptTemplateDirty ? 'Auto-save pending...' : 'Auto-saved'}
+                  </span>
+                  <WindowedPageButton
+                    onClick={() => {
+                      setSystemPromptTemplateDraft(systemPromptTemplateSavedTemplate);
+                      setSystemPromptTemplateSaveError(null);
+                    }}
+                    disabled={savingSystemPromptTemplate || !systemPromptTemplateDirty}
+                  >
+                    Revert edits
+                  </WindowedPageButton>
+                </div>
+              </div>
+            ) : null}
+            {systemPromptTemplateSaveError ? <WindowedStateBlock tone="danger">{systemPromptTemplateSaveError}</WindowedStateBlock> : null}
+          </WindowedPageSection>
+
+          <WindowedPageSection title="Agent context" meta={formatCount(visibleAgentCapabilities.length, 'capability')}>
+            <div className="wos-prompt-context-toolbar">
+              <WindowedTextInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agent context..." />
+              <span>Working directory: {formatPromptAssemblyDisplayPath(data.cwd ?? data.repoRoot, data)}</span>
+            </div>
+          </WindowedPageSection>
+
+          <WindowedCapabilitySection
+            title="Instructions"
+            rows={instructionCapabilities}
+            runtime={data}
+            busyId={busyId}
+            onToggle={toggleCapability}
+            emptyTitle="No instructions found"
+          />
+          <WindowedCapabilitySection
+            title="Tools"
+            rows={toolCapabilities}
+            runtime={data}
+            busyId={busyId}
+            onToggle={toggleCapability}
+            emptyTitle="No tools found"
+          />
+          <WindowedCapabilitySection
+            title="MCP"
+            rows={mcpCapabilities}
+            runtime={data}
+            busyId={busyId}
+            onToggle={toggleCapability}
+            emptyTitle="No MCP servers found"
+          />
+          <WindowedCapabilitySection
+            title="Issues"
+            rows={issueCapabilities}
+            runtime={data}
+            busyId={busyId}
+            onToggle={toggleCapability}
+            emptyTitle="No issues found"
+          />
+        </WindowedPageMain>
+      </WindowedPageShell>
+    );
+  }
 
   return (
     <div ref={runtimeScrollRef} className="h-full overflow-y-auto">
@@ -448,6 +591,60 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
       </AppPageLayout>
     </div>
   );
+}
+
+function WindowedCapabilitySection({
+  title,
+  rows,
+  runtime,
+  busyId,
+  onToggle,
+  emptyTitle,
+}: {
+  title: string;
+  rows: RuntimeCapability[];
+  runtime: AgentRuntimeResult;
+  busyId: string | null;
+  onToggle: (row: RuntimeCapability, enabled: boolean) => Promise<void>;
+  emptyTitle: string;
+}) {
+  return (
+    <WindowedPageSection title={title} meta={formatCount(rows.length, 'entry')}>
+      {rows.length ? (
+        <WindowedDataTable columns={[{ label: 'Name' }, { label: 'Contributes' }, { label: 'Source', align: 'right' }]}>
+          {rows.map((row) => (
+            <WindowedDataRow
+              key={`${row.kind}:${row.id}`}
+              name={row.title}
+              meta={formatParts(labelForKind(row.kind), row.description || fallbackDescription(row))}
+              status={<WindowedBadge tone={windowedStatusTone(row)}>{row.status}</WindowedBadge>}
+              action={
+                canToggle(row) ? (
+                  <WindowedPageButton
+                    disabled={busyId === row.id || row.status === 'invalid'}
+                    onClick={() => void onToggle(row, !row.enabled)}
+                  >
+                    {row.enabled ? 'Disable' : 'Enable'}
+                  </WindowedPageButton>
+                ) : (
+                  <span className="wos-prompt-source">{formatPromptAssemblyDisplayPath(row.source?.label ?? row.id, runtime)}</span>
+                )
+              }
+            />
+          ))}
+        </WindowedDataTable>
+      ) : (
+        <div className="wos-windowed-empty">{emptyTitle}.</div>
+      )}
+    </WindowedPageSection>
+  );
+}
+
+function windowedStatusTone(row: RuntimeCapability): 'neutral' | 'positive' | 'warning' | 'danger' {
+  if (row.status === 'active' || row.status === 'enabled') return 'positive';
+  if (row.status === 'invalid' || row.status === 'error') return 'danger';
+  if (!row.enabled) return 'warning';
+  return 'neutral';
 }
 
 function CapabilitySection({

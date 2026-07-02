@@ -2187,6 +2187,60 @@
   }
 }
 
+.wos-prompt-template {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+  padding: var(--wos-space-4);
+}
+
+.wos-prompt-template__path,
+.wos-prompt-template__status,
+.wos-prompt-source,
+.wos-prompt-context-toolbar > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--wos-ink-500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--wos-text-meta);
+}
+
+.wos-prompt-template__editor {
+  min-height: 260px;
+  resize: vertical;
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.wos-prompt-template__status,
+.wos-prompt-context-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--wos-space-4);
+}
+
+.wos-prompt-template__status {
+  justify-content: space-between;
+}
+
+.wos-prompt-context-toolbar {
+  padding: var(--wos-space-4);
+}
+
+.wos-prompt-context-toolbar .wos-input {
+  max-width: 360px;
+}
+
+.wos-prompt-source {
+  display: block;
+  max-width: 210px;
+  text-align: right;
+}
+
 .wos-automation-error,
 .wos-automation-empty {
   color: var(--wos-ink-500);

@@ -351,7 +351,7 @@ export function WorkbenchBrowserTab({
       isCoveredByRendererLayer(host);
 
     if (blocked) {
-      hideBrowserView();
+      hideBrowserView({ force: true });
       return;
     }
 

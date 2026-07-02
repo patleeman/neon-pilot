@@ -44,11 +44,21 @@ function runtimeResult(cwd: string, capabilities: unknown[] = []) {
   };
 }
 
-function renderPage({ cwd, invoke, callAction }: { cwd: string; invoke: ReturnType<typeof vi.fn>; callAction?: ReturnType<typeof vi.fn> }) {
+function renderPage({
+  cwd,
+  invoke,
+  callAction,
+  shellPresentation,
+}: {
+  cwd: string;
+  invoke: ReturnType<typeof vi.fn>;
+  callAction?: ReturnType<typeof vi.fn>;
+  shellPresentation?: 'stable' | 'windowed';
+}) {
   return (
     <PromptAssemblyPage
       pa={{ extension: { invoke }, extensions: callAction ? { callAction } : undefined } as never}
-      context={{ cwd, pathname: '', search: '', hash: '' }}
+      context={{ cwd, pathname: '', search: '', hash: '', shellPresentation }}
       surface={
         {
           id: 'prompt-assembly',
@@ -101,6 +111,43 @@ describe('PromptAssemblyPage', () => {
 
     expect(screen.getByRole('status', { name: 'Loading prompt assembly' })).toBeTruthy();
     expect(screen.queryByText('Loading prompt assembly…')).toBeNull();
+  });
+
+  it('renders a native windowed settings surface without stable page chrome', async () => {
+    const callAction = vi.fn().mockResolvedValue(
+      runtimeResult('/repo', [
+        {
+          id: 'instruction-a',
+          kind: 'instruction',
+          title: 'Repo instructions',
+          description: 'Project instructions',
+          enabled: true,
+          status: 'active',
+          source: { label: '/repo/AGENTS.md' },
+        },
+        {
+          id: 'tool-a',
+          kind: 'tool',
+          title: 'Tool A',
+          description: 'Useful tool',
+          enabled: true,
+          status: 'active',
+          source: { label: 'system-tools' },
+        },
+      ]),
+    );
+
+    const { container } = render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction, shellPresentation: 'windowed' }));
+
+    expect(await screen.findByRole('heading', { name: 'Prompt Assembly' })).toBeTruthy();
+    expect(container.querySelector('.prompt-assembly-page-windowed')).toBeTruthy();
+    expect(container.querySelector('.ui-app-page-shell')).toBeNull();
+    expect(container.querySelector('.ui-app-page-toc')).toBeNull();
+    expect(screen.queryByText('Review the instructions, tools, MCP servers, templates, and context available to the agent.')).toBeNull();
+    expect(screen.getByDisplayValue('Template')).toBeTruthy();
+    expect(screen.getByText('Repo instructions')).toBeTruthy();
+    expect(screen.getByText('Tool A')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Search agent context...')).toBeTruthy();
   });
 
   it('does not render or toggle skills from Prompt Assembly settings', async () => {
