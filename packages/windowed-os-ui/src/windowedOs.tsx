@@ -147,11 +147,7 @@ export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) 
   return (
     <div className="wos-start-menu" role="menu">
       <div className="wos-start-menu__header">
-        <AppMonogram label="Neon Pilot" accent="extensions" />
-        <div>
-          <div className="wos-start-menu__title">Neon Pilot OS</div>
-          <div className="wos-start-menu__meta">Applications</div>
-        </div>
+        <div className="wos-start-menu__title">Neon Pilot OS</div>
       </div>
       <div className="wos-start-menu__grid">
         {items.map((item) => (
