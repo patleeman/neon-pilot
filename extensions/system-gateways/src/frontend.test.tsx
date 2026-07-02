@@ -90,6 +90,29 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     </div>
   ),
   WindowedDataTable: ({ children }: { columns: unknown[]; children: React.ReactNode }) => <div>{children}</div>,
+  WindowedDialog: ({
+    title,
+    meta,
+    actions,
+    children,
+    onClose,
+  }: {
+    title: string;
+    meta?: string;
+    actions?: React.ReactNode;
+    children: React.ReactNode;
+    onClose: () => void;
+  }) => (
+    <section role="dialog" aria-label={title}>
+      <header>
+        <h2>{title}</h2>
+        {meta ? <p>{meta}</p> : null}
+        <button type="button" aria-label={`Close ${title}`} onClick={onClose} />
+      </header>
+      {actions}
+      {children}
+    </section>
+  ),
   WindowedField: ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
     <label>
       {label}
@@ -306,10 +329,19 @@ describe('GatewaysPage', () => {
     expect(await screen.findByText('Gateway provider')).toBeTruthy();
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
     expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
-    expect(screen.getByText('Telegram access')).toBeTruthy();
-    expect(screen.getAllByText('Setup').length).toBeGreaterThan(0);
-    expect(screen.getByText('Recent activity')).toBeTruthy();
+    expect(screen.getByText('Gateway tools')).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Telegram access' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Recent activity' })).toBeNull();
     expect(screen.queryByText('Gateway context')).toBeNull();
+
+    const toolButtons = screen.getAllByRole('button', { name: 'Open' });
+    fireEvent.click(toolButtons[0]);
+    expect(screen.getByRole('dialog', { name: 'Telegram configuration' })).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Close Telegram configuration'));
+    fireEvent.click(toolButtons[1]);
+    expect(screen.getByRole('dialog', { name: 'Telegram access' })).toBeTruthy();
+    expect(screen.getByText('Approved users')).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText('Enable Telegram gateway'));
     await waitFor(() =>
