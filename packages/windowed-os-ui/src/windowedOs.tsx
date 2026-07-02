@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react';
 
 export type AppAccent = 'chat' | 'routines' | 'automations' | 'gateways' | 'extensions' | 'telemetry' | 'settings';
 
@@ -142,21 +142,46 @@ export interface StartMenuProps {
 }
 
 export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) {
+  const [query, setQuery] = useState('');
+  useEffect(() => {
+    if (!open) setQuery('');
+  }, [open]);
+
+  const visibleItems = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return items;
+    return items.filter((item) => item.title.toLowerCase().includes(normalizedQuery));
+  }, [items, query]);
+
   if (!open) return null;
   return (
-    <div className="wos-start-menu" role="menu">
+    <div className="wos-start-menu" role="dialog" aria-label="Start menu">
       <div className="wos-start-menu__header">
         <div className="wos-start-menu__title">Neon Pilot OS</div>
       </div>
+      <div className="wos-start-menu__search">
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.currentTarget.value)}
+          placeholder="Search apps..."
+          aria-label="Search apps"
+        />
+      </div>
+      <div className="wos-start-menu__section-label">APPS</div>
       <div className="wos-start-menu__grid">
-        {items.map((item) => (
-          <button key={item.id} type="button" className="wos-start-menu__item" role="menuitem" onClick={item.onSelect}>
-            <AppMonogram label={item.title} accent={item.accent} />
-            <span className="wos-start-menu__item-copy">
-              <span className="wos-start-menu__item-title">{item.title}</span>
-            </span>
-          </button>
-        ))}
+        {visibleItems.length > 0 ? (
+          visibleItems.map((item) => (
+            <button key={item.id} type="button" className="wos-start-menu__item" onClick={item.onSelect}>
+              <AppMonogram label={item.title} accent={item.accent} />
+              <span className="wos-start-menu__item-copy">
+                <span className="wos-start-menu__item-title">{item.title}</span>
+              </span>
+            </button>
+          ))
+        ) : (
+          <div className="wos-start-menu__empty">No apps match.</div>
+        )}
       </div>
       <div className="wos-start-menu__footer">
         <button type="button" className="wos-start-menu__stable" onClick={onSelectStableShell}>
@@ -197,7 +222,7 @@ export interface TaskbarProps {
 export function Taskbar({ startOpen, onToggleStart, groups = [], items }: TaskbarProps) {
   return (
     <footer className="wos-taskbar">
-      <button type="button" className="wos-taskbar__start" aria-haspopup="menu" aria-expanded={startOpen} onClick={onToggleStart}>
+      <button type="button" className="wos-taskbar__start" aria-haspopup="dialog" aria-expanded={startOpen} onClick={onToggleStart}>
         <AppMonogram label="Neon Pilot" accent="extensions" />
         <span>Start</span>
       </button>

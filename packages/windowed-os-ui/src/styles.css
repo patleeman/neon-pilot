@@ -1,20 +1,21 @@
 .windowed-os-shell {
   --wos-ink-900: oklch(20% 0.01 60);
-  --wos-ink-700: oklch(34% 0.018 60);
-  --wos-ink-500: oklch(51% 0.025 60);
+  --wos-ink-700: oklch(35% 0.02 60);
+  --wos-ink-500: oklch(45% 0.02 60);
+  --wos-ink-400: oklch(50% 0.02 60);
   --wos-surface-0: oklch(95% 0.022 75);
   --wos-surface-1: oklch(99% 0.01 75);
   --wos-surface-2: oklch(97% 0.02 75);
-  --wos-surface-3: oklch(92% 0.026 75);
-  --wos-chat: oklch(70% 0.14 245);
-  --wos-routines: oklch(72% 0.15 145);
-  --wos-automations: oklch(72% 0.14 295);
-  --wos-gateways: oklch(73% 0.12 190);
-  --wos-extensions: oklch(74% 0.17 48);
-  --wos-telemetry: oklch(72% 0.15 22);
-  --wos-settings: oklch(82% 0.035 75);
-  --wos-shadow-window: 0 22px 54px oklch(20% 0.01 60 / 0.18), 0 5px 0 oklch(20% 0.01 60 / 0.06);
-  --wos-shadow-menu: 0 24px 60px oklch(20% 0.01 60 / 0.2), 0 3px 0 oklch(20% 0.01 60 / 0.08);
+  --wos-surface-3: oklch(90% 0.015 75);
+  --wos-chat: oklch(66% 0.14 250);
+  --wos-routines: oklch(62% 0.14 150);
+  --wos-automations: oklch(62% 0.14 300);
+  --wos-gateways: oklch(62% 0.14 200);
+  --wos-extensions: oklch(70% 0.15 60);
+  --wos-telemetry: oklch(68% 0.16 25);
+  --wos-settings: oklch(85% 0.02 75);
+  --wos-shadow-window: 0 26px 50px rgba(40, 30, 20, 0.22);
+  --wos-shadow-menu: 0 24px 48px rgba(40, 30, 20, 0.28);
   --wos-titlebar-h: 42px;
   --wos-taskbar-h: 42px;
   min-height: 100vh;
@@ -190,7 +191,7 @@
   left: 8px;
   bottom: calc(var(--wos-taskbar-h) + 8px);
   z-index: 1001;
-  width: min(390px, calc(100vw - 16px));
+  width: min(300px, calc(100vw - 16px));
   border: 2px solid var(--wos-ink-900);
   border-radius: 16px;
   background: var(--wos-surface-1);
@@ -219,10 +220,45 @@
   font-weight: 800;
 }
 
+.wos-start-menu__search {
+  padding: 8px 8px 2px;
+}
+
+.wos-start-menu__search input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 6px;
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-900);
+  padding: 0 9px;
+  font: 600 12px 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  outline: none;
+}
+
+.wos-start-menu__search input::placeholder {
+  color: var(--wos-ink-500);
+}
+
+.wos-start-menu__search input:focus-visible {
+  outline: 2px solid var(--wos-ink-900);
+  outline-offset: 2px;
+}
+
+.wos-start-menu__section-label {
+  color: var(--wos-ink-500);
+  padding: 8px 14px 2px;
+  font-family: 'IBM Plex Mono', 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
 .wos-start-menu__grid {
   display: grid;
-  gap: 7px;
-  padding: 10px;
+  gap: 1px;
+  padding: 0 8px 8px;
 }
 
 .wos-start-menu__item {
@@ -230,8 +266,10 @@
   min-width: 0;
   align-items: center;
   gap: 9px;
-  border-radius: 11px;
-  padding: 8px;
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
+  padding: 5px 6px;
   text-align: left;
 }
 
@@ -254,6 +292,14 @@
   white-space: nowrap;
   font-size: 13px;
   font-weight: 700;
+}
+
+.wos-start-menu__empty {
+  color: var(--wos-ink-500);
+  padding: 10px 6px 12px;
+  font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .wos-start-menu__stable {
