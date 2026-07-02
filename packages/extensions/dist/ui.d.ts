@@ -1,6 +1,6 @@
 export type { ExtensionSurfaceProps } from './index.js';
-export type { WindowedBadgeProps, WindowedKeyValueListProps, WindowedListItemProps, WindowedListProps, WindowedPageButtonProps, WindowedPageInspectorProps, WindowedPageMainProps, WindowedPageRailProps, WindowedPageSectionProps, WindowedPageShellProps, WindowedTimelineItemProps, WindowedTimelineProps, } from '@neon-pilot/windowed-os-ui';
-export { WindowedBadge, WindowedKeyValueList, WindowedList, WindowedListItem, WindowedPageButton, WindowedPageInspector, WindowedPageMain, WindowedPageRail, WindowedPageSection, WindowedPageShell, WindowedTimeline, WindowedTimelineItem, } from '@neon-pilot/windowed-os-ui';
+export type { WindowedBadgeProps, WindowedDataColumn, WindowedDataRowProps, WindowedDataTableProps, WindowedFieldProps, WindowedKeyValueGridProps, WindowedKeyValueItem, WindowedKeyValueListProps, WindowedListItemProps, WindowedListProps, WindowedPageButtonProps, WindowedPageInspectorProps, WindowedPageMainProps, WindowedPageRailProps, WindowedPageSectionProps, WindowedPageShellProps, WindowedTimelineItemProps, WindowedTimelineProps, WindowedToggleProps, } from '@neon-pilot/windowed-os-ui';
+export { WindowedBadge, WindowedDataRow, WindowedDataTable, WindowedField, WindowedKeyValueGrid, WindowedKeyValueList, WindowedList, WindowedListItem, WindowedPageButton, WindowedPageInspector, WindowedPageMain, WindowedPageRail, WindowedPageSection, WindowedPageShell, WindowedTextInput, WindowedTimeline, WindowedTimelineItem, WindowedToggle, } from '@neon-pilot/windowed-os-ui';
 import type { ExtensionDesktopBridge } from './desktopBridge.js';
 export type HostComponent = (...args: never[]) => unknown;
 export type DesktopKnowledgeEntryContextMenuAction = unknown;

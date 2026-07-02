@@ -1,6 +1,12 @@
 export type { ExtensionSurfaceProps } from './index.js';
 export type {
   WindowedBadgeProps,
+  WindowedDataColumn,
+  WindowedDataRowProps,
+  WindowedDataTableProps,
+  WindowedFieldProps,
+  WindowedKeyValueGridProps,
+  WindowedKeyValueItem,
   WindowedKeyValueListProps,
   WindowedListItemProps,
   WindowedListProps,
@@ -12,9 +18,14 @@ export type {
   WindowedPageShellProps,
   WindowedTimelineItemProps,
   WindowedTimelineProps,
+  WindowedToggleProps,
 } from '@neon-pilot/windowed-os-ui';
 export {
   WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedField,
+  WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
@@ -24,8 +35,10 @@ export {
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedTextInput,
   WindowedTimeline,
   WindowedTimelineItem,
+  WindowedToggle,
 } from '@neon-pilot/windowed-os-ui';
 
 import type { ExtensionDesktopBridge } from './desktopBridge.js';

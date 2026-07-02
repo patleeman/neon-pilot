@@ -70,6 +70,136 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   ),
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  WindowedBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  WindowedDataRow: ({
+    name,
+    meta,
+    status,
+    action,
+  }: {
+    name: string;
+    meta?: string;
+    status?: React.ReactNode;
+    action?: React.ReactNode;
+  }) => (
+    <div>
+      <span>{name}</span>
+      {meta ? <span>{meta}</span> : null}
+      {status}
+      {action}
+    </div>
+  ),
+  WindowedDataTable: ({ children }: { columns: unknown[]; children: React.ReactNode }) => <div>{children}</div>,
+  WindowedField: ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+    <label>
+      {label}
+      {children}
+      {hint ? <span>{hint}</span> : null}
+    </label>
+  ),
+  WindowedKeyValueGrid: ({ items }: { items: Array<{ label: string; value: React.ReactNode }> }) => (
+    <dl>
+      {items.map((item) => (
+        <div key={item.label}>
+          <dt>{item.label}</dt>
+          <dd>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  ),
+  WindowedKeyValueList: ({ items }: { items: Array<{ label: string; value: React.ReactNode }> }) => (
+    <dl>
+      {items.map((item) => (
+        <div key={item.label}>
+          <dt>{item.label}</dt>
+          <dd>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  ),
+  WindowedList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  WindowedListItem: ({
+    title,
+    meta,
+    detail,
+    status,
+    onSelect,
+  }: {
+    title: string;
+    meta?: string;
+    detail?: string;
+    status?: React.ReactNode;
+    onSelect?: () => void;
+  }) => (
+    <button type="button" onClick={onSelect}>
+      <span>{title}</span>
+      {meta ? <span>{meta}</span> : null}
+      {detail ? <span>{detail}</span> : null}
+      {status}
+    </button>
+  ),
+  WindowedPageButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  WindowedPageInspector: ({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: React.ReactNode }) => (
+    <aside>
+      {eyebrow ? <span>{eyebrow}</span> : null}
+      <h2>{title}</h2>
+      {children}
+    </aside>
+  ),
+  WindowedPageMain: ({
+    eyebrow,
+    title,
+    description,
+    actions,
+    children,
+  }: {
+    eyebrow?: string;
+    title: string;
+    description?: string;
+    actions?: React.ReactNode;
+    children?: React.ReactNode;
+  }) => (
+    <main>
+      {eyebrow ? <span>{eyebrow}</span> : null}
+      <h1>{title}</h1>
+      {description ? <p>{description}</p> : null}
+      {actions}
+      {children}
+    </main>
+  ),
+  WindowedPageRail: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <nav>
+      <h2>{title}</h2>
+      {children}
+    </nav>
+  ),
+  WindowedPageSection: ({ title, children }: { title: string; children?: React.ReactNode; meta?: string }) => (
+    <section>
+      <h3>{title}</h3>
+      {children}
+    </section>
+  ),
+  WindowedPageShell: ({ children }: { children: React.ReactNode }) => <div className="wos-page-shell">{children}</div>,
+  WindowedTextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+  WindowedTimeline: ({ children }: { children: React.ReactNode }) => <ol>{children}</ol>,
+  WindowedTimelineItem: ({ title, meta }: { title: string; meta?: string }) => (
+    <li>
+      <span>{title}</span>
+      {meta ? <span>{meta}</span> : null}
+    </li>
+  ),
+  WindowedToggle: ({
+    checked,
+    label,
+    onChange,
+    accent: _accent,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    checked: boolean;
+    label?: string;
+    accent?: string;
+    onChange?: (checked: boolean) => void;
+  }) => <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange?.(!checked)} {...props} />,
 }));
 
 const baseGateway = {
@@ -153,6 +283,27 @@ describe('GatewaysPage', () => {
     expect(screen.getByRole('heading', { name: 'Telegram' })).toBeTruthy();
     expect(screen.getByText('Configured')).toBeTruthy();
     expect(screen.queryByText('Gateways page')).toBeNull();
+  });
+
+  it('renders a native windowed gateways surface when hosted by the windowed shell', async () => {
+    const calls = installFetchMock({ token: { configured: true } });
+    const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
+
+    expect(await screen.findByText('Gateway provider')).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
+    expect(screen.getByText('Telegram access')).toBeTruthy();
+    expect(screen.getByText('Gateway context')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Enable Telegram gateway'));
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({
+          path: '/api/gateways/connections/telegram',
+          init: expect.objectContaining({ method: 'PATCH', body: expect.stringContaining('"enabled":true') }),
+        }),
+      ),
+    );
   });
 
   it('saves and clears the bot token through the Telegram token route', async () => {

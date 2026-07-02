@@ -187,12 +187,20 @@ export interface WindowedPageButtonProps {
   onClick?: () => void;
   tone?: 'neutral' | 'accent';
   type?: 'button' | 'submit';
+  disabled?: boolean;
   className?: string;
 }
 
-export function WindowedPageButton({ children, onClick, tone = 'neutral', type = 'button', className }: WindowedPageButtonProps) {
+export function WindowedPageButton({
+  children,
+  onClick,
+  tone = 'neutral',
+  type = 'button',
+  disabled = false,
+  className,
+}: WindowedPageButtonProps) {
   return (
-    <button type={type} className={cx('wos-page-button', className)} data-tone={tone} onClick={onClick}>
+    <button type={type} className={cx('wos-page-button', className)} data-tone={tone} disabled={disabled} onClick={onClick}>
       {children}
     </button>
   );
@@ -300,10 +308,18 @@ export interface WindowedToggleProps {
   accent?: AppAccent;
   onChange?: (checked: boolean) => void;
   label?: string;
+  disabled?: boolean;
   className?: string;
 }
 
-export function WindowedToggle({ checked = false, accent = 'routines', onChange, label = 'Toggle', className }: WindowedToggleProps) {
+export function WindowedToggle({
+  checked = false,
+  accent = 'routines',
+  onChange,
+  label = 'Toggle',
+  disabled = false,
+  className,
+}: WindowedToggleProps) {
   return (
     <button
       type="button"
@@ -313,6 +329,7 @@ export function WindowedToggle({ checked = false, accent = 'routines', onChange,
       className={cx('wos-toggle', className)}
       data-checked={checked}
       data-accent={accent}
+      disabled={disabled}
       onClick={() => onChange?.(!checked)}
     >
       <span className="wos-toggle__thumb" aria-hidden="true" />

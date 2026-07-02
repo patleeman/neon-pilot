@@ -226,6 +226,12 @@ export { SidebarTreeSection, type SidebarTreeSectionProps } from './SidebarTreeS
 export type { ExtensionSurfaceProps } from './types';
 export type {
   WindowedBadgeProps,
+  WindowedDataColumn,
+  WindowedDataRowProps,
+  WindowedDataTableProps,
+  WindowedFieldProps,
+  WindowedKeyValueGridProps,
+  WindowedKeyValueItem,
   WindowedKeyValueListProps,
   WindowedListItemProps,
   WindowedListProps,
@@ -237,9 +243,14 @@ export type {
   WindowedPageShellProps,
   WindowedTimelineItemProps,
   WindowedTimelineProps,
+  WindowedToggleProps,
 } from '@neon-pilot/windowed-os-ui';
 export {
   WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedField,
+  WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
@@ -249,6 +260,8 @@ export {
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedTextInput,
   WindowedTimeline,
   WindowedTimelineItem,
+  WindowedToggle,
 } from '@neon-pilot/windowed-os-ui';

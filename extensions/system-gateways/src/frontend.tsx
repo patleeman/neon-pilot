@@ -7,6 +7,7 @@ import {
   ContextRailHeader,
   ContextRailSection,
   ErrorState,
+  type ExtensionSurfaceProps,
   IconButton,
   KeyValueItem,
   KeyValueList,
@@ -18,6 +19,22 @@ import {
   Switch,
   TextInput,
   TextLink,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedField,
+  WindowedKeyValueGrid,
+  WindowedKeyValueList,
+  WindowedList,
+  WindowedListItem,
+  WindowedPageButton,
+  WindowedPageInspector,
+  WindowedPageMain,
+  WindowedPageRail,
+  WindowedPageSection,
+  WindowedPageShell,
+  WindowedTextInput,
+  WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -108,7 +125,7 @@ async function loadPageState(): Promise<PageState> {
   return { gateway, token, access };
 }
 
-export function GatewaysPage() {
+export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'> = {} as Pick<ExtensionSurfaceProps, 'context'>) {
   const [pageState, setPageState] = useState<PageState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -246,9 +263,30 @@ export function GatewaysPage() {
     [runMutation],
   );
 
-  if (loading && !pageState) return <GatewaysLoadingPage />;
+  const windowed = context?.shellPresentation === 'windowed';
+
+  if (loading && !pageState) return windowed ? <WindowedGatewaysLoading /> : <GatewaysLoadingPage />;
 
   if (!pageState) {
+    if (windowed) {
+      return (
+        <WindowedPageShell>
+          <WindowedPageRail title="Gateways" accent="gateways">
+            <WindowedList>
+              <WindowedListItem title="Telegram" meta="Gateway" detail="Unavailable" active accent="gateways" />
+            </WindowedList>
+          </WindowedPageRail>
+          <WindowedPageMain
+            eyebrow="Gateways"
+            title="Could not load"
+            description={error ?? 'Gateway settings could not be loaded.'}
+            actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
+          />
+          <WindowedPageInspector eyebrow="Gateway context" title="Unavailable" />
+        </WindowedPageShell>
+      );
+    }
+
     return (
       <div className="h-full overflow-y-auto">
         <AppPageLayout contentClassName="space-y-6">
@@ -268,6 +306,214 @@ export function GatewaysPage() {
   const statusTone = statusDotTone(connectionStatus, tokenConfigured, gatewayEnabled);
   const busy = operation !== null;
   const gatewayToggleDisabled = busy || !telegramConnection || !tokenConfigured;
+
+  if (windowed) {
+    const telegramEvents = pageState.gateway.events.filter((event) => event.provider === TELEGRAM_PROVIDER_ID).slice(0, 8);
+    return (
+      <WindowedPageShell>
+        <WindowedPageRail title="Gateways" accent="gateways">
+          <WindowedList>
+            {pageState.gateway.providers.map((provider) => {
+              const connection = pageState.gateway.connections.find((candidate) => candidate.provider === provider.id);
+              const providerEnabled = Boolean(connection?.enabled);
+              return (
+                <WindowedListItem
+                  key={provider.id}
+                  title={provider.label}
+                  meta={formatConfigurationLocation(provider.configurationLocation)}
+                  detail={connection?.statusMessage ?? provider.description ?? 'Gateway provider'}
+                  active={provider.id === TELEGRAM_PROVIDER_ID}
+                  accent="gateways"
+                  status={
+                    <WindowedBadge tone={gatewayBadgeTone(connection?.status ?? 'needs_config', tokenConfigured, providerEnabled)}>
+                      {providerEnabled ? formatGatewayStatus(connection?.status ?? 'needs_config') : 'Paused'}
+                    </WindowedBadge>
+                  }
+                />
+              );
+            })}
+          </WindowedList>
+        </WindowedPageRail>
+        <WindowedPageMain
+          eyebrow="Gateway provider"
+          title={telegramProvider?.label ?? 'Telegram'}
+          description={telegramProvider?.description ?? 'Run Neon Pilot from Telegram DMs, groups, and topics.'}
+          actions={
+            <>
+              <WindowedPageButton disabled={busy || !tokenConfigured} onClick={testToken}>
+                Test bot
+              </WindowedPageButton>
+              <WindowedPageButton disabled={busy} onClick={() => void load()}>
+                Refresh
+              </WindowedPageButton>
+            </>
+          }
+        >
+          {error ? (
+            <WindowedPageSection title="Action needed">
+              <div className="wos-gateway-error">{error}</div>
+            </WindowedPageSection>
+          ) : null}
+          {notice ? (
+            <WindowedPageSection title="Last change">
+              <div className="wos-gateway-notice">{notice}</div>
+            </WindowedPageSection>
+          ) : null}
+          <WindowedPageSection title="Readiness" meta={gatewayEnabled ? 'Enabled' : 'Paused'}>
+            <WindowedKeyValueGrid
+              items={[
+                { label: 'Token', value: tokenConfigured ? 'Configured' : 'Missing' },
+                { label: 'Connection', value: telegramConnection ? 'Created' : 'Not created' },
+                { label: 'Runtime', value: gatewayEnabled ? formatGatewayStatus(connectionStatus) : 'Paused' },
+              ]}
+            />
+            {telegramConnection?.statusMessage ? <p className="wos-gateway-status-message">{telegramConnection.statusMessage}</p> : null}
+          </WindowedPageSection>
+          <WindowedPageSection title="Connection">
+            <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
+              <WindowedDataRow
+                name={telegramProvider?.label ?? 'Telegram'}
+                meta="Telegram Bot API"
+                enabled={gatewayEnabled}
+                status={
+                  <WindowedBadge tone={gatewayBadgeTone(connectionStatus, tokenConfigured, gatewayEnabled)}>
+                    {formatGatewayStatus(connectionStatus)}
+                  </WindowedBadge>
+                }
+                action={
+                  telegramConnection ? (
+                    <WindowedToggle
+                      checked={gatewayEnabled}
+                      disabled={gatewayToggleDisabled}
+                      accent="gateways"
+                      label={gatewayEnabled ? 'Pause Telegram gateway' : 'Enable Telegram gateway'}
+                      onChange={() => setConnectionEnabled(!gatewayEnabled)}
+                    />
+                  ) : (
+                    <WindowedPageButton disabled={busy} onClick={createConnection}>
+                      Create
+                    </WindowedPageButton>
+                  )
+                }
+              />
+            </WindowedDataTable>
+          </WindowedPageSection>
+          <WindowedPageSection title="Bot token">
+            <div className="wos-gateway-token-row">
+              <WindowedField
+                label="Telegram bot token"
+                span="full"
+                hint={tokenConfigured ? 'A token is already saved.' : 'Paste a bot token from BotFather.'}
+              >
+                <WindowedTextInput
+                  aria-label="Telegram bot token"
+                  autoComplete="off"
+                  placeholder={tokenConfigured ? 'Token is already saved' : '123456789:AA...'}
+                  type="password"
+                  value={tokenDraft}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setTokenDraft(event.target.value)}
+                />
+              </WindowedField>
+              <div className="wos-gateway-token-actions">
+                {tokenDraft.trim() ? (
+                  <WindowedPageButton tone="accent" disabled={busy} onClick={saveToken}>
+                    Save token
+                  </WindowedPageButton>
+                ) : null}
+                {tokenConfigured ? (
+                  <WindowedPageButton disabled={busy} onClick={removeToken}>
+                    Remove
+                  </WindowedPageButton>
+                ) : null}
+              </div>
+            </div>
+          </WindowedPageSection>
+          <WindowedPageSection title="Telegram access" meta="Allowlist">
+            <div className="wos-gateway-access-grid">
+              <WindowedAllowlistEditor
+                title="Approved users"
+                emptyLabel="No approved users yet."
+                inputLabel="Telegram user ID"
+                placeholder="1191448898"
+                values={pageState.access.approvedUserIds}
+                value={newUserId}
+                busy={busy}
+                onValueChange={setNewUserId}
+                onAdd={() => {
+                  const value = newUserId.trim();
+                  if (!value || pageState.access.approvedUserIds.includes(value)) return;
+                  setNewUserId('');
+                  updateAccess(
+                    { ...pageState.access, approvedUserIds: [...pageState.access.approvedUserIds, value] },
+                    'Telegram user allowlist updated.',
+                  );
+                }}
+                onRemove={(value) =>
+                  updateAccess(
+                    { ...pageState.access, approvedUserIds: pageState.access.approvedUserIds.filter((id) => id !== value) },
+                    'Telegram user allowlist updated.',
+                  )
+                }
+              />
+              <WindowedAllowlistEditor
+                title="Approved chats"
+                emptyLabel="No approved chats yet."
+                inputLabel="Telegram chat ID"
+                placeholder="-1001192755030"
+                values={pageState.access.approvedChatIds}
+                value={newChatId}
+                busy={busy}
+                onValueChange={setNewChatId}
+                onAdd={() => {
+                  const value = newChatId.trim();
+                  if (!value || pageState.access.approvedChatIds.includes(value)) return;
+                  setNewChatId('');
+                  updateAccess(
+                    { ...pageState.access, approvedChatIds: [...pageState.access.approvedChatIds, value] },
+                    'Telegram chat allowlist updated.',
+                  );
+                }}
+                onRemove={(value) =>
+                  updateAccess(
+                    { ...pageState.access, approvedChatIds: pageState.access.approvedChatIds.filter((id) => id !== value) },
+                    'Telegram chat allowlist updated.',
+                  )
+                }
+              />
+            </div>
+          </WindowedPageSection>
+        </WindowedPageMain>
+        <WindowedPageInspector eyebrow="Gateway context" title={telegramProvider?.label ?? 'Telegram'}>
+          <WindowedPageSection title="Status">
+            <WindowedKeyValueList
+              items={[
+                { label: 'Setup', value: telegramProvider?.setupRoute ?? '/gateways' },
+                { label: 'Configuration', value: formatConfigurationLocation(telegramProvider?.configurationLocation) },
+                { label: 'Docs', value: 'Telegram Bot API' },
+                { label: 'Last update', value: telegramConnection?.updatedAt ? formatDate(telegramConnection.updatedAt) : 'Never' },
+              ]}
+            />
+          </WindowedPageSection>
+          <WindowedPageSection title="Recent activity" meta={`${telegramEvents.length} events`}>
+            {telegramEvents.length > 0 ? (
+              <ol className="wos-gateway-event-list">
+                {telegramEvents.map((event) => (
+                  <li key={event.id} className="wos-gateway-event" data-tone={event.kind === 'error' ? 'danger' : 'neutral'}>
+                    <div>{event.message}</div>
+                    <span>
+                      {formatEventKind(event.kind)} · {formatDate(event.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div className="wos-gateway-empty">No Telegram gateway events yet.</div>
+            )}
+          </WindowedPageSection>
+        </WindowedPageInspector>
+      </WindowedPageShell>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -441,6 +687,20 @@ function GatewaysLoadingPage() {
   );
 }
 
+function WindowedGatewaysLoading() {
+  return (
+    <WindowedPageShell>
+      <WindowedPageRail title="Gateways" accent="gateways">
+        <WindowedList>
+          <WindowedListItem title="Telegram" meta="Gateway" detail="Loading settings" active accent="gateways" />
+        </WindowedList>
+      </WindowedPageRail>
+      <WindowedPageMain eyebrow="Gateways" title="Loading" description="Loading gateway settings." />
+      <WindowedPageInspector eyebrow="Gateway context" title="Loading" />
+    </WindowedPageShell>
+  );
+}
+
 export function GatewaysContextRail() {
   const [state, setState] = useState<PageState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -539,6 +799,80 @@ export function GatewaysContextRail() {
         ) : null}
       </ContextRailBody>
     </ContextRail>
+  );
+}
+
+function WindowedAllowlistEditor({
+  title,
+  emptyLabel,
+  inputLabel,
+  placeholder,
+  values,
+  value,
+  busy,
+  onValueChange,
+  onAdd,
+  onRemove,
+}: {
+  title: string;
+  emptyLabel: string;
+  inputLabel: string;
+  placeholder: string;
+  values: string[];
+  value: string;
+  busy: boolean;
+  onValueChange: (value: string) => void;
+  onAdd: () => void;
+  onRemove: (value: string) => void;
+}) {
+  return (
+    <div className="wos-gateway-allowlist">
+      <div className="wos-gateway-allowlist__header">
+        <h4>{title}</h4>
+        <span>{values.length} approved</span>
+      </div>
+      <div className="wos-gateway-allowlist__form">
+        <WindowedField label={inputLabel}>
+          <WindowedTextInput
+            aria-label={inputLabel}
+            inputMode="text"
+            placeholder={placeholder}
+            value={value}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => onValueChange(event.target.value)}
+            onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                onAdd();
+              }
+            }}
+          />
+        </WindowedField>
+        {value.trim() ? (
+          <WindowedPageButton disabled={busy} onClick={onAdd}>
+            Add
+          </WindowedPageButton>
+        ) : null}
+      </div>
+      {values.length > 0 ? (
+        <WindowedList className="wos-gateway-allowlist__values">
+          {values.map((entry) => (
+            <WindowedListItem
+              key={entry}
+              title={entry}
+              meta="Allowed"
+              accent="gateways"
+              status={
+                <WindowedPageButton disabled={busy} onClick={() => onRemove(entry)}>
+                  Remove
+                </WindowedPageButton>
+              }
+            />
+          ))}
+        </WindowedList>
+      ) : (
+        <div className="wos-gateway-empty">{emptyLabel}</div>
+      )}
+    </div>
   );
 }
 
@@ -726,6 +1060,18 @@ function statusDotTone(status: GatewayStatus, tokenConfigured: boolean, enabled:
   if (status === 'needs_attention') return 'danger';
   if (!enabled || status === 'paused') return 'muted';
   return 'success';
+}
+
+function gatewayBadgeTone(
+  status: GatewayStatus,
+  tokenConfigured: boolean,
+  enabled: boolean,
+): 'neutral' | 'positive' | 'warning' | 'danger' {
+  const tone = statusDotTone(status, tokenConfigured, enabled);
+  if (tone === 'success') return 'positive';
+  if (tone === 'danger') return 'danger';
+  if (tone === 'warning') return 'warning';
+  return 'neutral';
 }
 
 function formatGatewayStatus(status: GatewayStatus): string {
