@@ -64,8 +64,8 @@
 
         <figure class="hero-shot">
           <img
-            src="./workbench.png"
-            alt="Neon Pilot desktop app showing the new conversation workbench with sidebar navigation and composer controls."
+            src="./extensions.png"
+            alt="Neon Pilot desktop app showing the extension manager with installed capabilities, status, and controls."
             width="1440"
             height="960"
             fetchpriority="high"
@@ -75,11 +75,12 @@
 
       <section class="trust-strip" aria-label="Provider support">
         <span>Keys, subscriptions, or local</span>
-        <strong>Anthropic</strong>
         <strong>OpenAI</strong>
-        <strong>Google</strong>
+        <strong>Opencode Go</strong>
         <strong>Ollama</strong>
         <strong>LM Studio</strong>
+        <strong>Anthropic</strong>
+        <strong>Google</strong>
         <span class="local-first">local-first · nothing hosted</span>
       </section>
 
@@ -178,22 +179,22 @@
         <h2 id="providers-title">One harness. Every provider. Your keys.</h2>
         <div class="provider-panel">
           <div class="provider-tabs" role="tablist" aria-label="Provider examples">
-            <button type="button" class="active" data-provider="anthropic">Anthropic</button>
-            <button type="button" data-provider="openai">OpenAI</button>
-            <button type="button" data-provider="google">Google</button>
+            <button type="button" class="active" data-provider="openai">OpenAI</button>
+            <button type="button" data-provider="opencodeGo">Opencode Go</button>
             <button type="button" data-provider="local">Local</button>
             <button type="button" data-provider="gateways">Gateways</button>
+            <button type="button" data-provider="anthropic">Anthropic</button>
+            <button type="button" data-provider="google">Google</button>
           </div>
           <div class="provider-content">
             <div>
-              <h3><span data-provider-name>Anthropic</span><small data-provider-tag>subscription + key</small></h3>
+              <h3><span data-provider-name>OpenAI</span><small data-provider-tag>subscription + key</small></h3>
               <p data-provider-note>
-                Sign in with a Claude Pro or Max subscription, or bring an API key. Subscription use draws from extra usage billed per
-                token, not your plan limits.
+                Use a ChatGPT Plus or Pro subscription through Codex, or bring an OpenAI API key.
               </p>
               <p class="connect-label">Connect via</p>
               <div class="connect-list" data-provider-connect>
-                <span>Claude Pro/Max login</span>
+                <span>ChatGPT Plus/Pro</span>
                 <span>API key</span>
               </div>
             </div>
@@ -201,11 +202,11 @@
               <p>Configure</p>
               <code>
                 <span># Primary: configure in the app</span><br />
-                Settings › Providers › <strong data-provider-config-name>Anthropic</strong><br />
+                Settings › Providers › <strong data-provider-config-name>OpenAI</strong><br />
                 <span># Or from the CLI</span><br />
-                $ <strong data-provider-command>neon-pilot bootstrap provider set-key anthropic</strong>
+                $ <strong data-provider-command>neon-pilot bootstrap provider set-key openai</strong>
               </code>
-              <p data-provider-store>OAuth tokens and keys are stored locally and never leave your machine.</p>
+              <p data-provider-store>Credentials stay on your machine. Auth-file entries take priority over environment variables.</p>
             </div>
           </div>
         </div>
@@ -224,13 +225,13 @@
         </figure>
         <figure>
           <img
-            src="./extensions.png"
-            alt="Neon Pilot extension manager showing bundled capabilities, status, diagnostics, and install controls."
+            src="./command-palette.png"
+            alt="Neon Pilot command palette showing thread and command search inside the desktop app."
             width="1440"
             height="960"
             loading="lazy"
           />
-          <figcaption>Inspect, enable, disable, and build extensions locally.</figcaption>
+          <figcaption>Search threads, commands, knowledge files, and app actions from the command palette.</figcaption>
         </figure>
       </section>
 
@@ -284,15 +285,6 @@
       });
 
       const providerData = {
-        anthropic: {
-          name: 'Anthropic',
-          tag: 'subscription + key',
-          note:
-            'Sign in with a Claude Pro or Max subscription, or bring an API key. Subscription use draws from extra usage billed per token, not your plan limits.',
-          connect: ['Claude Pro/Max login', 'API key'],
-          command: 'neon-pilot bootstrap provider set-key anthropic',
-          store: 'OAuth tokens and keys are stored locally and never leave your machine.',
-        },
         openai: {
           name: 'OpenAI',
           tag: 'subscription + key',
@@ -301,13 +293,13 @@
           command: 'neon-pilot bootstrap provider set-key openai',
           store: 'Credentials stay on your machine. Auth-file entries take priority over environment variables.',
         },
-        google: {
-          name: 'Google',
-          tag: 'key + cloud',
-          note: 'Connect a Gemini API key directly, or route through Google Vertex AI with application-default credentials.',
-          connect: ['Gemini API key', 'Vertex AI'],
-          command: 'neon-pilot bootstrap provider set-key google',
-          store: 'Keys and ADC credentials are read locally and never transmitted to Neon Pilot.',
+        opencodeGo: {
+          name: 'Opencode Go',
+          tag: 'local runtime',
+          note: 'Run the Opencode Go coding agent from Neon Pilot while keeping the desktop workbench, transcripts, and extension surfaces local.',
+          connect: ['Opencode Go CLI', 'Local runtime'],
+          command: 'neon-pilot bootstrap provider set-key opencode-go',
+          store: 'Configuration and credentials stay on your machine alongside the rest of your Neon Pilot provider setup.',
         },
         local: {
           name: 'Local',
@@ -324,6 +316,23 @@
           connect: ['OpenRouter', 'Vercel AI Gateway', 'Cloudflare'],
           command: 'neon-pilot bootstrap provider set-key openrouter',
           store: 'Gateway keys live in your local auth file alongside every other provider.',
+        },
+        anthropic: {
+          name: 'Anthropic',
+          tag: 'subscription + key',
+          note:
+            'Sign in with a Claude Pro or Max subscription, or bring an API key. Subscription use draws from extra usage billed per token, not your plan limits.',
+          connect: ['Claude Pro/Max login', 'API key'],
+          command: 'neon-pilot bootstrap provider set-key anthropic',
+          store: 'OAuth tokens and keys are stored locally and never leave your machine.',
+        },
+        google: {
+          name: 'Google',
+          tag: 'key + cloud',
+          note: 'Connect a Gemini API key directly, or route through Google Vertex AI with application-default credentials.',
+          connect: ['Gemini API key', 'Vertex AI'],
+          command: 'neon-pilot bootstrap provider set-key google',
+          store: 'Keys and ADC credentials are read locally and never transmitted to Neon Pilot.',
         },
       };
 
