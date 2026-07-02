@@ -26,6 +26,21 @@ function hasBlockingHtmlModal(): boolean {
   return Boolean(document.querySelector('[aria-modal="true"]'));
 }
 
+function hasWindowedShellOverlay(): boolean {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  return Boolean(
+    document.querySelector('.windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .wos-snap-preview'),
+  );
+}
+
+function isInsideUnfocusedWindow(host: HTMLElement | null): boolean {
+  const windowElement = host?.closest<HTMLElement>('.wos-window');
+  return windowElement?.dataset.focused === 'false';
+}
+
 export function formatWorkbenchBrowserError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? '');
   const firstLine = raw.split('\n')[0]?.trim() ?? '';
@@ -170,7 +185,7 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    if (hasBlockingHtmlModal()) {
+    if (hasBlockingHtmlModal() || hasWindowedShellOverlay() || isInsideUnfocusedWindow(host)) {
       void bridge
         .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey })
         .then((nextState) => {
@@ -233,7 +248,7 @@ export function WorkbenchBrowserTab({
     const modalObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(syncBounds) : null;
     modalObserver?.observe(document.body, {
       attributes: true,
-      attributeFilter: ['aria-modal'],
+      attributeFilter: ['aria-modal', 'data-focused'],
       childList: true,
       subtree: true,
     });
