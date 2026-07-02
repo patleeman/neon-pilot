@@ -113,17 +113,27 @@ export interface WindowedPageRailProps {
   title: string;
   accent?: AppAccent;
   children: ReactNode;
+  showHeader?: boolean;
   showMonogram?: boolean;
   className?: string;
 }
 
-export function WindowedPageRail({ title, accent = 'settings', children, showMonogram = false, className }: WindowedPageRailProps) {
+export function WindowedPageRail({
+  title,
+  accent = 'settings',
+  children,
+  showHeader = true,
+  showMonogram = false,
+  className,
+}: WindowedPageRailProps) {
   return (
-    <aside className={cx('wos-page-rail', className)}>
-      <div className="wos-page-rail__header">
-        {showMonogram ? <AppMonogram label={title} accent={accent} /> : null}
-        <span>{title}</span>
-      </div>
+    <aside className={cx('wos-page-rail', className)} aria-label={title}>
+      {showHeader ? (
+        <div className="wos-page-rail__header">
+          {showMonogram ? <AppMonogram label={title} accent={accent} /> : null}
+          <span>{title}</span>
+        </div>
+      ) : null}
       {children}
     </aside>
   );

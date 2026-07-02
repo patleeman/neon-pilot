@@ -648,6 +648,9 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage(undefined, '/settings', { shellPresentation: 'windowed', pathname: '/settings' });
     await flushAsyncWork();
 
+    expect(container.querySelector('.wos-page-rail')?.getAttribute('aria-label')).toBe('Settings');
+    expect(container.querySelector('.wos-page-rail__header')).toBeNull();
+
     const providersButton = queryButton(container, 'Providers');
 
     act(() => {
