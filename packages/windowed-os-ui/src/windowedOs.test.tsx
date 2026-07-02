@@ -102,6 +102,22 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('ariaLabel="Skills view"');
   });
 
+  it('documents the canonical Extensions desktop page and detail subwindow pattern', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const ExtensionsPage');
+    expect(source).toContain('title="Extensions"');
+    expect(source).toContain('eyebrow="Extension manager"');
+    expect(source).toContain('title="Inventory"');
+    expect(source).toContain('title="Installed extensions"');
+    expect(source).toContain('title="Sources"');
+    expect(source).toContain('title="Review queue"');
+    expect(source).toContain('ariaLabel="Extensions view"');
+    expect(source).toContain('<WindowedDialog');
+    expect(source).toContain('title="system-browser"');
+  });
+
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

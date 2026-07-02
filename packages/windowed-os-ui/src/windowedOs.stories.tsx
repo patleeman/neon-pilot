@@ -1063,6 +1063,136 @@ export const DiagnosticsPage: Story = {
   ),
 };
 
+export const ExtensionsPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="Extensions"
+        accent="extensions"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Extension manager"
+            title="Extensions"
+            actions={
+              <>
+                <WindowedSegmentedControl
+                  ariaLabel="Extensions view"
+                  value="installed"
+                  options={[
+                    { value: 'installed', label: 'Installed' },
+                    { value: 'sources', label: 'Sources' },
+                  ]}
+                  onChange={() => undefined}
+                />
+                <WindowedPageButton>Refresh</WindowedPageButton>
+                <WindowedPageButton tone="accent">Install extension</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Inventory" meta="local">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Installed', value: 18 },
+                  { label: 'Enabled', value: <WindowedBadge tone="positive">14</WindowedBadge> },
+                  { label: 'Updates', value: <WindowedBadge tone="warning">3 pending</WindowedBadge> },
+                  { label: 'Sources', value: '2 indexes' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Installed extensions" meta="selected: system-browser">
+              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Enabled', align: 'right' }]}>
+                <WindowedDataRow
+                  name="system-browser"
+                  meta="Workbench browser and browser automation"
+                  enabled
+                  status={<WindowedBadge tone="warning">update</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="system-terminal"
+                  meta="Terminal tabs and shell actions"
+                  enabled
+                  status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="system-model-arena"
+                  meta="Transcript duels and model comparisons"
+                  enabled={false}
+                  status={<WindowedBadge tone="neutral">disabled</WindowedBadge>}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Sources" meta="trusted">
+              <WindowedList>
+                <WindowedListItem
+                  title="Built-in system extensions"
+                  meta="18 extensions"
+                  accent="extensions"
+                  status={<WindowedBadge tone="positive">trusted</WindowedBadge>}
+                />
+                <WindowedListItem
+                  title="Personal marketplace"
+                  meta="7 extensions"
+                  accent="extensions"
+                  status={<WindowedBadge tone="neutral">enabled</WindowedBadge>}
+                />
+              </WindowedList>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Review queue" meta="1 item">
+              <WindowedList>
+                <WindowedListItem
+                  title="automation-dashboard"
+                  meta="Permission change"
+                  accent="extensions"
+                  status={<WindowedBadge tone="warning">review</WindowedBadge>}
+                />
+              </WindowedList>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+
+        <WindowedDialog
+          title="system-browser"
+          meta="update available"
+          accent="extensions"
+          onClose={() => undefined}
+          actions={
+            <>
+              <WindowedPageButton>Disable</WindowedPageButton>
+              <WindowedPageButton tone="accent">Update</WindowedPageButton>
+            </>
+          }
+        >
+          <WindowedKeyValueGrid
+            columns={3}
+            items={[
+              { label: 'Version', value: '0.11.39' },
+              { label: 'Surfaces', value: 'Workbench tab' },
+              { label: 'State', value: <WindowedBadge tone="warning">update</WindowedBadge> },
+              { label: 'Source', value: 'Built-in' },
+              { label: 'Permissions', value: 'Browser, network' },
+              { label: 'Updated', value: 'Today' },
+            ]}
+          />
+          <WindowedList>
+            <WindowedListItem title="Browser page" meta="Main tool panel" accent="extensions" status="active" />
+            <WindowedListItem title="Backend action" meta="Snapshot and navigation" accent="extensions" status="enabled" />
+          </WindowedList>
+        </WindowedDialog>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const SkillsPage: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
