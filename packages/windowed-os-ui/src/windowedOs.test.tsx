@@ -62,6 +62,20 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Repo audit"');
   });
 
+  it('documents the canonical Model Arena desktop page', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const ModelArenaPage');
+    expect(source).toContain('title="Model Arena"');
+    expect(source).toContain('eyebrow="Model duels"');
+    expect(source).toContain('title="Overview"');
+    expect(source).toContain('title="Active duel"');
+    expect(source).toContain('title="Rankings"');
+    expect(source).toContain('title="Challengers"');
+    expect(source).toContain('Toggle automatic duels');
+  });
+
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

@@ -895,6 +895,96 @@ export const WorkflowsPage: Story = {
   ),
 };
 
+export const ModelArenaPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="Model Arena"
+        accent="gateways"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Model duels"
+            title="Model Arena"
+            actions={
+              <>
+                <WindowedPageButton>Refresh</WindowedPageButton>
+                <WindowedPageButton tone="accent">Start duel</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Overview" meta="automatic">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Status', value: <WindowedBadge tone="positive">enabled</WindowedBadge> },
+                  { label: 'Active duel', value: 'release-notes-41' },
+                  { label: 'Votes', value: 128 },
+                  { label: 'Challengers', value: '3 selected' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Active duel" meta="awaiting vote">
+              <WindowedList>
+                <WindowedListItem
+                  title="Primary response"
+                  meta="hidden until vote"
+                  accent="gateways"
+                  status={<WindowedBadge tone="warning">A</WindowedBadge>}
+                />
+                <WindowedListItem
+                  title="Challenger response"
+                  meta="hidden until vote"
+                  accent="gateways"
+                  status={<WindowedBadge tone="warning">B</WindowedBadge>}
+                />
+              </WindowedList>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Rankings" meta="4 models">
+              <WindowedDataTable columns={[{ label: 'Model' }, { label: 'Win rate' }, { label: 'Votes', align: 'right' }]}>
+                <WindowedDataRow
+                  name="gpt-5.4"
+                  meta="42 wins / 61 votes"
+                  status={<WindowedBadge tone="positive">68.9%</WindowedBadge>}
+                  action="61"
+                />
+                <WindowedDataRow
+                  name="claude-sonnet-4.5"
+                  meta="31 wins / 52 votes"
+                  status={<WindowedBadge tone="neutral">59.6%</WindowedBadge>}
+                  action="52"
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Challengers" meta="sampling">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  {
+                    label: 'Automatic duels',
+                    value: <WindowedToggle checked accent="gateways" label="Toggle automatic duels" />,
+                  },
+                  { label: 'Sample rate', value: '20%' },
+                  { label: 'Prompt windows', value: 'parallel only' },
+                  { label: 'Excluded', value: 'image prompts' },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const CoreDataPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
