@@ -2101,14 +2101,14 @@ recordTelemetryEvent({ source: 'agent', category: 'my_extension', name: 'action_
           <code>change_working_directory</code>, <code>ensure_live</code>, <code>send_message</code>, <code>abort</code>,
           <code>compact</code>, <code>fork</code>, <code>set_active_tools</code>, <code>workspace_get</code>, <code>workspace_update</code>,
           <code>append_transcript_block</code>, <code>update_transcript_block</code>, and <code>rollback</code>), all extension manager
-          actions, image probe agent tasks, knowledge state/sync/read/search/reference/memory/file mutation/import actions and all
+          actions, multimedia probe agent tasks, knowledge state/sync/read/search/reference/memory/file mutation/import actions and all
           non-streaming Knowledge routes including binary assets, local dictation settings/model install/transcription, MCP
           settings/config/test/auth/logout actions and read-only tool inspection, onboarding bootstrap, prompt assembly inspection/toggles,
           skills inventory and enablement, telemetry aggregate reads, todos, web fetch, installable web search tools, installable local
-          model lookup/discovery actions, installable DS4 provider/tool/runtime-control actions, Video Probe frame sampling and
-          transcription tools, Suggested Context cache warming, and background work (<code>system-runs</code>) run their declared
-          worker-safe actions through this lane; broader backend handler execution still runs through the in-process runner until the
-          remaining live capabilities are implemented on top of those capability handles.
+          model lookup/discovery actions, installable DS4 provider/tool/runtime-control actions, multimedia frame sampling and transcription
+          tools, Suggested Context cache warming, and background work (<code>system-runs</code>) run their declared worker-safe actions
+          through this lane; broader backend handler execution still runs through the in-process runner until the remaining live
+          capabilities are implemented on top of those capability handles.
         </p>
         <p>
           Backend actions can opt into worker execution with <code>worker.enabled: true</code> when every code path they expose only needs

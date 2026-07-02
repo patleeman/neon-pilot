@@ -36,6 +36,8 @@ interface VideoProbeInvocationContext {
 const attachmentsBySession = new Map<string, Map<string, StoredVideoProbeAttachment>>();
 const MAX_VIDEO_FRAME_COUNT = 12;
 const FRAME_MIME_TYPE = 'image/png';
+const MEDIA_PROBE_RUNTIME_DIR = 'media-probes';
+const LEGACY_VIDEO_PROBE_RUNTIME_DIR = 'video-probes';
 
 function safeFileName(value: string | undefined, fallback: string): string {
   const cleaned = (value ?? '')
@@ -46,11 +48,15 @@ function safeFileName(value: string | undefined, fallback: string): string {
 }
 
 function resolveVideoProbeSessionDir(sessionId: string): string {
-  return join(getPiAgentRuntimeDir(), 'video-probes', safeFileName(sessionId, 'session'));
+  return join(getPiAgentRuntimeDir(), MEDIA_PROBE_RUNTIME_DIR, safeFileName(sessionId, 'session'));
 }
 
 function resolveVideoProbeMetadataPath(sessionId: string): string {
   return join(resolveVideoProbeSessionDir(sessionId), 'metadata.json');
+}
+
+function resolveLegacyVideoProbeMetadataPath(sessionId: string): string {
+  return join(getPiAgentRuntimeDir(), LEGACY_VIDEO_PROBE_RUNTIME_DIR, safeFileName(sessionId, 'session'), 'metadata.json');
 }
 
 function videoIdForFile(path: string, sizeBytes: number, mtimeMs: number): string {
@@ -80,7 +86,9 @@ function normalizeStoredVideo(value: unknown): StoredVideoProbeAttachment | null
 }
 
 function readPersistedVideoProbeAttachments(sessionId: string): Map<string, StoredVideoProbeAttachment> {
-  const metadataPath = resolveVideoProbeMetadataPath(sessionId);
+  const metadataPath = existsSync(resolveVideoProbeMetadataPath(sessionId))
+    ? resolveVideoProbeMetadataPath(sessionId)
+    : resolveLegacyVideoProbeMetadataPath(sessionId);
   if (!existsSync(metadataPath)) return new Map();
 
   try {
@@ -335,8 +343,11 @@ export function getVideoProbeAttachmentsByIdFromAnySession(videoIds: string[]): 
     }
   }
 
-  const probesDir = join(getPiAgentRuntimeDir(), 'video-probes');
-  if (remaining.size > 0 && existsSync(probesDir)) {
+  for (const probesDir of [
+    join(getPiAgentRuntimeDir(), MEDIA_PROBE_RUNTIME_DIR),
+    join(getPiAgentRuntimeDir(), LEGACY_VIDEO_PROBE_RUNTIME_DIR),
+  ]) {
+    if (remaining.size === 0 || !existsSync(probesDir)) continue;
     for (const entry of readdirSync(probesDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       const sessionAttachments = readPersistedVideoProbeAttachments(entry.name);
@@ -363,7 +374,7 @@ export async function sampleVideoFrames(input: unknown, context?: VideoProbeInvo
   if (endSec < startSec) throw new Error('endSec must be greater than or equal to startSec.');
   const timestamps = normalizeFrameTimestamps({ startSec, endSec, count, durationMs: video.durationMs, fps: video.fps });
 
-  const tempRoot = await mkdtemp(join(tmpdir(), 'neon-pilot-video-probe-'));
+  const tempRoot = await mkdtemp(join(tmpdir(), 'neon-pilot-media-probe-'));
   try {
     const frames: Array<{ timestampMs: number; mimeType: string; data: string; sizeBytes: number }> = [];
     for (let index = 0; index < timestamps.length; index += 1) {

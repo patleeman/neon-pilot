@@ -75,7 +75,6 @@ function buildLaunchEnv(tempRoot: string, stateRoot: string): Record<string, str
     NEON_PILOT_CONFIG_ROOT: join(stateRoot, 'config'),
     NEON_PILOT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
     NEON_PILOT_DAEMON_SOCKET_PATH: join(tempRoot, 'daemon.sock'),
-    NEON_PILOT_COMPANION_PORT: '0',
   };
 }
 
