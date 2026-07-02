@@ -49,6 +49,16 @@ describe('workbench browser validation', () => {
     expect(source).toContain('entry.view.webContents.stop();');
   });
 
+  it('detaches hidden browser views so native content cannot overlay renderer chrome', () => {
+    const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
+
+    expect(source).toContain('attached: boolean');
+    expect(source).toContain('this.attach(entry);');
+    expect(source).toContain('private detach(entry: WorkbenchBrowserViewEntry)');
+    expect(source).toContain('entry.ownerWindow.contentView.removeChildView(entry.view);');
+    expect(source).toContain('this.detach(entry);');
+  });
+
   it('forwards command palette shortcuts out of the embedded browser', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 

@@ -191,6 +191,7 @@ interface WorkbenchBrowserViewEntry {
   ownerWindow: BrowserWindow;
   owner: WebContents;
   view: WebContentsView;
+  attached: boolean;
   active: boolean;
   deactivated: boolean;
   browserRevision: number;
@@ -357,6 +358,7 @@ export class WorkbenchBrowserViewController {
     const view = this.ensureView(ownerWindow, owner.id, sessionKey);
     const entry = this.views.get(viewKey);
     if (entry) {
+      this.attach(entry);
       entry.active = true;
       entry.deactivated = false;
     }
@@ -562,11 +564,7 @@ export class WorkbenchBrowserViewController {
         continue;
       }
       this.views.delete(viewKey);
-      try {
-        entry.ownerWindow.contentView.removeChildView(entry.view);
-      } catch {
-        // Best-effort cleanup. Electron may already have torn down the window.
-      }
+      this.detach(entry);
       entry.view.webContents.close();
     }
     this.activeViewKeysByOwner.delete(ownerWebContentsId);
@@ -589,6 +587,27 @@ export class WorkbenchBrowserViewController {
       entry.view.webContents.stop();
     }
     entry.view.setBounds({ x: -10_000, y: -10_000, width: 1, height: 1 });
+    this.detach(entry);
+  }
+
+  private attach(entry: WorkbenchBrowserViewEntry): void {
+    if (entry.attached || entry.ownerWindow.isDestroyed()) {
+      return;
+    }
+    entry.ownerWindow.contentView.addChildView(entry.view);
+    entry.attached = true;
+  }
+
+  private detach(entry: WorkbenchBrowserViewEntry): void {
+    if (!entry.attached) {
+      return;
+    }
+    try {
+      entry.ownerWindow.contentView.removeChildView(entry.view);
+    } catch {
+      // Best-effort cleanup. Electron may already have torn down the window.
+    }
+    entry.attached = false;
   }
 
   private hideActiveOwnerView(ownerWebContentsId: number, exceptViewKey: string): void {
@@ -666,6 +685,7 @@ export class WorkbenchBrowserViewController {
       ownerWindow,
       owner: ownerWindow.webContents,
       view,
+      attached: true,
       active: false,
       deactivated: false,
       browserRevision: 0,
