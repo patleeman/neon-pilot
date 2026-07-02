@@ -160,6 +160,19 @@ function renderPageWithPa(pa: Record<string, unknown>) {
   );
 }
 
+function renderWindowedPage(options?: { pa?: Record<string, unknown> }) {
+  return render(
+    <MemoryRouter initialEntries={['/extensions']}>
+      <ExtensionManagerPage
+        pa={(options?.pa ?? { ui: { toast: vi.fn(), notify: vi.fn() }, commands: { list: vi.fn().mockResolvedValue([]) } }) as never}
+        context={{ shellPresentation: 'windowed' } as never}
+        surface={{} as never}
+        params={{}}
+      />
+    </MemoryRouter>,
+  );
+}
+
 function renderRepositoriesSettingsPanel(pa: Record<string, unknown>) {
   render(<ExtensionRepositoriesSettingsPanel pa={pa as never} context={{} as never} surface={{} as never} params={{}} />);
 }
@@ -285,6 +298,26 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
+  });
+
+  it('renders the native windowed extensions layout without the stable table chrome', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createExtension(), createRequiredSystemExtension()]);
+    const { container } = renderWindowedPage();
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('table')).toBeNull();
+    expect(screen.getByPlaceholderText('Search extensions')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Installed/ }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /Platform/ })).toBeTruthy();
+    expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
+    expect(screen.getByText('Extension context')).toBeTruthy();
+    expect(screen.getAllByText('Applications').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: /Platform/ }));
+
+    expect(screen.getAllByText('Settings panels').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('switch', { name: /Disable Settings panels/ })).toBeNull();
   });
 
   it('starts an extension-building chat with a guided prompt', async () => {

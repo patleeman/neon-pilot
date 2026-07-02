@@ -46,6 +46,20 @@ import {
   TabButton,
   TabList,
   TextInput,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedKeyValueList,
+  WindowedList,
+  WindowedListItem,
+  WindowedPageButton,
+  WindowedPageInspector,
+  WindowedPageMain,
+  WindowedPageRail,
+  WindowedPageSection,
+  WindowedPageShell,
+  WindowedTextInput,
+  WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
@@ -132,6 +146,7 @@ interface ExtensionCatalogSource {
 type ExtensionFilter = 'all' | 'platform' | 'attention';
 type ExtensionActionBridge = ExtensionSurfaceProps['pa']['extensions'];
 type ExtensionManagerNotice = { type: 'info' | 'success' | 'error'; message: string; details?: string };
+type WindowedStatusTone = 'neutral' | 'positive' | 'warning' | 'danger';
 
 function extensionResourceId(extensionId: string): string {
   return `extension:${extensionId}`;
@@ -690,6 +705,14 @@ function extensionStatusClass(extension: ExtensionInstallSummary, unavailableCat
   return 'text-dim';
 }
 
+function extensionStatusTone(extension: ExtensionInstallSummary, unavailableCatalogItem = false): WindowedStatusTone {
+  const label = extensionStatusLabel(extension, unavailableCatalogItem);
+  if (label === 'Enabled' || label === 'Required') return 'positive';
+  if (label === 'Invalid' || label === 'Quarantined') return 'danger';
+  if (label === 'Unavailable') return 'warning';
+  return 'neutral';
+}
+
 function formatFrontendSummary(extension: ExtensionInstallSummary): string {
   return extension.manifest?.frontend?.entry ?? '';
 }
@@ -962,7 +985,7 @@ function formatExtensionDiagnostics(extension: ExtensionInstallSummary): string 
   );
 }
 
-export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceProps & { embedded?: boolean }) {
+export function ExtensionManagerPage({ pa, context, embedded = false }: ExtensionSurfaceProps & { embedded?: boolean }) {
   const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1680,6 +1703,228 @@ export function ExtensionManagerPage({ pa, embedded = false }: ExtensionSurfaceP
 
   if (error) {
     return <ErrorState message={error} />;
+  }
+
+  const selectedExtension =
+    (detailsExtensionId ? visibleExtensions.find((extension) => extension.id === detailsExtensionId) : null) ??
+    visibleExtensions[0] ??
+    null;
+
+  if (context.shellPresentation === 'windowed') {
+    const filterItems: Array<{ id: ExtensionFilter; label: string; meta: string }> = [
+      { id: 'all', label: 'Installed', meta: `${installedExtensions.filter((extension) => !isLocked(extension)).length}` },
+      { id: 'platform', label: 'Platform', meta: `${visiblePlatformExtensionCount}` },
+      { id: 'attention', label: 'Attention', meta: `${installedExtensions.filter(extensionHasIssue).length}` },
+    ];
+
+    return (
+      <>
+        <WindowedPageShell>
+          <WindowedPageRail title="Extensions" accent="extensions">
+            <WindowedPageSection title="Views" meta={sectionSummary}>
+              <WindowedList>
+                {filterItems.map((item) => (
+                  <WindowedListItem
+                    key={item.id}
+                    title={item.label}
+                    meta={`${item.meta} items`}
+                    active={activeFilter === item.id}
+                    accent="extensions"
+                    onSelect={() => setActiveFilter(item.id)}
+                  />
+                ))}
+              </WindowedList>
+            </WindowedPageSection>
+            <WindowedPageSection title="Sources" meta={`${catalogSources.length} sources`}>
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Catalog', value: catalogError ? 'Unavailable' : catalog ? 'Loaded' : 'Loading' },
+                  { label: 'Available', value: `${visibleCatalogExtensions.length}` },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageRail>
+
+          <WindowedPageMain
+            eyebrow="Applications"
+            title={sectionTitle}
+            actions={
+              <>
+                <WindowedPageButton
+                  disabled={busyId === 'update-all'}
+                  onClick={() => {
+                    notifyExtensionRegistryChanged();
+                    void load();
+                    loadCatalog();
+                  }}
+                >
+                  Reload
+                </WindowedPageButton>
+                {updatableExtensions.length ? (
+                  <WindowedPageButton disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
+                    {busyId === 'update-all' ? 'Updating' : `Update all (${updatableExtensions.length})`}
+                  </WindowedPageButton>
+                ) : null}
+                <WindowedPageButton tone="accent" disabled={busyId === 'update-all'} onClick={startExtensionBuildConversation}>
+                  Build
+                </WindowedPageButton>
+                <WindowedPageButton disabled={busyId === 'update-all'} onClick={() => setInstallModalOpen(true)}>
+                  Install
+                </WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection>
+              <WindowedTextInput
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                placeholder="Search extensions"
+                aria-label="Search extensions"
+              />
+            </WindowedPageSection>
+
+            {notice ? (
+              <WindowedPageSection>
+                <ExtensionNoticeBox notice={notice} />
+              </WindowedPageSection>
+            ) : null}
+
+            {catalogError ? <ErrorState title="Could not load installable extensions" message={catalogError} /> : null}
+
+            <WindowedPageSection title="Installed" meta={sectionSummary}>
+              {loading ? (
+                <QuietLoadingState label="Loading extensions" className="min-h-24" />
+              ) : extensions.length === 0 ? (
+                <EmptyState
+                  title="Add capabilities to Neon Pilot"
+                  body="Extensions add native pages, tools, settings, skills, and workflow surfaces without changing the core app."
+                  align="start"
+                />
+              ) : visibleExtensions.length === 0 ? (
+                <EmptyState title={emptyVisibleExtensionsTitle} body={emptyVisibleExtensionsBody} />
+              ) : (
+                <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
+                  {visibleExtensions.map((extension) => {
+                    const route = firstRoute(extension);
+                    const busy = busyId === extension.id;
+                    const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
+                    const unavailableCatalogItem =
+                      extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogItem;
+                    const showEnablement = activeFilter !== 'platform' && extension.status !== 'invalid';
+                    return (
+                      <WindowedDataRow
+                        key={extension.id}
+                        name={extension.name}
+                        meta={`${extensionSourceLabel(extension)} · ${formatAppearsInSummary(extension)}`}
+                        status={
+                          <span className="flex flex-col items-start gap-1">
+                            <WindowedBadge tone={extensionStatusTone(extension, unavailableCatalogItem)}>
+                              {extensionStatusLabel(extension, unavailableCatalogItem)}
+                            </WindowedBadge>
+                            {unavailableCatalogItem ? (
+                              <span className="text-[11px] text-warning">Unavailable</span>
+                            ) : catalogItem?.updateAvailable ? (
+                              <span className="text-[11px] text-accent">{catalogItem.availableVersion ?? catalogItem.version}</span>
+                            ) : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]) ? (
+                              <span className="text-[11px] text-danger">
+                                {extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]}
+                              </span>
+                            ) : null}
+                          </span>
+                        }
+                        action={
+                          <span className="flex items-center justify-end gap-2">
+                            {showEnablement ? (
+                              <WindowedToggle
+                                checked={extension.enabled}
+                                disabled={busy || isLocked(extension)}
+                                label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
+                                accent="extensions"
+                                onChange={() => toggleExtension(extension)}
+                              />
+                            ) : null}
+                            <WindowedPageButton onClick={() => selectExtension(extension)}>Details</WindowedPageButton>
+                            {route && extension.enabled ? (
+                              <WindowedPageButton onClick={() => navigate(route)}>Open</WindowedPageButton>
+                            ) : null}
+                          </span>
+                        }
+                        className={selectedExtension?.id === extension.id ? 'is-selected' : undefined}
+                      />
+                    );
+                  })}
+                </WindowedDataTable>
+              )}
+            </WindowedPageSection>
+          </WindowedPageMain>
+
+          <WindowedPageInspector eyebrow="Extension context" title={selectedExtension?.name ?? 'Select an extension'}>
+            {selectedExtension ? (
+              <>
+                <WindowedPageSection title="Status">
+                  <WindowedKeyValueList
+                    items={[
+                      { label: 'State', value: extensionStatusLabel(selectedExtension) },
+                      { label: 'Source', value: extensionSourceLabel(selectedExtension) },
+                      { label: 'Version', value: selectedExtension.version ? `v${selectedExtension.version}` : 'Unknown' },
+                      { label: 'Settings', value: hasExtensionSettings(selectedExtension) ? 'Configurable' : 'None' },
+                    ]}
+                  />
+                </WindowedPageSection>
+                <WindowedPageSection title="Actions">
+                  <div className="flex flex-wrap gap-2">
+                    {firstRoute(selectedExtension) && selectedExtension.enabled ? (
+                      <WindowedPageButton onClick={() => navigate(firstRoute(selectedExtension)!)}>Open</WindowedPageButton>
+                    ) : null}
+                    {hasExtensionSettings(selectedExtension) ? (
+                      <WindowedPageButton onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}>
+                        Settings
+                      </WindowedPageButton>
+                    ) : null}
+                    {selectedExtension.packageRoot ? (
+                      <WindowedPageButton onClick={() => openFolder(selectedExtension)}>Folder</WindowedPageButton>
+                    ) : null}
+                  </div>
+                </WindowedPageSection>
+                {selectedExtension.description ? (
+                  <WindowedPageSection title="Description">
+                    <p className="text-[12px] leading-5 text-secondary">{selectedExtension.description}</p>
+                  </WindowedPageSection>
+                ) : null}
+                <WindowedPageSection title="Includes">
+                  <WindowedKeyValueList
+                    items={[
+                      { label: 'Appears in', value: formatAppearsInSummary(selectedExtension) },
+                      { label: 'Skills', value: formatSkillSummary(selectedExtension) || 'None' },
+                      { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
+                    ]}
+                  />
+                </WindowedPageSection>
+              </>
+            ) : loading ? (
+              <QuietLoadingState label="Loading extension details" className="min-h-12" />
+            ) : (
+              <EmptyState title="Pick a row to inspect" body="Select an extension to inspect its status, surfaces, and install details." />
+            )}
+          </WindowedPageInspector>
+        </WindowedPageShell>
+
+        {installModalOpen ? (
+          <InstallExtensionModal
+            catalogItems={visibleCatalogExtensions}
+            catalogSources={catalogSources}
+            catalogSourceInput={catalogSourceInput}
+            catalogSourceErrors={catalog?.sourceErrors ?? []}
+            catalogBusyId={busyId}
+            onCatalogSourceInputChange={setCatalogSourceInput}
+            onInstallCatalog={(item) => void installCatalogExtension(item)}
+            onAddCatalogSource={() => void addCatalogSource()}
+            onRemoveCatalogSource={(source) => void removeCatalogSource(source)}
+            onClose={() => setInstallModalOpen(false)}
+          />
+        ) : null}
+      </>
+    );
   }
 
   return (
