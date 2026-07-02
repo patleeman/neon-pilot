@@ -82,6 +82,8 @@ const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'settings', title: 'Settings', route: '/settings', kind: 'route' },
 ];
 
+const CANONICAL_LAUNCHER_ORDER = ['Automations', 'Workflows', 'Gateways', 'Model Arena', 'Routines', 'Extensions', 'Skills', 'Diagnostics'];
+
 function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: string): string {
   if (input.kind === 'chat') return `chat:${suffix ?? 'draft'}`;
   return `route:${input.id}`;
@@ -205,9 +207,18 @@ function buildLauncherItems(extensionRegistry: ReturnType<typeof useExtensionReg
       });
 
       return [...navItems, ...mainViewItems];
-    });
+    })
+    .sort(compareLauncherItems);
 
   return [STATIC_LAUNCHER_ITEMS[0]!, ...dynamic, STATIC_LAUNCHER_ITEMS[1]!];
+}
+
+function compareLauncherItems(left: LauncherItem, right: LauncherItem): number {
+  const leftRank = CANONICAL_LAUNCHER_ORDER.indexOf(left.title);
+  const rightRank = CANONICAL_LAUNCHER_ORDER.indexOf(right.title);
+  const normalizedLeftRank = leftRank >= 0 ? leftRank : CANONICAL_LAUNCHER_ORDER.length;
+  const normalizedRightRank = rightRank >= 0 ? rightRank : CANONICAL_LAUNCHER_ORDER.length;
+  return normalizedLeftRank - normalizedRightRank || left.title.localeCompare(right.title);
 }
 
 function accentForTitle(title: string): AppAccent {
