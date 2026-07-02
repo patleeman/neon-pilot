@@ -20,12 +20,36 @@ export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-com
 const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.reopenTab', 'browser.closeTab', 'browser.focusLocation']);
 const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 450;
 
-function hasBlockingHtmlModal(): boolean {
+function hasBlockingRendererOverlay(host: HTMLElement | null): boolean {
   if (typeof document === 'undefined') {
     return false;
   }
 
-  return Boolean(document.querySelector('[aria-modal="true"]'));
+  const overlays = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      [
+        '[aria-modal="true"]',
+        '[role="dialog"]',
+        '.ui-overlay-backdrop',
+        '.ui-menu-shell',
+        '.ui-command-palette-shell',
+        '.wos-start-menu',
+        '.wos-taskbar__menu-layer',
+        '.wos-snap-preview',
+        '.wos-dialog-layer',
+      ].join(', '),
+    ),
+  );
+
+  return overlays.some((element) => {
+    if (!isConnectedVisibleElement(element)) {
+      return false;
+    }
+    if (host && (host.contains(element) || element.contains(host))) {
+      return false;
+    }
+    return true;
+  });
 }
 
 function hasWindowedShellOverlay(): boolean {
@@ -351,7 +375,7 @@ export function WorkbenchBrowserTab({
 
     const blocked =
       Date.now() < windowedShellSuspendUntilRef.current ||
-      hasBlockingHtmlModal() ||
+      hasBlockingRendererOverlay(host) ||
       hasWindowedShellOverlay() ||
       isInsideUnfocusedWindow(host) ||
       isInsideBackgroundWindowedWindow(host) ||
