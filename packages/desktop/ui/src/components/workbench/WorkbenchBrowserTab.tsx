@@ -259,6 +259,7 @@ export function WorkbenchBrowserTab({
   const tabsStateRef = useRef(tabsState);
   const lastBoundsRequestRef = useRef('');
   const windowedShellSuspendUntilRef = useRef(0);
+  const hiddenReassertTimersRef = useRef<number[]>([]);
   const [state, setState] = useState<DesktopWorkbenchBrowserState | null>(null);
   const [status, setStatus] = useState('');
   const [surfaceKeybindings, setSurfaceKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
@@ -364,6 +365,21 @@ export function WorkbenchBrowserTab({
           }
         })
         .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
+
+      if (options?.force) {
+        for (const delay of [80, 240]) {
+          const timer = window.setTimeout(() => {
+            hiddenReassertTimersRef.current = hiddenReassertTimersRef.current.filter((candidate) => candidate !== timer);
+            if (closedRef.current) {
+              return;
+            }
+            void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey }).catch((error) => {
+              setStatus(formatWorkbenchBrowserError(error));
+            });
+          }, delay);
+          hiddenReassertTimersRef.current.push(timer);
+        }
+      }
     },
     [activeTab.id, bridge, browserSessionKey, syncUrlDraftFromBrowserState],
   );
@@ -474,6 +490,10 @@ export function WorkbenchBrowserTab({
       window.removeEventListener('pointerdown', syncBounds, true);
       window.removeEventListener('pointerup', syncBounds, true);
       window.clearInterval(timer);
+      for (const reassertTimer of hiddenReassertTimersRef.current) {
+        window.clearTimeout(reassertTimer);
+      }
+      hiddenReassertTimersRef.current = [];
       // Deactivate all tabs on unmount
       const currentTabs = tabsStateRef.current?.tabs ?? [];
       for (const tab of currentTabs) {
