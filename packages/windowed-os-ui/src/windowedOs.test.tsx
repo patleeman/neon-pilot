@@ -35,7 +35,17 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).not.toContain('ui-context-rail');
     expect(source).not.toContain('ui-app-page-');
-    expect(source).not.toContain('layout="two-column"');
+  });
+
+  it('documents the Settings-only two-column rail pattern', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const SettingsTwoColumnPage');
+    expect(source).toContain('layout="two-column"');
+    expect(source).toContain('<WindowedPageRail');
+    expect(source).toContain('showHeader={false}');
+    expect(source).toContain('title="Settings sections"');
   });
 
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {

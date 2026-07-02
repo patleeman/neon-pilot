@@ -19,6 +19,7 @@ import {
   WindowedMessageBubble,
   WindowedPageButton,
   WindowedPageMain,
+  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
   WindowedSegmentedControl,
@@ -332,6 +333,63 @@ export const DenseAppPage: Story = {
                   {
                     label: 'Enabled',
                     value: <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />,
+                  },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const SettingsTwoColumnPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 620, padding: 24 }}>
+      <WindowFrame
+        title="Settings"
+        accent="settings"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 560 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="two-column">
+          <WindowedPageRail title="Settings sections" accent="settings" showHeader={false}>
+            <WindowedList>
+              <WindowedListItem title="Appearance" active accent="settings" />
+              <WindowedListItem title="Providers" accent="settings" status={<WindowedBadge tone="positive">2</WindowedBadge>} />
+              <WindowedListItem title="Extensions" accent="settings" />
+              <WindowedListItem title="Desktop" accent="settings" status={<WindowedBadge tone="neutral">Beta</WindowedBadge>} />
+              <WindowedListItem title="Shortcuts" accent="settings" />
+            </WindowedList>
+          </WindowedPageRail>
+          <WindowedPageMain
+            title="Providers"
+            actions={
+              <>
+                <WindowedPageButton>Refresh</WindowedPageButton>
+                <WindowedPageButton tone="accent">Add provider</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Model providers" meta="2 configured">
+              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
+                <WindowedDataRow name="OpenAI" meta="Default" enabled status={<WindowedBadge tone="positive">Connected</WindowedBadge>} />
+                <WindowedDataRow name="Local" meta="Ollama" status={<WindowedBadge tone="warning">Setup</WindowedBadge>} />
+              </WindowedDataTable>
+            </WindowedPageSection>
+            <WindowedPageSection title="Desktop mode">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Shell', value: 'Windowed OS' },
+                  { label: 'Launch mode', value: 'Menu item' },
+                  { label: 'Workbench', value: 'Attached to Chat' },
+                  {
+                    label: 'Enabled',
+                    value: <WindowedToggle checked accent="settings" label="Toggle windowed desktop mode" />,
                   },
                 ]}
               />
