@@ -796,6 +796,7 @@ export function WindowFrame({
 }: WindowFrameProps) {
   return (
     <section
+      aria-label={title}
       className={cx('wos-window', className)}
       data-window-id={windowId}
       data-focused={focused}

@@ -236,10 +236,20 @@ function routeLocation(route: string) {
 function WindowRouteBody({ route }: { route: string }) {
   const isChatRoute = route.startsWith('/conversations');
 
+  if (!isChatRoute) {
+    return (
+      <div className="wos-window-route-body wos-window-route-body--extension">
+        <Routes location={routeLocation(route)}>
+          <Route path="*" element={<ExtensionRouteHost />} />
+        </Routes>
+      </div>
+    );
+  }
+
   return (
-    <div className="wos-window-route-body">
+    <div className="wos-window-route-body wos-window-route-body--chat">
       <Routes location={routeLocation(route)}>
-        <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench={isChatRoute} />}>
+        <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
           <Route
             path="conversations"
             element={
