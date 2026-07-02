@@ -76,10 +76,12 @@ describe('TelemetryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     fireEvent.click(screen.getByRole('button', { name: /7D/ }));
 
-    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.ui-app-page-shell')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeTruthy();
-    expect(screen.getByText('Diagnostics context')).toBeTruthy();
+    expect(screen.queryByText('Diagnostics context')).toBeNull();
+    expect(screen.getByText('Health')).toBeTruthy();
     expect(screen.getByText('Tool errors')).toBeTruthy();
     expect(refetch).toHaveBeenCalled();
     expect(useTracesData).toHaveBeenLastCalledWith('7d', expect.anything());

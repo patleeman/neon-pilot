@@ -32,7 +32,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -91,7 +90,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
   if (error) {
     if (context?.shellPresentation === 'windowed') {
       return (
-        <WindowedPageShell>
+        <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Diagnostics" accent="telemetry">
             <WindowedRangeSelector value={range} onChange={setRange} />
           </WindowedPageRail>
@@ -103,8 +102,6 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
             <WindowedPageSection>
               <ErrorState message={error} />
             </WindowedPageSection>
-          </WindowedPageMain>
-          <WindowedPageInspector eyebrow="Data context" title="Load failed">
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
                 items={[
@@ -113,7 +110,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
                 ]}
               />
             </WindowedPageSection>
-          </WindowedPageInspector>
+          </WindowedPageMain>
         </WindowedPageShell>
       );
     }
@@ -155,7 +152,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
       ) : null;
 
     return (
-      <WindowedPageShell>
+      <WindowedPageShell layout="two-column">
         <WindowedPageRail title="Diagnostics" accent="telemetry">
           <WindowedRangeSelector value={range} onChange={setRange} />
           <WindowedPageSection title="Data" meta={loading ? 'Loading' : summary ? 'Loaded' : 'Empty'}>
@@ -181,6 +178,22 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
           ) : null}
 
           {usageSection ? <WindowedPageSection title="Usage">{usageSection}</WindowedPageSection> : null}
+
+          <WindowedPageSection title="Status" meta={summary ? 'Current range' : 'Waiting for data'}>
+            <WindowedKeyValueList
+              items={[
+                { label: 'Range', value: range.toUpperCase() },
+                { label: 'Activity', value: hasDiagnosticActivity ? 'Present' : 'None' },
+                { label: 'Loading', value: loading ? 'Yes' : 'No' },
+                { label: 'Errors', value: summary ? `${summary.toolErrors}` : '0' },
+              ]}
+            />
+          </WindowedPageSection>
+          <WindowedPageSection title="Health">
+            <WindowedBadge tone={summary?.toolErrors ? 'danger' : hasDiagnosticActivity ? 'positive' : 'neutral'}>
+              {summary?.toolErrors ? 'Needs attention' : hasDiagnosticActivity ? 'Active' : 'Quiet'}
+            </WindowedBadge>
+          </WindowedPageSection>
 
           {summary && hasDiagnosticActivity ? (
             <>
@@ -225,24 +238,6 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
             </>
           ) : null}
         </WindowedPageMain>
-
-        <WindowedPageInspector eyebrow="Diagnostics context" title={summary ? 'Current range' : 'Waiting for data'}>
-          <WindowedPageSection title="Status">
-            <WindowedKeyValueList
-              items={[
-                { label: 'Range', value: range.toUpperCase() },
-                { label: 'Activity', value: hasDiagnosticActivity ? 'Present' : 'None' },
-                { label: 'Loading', value: loading ? 'Yes' : 'No' },
-                { label: 'Errors', value: summary ? `${summary.toolErrors}` : '0' },
-              ]}
-            />
-          </WindowedPageSection>
-          <WindowedPageSection title="Health">
-            <WindowedBadge tone={summary?.toolErrors ? 'danger' : hasDiagnosticActivity ? 'positive' : 'neutral'}>
-              {summary?.toolErrors ? 'Needs attention' : hasDiagnosticActivity ? 'Active' : 'Quiet'}
-            </WindowedBadge>
-          </WindowedPageSection>
-        </WindowedPageInspector>
       </WindowedPageShell>
     );
   }
