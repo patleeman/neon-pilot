@@ -144,9 +144,12 @@ describe('Dynamic Workflows surfaces', () => {
     const { container } = render(<WorkflowsPage {...props(pa, { hash: '#run:run-1', shellPresentation: 'windowed' })} />);
 
     expect(await screen.findAllByText('Live workflow')).toHaveLength(2);
-    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
     expect(container.querySelector('.wos-page-rail')).toBeTruthy();
-    expect(container.querySelector('.wos-page-inspector')).toBeTruthy();
+    expect(container.querySelector('.wos-page-inspector')).toBeNull();
+    expect(screen.queryByText('Workflow context')).toBeNull();
+    expect(screen.getByText('Selection')).toBeTruthy();
+    expect(screen.getByText('Actions')).toBeTruthy();
     expect(screen.getByText(/1\/2 complete, 1 running/)).toBeTruthy();
   });
 });

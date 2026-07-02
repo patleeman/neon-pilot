@@ -23,7 +23,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -582,7 +581,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
     const detailsTitle = selected?.name ?? selectedTemplate?.name ?? 'Workflow details';
 
     return (
-      <WindowedPageShell layout="wide">
+      <WindowedPageShell layout="two-column">
         <WindowedPageRail title="Workflows" accent="routines">
           <WindowedPageSection title="Runs" meta={workflows.length ? `${workflows.length} total` : 'Empty'}>
             {workflowRows.length ? (
@@ -666,6 +665,40 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
               <p className="wos-windowed-error">{error}</p>
             </WindowedPageSection>
           ) : null}
+
+          <WindowedPageSection title="Selection" meta={selected?.status ?? (selectedTemplate ? 'Template' : 'Ready')}>
+            <WindowedKeyValueList
+              items={[
+                { label: 'Runs', value: workflows.length },
+                { label: 'Saved', value: savedWorkflows.length },
+                { label: 'Templates', value: templates.length },
+                { label: 'Selected', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
+              ]}
+            />
+          </WindowedPageSection>
+
+          <WindowedPageSection title="Actions">
+            <div className="wos-workflows-actions">
+              {selectedTemplate ? (
+                <>
+                  <WindowedPageButton tone="accent" onClick={() => void runSaved(selectedTemplate)}>
+                    Run
+                  </WindowedPageButton>
+                  {selectedSavedWorkflow ? (
+                    <>
+                      <WindowedPageButton onClick={() => editSaved(selectedSavedWorkflow)}>Edit</WindowedPageButton>
+                      <WindowedPageButton onClick={() => void deleteSaved(selectedSavedWorkflow)}>Delete</WindowedPageButton>
+                    </>
+                  ) : null}
+                  <WindowedPageButton onClick={() => void saveTemplate(selectedTemplate)}>Save copy</WindowedPageButton>
+                </>
+              ) : null}
+              {selected?.status === 'running' ? (
+                <WindowedPageButton onClick={() => void cancelSelected()}>Cancel</WindowedPageButton>
+              ) : null}
+              <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
+            </div>
+          </WindowedPageSection>
 
           {draftOpen ? (
             <WindowedPageSection title={draft.id ? 'Edit saved workflow' : 'New saved workflow'} meta={draftStatus ?? 'Autosaves'}>
@@ -845,41 +878,6 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
             </WindowedPageSection>
           ) : null}
         </WindowedPageMain>
-
-        <WindowedPageInspector eyebrow="Workflow context" title={selected?.status ?? (selectedTemplate ? 'Template' : 'Ready')}>
-          <WindowedPageSection title="Selection">
-            <WindowedKeyValueList
-              items={[
-                { label: 'Runs', value: workflows.length },
-                { label: 'Saved', value: savedWorkflows.length },
-                { label: 'Templates', value: templates.length },
-                { label: 'Selected', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
-              ]}
-            />
-          </WindowedPageSection>
-          <WindowedPageSection title="Actions">
-            <div className="wos-workflows-actions">
-              {selectedTemplate ? (
-                <>
-                  <WindowedPageButton tone="accent" onClick={() => void runSaved(selectedTemplate)}>
-                    Run
-                  </WindowedPageButton>
-                  {selectedSavedWorkflow ? (
-                    <>
-                      <WindowedPageButton onClick={() => editSaved(selectedSavedWorkflow)}>Edit</WindowedPageButton>
-                      <WindowedPageButton onClick={() => void deleteSaved(selectedSavedWorkflow)}>Delete</WindowedPageButton>
-                    </>
-                  ) : null}
-                  <WindowedPageButton onClick={() => void saveTemplate(selectedTemplate)}>Save copy</WindowedPageButton>
-                </>
-              ) : null}
-              {selected?.status === 'running' ? (
-                <WindowedPageButton onClick={() => void cancelSelected()}>Cancel</WindowedPageButton>
-              ) : null}
-              <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
-            </div>
-          </WindowedPageSection>
-        </WindowedPageInspector>
       </WindowedPageShell>
     );
   }
