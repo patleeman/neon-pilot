@@ -28,7 +28,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -1179,7 +1178,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
     if (context.shellPresentation === 'windowed') {
       return (
-        <WindowedPageShell>
+        <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Routines" accent="routines">
             <WindowedList>
               {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
@@ -1240,8 +1239,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 ))}
               </WindowedList>
             </WindowedPageSection>
-          </WindowedPageMain>
-          <WindowedPageInspector eyebrow="Routine context" title="No event selected">
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
                 items={[
@@ -1251,7 +1248,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 ]}
               />
             </WindowedPageSection>
-          </WindowedPageInspector>
+          </WindowedPageMain>
         </WindowedPageShell>
       );
     }
@@ -1991,7 +1988,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     };
 
     return (
-      <WindowedPageShell>
+      <WindowedPageShell layout="two-column">
         <WindowedPageRail title="Routines" accent="routines">
           <WindowedList>
             {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
@@ -2048,9 +2045,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               <div className="wos-routine-empty">No routines after this event.</div>
             )}
           </WindowedPageSection>
-        </WindowedPageMain>
-        <WindowedPageInspector eyebrow="Routine context" title={selectedRoutine?.name ?? selectedHook.title}>
-          <WindowedPageSection title="Status">
+          <WindowedPageSection title="Status" meta={selectedRoutine?.name ?? selectedHook.title}>
             <WindowedKeyValueList
               items={[
                 { label: 'Owner', value: ownerLabel(selectedHook.ownerExtensionId) },
@@ -2083,7 +2078,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               <div className="wos-routine-empty">Run history appears here after routines execute.</div>
             )}
           </WindowedPageSection>
-        </WindowedPageInspector>
+        </WindowedPageMain>
       </WindowedPageShell>
     );
   }

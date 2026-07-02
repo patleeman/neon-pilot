@@ -213,11 +213,15 @@ describe('RoutinesPage', () => {
     const { container } = render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
 
     expect((await screen.findAllByText('Review code changes')).length).toBeGreaterThan(1);
-    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.ui-app-page-intro')).toBeNull();
     expect(screen.getByRole('button', { name: 'Choose path' })).toBeTruthy();
     expect(screen.getAllByText('Before').length).toBeGreaterThan(1);
     expect(screen.getAllByText('After').length).toBeGreaterThan(1);
+    expect(screen.getByText('Status')).toBeTruthy();
+    expect(screen.getByText('Runs')).toBeTruthy();
+    expect(screen.queryByText('Routine context')).toBeNull();
   });
 
   it('opens the add menu for the New Routine command route', async () => {
