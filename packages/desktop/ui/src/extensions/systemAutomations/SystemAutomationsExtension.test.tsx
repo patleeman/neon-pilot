@@ -238,7 +238,20 @@ describe('AutomationsPage', () => {
     expect(container.textContent).toContain('Release watch thread');
     expect(container.textContent).not.toContain('Selected automation');
     expect(container.textContent).not.toContain('Automation context');
+    expect(container.querySelector('.wos-dialog')).toBeNull();
+    expect(container.querySelector('.wos-automation-detail-grid')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
+
+    await act(async () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent?.startsWith('Release watch'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(container.querySelector('.wos-dialog')).not.toBeNull();
+    expect(container.querySelector('.wos-dialog__title')?.textContent).toBe('Automation details');
+    expect(container.textContent).toContain('Automation context');
+    expect(container.textContent).toContain('Run now');
 
     await act(async () =>
       Array.from(container.querySelectorAll('button'))

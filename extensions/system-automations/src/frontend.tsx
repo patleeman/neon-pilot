@@ -44,8 +44,8 @@ import {
   TextButton,
   TextInput,
   WindowedBadge,
+  WindowedDialog,
   WindowedKeyValueGrid,
-  WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
@@ -663,6 +663,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
         ? 'Edit automation'
         : 'Automation details'
     : '';
+  const activeAutomationMeta =
+    activeAutomation?.kind && activeAutomation.kind !== 'new'
+      ? `${statusLabel(activeAutomation.task)} · ${scheduleText(activeAutomation.task)}`
+      : activeAutomation?.kind === 'new'
+        ? 'Configure schedule and owner'
+        : undefined;
   const dialogPa = activeAutomation
     ? ({
         ...pa,
@@ -706,7 +712,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     : null;
 
   if (context?.shellPresentation === 'windowed') {
-    const selectedTask = activeAutomation?.kind && activeAutomation.kind !== 'new' ? activeAutomation.task : (visibleTasks[0] ?? null);
+    const selectedTask = activeAutomation?.kind && activeAutomation.kind !== 'new' ? activeAutomation.task : null;
     const runningCount = visibleTasks.filter((task) => task.running).length;
     const failedCount = visibleTasks.filter((task) => task.lastStatus === 'failed').length;
     const pausedCount = visibleTasks.filter((task) => !task.enabled).length;
@@ -813,68 +819,21 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 </div>
               ) : null}
             </WindowedPageSection>
-
-            <WindowedPageSection
-              title={selectedTask ? taskTitle(selectedTask) : 'No automation selected'}
-              meta={selectedTask ? statusLabel(selectedTask) : undefined}
-            >
-              {selectedTask ? (
-                <div className="wos-automation-detail-grid">
-                  <WindowedKeyValueList
-                    items={[
-                      { label: 'State', value: statusLabel(selectedTask) },
-                      { label: 'Next run', value: nextRunText(selectedTask) },
-                      { label: 'Last run', value: lastRunText(selectedTask) },
-                      { label: 'Schedule', value: selectedTask.scheduleType === 'at' ? 'Once' : 'Recurring' },
-                    ]}
-                  />
-                  <WindowedKeyValueList
-                    items={[
-                      { label: 'Thread', value: selectedTask.threadTitle || selectedTask.threadConversationId || 'None' },
-                      { label: 'Directory', value: selectedTask.cwd || 'Thread default' },
-                      { label: 'Model', value: selectedTask.model || 'App default' },
-                      { label: 'Timeout', value: selectedTask.timeoutSeconds ? `${selectedTask.timeoutSeconds}s` : 'Default' },
-                    ]}
-                  />
-                  <div className="wos-automation-inspector-actions">
-                    <WindowedPageButton
-                      disabled={selectedTask.running || busy === `run:${selectedTask.id}`}
-                      onClick={() => void runNow(selectedTask)}
-                    >
-                      Run now
-                    </WindowedPageButton>
-                    <WindowedPageButton
-                      disabled={Boolean(busy?.endsWith(`:${selectedTask.id}`))}
-                      onClick={() => void updateEnabled(selectedTask, !selectedTask.enabled)}
-                    >
-                      {selectedTask.enabled ? 'Pause' : 'Resume'}
-                    </WindowedPageButton>
-                    <WindowedPageButton onClick={() => selectTask(selectedTask, 'edit')}>Edit</WindowedPageButton>
-                    <WindowedPageButton
-                      disabled={selectedTask.running || busy === `delete:${selectedTask.id}`}
-                      onClick={() => void deleteTask(selectedTask)}
-                    >
-                      Delete
-                    </WindowedPageButton>
-                  </div>
-                </div>
-              ) : (
-                <div className="wos-automation-empty">Select an automation to inspect schedule, owner, and run controls.</div>
-              )}
-            </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
 
         {activeAutomation && dialogPa ? (
-          <Dialog className="max-w-3xl" labelledBy="automation-dialog-title" onClose={() => setActiveAutomation(null)}>
-            <DialogHeader title={activeAutomationTitle} titleId="automation-dialog-title" />
-            <DialogBody className="max-h-[min(78vh,52rem)] overflow-auto">
-              <AutomationDialogPanel
-                key={`${activeAutomation.kind}:${activeAutomation.kind === 'new' ? 'new' : activeAutomation.task.id}`}
-                pa={dialogPa}
-              />
-            </DialogBody>
-          </Dialog>
+          <WindowedDialog
+            title={activeAutomationTitle}
+            meta={activeAutomationMeta}
+            accent="automations"
+            onClose={() => setActiveAutomation(null)}
+          >
+            <AutomationDialogPanel
+              key={`${activeAutomation.kind}:${activeAutomation.kind === 'new' ? 'new' : activeAutomation.task.id}`}
+              pa={dialogPa}
+            />
+          </WindowedDialog>
         ) : null}
       </div>
     );
