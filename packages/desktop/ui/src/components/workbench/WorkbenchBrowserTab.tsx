@@ -41,6 +41,34 @@ function isInsideUnfocusedWindow(host: HTMLElement | null): boolean {
   return windowElement?.dataset.focused === 'false';
 }
 
+function rectsOverlap(first: DOMRect, second: DOMRect): boolean {
+  return first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
+}
+
+function windowLayer(windowElement: HTMLElement): number {
+  const zIndex = Number.parseInt(window.getComputedStyle(windowElement).zIndex, 10);
+  return Number.isFinite(zIndex) ? zIndex : 0;
+}
+
+function isCoveredByWindowedWindow(host: HTMLElement | null): boolean {
+  const ownWindow = host?.closest<HTMLElement>('.wos-window');
+  if (!host || !ownWindow) {
+    return false;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  const ownLayer = windowLayer(ownWindow);
+  const windows = Array.from(document.querySelectorAll<HTMLElement>('.windowed-os-shell .wos-window'));
+
+  return windows.some((candidate) => {
+    if (candidate === ownWindow) return false;
+    if (windowLayer(candidate) <= ownLayer) return false;
+    const style = window.getComputedStyle(candidate);
+    if (style.display === 'none' || style.visibility === 'hidden' || Number.parseFloat(style.opacity || '1') === 0) return false;
+    return rectsOverlap(hostRect, candidate.getBoundingClientRect());
+  });
+}
+
 export function formatWorkbenchBrowserError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? '');
   const firstLine = raw.split('\n')[0]?.trim() ?? '';
@@ -185,7 +213,7 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    if (hasBlockingHtmlModal() || hasWindowedShellOverlay() || isInsideUnfocusedWindow(host)) {
+    if (hasBlockingHtmlModal() || hasWindowedShellOverlay() || isInsideUnfocusedWindow(host) || isCoveredByWindowedWindow(host)) {
       void bridge
         .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey })
         .then((nextState) => {
@@ -248,7 +276,7 @@ export function WorkbenchBrowserTab({
     const modalObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(syncBounds) : null;
     modalObserver?.observe(document.body, {
       attributes: true,
-      attributeFilter: ['aria-modal', 'data-focused'],
+      attributeFilter: ['aria-modal', 'class', 'data-focused', 'style'],
       childList: true,
       subtree: true,
     });
