@@ -233,7 +233,13 @@
   background: var(--wos-surface-2);
   color: var(--wos-ink-900);
   padding: 0 9px;
-  font: 600 12px 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  font:
+    600 12px 'Space Grotesk',
+    'Geist Variable',
+    Geist,
+    Inter,
+    system-ui,
+    sans-serif;
   outline: none;
 }
 
@@ -912,6 +918,118 @@
 
 .wos-page-button:hover {
   background: var(--wos-surface-3);
+}
+
+.wos-badge {
+  color: var(--wos-ink-500);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.wos-badge[data-tone='positive'] {
+  color: oklch(58% 0.14 150);
+}
+
+.wos-badge[data-tone='warning'] {
+  color: var(--wos-extensions);
+}
+
+.wos-badge[data-tone='danger'] {
+  color: var(--wos-telemetry);
+}
+
+.wos-toggle {
+  position: relative;
+  display: inline-flex;
+  width: 32px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: oklch(88% 0.02 60);
+  padding: 0;
+}
+
+.wos-toggle[data-checked='true'][data-accent='chat'] {
+  background: var(--wos-chat);
+}
+
+.wos-toggle[data-checked='true'][data-accent='routines'] {
+  background: var(--wos-routines);
+}
+
+.wos-toggle[data-checked='true'][data-accent='automations'] {
+  background: var(--wos-automations);
+}
+
+.wos-toggle[data-checked='true'][data-accent='gateways'] {
+  background: var(--wos-gateways);
+}
+
+.wos-toggle[data-checked='true'][data-accent='extensions'] {
+  background: var(--wos-extensions);
+}
+
+.wos-toggle[data-checked='true'][data-accent='telemetry'] {
+  background: var(--wos-telemetry);
+}
+
+.wos-toggle[data-checked='true'][data-accent='settings'] {
+  background: var(--wos-settings);
+}
+
+.wos-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: white;
+}
+
+.wos-toggle[data-checked='true'] .wos-toggle__thumb {
+  left: 16px;
+}
+
+.wos-data-row {
+  display: grid;
+  grid-template-columns: 2fr 1.4fr 0.7fr;
+  gap: 8px;
+  align-items: center;
+  border-top: 1.5px solid var(--wos-surface-3);
+  padding: 9px 6px;
+}
+
+.wos-data-row__identity,
+.wos-data-row__status,
+.wos-data-row__action {
+  min-width: 0;
+}
+
+.wos-data-row__name {
+  overflow: hidden;
+  color: var(--wos-ink-900);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.wos-data-row__meta {
+  overflow: hidden;
+  color: var(--wos-ink-500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.wos-data-row__action {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .wos-chat-surface {

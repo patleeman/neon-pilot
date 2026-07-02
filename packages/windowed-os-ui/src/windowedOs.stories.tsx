@@ -3,10 +3,12 @@ import type { Meta, StoryObj } from '@storybook/react';
 import {
   StartMenu,
   Taskbar,
+  WindowedBadge,
   WindowedChatComposer,
   WindowedChatMain,
   WindowedChatRail,
   WindowedChatSurface,
+  WindowedDataRow,
   WindowedMessageBubble,
   WindowedPageButton,
   WindowedPageInspector,
@@ -15,6 +17,7 @@ import {
   WindowedPageSection,
   WindowedPageShell,
   WindowedThreadItem,
+  WindowedToggle,
   WindowFrame,
 } from './windowedOs';
 
@@ -103,10 +106,9 @@ export const DenseAppPage: Story = {
         <WindowedPageShell>
           <WindowedPageRail title="Gateways" accent="gateways">
             <WindowedPageSection title="Providers" meta="2 enabled">
-              <div style={{ display: 'grid', gap: 6, padding: 8, fontSize: 12 }}>
-                <strong>Telegram</strong>
-                <span>Model gateway</span>
-                <span>Local tools</span>
+              <div style={{ display: 'grid', padding: '0 8px 8px' }}>
+                <WindowedDataRow name="Telegram" meta="Gateway" enabled status={<WindowedBadge tone="positive">Enabled</WindowedBadge>} />
+                <WindowedDataRow name="Local tools" meta="Runtime" enabled={false} />
               </div>
             </WindowedPageSection>
           </WindowedPageRail>
@@ -121,7 +123,7 @@ export const DenseAppPage: Story = {
                 {['Token', 'Connection', 'Runtime'].map((label) => (
                   <div key={label} style={{ borderRight: '1.5px solid var(--wos-ink-900)', padding: 10 }}>
                     <div className="wos-page-eyebrow">{label}</div>
-                    <strong>{label === 'Runtime' ? 'Needs attention' : 'Configured'}</strong>
+                    {label === 'Runtime' ? <WindowedBadge tone="warning">Needs attention</WindowedBadge> : <strong>Configured</strong>}
                   </div>
                 ))}
               </div>
@@ -135,11 +137,57 @@ export const DenseAppPage: Story = {
               <div style={{ display: 'grid', gap: 8, padding: 10, fontSize: 12 }}>
                 <span>Setup /gateways</span>
                 <span>Configuration Gateways page</span>
-                <span>Docs Telegram Bot API</span>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  Enabled
+                  <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />
+                </span>
               </div>
             </WindowedPageSection>
           </WindowedPageInspector>
         </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const CoreDataPrimitives: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+      <WindowFrame
+        title="Extensions"
+        accent="extensions"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(760px, 100%)', height: 430 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageMain title="Extensions" actions={<WindowedPageButton tone="accent">New</WindowedPageButton>}>
+          <WindowedPageSection title="Installed" meta="3 enabled">
+            <div style={{ padding: '0 10px 10px' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1.4fr 0.7fr',
+                  gap: 8,
+                  padding: '7px 6px',
+                  color: 'var(--wos-ink-500)',
+                  fontFamily: 'IBM Plex Mono, Geist Mono, ui-monospace, monospace',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                <div>EXTENSION</div>
+                <div>STATUS</div>
+                <div style={{ textAlign: 'right' }}>ENABLED</div>
+              </div>
+              <WindowedDataRow name="GitHub Sync" meta="Chat tool · Skill" enabled />
+              <WindowedDataRow name="Voice Mode" meta="Chat tool" enabled />
+              <WindowedDataRow name="Web Search" meta="Chat tool · Skill" enabled={false} />
+            </div>
+          </WindowedPageSection>
+        </WindowedPageMain>
       </WindowFrame>
     </div>
   ),

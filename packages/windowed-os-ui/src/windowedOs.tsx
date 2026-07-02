@@ -128,6 +128,74 @@ export function WindowedPageButton({ children, onClick, tone = 'neutral', type =
   );
 }
 
+export interface WindowedBadgeProps {
+  children: ReactNode;
+  tone?: 'neutral' | 'positive' | 'warning' | 'danger';
+  className?: string;
+}
+
+export function WindowedBadge({ children, tone = 'neutral', className }: WindowedBadgeProps) {
+  return (
+    <span className={cx('wos-badge', className)} data-tone={tone}>
+      {children}
+    </span>
+  );
+}
+
+export interface WindowedToggleProps {
+  checked?: boolean;
+  accent?: AppAccent;
+  onChange?: (checked: boolean) => void;
+  label?: string;
+  className?: string;
+}
+
+export function WindowedToggle({ checked = false, accent = 'routines', onChange, label = 'Toggle', className }: WindowedToggleProps) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={cx('wos-toggle', className)}
+      data-checked={checked}
+      data-accent={accent}
+      onClick={() => onChange?.(!checked)}
+    >
+      <span className="wos-toggle__thumb" aria-hidden="true" />
+    </button>
+  );
+}
+
+export interface WindowedDataRowProps {
+  name: string;
+  meta?: string;
+  enabled?: boolean;
+  status?: ReactNode;
+  action?: ReactNode;
+  onToggle?: (checked: boolean) => void;
+  className?: string;
+}
+
+export function WindowedDataRow({ name, meta, enabled = false, status, action, onToggle, className }: WindowedDataRowProps) {
+  return (
+    <div className={cx('wos-data-row', className)}>
+      <div className="wos-data-row__identity">
+        <div className="wos-data-row__name">{name}</div>
+        {meta ? <div className="wos-data-row__meta">{meta}</div> : null}
+      </div>
+      <div className="wos-data-row__status">
+        {status ?? <WindowedBadge tone={enabled ? 'positive' : 'neutral'}>{enabled ? 'Enabled' : 'Disabled'}</WindowedBadge>}
+      </div>
+      <div className="wos-data-row__action">
+        {action ?? (
+          <WindowedToggle checked={enabled} accent="chat" label={`${enabled ? 'Disable' : 'Enable'} ${name}`} onChange={onToggle} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export interface WindowedChatSurfaceProps {
   children: ReactNode;
   className?: string;
