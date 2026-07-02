@@ -5073,8 +5073,6 @@ export function SettingsPage({
               <WindowedListItem
                 key={item.id}
                 title={settingsQuickLinkLabelText(item.label)}
-                meta={item.children?.length ? `${item.children.length} extension panels` : 'Preference group'}
-                detail={item.id === activeRootSectionId ? 'Selected' : undefined}
                 active={item.id === activeRootSectionId}
                 accent="settings"
                 onSelect={() => focusSettingsSection(item.id)}
@@ -5091,8 +5089,6 @@ export function SettingsPage({
                 <WindowedListItem
                   key={child.id}
                   title={settingsQuickLinkLabelText(child.label)}
-                  meta="Extension panel"
-                  detail={child.id === effectiveActiveQuickLinkId ? 'Selected' : undefined}
                   active={child.id === effectiveActiveQuickLinkId}
                   accent="extensions"
                   onSelect={() => focusSettingsSection(child.id)}

@@ -375,6 +375,10 @@ describe('SettingsPage', () => {
     expect(html).toContain('>Preferences</div>');
     expect(html).toContain('>Settings</span>');
     expect(html).toContain('>Appearance</h1>');
+    expect(html).not.toContain('Preference group');
+    expect(html).not.toContain('Extension panel');
+    expect(html).not.toContain('panels');
+    expect(html).not.toContain('>Selected</span>');
     expect(html).not.toContain('>Settings context</div>');
     expect(html).not.toContain('>Sections</h3>');
     expect(html).not.toContain('wos-page-inspector');
