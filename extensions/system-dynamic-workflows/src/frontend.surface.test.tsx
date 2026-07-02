@@ -67,7 +67,10 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function props(pa: never, context: Partial<{ hash: string; search: string; surfaceId: string }> = {}) {
+function props(
+  pa: never,
+  context: Partial<{ hash: string; search: string; surfaceId: string; shellPresentation: 'stable' | 'windowed' }> = {},
+) {
   return {
     pa,
     context: {
@@ -77,6 +80,7 @@ function props(pa: never, context: Partial<{ hash: string; search: string; surfa
       route: '/workflows',
       search: context.search ?? '',
       hash: context.hash ?? '',
+      shellPresentation: context.shellPresentation,
     },
     surface: {
       id: context.surfaceId ?? 'page',
@@ -133,5 +137,16 @@ describe('Dynamic Workflows surfaces', () => {
     const editor = await screen.findByText('New saved workflow');
     expect(editor).toBeTruthy();
     expect(within(document.body).getByRole('textbox', { name: 'Name' })).toBeTruthy();
+  });
+
+  it('renders a native windowed workflows surface in desktop mode', async () => {
+    const pa = createPa();
+    const { container } = render(<WorkflowsPage {...props(pa, { hash: '#run:run-1', shellPresentation: 'windowed' })} />);
+
+    expect(await screen.findAllByText('Live workflow')).toHaveLength(2);
+    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('.wos-page-rail')).toBeTruthy();
+    expect(container.querySelector('.wos-page-inspector')).toBeTruthy();
+    expect(screen.getByText(/1\/2 complete, 1 running/)).toBeTruthy();
   });
 });
