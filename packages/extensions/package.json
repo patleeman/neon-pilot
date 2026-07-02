@@ -189,6 +189,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
+    "@neon-pilot/windowed-os-ui": "workspace:0.11.39",
     "@excalidraw/excalidraw": "0.18.1"
   }
 }

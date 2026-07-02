@@ -858,6 +858,10 @@
   font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
 }
 
+.wos-page-shell[data-layout='wide'] {
+  grid-template-columns: 190px minmax(0, 1fr);
+}
+
 .wos-page-rail,
 .wos-page-inspector {
   min-height: 0;
@@ -1688,6 +1692,70 @@
   font-family: system-ui, sans-serif;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.wos-routine-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.wos-routine-row__body {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.wos-routine-row__body > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wos-routine-row__body > :first-child {
+  color: var(--wos-ink-700);
+  white-space: nowrap;
+}
+
+.wos-routine-row__body > :last-child,
+.wos-routine-empty,
+.wos-routine-error {
+  color: var(--wos-ink-500);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.wos-routine-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.wos-routine-path-list {
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: var(--wos-surface-1);
+  margin-top: 8px;
+}
+
+.wos-routine-editor-bridge {
+  overflow: hidden;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: var(--wos-surface-1);
+  margin-top: 10px;
+}
+
+.wos-routine-editor-bridge > * {
+  border-top: 0;
+}
+
+.wos-routine-error {
+  color: var(--wos-telemetry);
 }
 
 .wos-chat-surface {

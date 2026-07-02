@@ -224,3 +224,31 @@ export { streamExtensionRouteSse } from './extensionRouteStream';
 export { type ExtensionSettingsPanelRegistration, SettingsPanelHost } from './SettingsPanelHost';
 export { SidebarTreeSection, type SidebarTreeSectionProps } from './SidebarTreeSection';
 export type { ExtensionSurfaceProps } from './types';
+export type {
+  WindowedBadgeProps,
+  WindowedKeyValueListProps,
+  WindowedListItemProps,
+  WindowedListProps,
+  WindowedPageButtonProps,
+  WindowedPageInspectorProps,
+  WindowedPageMainProps,
+  WindowedPageRailProps,
+  WindowedPageSectionProps,
+  WindowedPageShellProps,
+  WindowedTimelineItemProps,
+  WindowedTimelineProps,
+} from '@neon-pilot/windowed-os-ui';
+export {
+  WindowedBadge,
+  WindowedKeyValueList,
+  WindowedList,
+  WindowedListItem,
+  WindowedPageButton,
+  WindowedPageInspector,
+  WindowedPageMain,
+  WindowedPageRail,
+  WindowedPageSection,
+  WindowedPageShell,
+  WindowedTimeline,
+  WindowedTimelineItem,
+} from '@neon-pilot/windowed-os-ui';

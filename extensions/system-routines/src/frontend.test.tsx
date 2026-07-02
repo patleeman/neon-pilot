@@ -104,12 +104,16 @@ function props(pa: never) {
   } as never;
 }
 
-function propsWithContext(pa: never, context: Partial<{ search: string; hash: string; surfaceId: string }> = {}) {
+function propsWithContext(
+  pa: never,
+  context: Partial<{ search: string; hash: string; surfaceId: string; shellPresentation: 'stable' | 'windowed' }> = {},
+) {
   return {
     pa,
     context: {
       extensionId: 'system-routines',
       surfaceId: context.surfaceId ?? 'page',
+      shellPresentation: context.shellPresentation,
       pathname: '/routines',
       route: '/routines',
       search: context.search ?? '',
@@ -202,6 +206,18 @@ describe('RoutinesPage', () => {
     expect(screen.getByText('Add routine ▾')).toBeTruthy();
     expect(screen.getByText('If this returns pass')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
+  });
+
+  it('renders a native windowed routines surface when hosted by the windowed shell', async () => {
+    const { pa } = createPa();
+    const { container } = render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
+
+    expect((await screen.findAllByText('Review code changes')).length).toBeGreaterThan(1);
+    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('.ui-app-page-intro')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Choose path' })).toBeTruthy();
+    expect(screen.getAllByText('Before').length).toBeGreaterThan(1);
+    expect(screen.getAllByText('After').length).toBeGreaterThan(1);
   });
 
   it('opens the add menu for the New Routine command route', async () => {

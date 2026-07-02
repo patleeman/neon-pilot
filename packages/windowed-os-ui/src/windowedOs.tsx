@@ -89,10 +89,15 @@ export function WindowedTitleBarControls({
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;
+  layout?: 'standard' | 'wide';
 }
 
-export function WindowedPageShell({ children, className }: WindowedPageShellProps) {
-  return <div className={cx('wos-page-shell', className)}>{children}</div>;
+export function WindowedPageShell({ children, className, layout = 'standard' }: WindowedPageShellProps) {
+  return (
+    <div className={cx('wos-page-shell', className)} data-layout={layout}>
+      {children}
+    </div>
+  );
 }
 
 export interface WindowedPageRailProps {
