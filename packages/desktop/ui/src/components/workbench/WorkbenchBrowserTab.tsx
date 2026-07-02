@@ -13,12 +13,12 @@ import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
 import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '../../local/workbenchBrowserTabs';
 import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
-import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbenchBrowserEvents';
+import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbenchBrowserEvents';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.reopenTab', 'browser.closeTab', 'browser.focusLocation']);
-const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 450;
+const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 1500;
 const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '[aria-modal="true"]',
   '[role="dialog"]',
@@ -367,7 +367,7 @@ export function WorkbenchBrowserTab({
         .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
 
       if (options?.force) {
-        for (const delay of [80, 240]) {
+        for (const delay of [80, 240, 600, 1200]) {
           const timer = window.setTimeout(() => {
             hiddenReassertTimersRef.current = hiddenReassertTimersRef.current.filter((candidate) => candidate !== timer);
             if (closedRef.current) {
@@ -440,8 +440,13 @@ export function WorkbenchBrowserTab({
   }, [bridge, browserSessionKey, hideBrowserView, syncUrlDraftFromBrowserState]);
 
   useEffect(() => {
-    const handleSuspend = () => {
-      windowedShellSuspendUntilRef.current = Date.now() + WINDOWED_SHELL_BROWSER_SUSPEND_MS;
+    const handleSuspend = (event: Event) => {
+      const detail = (event as CustomEvent<WindowedShellBrowserSuspendDetail>).detail;
+      const durationMs =
+        typeof detail?.durationMs === 'number' && Number.isFinite(detail.durationMs)
+          ? Math.max(WINDOWED_SHELL_BROWSER_SUSPEND_MS, detail.durationMs)
+          : WINDOWED_SHELL_BROWSER_SUSPEND_MS;
+      windowedShellSuspendUntilRef.current = Math.max(windowedShellSuspendUntilRef.current, Date.now() + durationMs);
       hideBrowserView({ force: true });
     };
     window.addEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);

@@ -37,7 +37,7 @@ import {
 } from '../ui-state/windowedShell';
 import { Layout } from './Layout';
 import { QuietLoadingState } from './ui';
-import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
+import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
 type WindowKind = 'chat' | 'route';
 
@@ -255,9 +255,11 @@ function isPrimaryNativeMouse(event: MouseEvent): boolean {
   return event.button === 0;
 }
 
-function suspendWindowedBrowserViews(): void {
+function suspendWindowedBrowserViews(durationMs = 1500): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new Event(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT));
+  window.dispatchEvent(
+    new CustomEvent<WindowedShellBrowserSuspendDetail>(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, { detail: { durationMs } }),
+  );
   const bridge = getDesktopBridge();
   if (!bridge) return;
 

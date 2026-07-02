@@ -574,6 +574,8 @@ describe('WindowedLayout route windows', () => {
       await waitFor(() => {
         expect(suspendListener).toHaveBeenCalled();
       });
+      const event = suspendListener.mock.calls.at(-1)?.[0] as CustomEvent<{ durationMs?: number }> | undefined;
+      expect(event?.detail?.durationMs).toBeGreaterThanOrEqual(1500);
       expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
     } finally {
       window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, suspendListener);
