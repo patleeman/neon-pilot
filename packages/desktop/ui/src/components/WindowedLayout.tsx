@@ -429,14 +429,16 @@ export function WindowedLayout() {
         const conversationId = windowModel.id.slice('chat:'.length);
         conversations.archiveSession(conversationId);
       }
-      setWindows((current) => current.filter((candidate) => candidate.id !== windowModel.id));
+      setWindows((current) => ensureFocusedWindow(current.filter((candidate) => candidate.id !== windowModel.id)));
     },
     [conversations],
   );
 
   const minimizeWindow = useCallback((windowId: string) => {
     setWindows((current) =>
-      current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
+      ensureFocusedWindow(
+        current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
+      ),
     );
   }, []);
 
@@ -639,6 +641,7 @@ export function WindowedLayout() {
       const windowId = windowElement?.dataset.windowId;
       const windowModel = windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
       if (!windowModel) return;
+      if (target.closest('.wos-window__controls button')) return;
 
       const resizeHandle = target.closest<HTMLElement>('.wos-resize-handle');
       const edge = (resizeHandle?.dataset.resizeEdge as ResizeEdge | undefined) ?? resizeEdgeForPointer(event, windowElement);

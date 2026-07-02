@@ -175,4 +175,70 @@ describe('WindowedLayout route windows', () => {
     expect(routeHost.textContent).toBe('/workflows:windowed');
     expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
   });
+
+  it('focuses the next visible window when the focused route window is minimized', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /minimize routines/i }));
+
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+    expect(screen.queryByRole('region', { name: /routines/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /routines/i }).getAttribute('data-minimized')).toBe('true');
+  });
+
+  it('focuses the next visible window when the focused route window is closed', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /close routines/i }));
+
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+    expect(screen.queryByRole('region', { name: /routines/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /routines/i })).toBeNull();
+  });
 });

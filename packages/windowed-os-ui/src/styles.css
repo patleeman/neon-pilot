@@ -385,7 +385,7 @@
 
 .wos-window__titlebar {
   position: relative;
-  z-index: 20;
+  z-index: 60;
   display: flex;
   min-width: 0;
   user-select: none;
