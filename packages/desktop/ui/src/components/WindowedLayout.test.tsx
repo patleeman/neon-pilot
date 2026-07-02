@@ -586,6 +586,29 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /routines detail/i })).toBeTruthy();
   });
 
+  it('recovers persisted windows that load outside the current desktop bounds', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 5000, y: -5000, width: 720, height: 420 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
+    await waitFor(() => {
+      expect(routinesWindow.getAttribute('style')).toContain('left: 928px');
+      expect(routinesWindow.getAttribute('style')).toContain('top: -386px');
+    });
+  });
+
   it('does not prune persisted extension route windows while the registry is loading', async () => {
     mocks.registryLoading = true;
     seedWindowedWindows([

@@ -226,7 +226,7 @@ function accentForWindow(windowModel: Pick<DesktopWindowModel, 'kind' | 'title'>
 }
 
 function desktopRect(element: HTMLElement | null): DesktopRect {
-  return { width: element?.clientWidth ?? window.innerWidth, height: element?.clientHeight ?? window.innerHeight };
+  return { width: element?.clientWidth || window.innerWidth, height: element?.clientHeight || window.innerHeight };
 }
 
 function boundsStyle(bounds: WindowBounds): CSSProperties {
@@ -249,6 +249,30 @@ function suspendWindowedBrowserViews(): void {
 
 function sameBounds(first: WindowBounds, second: WindowBounds): boolean {
   return first.x === second.x && first.y === second.y && first.width === second.width && first.height === second.height;
+}
+
+function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
+  let changed = false;
+  const next = windows.map((windowModel) => {
+    const bounds = constrainWindowBounds(windowModel.bounds, desktop);
+    if (sameBounds(windowModel.bounds, bounds)) return windowModel;
+    changed = true;
+    return { ...windowModel, bounds };
+  });
+  return changed ? next : windows;
+}
+
+function constrainRestoreBounds(boundsByWindow: Record<string, WindowBounds>, desktop: DesktopRect): Record<string, WindowBounds> {
+  let changed = false;
+  const next: Record<string, WindowBounds> = {};
+  for (const [windowId, bounds] of Object.entries(boundsByWindow)) {
+    const constrained = constrainWindowBounds(bounds, desktop);
+    next[windowId] = constrained;
+    if (!sameBounds(bounds, constrained)) {
+      changed = true;
+    }
+  }
+  return changed ? next : boundsByWindow;
 }
 
 function resizeEdgeForPointer(event: MouseEvent, windowElement: HTMLElement): ResizeEdge | null {
@@ -542,6 +566,26 @@ export function WindowedLayout() {
     writeStoredWindows(windows);
     windowsRef.current = windows;
   }, [windows]);
+
+  const reconcileWindowBounds = useCallback(() => {
+    const rect = desktopRect(desktopRef.current);
+    setWindows((current) => constrainWindowCollectionBounds(current, rect));
+    setRestoreBounds((current) => constrainRestoreBounds(current, rect));
+  }, []);
+
+  useEffect(() => {
+    reconcileWindowBounds();
+    const desktop = desktopRef.current;
+    const observer = typeof ResizeObserver !== 'undefined' && desktop ? new ResizeObserver(reconcileWindowBounds) : null;
+    if (desktop) {
+      observer?.observe(desktop);
+    }
+    window.addEventListener('resize', reconcileWindowBounds);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', reconcileWindowBounds);
+    };
+  }, [reconcileWindowBounds]);
 
   useEffect(() => {
     if (!launcherOpen) return;
