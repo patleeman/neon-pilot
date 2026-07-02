@@ -19,7 +19,6 @@ import {
   WindowedMessageBubble,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
   WindowedSegmentedControl,
@@ -241,21 +240,19 @@ export const DenseAppPage: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Gateways" accent="gateways">
-            <WindowedPageSection title="Providers" meta="2 enabled">
-              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
-                <WindowedDataRow name="Telegram" meta="Gateway" enabled status={<WindowedBadge tone="positive">Enabled</WindowedBadge>} />
-                <WindowedDataRow name="Local tools" meta="Runtime" enabled={false} />
-              </WindowedDataTable>
-            </WindowedPageSection>
-          </WindowedPageRail>
+        <WindowedPageShell layout="standard">
           <WindowedPageMain
             eyebrow="Gateway"
             title="Telegram"
             description="Only approved users and chats can send work into Neon Pilot."
             actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}
           >
+            <WindowedPageSection title="Providers" meta="2 enabled">
+              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
+                <WindowedDataRow name="Telegram" meta="Gateway" enabled status={<WindowedBadge tone="positive">Enabled</WindowedBadge>} />
+                <WindowedDataRow name="Local tools" meta="Runtime" enabled={false} />
+              </WindowedDataTable>
+            </WindowedPageSection>
             <WindowedPageSection title="Runtime" meta="Needs attention">
               <WindowedKeyValueGrid
                 items={[
@@ -352,18 +349,7 @@ export const CanonicalDensity: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Applications" accent="extensions">
-            <WindowedPageSection title="Pages" meta="Dense">
-              <WindowedList>
-                <WindowedListItem title="Chat" meta="Threads" detail="Workbench attached" accent="chat" />
-                <WindowedListItem title="Automations" meta="Scheduled runs" detail="3 enabled" accent="automations" />
-                <WindowedListItem title="Gateways" meta="Ingress" detail="Telegram ready" active accent="gateways" />
-                <WindowedListItem title="Routines" meta="Hooks" detail="Before and after" accent="routines" />
-              </WindowedList>
-            </WindowedPageSection>
-          </WindowedPageRail>
-
+        <WindowedPageShell layout="standard">
           <WindowedPageMain
             eyebrow="Desktop OS"
             title="Windowed surface rhythm"
@@ -375,6 +361,14 @@ export const CanonicalDensity: Story = {
               </>
             }
           >
+            <WindowedPageSection title="Open applications" meta="Taskbar-owned">
+              <WindowedList>
+                <WindowedListItem title="Chat" meta="Threads" detail="Workbench attached" accent="chat" />
+                <WindowedListItem title="Automations" meta="Scheduled runs" detail="3 enabled" accent="automations" />
+                <WindowedListItem title="Gateways" meta="Ingress" detail="Telegram ready" active accent="gateways" />
+                <WindowedListItem title="Routines" meta="Hooks" detail="Before and after" accent="routines" />
+              </WindowedList>
+            </WindowedPageSection>
             <WindowedPageSection title="Canonical controls" meta="8px grid">
               <div className="wos-form-grid" data-columns="3">
                 <WindowedField label="Name">
@@ -486,8 +480,17 @@ export const AutomationFormPrimitives: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell>
-          <WindowedPageRail title="Automations" accent="automations">
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Automation"
+            title="Daily release notes"
+            actions={
+              <>
+                <WindowedPageButton>Run now</WindowedPageButton>
+                <WindowedPageButton tone="accent">Save</WindowedPageButton>
+              </>
+            }
+          >
             <WindowedPageSection title="Runs" meta="2 active">
               <WindowedDataTable columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
                 <WindowedDataRow
@@ -500,17 +503,6 @@ export const AutomationFormPrimitives: Story = {
                 <WindowedDataRow name="Inbox sweep" meta="Every 2 hours" enabled />
               </WindowedDataTable>
             </WindowedPageSection>
-          </WindowedPageRail>
-          <WindowedPageMain
-            eyebrow="Automation"
-            title="Daily release notes"
-            actions={
-              <>
-                <WindowedPageButton>Run now</WindowedPageButton>
-                <WindowedPageButton tone="accent">Save</WindowedPageButton>
-              </>
-            }
-          >
             <WindowedPageSection title="Schedule" meta="Enabled">
               <div className="wos-form-grid" data-columns="2">
                 <WindowedField label="Mode">
@@ -590,17 +582,7 @@ export const RoutinesListDetailPrimitives: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell>
-          <WindowedPageRail title="Routines" accent="routines">
-            <WindowedPageSection title="Hooks" meta="4">
-              <WindowedList>
-                <WindowedListItem title="before_agent_start" meta="3 routines" detail="Instruction context" active accent="routines" />
-                <WindowedListItem title="after_agent_turn" meta="2 routines" detail="Status bookkeeping" accent="routines" />
-                <WindowedListItem title="before_tool_call" meta="1 routine" detail="Safety checks" accent="routines" />
-                <WindowedListItem title="after_tool_call" meta="No routines" detail="Available" accent="routines" />
-              </WindowedList>
-            </WindowedPageSection>
-          </WindowedPageRail>
+        <WindowedPageShell layout="standard">
           <WindowedPageMain
             eyebrow="Hook"
             title="before_agent_start"
@@ -611,6 +593,14 @@ export const RoutinesListDetailPrimitives: Story = {
               </>
             }
           >
+            <WindowedPageSection title="Hooks" meta="4">
+              <WindowedList>
+                <WindowedListItem title="before_agent_start" meta="3 routines" detail="Instruction context" active accent="routines" />
+                <WindowedListItem title="after_agent_turn" meta="2 routines" detail="Status bookkeeping" accent="routines" />
+                <WindowedListItem title="before_tool_call" meta="1 routine" detail="Safety checks" accent="routines" />
+                <WindowedListItem title="after_tool_call" meta="No routines" detail="Available" accent="routines" />
+              </WindowedList>
+            </WindowedPageSection>
             <WindowedPageSection title="Position" meta="3 routines">
               <div className="wos-form-grid" data-columns="2">
                 <WindowedField label="Mode">
