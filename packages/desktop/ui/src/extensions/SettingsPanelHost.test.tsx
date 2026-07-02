@@ -19,6 +19,14 @@ vi.mock('./nativePaClient', () => ({
 
 vi.mock('./systemExtensionModules', () => ({
   systemExtensionModules: new Map([
+    [
+      'system-context-panel',
+      async () => ({
+        ContextPanel: ({ settingsContext }: { settingsContext: { shellPresentation?: string } }) => (
+          <div>{`shell:${settingsContext.shellPresentation}`}</div>
+        ),
+      }),
+    ],
     ['system-test-panel', async () => ({ OtherPanel: () => null })],
     ['system-pending-panel', () => new Promise(() => {})],
     [
@@ -41,6 +49,23 @@ describe('SettingsPanelHost', () => {
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
+  });
+
+  it('passes shell presentation to extension settings components', async () => {
+    render(
+      <SettingsPanelHost
+        shellPresentation="windowed"
+        registration={{
+          extensionId: 'system-context-panel',
+          id: 'context-panel',
+          component: 'ContextPanel',
+          sectionId: 'settings-context-panel',
+          label: 'Context Panel',
+        }}
+      />,
+    );
+
+    expect(await screen.findByText('shell:windowed')).toBeTruthy();
   });
 
   it('shows a visible error when a declared settings component export is missing', async () => {

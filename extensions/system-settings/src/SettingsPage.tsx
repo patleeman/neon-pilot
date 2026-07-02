@@ -2372,9 +2372,11 @@ function ExtensionSettingsIndex({ items }: { items: readonly SettingsQuickLink[]
 function ExtensionSettingsComponentPanels({
   registrations,
   includeExtensionIds,
+  shellPresentation = 'stable',
 }: {
   registrations: ReturnType<typeof useExtensionRegistry>['settingsComponents'];
   includeExtensionIds?: readonly string[];
+  shellPresentation?: 'stable' | 'windowed';
 }) {
   const includedExtensionIds = includeExtensionIds ? new Set(includeExtensionIds) : null;
   const visibleRegistrations = includedExtensionIds
@@ -2392,7 +2394,7 @@ function ExtensionSettingsComponentPanels({
           className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-components-group')}
         >
           <div className="settings-page-extension-component-body">
-            <SettingsPanelHost registration={registration} />
+            <SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />
           </div>
         </SettingsGroup>
       ))}
@@ -4089,12 +4091,16 @@ export function SettingsPage({
               <ExtensionSettingsComponentPanels
                 registrations={extensionRegistry.settingsComponents}
                 includeExtensionIds={[activeExtensionSettingsLink.extensionId]}
+                shellPresentation={context?.shellPresentation}
               />
             </>
           ) : (
             <>
               <ExtensionSettingsSection excludeExtensionIds={['system-settings']} groupByExtension extensionLabels={extensionLabels} />
-              <ExtensionSettingsComponentPanels registrations={extensionRegistry.settingsComponents} />
+              <ExtensionSettingsComponentPanels
+                registrations={extensionRegistry.settingsComponents}
+                shellPresentation={context?.shellPresentation}
+              />
               <ExtensionSettingsIndex items={settingsNavLinks} />
             </>
           )}

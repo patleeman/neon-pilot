@@ -35,7 +35,7 @@ function hasWindowedShellOverlay(): boolean {
 
   return Boolean(
     document.querySelector(
-      '.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .wos-snap-preview',
+      '.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .wos-snap-preview, .ui-overlay-backdrop',
     ),
   );
 }
@@ -128,6 +128,8 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
     return false;
   }
 
+  const ownWindow = host.closest<HTMLElement>('.wos-window');
+  const shell = ownWindow?.closest<HTMLElement>('.windowed-os-shell') ?? null;
   const rect = host.getBoundingClientRect();
   if (rect.width < 1 || rect.height < 1) {
     return false;
@@ -162,9 +164,16 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
       return false;
     }
     const blocker = topElement.closest<HTMLElement>(
-      '.wos-window, .wos-start-menu, .wos-taskbar, .wos-taskbar__menu-layer, .wos-snap-preview, .wos-dialog-layer, [aria-modal="true"]',
+      '.wos-window, .wos-start-menu, .wos-taskbar, .wos-taskbar__menu-layer, .wos-snap-preview, .wos-dialog-layer, .ui-overlay-backdrop, [aria-modal="true"]',
     );
-    return Boolean(blocker && isVisibleStyle(blocker));
+    if (blocker && isVisibleStyle(blocker)) {
+      return true;
+    }
+    if (!shell || !(topElement instanceof HTMLElement)) {
+      return false;
+    }
+    const topShell = topElement.closest<HTMLElement>('.windowed-os-shell');
+    return topShell === shell && isVisibleStyle(topElement);
   });
 }
 

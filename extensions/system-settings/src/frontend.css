@@ -526,38 +526,6 @@
   padding: 0.5rem 0.625rem;
 }
 
-.settings-page-windowed .settings-page-extension-component-body > .ui-app-page-shell {
-  min-height: 0;
-  background: transparent;
-  padding: 0;
-}
-
-.settings-page-windowed .settings-page-extension-component-body .ui-app-page-main {
-  width: 100%;
-  max-width: none;
-}
-
-.settings-page-windowed .settings-page-extension-component-body .ui-app-page-intro {
-  gap: 0.375rem;
-  padding: 0.625rem;
-}
-
-.settings-page-windowed .settings-page-extension-component-body .ui-app-page-title {
-  font-size: 0.875rem;
-  line-height: 1.2;
-}
-
-.settings-page-windowed .settings-page-extension-component-body .ui-app-page-summary {
-  max-width: 42rem;
-  font-size: 0.6875rem;
-  line-height: 1.35;
-}
-
-.settings-page-windowed .settings-page-extension-component-body .ui-app-page-section {
-  border-top-width: 1px;
-  padding-top: 0.75rem;
-}
-
 @media (min-width: 1280px) {
   .settings-page-shell.ui-app-page-shell {
     padding-inline: 2.5rem;

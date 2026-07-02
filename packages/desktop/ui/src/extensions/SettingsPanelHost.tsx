@@ -20,6 +20,7 @@ export interface ExtensionSettingsPanelRegistration {
 interface ExtensionSettingsPanelContext {
   sectionId: string;
   extensionId: string;
+  shellPresentation?: 'stable' | 'windowed';
 }
 
 type ExtensionSettingsPanelComponent = ComponentType<{
@@ -45,7 +46,13 @@ function loadPanelModule(registration: ExtensionSettingsPanelRegistration, revis
   return import(/* @vite-ignore */ source) as Promise<Record<string, unknown>>;
 }
 
-export function SettingsPanelHost({ registration }: { registration: ExtensionSettingsPanelRegistration }) {
+export function SettingsPanelHost({
+  registration,
+  shellPresentation = 'stable',
+}: {
+  registration: ExtensionSettingsPanelRegistration;
+  shellPresentation?: 'stable' | 'windowed';
+}) {
   const moduleKey = `${registration.extensionId}:${registration.frontendEntry ?? ''}:${getExtensionRegistryRevision()}`;
   const pa = useMemo(() => createNativeExtensionClient(registration.extensionId), [registration.extensionId]);
   const friendlyErrorBody = `The settings panel for ${registration.label} could not load. Reload the extension or try again after updating it.`;
@@ -71,7 +78,10 @@ export function SettingsPanelHost({ registration }: { registration: ExtensionSet
   return (
     <SettingsPanelErrorBoundary extensionId={registration.extensionId} componentId={registration.id} errorBody={friendlyErrorBody}>
       <Suspense fallback={<QuietLoadingState label="Loading extension settings" />}>
-        <Component pa={pa} settingsContext={{ sectionId: registration.sectionId, extensionId: registration.extensionId }} />
+        <Component
+          pa={pa}
+          settingsContext={{ sectionId: registration.sectionId, extensionId: registration.extensionId, shellPresentation }}
+        />
       </Suspense>
     </SettingsPanelErrorBoundary>
   );
