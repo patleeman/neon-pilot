@@ -716,18 +716,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
         <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Automations" accent="automations">
             <WindowedList>
-              {loading && visibleTasks.length === 0 ? (
-                <WindowedListItem title="Loading" meta="Automations" detail="Reading scheduled tasks" active accent="automations" />
-              ) : null}
-              {!loading && visibleTasks.length === 0 ? (
-                <WindowedListItem
-                  title="No automations"
-                  meta="Schedule"
-                  detail="Create the first scheduled task"
-                  active
-                  accent="automations"
-                />
-              ) : null}
+              {loading && visibleTasks.length === 0 ? <WindowedListItem title="Loading automations" active accent="automations" /> : null}
+              {!loading && visibleTasks.length === 0 ? <WindowedListItem title="No automations" active accent="automations" /> : null}
               {visibleTasks.map((task) => (
                 <WindowedListItem
                   key={task.id}
@@ -825,8 +815,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             </WindowedPageSection>
 
             <WindowedPageSection
-              title={selectedTask ? 'Selected automation' : 'Selection'}
-              meta={selectedTask ? taskTitle(selectedTask) : 'No automation selected'}
+              title={selectedTask ? taskTitle(selectedTask) : 'No automation selected'}
+              meta={selectedTask ? statusLabel(selectedTask) : undefined}
             >
               {selectedTask ? (
                 <div className="wos-automation-detail-grid">

@@ -234,9 +234,10 @@ describe('AutomationsPage', () => {
     expect(container.querySelector('.wos-automation-table')).not.toBeNull();
     expect(container.textContent).toContain('Scheduled work');
     expect(container.textContent).toContain('Task queue');
-    expect(container.textContent).toContain('Automation context');
     expect(container.textContent).toContain('Release watch');
     expect(container.textContent).toContain('Release watch thread');
+    expect(container.textContent).not.toContain('Selected automation');
+    expect(container.textContent).not.toContain('Automation context');
     expect(container.querySelector('table')).toBeNull();
 
     await act(async () =>
