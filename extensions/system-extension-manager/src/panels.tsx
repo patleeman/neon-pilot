@@ -53,7 +53,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -1719,7 +1718,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
     return (
       <>
-        <WindowedPageShell>
+        <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Extensions" accent="extensions">
             <WindowedPageSection title="Views" meta={sectionSummary}>
               <WindowedList>
@@ -1791,6 +1790,54 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
             {catalogError ? <ErrorState title="Could not load installable extensions" message={catalogError} /> : null}
 
+            <WindowedPageSection
+              title={selectedExtension ? 'Selected extension' : 'Selection'}
+              meta={selectedExtension?.name ?? 'No extension selected'}
+            >
+              {selectedExtension ? (
+                <div className="wos-extension-detail-grid">
+                  <WindowedKeyValueList
+                    items={[
+                      { label: 'State', value: extensionStatusLabel(selectedExtension) },
+                      { label: 'Source', value: extensionSourceLabel(selectedExtension) },
+                      { label: 'Version', value: selectedExtension.version ? `v${selectedExtension.version}` : 'Unknown' },
+                      { label: 'Settings', value: hasExtensionSettings(selectedExtension) ? 'Configurable' : 'None' },
+                    ]}
+                  />
+                  <WindowedKeyValueList
+                    items={[
+                      { label: 'Appears in', value: formatAppearsInSummary(selectedExtension) },
+                      { label: 'Skills', value: formatSkillSummary(selectedExtension) || 'None' },
+                      { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
+                    ]}
+                  />
+                  <div className="wos-extension-detail-actions">
+                    {firstRoute(selectedExtension) && selectedExtension.enabled ? (
+                      <WindowedPageButton onClick={() => navigate(firstRoute(selectedExtension)!)}>Open</WindowedPageButton>
+                    ) : null}
+                    {hasExtensionSettings(selectedExtension) ? (
+                      <WindowedPageButton onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}>
+                        Settings
+                      </WindowedPageButton>
+                    ) : null}
+                    {selectedExtension.packageRoot ? (
+                      <WindowedPageButton onClick={() => openFolder(selectedExtension)}>Folder</WindowedPageButton>
+                    ) : null}
+                  </div>
+                  {selectedExtension.description ? (
+                    <p className="wos-extension-detail-description">{selectedExtension.description}</p>
+                  ) : null}
+                </div>
+              ) : loading ? (
+                <QuietLoadingState label="Loading extension details" className="min-h-12" />
+              ) : (
+                <EmptyState
+                  title="Pick a row to inspect"
+                  body="Select an extension to inspect its status, surfaces, and install details."
+                />
+              )}
+            </WindowedPageSection>
+
             <WindowedPageSection title="Installed" meta={sectionSummary}>
               {loading ? (
                 <QuietLoadingState label="Loading extensions" className="min-h-24" />
@@ -1857,56 +1904,6 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
               )}
             </WindowedPageSection>
           </WindowedPageMain>
-
-          <WindowedPageInspector eyebrow="Extension context" title={selectedExtension?.name ?? 'Select an extension'}>
-            {selectedExtension ? (
-              <>
-                <WindowedPageSection title="Status">
-                  <WindowedKeyValueList
-                    items={[
-                      { label: 'State', value: extensionStatusLabel(selectedExtension) },
-                      { label: 'Source', value: extensionSourceLabel(selectedExtension) },
-                      { label: 'Version', value: selectedExtension.version ? `v${selectedExtension.version}` : 'Unknown' },
-                      { label: 'Settings', value: hasExtensionSettings(selectedExtension) ? 'Configurable' : 'None' },
-                    ]}
-                  />
-                </WindowedPageSection>
-                <WindowedPageSection title="Actions">
-                  <div className="flex flex-wrap gap-2">
-                    {firstRoute(selectedExtension) && selectedExtension.enabled ? (
-                      <WindowedPageButton onClick={() => navigate(firstRoute(selectedExtension)!)}>Open</WindowedPageButton>
-                    ) : null}
-                    {hasExtensionSettings(selectedExtension) ? (
-                      <WindowedPageButton onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}>
-                        Settings
-                      </WindowedPageButton>
-                    ) : null}
-                    {selectedExtension.packageRoot ? (
-                      <WindowedPageButton onClick={() => openFolder(selectedExtension)}>Folder</WindowedPageButton>
-                    ) : null}
-                  </div>
-                </WindowedPageSection>
-                {selectedExtension.description ? (
-                  <WindowedPageSection title="Description">
-                    <p className="text-[12px] leading-5 text-secondary">{selectedExtension.description}</p>
-                  </WindowedPageSection>
-                ) : null}
-                <WindowedPageSection title="Includes">
-                  <WindowedKeyValueList
-                    items={[
-                      { label: 'Appears in', value: formatAppearsInSummary(selectedExtension) },
-                      { label: 'Skills', value: formatSkillSummary(selectedExtension) || 'None' },
-                      { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
-                    ]}
-                  />
-                </WindowedPageSection>
-              </>
-            ) : loading ? (
-              <QuietLoadingState label="Loading extension details" className="min-h-12" />
-            ) : (
-              <EmptyState title="Pick a row to inspect" body="Select an extension to inspect its status, surfaces, and install details." />
-            )}
-          </WindowedPageInspector>
         </WindowedPageShell>
 
         {installModalOpen ? (

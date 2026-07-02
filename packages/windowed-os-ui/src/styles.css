@@ -1055,6 +1055,17 @@
   font: var(--wos-text-section);
 }
 
+.wos-page-rail .wos-page-section__header h3 {
+  flex-shrink: 0;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.wos-page-rail .wos-page-section__header span {
+  min-width: 0;
+  text-align: right;
+}
+
 .wos-page-button {
   min-height: 26px;
   border: 2px solid var(--wos-ink-900);
@@ -2128,9 +2139,41 @@
   align-items: stretch;
 }
 
+.wos-extension-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(150px, auto);
+  gap: var(--wos-space-4);
+  align-items: start;
+}
+
+.wos-extension-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.wos-extension-detail-description {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--wos-ink-700);
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 @media (max-width: 1100px) {
   .wos-automation-detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .wos-extension-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wos-extension-detail-actions {
+    justify-content: flex-start;
   }
 
   .wos-automation-table__header {

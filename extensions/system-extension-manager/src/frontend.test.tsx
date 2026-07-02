@@ -306,12 +306,15 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-inspector')).toBeNull();
+    expect(container.querySelector('.wos-extension-detail-grid')).toBeTruthy();
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByPlaceholderText('Search extensions')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /Installed/ }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Platform/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
-    expect(screen.getByText('Extension context')).toBeTruthy();
+    expect(screen.getByText('Selected extension')).toBeTruthy();
     expect(screen.getAllByText('Applications').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /Platform/ }));
