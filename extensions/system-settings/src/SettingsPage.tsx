@@ -74,6 +74,7 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageMain,
+  WindowedPageRail,
   WindowedPageShell,
 } from '@neon-pilot/extensions/ui';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -5091,40 +5092,40 @@ export function SettingsPage({
   );
 
   const settingsContent = isWindowedSettingsSurface ? (
-    <WindowedPageShell layout="standard" className="settings-page-windowed">
-      <WindowedPageMain eyebrow="Preferences" title={activeSectionTitle}>
-        <nav className="settings-page-windowed-nav" aria-label="Settings sections">
-          <WindowedList>
-            {settingsNavLinks.flatMap((item) => {
-              const rootItem = (
+    <WindowedPageShell layout="two-column" className="settings-page-windowed">
+      <WindowedPageRail title="Sections" accent="settings" showHeader={false} className="settings-page-windowed-nav">
+        <WindowedList>
+          {settingsNavLinks.flatMap((item) => {
+            const rootItem = (
+              <WindowedListItem
+                key={item.id}
+                title={settingsQuickLinkLabelText(item.label)}
+                active={item.id === activeRootSectionId}
+                accent="settings"
+                onSelect={() => focusSettingsSection(item)}
+              />
+            );
+            const showChildren =
+              item.children &&
+              item.children.length > 0 &&
+              (item.id === activeRootSectionId || item.children.some((child) => child.id === effectiveActiveQuickLinkId));
+            if (!showChildren) return [rootItem];
+            return [
+              rootItem,
+              ...item.children.map((child) => (
                 <WindowedListItem
-                  key={item.id}
-                  title={settingsQuickLinkLabelText(item.label)}
-                  active={item.id === activeRootSectionId}
-                  accent="settings"
-                  onSelect={() => focusSettingsSection(item)}
+                  key={child.id}
+                  title={settingsQuickLinkLabelText(child.label)}
+                  active={child.id === effectiveActiveQuickLinkId}
+                  accent="extensions"
+                  onSelect={() => focusSettingsSection(child)}
                 />
-              );
-              const showChildren =
-                item.children &&
-                item.children.length > 0 &&
-                (item.id === activeRootSectionId || item.children.some((child) => child.id === effectiveActiveQuickLinkId));
-              if (!showChildren) return [rootItem];
-              return [
-                rootItem,
-                ...item.children.map((child) => (
-                  <WindowedListItem
-                    key={child.id}
-                    title={settingsQuickLinkLabelText(child.label)}
-                    active={child.id === effectiveActiveQuickLinkId}
-                    accent="extensions"
-                    onSelect={() => focusSettingsSection(child)}
-                  />
-                )),
-              ];
-            })}
-          </WindowedList>
-        </nav>
+              )),
+            ];
+          })}
+        </WindowedList>
+      </WindowedPageRail>
+      <WindowedPageMain eyebrow="Preferences" title={activeSectionTitle}>
         <div ref={settingsScrollRef} className="settings-page-windowed-scroll h-full min-h-0 overflow-y-auto">
           {settingsSections}
         </div>
