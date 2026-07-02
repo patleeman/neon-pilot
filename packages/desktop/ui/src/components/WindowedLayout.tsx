@@ -323,6 +323,84 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
 }
 
+function focusRouteWindowIn(windows: DesktopWindowModel[], route: string, item: LauncherItem): DesktopWindowModel[] {
+  const id = createId(item);
+  const existing = windows.find((windowModel) => windowModel.id === id);
+  if (existing) {
+    return [
+      ...windows.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
+      { ...existing, route, minimized: false, focused: true },
+    ];
+  }
+  const next: DesktopWindowModel = {
+    id,
+    kind: 'route',
+    title: item.title,
+    route,
+    bounds: defaultBounds(windows.length, 'route'),
+    minimized: false,
+    focused: true,
+    singleton: true,
+  };
+  return [...windows.map((windowModel) => ({ ...windowModel, focused: false })), next];
+}
+
+function focusChatWindowIn(windows: DesktopWindowModel[], route: string, chatSessions: SessionMeta[]): DesktopWindowModel[] {
+  const sessionId = chatSessionIdForRoute(route);
+  if (!sessionId) return windows;
+  const isDraft = sessionId === 'draft';
+  const session = isDraft ? null : (chatSessions.find((candidate) => candidate.id === sessionId) ?? null);
+  const id = isDraft ? 'chat:draft' : `chat:${sessionId}`;
+  const windowRoute = isDraft ? '/conversations/new' : route;
+  const existing = windows.find((windowModel) => windowModel.id === id);
+  if (existing) {
+    const title = session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : existing.title;
+    return [
+      ...windows.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
+      { ...existing, title, route: windowRoute, minimized: false, focused: true },
+    ];
+  }
+  const next: DesktopWindowModel = {
+    id,
+    kind: 'chat',
+    title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : 'Chat',
+    route: windowRoute,
+    bounds: defaultBounds(windows.length, 'chat'),
+    minimized: false,
+    focused: true,
+    archivedOnClose: !isDraft,
+  };
+  return [...windows.map((windowModel) => ({ ...windowModel, focused: false })), next];
+}
+
+function retargetChatWindowIn(
+  windows: DesktopWindowModel[],
+  windowId: string,
+  existing: DesktopWindowModel,
+  route: string,
+  chatSessions: SessionMeta[],
+): DesktopWindowModel[] {
+  const sessionId = chatSessionIdForRoute(route);
+  if (!sessionId) return windows.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, route } : windowModel));
+
+  const isDraft = sessionId === 'draft';
+  const session = isDraft ? null : (chatSessions.find((candidate) => candidate.id === sessionId) ?? null);
+  const nextId = isDraft ? 'chat:draft' : `chat:${sessionId}`;
+  const nextWindow: DesktopWindowModel = {
+    ...existing,
+    id: nextId,
+    route: isDraft ? '/conversations/new' : route,
+    title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : existing.title,
+    archivedOnClose: !isDraft,
+  };
+
+  return windows.flatMap((windowModel) => {
+    if (windowModel.id === windowId) return [nextWindow];
+    if (windowModel.id === nextId) return [];
+    return [windowModel];
+  });
+}
+
 function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode; onNavigate: WindowNavigate; route: string }) {
   const location = useMemo(() => routeLocation(route), [route]);
   const navigator = useMemo(
@@ -507,28 +585,8 @@ export function WindowedLayout() {
     (route: string) => {
       const item = findLauncherItemForRoute(route, launcherItems);
       if (!item) return false;
-      const id = createId(item);
       setLauncherOpen(false);
-      setWindows((current) => {
-        const existing = current.find((windowModel) => windowModel.id === id);
-        if (existing) {
-          return [
-            ...current.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
-            { ...existing, route, minimized: false, focused: true },
-          ];
-        }
-        const next: DesktopWindowModel = {
-          id,
-          kind: 'route',
-          title: item.title,
-          route,
-          bounds: defaultBounds(current.length, 'route'),
-          minimized: false,
-          focused: true,
-          singleton: true,
-        };
-        return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
-      });
+      setWindows((current) => focusRouteWindowIn(current, route, item));
       return true;
     },
     [launcherItems],
@@ -538,31 +596,8 @@ export function WindowedLayout() {
     (route: string) => {
       const sessionId = chatSessionIdForRoute(route);
       if (!sessionId) return false;
-      const isDraft = sessionId === 'draft';
-      const session = isDraft ? null : (chatSessions.find((candidate) => candidate.id === sessionId) ?? null);
-      const id = isDraft ? 'chat:draft' : `chat:${sessionId}`;
       setLauncherOpen(false);
-      setWindows((current) => {
-        const existing = current.find((windowModel) => windowModel.id === id);
-        if (existing) {
-          const title = session ? conversationWindowTitle(session) : existing.title;
-          return [
-            ...current.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
-            { ...existing, title, route, minimized: false, focused: true },
-          ];
-        }
-        const next: DesktopWindowModel = {
-          id,
-          kind: 'chat',
-          title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : 'Chat',
-          route: isDraft ? '/conversations/new' : route,
-          bounds: defaultBounds(current.length, 'chat'),
-          minimized: false,
-          focused: true,
-          archivedOnClose: !isDraft,
-        };
-        return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
-      });
+      setWindows((current) => focusChatWindowIn(current, route, chatSessions));
       return true;
     },
     [chatSessions],
@@ -575,32 +610,25 @@ export function WindowedLayout() {
         const existing = current.find((windowModel) => windowModel.id === windowId);
         if (!existing) return current;
 
+        const chatSessionId = chatSessionIdForRoute(route);
+        if (chatSessionId && existing.kind !== 'chat') return focusChatWindowIn(current, route, chatSessions);
+
+        const targetLauncherItem = findLauncherItemForRoute(route, launcherItems);
+        if (targetLauncherItem) {
+          const currentLauncherItem = findLauncherItemForRoute(existing.route, launcherItems);
+          if (!currentLauncherItem || currentLauncherItem.id !== targetLauncherItem.id) {
+            return focusRouteWindowIn(current, route, targetLauncherItem);
+          }
+        }
+
         if (existing.kind !== 'chat') {
           return current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, route } : windowModel));
         }
 
-        const sessionId = chatSessionIdForRoute(route);
-        if (!sessionId) return current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, route } : windowModel));
-
-        const isDraft = sessionId === 'draft';
-        const session = isDraft ? null : (chatSessions.find((candidate) => candidate.id === sessionId) ?? null);
-        const nextId = isDraft ? 'chat:draft' : `chat:${sessionId}`;
-        const nextWindow: DesktopWindowModel = {
-          ...existing,
-          id: nextId,
-          route: isDraft ? '/conversations/new' : route,
-          title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : existing.title,
-          archivedOnClose: !isDraft,
-        };
-
-        return current.flatMap((windowModel) => {
-          if (windowModel.id === windowId) return [nextWindow];
-          if (windowModel.id === nextId) return [];
-          return [windowModel];
-        });
+        return retargetChatWindowIn(current, windowId, existing, route, chatSessions);
       });
     },
-    [chatSessions],
+    [chatSessions, launcherItems],
   );
 
   useEffect(() => {

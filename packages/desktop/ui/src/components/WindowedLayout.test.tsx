@@ -44,11 +44,18 @@ vi.mock('./Layout', async () => {
 });
 
 vi.mock('../extensions/ExtensionRouteHost', async () => {
-  const { useLocation } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  const { useLocation, useNavigate } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ExtensionRouteHost: ({ shellPresentation = 'stable' }: { shellPresentation?: 'stable' | 'windowed' }) => {
       const location = useLocation();
-      return <div data-testid="extension-route-host">{`${location.pathname}:${shellPresentation}`}</div>;
+      const navigate = useNavigate();
+      return (
+        <div data-testid="extension-route-host">
+          {`${location.pathname}:${shellPresentation}`}
+          <button type="button" aria-label="Navigate within extension app" onClick={() => navigate('/routines/checkpoint')} />
+          <button type="button" aria-label="Navigate to settings app" onClick={() => navigate('/settings/providers')} />
+        </div>
+      );
     },
   };
 });
@@ -298,6 +305,39 @@ describe('WindowedLayout route windows', () => {
 
     const settingsWindow = screen.getByRole('region', { name: /settings/i });
     expect(within(settingsWindow).getByText('/settings/providers:windowed')).toBeTruthy();
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /settings/i })).toBeTruthy();
+  });
+
+  it('keeps embedded extension navigation in the current window when it stays inside the same desktop app', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+
+    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
+    fireEvent.click(within(routinesWindow).getByRole('button', { name: /navigate within extension app/i }));
+
+    await waitFor(() => {
+      expect(within(routinesWindow).getByText('/routines/checkpoint:windowed')).toBeTruthy();
+    });
+    expect(screen.getAllByRole('region', { name: /routines/i })).toHaveLength(1);
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getAllByRole('button', { name: /routines/i })).toHaveLength(1);
+  });
+
+  it('opens a matching desktop app window when embedded extension navigation crosses app boundaries', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+
+    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
+    fireEvent.click(within(routinesWindow).getByRole('button', { name: /navigate to settings app/i }));
+
+    const settingsWindow = await screen.findByRole('region', { name: /settings/i });
+    expect(within(settingsWindow).getByText('/settings/providers:windowed')).toBeTruthy();
+    expect(within(routinesWindow).getByText('/routines:windowed')).toBeTruthy();
+    expect(routinesWindow.getAttribute('data-focused')).toBe('false');
+    expect(settingsWindow.getAttribute('data-focused')).toBe('true');
     expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /settings/i })).toBeTruthy();
   });
 
