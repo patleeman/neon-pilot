@@ -55,6 +55,7 @@ import { useAllSessions } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
+import { isWindowedShellChild } from '../ui-state/windowedShell';
 import {
   WORKBENCH_CHAT_CLOSE_EVENT,
   WORKBENCH_CHAT_OPEN_EVENT,
@@ -1932,7 +1933,8 @@ export function Layout() {
     };
   }, []);
 
-  const effectiveSidebarOpen = sidebarOpen;
+  const windowedShellChild = isWindowedShellChild();
+  const effectiveSidebarOpen = windowedShellChild ? false : sidebarOpen;
   useEffect(() => {
     const root = document.documentElement;
     const previous = root.style.getPropertyValue('--neon-pilot-sidebar-offset');
@@ -3541,30 +3543,32 @@ export function Layout() {
       <NotificationCommandBridge open={notificationCenterOpen} onClose={() => setNotificationCenterOpen(false)} />
       <DesktopChromeContext.Provider value={{ setRightRailControl: setRegisteredRightRailControl }}>
         <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
-          <DesktopTopBar
-            environment={desktopEnvironment}
-            sidebarOpen={effectiveSidebarOpen}
-            onToggleSidebar={handlePrimarySidebarToggle}
-            showRailToggle={canToggleRightRail}
-            railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
-            railToggleLabel={canToggleWorkbench ? { open: 'Hide workbench', closed: 'Show workbench' } : undefined}
-            onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
-            trailingExtra={
-              <>
-                <SetupReadinessButton
-                  count={setupReadiness.snapshot?.counts.actionable ?? 0}
-                  onClick={() => {
-                    startTransition(() => setSetupReadinessOpen((open) => !open));
-                  }}
-                />
-                <NotificationBell
-                  onClick={() => {
-                    startTransition(() => setNotificationCenterOpen((open) => !open));
-                  }}
-                />
-              </>
-            }
-          />
+          {!windowedShellChild ? (
+            <DesktopTopBar
+              environment={desktopEnvironment}
+              sidebarOpen={effectiveSidebarOpen}
+              onToggleSidebar={handlePrimarySidebarToggle}
+              showRailToggle={canToggleRightRail}
+              railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
+              railToggleLabel={canToggleWorkbench ? { open: 'Hide workbench', closed: 'Show workbench' } : undefined}
+              onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
+              trailingExtra={
+                <>
+                  <SetupReadinessButton
+                    count={setupReadiness.snapshot?.counts.actionable ?? 0}
+                    onClick={() => {
+                      startTransition(() => setSetupReadinessOpen((open) => !open));
+                    }}
+                  />
+                  <NotificationBell
+                    onClick={() => {
+                      startTransition(() => setNotificationCenterOpen((open) => !open));
+                    }}
+                  />
+                </>
+              }
+            />
+          ) : null}
           <div className="flex min-h-0 flex-1 overflow-hidden">
             {effectiveSidebarOpen ? (
               <div

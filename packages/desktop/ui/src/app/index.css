@@ -11,6 +11,150 @@
 }
 
 @layer components {
+  .windowed-shell-topbar {
+    @apply relative z-[100] flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle bg-panel px-3 text-xs;
+  }
+
+  .windowed-shell-menu {
+    @apply relative shrink-0;
+  }
+
+  .windowed-shell-menu-button,
+  .windowed-shell-stable-button,
+  .windowed-shell-task-button {
+    @apply h-7 rounded-sm border border-transparent bg-transparent px-2 text-left text-xs text-secondary hover:border-border-subtle hover:bg-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent;
+  }
+
+  .windowed-shell-stable-button {
+    @apply ml-auto shrink-0;
+  }
+
+  .windowed-shell-menu-panel {
+    @apply absolute left-0 top-8 z-[200] min-w-48 border border-border-subtle bg-panel py-1 shadow-lg;
+  }
+
+  .windowed-shell-menu-panel button {
+    @apply flex h-7 w-full items-center px-2 text-left text-xs text-secondary hover:bg-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent;
+  }
+
+  .windowed-shell-task-strip {
+    @apply flex min-w-0 flex-1 items-center gap-1 overflow-hidden;
+  }
+
+  .windowed-shell-chat-group {
+    @apply relative shrink-0;
+  }
+
+  .windowed-shell-chat-menu {
+    @apply min-w-64;
+  }
+
+  .windowed-shell-task-button {
+    @apply max-w-48 truncate border-border-subtle bg-surface/35;
+  }
+
+  .windowed-shell-task-button[data-focused='true'] {
+    @apply border-border-default bg-elevated text-primary;
+  }
+
+  .windowed-shell-task-button[data-minimized='true'] {
+    @apply text-dim;
+  }
+
+  .windowed-shell-desktop {
+    @apply relative h-[calc(100vh-2.5rem)] overflow-hidden bg-base;
+  }
+
+  .windowed-shell-window {
+    @apply absolute grid min-h-[260px] min-w-[360px] grid-rows-[30px_1fr] overflow-hidden border border-border-subtle bg-panel shadow-lg;
+  }
+
+  .windowed-shell-window[data-focused='true'] {
+    @apply border-border-default;
+  }
+
+  .windowed-shell-window-titlebar {
+    @apply flex cursor-default select-none items-center justify-between gap-2 border-b border-border-subtle bg-elevated px-2 text-xs;
+    touch-action: none;
+  }
+
+  .windowed-shell-window-title {
+    @apply min-w-0 flex-1 truncate font-medium text-primary;
+  }
+
+  .windowed-shell-window-controls {
+    @apply flex shrink-0 items-center gap-1;
+  }
+
+  .windowed-shell-window-controls button {
+    @apply h-5 min-w-6 rounded-sm border border-transparent px-1 text-[11px] leading-none text-secondary hover:border-border-subtle hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent;
+  }
+
+  .windowed-shell-route-body {
+    @apply min-h-0 overflow-auto bg-base;
+  }
+
+  .windowed-shell-route-body > * {
+    @apply min-h-full;
+  }
+
+  .windowed-shell-snap-preview {
+    @apply pointer-events-none absolute z-[5] border border-accent bg-accent/10;
+  }
+
+  .windowed-shell-resize-handle {
+    @apply absolute z-10;
+  }
+
+  .windowed-shell-resize-n,
+  .windowed-shell-resize-s {
+    @apply left-2 right-2 h-2 cursor-ns-resize;
+  }
+
+  .windowed-shell-resize-e,
+  .windowed-shell-resize-w {
+    @apply bottom-2 top-2 w-2 cursor-ew-resize;
+  }
+
+  .windowed-shell-resize-n {
+    @apply top-0;
+  }
+
+  .windowed-shell-resize-s {
+    @apply bottom-0;
+  }
+
+  .windowed-shell-resize-e {
+    @apply right-0;
+  }
+
+  .windowed-shell-resize-w {
+    @apply left-0;
+  }
+
+  .windowed-shell-resize-ne,
+  .windowed-shell-resize-nw,
+  .windowed-shell-resize-se,
+  .windowed-shell-resize-sw {
+    @apply h-3 w-3;
+  }
+
+  .windowed-shell-resize-ne {
+    @apply right-0 top-0 cursor-nesw-resize;
+  }
+
+  .windowed-shell-resize-nw {
+    @apply left-0 top-0 cursor-nwse-resize;
+  }
+
+  .windowed-shell-resize-se {
+    @apply bottom-0 right-0 cursor-nwse-resize;
+  }
+
+  .windowed-shell-resize-sw {
+    @apply bottom-0 left-0 cursor-nesw-resize;
+  }
+
   .ui-page-title {
     @apply text-base font-semibold text-primary;
   }

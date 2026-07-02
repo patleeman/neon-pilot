@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from '
 import { recordClientPerfTimingOnce } from '../client/perfDiagnostics';
 import { Layout } from '../components/Layout';
 import { Button, ButtonLink, Notice, QuietLoadingState, SectionLabel, SurfacePanel } from '../components/ui';
+import { WindowedLayout } from '../components/WindowedLayout';
 import { resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
 import {
   hasDraftConversationAttachments,
@@ -16,6 +17,7 @@ import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { ConversationPage } from '../pages/ConversationPage';
 import { ThemeProvider } from '../ui-state/theme';
+import { readDesktopShellPresentation } from '../ui-state/windowedShell';
 import { AppDataContext, AppEventsContext, LiveTitlesContext, SseConnectionContext, SystemStatusContext } from './contexts';
 import { useDesktopAppEventRuntime } from './useDesktopAppEventRuntime';
 
@@ -174,6 +176,7 @@ export function App() {
   const appDataContextValue = useMemo(() => ({ projects, setProjects }), [projects, setProjects]);
   const systemStatusContextValue = useMemo(() => ({ daemon, setDaemon }), [daemon, setDaemon]);
   const liveTitlesContextValue = useMemo(() => ({ titles: titleMap, setTitle }), [setTitle, titleMap]);
+  const desktopShellPresentation = readDesktopShellPresentation();
 
   return (
     <AppErrorBoundary>
@@ -186,7 +189,7 @@ export function App() {
                   <ExtensionRegistryProvider>
                     <BrowserRouter future={{ v7_startTransition: true }}>
                       <Routes>
-                        <Route path="/" element={<Layout />}>
+                        <Route path="/" element={desktopShellPresentation === 'windowed' ? <WindowedLayout /> : <Layout />}>
                           <Route index element={<Navigate to="/conversations/new" replace />} />
                           <Route path="conversations" element={<ConversationsRouteRedirect />} />
                           <Route path="conversations/new" element={<DraftConversationRoute />} />
