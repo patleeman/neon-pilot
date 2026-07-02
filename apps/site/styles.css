@@ -142,17 +142,6 @@ header {
   height: 18px;
 }
 
-.brand-version {
-  margin-left: 2px;
-  padding: 1px 6px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  color: var(--dim);
-  font-family: var(--mono);
-  font-size: 0.625rem;
-  font-weight: 500;
-}
-
 .brand-powered {
   margin-left: 6px;
   color: var(--muted);
