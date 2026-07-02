@@ -39,7 +39,7 @@
   --wos-text-eyebrow: 700 10px/1.4 var(--wos-font-mono);
   --wos-titlebar-h: 42px;
   --wos-taskbar-h: 42px;
-  --wos-chat-rail-width: 150px;
+  --wos-page-rail-width: 150px;
   min-height: 100vh;
   overflow: hidden;
   background: var(--wos-surface-0);
@@ -922,7 +922,7 @@
 
 .wos-page-shell {
   display: grid;
-  grid-template-columns: var(--wos-chat-rail-width) minmax(0, 1fr) minmax(206px, 0.3fr);
+  grid-template-columns: var(--wos-page-rail-width) minmax(0, 1fr) minmax(206px, 0.3fr);
   height: 100%;
   min-height: 0;
   background: var(--wos-surface-1);
@@ -2198,7 +2198,7 @@
 
 .wos-chat-surface {
   display: grid;
-  grid-template-columns: var(--wos-chat-rail-width) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   background: var(--wos-surface-1);
@@ -2206,76 +2206,12 @@
   font-family: var(--wos-font-display);
 }
 
-.wos-chat-rail {
-  min-height: 0;
-  overflow: hidden;
-  border-right: 2px solid var(--wos-ink-900);
-  background: var(--wos-surface-2);
-  padding: 8px;
-}
-
 .wos-embedded-sidebar {
-  width: var(--wos-chat-rail-width) !important;
-  flex-basis: var(--wos-chat-rail-width) !important;
+  width: var(--wos-page-rail-width) !important;
+  flex-basis: var(--wos-page-rail-width) !important;
   background: var(--wos-surface-2);
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);
-}
-
-.wos-embedded-chat-thread-rail {
-  width: 100%;
-  height: 100%;
-}
-
-.wos-chat-rail__label {
-  color: var(--wos-ink-500);
-  padding: 1px 4px 6px;
-  font: var(--wos-text-eyebrow);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.wos-chat-rail__list {
-  display: grid;
-  gap: 2px;
-}
-
-.wos-thread-item {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--wos-ink-700);
-  padding: 5px 7px;
-  text-align: left;
-}
-
-.wos-thread-item:hover {
-  background: var(--wos-surface-3);
-}
-
-.wos-thread-item[data-active='true'] {
-  background: var(--wos-chat);
-  color: white;
-}
-
-.wos-thread-item__title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font: var(--wos-text-row);
-}
-
-.wos-thread-item__meta {
-  flex-shrink: 0;
-  color: var(--wos-ink-400);
-  font: var(--wos-text-meta);
 }
 
 .wos-chat-main {
@@ -2674,7 +2610,6 @@
     .wos-list-item__title,
     .wos-timeline-item__title,
     .wos-automation-row,
-    .wos-thread-item__title,
     .wos-chat-composer__input,
     .wos-chat-composer__send,
     .wos-arena-ranking-row,
@@ -2708,7 +2643,6 @@
     .wos-list-item__detail,
     .wos-list-item__status,
     .wos-automation-row__identity > small,
-    .wos-thread-item__meta,
     .wos-arena-ranking-row__model small
   ) {
   font-family: var(--wos-font-display);
@@ -2749,8 +2683,7 @@
     .wos-field__label,
     .wos-data-table__header,
     .wos-key-value__label,
-    .wos-timeline-item__meta,
-    .wos-chat-rail__label
+    .wos-timeline-item__meta
   ) {
   font-family: var(--wos-font-mono);
   font-size: 10px;
@@ -2789,7 +2722,6 @@
 .windowed-os-shell button.wos-text-button,
 .windowed-os-shell button.wos-segmented-control__item,
 .windowed-os-shell button.wos-list-item,
-.windowed-os-shell button.wos-thread-item,
 .windowed-os-shell button.wos-chat-composer__send,
 .windowed-os-shell button.wos-menu-panel__item,
 .windowed-os-shell .wos-window-route-body button.ui-toolbar-button,

@@ -7,7 +7,6 @@ import {
   WindowedBadge,
   WindowedChatComposer,
   WindowedChatMain,
-  WindowedChatRail,
   WindowedChatSurface,
   WindowedDataRow,
   WindowedDataTable,
@@ -27,7 +26,6 @@ import {
   WindowedSelect,
   WindowedTextarea,
   WindowedTextInput,
-  WindowedThreadItem,
   WindowedTimeline,
   WindowedTimelineItem,
   WindowedTitleBarControls,
@@ -115,11 +113,7 @@ export const TaskbarMenuPlacement: Story = {
           onClose={() => undefined}
         >
           <WindowedChatSurface>
-            <WindowedChatRail>
-              <WindowedThreadItem title="Release notes" active />
-              <WindowedThreadItem title="Bug triage" meta="2h" />
-            </WindowedChatRail>
-            <WindowedChatMain title="Release notes">
+            <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
               <WindowedMessageBubble>Taskbar menu placement preview.</WindowedMessageBubble>
             </WindowedChatMain>
           </WindowedChatSurface>

@@ -559,37 +559,6 @@ export function WindowedChatSurface({ children, className }: WindowedChatSurface
   return <div className={cx('wos-chat-surface', className)}>{children}</div>;
 }
 
-export interface WindowedChatRailProps {
-  title?: string;
-  children: ReactNode;
-  className?: string;
-}
-
-export function WindowedChatRail({ title = 'Threads', children, className }: WindowedChatRailProps) {
-  return (
-    <aside className={cx('wos-chat-rail', className)}>
-      <div className="wos-chat-rail__label">{title}</div>
-      <div className="wos-chat-rail__list">{children}</div>
-    </aside>
-  );
-}
-
-export interface WindowedThreadItemProps {
-  title: string;
-  meta?: string;
-  active?: boolean;
-  onSelect?: () => void;
-}
-
-export function WindowedThreadItem({ title, meta, active = false, onSelect }: WindowedThreadItemProps) {
-  return (
-    <button type="button" className="wos-thread-item" data-active={active} onClick={onSelect}>
-      <span className="wos-thread-item__title">{title}</span>
-      {meta && !active ? <span className="wos-thread-item__meta">{meta}</span> : null}
-    </button>
-  );
-}
-
 export interface WindowedChatMainProps {
   title: string;
   children: ReactNode;
