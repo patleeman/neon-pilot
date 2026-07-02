@@ -37,4 +37,24 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('ui-app-page-');
     expect(source).not.toContain('layout="two-column"');
   });
+
+  it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    for (const title of [
+      'Chat',
+      'Automations',
+      'Workflows',
+      'Extensions',
+      'Gateways',
+      'Model Arena',
+      'Routines',
+      'Skills',
+      'Diagnostics',
+      'Settings',
+    ]) {
+      expect(source).toContain(`title: '${title}'`);
+    }
+  });
 });

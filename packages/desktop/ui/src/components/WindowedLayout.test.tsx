@@ -266,6 +266,108 @@ describe('WindowedLayout route windows', () => {
     expect(within(startMenu).getAllByRole('button', { name: /^routines$/i })).toHaveLength(1);
   });
 
+  it('exposes the canonical top-level desktop apps without nested route duplicates', () => {
+    mocks.extensions = [
+      {
+        id: 'system-automations',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'automations-nav', label: 'Automations', route: '/automations' }],
+          views: [{ id: 'automations-page', title: 'Automations', location: 'main', route: '/automations' }],
+        },
+      },
+      {
+        id: 'system-dynamic-workflows',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'workflows-nav', label: 'Workflows', route: '/workflows' }],
+          views: [{ id: 'workflows-page', title: 'Workflows', location: 'main', route: '/workflows' }],
+        },
+      },
+      {
+        id: 'system-extension-manager',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'extensions-nav', label: 'Extensions', route: '/extensions' }],
+          views: [{ id: 'extensions-page', title: 'Extensions', location: 'main', route: '/extensions' }],
+        },
+      },
+      {
+        id: 'system-gateways',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'gateways-nav', label: 'Gateways', route: '/gateways' }],
+          views: [{ id: 'gateways-page', title: 'Gateways', location: 'main', route: '/gateways' }],
+        },
+      },
+      {
+        id: 'system-model-arena',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'model-arena-nav', label: 'Model Arena', route: '/model-arena' }],
+          views: [{ id: 'model-arena-page', title: 'Model Arena', location: 'main', route: '/model-arena' }],
+        },
+      },
+      {
+        id: 'system-routines',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'routines-nav', label: 'Routines', route: '/routines' }],
+          views: [{ id: 'routines-page', title: 'Routines', location: 'main', route: '/routines' }],
+        },
+      },
+      {
+        id: 'system-skills',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'skills-nav', label: 'Skills', route: '/skills' }],
+          views: [{ id: 'skills-page', title: 'Skills', location: 'main', route: '/skills' }],
+        },
+      },
+      {
+        id: 'system-telemetry',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'telemetry-nav', label: 'Diagnostics', route: '/telemetry' }],
+          views: [{ id: 'telemetry-page', title: 'Diagnostics', location: 'main', route: '/telemetry' }],
+        },
+      },
+      {
+        id: 'system-settings',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'settings-nav', label: 'Settings', route: '/settings' }],
+          views: [
+            { id: 'settings-page', title: 'Settings', location: 'main', route: '/settings' },
+            { id: 'provider-settings', title: 'Provider settings', location: 'main', route: '/settings/providers' },
+          ],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+
+    for (const label of [
+      'Chat',
+      'Automations',
+      'Workflows',
+      'Extensions',
+      'Gateways',
+      'Model Arena',
+      'Routines',
+      'Skills',
+      'Diagnostics',
+      'Settings',
+    ]) {
+      expect(within(startMenu).getAllByRole('button', { name: new RegExp(`^${label}$`, 'i') })).toHaveLength(1);
+    }
+
+    expect(within(startMenu).queryByRole('button', { name: /provider settings/i })).toBeNull();
+  });
+
   it('does not promote nested main extension views into top-level desktop applications', () => {
     mocks.extensions = [
       {

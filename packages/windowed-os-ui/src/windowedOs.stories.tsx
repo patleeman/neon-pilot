@@ -53,7 +53,13 @@ export const DesktopComposition: Story = {
           items={[
             { id: 'chat', title: 'Chat', accent: 'chat', onSelect: () => undefined },
             { id: 'automations', title: 'Automations', accent: 'automations', onSelect: () => undefined },
+            { id: 'workflows', title: 'Workflows', accent: 'routines', onSelect: () => undefined },
+            { id: 'extensions', title: 'Extensions', accent: 'extensions', onSelect: () => undefined },
             { id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined },
+            { id: 'model-arena', title: 'Model Arena', accent: 'gateways', onSelect: () => undefined },
+            { id: 'routines', title: 'Routines', accent: 'routines', onSelect: () => undefined },
+            { id: 'skills', title: 'Skills', accent: 'extensions', onSelect: () => undefined },
+            { id: 'diagnostics', title: 'Diagnostics', accent: 'telemetry', onSelect: () => undefined },
             { id: 'settings', title: 'Settings', accent: 'settings', onSelect: () => undefined },
           ]}
         />
