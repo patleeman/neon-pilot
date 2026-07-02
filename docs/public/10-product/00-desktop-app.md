@@ -64,16 +64,32 @@ Neon Pilot ships with bundled system extensions. You can also install optional e
 
 Default shortcuts:
 
-| Action               | Shortcut     |
-| -------------------- | ------------ |
-| New conversation     | `Cmd/Ctrl+N` |
-| Focus composer       | `Cmd/Ctrl+L` |
-| Find on page         | `Cmd/Ctrl+F` |
-| Settings             | `Cmd/Ctrl+,` |
-| Conversation focused | `F1`         |
-| Workbench open       | `F2`         |
-| Toggle left sidebar  | `Cmd/Ctrl+/` |
-| Toggle workbench     | `Cmd/Ctrl+\` |
+| Action                    | Shortcut           |
+| ------------------------- | ------------------ |
+| Show Neon Pilot           | `Cmd/Ctrl+Shift+A` |
+| New conversation          | `Cmd/Ctrl+N`       |
+| Close tab                 | `Cmd/Ctrl+W`       |
+| Reopen closed tab         | `Cmd+Shift+N`      |
+| Previous conversation     | `Cmd/Ctrl+[`       |
+| Next conversation         | `Cmd/Ctrl+]`       |
+| Toggle pinned             | `Cmd/Ctrl+Alt+P`   |
+| Archive / restore         | `Cmd/Ctrl+Alt+A`   |
+| Rename conversation       | `Cmd/Ctrl+Alt+R`   |
+| Focus composer            | `Cmd/Ctrl+L`       |
+| Edit working directory    | `Cmd/Ctrl+Shift+L` |
+| Find on page              | `Cmd/Ctrl+F`       |
+| Settings                  | `Cmd/Ctrl+,`       |
+| Quit                      | `Cmd/Ctrl+Q`       |
+| Conversation mode         | `F1`               |
+| Workbench mode            | `F2`               |
+| New workbench tab         | `Cmd/Ctrl+T`       |
+| Close workbench tab       | `Cmd/Ctrl+Shift+W` |
+| Close workbench file      | `Cmd/Ctrl+Alt+W`   |
+| Refresh workbench file    | `F5`               |
+| Toggle workbench explorer | `Cmd/Ctrl+B`       |
+| Toggle workbench diff     | `Cmd/Ctrl+Shift+D` |
+| Toggle left sidebar       | `Cmd/Ctrl+/`       |
+| Toggle right sidebar      | `Cmd/Ctrl+\`       |
 
 Shortcuts are configurable in Settings when the owning command supports keybinding changes.
 

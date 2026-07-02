@@ -192,9 +192,9 @@ describe('extension quality eval assets', () => {
   });
 
   it('documents the shared settings component grammar for extension authors', () => {
-    const extensionsDoc = readFileSync(new URL('../docs/extensions.md', import.meta.url), 'utf8');
+    const extensionsDoc = readFileSync(new URL('../docs/public/20-extensions/20-extensions.md', import.meta.url), 'utf8');
     const sdkReadme = readFileSync(new URL('../packages/extensions/README.md', import.meta.url), 'utf8');
-    const buildGuide = readFileSync(new URL('../docs/build-an-extension.md', import.meta.url), 'utf8');
+    const buildGuide = readFileSync(new URL('../docs/public/20-extensions/00-build-an-extension.md', import.meta.url), 'utf8');
     const templateReadme = readFileSync(
       new URL('../docs/extension-templates/templates/template-settings-section/README.md', import.meta.url),
       'utf8',

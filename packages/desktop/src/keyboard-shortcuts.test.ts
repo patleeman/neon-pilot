@@ -44,7 +44,7 @@ describe('DEFAULT_DESKTOP_KEYBOARD_SHORTCUTS', () => {
   });
 
   it('keeps the desktop app docs shortcut table aligned with the core registry', () => {
-    const docs = readFileSync(new URL('../../../docs/desktop-app.md', import.meta.url), 'utf8');
+    const docs = readFileSync(new URL('../../../docs/public/10-product/00-desktop-app.md', import.meta.url), 'utf8');
     const shortcutRows = new Map(
       docs
         .split('\n')
