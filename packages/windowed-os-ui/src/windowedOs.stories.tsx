@@ -123,6 +123,7 @@ export const TaskbarMenuPlacement: Story = {
       <Taskbar
         startOpen={false}
         onToggleStart={() => undefined}
+        defaultOpenGroupId="chat"
         groups={[
           {
             id: 'chat',

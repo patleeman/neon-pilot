@@ -729,12 +729,14 @@ export interface TaskbarProps {
   onToggleStart: () => void;
   groups?: TaskbarGroup[];
   items: TaskbarItem[];
+  defaultOpenGroupId?: string | null;
 }
 
 const EMPTY_TASKBAR_GROUPS: TaskbarGroup[] = [];
 
-export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUPS, items }: TaskbarProps) {
+export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUPS, items, defaultOpenGroupId = null }: TaskbarProps) {
   const groupRefs = useRef(new Map<string, HTMLDivElement>());
+  const [openGroupId, setOpenGroupId] = useState<string | null>(defaultOpenGroupId);
   const [menuAnchors, setMenuAnchors] = useState<Record<string, { left: number; bottom: number }>>({});
 
   useLayoutEffect(() => {
@@ -763,6 +765,32 @@ export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUP
     };
   }, [groups]);
 
+  useEffect(() => {
+    if (!openGroupId) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (!target) return;
+      if (target.closest('.wos-taskbar__group, .wos-taskbar__menu-layer')) return;
+      setOpenGroupId(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenGroupId(null);
+    };
+    window.addEventListener('mousedown', handlePointerDown, true);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [openGroupId]);
+
+  useEffect(() => {
+    if (!openGroupId) return;
+    if (!groups.some((group) => group.id === openGroupId && group.menu)) {
+      setOpenGroupId(null);
+    }
+  }, [groups, openGroupId]);
+
   return (
     <>
       <footer className="wos-taskbar">
@@ -782,7 +810,20 @@ export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUP
               }}
               className="wos-taskbar__group"
             >
-              <button type="button" className="wos-taskbar__button" data-focused={group.focused} onClick={group.onSelect}>
+              <button
+                type="button"
+                className="wos-taskbar__button"
+                data-focused={group.focused}
+                aria-haspopup={group.menu ? 'menu' : undefined}
+                aria-expanded={group.menu ? openGroupId === group.id : undefined}
+                onClick={() => {
+                  if (!group.menu) {
+                    group.onSelect();
+                    return;
+                  }
+                  setOpenGroupId((current) => (current === group.id ? null : group.id));
+                }}
+              >
                 <WindowedAppTile label={group.title} accent={group.accent} count={group.count} variant="taskbar" />
               </button>
             </div>
@@ -802,8 +843,17 @@ export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUP
         </nav>
       </footer>
       {groups.map((group) =>
-        group.menu && menuAnchors[group.id] ? (
-          <div key={`${group.id}-menu`} className="wos-taskbar__menu-layer" style={menuAnchors[group.id]}>
+        group.menu && openGroupId === group.id && menuAnchors[group.id] ? (
+          <div
+            key={`${group.id}-menu`}
+            className="wos-taskbar__menu-layer"
+            style={menuAnchors[group.id]}
+            onClickCapture={(event) => {
+              if ((event.target as HTMLElement | null)?.closest('.wos-menu-panel__item')) {
+                setOpenGroupId(null);
+              }
+            }}
+          >
             {group.menu}
           </div>
         ) : null,

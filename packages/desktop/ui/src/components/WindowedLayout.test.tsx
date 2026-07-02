@@ -357,6 +357,55 @@ describe('WindowedLayout route windows', () => {
     ).toBe('true');
   });
 
+  it('groups multiple open chat windows under a taskbar chat menu', async () => {
+    mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'chat:session-1',
+        kind: 'chat',
+        title: 'Planning thread',
+        route: '/conversations/session-1',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        archivedOnClose: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+
+    expect(await screen.findByRole('region', { name: /planning thread/i })).toBeTruthy();
+    expect(container.querySelector('.wos-taskbar__group')).toBeTruthy();
+
+    const taskbar = screen.getByRole('navigation', { name: /open windows/i });
+    const chatGroupButton = within(taskbar).getByRole('button', { name: /chat 2/i });
+    expect(chatGroupButton.getAttribute('data-focused')).toBe('true');
+    expect(within(taskbar).queryByRole('button', { name: /planning thread/i })).toBeNull();
+    expect(screen.queryByRole('menu', { name: /open chat windows/i })).toBeNull();
+
+    fireEvent.click(chatGroupButton);
+
+    const chatMenu = screen.getByRole('menu', { name: /open chat windows/i });
+    expect(within(chatMenu).getByRole('menuitem', { name: /new conversation/i })).toBeTruthy();
+    expect(within(chatMenu).getByRole('menuitem', { name: /planning thread/i })).toBeTruthy();
+
+    fireEvent.click(within(chatMenu).getByRole('menuitem', { name: /new conversation/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('menu', { name: /open chat windows/i })).toBeNull();
+    });
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+  });
+
   it('does not auto-create taskbar windows for every known chat session', () => {
     mocks.tabs = [
       { id: 'session-1', title: 'Planning thread', messageCount: 4 },
@@ -392,16 +441,14 @@ describe('WindowedLayout route windows', () => {
     expect(within(planningWindow).getByTestId('embedded-layout')).toBeTruthy();
 
     const taskbar = screen.getByRole('navigation', { name: /open windows/i });
-    expect(
-      within(taskbar)
-        .getByRole('button', { name: /planning thread/i })
-        .getAttribute('data-focused'),
-    ).toBe('true');
-    expect(
-      within(taskbar)
-        .getByRole('button', { name: /new conversation/i })
-        .getAttribute('data-focused'),
-    ).toBe('false');
+    const chatGroupButton = within(taskbar).getByRole('button', { name: /chat 2/i });
+    expect(chatGroupButton.getAttribute('data-focused')).toBe('true');
+
+    fireEvent.click(chatGroupButton);
+
+    const chatMenu = screen.getByRole('menu', { name: /open chat windows/i });
+    expect(within(chatMenu).getByRole('menuitem', { name: /planning thread/i })).toBeTruthy();
+    expect(within(chatMenu).getByRole('menuitem', { name: /new conversation/i })).toBeTruthy();
   });
 
   it('keeps embedded chat navigation scoped to the window route', async () => {

@@ -1,4 +1,13 @@
-import { type AppAccent, StartMenu, type StartMenuItem, Taskbar, type TaskbarItem, WindowFrame } from '@neon-pilot/windowed-os-ui';
+import {
+  type AppAccent,
+  StartMenu,
+  type StartMenuItem,
+  Taskbar,
+  type TaskbarGroup,
+  type TaskbarItem,
+  WindowedMenuPanel,
+  WindowFrame,
+} from '@neon-pilot/windowed-os-ui';
 import { type CSSProperties, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createPath,
@@ -928,6 +937,33 @@ export function WindowedLayout() {
       onSelect: () => focusWindow(windowModel.id),
     }),
   );
+  const shouldGroupChatTaskItems = chatTaskItems.length > 1;
+  const chatTaskGroups: TaskbarGroup[] = shouldGroupChatTaskItems
+    ? [
+        {
+          id: 'chat',
+          title: 'Chat',
+          focused: chatTaskItems.some((item) => item.focused),
+          count: chatTaskItems.length,
+          accent: 'chat',
+          onSelect: () => {
+            const focusedChat = chatTaskItems.find((item) => item.focused);
+            (focusedChat ?? chatTaskItems[0])?.onSelect();
+          },
+          menu: (
+            <WindowedMenuPanel
+              ariaLabel="Open chat windows"
+              items={chatTaskItems.map((item) => ({
+                id: item.id,
+                label: item.title,
+                onSelect: item.onSelect,
+              }))}
+            />
+          ),
+        },
+      ]
+    : [];
+  const taskbarItems = shouldGroupChatTaskItems ? routeTaskItems : [...chatTaskItems, ...routeTaskItems];
 
   return (
     <div className="windowed-os-shell h-screen overflow-hidden">
@@ -960,7 +996,8 @@ export function WindowedLayout() {
         onToggleStart={() => {
           setLauncherOpen((open) => !open);
         }}
-        items={[...chatTaskItems, ...routeTaskItems]}
+        groups={chatTaskGroups}
+        items={taskbarItems}
       />
     </div>
   );
