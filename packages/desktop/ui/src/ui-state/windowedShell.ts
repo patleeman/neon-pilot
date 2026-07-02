@@ -20,6 +20,7 @@ export type SnapTarget = 'maximize' | 'left' | 'right' | 'bottom' | 'top-left' |
 const MIN_VISIBLE_X = 96;
 const MIN_VISIBLE_Y = 34;
 const SNAP_THRESHOLD = 24;
+const TITLEBAR_RESTORE_DRAG_Y = 30;
 
 export function isWindowedShellChild(search = typeof window === 'undefined' ? '' : window.location.search): boolean {
   return new URLSearchParams(search).get(WINDOWED_SHELL_CHILD_PARAM) === '1';
@@ -112,4 +113,27 @@ export function boundsForSnapTarget(target: SnapTarget, desktop: DesktopRect): W
     case 'bottom-right':
       return { x: halfWidth, y: halfHeight, width: desktop.width - halfWidth, height: desktop.height - halfHeight };
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function boundsForRestoredDragStart(
+  snappedBounds: WindowBounds,
+  restoredBounds: WindowBounds,
+  pointer: { x: number; y: number },
+  desktop: DesktopRect,
+): WindowBounds {
+  const pointerRatioX = clamp((pointer.x - snappedBounds.x) / Math.max(1, snappedBounds.width), 0, 1);
+  const titlebarOffsetY = clamp(pointer.y - snappedBounds.y, 0, TITLEBAR_RESTORE_DRAG_Y);
+
+  return constrainWindowBounds(
+    {
+      ...restoredBounds,
+      x: Math.round(pointer.x - restoredBounds.width * pointerRatioX),
+      y: Math.round(pointer.y - titlebarOffsetY),
+    },
+    desktop,
+  );
 }

@@ -1773,7 +1773,12 @@ function WorkbenchKnowledgeRail({
   );
 }
 
-export function Layout() {
+interface LayoutProps {
+  embeddedWindowChrome?: boolean;
+  forceWorkbench?: boolean;
+}
+
+export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }: LayoutProps = {}) {
   const location = useLocation();
   useRouteTelemetry();
   const navigate = useNavigate();
@@ -1934,7 +1939,8 @@ export function Layout() {
   }, []);
 
   const windowedShellChild = isWindowedShellChild();
-  const effectiveSidebarOpen = windowedShellChild ? false : sidebarOpen;
+  const hideDesktopTopBar = embeddedWindowChrome || windowedShellChild;
+  const effectiveSidebarOpen = windowedShellChild && !embeddedWindowChrome ? false : sidebarOpen;
   useEffect(() => {
     const root = document.documentElement;
     const previous = root.style.getPropertyValue('--neon-pilot-sidebar-offset');
@@ -1948,7 +1954,8 @@ export function Layout() {
     };
   }, [effectiveSidebarOpen, sidebar.width]);
 
-  const showWorkbench = appLayoutMode === 'workbench' && routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
+  const showWorkbench =
+    (forceWorkbench || appLayoutMode === 'workbench') && routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const canToggleWorkbench = routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const activeWorkbenchKnowledgeFileId = showWorkbench
     ? (searchParams.get('file') ?? (activeConversationId ? selectedFileByConversation[activeConversationId] : null) ?? null)
@@ -3542,8 +3549,13 @@ export function Layout() {
     <NotificationProvider>
       <NotificationCommandBridge open={notificationCenterOpen} onClose={() => setNotificationCenterOpen(false)} />
       <DesktopChromeContext.Provider value={{ setRightRailControl: setRegisteredRightRailControl }}>
-        <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
-          {!windowedShellChild ? (
+        <div
+          className={cx(
+            'flex flex-col overflow-hidden bg-base text-primary select-none',
+            embeddedWindowChrome ? 'h-full min-h-0' : 'h-screen',
+          )}
+        >
+          {!hideDesktopTopBar ? (
             <DesktopTopBar
               environment={desktopEnvironment}
               sidebarOpen={effectiveSidebarOpen}

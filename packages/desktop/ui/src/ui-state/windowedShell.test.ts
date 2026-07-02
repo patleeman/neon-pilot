@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  boundsForRestoredDragStart,
   boundsForSnapTarget,
   constrainWindowBounds,
   isWindowedShellChild,
@@ -50,6 +51,18 @@ describe('windowedShell', () => {
     expect(boundsForSnapTarget('left', desktop)).toEqual({ x: 0, y: 0, width: 600, height: 800 });
     expect(boundsForSnapTarget('top-right', desktop)).toEqual({ x: 600, y: 0, width: 600, height: 400 });
     expect(boundsForSnapTarget('bottom', desktop)).toEqual({ x: 0, y: 400, width: 1200, height: 400 });
+  });
+
+  it('restores snapped windows under the cursor before dragging', () => {
+    const desktop = { width: 1200, height: 800 };
+    expect(
+      boundsForRestoredDragStart(
+        { x: 0, y: 0, width: 1200, height: 800 },
+        { x: 180, y: 120, width: 640, height: 420 },
+        { x: 600, y: 18 },
+        desktop,
+      ),
+    ).toEqual({ x: 280, y: 0, width: 640, height: 420 });
   });
 
   it('keeps child frames on the stable shell even when the parent preference is windowed', () => {

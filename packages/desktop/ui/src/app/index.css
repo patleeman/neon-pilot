@@ -13,16 +13,19 @@
 @layer components {
   .windowed-shell-topbar {
     @apply relative z-[100] flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle bg-panel px-3 text-xs;
+    -webkit-app-region: drag;
   }
 
   .windowed-shell-menu {
     @apply relative shrink-0;
+    -webkit-app-region: no-drag;
   }
 
   .windowed-shell-menu-button,
   .windowed-shell-stable-button,
   .windowed-shell-task-button {
     @apply h-7 rounded-sm border border-transparent bg-transparent px-2 text-left text-xs text-secondary hover:border-border-subtle hover:bg-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent;
+    -webkit-app-region: no-drag;
   }
 
   .windowed-shell-stable-button {
@@ -31,6 +34,7 @@
 
   .windowed-shell-menu-panel {
     @apply absolute left-0 top-8 z-[200] min-w-48 border border-border-subtle bg-panel py-1 shadow-lg;
+    -webkit-app-region: no-drag;
   }
 
   .windowed-shell-menu-panel button {
@@ -39,6 +43,7 @@
 
   .windowed-shell-task-strip {
     @apply flex min-w-0 flex-1 items-center gap-1 overflow-hidden;
+    -webkit-app-region: no-drag;
   }
 
   .windowed-shell-chat-group {
@@ -66,7 +71,7 @@
   }
 
   .windowed-shell-window {
-    @apply absolute grid min-h-[260px] min-w-[360px] grid-rows-[30px_1fr] overflow-hidden border border-border-subtle bg-panel shadow-lg;
+    @apply absolute isolate grid min-h-[260px] min-w-[360px] grid-rows-[30px_1fr] overflow-hidden border border-border-subtle bg-panel shadow-lg;
   }
 
   .windowed-shell-window[data-focused='true'] {
@@ -74,7 +79,7 @@
   }
 
   .windowed-shell-window-titlebar {
-    @apply flex cursor-default select-none items-center justify-between gap-2 border-b border-border-subtle bg-elevated px-2 text-xs;
+    @apply relative z-20 flex cursor-default select-none items-center justify-between gap-2 border-b border-border-subtle bg-elevated px-2 text-xs;
     touch-action: none;
   }
 
@@ -91,7 +96,7 @@
   }
 
   .windowed-shell-route-body {
-    @apply min-h-0 overflow-auto bg-base;
+    @apply relative z-0 min-h-0 overflow-hidden bg-base;
   }
 
   .windowed-shell-route-body > * {
@@ -99,21 +104,22 @@
   }
 
   .windowed-shell-snap-preview {
-    @apply pointer-events-none absolute z-[5] border border-accent bg-accent/10;
+    @apply pointer-events-none absolute z-[90] border border-accent bg-accent/10;
   }
 
   .windowed-shell-resize-handle {
-    @apply absolute z-10;
+    @apply absolute z-50 pointer-events-auto select-none;
+    touch-action: none;
   }
 
   .windowed-shell-resize-n,
   .windowed-shell-resize-s {
-    @apply left-2 right-2 h-2 cursor-ns-resize;
+    @apply left-4 right-4 h-4 cursor-ns-resize;
   }
 
   .windowed-shell-resize-e,
   .windowed-shell-resize-w {
-    @apply bottom-2 top-2 w-2 cursor-ew-resize;
+    @apply bottom-4 top-4 w-4 cursor-ew-resize;
   }
 
   .windowed-shell-resize-n {
@@ -136,7 +142,7 @@
   .windowed-shell-resize-nw,
   .windowed-shell-resize-se,
   .windowed-shell-resize-sw {
-    @apply h-3 w-3;
+    @apply h-6 w-6;
   }
 
   .windowed-shell-resize-ne {

@@ -7,6 +7,7 @@ import { useConversations } from '../hooks/useConversations';
 import { ConversationPage } from '../pages/ConversationPage';
 import type { SessionMeta } from '../shared/types';
 import {
+  boundsForRestoredDragStart,
   boundsForSnapTarget,
   constrainWindowBounds,
   type DesktopRect,
@@ -15,6 +16,7 @@ import {
   type WindowBounds,
   writeDesktopShellPresentation,
 } from '../ui-state/windowedShell';
+import { Layout } from './Layout';
 import { QuietLoadingState } from './ui';
 
 type WindowKind = 'chat' | 'route';
@@ -175,6 +177,31 @@ function isPrimaryNativeMouse(event: MouseEvent): boolean {
   return event.button === 0;
 }
 
+function sameBounds(first: WindowBounds, second: WindowBounds): boolean {
+  return first.x === second.x && first.y === second.y && first.width === second.width && first.height === second.height;
+}
+
+function resizeEdgeForPointer(event: MouseEvent, windowElement: HTMLElement): ResizeEdge | null {
+  const threshold = 14;
+  const rect = windowElement.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const nearLeft = x <= threshold;
+  const nearRight = x >= rect.width - threshold;
+  const nearTop = y <= threshold;
+  const nearBottom = y >= rect.height - threshold;
+
+  if (nearTop && nearLeft) return 'nw';
+  if (nearTop && nearRight) return 'ne';
+  if (nearBottom && nearLeft) return 'sw';
+  if (nearBottom && nearRight) return 'se';
+  if (nearTop) return 'n';
+  if (nearRight) return 'e';
+  if (nearBottom) return 's';
+  if (nearLeft) return 'w';
+  return null;
+}
+
 function routeLocation(route: string) {
   const url = new URL(route, window.location.origin);
   return {
@@ -187,34 +214,38 @@ function routeLocation(route: string) {
 }
 
 function WindowRouteBody({ route }: { route: string }) {
+  const isChatRoute = route.startsWith('/conversations');
+
   return (
     <div className="windowed-shell-route-body">
       <Routes location={routeLocation(route)}>
-        <Route
-          path="/conversations"
-          element={
-            <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
-              <ConversationPage key="draft" draft />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/conversations/new"
-          element={
-            <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
-              <ConversationPage key="draft" draft />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/conversations/:id"
-          element={
-            <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
-              <ConversationPage />
-            </Suspense>
-          }
-        />
-        <Route path="*" element={<ExtensionRouteHost />} />
+        <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench={isChatRoute} />}>
+          <Route
+            path="conversations"
+            element={
+              <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                <ConversationPage key="draft" draft />
+              </Suspense>
+            }
+          />
+          <Route
+            path="conversations/new"
+            element={
+              <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                <ConversationPage key="draft" draft />
+              </Suspense>
+            }
+          />
+          <Route
+            path="conversations/:id"
+            element={
+              <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                <ConversationPage />
+              </Suspense>
+            }
+          />
+          <Route path="*" element={<ExtensionRouteHost />} />
+        </Route>
       </Routes>
     </div>
   );
@@ -339,6 +370,34 @@ export function WindowedLayout() {
     );
   }, []);
 
+  const maximizeWindow = useCallback(
+    (windowModel: DesktopWindowModel) => {
+      const rect = desktopRect(desktopRef.current);
+      const maximizedBounds = boundsForSnapTarget('maximize', rect);
+      const restored = restoreBounds[windowModel.id];
+
+      if (sameBounds(windowModel.bounds, maximizedBounds) && restored) {
+        setRestoreBounds((current) => {
+          const next = { ...current };
+          delete next[windowModel.id];
+          return next;
+        });
+        setWindows((current) =>
+          current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds: restored } : candidate)),
+        );
+        return;
+      }
+
+      setRestoreBounds((current) => ({ ...current, [windowModel.id]: current[windowModel.id] ?? windowModel.bounds }));
+      setWindows((current) =>
+        current.map((candidate) =>
+          candidate.id === windowModel.id ? { ...candidate, bounds: maximizedBounds, minimized: false } : candidate,
+        ),
+      );
+    },
+    [restoreBounds],
+  );
+
   const toggleMaximize = useCallback(
     (windowModel: DesktopWindowModel) => {
       const restored = restoreBounds[windowModel.id];
@@ -366,17 +425,8 @@ export function WindowedLayout() {
 
   const startDrag = useCallback(
     (event: MouseEvent, windowModel: DesktopWindowModel) => {
-      if (!isPrimaryNativeMouse(event) || (event.target as HTMLElement).closest('button')) return;
+      if (!isPrimaryNativeMouse(event) || event.detail > 1 || (event.target as HTMLElement).closest('button')) return;
       event.preventDefault();
-      focusWindow(windowModel.id);
-      const dragState: DragState = {
-        windowId: windowModel.id,
-        startX: event.clientX,
-        startY: event.clientY,
-        initial: windowModel.bounds,
-      };
-      setDrag(dragState);
-
       const pointerInDesktop = (event: MouseEvent) => {
         const rect = desktopRef.current?.getBoundingClientRect();
         return {
@@ -384,6 +434,29 @@ export function WindowedLayout() {
           y: event.clientY - (rect?.top ?? 40),
         };
       };
+      const rect = desktopRect(desktopRef.current);
+      const restored = restoreBounds[windowModel.id] ?? null;
+      const initial = restored
+        ? boundsForRestoredDragStart(windowModel.bounds, restored, pointerInDesktop(event), rect)
+        : windowModel.bounds;
+      focusWindow(windowModel.id);
+      if (restored) {
+        setRestoreBounds((current) => {
+          const next = { ...current };
+          delete next[windowModel.id];
+          return next;
+        });
+        setWindows((current) =>
+          current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds: initial } : candidate)),
+        );
+      }
+      const dragState: DragState = {
+        windowId: windowModel.id,
+        startX: event.clientX,
+        startY: event.clientY,
+        initial,
+      };
+      setDrag(dragState);
 
       const handlePointerMove = (event: MouseEvent) => {
         const rect = desktopRect(desktopRef.current);
@@ -410,6 +483,15 @@ export function WindowedLayout() {
         window.removeEventListener('mouseup', handlePointerEnd);
         if (!target) return;
         const bounds = boundsForSnapTarget(target, rect);
+        const releasedBounds = constrainWindowBounds(
+          {
+            ...dragState.initial,
+            x: dragState.initial.x + event.clientX - dragState.startX,
+            y: dragState.initial.y + event.clientY - dragState.startY,
+          },
+          rect,
+        );
+        setRestoreBounds((current) => ({ ...current, [dragState.windowId]: releasedBounds }));
         setWindows((current) =>
           current.map((windowModel) => (windowModel.id === dragState.windowId ? { ...windowModel, bounds } : windowModel)),
         );
@@ -418,7 +500,7 @@ export function WindowedLayout() {
       window.addEventListener('mousemove', handlePointerMove);
       window.addEventListener('mouseup', handlePointerEnd);
     },
-    [focusWindow],
+    [focusWindow, restoreBounds],
   );
 
   const startResize = useCallback(
@@ -427,6 +509,12 @@ export function WindowedLayout() {
       event.stopPropagation();
       event.preventDefault();
       focusWindow(windowModel.id);
+      setRestoreBounds((current) => {
+        if (!current[windowModel.id]) return current;
+        const next = { ...current };
+        delete next[windowModel.id];
+        return next;
+      });
       const resizeState: ResizeState = {
         windowId: windowModel.id,
         startX: event.clientX,
@@ -483,7 +571,7 @@ export function WindowedLayout() {
       if (!windowModel) return;
 
       const resizeHandle = target.closest<HTMLElement>('.windowed-shell-resize-handle');
-      const edge = resizeHandle?.dataset.resizeEdge as ResizeEdge | undefined;
+      const edge = (resizeHandle?.dataset.resizeEdge as ResizeEdge | undefined) ?? resizeEdgeForPointer(event, windowElement);
       if (edge) {
         startResize(event, windowModel, edge);
         return;
@@ -493,10 +581,25 @@ export function WindowedLayout() {
         startDrag(event, windowModel);
       }
     };
+    const handleDoubleClick = (event: MouseEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (!target || target.closest('button')) return;
+      const titlebar = target.closest<HTMLElement>('.windowed-shell-window-titlebar');
+      const windowElement = target.closest<HTMLElement>('.windowed-shell-window');
+      const windowId = titlebar && windowElement?.dataset.windowId;
+      const windowModel = windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
+      if (!windowModel) return;
+      event.preventDefault();
+      maximizeWindow(windowModel);
+    };
 
     window.addEventListener('mousedown', handleMouseDown, true);
-    return () => window.removeEventListener('mousedown', handleMouseDown, true);
-  }, [startDrag, startResize]);
+    window.addEventListener('dblclick', handleDoubleClick, true);
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown, true);
+      window.removeEventListener('dblclick', handleDoubleClick, true);
+    };
+  }, [maximizeWindow, startDrag, startResize]);
 
   const activeChatWindow = chatWindows.find((windowModel) => windowModel.focused) ?? chatWindows[0] ?? null;
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
