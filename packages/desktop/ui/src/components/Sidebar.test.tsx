@@ -988,6 +988,9 @@ describe('Sidebar', () => {
 
     expect(html).toContain('Chat');
     expect(html).toContain('ui-sidebar-nav-item-active');
+    expect(html).toContain('w-full min-w-0 pr-10');
+    expect(html).toContain('ui-icon-button ui-icon-button-compact');
+    expect(html).toContain('absolute right-1 top-0 z-10');
     expect(html).not.toContain('ui-sidebar-session-row-active');
   });
 
