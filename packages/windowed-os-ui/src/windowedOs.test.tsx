@@ -76,6 +76,19 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('Toggle automatic duels');
   });
 
+  it('documents the canonical Diagnostics desktop page', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const DiagnosticsPage');
+    expect(source).toContain('title="Diagnostics"');
+    expect(source).toContain('eyebrow="Telemetry"');
+    expect(source).toContain('title="Health"');
+    expect(source).toContain('title="Usage"');
+    expect(source).toContain('title="Traces"');
+    expect(source).toContain('Export trace');
+  });
+
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

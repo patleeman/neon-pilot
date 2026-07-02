@@ -985,6 +985,84 @@ export const ModelArenaPage: Story = {
   ),
 };
 
+export const DiagnosticsPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="Diagnostics"
+        accent="telemetry"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Telemetry"
+            title="Diagnostics"
+            actions={
+              <>
+                <WindowedPageButton>Refresh</WindowedPageButton>
+                <WindowedPageButton tone="accent">Export trace</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Health" meta="live">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Store', value: <WindowedBadge tone="positive">ready</WindowedBadge> },
+                  { label: 'Retention', value: '14 days' },
+                  { label: 'Runs', value: 42 },
+                  { label: 'Errors', value: 2 },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Usage" meta="today">
+              <WindowedDataTable columns={[{ label: 'Surface' }, { label: 'Events' }, { label: 'Last seen', align: 'right' }]}>
+                <WindowedDataRow
+                  name="Chat"
+                  meta="conversation loop"
+                  status={<WindowedBadge tone="positive">1,284</WindowedBadge>}
+                  action="2m"
+                />
+                <WindowedDataRow
+                  name="Workbench Browser"
+                  meta="native browser view"
+                  status={<WindowedBadge tone="neutral">216</WindowedBadge>}
+                  action="8m"
+                />
+                <WindowedDataRow
+                  name="Extensions"
+                  meta="surface actions"
+                  status={<WindowedBadge tone="neutral">89</WindowedBadge>}
+                  action="12m"
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Traces" meta="recent">
+              <WindowedTimeline>
+                <WindowedTimelineItem title="Model Arena duel completed" meta="gpt-5.4 · 1.8s" tone="positive">
+                  Captured challenger result and updated the transcript block.
+                </WindowedTimelineItem>
+                <WindowedTimelineItem title="Browser view suspended" meta="windowed shell · 0.1s" tone="neutral">
+                  Detached hidden native view while a desktop overlay was active.
+                </WindowedTimelineItem>
+                <WindowedTimelineItem title="Extension action failed" meta="system-browser · retryable" tone="warning">
+                  Backend action returned a transient navigation error.
+                </WindowedTimelineItem>
+              </WindowedTimeline>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const CoreDataPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
