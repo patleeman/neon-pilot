@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WindowedLayout } from './WindowedLayout';
+import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
 
 const mocks = vi.hoisted(() => ({
   layout: vi.fn(({ children }: { children?: ReactNode }) => (
@@ -506,6 +507,47 @@ describe('WindowedLayout route windows', () => {
       expect(screen.queryByRole('menu', { name: /open chat windows/i })).toBeNull();
     });
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+  });
+
+  it('broadcasts browser suspension when window focus changes', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+    const suspendListener = vi.fn();
+    window.addEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, suspendListener);
+
+    try {
+      renderWindowedLayout();
+      await screen.findByRole('region', { name: /routines/i });
+      suspendListener.mockClear();
+
+      fireEvent.pointerDown(screen.getByRole('region', { name: /new conversation/i }));
+
+      await waitFor(() => {
+        expect(suspendListener).toHaveBeenCalled();
+      });
+      expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+    } finally {
+      window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, suspendListener);
+    }
   });
 
   it('does not auto-create taskbar windows for every known chat session', () => {

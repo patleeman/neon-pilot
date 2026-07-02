@@ -549,6 +549,22 @@ export function WindowedLayout() {
   );
   const chatWindows = windows.filter((windowModel) => windowModel.kind === 'chat');
   const visibleWindows = windows.filter((windowModel) => !windowModel.minimized);
+  const visibleWindowSignature = useMemo(
+    () =>
+      visibleWindows
+        .map((windowModel) =>
+          [
+            windowModel.id,
+            windowModel.focused ? 'focused' : 'background',
+            windowModel.bounds.x,
+            windowModel.bounds.y,
+            windowModel.bounds.width,
+            windowModel.bounds.height,
+          ].join(':'),
+        )
+        .join('|'),
+    [visibleWindows],
+  );
   const windowsRef = useRef(windows);
 
   useEffect(() => {
@@ -973,6 +989,11 @@ export function WindowedLayout() {
     if (!launcherOpen && !drag && !resize && !snapTarget) return;
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
+
+  useEffect(() => {
+    if (!visibleWindowSignature) return;
+    suspendWindowedBrowserViews();
+  }, [visibleWindowSignature]);
 
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
   const startMenuItems = launcherItems.map(
