@@ -19,6 +19,7 @@ import {
   WindowedPageSection,
   WindowedPageShell,
   WindowedThreadItem,
+  WindowedTitleBarControls,
   WindowedToggle,
   WindowFrame,
 } from './windowedOs';
@@ -121,6 +122,36 @@ export const NavigationPrimitives: Story = {
               <span className="wos-taskbar__button">
                 <WindowedAppTile label="Gateways" accent="gateways" variant="taskbar" />
               </span>
+            </div>
+          </WindowedPageSection>
+        </WindowedPageMain>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const WindowChromePrimitives: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 420, padding: 24 }}>
+      <WindowFrame
+        title="Window chrome"
+        accent="chat"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(620px, 100%)', height: 300 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageMain title="Window chrome">
+          <WindowedPageSection title="Titlebar controls">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10 }}>
+              <WindowedTitleBarControls
+                title="Preview"
+                onMinimize={() => undefined}
+                onMaximize={() => undefined}
+                onClose={() => undefined}
+              />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Minimize, maximize, close</span>
             </div>
           </WindowedPageSection>
         </WindowedPageMain>

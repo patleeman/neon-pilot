@@ -43,6 +43,38 @@ export function WindowedAppTile({ label, accent = 'settings', variant = 'menu', 
   );
 }
 
+export interface WindowedTitleBarControlsProps {
+  title: string;
+  onMinimize: () => void;
+  onMaximize: () => void;
+  onClose: () => void;
+  maximizeLabel?: string;
+  className?: string;
+}
+
+export function WindowedTitleBarControls({
+  title,
+  onMinimize,
+  onMaximize,
+  onClose,
+  maximizeLabel,
+  className,
+}: WindowedTitleBarControlsProps) {
+  return (
+    <div className={cx('wos-window__controls', className)}>
+      <button type="button" aria-label={`Minimize ${title}`} data-control="minimize" onClick={onMinimize}>
+        <span className="wos-window__control-glyph" aria-hidden="true" />
+      </button>
+      <button type="button" aria-label={maximizeLabel ?? `Maximize ${title}`} data-control="maximize" onClick={onMaximize}>
+        <span className="wos-window__control-glyph" aria-hidden="true" />
+      </button>
+      <button type="button" aria-label={`Close ${title}`} data-control="close" onClick={onClose}>
+        <span className="wos-window__control-glyph" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;
@@ -498,17 +530,13 @@ export function WindowFrame({
             {title}
           </div>
         </div>
-        <div className="wos-window__controls">
-          <button type="button" aria-label={`Minimize ${title}`} onClick={onMinimize}>
-            -
-          </button>
-          <button type="button" aria-label={restoreLabel ?? `Maximize ${title}`} onClick={onMaximize}>
-            □
-          </button>
-          <button type="button" aria-label={`Close ${title}`} onClick={onClose}>
-            ×
-          </button>
-        </div>
+        <WindowedTitleBarControls
+          title={title}
+          onMinimize={onMinimize}
+          onMaximize={onMaximize}
+          onClose={onClose}
+          maximizeLabel={restoreLabel}
+        />
       </header>
       <div className="wos-window__body">{children}</div>
       {resizeHandles}

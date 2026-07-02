@@ -403,13 +403,59 @@
 }
 
 .wos-window__controls button {
+  position: relative;
+  display: inline-flex;
   width: 24px;
   height: 24px;
+  align-items: center;
+  justify-content: center;
   border-radius: 7px;
   padding: 0;
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1;
+}
+
+.wos-window__control-glyph {
+  display: block;
+  color: currentColor;
+}
+
+.wos-window__controls button[data-control='minimize'] .wos-window__control-glyph {
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.wos-window__controls button[data-control='maximize'] .wos-window__control-glyph {
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+}
+
+.wos-window__controls button[data-control='close'] .wos-window__control-glyph {
+  position: relative;
+  width: 12px;
+  height: 12px;
+}
+
+.wos-window__controls button[data-control='close'] .wos-window__control-glyph::before,
+.wos-window__controls button[data-control='close'] .wos-window__control-glyph::after {
+  position: absolute;
+  top: 5px;
+  left: 1px;
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  content: '';
+}
+
+.wos-window__controls button[data-control='close'] .wos-window__control-glyph::before {
+  transform: rotate(45deg);
+}
+
+.wos-window__controls button[data-control='close'] .wos-window__control-glyph::after {
+  transform: rotate(-45deg);
 }
 
 .wos-window__body {

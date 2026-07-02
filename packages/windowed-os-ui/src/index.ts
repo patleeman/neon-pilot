@@ -43,6 +43,8 @@ export {
   type WindowedPageShellProps,
   WindowedThreadItem,
   type WindowedThreadItemProps,
+  WindowedTitleBarControls,
+  type WindowedTitleBarControlsProps,
   WindowedToggle,
   type WindowedToggleProps,
   WindowFrame,
