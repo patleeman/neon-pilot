@@ -9,10 +9,11 @@
 - Removes stale companion/probe implementation leftovers while keeping the multimedia probe path focused on the in-house Browser extension.
 - Extends video probe worker budgets and sample handling so multimedia attachment inspection has more reliable room to finish.
 - Polishes chat navigation row alignment, spacing, typography, and edge constraints for a cleaner desktop sidebar feel.
+- Adds an early local app OS prototype and design concepts for exploring heavier native desktop workflows.
 
 ### Notes
 
-- 19 commits since the previous release.
+- 23 commits since the previous release.
 
 ## 0.11.38 — 2026-07-01
 

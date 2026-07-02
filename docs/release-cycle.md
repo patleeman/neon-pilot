@@ -14,6 +14,7 @@ Highlights in this train:
 - Removes stale companion/probe implementation leftovers while keeping the Browser-owned multimedia probe path focused.
 - Extends video probe worker budgets and sample handling for more reliable multimedia attachment inspection.
 - Polishes chat navigation row alignment, spacing, typography, and edge constraints.
+- Adds an early local app OS prototype and design concepts for exploring heavier native desktop workflows.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
