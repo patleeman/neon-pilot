@@ -6,7 +6,7 @@ Install Neon Pilot, connect a model provider, and send your first message.
 
 Download the latest signed macOS build:
 
-[Download the latest DMG](https://github.com/patleeman/neon-pilot/releases/download/v0.11.38/Neon-Pilot-0.11.38-mac-arm64.dmg)
+[Download the latest DMG](https://github.com/patleeman/neon-pilot/releases/download/v0.11.39/Neon-Pilot-0.11.39-mac-arm64.dmg)
 
 Open the `.dmg`, then drag **Neon Pilot.app** into **Applications**.
 

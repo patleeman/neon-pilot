@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.39 — 2026-07-01
+
+### Highlights
+
+- Refreshes the public docs site positioning and getting-started path so new users see clearer self-extensible app messaging and current download links.
+- Redesigns the public site landing experience with real app screenshots, stronger provider ordering, and cleaner header/version presentation.
+- Removes stale companion/probe implementation leftovers while keeping the multimedia probe path focused on the in-house Browser extension.
+- Extends video probe worker budgets and sample handling so multimedia attachment inspection has more reliable room to finish.
+- Polishes chat navigation row alignment, spacing, typography, and edge constraints for a cleaner desktop sidebar feel.
+
+### Notes
+
+- 19 commits since the previous release.
+
 ## 0.11.38 — 2026-07-01
 
 ### Highlights

@@ -4,18 +4,16 @@ Desktop releases are built, signed, notarized, and published locally. Pushing a 
 
 ## Current release
 
-**v0.11.37** — stable release being prepared locally.
+**v0.11.39** — stable release being prepared locally.
 
-Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.37
+Release page: https://github.com/patleeman/neon-pilot/releases/tag/v0.11.39
 
 Highlights in this train:
 
-- Brings the Browser extension in-house and adds multimedia probe support for richer image/video attachment inspection.
-- Improves Skills discovery with source-first browsing, cached marketplace inventory, table-header filters, list controls, and clearer Skills-before-Extensions navigation.
-- Adds setup readiness as a rediscoverable top-bar popover with actionable local-prerequisite checks.
-- Hardens transcript loading and stale aggregate cancellation so older reads do not overwrite newer conversation views.
-- Polishes dictation submit, streaming scroll anchoring, top-bar presentation, Model Arena challenger wins, and the Routines onboarding/workbench path.
-- Refreshes Pi runtime packages to `^0.80.3` and retargets the local Responses streaming patch for that runtime.
+- Refreshes the public docs site and landing page with clearer self-extensible app positioning, real screenshots, and current download links.
+- Removes stale companion/probe implementation leftovers while keeping the Browser-owned multimedia probe path focused.
+- Extends video probe worker budgets and sample handling for more reliable multimedia attachment inspection.
+- Polishes chat navigation row alignment, spacing, typography, and edge constraints.
 - Keep this section aligned with `package.json`, `CHANGELOG.md`, and the tag being prepared.
 
 ## RC release operating instructions
