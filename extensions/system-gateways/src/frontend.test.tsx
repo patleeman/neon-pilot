@@ -70,7 +70,7 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   ),
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
-  WindowedBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  WindowedBadge: ({ children, tone }: { children: React.ReactNode; tone?: string }) => <span data-tone={tone}>{children}</span>,
   WindowedDataRow: ({
     name,
     meta,
@@ -332,6 +332,13 @@ describe('GatewaysPage', () => {
     expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
     expect(screen.getByText('Providers')).toBeTruthy();
     expect(screen.getByText('Gateway tools')).toBeTruthy();
+    expect(
+      screen
+        .getAllByText('Configured')
+        .find((element) => element.getAttribute('data-tone'))
+        ?.getAttribute('data-tone'),
+    ).toBe('positive');
+    expect(screen.getByText('0 events').getAttribute('data-tone')).toBe('neutral');
     expect(screen.queryByRole('dialog', { name: 'Telegram access' })).toBeNull();
     expect(screen.queryByRole('dialog', { name: 'Recent activity' })).toBeNull();
     expect(screen.queryByText('Gateway context')).toBeNull();

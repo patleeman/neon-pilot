@@ -424,7 +424,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                   name="Configuration"
                   meta="Setup route, docs, and bot token"
                   status={
-                    <WindowedBadge tone={tokenConfigured ? 'success' : 'warning'}>
+                    <WindowedBadge tone={tokenConfigured ? 'positive' : 'warning'}>
                       {tokenConfigured ? 'Configured' : 'Missing token'}
                     </WindowedBadge>
                   }
@@ -443,7 +443,9 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <WindowedDataRow
                   name="Activity"
                   meta="Recent gateway events"
-                  status={<WindowedBadge tone={telegramEvents.length ? 'info' : 'neutral'}>{telegramEvents.length} events</WindowedBadge>}
+                  status={
+                    <WindowedBadge tone={telegramEvents.length ? 'positive' : 'neutral'}>{telegramEvents.length} events</WindowedBadge>
+                  }
                   action={<WindowedPageButton onClick={() => setWindowedDialog('activity')}>Open</WindowedPageButton>}
                 />
               </WindowedDataTable>
