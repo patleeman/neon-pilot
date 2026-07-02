@@ -35,11 +35,15 @@ function buildUseApiResult<T>(data: T) {
   };
 }
 
-function renderPage(pathname: string, sectionIds?: React.ComponentProps<typeof SettingsPage>['sectionIds']): string {
+function renderPage(
+  pathname: string,
+  sectionIds?: React.ComponentProps<typeof SettingsPage>['sectionIds'],
+  context?: React.ComponentProps<typeof SettingsPage>['context'],
+): string {
   return renderToString(
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
-        <Route path="/settings/*" element={<SettingsPage sectionIds={sectionIds} />} />
+        <Route path="/settings/*" element={<SettingsPage sectionIds={sectionIds} context={context} />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -361,6 +365,18 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Restart daemon');
     expect(html).toContain('Theme');
     expect(html).not.toContain('Related Views');
+  });
+
+  it('renders native windowed settings chrome without the stable app page shell', () => {
+    const html = renderPage('/settings', undefined, { shellPresentation: 'windowed', pathname: '/settings', hash: '' });
+
+    expect(html).toContain('class="wos-page-shell settings-page-windowed"');
+    expect(html).toContain('data-layout="wide"');
+    expect(html).toContain('>Preferences</div>');
+    expect(html).toContain('>Settings context</div>');
+    expect(html).toContain('>Sections</h3>');
+    expect(html).toContain('>Appearance</h1>');
+    expect(html).not.toContain('ui-app-page-shell');
   });
 
   it('right-aligns appearance accent choices within the settings action column', () => {
