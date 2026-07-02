@@ -1,4 +1,15 @@
-import { type CSSProperties, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 export type AppAccent = 'chat' | 'routines' | 'automations' | 'gateways' | 'extensions' | 'telemetry' | 'settings';
 
@@ -179,6 +190,89 @@ export function WindowedPageButton({ children, onClick, tone = 'neutral', type =
     <button type={type} className={cx('wos-page-button', className)} data-tone={tone} onClick={onClick}>
       {children}
     </button>
+  );
+}
+
+export interface WindowedFieldProps {
+  label: string;
+  children: ReactNode;
+  hint?: string;
+  error?: string;
+  span?: 'full';
+  className?: string;
+}
+
+export function WindowedField({ label, children, hint, error, span, className }: WindowedFieldProps) {
+  return (
+    <div className={cx('wos-field', className)} data-invalid={Boolean(error)} data-span={span}>
+      <span className="wos-field__label">{label}</span>
+      {children}
+      {error ? <span className="wos-field__error">{error}</span> : null}
+      {hint && !error ? <span className="wos-field__hint">{hint}</span> : null}
+    </div>
+  );
+}
+
+export type WindowedTextInputProps = InputHTMLAttributes<HTMLInputElement>;
+
+export function WindowedTextInput({ className, ...props }: WindowedTextInputProps) {
+  return <input className={cx('wos-input', className)} {...props} />;
+}
+
+export type WindowedTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+export function WindowedTextarea({ className, ...props }: WindowedTextareaProps) {
+  return <textarea className={cx('wos-textarea', className)} {...props} />;
+}
+
+export type WindowedSelectProps = SelectHTMLAttributes<HTMLSelectElement>;
+
+export function WindowedSelect({ className, children, ...props }: WindowedSelectProps) {
+  return (
+    <select className={cx('wos-select', className)} {...props}>
+      {children}
+    </select>
+  );
+}
+
+export interface WindowedSegmentedOption {
+  id: string;
+  label: string;
+}
+
+export interface WindowedSegmentedControlProps {
+  options: WindowedSegmentedOption[];
+  value: string;
+  onChange?: (value: string) => void;
+  ariaLabel: string;
+  accent?: AppAccent;
+  className?: string;
+}
+
+export function WindowedSegmentedControl({
+  options,
+  value,
+  onChange,
+  ariaLabel,
+  accent = 'automations',
+  className,
+}: WindowedSegmentedControlProps) {
+  return (
+    <div className={cx('wos-segmented-control', className)} data-accent={accent} role="radiogroup" aria-label={ariaLabel}>
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          role="radio"
+          aria-checked={option.id === value}
+          data-active={option.id === value}
+          className="wos-segmented-control__item"
+          onClick={() => onChange?.(option.id)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

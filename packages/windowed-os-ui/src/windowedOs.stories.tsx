@@ -11,6 +11,7 @@ import {
   WindowedChatSurface,
   WindowedDataRow,
   WindowedDataTable,
+  WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedMenuPanel,
@@ -21,6 +22,10 @@ import {
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedSegmentedControl,
+  WindowedSelect,
+  WindowedTextarea,
+  WindowedTextInput,
   WindowedThreadItem,
   WindowedTitleBarControls,
   WindowedToggle,
@@ -279,6 +284,112 @@ export const DenseAppPage: Story = {
                     label: 'Enabled',
                     value: <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />,
                   },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageInspector>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const AutomationFormPrimitives: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
+      <WindowFrame
+        title="Automations"
+        accent="automations"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1080px, 100%)', height: 620 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell>
+          <WindowedPageRail title="Automations" accent="automations">
+            <WindowedPageSection title="Runs" meta="2 active">
+              <WindowedDataTable columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
+                <WindowedDataRow
+                  name="Daily release notes"
+                  meta="Weekdays at 09:00"
+                  enabled
+                  status={<WindowedBadge tone="positive">Ready</WindowedBadge>}
+                />
+                <WindowedDataRow name="Dependency audit" meta="Mondays at 08:30" enabled={false} />
+                <WindowedDataRow name="Inbox sweep" meta="Every 2 hours" enabled />
+              </WindowedDataTable>
+            </WindowedPageSection>
+          </WindowedPageRail>
+          <WindowedPageMain
+            eyebrow="Automation"
+            title="Daily release notes"
+            actions={
+              <>
+                <WindowedPageButton>Run now</WindowedPageButton>
+                <WindowedPageButton tone="accent">Save</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Schedule" meta="Enabled">
+              <div className="wos-form-grid" data-columns="2">
+                <WindowedField label="Mode">
+                  <WindowedSegmentedControl
+                    accent="automations"
+                    ariaLabel="Schedule mode"
+                    value="cron"
+                    options={[
+                      { id: 'cron', label: 'Cron' },
+                      { id: 'once', label: 'Once' },
+                      { id: 'manual', label: 'Manual' },
+                    ]}
+                  />
+                </WindowedField>
+                <WindowedField label="Model">
+                  <WindowedSelect defaultValue="gpt-5" aria-label="Automation model">
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-5-mini">GPT-5 mini</option>
+                    <option value="local">Local default</option>
+                  </WindowedSelect>
+                </WindowedField>
+                <WindowedField label="Cron">
+                  <WindowedTextInput defaultValue="0 9 * * 1-5" aria-label="Cron schedule" />
+                </WindowedField>
+                <WindowedField label="Timezone">
+                  <WindowedTextInput defaultValue="America/New_York" aria-label="Schedule timezone" />
+                </WindowedField>
+                <WindowedField label="Instruction" span="full">
+                  <WindowedTextarea
+                    defaultValue="Summarize merged changes since the last release checkpoint. Group updates by extension and include blockers only when action is required."
+                    aria-label="Automation instruction"
+                  />
+                </WindowedField>
+              </div>
+              <div className="wos-form-actions">
+                <WindowedPageButton>Reset</WindowedPageButton>
+                <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
+              </div>
+            </WindowedPageSection>
+          </WindowedPageMain>
+          <WindowedPageInspector eyebrow="Run context" title="Daily release notes">
+            <WindowedPageSection title="State">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Next run', value: 'Today 09:00' },
+                  { label: 'Last run', value: 'Yesterday 09:01' },
+                  { label: 'Owner', value: 'Release workflow' },
+                  {
+                    label: 'Enabled',
+                    value: <WindowedToggle checked accent="automations" label="Toggle Daily release notes automation" />,
+                  },
+                ]}
+              />
+            </WindowedPageSection>
+            <WindowedPageSection title="Output">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Thread', value: 'Release notes' },
+                  { label: 'Delivery', value: 'Append to chat' },
                 ]}
               />
             </WindowedPageSection>
