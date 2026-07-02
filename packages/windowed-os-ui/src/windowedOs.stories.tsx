@@ -762,6 +762,121 @@ export const AutomationsPage: Story = {
   ),
 };
 
+export const GatewaysPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="Gateways"
+        accent="gateways"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Ingress"
+            title="Gateways"
+            actions={
+              <>
+                <WindowedSegmentedControl
+                  ariaLabel="Gateway filter"
+                  accent="gateways"
+                  value="enabled"
+                  options={[
+                    { id: 'enabled', label: 'Enabled' },
+                    { id: 'paused', label: 'Paused' },
+                    { id: 'all', label: 'All' },
+                  ]}
+                  onChange={() => undefined}
+                />
+                <WindowedPageButton>Refresh</WindowedPageButton>
+                <WindowedPageButton tone="accent">New gateway</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Status" meta="runtime">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Enabled', value: <WindowedBadge tone="positive">2</WindowedBadge> },
+                  { label: 'Inbound today', value: 48 },
+                  { label: 'Pending approvals', value: <WindowedBadge tone="warning">3</WindowedBadge> },
+                  { label: 'Failed', value: 0 },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Gateways" meta="selected: Telegram">
+              <WindowedDataTable columns={[{ label: 'Gateway' }, { label: 'State' }, { label: 'Enabled', align: 'right' }]}>
+                <WindowedDataRow
+                  name="Telegram"
+                  meta="Bot token saved · allowlist"
+                  enabled
+                  status={<WindowedBadge tone="positive">polling</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="Local webhook"
+                  meta="http://127.0.0.1:8787"
+                  enabled
+                  status={<WindowedBadge tone="neutral">idle</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="Email digest"
+                  meta="Needs credential"
+                  enabled={false}
+                  status={<WindowedBadge tone="warning">setup</WindowedBadge>}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Selected gateway" meta="Telegram">
+              <div className="wos-form-grid" data-columns="3">
+                <WindowedField label="Mode">
+                  <WindowedSelect defaultValue="allowlist" aria-label="Gateway mode">
+                    <option value="allowlist">Allowlist</option>
+                    <option value="private">Private</option>
+                    <option value="open">Open</option>
+                  </WindowedSelect>
+                </WindowedField>
+                <WindowedField label="Default model">
+                  <WindowedSelect defaultValue="gpt-5" aria-label="Default gateway model">
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-5-mini">GPT-5 mini</option>
+                  </WindowedSelect>
+                </WindowedField>
+                <WindowedField label="State">
+                  <WindowedSegmentedControl
+                    ariaLabel="Gateway state"
+                    accent="gateways"
+                    value="on"
+                    options={[
+                      { id: 'on', label: 'On' },
+                      { id: 'paused', label: 'Paused' },
+                    ]}
+                    onChange={() => undefined}
+                  />
+                </WindowedField>
+                <WindowedField label="Instruction" span="full">
+                  <WindowedTextarea
+                    aria-label="Gateway instruction"
+                    defaultValue="Create or resume a chat for approved Telegram messages and attach inbound media to the workbench."
+                  />
+                </WindowedField>
+              </div>
+              <div className="wos-form-actions">
+                <WindowedPageButton>Rotate token</WindowedPageButton>
+                <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
+              </div>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const RoutinesListDetailPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
