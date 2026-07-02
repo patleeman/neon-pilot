@@ -47,11 +47,17 @@ vi.mock('./systemExtensionModules', () => ({
     [
       'system-automations',
       async () => ({
-        AutomationsPage: ({ pa }: { pa: { automations: { list: () => Promise<unknown> } } }) => {
+        AutomationsPage: ({
+          pa,
+          context,
+        }: {
+          pa: { automations: { list: () => Promise<unknown> } };
+          context: { shellPresentation?: 'stable' | 'windowed' };
+        }) => {
           React.useEffect(() => {
             void pa.automations.list();
           }, [pa]);
-          return <div>Automations loaded</div>;
+          return <div>Automations loaded in {context.shellPresentation ?? 'unset'} shell</div>;
         },
       }),
     ],
@@ -144,7 +150,32 @@ describe('NativeExtensionSurfaceHost', () => {
 
     await vi.waitFor(() => expect(container.textContent).toContain('Automations'));
     expect(container.textContent).toContain('Automations loaded');
+    expect(container.textContent).toContain('stable shell');
     expect(apiMocks.automations.list).toHaveBeenCalled();
+  });
+
+  it('passes windowed shell presentation to native extension surfaces', async () => {
+    const surface: NativeExtensionViewSummary = {
+      extensionId: 'system-automations',
+      id: 'page',
+      title: 'Automations',
+      location: 'main',
+      route: '/automations',
+      component: 'AutomationsPage',
+      frontend: { entry: 'dist/frontend.js' },
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/automations" search="" hash="" shellPresentation="windowed" />);
+    });
+
+    await vi.waitFor(() => expect(container.textContent).toContain('windowed shell'));
+    const host = container.querySelector('[data-extension-surface-id="page"]');
+    expect(host?.getAttribute('data-shell-presentation')).toBe('windowed');
   });
 
   it('shows a safe message when an extension surface fails to load', async () => {

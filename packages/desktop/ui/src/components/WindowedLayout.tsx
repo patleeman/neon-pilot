@@ -240,7 +240,7 @@ function WindowRouteBody({ route }: { route: string }) {
     return (
       <div className="wos-window-route-body wos-window-route-body--extension">
         <Routes location={routeLocation(route)}>
-          <Route path="*" element={<ExtensionRouteHost />} />
+          <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
         </Routes>
       </div>
     );
@@ -274,7 +274,7 @@ function WindowRouteBody({ route }: { route: string }) {
               </Suspense>
             }
           />
-          <Route path="*" element={<ExtensionRouteHost />} />
+          <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
         </Route>
       </Routes>
     </div>

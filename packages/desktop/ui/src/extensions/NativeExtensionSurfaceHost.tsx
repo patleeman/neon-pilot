@@ -137,6 +137,7 @@ export function NativeExtensionSurfaceHost({
   pathname,
   search,
   hash,
+  shellPresentation = 'stable',
   conversationId,
   cwd,
   instanceId,
@@ -145,6 +146,7 @@ export function NativeExtensionSurfaceHost({
   pathname: string;
   search: string;
   hash: string;
+  shellPresentation?: 'stable' | 'windowed';
   conversationId?: string | null;
   cwd?: string | null;
   instanceId?: string | null;
@@ -161,6 +163,7 @@ export function NativeExtensionSurfaceHost({
     () => ({
       extensionId: surface.extensionId,
       surfaceId: surface.id,
+      shellPresentation,
       route: surface.route,
       pathname,
       search,
@@ -169,7 +172,7 @@ export function NativeExtensionSurfaceHost({
       cwd,
       instanceId,
     }),
-    [conversationId, cwd, hash, instanceId, pathname, search, surface.extensionId, surface.id, surface.route],
+    [conversationId, cwd, hash, instanceId, pathname, search, shellPresentation, surface.extensionId, surface.id, surface.route],
   );
 
   const shouldUseTransparentChrome = surface.location === 'sidebar' || surface.location === 'rightRail';
@@ -179,6 +182,7 @@ export function NativeExtensionSurfaceHost({
       className={shouldUseTransparentChrome ? 'h-full min-h-0 overflow-auto bg-transparent' : 'h-full min-h-0 overflow-auto bg-base'}
       data-extension-id={surface.extensionId}
       data-extension-surface-id={surface.id}
+      data-shell-presentation={shellPresentation}
     >
       <Suspense fallback={<QuietExtensionSurfaceLoading />}>
         <ExtensionErrorBoundary extensionId={surface.extensionId}>

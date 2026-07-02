@@ -24,9 +24,9 @@ vi.mock('./Layout', () => ({
 vi.mock('../extensions/ExtensionRouteHost', async () => {
   const { useLocation } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
-    ExtensionRouteHost: () => {
+    ExtensionRouteHost: ({ shellPresentation = 'stable' }: { shellPresentation?: 'stable' | 'windowed' }) => {
       const location = useLocation();
-      return <div data-testid="extension-route-host">{location.pathname}</div>;
+      return <div data-testid="extension-route-host">{`${location.pathname}:${shellPresentation}`}</div>;
     },
   };
 });
@@ -84,7 +84,7 @@ describe('WindowedLayout route windows', () => {
     fireEvent.click(screen.getByRole('button', { name: /routines/i }));
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/routines');
+    expect(routeHost.textContent).toBe('/routines:windowed');
 
     const routinesWindow = screen.getByRole('region', { name: /routines/i });
     expect(within(routinesWindow).getByTestId('extension-route-host')).toBeTruthy();

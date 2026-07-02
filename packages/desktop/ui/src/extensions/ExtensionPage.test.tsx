@@ -14,7 +14,13 @@ vi.mock('../components/notifications/notificationStore', () => ({
 }));
 
 vi.mock('./NativeExtensionSurfaceHost', () => ({
-  NativeExtensionSurfaceHost: ({ surface }: { surface: { extensionId: string; id: string } }) => {
+  NativeExtensionSurfaceHost: ({
+    surface,
+    shellPresentation,
+  }: {
+    surface: { extensionId: string; id: string };
+    shellPresentation?: 'stable' | 'windowed';
+  }) => {
     const [mountedSurfaceId] = useState(surface.id);
     return (
       <div
@@ -22,6 +28,7 @@ vi.mock('./NativeExtensionSurfaceHost', () => ({
         data-extension-id={surface.extensionId}
         data-surface-id={surface.id}
         data-mounted-surface-id={mountedSurfaceId}
+        data-shell-presentation={shellPresentation ?? 'stable'}
       />
     );
   },
@@ -106,6 +113,35 @@ describe('ExtensionPage', () => {
     expect(host.getAttribute('data-extension-id')).toBe('system-settings');
     expect(host.getAttribute('data-surface-id')).toBe('providers');
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
+  });
+
+  it('passes windowed shell presentation through to native extension pages', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      surfaces: [],
+      routes: [{ route: '/automations', extensionId: 'system-automations', surfaceId: 'page', packageType: 'system' }],
+      extensions: [
+        {
+          id: 'system-automations',
+          name: 'Automations',
+          enabled: true,
+          packageType: 'system',
+          frontend: { entry: 'dist/frontend.js' },
+          contributes: {
+            views: [{ id: 'page', title: 'Automations', location: 'main', route: '/automations', component: 'AutomationsPage' }],
+          },
+        },
+      ],
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/automations']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('surface-host').getAttribute('data-shell-presentation')).toBe('windowed');
   });
 
   it('keeps registry loading visually quiet while preserving status semantics', () => {

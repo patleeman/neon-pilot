@@ -1107,6 +1107,7 @@ export interface ExtensionRouteResponse {
 export interface ExtensionRenderContext {
   extensionId: string;
   surfaceId: string;
+  shellPresentation?: 'stable' | 'windowed';
   route?: string | null;
   pathname: string;
   search: string;
