@@ -51,13 +51,11 @@ import {
   WindowedDataTable,
   WindowedDialog,
   WindowedKeyValueList,
-  WindowedList,
-  WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedSegmentedControl,
   WindowedTextInput,
   WindowedToggle,
 } from '@neon-pilot/extensions/ui';
@@ -1718,37 +1716,19 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
     return (
       <>
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Extensions" accent="extensions">
-            <WindowedPageSection title="Views" meta={sectionSummary}>
-              <WindowedList>
-                {filterItems.map((item) => (
-                  <WindowedListItem
-                    key={item.id}
-                    title={item.label}
-                    meta={`${item.meta} items`}
-                    active={activeFilter === item.id}
-                    accent="extensions"
-                    onSelect={() => setActiveFilter(item.id)}
-                  />
-                ))}
-              </WindowedList>
-            </WindowedPageSection>
-            <WindowedPageSection title="Sources" meta={`${catalogSources.length} sources`}>
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Catalog', value: catalogError ? 'Unavailable' : catalog ? 'Loaded' : 'Loading' },
-                  { label: 'Available', value: `${visibleCatalogExtensions.length}` },
-                ]}
-              />
-            </WindowedPageSection>
-          </WindowedPageRail>
-
+        <WindowedPageShell layout="standard" className="extension-manager-page-windowed">
           <WindowedPageMain
             eyebrow="Applications"
             title={sectionTitle}
             actions={
               <>
+                <WindowedSegmentedControl
+                  ariaLabel="Extension view"
+                  accent="extensions"
+                  value={activeFilter}
+                  options={filterItems.map((item) => ({ id: item.id, label: `${item.label} ${item.meta}` }))}
+                  onChange={(value) => setActiveFilter(value as ExtensionFilter)}
+                />
                 <WindowedPageButton
                   disabled={busyId === 'update-all'}
                   onClick={() => {
@@ -1773,6 +1753,16 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
               </>
             }
           >
+            <WindowedPageSection title="Sources" meta={`${catalogSources.length} sources`}>
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Catalog', value: catalogError ? 'Unavailable' : catalog ? 'Loaded' : 'Loading' },
+                  { label: 'Available', value: `${visibleCatalogExtensions.length}` },
+                  { label: 'Visible', value: sectionSummary },
+                ]}
+              />
+            </WindowedPageSection>
+
             <WindowedPageSection>
               <WindowedTextInput
                 value={query}

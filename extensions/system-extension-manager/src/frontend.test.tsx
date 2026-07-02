@@ -306,13 +306,15 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(container.querySelector('.wos-page-shell')).toBeTruthy();
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-extension-detail-grid')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByPlaceholderText('Search extensions')).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: /Installed/ }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: /Platform/ })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Extension view' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Installed/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Platform/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
     expect(screen.queryByText('Selected extension')).toBeNull();
     expect(screen.queryByText('Selection')).toBeNull();
@@ -328,7 +330,7 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Close Menu Test' }));
     expect(screen.queryByRole('dialog', { name: 'Menu Test' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /Platform/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /Platform/ }));
 
     expect(screen.getAllByText('Settings panels').length).toBeGreaterThan(0);
     expect(screen.queryByRole('switch', { name: /Disable Settings panels/ })).toBeNull();
