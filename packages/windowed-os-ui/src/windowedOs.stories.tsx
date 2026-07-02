@@ -298,6 +298,139 @@ export const DenseAppPage: Story = {
   ),
 };
 
+export const CanonicalDensity: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 740, padding: 24 }}>
+      <WindowFrame
+        title="Canonical density"
+        accent="extensions"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1080px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="wide">
+          <WindowedPageRail title="Applications" accent="extensions">
+            <WindowedPageSection title="Pages" meta="Dense">
+              <WindowedList>
+                <WindowedListItem title="Chat" meta="Threads" detail="Workbench attached" accent="chat" />
+                <WindowedListItem title="Automations" meta="Scheduled runs" detail="3 enabled" accent="automations" />
+                <WindowedListItem title="Gateways" meta="Ingress" detail="Telegram ready" active accent="gateways" />
+                <WindowedListItem title="Routines" meta="Hooks" detail="Before and after" accent="routines" />
+              </WindowedList>
+            </WindowedPageSection>
+          </WindowedPageRail>
+
+          <WindowedPageMain
+            eyebrow="Desktop OS"
+            title="Windowed surface rhythm"
+            description="Compact chrome, small metadata, and dense product controls should feel native to the OS without reverting to stable app spacing."
+            actions={
+              <>
+                <WindowedPageButton>Secondary</WindowedPageButton>
+                <WindowedPageButton tone="accent">Primary</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Canonical controls" meta="8px grid">
+              <div className="wos-form-grid" data-columns="3">
+                <WindowedField label="Name">
+                  <WindowedTextInput defaultValue="Telegram gateway" aria-label="Name" />
+                </WindowedField>
+                <WindowedField label="Mode">
+                  <WindowedSelect defaultValue="allowlist" aria-label="Mode">
+                    <option value="allowlist">Allowlist</option>
+                    <option value="private">Private</option>
+                  </WindowedSelect>
+                </WindowedField>
+                <WindowedField label="Status">
+                  <WindowedSegmentedControl
+                    ariaLabel="Status"
+                    accent="gateways"
+                    value="ready"
+                    options={[
+                      { id: 'ready', label: 'Ready' },
+                      { id: 'paused', label: 'Paused' },
+                    ]}
+                  />
+                </WindowedField>
+                <WindowedField label="Instruction" span="full">
+                  <WindowedTextarea
+                    aria-label="Instruction"
+                    defaultValue="Keep labels crisp, controls compact, and metadata legible without adding stable-shell page padding."
+                  />
+                </WindowedField>
+              </div>
+              <div className="wos-form-actions">
+                <WindowedPageButton>Cancel</WindowedPageButton>
+                <WindowedPageButton tone="accent">Save</WindowedPageButton>
+              </div>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Hosted stable primitives" meta="Scoped">
+              <div className="wos-window-route-body" style={{ height: 'auto', minHeight: 0 }}>
+                <div className="ui-app-page-shell">
+                  <main className="ui-app-page-main">
+                    <section className="ui-app-page-intro">
+                      <div style={{ minWidth: 0 }}>
+                        <div className="ui-app-page-eyebrow">Extension page</div>
+                        <h1 className="ui-app-page-title">Embedded route</h1>
+                        <p className="ui-app-page-summary">Stable components inherit the windowed OS text and spacing scale.</p>
+                      </div>
+                      <button type="button" className="ui-action-button">
+                        Refresh
+                      </button>
+                    </section>
+                    <section style={{ display: 'grid', gap: 8 }}>
+                      <div className="ui-key-value-table ui-key-value-table-3">
+                        <div className="ui-key-value-table-item">
+                          <p className="ui-key-value-table-label">Token</p>
+                          <p className="ui-key-value-table-value">Configured</p>
+                        </div>
+                        <div className="ui-key-value-table-item">
+                          <p className="ui-key-value-table-label">Connection</p>
+                          <p className="ui-key-value-table-value">Ready</p>
+                        </div>
+                        <div className="ui-key-value-table-item">
+                          <p className="ui-key-value-table-label">Runtime</p>
+                          <p className="ui-key-value-table-value">Healthy</p>
+                        </div>
+                      </div>
+                    </section>
+                  </main>
+                </div>
+              </div>
+            </WindowedPageSection>
+          </WindowedPageMain>
+
+          <WindowedPageInspector eyebrow="Inspection" title="Density">
+            <WindowedPageSection title="Scale">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Title', value: '17 / 1.25' },
+                  { label: 'Rows', value: '12.5 / 1.35' },
+                  { label: 'Metadata', value: '10 mono' },
+                  { label: 'Padding', value: '8 / 10' },
+                ]}
+              />
+            </WindowedPageSection>
+            <WindowedPageSection title="States">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Ready', value: <WindowedBadge tone="positive">Healthy</WindowedBadge> },
+                  { label: 'Warning', value: <WindowedBadge tone="warning">Review</WindowedBadge> },
+                  { label: 'Danger', value: <WindowedBadge tone="danger">Failed</WindowedBadge> },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageInspector>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const AutomationFormPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
