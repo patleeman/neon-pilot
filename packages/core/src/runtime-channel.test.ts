@@ -8,7 +8,6 @@ describe('runtime channel resolution', () => {
     expect(resolveNeonPilotRuntimeChannelConfig({})).toEqual({
       channel: 'stable',
       stateRootSuffix: '',
-      companionPort: 3842,
       codexPort: 3846,
       updatesEnabled: true,
     });
@@ -18,7 +17,6 @@ describe('runtime channel resolution', () => {
     expect(resolveNeonPilotRuntimeChannel({}, { version: '0.8.0-rc.12', packaged: true })).toBe('rc');
     expect(resolveNeonPilotRuntimeChannelConfig({}, { version: '0.8.0-rc.12', packaged: true })).toMatchObject({
       channel: 'rc',
-      companionPort: 3843,
       updatesEnabled: true,
     });
   });
@@ -37,7 +35,6 @@ describe('runtime channel resolution', () => {
     expect(resolveNeonPilotRuntimeChannel({ NEON_PILOT_DESKTOP_VARIANT: 'testing' })).toBe('test');
     expect(resolveNeonPilotRuntimeChannelConfig({ NEON_PILOT_RUNTIME_CHANNEL: 'development' })).toMatchObject({
       channel: 'dev',
-      companionPort: 0,
       codexPort: 0,
     });
   });

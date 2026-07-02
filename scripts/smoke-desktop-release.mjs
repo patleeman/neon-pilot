@@ -340,7 +340,6 @@ async function main() {
   const stateRoot = join(tempRoot, 'state');
   const daemonSocketPath = join(tempRoot, 'daemon.sock');
   const debugPort = await allocatePort();
-  const companionPort = await allocatePort();
   const stdoutChunks = [];
   const stderrChunks = [];
   const renderLogs = () =>
@@ -359,7 +358,6 @@ async function main() {
       NEON_PILOT_STATE_ROOT: stateRoot,
       NEON_PILOT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
       NEON_PILOT_DAEMON_SOCKET_PATH: daemonSocketPath,
-      NEON_PILOT_COMPANION_PORT: String(companionPort),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

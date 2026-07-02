@@ -8,7 +8,7 @@ Neon Pilot's desktop app uses three process boundaries with one clear ownership 
 
 ### HTTP: product data and mutations
 
-Use HTTP for renderer, companion, extension, and future remote clients that request product data or perform bounded mutations.
+Use HTTP for renderer, extension, gateway, and future remote clients that request product data or perform bounded mutations.
 
 Examples:
 
@@ -17,7 +17,7 @@ Examples:
 - scheduled tasks, durable runs, execution projections, task/run logs, cancel/rerun/attention mutations
 - models, providers, provider auth, default cwd, conversation workspace layout, title settings, conversation model preferences
 - knowledge/workspace trees, files, searches, diffs, and explicit file mutations
-- extension routes, extension manager operations, OAuth callbacks, downloads, webhooks, and companion APIs
+- extension routes, extension manager operations, OAuth callbacks, downloads, webhooks, and gateway APIs
 
 HTTP responses must be bounded, paginated, or streamed. Large binary/text payloads should flow as bytes/streams instead of deeply nested objects.
 

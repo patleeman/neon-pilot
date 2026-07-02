@@ -34,7 +34,3 @@ export async function resolveDesktopRealtimeUrl(): Promise<string> {
 export async function openDesktopRealtimeSocket(): Promise<WebSocket> {
   return new WebSocket(await resolveDesktopRealtimeUrl());
 }
-
-export function clearDesktopRealtimeUrlCacheForTests(): void {
-  cachedRealtimeUrl = undefined;
-}

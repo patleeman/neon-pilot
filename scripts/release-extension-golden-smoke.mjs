@@ -504,7 +504,6 @@ export async function runGoldenSmoke({ appPath, matrixPath = defaultMatrixPath, 
   const knowledgeRoot = join(tempRoot, 'knowledge');
   const homeRoot = join(tempRoot, 'home');
   const debugPort = await allocatePort();
-  const companionPort = await allocatePort();
   const stdoutChunks = [];
   const stderrChunks = [];
   const renderLogs = () =>
@@ -530,7 +529,6 @@ export async function runGoldenSmoke({ appPath, matrixPath = defaultMatrixPath, 
       NEON_PILOT_KNOWLEDGE_ROOT: knowledgeRoot,
       NEON_PILOT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
       NEON_PILOT_DAEMON_SOCKET_PATH: join(tempRoot, 'daemon.sock'),
-      NEON_PILOT_COMPANION_PORT: String(companionPort),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

@@ -1,9 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { EventEmitter } from 'node:events';
 
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 const inProcess = vi.hoisted(() => ({ getDaemonClientTransportOverride: vi.fn() }));
-const core = vi.hoisted(() => ({ resolveNeonPilotRuntimeChannelConfig: vi.fn(() => ({ companionPort: 4567 })) }));
 const events = vi.hoisted(() => ({
   createDaemonEvent: vi.fn((input) => ({ id: 'event-1', version: 1, timestamp: '2026-05-22T00:00:00.000Z', payload: {}, ...input })),
 }));
@@ -13,7 +12,6 @@ const net = vi.hoisted(() => ({ createConnection: vi.fn() }));
 
 vi.mock('net', () => net);
 vi.mock('./in-process-client.js', () => inProcess);
-vi.mock('@neon-pilot/core', () => core);
 vi.mock('./events.js', () => events);
 vi.mock('../shared/appEvents.js', () => appEvents);
 vi.mock('../shared/logging.js', () => logging);
@@ -25,15 +23,14 @@ import {
   emitDaemonEvent,
   emitDaemonEventNonFatal,
   followUpDurableRun,
-  getCompanionUrl,
   getDaemonStatus,
   getDurableRun,
   listDurableRuns,
   listRecoverableWebLiveConversationRunsFromDaemon,
   pingDaemon,
   rerunDurableRun,
-  startScheduledTaskRun,
   startBackgroundRun,
+  startScheduledTaskRun,
   stopDaemon,
   syncWebLiveConversationRunState,
 } from './client.js';
@@ -104,14 +101,6 @@ describe('daemon client transport paths', () => {
       }),
     });
     await expect(pingDaemon()).resolves.toBe(false);
-  });
-
-  it('computes companion url locally when no transport companion method exists', async () => {
-    await expect(getCompanionUrl({ ipc: { socketPath: '/sock' }, companion: { enabled: false } } as never)).resolves.toBeNull();
-    await expect(getCompanionUrl({ ipc: { socketPath: '/sock' }, companion: { host: '::1', port: 9999 } } as never)).resolves.toBe(
-      'http://[::1]:9999',
-    );
-    await expect(getCompanionUrl({ ipc: { socketPath: '/sock' }, companion: {} } as never)).resolves.toBe('http://127.0.0.1:4567');
   });
 
   it('sends durable run fallback request envelopes over the daemon socket', async () => {

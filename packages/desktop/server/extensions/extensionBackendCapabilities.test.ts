@@ -2289,7 +2289,7 @@ describe('extension backend capability dispatcher', () => {
         dispatch({
           id: 1,
           kind: 'capabilityRequest',
-          extensionId: 'system-video-probe',
+          extensionId: 'system-image-probe',
           capability: 'video',
           operation: 'sampleFrames',
           input: { videoId: 'vid_aaaaaaaaaaaa', startSec: 0, endSec: 1, count: 1 },

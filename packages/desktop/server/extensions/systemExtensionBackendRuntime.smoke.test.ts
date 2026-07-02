@@ -577,9 +577,6 @@ const smokes = {
   async 'system-image-probe'() {
     await expectReject(() => module.probeImage({ imageIds: [], question: 'what is this?' }, ctx), /at least one image ID/i);
   },
-  async 'system-video-probe'() {
-    await expectReject(() => module.sampleVideoFramesAction({ videoId: 'bad', startSec: 0, endSec: 1, count: 1 }, ctx), /valid videoId/i);
-  },
   async 'system-knowledge'() {
     const list = await module.knowledgeListFiles({}, ctx);
     assert(list.root === knowledgeRoot && Array.isArray(list.files), 'knowledgeListFiles failed');

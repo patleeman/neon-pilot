@@ -106,7 +106,6 @@ async function main() {
         NEON_PILOT_RUNTIME_CHANNEL: 'test',
         NEON_PILOT_DESKTOP_USER_DATA_DIR: join(stateRoot, 'user-data'),
         NEON_PILOT_DAEMON_SOCKET_PATH: join(stateRoot, 'daemon.sock'),
-        NEON_PILOT_COMPANION_PORT: '0',
       },
       stdio: 'ignore',
     });

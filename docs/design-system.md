@@ -8,7 +8,7 @@ Extension authors should normally import through the public SDK surface:
 import { Field, TextInput, ToolbarButton } from '@neon-pilot/extensions/ui';
 ```
 
-This applies to sibling first-party extension repositories too, such as `../neon-pilot-extensions`. Those extensions should not copy local `Field`, `TextInput`, `Select`, `Pill`, notice, progress, or panel classes when the SDK component exists. Build the extension after replacement with its repo script, for example `pnpm build system-video-probe` from `../neon-pilot-extensions`.
+This applies to sibling first-party extension repositories too, such as `../neon-pilot-extensions`. Those extensions should not copy local `Field`, `TextInput`, `Select`, `Pill`, notice, progress, or panel classes when the SDK component exists. Build the extension after replacement with its repo script.
 
 The desktop app may import from local compatibility paths such as `packages/desktop/ui/src/components/ui`, but reusable components should be implemented in `packages/ui` first and re-exported through `@neon-pilot/extensions/ui`.
 
@@ -162,7 +162,6 @@ Use these as reference implementations when migrating similar surfaces:
 - `packages/desktop/ui/src/components/conversation/ConversationActivityShelf.tsx` and `ConversationQueueShelf.tsx`: compact conversation shelves use `ShelfSection`.
 - `packages/desktop/ui/src/components/chat/MessageBlocks.tsx`: transcript messages use `MessageCard`, `MessageMeta`, and `MessageActionButton`.
 - `../neon-pilot-extensions/system-ds4/src/frontend.tsx`: runtime settings use `SurfacePanel`, `Disclosure`, `ProgressBar`, `Pill`, `DashboardGrid`, `MetricTile`, and `CodeBlock`.
-- `../neon-pilot-extensions/system-video-probe/src/frontend.tsx`: selected-model/runtime summaries use `DashboardGrid` and `MetricTile`.
 - `extensions/system-browser/src/panels.tsx`: browser tab rail uses `RailSection` and `ResourceListItem`.
 
 ## Agent Checklist

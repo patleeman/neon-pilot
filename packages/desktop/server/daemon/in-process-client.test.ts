@@ -17,8 +17,6 @@ describe('in-process daemon client', () => {
     return {
       isRunning: vi.fn(() => true),
       getStatus: vi.fn(() => ({ running: true })),
-      getCompanionUrl: vi.fn(() => 'http://127.0.0.1:3838'),
-      updateCompanionConfig: vi.fn((input) => ({ url: input.enabled ? 'http://localhost' : null })),
       requestStop: vi.fn(),
       listDurableRuns: vi.fn(() => ({ runs: [], summary: { total: 0 } })),
       getDurableRun: vi.fn((runId: string) => (runId === 'missing' ? null : { run: { runId } })),
@@ -64,8 +62,6 @@ describe('in-process daemon client', () => {
 
     await expect(transport.ping()).resolves.toBe(true);
     await expect(transport.getStatus()).resolves.toEqual({ running: true });
-    await expect(transport.getCompanionUrl?.()).resolves.toBe('http://127.0.0.1:3838');
-    await expect(transport.updateCompanionConfig?.({ enabled: true })).resolves.toEqual({ url: 'http://localhost' });
     await expect(transport.listDurableRuns()).resolves.toEqual({ runs: [], summary: { total: 0 } });
     await expect(transport.getDurableRun('run-1')).resolves.toEqual({ run: { runId: 'run-1' } });
     await expect(transport.startScheduledTaskRun('task-1')).resolves.toEqual({ accepted: true, runId: 'run-task-1' });

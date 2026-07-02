@@ -6,7 +6,6 @@ import { applyDesktopAboutPanelOptions } from './about.js';
 import { applyDesktopApplicationIcon } from './app-icon.js';
 import { applyDesktopShellAppMode } from './app-mode.js';
 import { registerDesktopAppProtocol, warmDesktopShellStaticAssets } from './app-protocol.js';
-import { createDesktopCompanionRuntime } from './companion/runtime.js';
 import { resolveDesktopRuntimePaths } from './desktop-env.js';
 import { closeDesktopMainLog, writeDesktopMainLogLine } from './desktop-main-log.js';
 import { HostManager } from './hosts/host-manager.js';
@@ -450,11 +449,6 @@ async function bootstrapDesktopApp(): Promise<void> {
     onError: logBootstrapError,
   });
 
-  void import('../server/daemon/companion/runtime.js')
-    .then((module) => {
-      module.setCompanionRuntimeProvider(() => createDesktopCompanionRuntime(hostManager as HostManager));
-    })
-    .catch((error) => logBootstrapError(error));
   registerDesktopAppProtocol(hostManager);
   warmDesktopShellStaticAssets();
   windowController = new DesktopWindowController(hostManager);

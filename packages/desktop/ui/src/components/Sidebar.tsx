@@ -17,7 +17,6 @@ import { type ActivityTreeDropPosition, ActivityTreeView } from '../activity/Act
 import { useAppEvents, useLiveTitles } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
-import { dispatchPromoteWorkbenchChat, WORKBENCH_CHAT_TAB_DRAG_MIME } from '../companion/companionEvents';
 import {
   buildConversationGroupLabels,
   getConversationGroupLabel,
@@ -111,6 +110,7 @@ import {
   useTitle,
   useTitleVersion,
 } from '../store';
+import { dispatchPromoteWorkbenchChat, WORKBENCH_CHAT_TAB_DRAG_MIME } from '../workbench/workbenchChatEvents';
 import { ConversationStatusText } from './ConversationStatusText';
 import { isChatShellRoute, resolveRouteSidebarSurface } from './layout/routeShellRegions';
 import { addNotification } from './notifications/notificationStore';

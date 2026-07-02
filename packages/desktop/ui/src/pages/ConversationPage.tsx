@@ -436,6 +436,7 @@ import {
   transcriptRenderItemsToMessageBlocks,
 } from '../transcript/messageBlocks';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
+import { dispatchOpenWorkbenchChat } from '../workbench/workbenchChatEvents';
 
 export {
   replaceConversationMetaInSessionList,
@@ -4909,11 +4910,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         if (target.promptDraft) {
           persistForkPromptDraft(newSessionId, target.promptDraft);
         }
-        window.dispatchEvent(
-          new CustomEvent('pa:companion-chat-open', {
-            detail: { conversationId: newSessionId },
-          }),
-        );
+        dispatchOpenWorkbenchChat({ conversationId: newSessionId });
       } catch (error) {
         showNotice('danger', formatConversationMessageActionFailure('Rewind', error));
       }
@@ -4992,11 +4989,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         });
         const { newSessionId } = forked;
         primeForkedConversationOpenCaches(forked);
-        window.dispatchEvent(
-          new CustomEvent('pa:companion-chat-open', {
-            detail: { conversationId: newSessionId },
-          }),
-        );
+        dispatchOpenWorkbenchChat({ conversationId: newSessionId });
         await api.promptSession(
           newSessionId,
           editedText,
@@ -5096,14 +5089,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
         if (clickedBlock.type === 'user') {
           persistForkPromptDraft(newSessionId, clickedBlock.text);
         }
-        window.dispatchEvent(
-          new CustomEvent('pa:companion-chat-open', {
-            detail: {
-              conversationId: newSessionId,
-              title: clickedBlock.type === 'user' ? `Fork: ${clickedBlock.text.slice(0, 40)}` : undefined,
-            },
-          }),
-        );
+        dispatchOpenWorkbenchChat({
+          conversationId: newSessionId,
+          title: clickedBlock.type === 'user' ? `Fork: ${clickedBlock.text.slice(0, 40)}` : undefined,
+        });
       } catch (error) {
         showNotice('danger', formatConversationMessageActionFailure('Fork', error));
       }

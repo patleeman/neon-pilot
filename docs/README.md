@@ -115,7 +115,6 @@ Bundled system extensions:
 - [Hashline Edit](../extensions/system-hashline-edit/README.md) — hash-anchored read and edit tools for guarded line operations
 - [Host view components](public/20-extensions/30-host-view-components.md) — host-owned UI components reusable by extensions
 - [Multimedia Probe](../extensions/system-image-probe/README.md) — image and video attachment inspection with a vision agent
-- [Video Probe](../extensions/system-video-probe/README.md) — lower-level local video frame sampling and transcription tools
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
 - [Model Arena](../extensions/system-model-arena/README.md) — blind challenger model duels and local preference stats

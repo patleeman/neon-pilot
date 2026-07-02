@@ -1,6 +1,6 @@
 import { setExtensionCommandContext } from '../../extensions/commands';
 
-export type MessageActionCommand = 'copyFirst' | 'editFirst' | 'rewindFirst' | 'forkFirst';
+type MessageActionCommand = 'copyFirst' | 'editFirst' | 'rewindFirst' | 'forkFirst';
 
 export const MESSAGE_ACTION_COMMAND_EVENT = 'neon-pilot:message-action-command';
 

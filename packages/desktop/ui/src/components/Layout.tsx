@@ -5,13 +5,6 @@ import { useAppEvents } from '../app/contexts';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
-import {
-  COMPANION_CHAT_CLOSE_EVENT,
-  COMPANION_CHAT_OPEN_EVENT,
-  type CompanionChatOpenDetail,
-  WORKBENCH_CHAT_TAB_DRAG_MIME,
-  WORKBENCH_PROMOTE_CHAT_EVENT,
-} from '../companion/companionEvents';
 import { getConversationArtifactIdFromSearch, setConversationArtifactIdInSearch } from '../conversation/conversationArtifacts';
 import {
   buildConversationDeeplink,
@@ -62,6 +55,13 @@ import { useAllSessions } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
+import {
+  WORKBENCH_CHAT_CLOSE_EVENT,
+  WORKBENCH_CHAT_OPEN_EVENT,
+  WORKBENCH_CHAT_TAB_DRAG_MIME,
+  WORKBENCH_PROMOTE_CHAT_EVENT,
+  type WorkbenchChatOpenDetail,
+} from '../workbench/workbenchChatEvents';
 import { ARTIFACT_MODAL_COMMAND_EVENT, type ArtifactModalCommand } from './artifactModalCommands';
 import {
   COMPOSER_EDIT_FIRST_DRAWING_COMMAND_EVENT,
@@ -3374,14 +3374,14 @@ export function Layout() {
   }, [activeConversationId, activeWorkspaceCwd, openWorkbenchToolTab]);
 
   useEffect(() => {
-    function handleCompanionChatOpen(event: Event) {
-      const detail = (event as CustomEvent<CompanionChatOpenDetail>).detail;
+    function handleWorkbenchChatOpen(event: Event) {
+      const detail = (event as CustomEvent<WorkbenchChatOpenDetail>).detail;
       if (!detail?.conversationId) return;
       handleAppLayoutModeChange('workbench');
       openWorkbenchToolTab('chat', { conversationId: detail.conversationId, forceNewTab: detail.forceNewTab });
     }
 
-    function handleCompanionChatClose(event: Event) {
+    function handleWorkbenchChatClose(event: Event) {
       const detail = (event as CustomEvent<{ conversationId?: string }>).detail;
       if (!detail?.conversationId) return;
       closeWorkbenchTab(detail.conversationId);
@@ -3393,12 +3393,12 @@ export function Layout() {
       promoteWorkbenchChatTab(detail.conversationId);
     }
 
-    window.addEventListener(COMPANION_CHAT_OPEN_EVENT, handleCompanionChatOpen);
-    window.addEventListener(COMPANION_CHAT_CLOSE_EVENT, handleCompanionChatClose);
+    window.addEventListener(WORKBENCH_CHAT_OPEN_EVENT, handleWorkbenchChatOpen);
+    window.addEventListener(WORKBENCH_CHAT_CLOSE_EVENT, handleWorkbenchChatClose);
     window.addEventListener(WORKBENCH_PROMOTE_CHAT_EVENT, handleWorkbenchPromoteChat);
     return () => {
-      window.removeEventListener(COMPANION_CHAT_OPEN_EVENT, handleCompanionChatOpen);
-      window.removeEventListener(COMPANION_CHAT_CLOSE_EVENT, handleCompanionChatClose);
+      window.removeEventListener(WORKBENCH_CHAT_OPEN_EVENT, handleWorkbenchChatOpen);
+      window.removeEventListener(WORKBENCH_CHAT_CLOSE_EVENT, handleWorkbenchChatClose);
       window.removeEventListener(WORKBENCH_PROMOTE_CHAT_EVENT, handleWorkbenchPromoteChat);
     };
   }, [closeWorkbenchTab, handleAppLayoutModeChange, openWorkbenchToolTab, promoteWorkbenchChatTab]);

@@ -48,7 +48,7 @@ export function ContextMenuSection({ children, label }: { children: ReactNode; l
   );
 }
 
-export interface ContextMenuProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onClose' | 'role'> {
+interface ContextMenuProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onClose' | 'role'> {
   children: ReactNode;
   estimatedHeight?: number;
   ignoreRefs?: ContextMenuRef[];

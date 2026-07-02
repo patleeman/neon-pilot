@@ -538,5 +538,4 @@ Validate these by installing from the catalog or release artifact and reading th
 - system-exa-search — Exa Search
 - system-knowledge — Knowledge
 - system-suggested-context — Suggested Context
-- system-video-probe — Video Probe
 - system-writing-studio — Writing Studio

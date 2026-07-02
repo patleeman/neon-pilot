@@ -14,22 +14,6 @@ describe('daemon ipc protocol', () => {
     });
   });
 
-  it('parses and validates companion config updates', () => {
-    expect(
-      parseRequest(JSON.stringify({ id: '1', type: 'companion.updateConfig', input: { enabled: true, host: ' 0.0.0.0 ', port: 3838 } })),
-    ).toEqual({
-      id: '1',
-      type: 'companion.updateConfig',
-      input: { enabled: true, host: '0.0.0.0', port: 3838 },
-    });
-    expect(() => parseRequest(JSON.stringify({ id: '1', type: 'companion.updateConfig', input: { enabled: 'yes' } }))).toThrow(
-      'companion.updateConfig enabled must be a boolean',
-    );
-    expect(() => parseRequest(JSON.stringify({ id: '1', type: 'companion.updateConfig', input: { port: 70_000 } }))).toThrow(
-      'companion.updateConfig port must be an integer between 0 and 65535',
-    );
-  });
-
   it('parses background run requests with shell, agent, source, callback, and checkpoint payloads', () => {
     expect(
       parseRequest(

@@ -15,7 +15,6 @@ describe('daemon config', () => {
     process.env = { ...originalEnv, NEON_PILOT_STATE_ROOT: stateRoot };
     delete process.env.NEON_PILOT_DAEMON_CONFIG;
     delete process.env.NEON_PILOT_DAEMON_SOCKET_PATH;
-    delete process.env.NEON_PILOT_COMPANION_PORT;
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
@@ -34,15 +33,13 @@ describe('daemon config', () => {
     expect(getDaemonConfigFilePath()).toBe(join(stateRoot, 'config', 'config.json'));
   });
 
-  it('builds defaults from durable task paths, socket override, and companion port override', () => {
+  it('builds defaults from durable task paths and socket override', () => {
     process.env.NEON_PILOT_DAEMON_SOCKET_PATH = '/tmp/neon.sock';
-    process.env.NEON_PILOT_COMPANION_PORT = '4567';
 
     expect(getDefaultDaemonConfig()).toEqual({
       logLevel: 'info',
       queue: { maxDepth: 1000 },
       ipc: { socketPath: '/tmp/neon.sock' },
-      companion: { port: 4567 },
       modules: {
         maintenance: { enabled: true, cleanupIntervalMinutes: 60 },
         tasks: {

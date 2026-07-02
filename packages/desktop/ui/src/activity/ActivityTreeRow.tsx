@@ -43,7 +43,7 @@ type ActivityTreeRowProps = {
   rowDropPosition: ActivityTreeDropPosition | null;
 };
 
-export function focusAdjacentActivityTreeRow(currentRow: HTMLElement, key: string): boolean {
+function focusAdjacentActivityTreeRow(currentRow: HTMLElement, key: string): boolean {
   const tree = currentRow.closest('[role="tree"]');
   if (!tree) {
     return false;

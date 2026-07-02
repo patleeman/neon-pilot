@@ -9,8 +9,9 @@ import { parseSkillBlock } from '../../markdown/markdownExtensions';
 import type { AssistantMessageVariationSet, LiveSessionToolDefinition, MessageBlock } from '../../shared/types';
 import { timeAgo } from '../../shared/utils';
 import { dispatchTranscriptSpotlight, transcriptTargetAttributes } from '../../transcript/spotlight.js';
-import { cx, Disclosure, MessageActionButton, MessageCard, MessageMeta, StatusDot, Textarea, TextButton, Tooltip } from '../ui.js';
+import { dispatchOpenWorkbenchChat } from '../../workbench/workbenchChatEvents';
 import { addNotification } from '../notifications/notificationStore';
+import { cx, Disclosure, MessageActionButton, MessageCard, MessageMeta, StatusDot, Textarea, TextButton, Tooltip } from '../ui.js';
 import type { ChatViewLayout } from './chatViewTypes.js';
 import { ImagePreview, type InspectableImage } from './ImageMessageBlocks.js';
 import { InlineTraceRunCard } from './InlineTraceRunCard.js';
@@ -105,10 +106,7 @@ function modelArenaHasBothAnswers(duel: Pick<ModelArenaDuelBlockData, 'sideA' | 
   return Boolean(modelArenaSideText(duel.sideA) && modelArenaSideText(duel.sideB));
 }
 
-function modelArenaPreferredChallengerModel(
-  duel: ModelArenaDuelBlockData,
-  choice: 'a' | 'b' | 'tie' | 'neither',
-): string | null {
+function modelArenaPreferredChallengerModel(duel: ModelArenaDuelBlockData, choice: 'a' | 'b' | 'tie' | 'neither'): string | null {
   if (choice !== 'a' && choice !== 'b') return null;
   const challenger = duel.models?.challenger?.trim();
   const primary = duel.models?.primary?.trim();
@@ -1463,13 +1461,7 @@ export const TopologyBlock = memo(function TopologyBlock({ block }: { block: Ext
 
   const handleClick = useCallback(() => {
     if (conversationId) {
-      // Dispatch an event so the Layout can open this conversation in a right-panel
-      // companion tab.  If the companion system isn't active, fall back to navigation.
-      window.dispatchEvent(
-        new CustomEvent('pa:companion-chat-open', {
-          detail: { conversationId, title: title ?? undefined },
-        }),
-      );
+      dispatchOpenWorkbenchChat({ conversationId, title: title ?? undefined });
     }
   }, [conversationId, title]);
 

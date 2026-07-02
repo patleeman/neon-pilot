@@ -756,7 +756,6 @@ async function main() {
     NEON_PILOT_CONFIG_ROOT: join(stateRoot, 'config'),
     NEON_PILOT_DESKTOP_USER_DATA_DIR: join(root, 'user-data'),
     NEON_PILOT_DAEMON_SOCKET_PATH: join(root, 'daemon.sock'),
-    NEON_PILOT_COMPANION_PORT: '0',
   };
   const start = performance.now();
   const launchArgs = isPackagedApp

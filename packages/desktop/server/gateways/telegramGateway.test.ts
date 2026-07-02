@@ -492,7 +492,7 @@ describe('TelegramGatewayRuntime', () => {
       "import { useCallback, useEffect, useMemo, useRef, useState } from 'react';",
       "import { useAppEvents } from '../../app/contexts.js';",
       "import { api } from '../../client/api.js';",
-      "import { dispatchOpenCompanionChat } from '../companion/companionEvents.js';",
+      "import { dispatchOpenWorkbenchChat } from '../workbench/workbenchChatEvents.js';",
       "import { buildComposerShelfContext } from './conversationComposerShelves.js';",
     ].join(' ');
     const d = deps({

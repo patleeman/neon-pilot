@@ -58,7 +58,6 @@ describe('desktop runtime environment overrides', () => {
     expect(env.NEON_PILOT_STATE_ROOT).toBeTruthy();
     expect(env.NEON_PILOT_STATE_ROOT).toMatch(/neon-pilot-testing$/);
     expect(env.CODEX_PORT).toBeUndefined();
-    expect(env.NEON_PILOT_COMPANION_PORT).toBe('0');
     expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('test');
     expect(env.NEON_PILOT_DAEMON_NAMESPACE).toBe('test');
   });
@@ -73,7 +72,6 @@ describe('desktop runtime environment overrides', () => {
 
     expect(env.NEON_PILOT_STATE_ROOT).toBe('/state/neon-pilot-dev');
     expect(env.CODEX_PORT).toBeUndefined();
-    expect(env.NEON_PILOT_COMPANION_PORT).toBe('0');
     expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('dev');
     expect(env.NEON_PILOT_DAEMON_NAMESPACE).toBe('dev');
   });
@@ -99,7 +97,6 @@ describe('desktop runtime environment overrides', () => {
 
     expect(env.NEON_PILOT_STATE_ROOT).toBe('/state/neon-pilot-rc');
     expect(env.CODEX_PORT).toBe('3847');
-    expect(env.NEON_PILOT_COMPANION_PORT).toBe('3843');
     expect(env.NEON_PILOT_RUNTIME_CHANNEL).toBe('rc');
   });
 

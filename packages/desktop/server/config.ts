@@ -1,10 +1,4 @@
-import {
-  getDurableTasksDir,
-  getMachineConfigFilePath,
-  readMachineConfigSection,
-  readPortOverride,
-  resolveNeonPilotRuntimeChannelConfig,
-} from '@neon-pilot/core';
+import { getDurableTasksDir, getMachineConfigFilePath, readMachineConfigSection } from '@neon-pilot/core';
 import { homedir } from 'os';
 import { join, resolve } from 'path';
 
@@ -31,11 +25,6 @@ export interface DaemonConfig {
   };
   ipc: {
     socketPath?: string;
-  };
-  companion?: {
-    enabled?: boolean;
-    host?: string;
-    port?: number;
   };
   modules: {
     maintenance: MaintenanceModuleConfig;
@@ -129,8 +118,6 @@ export function getDaemonConfigFilePath(): string {
 }
 
 export function getDefaultDaemonConfig(): DaemonConfig {
-  const channelConfig = resolveNeonPilotRuntimeChannelConfig();
-  const companionPort = readPortOverride(process.env.NEON_PILOT_COMPANION_PORT) ?? channelConfig.companionPort;
   return {
     logLevel: 'info',
     queue: {
@@ -138,9 +125,6 @@ export function getDefaultDaemonConfig(): DaemonConfig {
     },
     ipc: {
       socketPath: process.env.NEON_PILOT_DAEMON_SOCKET_PATH,
-    },
-    companion: {
-      port: companionPort,
     },
     modules: {
       maintenance: {

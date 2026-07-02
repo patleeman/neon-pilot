@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const routeModules = vi.hoisted(() => ({
   registerAppTelemetryRoutes: vi.fn(),
-  registerCompanionProxyRoutes: vi.fn(),
   registerConversationRoutes: vi.fn(),
   registerConversationStateRoutes: vi.fn(),
   registerExecutionRoutes: vi.fn(),
@@ -20,7 +19,6 @@ const routeModules = vi.hoisted(() => ({
 }));
 
 vi.mock('./appTelemetry.js', () => ({ registerAppTelemetryRoutes: routeModules.registerAppTelemetryRoutes }));
-vi.mock('./companionProxy.js', () => ({ registerCompanionProxyRoutes: routeModules.registerCompanionProxyRoutes }));
 vi.mock('./conversations.js', () => ({ registerConversationRoutes: routeModules.registerConversationRoutes }));
 vi.mock('./conversationState.js', () => ({ registerConversationStateRoutes: routeModules.registerConversationStateRoutes }));
 vi.mock('./executions.js', () => ({ registerExecutionRoutes: routeModules.registerExecutionRoutes }));
@@ -50,7 +48,6 @@ describe('registerServerRoutes', () => {
     registerServerRoutes({ app: app as never, context: context as never });
 
     expect(routeModules.registerAppTelemetryRoutes).toHaveBeenCalledWith(app);
-    expect(routeModules.registerCompanionProxyRoutes).toHaveBeenCalledWith(app);
     expect(routeModules.registerExecutionRoutes).toHaveBeenCalledWith(app);
 
     for (const register of [
@@ -73,7 +70,6 @@ describe('registerServerRoutes', () => {
 
     const invocationOrder = [
       routeModules.registerAppTelemetryRoutes,
-      routeModules.registerCompanionProxyRoutes,
       routeModules.registerSettingsRoutes,
       routeModules.registerSecretRoutes,
       routeModules.registerGatewayRoutes,

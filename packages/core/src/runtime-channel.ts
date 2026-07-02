@@ -3,16 +3,15 @@ export type NeonPilotRuntimeChannel = 'stable' | 'rc' | 'dev' | 'test';
 export interface NeonPilotRuntimeChannelConfig {
   channel: NeonPilotRuntimeChannel;
   stateRootSuffix: '' | '-rc' | '-dev' | '-testing';
-  companionPort: number;
   codexPort: number;
   updatesEnabled: boolean;
 }
 
 const CHANNEL_CONFIGS: Record<NeonPilotRuntimeChannel, NeonPilotRuntimeChannelConfig> = {
-  stable: { channel: 'stable', stateRootSuffix: '', companionPort: 3842, codexPort: 3846, updatesEnabled: true },
-  rc: { channel: 'rc', stateRootSuffix: '-rc', companionPort: 3843, codexPort: 3847, updatesEnabled: true },
-  dev: { channel: 'dev', stateRootSuffix: '-dev', companionPort: 0, codexPort: 0, updatesEnabled: false },
-  test: { channel: 'test', stateRootSuffix: '-testing', companionPort: 0, codexPort: 0, updatesEnabled: false },
+  stable: { channel: 'stable', stateRootSuffix: '', codexPort: 3846, updatesEnabled: true },
+  rc: { channel: 'rc', stateRootSuffix: '-rc', codexPort: 3847, updatesEnabled: true },
+  dev: { channel: 'dev', stateRootSuffix: '-dev', codexPort: 0, updatesEnabled: false },
+  test: { channel: 'test', stateRootSuffix: '-testing', codexPort: 0, updatesEnabled: false },
 };
 
 function isRcVersion(version?: string): boolean {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as daemon from './index.js';
 
 describe('@neon-pilot/daemon barrel', () => {
-  it('reexports daemon client, in-process transport, companion runtime, and background agent helpers', () => {
+  it('reexports daemon client, in-process transport, and background agent helpers', () => {
     expect(daemon).toEqual(
       expect.objectContaining({
         buildBackgroundAgentArgv: expect.any(Function),
@@ -14,9 +14,6 @@ describe('@neon-pilot/daemon barrel', () => {
         emitDaemonEventNonFatal: expect.any(Function),
         bindInProcessDaemonClient: expect.any(Function),
         createInProcessDaemonClient: expect.any(Function),
-        getCompanionRuntimeProvider: expect.any(Function),
-        setCompanionRuntimeProvider: expect.any(Function),
-        resolveCompanionRuntime: expect.any(Function),
       }),
     );
   });

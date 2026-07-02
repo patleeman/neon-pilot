@@ -1,7 +1,7 @@
 import type { ModelInfo, SessionContextUsage } from '../shared/types';
 
-export type SlashCommandExecutionClass = 'action' | 'prompt' | 'ephemeral';
-export type SlashCommandOwner =
+type SlashCommandExecutionClass = 'action' | 'prompt' | 'ephemeral';
+type SlashCommandOwner =
   | 'core'
   | 'system-model-picker'
   | 'system-auto-mode'
@@ -12,7 +12,6 @@ export type SlashCommandOwner =
   | 'system-diffs'
   | 'system-composer-attachments'
   | 'system-image-probe'
-  | 'system-video-probe'
   | 'system-mcp'
   | 'system-skill-search'
   | 'system-prompt-assembly'
@@ -28,7 +27,7 @@ export interface SlashCommandDefinition {
   requiresConversation?: boolean;
 }
 
-export interface SlashSubcommandDefinition {
+interface SlashSubcommandDefinition {
   name: string;
   description: string;
   executionClass?: SlashCommandExecutionClass;
@@ -41,7 +40,7 @@ export type SlashArgumentDefinition =
   | { kind: 'enum'; name: string; required?: boolean; values: string[]; placeholder?: string }
   | { kind: 'dynamic'; name: string; required?: boolean; source: SlashDynamicSuggestionSource; placeholder?: string };
 
-export type SlashDynamicSuggestionSource =
+type SlashDynamicSuggestionSource =
   | 'models'
   | 'tools'
   | 'queuedPrompts'
@@ -91,9 +90,9 @@ export interface SlashCommandValidationResult {
   message?: string;
 }
 
-export const THINKING_LEVEL_VALUES = ['minimal', 'low', 'medium', 'high', 'xhigh'];
-export const SERVICE_TIER_VALUES = ['auto', 'priority'];
-export const AUTO_MODE_VALUES = ['manual', 'nudge', 'mission', 'loop'];
+const THINKING_LEVEL_VALUES = ['minimal', 'low', 'medium', 'high', 'xhigh'];
+const SERVICE_TIER_VALUES = ['auto', 'priority'];
+const AUTO_MODE_VALUES = ['manual', 'nudge', 'mission', 'loop'];
 
 export const STRUCTURED_SLASH_COMMANDS: SlashCommandDefinition[] = [
   { name: 'status', owner: 'core', description: 'Show current thread state.', executionClass: 'ephemeral' },
@@ -474,26 +473,6 @@ export const STRUCTURED_SLASH_COMMANDS: SlashCommandDefinition[] = [
     argument: { kind: 'freeform', name: 'question', required: true },
   },
   {
-    name: 'video',
-    owner: 'system-video-probe',
-    description: 'Inspect attached video.',
-    executionClass: 'ephemeral',
-    subcommands: [
-      {
-        name: 'sample',
-        description: 'Sample frames from a video.',
-        executionClass: 'prompt',
-        argument: { kind: 'dynamic', name: 'video id', source: 'videos' },
-      },
-      {
-        name: 'transcribe',
-        description: 'Transcribe a video.',
-        executionClass: 'prompt',
-        argument: { kind: 'dynamic', name: 'video id', source: 'videos' },
-      },
-    ],
-  },
-  {
     name: 'mcp_tools',
     owner: 'system-mcp',
     description: 'Show MCP tools available to this thread.',
@@ -541,7 +520,7 @@ export const STRUCTURED_SLASH_COMMANDS: SlashCommandDefinition[] = [
 
 const COMMAND_BY_NAME = new Map(STRUCTURED_SLASH_COMMANDS.map((command) => [command.name, command]));
 
-export function findStructuredSlashCommand(name: string): SlashCommandDefinition | undefined {
+function findStructuredSlashCommand(name: string): SlashCommandDefinition | undefined {
   return COMMAND_BY_NAME.get(name.replace(/^\//, ''));
 }
 

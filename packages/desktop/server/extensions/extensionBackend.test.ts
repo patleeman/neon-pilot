@@ -1846,17 +1846,17 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('runs worker-safe installable video probe tool actions through the worker runner', async () => {
+  it('runs worker-safe installable media probe video actions through the worker runner', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
-    const videoProbeRoot = join(stateRoot, 'extensions', 'installable-video-probe');
-    mkdirSync(join(videoProbeRoot, 'dist'), { recursive: true });
+    const mediaProbeRoot = join(stateRoot, 'extensions', 'installable-media-probe');
+    mkdirSync(join(mediaProbeRoot, 'dist'), { recursive: true });
     writeFileSync(
-      join(videoProbeRoot, 'extension.json'),
+      join(mediaProbeRoot, 'extension.json'),
       JSON.stringify({
         schemaVersion: 2,
-        id: 'installable-video-probe',
-        name: 'Installable Video Probe',
+        id: 'installable-media-probe',
+        name: 'Installable Media Probe',
         packageType: 'system',
         backend: {
           entry: 'dist/backend.mjs',
@@ -1868,7 +1868,7 @@ describe('extension backend action invocation', () => {
         },
       }),
     );
-    writeFileSync(join(videoProbeRoot, 'dist', 'backend.mjs'), 'export function sampleVideoFramesAction() { return true; }\n');
+    writeFileSync(join(mediaProbeRoot, 'dist', 'backend.mjs'), 'export function sampleVideoFramesAction() { return true; }\n');
     invalidateExtensionRegistryReadCaches(stateRoot);
 
     const backendRunner = {
@@ -1891,15 +1891,15 @@ describe('extension backend action invocation', () => {
     setExtensionBackendRunnerForTests(backendRunner);
     setWorkerImportBackendRunnerForTests(workerRunner);
 
-    await expect(invokeExtensionAction('installable-video-probe', 'sampleVideoFrames', {})).resolves.toEqual({
+    await expect(invokeExtensionAction('installable-media-probe', 'sampleVideoFrames', {})).resolves.toEqual({
       ok: true,
       result: { ok: true, action: 'sampleVideoFramesAction' },
     });
 
     expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
-      'installable-video-probe',
+      'installable-media-probe',
       expect.objectContaining({
-        path: expect.stringContaining(join('extensions', 'installable-video-probe', 'dist', 'backend.mjs')),
+        path: expect.stringContaining(join('extensions', 'installable-media-probe', 'dist', 'backend.mjs')),
       }),
       'sampleVideoFramesAction',
       { type: 'action', label: 'action sampleVideoFrames', target: 'sampleVideoFrames' },

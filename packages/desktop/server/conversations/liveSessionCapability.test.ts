@@ -311,11 +311,11 @@ describe('createLiveSessionCapability', () => {
   it('preserves the surface id when submitting an initial prompt', async () => {
     isLocalLiveMock.mockReturnValue(true);
 
-    await createLiveSessionCapability({ prompt: 'Hello from companion.', surfaceId: 'surface-1' }, createContext());
+    await createLiveSessionCapability({ prompt: 'Hello from workbench.', surfaceId: 'surface-1' }, createContext());
 
     expect(submitLocalPromptSessionMock).toHaveBeenCalledWith(
       'test-session',
-      'Hello from companion.',
+      'Hello from workbench.',
       undefined,
       undefined,
       undefined,

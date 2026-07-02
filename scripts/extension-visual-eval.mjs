@@ -630,7 +630,6 @@ export async function runVisualCapture() {
   const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-visual-'));
   const stateRoot = join(tempRoot, 'state');
   const debugPort = await allocatePort();
-  const companionPort = await allocatePort();
   const executablePath = join(appPath, 'Contents', 'MacOS', basename(appPath, '.app'));
   const stdoutChunks = [];
   const stderrChunks = [];
@@ -660,7 +659,6 @@ export async function runVisualCapture() {
       NEON_PILOT_KNOWLEDGE_ROOT: join(tempRoot, 'knowledge'),
       NEON_PILOT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
       NEON_PILOT_DAEMON_SOCKET_PATH: join(tempRoot, 'daemon.sock'),
-      NEON_PILOT_COMPANION_PORT: String(companionPort),
       NEON_PILOT_DESKTOP_DEV_BUNDLE: appEntry ? '1' : undefined,
       NEON_PILOT_REPO_ROOT: repoRoot,
     },

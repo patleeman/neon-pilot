@@ -374,10 +374,6 @@ export function readArchivedSessionIds(): string[] {
   return readConversationLayout().archivedSessionIds;
 }
 
-export function readLockedConversationIds(): string[] {
-  return readConversationLayout().lockedConversationIds;
-}
-
 function writeConversationLayout(layout: ConversationLayout, options: { local?: boolean } = {}): ConversationLayout {
   if (options.local) {
     lastLocalWriteAt = Date.now();

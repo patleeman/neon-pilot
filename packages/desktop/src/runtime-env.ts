@@ -135,12 +135,8 @@ export function applyDesktopRuntimeEnvironmentOverrides(
 
   const channelConfig = resolveNeonPilotRuntimeChannelConfig(env, options);
   const codexPort = readPortOverride(env.NEON_PILOT_CODEX_PORT) ?? channelConfig.codexPort;
-  const companionPort = readPortOverride(env.NEON_PILOT_COMPANION_PORT) ?? channelConfig.companionPort;
   if (!env.CODEX_PORT && codexPort > 0) {
     env.CODEX_PORT = String(codexPort);
-  }
-  if (!env.NEON_PILOT_COMPANION_PORT && companionPort >= 0) {
-    env.NEON_PILOT_COMPANION_PORT = String(companionPort);
   }
   env.NEON_PILOT_RUNTIME_CHANNEL = channelConfig.channel;
 

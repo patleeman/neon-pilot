@@ -36,16 +36,6 @@ interface PingRequest {
   type: 'ping';
 }
 
-interface CompanionUpdateConfigRequest {
-  id: string;
-  type: 'companion.updateConfig';
-  input: {
-    enabled?: boolean;
-    host?: string;
-    port?: number;
-  };
-}
-
 interface ListDurableRunsRequest {
   id: string;
   type: 'runs.list';
@@ -104,7 +94,6 @@ export type DaemonRequest =
   | StatusRequest
   | StopRequest
   | PingRequest
-  | CompanionUpdateConfigRequest
   | ListDurableRunsRequest
   | GetDurableRunRequest
   | StartScheduledTaskRunRequest
@@ -123,7 +112,6 @@ interface DaemonSuccessResponse {
     | DaemonStatus
     | { stopping: boolean }
     | { pong: true }
-    | { url: string | null }
     | ListDurableRunsResult
     | GetDurableRunResult
     | StartScheduledTaskRunResult
@@ -173,34 +161,6 @@ function readOptionalBoolean(value: unknown, label: string): boolean | undefined
   }
 
   return value;
-}
-
-function readOptionalPort(value: unknown, label: string): number | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 65535) {
-    throw new Error(`${label} must be an integer between 0 and 65535`);
-  }
-
-  return value;
-}
-
-function readCompanionUpdateConfigInput(value: unknown): CompanionUpdateConfigRequest['input'] {
-  if (!isRecord(value)) {
-    throw new Error('companion.updateConfig input must be an object');
-  }
-
-  return {
-    ...(readOptionalBoolean(value.enabled, 'companion.updateConfig enabled') !== undefined
-      ? { enabled: readOptionalBoolean(value.enabled, 'companion.updateConfig enabled') }
-      : {}),
-    ...(readOptionalString(value.host) ? { host: readOptionalString(value.host) } : {}),
-    ...(readOptionalPort(value.port, 'companion.updateConfig port') !== undefined
-      ? { port: readOptionalPort(value.port, 'companion.updateConfig port') }
-      : {}),
-  };
 }
 
 function readBackgroundRunAgent(value: unknown): StartBackgroundRunRequestInput['agent'] {
@@ -336,14 +296,6 @@ export function parseRequest(raw: string): DaemonRequest {
       id: parsed.id,
       type: 'emit',
       event: parsed.event as DaemonEvent,
-    };
-  }
-
-  if (parsed.type === 'companion.updateConfig') {
-    return {
-      id: parsed.id,
-      type: 'companion.updateConfig',
-      input: readCompanionUpdateConfigInput(parsed.input),
     };
   }
 

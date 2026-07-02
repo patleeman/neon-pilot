@@ -2,10 +2,7 @@ import { spawn } from 'child_process';
 import { createWriteStream, mkdirSync, type WriteStream } from 'fs';
 import { join } from 'path';
 
-import { loadDaemonConfig } from '../../config.js';
 import { buildBackgroundAgentArgv } from '../../daemon/background-run-agent.js';
-import { resolveCompanionRuntime } from '../../daemon/companion/runtime.js';
-import type { CompanionRuntime } from '../../daemon/companion/types.js';
 import type { ParsedTaskDefinition } from './tasks-parser.js';
 
 interface TaskRunThreadBinding {
@@ -21,7 +18,6 @@ export type RunnableTaskDefinition = ParsedTaskDefinition &
   };
 
 const MAX_CAPTURED_OUTPUT_CHARS = 16_000;
-const COMPLETION_POLL_INTERVAL_MS = 1000;
 const PRIVATE_TASK_LOG_FILE_MODE = 0o600;
 
 export interface TaskRunRequest {
@@ -105,117 +101,10 @@ function createCapturedOutputBuffer(): CapturedOutputBuffer {
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function readString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
-}
-
-function extractConversationId(value: unknown): string | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  return (
-    readString(value.conversationId) ??
-    (isRecord(value.sessionMeta) ? readString(value.sessionMeta.id) : undefined) ??
-    (isRecord(value.bootstrap) ? extractConversationId(value.bootstrap) : undefined) ??
-    (isRecord(value.sessionDetail) ? readString(value.sessionDetail.conversationId) : undefined)
-  );
-}
-
-function extractIsRunning(value: unknown): boolean | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  if (typeof value.isRunning === 'boolean') {
-    return value.isRunning;
-  }
-
-  if (typeof value.isStreaming === 'boolean') {
-    return value.isStreaming;
-  }
-
-  if (isRecord(value.sessionMeta)) {
-    const nested = extractIsRunning(value.sessionMeta);
-    if (nested !== undefined) {
-      return nested;
-    }
-  }
-
-  if (isRecord(value.bootstrap)) {
-    const nested = extractIsRunning(value.bootstrap);
-    if (nested !== undefined) {
-      return nested;
-    }
-  }
-
-  return undefined;
-}
-
-function summarizeEvent(event: unknown): string | undefined {
-  if (!isRecord(event)) {
-    return undefined;
-  }
-
-  const type = readString(event.type);
-  if (!type) {
-    return undefined;
-  }
-
-  switch (type) {
-    case 'text_delta':
-    case 'thinking_delta':
-      return readString(event.delta);
-    case 'tool_start':
-      return `tool_start ${readString(event.toolName) ?? 'tool'}`;
-    case 'tool_end': {
-      const toolName = readString(event.toolName) ?? 'tool';
-      const output = readString(event.output);
-      return output ? `tool_end ${toolName}: ${output}` : `tool_end ${toolName}`;
-    }
-    case 'error':
-      return `error: ${readString(event.message) ?? 'Conversation run failed.'}`;
-    case 'agent_start':
-    case 'agent_end':
-    case 'turn_end':
-      return type;
-    default:
-      return undefined;
-  }
-}
-
-function summarizeVisibleOutputEvent(event: unknown): string | undefined {
-  if (!isRecord(event) || event.type !== 'text_delta') {
-    return undefined;
-  }
-
-  return readString(event.delta);
-}
-
 function readExactReplyPrompt(prompt: string): string | undefined {
   const match = prompt.trim().match(/^(?:reply|say|output|respond)\s+exactly\s*:?\s*([\s\S]+)$/i);
   const exactText = match?.[1]?.trim();
   return exactText && exactText.length > 0 ? exactText : undefined;
-}
-
-function formatConversationTaskPrompt(prompt: string): string {
-  const exactText = readExactReplyPrompt(prompt);
-  if (!exactText) {
-    return prompt;
-  }
-
-  return [
-    'This automation requires an exact response.',
-    'Your entire assistant response must be exactly the text between <exact_reply> and </exact_reply>.',
-    'Do not explain, quote, add punctuation, mention these instructions, or include any other text.',
-    '<exact_reply>',
-    exactText,
-    '</exact_reply>',
-  ].join('\n');
 }
 
 function formatStandaloneTaskSystemPromptSupplement(prompt: string): string | undefined {
@@ -241,184 +130,6 @@ function normalizeCapturedOutputText(task: RunnableTaskDefinition, outputText: s
   }
 
   return exactText;
-}
-
-function readEventError(event: unknown): string | undefined {
-  return isRecord(event) && event.type === 'error' ? (readString(event.message) ?? 'Conversation run failed.') : undefined;
-}
-
-function wait(ms: number, signal?: AbortSignal): Promise<void> {
-  if (signal?.aborted) {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort);
-      resolve();
-    }, ms);
-    const onAbort = () => {
-      clearTimeout(timer);
-      resolve();
-    };
-    signal?.addEventListener('abort', onAbort, { once: true });
-  });
-}
-
-async function resolveTaskConversation(runtime: CompanionRuntime, task: RunnableTaskDefinition): Promise<string> {
-  if (task.threadMode && task.threadMode !== 'none' && task.threadSessionFile) {
-    const resumed = await runtime.resumeConversation({
-      sessionFile: task.threadSessionFile,
-      ...(task.cwd ? { cwd: task.cwd } : {}),
-    });
-    return (
-      extractConversationId(resumed) ??
-      task.threadConversationId ??
-      (() => {
-        throw new Error(`Conversation runtime did not return a conversation id for automation @${task.id}.`);
-      })()
-    );
-  }
-
-  if (task.threadConversationId) {
-    return task.threadConversationId;
-  }
-
-  const created = await runtime.createConversation({
-    ...(task.cwd ? { cwd: task.cwd } : {}),
-    ...(task.modelRef ? { model: task.modelRef } : {}),
-    ...(task.thinkingLevel ? { thinkingLevel: task.thinkingLevel } : {}),
-  });
-  const conversationId = extractConversationId(created);
-  if (!conversationId) {
-    throw new Error(`Conversation runtime did not return a conversation id for automation @${task.id}.`);
-  }
-
-  return conversationId;
-}
-
-async function waitForConversationCompletion(input: {
-  runtime: CompanionRuntime;
-  conversationId: string;
-  task: RunnableTaskDefinition;
-  signal?: AbortSignal;
-  stream: WriteStream;
-  capture: CapturedOutputBuffer;
-}): Promise<{ success: boolean; cancelled: boolean; timedOut: boolean; error?: string }> {
-  const { runtime, conversationId, task, signal, stream, capture } = input;
-  let settled = false;
-  let completed = false;
-  let errorMessage: string | undefined;
-  let unsubscribe: (() => void) | undefined;
-  let started = false;
-  let promptDispatchStarted = false;
-  let cleanedUp = false;
-
-  const finish = (details: { completed?: boolean; error?: string }) => {
-    completed = details.completed === true;
-    errorMessage = details.error ?? errorMessage;
-    settled = true;
-  };
-
-  const abortHandler = () => finish({ error: 'Task run cancelled' });
-  signal?.addEventListener('abort', abortHandler, { once: true });
-
-  const cleanupSubscription = () => {
-    if (cleanedUp) {
-      return;
-    }
-
-    cleanedUp = true;
-    unsubscribe?.();
-    unsubscribe = undefined;
-  };
-
-  try {
-    const teardown = await runtime.subscribeConversation(
-      {
-        conversationId,
-        surfaceId: `automation-${task.id}`,
-        surfaceType: 'desktop_ui',
-        tailBlocks: 20,
-      },
-      (event) => {
-        const summary = summarizeEvent(event);
-        if (summary) {
-          writeLine(stream, summary);
-        }
-
-        const visibleOutput = summarizeVisibleOutputEvent(event);
-        if (visibleOutput) {
-          capture.append(visibleOutput);
-        }
-
-        const eventError = readEventError(event);
-        if (eventError) {
-          finish({ error: eventError });
-          return;
-        }
-
-        if (isRecord(event) && event.type === 'agent_start' && promptDispatchStarted) {
-          started = true;
-        }
-
-        if (isRecord(event) && (event.type === 'turn_end' || event.type === 'agent_end') && (started || promptDispatchStarted)) {
-          completed = true;
-        }
-      },
-    );
-    if (signal?.aborted || settled) {
-      teardown();
-      finish({ error: 'Task run cancelled' });
-    } else {
-      unsubscribe = teardown;
-
-      promptDispatchStarted = true;
-      await runtime.promptConversation({
-        conversationId,
-        text: formatConversationTaskPrompt(task.prompt),
-        behavior: task.conversationBehavior ?? 'followUp',
-        surfaceId: `automation-${task.id}`,
-      });
-
-      const deadline = Date.now() + task.timeoutSeconds * 1000;
-      while (!settled) {
-        if (signal?.aborted) {
-          finish({ error: 'Task run cancelled' });
-          break;
-        }
-
-        if (Date.now() >= deadline) {
-          finish({ error: `Task timed out after ${task.timeoutSeconds}s` });
-          break;
-        }
-
-        await wait(COMPLETION_POLL_INTERVAL_MS, signal);
-
-        const bootstrap = await runtime.readConversationBootstrap({ conversationId, tailBlocks: 5 }).catch(() => null);
-        const running = extractIsRunning(bootstrap);
-        if (completed && running === false) {
-          finish({ completed: true });
-        }
-      }
-    }
-  } finally {
-    signal?.removeEventListener('abort', abortHandler);
-    cleanupSubscription();
-  }
-
-  const timedOut = errorMessage === `Task timed out after ${task.timeoutSeconds}s`;
-  const cancelled = errorMessage === 'Task run cancelled';
-  if (cancelled || timedOut) {
-    await runtime.abortConversation({ conversationId }).catch(() => undefined);
-  }
-
-  return {
-    success: completed && !errorMessage,
-    cancelled,
-    timedOut,
-    ...(errorMessage ? { error: errorMessage } : {}),
-  };
 }
 
 async function runTaskWithStandaloneAgent(input: {
@@ -567,7 +278,7 @@ export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<Task
   try {
     if (request.signal?.aborted) {
       const endedAt = new Date().toISOString();
-      writeLine(stream, '# cancelled before conversation runtime dispatch');
+      writeLine(stream, '# cancelled before standalone agent dispatch');
       result = {
         success: false,
         startedAt,
@@ -583,55 +294,14 @@ export async function runTaskInIsolatedPi(request: TaskRunRequest): Promise<Task
       return result;
     }
 
-    const runtime = await resolveCompanionRuntime(loadDaemonConfig());
-    if (!runtime) {
-      result = await runTaskWithStandaloneAgent({
-        task: request.task,
-        startedAt,
-        logPath,
-        stream,
-        capture,
-        signal: request.signal,
-      });
-      return result;
-    }
-
-    writeLine(stream, '# mode=conversation-runtime');
-    const conversationId = await resolveTaskConversation(runtime, request.task);
-    writeLine(stream, `# conversation=${conversationId}`);
-
-    if (request.task.modelRef || request.task.thinkingLevel) {
-      await runtime.updateConversationModelPreferences({
-        conversationId,
-        ...(request.task.modelRef ? { model: request.task.modelRef } : {}),
-        ...(request.task.thinkingLevel ? { thinkingLevel: request.task.thinkingLevel } : {}),
-        surfaceId: `automation-${request.task.id}`,
-      });
-    }
-
-    const outcome = await waitForConversationCompletion({
-      runtime,
-      conversationId,
+    result = await runTaskWithStandaloneAgent({
       task: request.task,
+      startedAt,
+      logPath,
       signal: request.signal,
       stream,
       capture,
     });
-
-    const endedAt = new Date().toISOString();
-    result = {
-      success: outcome.success,
-      startedAt,
-      endedAt,
-      exitCode: outcome.success ? 0 : 1,
-      signal: null,
-      timedOut: outcome.timedOut,
-      cancelled: outcome.cancelled,
-      logPath,
-      ...(outcome.error ? { error: outcome.error } : {}),
-      outputText: normalizeCapturedOutputText(request.task, capture.value()),
-    };
-
     return result;
   } catch (error) {
     const endedAt = new Date().toISOString();

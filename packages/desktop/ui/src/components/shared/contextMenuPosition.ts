@@ -1,7 +1,7 @@
-export const CONTEXT_MENU_EDGE_PADDING_PX = 12;
-export const CONTEXT_MENU_ITEM_HEIGHT_PX = 28;
-export const CONTEXT_MENU_SHELL_PADDING_PX = 6;
-export const CONTEXT_MENU_SEPARATOR_HEIGHT_PX = 5;
+const CONTEXT_MENU_EDGE_PADDING_PX = 12;
+const CONTEXT_MENU_ITEM_HEIGHT_PX = 28;
+const CONTEXT_MENU_SHELL_PADDING_PX = 6;
+const CONTEXT_MENU_SEPARATOR_HEIGHT_PX = 5;
 
 function readSafeGeometryNumber(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;

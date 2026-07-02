@@ -198,7 +198,6 @@ async function startBenchBackend({ mode, stateRoot }) {
     NEON_PILOT_CONFIG_ROOT: path.join(root, 'config'),
     NEON_PILOT_DESKTOP_USER_DATA_DIR: path.join(root, 'user-data'),
     NEON_PILOT_DAEMON_SOCKET_PATH: path.join(root, 'daemon.sock'),
-    NEON_PILOT_COMPANION_PORT: '0',
     NEON_PILOT_DS4_OPTIMIZATION_MODE: mode === 'baseline' ? 'baseline' : 'optimized',
   };
   const extensionHost = spawn(process.execPath, [extensionHostFile], { cwd: repoRoot, env, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });

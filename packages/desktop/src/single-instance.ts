@@ -6,9 +6,9 @@ export interface DesktopSingleInstanceApp {
   exit(code?: number): void;
 }
 
-export const DESKTOP_INITIAL_ROUTE_ARG = '--neon-pilot-initial-route=';
+const DESKTOP_INITIAL_ROUTE_ARG = '--neon-pilot-initial-route=';
 
-export function normalizeDesktopInitialRoute(route: string | undefined): string | null {
+function normalizeDesktopInitialRoute(route: string | undefined): string | null {
   const normalized = route?.trim();
   if (!normalized || !normalized.startsWith('/') || normalized.startsWith('//')) {
     return null;
