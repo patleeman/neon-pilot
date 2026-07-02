@@ -34,6 +34,7 @@ describe('Windowed OS Storybook examples', () => {
     const source = readFileSync(storiesPath, 'utf8');
 
     expect(source).not.toContain('ui-context-rail');
+    expect(source).not.toContain('ui-app-page-');
     expect(source).not.toContain('layout="two-column"');
   });
 });

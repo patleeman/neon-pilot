@@ -149,6 +149,60 @@ export const TaskbarMenuPlacement: Story = {
   ),
 };
 
+export const ChatWithAttachedWorkbench: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
+      <WindowFrame
+        title="Release notes"
+        accent="chat"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1180px, 100%)', height: 640 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <div className="wos-chat-workbench">
+          <WindowedChatSurface>
+            <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
+              <WindowedMessageBubble from="user">Draft the changelog for v0.11.39.</WindowedMessageBubble>
+              <WindowedMessageBubble>Reading the current branch and grouping changes by extension.</WindowedMessageBubble>
+              <WindowedMessageBubble from="user">Keep it compact and include blockers only when action is required.</WindowedMessageBubble>
+              <WindowedMessageBubble>
+                Ready. I found three UI changes, one extension rebuild, and no release blockers.
+              </WindowedMessageBubble>
+            </WindowedChatMain>
+          </WindowedChatSurface>
+          <aside className="wos-chat-workbench__panel" aria-label="Attached workbench">
+            <div className="wos-chat-workbench__tabs" role="tablist" aria-label="Workbench tabs">
+              <button type="button" role="tab" aria-selected="true">
+                Files
+              </button>
+              <button type="button" role="tab" aria-selected="false">
+                Browser
+              </button>
+              <button type="button" role="tab" aria-selected="false">
+                Terminal
+              </button>
+            </div>
+            <WindowedPageSection title="Workspace" meta="3 open">
+              <WindowedList>
+                <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
+                <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
+                <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
+              </WindowedList>
+            </WindowedPageSection>
+            <WindowedPageSection title="Terminal" meta="Last command">
+              <WindowedStateBlock tone="positive" title="Validation passed">
+                pnpm --dir packages/windowed-os-ui run build
+              </WindowedStateBlock>
+            </WindowedPageSection>
+          </aside>
+        </div>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const NavigationPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 680, padding: 24 }}>
@@ -404,40 +458,6 @@ export const CanonicalDensity: Story = {
               </div>
             </WindowedPageSection>
 
-            <WindowedPageSection title="Hosted stable primitives" meta="Scoped">
-              <div className="wos-window-route-body" style={{ height: 'auto', minHeight: 0 }}>
-                <div className="ui-app-page-shell">
-                  <main className="ui-app-page-main">
-                    <section className="ui-app-page-intro">
-                      <div style={{ minWidth: 0 }}>
-                        <div className="ui-app-page-eyebrow">Extension page</div>
-                        <h1 className="ui-app-page-title">Embedded route</h1>
-                        <p className="ui-app-page-summary">Stable components inherit the windowed OS text and spacing scale.</p>
-                      </div>
-                      <button type="button" className="ui-action-button">
-                        Refresh
-                      </button>
-                    </section>
-                    <section style={{ display: 'grid', gap: 8 }}>
-                      <div className="ui-key-value-table ui-key-value-table-3">
-                        <div className="ui-key-value-table-item">
-                          <p className="ui-key-value-table-label">Token</p>
-                          <p className="ui-key-value-table-value">Configured</p>
-                        </div>
-                        <div className="ui-key-value-table-item">
-                          <p className="ui-key-value-table-label">Connection</p>
-                          <p className="ui-key-value-table-value">Ready</p>
-                        </div>
-                        <div className="ui-key-value-table-item">
-                          <p className="ui-key-value-table-label">Runtime</p>
-                          <p className="ui-key-value-table-value">Healthy</p>
-                        </div>
-                      </div>
-                    </section>
-                  </main>
-                </div>
-              </div>
-            </WindowedPageSection>
             <WindowedPageSection title="Scale">
               <WindowedKeyValueList
                 items={[
