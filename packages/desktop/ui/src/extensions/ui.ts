@@ -263,6 +263,7 @@ export {
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedSegmentedControl,
   WindowedSelect,
   WindowedStateBlock,
   WindowedTextButton,

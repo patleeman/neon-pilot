@@ -45,6 +45,11 @@ function rectsOverlap(first: DOMRect, second: DOMRect): boolean {
   return first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
 }
 
+function isVisibleStyle(element: HTMLElement): boolean {
+  const style = window.getComputedStyle(element);
+  return style.display !== 'none' && style.visibility !== 'hidden' && Number.parseFloat(style.opacity || '1') !== 0;
+}
+
 function windowLayer(windowElement: HTMLElement): number {
   const zIndex = Number.parseInt(window.getComputedStyle(windowElement).zIndex, 10);
   return Number.isFinite(zIndex) ? zIndex : 0;
@@ -63,9 +68,56 @@ function isCoveredByWindowedWindow(host: HTMLElement | null): boolean {
   return windows.some((candidate) => {
     if (candidate === ownWindow) return false;
     if (windowLayer(candidate) <= ownLayer) return false;
-    const style = window.getComputedStyle(candidate);
-    if (style.display === 'none' || style.visibility === 'hidden' || Number.parseFloat(style.opacity || '1') === 0) return false;
+    if (!isVisibleStyle(candidate)) return false;
     return rectsOverlap(hostRect, candidate.getBoundingClientRect());
+  });
+}
+
+function elementAtPoint(x: number, y: number): Element | null {
+  if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
+    return null;
+  }
+  return document.elementFromPoint(x, y);
+}
+
+function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
+  if (!host || !host.isConnected || typeof document.elementFromPoint !== 'function') {
+    return false;
+  }
+
+  const rect = host.getBoundingClientRect();
+  if (rect.width < 1 || rect.height < 1) {
+    return false;
+  }
+
+  const left = Math.max(0, rect.left);
+  const top = Math.max(0, rect.top);
+  const right = Math.min(window.innerWidth, rect.right);
+  const bottom = Math.min(window.innerHeight, rect.bottom);
+  if (right <= left || bottom <= top) {
+    return false;
+  }
+
+  const points = [
+    [left + (right - left) / 2, top + (bottom - top) / 2],
+    [left + 8, top + 8],
+    [right - 8, top + 8],
+    [left + 8, bottom - 8],
+    [right - 8, bottom - 8],
+  ];
+
+  return points.some(([x, y]) => {
+    const topElement = elementAtPoint(x, y);
+    if (!topElement) {
+      return false;
+    }
+    if (host.contains(topElement)) {
+      return false;
+    }
+    const blocker = topElement.closest<HTMLElement>(
+      '.wos-window, .wos-start-menu, .wos-taskbar, .wos-taskbar__menu-layer, .wos-snap-preview, .wos-dialog-layer, [aria-modal="true"]',
+    );
+    return Boolean(blocker && isVisibleStyle(blocker));
   });
 }
 
@@ -124,6 +176,7 @@ export function WorkbenchBrowserTab({
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const closedRef = useRef(false);
   const tabsStateRef = useRef(tabsState);
+  const lastBoundsRequestRef = useRef('');
   const [state, setState] = useState<DesktopWorkbenchBrowserState | null>(null);
   const [status, setStatus] = useState('');
   const [surfaceKeybindings, setSurfaceKeybindings] = useState<ExtensionKeybindingRegistration[]>([]);
@@ -213,7 +266,19 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    if (hasBlockingHtmlModal() || hasWindowedShellOverlay() || isInsideUnfocusedWindow(host) || isCoveredByWindowedWindow(host)) {
+    const blocked =
+      hasBlockingHtmlModal() ||
+      hasWindowedShellOverlay() ||
+      isInsideUnfocusedWindow(host) ||
+      isCoveredByWindowedWindow(host) ||
+      isCoveredByRendererLayer(host);
+
+    if (blocked) {
+      const requestKey = `${browserSessionKey}:hidden`;
+      if (lastBoundsRequestRef.current === requestKey) {
+        return;
+      }
+      lastBoundsRequestRef.current = requestKey;
       void bridge
         .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey })
         .then((nextState) => {
@@ -230,20 +295,26 @@ export function WorkbenchBrowserTab({
 
     const rect = host.getBoundingClientRect();
     const visible = rect.width >= 24 && rect.height >= 24;
+    const bounds = visible
+      ? {
+          x: Math.round(rect.left),
+          y: Math.round(rect.top),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        }
+      : null;
+    const requestKey = bounds
+      ? `${browserSessionKey}:visible:${bounds.x}:${bounds.y}:${bounds.width}:${bounds.height}`
+      : `${browserSessionKey}:hidden`;
+    if (lastBoundsRequestRef.current === requestKey) {
+      return;
+    }
+    lastBoundsRequestRef.current = requestKey;
     void bridge
       .setWorkbenchBrowserBounds({
         visible,
         sessionKey: browserSessionKey,
-        ...(visible
-          ? {
-              bounds: {
-                x: Math.round(rect.left),
-                y: Math.round(rect.top),
-                width: Math.round(rect.width),
-                height: Math.round(rect.height),
-              },
-            }
-          : {}),
+        ...(bounds ? { bounds } : {}),
       })
       .then((nextState) => {
         if (nextState) {
@@ -273,6 +344,11 @@ export function WorkbenchBrowserTab({
       observer?.observe(browserHostRef.current);
     }
     window.addEventListener('resize', syncBounds);
+    window.addEventListener('mousemove', syncBounds, true);
+    window.addEventListener('mousedown', syncBounds, true);
+    window.addEventListener('mouseup', syncBounds, true);
+    window.addEventListener('pointerdown', syncBounds, true);
+    window.addEventListener('pointerup', syncBounds, true);
     const modalObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(syncBounds) : null;
     modalObserver?.observe(document.body, {
       attributes: true,
@@ -287,6 +363,11 @@ export function WorkbenchBrowserTab({
       observer?.disconnect();
       modalObserver?.disconnect();
       window.removeEventListener('resize', syncBounds);
+      window.removeEventListener('mousemove', syncBounds, true);
+      window.removeEventListener('mousedown', syncBounds, true);
+      window.removeEventListener('mouseup', syncBounds, true);
+      window.removeEventListener('pointerdown', syncBounds, true);
+      window.removeEventListener('pointerup', syncBounds, true);
       window.clearInterval(timer);
       // Deactivate all tabs on unmount
       const currentTabs = tabsStateRef.current?.tabs ?? [];

@@ -139,10 +139,12 @@ describe('SkillsPage', () => {
     const { container } = render(<SkillsPage pa={pa as never} context={{ shellPresentation: 'windowed' } as never} />);
 
     await screen.findByText('PDF');
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByText('Sources')).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Skills view' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Search marketplace skills' })).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Details' }).length).toBeGreaterThan(1);
@@ -156,7 +158,7 @@ describe('SkillsPage', () => {
     expect(screen.getByText('Marketplace skill')).toBeTruthy();
     expect(screen.getByText('Identifier')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /Installed/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /Installed/ }));
     expect(await screen.findByText('Build iOS Apps')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Enable Build iOS Apps' })).toBeTruthy();
   });

@@ -37,13 +37,11 @@ import {
   WindowedDataTable,
   WindowedDialog,
   WindowedKeyValueList,
-  WindowedList,
-  WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedSegmentedControl,
   WindowedSelect,
   WindowedTextInput,
   WindowedToggle,
@@ -645,41 +643,22 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
 
     return (
       <div className="h-full overflow-hidden">
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Skills" accent="extensions">
-            <WindowedPageSection title="Views" meta={view === 'marketplace' ? marketplaceFilterSummary : `${skillCounts.enabled} on`}>
-              <WindowedList>
-                {viewItems.map((item) => (
-                  <WindowedListItem
-                    key={item.id}
-                    title={item.label}
-                    meta={item.meta}
-                    active={view === item.id}
-                    accent="extensions"
-                    onSelect={() => {
-                      setView(item.id);
-                      setSelectedSkillResourceId(null);
-                    }}
-                  />
-                ))}
-              </WindowedList>
-            </WindowedPageSection>
-            <WindowedPageSection title="Sources" meta={sourceSummary}>
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Trusted', value: `${trustedSourceCount}` },
-                  { label: 'Community', value: `${communitySourceCount}` },
-                  { label: 'Refresh', value: refreshingMarketplace ? 'Running' : 'Ready' },
-                ]}
-              />
-            </WindowedPageSection>
-          </WindowedPageRail>
-
+        <WindowedPageShell layout="standard" className="skills-page-windowed">
           <WindowedPageMain
             eyebrow="Skill library"
             title={view === 'marketplace' ? 'Browse skills' : 'Installed skills'}
             actions={
               <>
+                <WindowedSegmentedControl
+                  ariaLabel="Skills view"
+                  accent="extensions"
+                  value={view}
+                  options={viewItems}
+                  onChange={(value) => {
+                    setView(value as SkillView);
+                    setSelectedSkillResourceId(null);
+                  }}
+                />
                 {view === 'marketplace' && hasMarketplaceFilters ? (
                   <WindowedPageButton onClick={clearMarketplaceFilters}>Clear filters</WindowedPageButton>
                 ) : null}
@@ -689,6 +668,16 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
               </>
             }
           >
+            <WindowedPageSection title="Sources" meta={sourceSummary}>
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Trusted', value: `${trustedSourceCount}` },
+                  { label: 'Community', value: `${communitySourceCount}` },
+                  { label: 'Refresh', value: refreshingMarketplace ? 'Running' : 'Ready' },
+                ]}
+              />
+            </WindowedPageSection>
+
             <WindowedPageSection>
               <form className="flex min-w-0 flex-wrap items-center gap-2" onSubmit={submitSearch}>
                 <WindowedTextInput
