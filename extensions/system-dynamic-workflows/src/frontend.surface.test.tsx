@@ -148,7 +148,10 @@ describe('Dynamic Workflows surfaces', () => {
     expect(container.querySelector('.wos-page-rail')).toBeTruthy();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(screen.queryByText('Workflow context')).toBeNull();
-    expect(screen.getByText('Selection')).toBeTruthy();
+    expect(screen.getByText('Inventory')).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
+    expect(screen.queryByText('Selection')).toBeNull();
+    expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.getByText('Actions')).toBeTruthy();
     expect(screen.getByText(/1\/2 complete, 1 running/)).toBeTruthy();
   });

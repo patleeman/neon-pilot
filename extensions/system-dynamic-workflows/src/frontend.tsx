@@ -666,13 +666,13 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
             </WindowedPageSection>
           ) : null}
 
-          <WindowedPageSection title="Selection" meta={selected?.status ?? (selectedTemplate ? 'Template' : 'Ready')}>
+          <WindowedPageSection title="Inventory" meta={selected?.status ?? (selectedTemplate ? 'Template' : 'Ready')}>
             <WindowedKeyValueList
               items={[
                 { label: 'Runs', value: workflows.length },
                 { label: 'Saved', value: savedWorkflows.length },
                 { label: 'Templates', value: templates.length },
-                { label: 'Selected', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
+                { label: 'Active', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
               ]}
             />
           </WindowedPageSection>
