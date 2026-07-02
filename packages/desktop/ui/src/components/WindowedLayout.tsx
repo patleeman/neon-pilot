@@ -157,18 +157,35 @@ function buildLauncherItems(extensionRegistry: ReturnType<typeof useExtensionReg
   const seen = new Set(STATIC_LAUNCHER_ITEMS.map((item) => item.route));
   const dynamic = extensionRegistry.extensions
     .filter((extension) => extension.enabled)
-    .flatMap((extension) => extension.contributes?.nav ?? [])
-    .filter((item) => {
-      if (!item.route || seen.has(item.route)) return false;
-      seen.add(item.route);
-      return true;
-    })
-    .map((item) => ({
-      id: item.id,
-      title: item.label,
-      route: item.route,
-      kind: 'route' as const,
-    }));
+    .flatMap((extension) => {
+      const navItems = (extension.contributes?.nav ?? []).flatMap((item): LauncherItem[] => {
+        if (!item.route || seen.has(item.route)) return [];
+        seen.add(item.route);
+        return [
+          {
+            id: item.id,
+            title: item.label,
+            route: item.route,
+            kind: 'route',
+          },
+        ];
+      });
+
+      const mainViewItems = (extension.contributes?.views ?? []).flatMap((view): LauncherItem[] => {
+        if (view.location !== 'main' || !view.route || !isTopLevelRoute(view.route) || seen.has(view.route)) return [];
+        seen.add(view.route);
+        return [
+          {
+            id: view.id,
+            title: view.title,
+            route: view.route,
+            kind: 'route',
+          },
+        ];
+      });
+
+      return [...navItems, ...mainViewItems];
+    });
 
   return [STATIC_LAUNCHER_ITEMS[0]!, ...dynamic, STATIC_LAUNCHER_ITEMS[1]!];
 }
@@ -252,6 +269,12 @@ function isWindowRouteAvailable(route: string, launcherItems: LauncherItem[]): b
     const itemPathname = routePathname(item.route);
     return pathname === itemPathname || pathname.startsWith(`${itemPathname.replace(/\/$/, '')}/`);
   });
+}
+
+function isTopLevelRoute(route: string): boolean {
+  const pathname = routePathname(route).replace(/\/+$/, '');
+  if (!pathname || pathname === '/') return false;
+  return pathname.split('/').filter(Boolean).length === 1;
 }
 
 function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[] {

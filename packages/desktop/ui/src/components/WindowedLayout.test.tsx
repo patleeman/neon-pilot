@@ -18,6 +18,22 @@ const mocks = vi.hoisted(() => ({
   registryLoading: false,
   pinnedSessions: [] as Array<{ id: string; title?: string; messageCount?: number }>,
   tabs: [] as Array<{ id: string; title?: string; messageCount?: number }>,
+  extensions: [
+    {
+      id: 'system-routines',
+      enabled: true,
+      contributes: {
+        nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
+      },
+    },
+  ] as Array<{
+    id: string;
+    enabled: boolean;
+    contributes?: {
+      nav?: Array<{ id: string; label: string; route: string }>;
+      views?: Array<{ id: string; title: string; location: string; route?: string }>;
+    };
+  }>,
 }));
 
 vi.mock('./Layout', () => ({
@@ -38,15 +54,7 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
   useExtensionRegistry: () => ({
     loading: mocks.registryLoading,
     error: null,
-    extensions: [
-      {
-        id: 'system-routines',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
-        },
-      },
-    ],
+    extensions: mocks.extensions,
     surfaces: [],
   }),
 }));
@@ -83,6 +91,15 @@ describe('WindowedLayout route windows', () => {
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
+    mocks.extensions = [
+      {
+        id: 'system-routines',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
+        },
+      },
+    ];
   });
 
   it('renders non-chat routes through the extension host without the embedded stable layout', async () => {
@@ -125,6 +142,72 @@ describe('WindowedLayout route windows', () => {
     fireEvent.mouseDown(screen.getByLabelText(/windowed neon pilot desktop/i));
 
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
+  it('adds enabled main extension views to the start menu even when they do not contribute sidebar nav', async () => {
+    mocks.extensions = [
+      ...mocks.extensions,
+      {
+        id: 'system-dynamic-workflows',
+        enabled: true,
+        contributes: {
+          views: [{ id: 'workflows-page', title: 'Workflows', location: 'main', route: '/workflows' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^workflows$/i }));
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/workflows:windowed');
+    expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
+  });
+
+  it('deduplicates start menu routes when an extension contributes both nav and a main view', () => {
+    mocks.extensions = [
+      {
+        id: 'system-routines',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'routines-nav', label: 'Routines', route: '/routines' }],
+          views: [{ id: 'routines-page', title: 'Routines', location: 'main', route: '/routines' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+
+    expect(within(startMenu).getAllByRole('button', { name: /^routines$/i })).toHaveLength(1);
+  });
+
+  it('does not promote nested main extension views into top-level desktop applications', () => {
+    mocks.extensions = [
+      {
+        id: 'system-settings',
+        enabled: true,
+        contributes: {
+          views: [
+            { id: 'provider-settings', title: 'Provider settings', location: 'main', route: '/settings/providers' },
+            { id: 'desktop-settings', title: 'Desktop settings', location: 'main', route: '/settings/desktop' },
+          ],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+
+    expect(within(startMenu).queryByRole('button', { name: /provider settings/i })).toBeNull();
+    expect(within(startMenu).queryByRole('button', { name: /desktop settings/i })).toBeNull();
+    expect(within(startMenu).getByRole('button', { name: /^settings$/i })).toBeTruthy();
   });
 
   it('renders chat windows directly in the taskbar with larger default bounds', () => {
