@@ -101,7 +101,7 @@ export interface WindowedPageShellProps {
   layout?: 'standard' | 'wide' | 'two-column';
 }
 
-export function WindowedPageShell({ children, className, layout = 'standard' }: WindowedPageShellProps) {
+export function WindowedPageShell({ children, className, layout = 'two-column' }: WindowedPageShellProps) {
   return (
     <div className={cx('wos-page-shell', className)} data-layout={layout}>
       {children}
@@ -151,23 +151,6 @@ export function WindowedPageMain({ eyebrow, title, description, actions, childre
       </header>
       <div className="wos-page-main__body">{children}</div>
     </main>
-  );
-}
-
-export interface WindowedPageInspectorProps {
-  eyebrow?: string;
-  title: string;
-  children: ReactNode;
-  className?: string;
-}
-
-export function WindowedPageInspector({ eyebrow, title, children, className }: WindowedPageInspectorProps) {
-  return (
-    <aside className={cx('wos-page-inspector', className)}>
-      {eyebrow ? <div className="wos-page-eyebrow">{eyebrow}</div> : null}
-      <h2>{title}</h2>
-      {children}
-    </aside>
   );
 }
 

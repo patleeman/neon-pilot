@@ -43,8 +43,6 @@ export {
   type WindowedMessageBubbleProps,
   WindowedPageButton,
   type WindowedPageButtonProps,
-  WindowedPageInspector,
-  type WindowedPageInspectorProps,
   WindowedPageMain,
   type WindowedPageMainProps,
   WindowedPageRail,
