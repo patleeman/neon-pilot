@@ -39,7 +39,7 @@ describe('windowedShell', () => {
     expect(resolveSnapTarget({ x: 1198, y: 2 }, desktop)).toBe('top-right');
     expect(resolveSnapTarget({ x: 2, y: 798 }, desktop)).toBe('bottom-left');
     expect(resolveSnapTarget({ x: 1198, y: 798 }, desktop)).toBe('bottom-right');
-    expect(resolveSnapTarget({ x: 600, y: 1 }, desktop)).toBe('maximize');
+    expect(resolveSnapTarget({ x: 600, y: 1 }, desktop)).toBe('top');
     expect(resolveSnapTarget({ x: 1, y: 400 }, desktop)).toBe('left');
     expect(resolveSnapTarget({ x: 1199, y: 400 }, desktop)).toBe('right');
     expect(resolveSnapTarget({ x: 600, y: 799 }, desktop)).toBe('bottom');
@@ -49,6 +49,7 @@ describe('windowedShell', () => {
   it('maps snap targets to desktop bounds', () => {
     const desktop = { width: 1200, height: 800 };
     expect(boundsForSnapTarget('left', desktop)).toEqual({ x: 0, y: 0, width: 600, height: 800 });
+    expect(boundsForSnapTarget('top', desktop)).toEqual({ x: 0, y: 0, width: 1200, height: 200 });
     expect(boundsForSnapTarget('top-right', desktop)).toEqual({ x: 600, y: 0, width: 600, height: 400 });
     expect(boundsForSnapTarget('bottom', desktop)).toEqual({ x: 0, y: 400, width: 1200, height: 400 });
   });

@@ -15,7 +15,7 @@ export interface WindowBounds {
   height: number;
 }
 
-export type SnapTarget = 'maximize' | 'left' | 'right' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type SnapTarget = 'maximize' | 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 const MIN_VISIBLE_X = 96;
 const MIN_VISIBLE_Y = 34;
@@ -84,7 +84,7 @@ export function resolveSnapTarget(pointer: { x: number; y: number }, desktop: De
   if (nearTop && nearRight) return 'top-right';
   if (nearBottom && nearLeft) return 'bottom-left';
   if (nearBottom && nearRight) return 'bottom-right';
-  if (nearTop) return 'maximize';
+  if (nearTop) return 'top';
   if (nearLeft) return 'left';
   if (nearRight) return 'right';
   if (nearBottom) return 'bottom';
@@ -102,6 +102,8 @@ export function boundsForSnapTarget(target: SnapTarget, desktop: DesktopRect): W
       return { x: 0, y: 0, width: halfWidth, height: desktop.height };
     case 'right':
       return { x: halfWidth, y: 0, width: desktop.width - halfWidth, height: desktop.height };
+    case 'top':
+      return { x: 0, y: 0, width: desktop.width, height: Math.round(desktop.height / 4) };
     case 'bottom':
       return { x: 0, y: halfHeight, width: desktop.width, height: desktop.height - halfHeight };
     case 'top-left':
