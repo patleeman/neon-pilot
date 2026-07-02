@@ -582,7 +582,7 @@ function SidebarPrimaryNav({
 }) {
   return (
     <nav className="relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3" aria-label="Primary navigation">
-      <div className="grid grid-cols-[minmax(0,1fr)_32px] gap-1 px-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_28px] gap-1 px-4">
         <SidebarNavButton onClick={onOpenChat} active={chatActive} className="mx-0 flex min-w-0 text-secondary" title="Chat">
           <Ico d={PATH.chatBubble} size={15} />
           <span className="flex-1 text-left">Chat</span>
@@ -590,11 +590,11 @@ function SidebarPrimaryNav({
         <SidebarNavButton
           onClick={onNewConversation}
           disabled={newConversationBusy}
-          className="mx-0 flex h-7 w-8 justify-center px-0 text-secondary"
+          className="mx-0 flex h-7 w-7 justify-center px-0 text-secondary"
           title={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
           aria-label={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
         >
-          <Ico d={PATH.plus} size={19} className="shrink-0" />
+          <Ico d={PATH.plus} size={12} className="shrink-0" />
         </SidebarNavButton>
       </div>
       {items.map((item) => (
