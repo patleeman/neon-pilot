@@ -14,6 +14,8 @@ import {
   WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
+  WindowedList,
+  WindowedListItem,
   WindowedMenuPanel,
   WindowedMessageBubble,
   WindowedPageButton,
@@ -27,6 +29,8 @@ import {
   WindowedTextarea,
   WindowedTextInput,
   WindowedThreadItem,
+  WindowedTimeline,
+  WindowedTimelineItem,
   WindowedTitleBarControls,
   WindowedToggle,
   WindowFrame,
@@ -390,6 +394,130 @@ export const AutomationFormPrimitives: Story = {
                 items={[
                   { label: 'Thread', value: 'Release notes' },
                   { label: 'Delivery', value: 'Append to chat' },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageInspector>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const RoutinesListDetailPrimitives: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
+      <WindowFrame
+        title="Routines"
+        accent="routines"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1080px, 100%)', height: 620 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell>
+          <WindowedPageRail title="Routines" accent="routines">
+            <WindowedPageSection title="Hooks" meta="4">
+              <WindowedList>
+                <WindowedListItem title="before_agent_start" meta="3 routines" detail="Instruction context" active accent="routines" />
+                <WindowedListItem title="after_agent_turn" meta="2 routines" detail="Status bookkeeping" accent="routines" />
+                <WindowedListItem title="before_tool_call" meta="1 routine" detail="Safety checks" accent="routines" />
+                <WindowedListItem title="after_tool_call" meta="No routines" detail="Available" accent="routines" />
+              </WindowedList>
+            </WindowedPageSection>
+          </WindowedPageRail>
+          <WindowedPageMain
+            eyebrow="Hook"
+            title="before_agent_start"
+            actions={
+              <>
+                <WindowedPageButton>Disable hook</WindowedPageButton>
+                <WindowedPageButton tone="accent">New routine</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Position" meta="3 routines">
+              <div className="wos-form-grid" data-columns="2">
+                <WindowedField label="Mode">
+                  <WindowedSegmentedControl
+                    accent="routines"
+                    ariaLabel="Routine position"
+                    value="before"
+                    options={[
+                      { id: 'before', label: 'Before' },
+                      { id: 'after', label: 'After' },
+                    ]}
+                  />
+                </WindowedField>
+                <WindowedField label="Selected routine">
+                  <WindowedSelect defaultValue="repo-context" aria-label="Selected routine">
+                    <option value="repo-context">Repo context loader</option>
+                    <option value="taste">Taste checklist</option>
+                    <option value="handoff">Session handoff</option>
+                  </WindowedSelect>
+                </WindowedField>
+              </div>
+            </WindowedPageSection>
+            <WindowedPageSection title="Routine stack" meta="Before agent">
+              <WindowedList>
+                <WindowedListItem
+                  title="Repo context loader"
+                  meta="Runs first"
+                  detail="Loads glossary, repo rules, and active workspace notes"
+                  active
+                  accent="routines"
+                  status={<WindowedBadge tone="positive">On</WindowedBadge>}
+                />
+                <WindowedListItem
+                  title="Taste checklist"
+                  meta="Runs second"
+                  detail="Adds UI evaluation reminders when editing app surfaces"
+                  accent="routines"
+                  status={<WindowedBadge tone="positive">On</WindowedBadge>}
+                />
+                <WindowedListItem
+                  title="Session handoff"
+                  meta="Runs third"
+                  detail="Summarizes state when context is compacted"
+                  accent="routines"
+                  status={<WindowedBadge>Paused</WindowedBadge>}
+                />
+              </WindowedList>
+            </WindowedPageSection>
+            <WindowedPageSection title="Recent runs" meta="Last 24h">
+              <WindowedTimeline>
+                <WindowedTimelineItem title="Loaded repo context" meta="09:58" tone="positive">
+                  Applied Neon Pilot route and extension boundary rules.
+                </WindowedTimelineItem>
+                <WindowedTimelineItem title="Skipped taste checklist" meta="09:22">
+                  No user-visible UI files were edited in that turn.
+                </WindowedTimelineItem>
+                <WindowedTimelineItem title="Recovered stale handoff" meta="Yesterday" tone="warning">
+                  Reconciled compacted notes with the current git status.
+                </WindowedTimelineItem>
+              </WindowedTimeline>
+            </WindowedPageSection>
+          </WindowedPageMain>
+          <WindowedPageInspector eyebrow="Routine context" title="Repo context loader">
+            <WindowedPageSection title="Status">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Hook', value: 'before_agent_start' },
+                  { label: 'Order', value: '1' },
+                  { label: 'State', value: <WindowedBadge tone="positive">Enabled</WindowedBadge> },
+                  {
+                    label: 'Auto-run',
+                    value: <WindowedToggle checked accent="routines" label="Toggle Repo context loader" />,
+                  },
+                ]}
+              />
+            </WindowedPageSection>
+            <WindowedPageSection title="Scope">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Applies to', value: 'Neon Pilot repo' },
+                  { label: 'Source', value: 'Workspace rules' },
                 ]}
               />
             </WindowedPageSection>

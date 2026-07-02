@@ -412,6 +412,69 @@ export function WindowedKeyValueList({ items, className }: WindowedKeyValueListP
   );
 }
 
+export interface WindowedListProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedList({ children, className }: WindowedListProps) {
+  return <div className={cx('wos-list', className)}>{children}</div>;
+}
+
+export interface WindowedListItemProps {
+  title: string;
+  meta?: string;
+  detail?: string;
+  active?: boolean;
+  accent?: AppAccent;
+  status?: ReactNode;
+  onSelect?: () => void;
+}
+
+export function WindowedListItem({ title, meta, detail, active = false, accent = 'settings', status, onSelect }: WindowedListItemProps) {
+  return (
+    <button type="button" className="wos-list-item" data-active={active} data-accent={accent} onClick={onSelect}>
+      <span className="wos-list-item__copy">
+        <span className="wos-list-item__title">{title}</span>
+        {meta ? <span className="wos-list-item__meta">{meta}</span> : null}
+        {detail ? <span className="wos-list-item__detail">{detail}</span> : null}
+      </span>
+      {status ? <span className="wos-list-item__status">{status}</span> : null}
+    </button>
+  );
+}
+
+export interface WindowedTimelineProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedTimeline({ children, className }: WindowedTimelineProps) {
+  return <div className={cx('wos-timeline', className)}>{children}</div>;
+}
+
+export interface WindowedTimelineItemProps {
+  title: string;
+  meta?: string;
+  tone?: 'neutral' | 'positive' | 'warning' | 'danger';
+  children?: ReactNode;
+}
+
+export function WindowedTimelineItem({ title, meta, tone = 'neutral', children }: WindowedTimelineItemProps) {
+  return (
+    <div className="wos-timeline-item" data-tone={tone}>
+      <div className="wos-timeline-item__marker" aria-hidden="true" />
+      <div className="wos-timeline-item__body">
+        <div className="wos-timeline-item__header">
+          <span className="wos-timeline-item__title">{title}</span>
+          {meta ? <span className="wos-timeline-item__meta">{meta}</span> : null}
+        </div>
+        {children ? <div className="wos-timeline-item__content">{children}</div> : null}
+      </div>
+    </div>
+  );
+}
+
 export interface WindowedMenuItem {
   id: string;
   label: string;
