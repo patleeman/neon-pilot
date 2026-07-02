@@ -84,6 +84,19 @@ function defaultBounds(index: number, kind: WindowKind): WindowBounds {
   return { x: 112 + offset, y: 72 + offset, width: 1040, height: 650 };
 }
 
+function defaultDraftWindow(): DesktopWindowModel {
+  return {
+    id: 'chat:draft',
+    kind: 'chat',
+    title: 'New conversation',
+    route: '/conversations/new',
+    bounds: defaultBounds(0, 'chat'),
+    minimized: false,
+    focused: true,
+    archivedOnClose: false,
+  };
+}
+
 function readStoredWindows(): DesktopWindowModel[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -233,6 +246,33 @@ function routeLocation(route: string) {
   };
 }
 
+function routePathname(route: string): string {
+  try {
+    return new URL(route, window.location.origin).pathname;
+  } catch {
+    return route.split(/[?#]/, 1)[0] || route;
+  }
+}
+
+function isWindowRouteAvailable(route: string, launcherItems: LauncherItem[]): boolean {
+  const pathname = routePathname(route);
+  return launcherItems.some((item) => {
+    if (item.kind !== 'route') return false;
+    const itemPathname = routePathname(item.route);
+    return pathname === itemPathname || pathname.startsWith(`${itemPathname.replace(/\/$/, '')}/`);
+  });
+}
+
+function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[] {
+  if (windows.length === 0 || windows.some((windowModel) => windowModel.focused)) return windows;
+  let lastVisibleIndex = -1;
+  windows.forEach((windowModel, index) => {
+    if (!windowModel.minimized) lastVisibleIndex = index;
+  });
+  const index = lastVisibleIndex >= 0 ? lastVisibleIndex : windows.length - 1;
+  return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
+}
+
 function WindowRouteBody({ route }: { route: string }) {
   const isChatRoute = route.startsWith('/conversations');
 
@@ -290,18 +330,7 @@ export function WindowedLayout() {
   const [windows, setWindows] = useState<DesktopWindowModel[]>(() => {
     const stored = readStoredWindows();
     if (stored.length > 0) return stored;
-    return [
-      {
-        id: 'chat:draft',
-        kind: 'chat',
-        title: 'New conversation',
-        route: '/conversations/new',
-        bounds: defaultBounds(0, 'chat'),
-        minimized: false,
-        focused: true,
-        archivedOnClose: false,
-      },
-    ];
+    return [defaultDraftWindow()];
   });
   const [, setDrag] = useState<DragState | null>(null);
   const [, setResize] = useState<ResizeState | null>(null);
@@ -317,6 +346,17 @@ export function WindowedLayout() {
   const visibleWindows = windows.filter((windowModel) => !windowModel.minimized);
   const focusedWindowId = windows.find((windowModel) => windowModel.focused)?.id ?? null;
   const windowsRef = useRef(windows);
+
+  useEffect(() => {
+    if (extensionRegistry.loading) return;
+    setWindows((current) => {
+      const next = current.filter(
+        (windowModel) => windowModel.kind !== 'route' || isWindowRouteAvailable(windowModel.route, launcherItems),
+      );
+      if (next.length === current.length) return current;
+      return ensureFocusedWindow(next.length > 0 ? next : [defaultDraftWindow()]);
+    });
+  }, [extensionRegistry.loading, launcherItems]);
 
   useEffect(() => {
     writeStoredWindows(windows);

@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     </div>
   )),
   archiveSession: vi.fn(),
+  registryLoading: false,
 }));
 
 vi.mock('./Layout', () => ({
@@ -33,7 +34,7 @@ vi.mock('../extensions/ExtensionRouteHost', async () => {
 
 vi.mock('../extensions/useExtensionRegistry', () => ({
   useExtensionRegistry: () => ({
-    loading: false,
+    loading: mocks.registryLoading,
     error: null,
     extensions: [
       {
@@ -68,11 +69,16 @@ function renderWindowedLayout() {
   );
 }
 
+function seedWindowedWindows(windows: unknown[]) {
+  window.localStorage.setItem('pa:windowed-os-shell-windows:v1', JSON.stringify(windows));
+}
+
 describe('WindowedLayout route windows', () => {
   beforeEach(() => {
     window.localStorage.clear();
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
+    mocks.registryLoading = false;
   });
 
   it('renders non-chat routes through the extension host without the embedded stable layout', async () => {
@@ -103,5 +109,70 @@ describe('WindowedLayout route windows', () => {
     expect(within(startMenu).getByText('Neon Pilot OS')).toBeTruthy();
     expect(within(startMenu).queryByText('APPS')).toBeNull();
     expect(startMenu.querySelector('.wos-app-monogram')).toBeNull();
+  });
+
+  it('prunes persisted route windows when their nav item is no longer available', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:workflows',
+        kind: 'route',
+        title: 'Workflows',
+        route: '/workflows',
+        bounds: { x: 60, y: 48, width: 800, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await waitFor(() => expect(screen.queryByText('/workflows:windowed')).toBeNull());
+    expect(screen.queryByRole('region', { name: /workflows/i })).toBeNull();
+    expect(await screen.findByTestId('embedded-layout')).toBeTruthy();
+    expect(screen.getByRole('region', { name: /new conversation/i })).toBeTruthy();
+  });
+
+  it('keeps persisted nested route windows when their parent nav item is available', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines-detail',
+        kind: 'route',
+        title: 'Routines detail',
+        route: '/routines/checkpoint',
+        bounds: { x: 60, y: 48, width: 800, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/routines/checkpoint:windowed');
+    expect(screen.getByRole('region', { name: /routines detail/i })).toBeTruthy();
+  });
+
+  it('does not prune persisted extension route windows while the registry is loading', async () => {
+    mocks.registryLoading = true;
+    seedWindowedWindows([
+      {
+        id: 'route:workflows',
+        kind: 'route',
+        title: 'Workflows',
+        route: '/workflows',
+        bounds: { x: 60, y: 48, width: 800, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/workflows:windowed');
+    expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
   });
 });
