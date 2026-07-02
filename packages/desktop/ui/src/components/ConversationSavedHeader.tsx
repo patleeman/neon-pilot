@@ -1,7 +1,7 @@
 import { TitleButton } from './ui';
 
 export const CONVERSATION_TITLE_CLASS =
-  'ui-conversation-title-clamp max-w-full break-words text-[32px] font-semibold leading-[1.08] tracking-[-0.018em] text-primary sm:text-[36px]';
+  'ui-conversation-title-clamp max-w-full break-words text-[24px] font-semibold leading-[1.15] tracking-normal text-primary sm:text-[26px]';
 
 interface ConversationSavedHeaderProps {
   title: string;

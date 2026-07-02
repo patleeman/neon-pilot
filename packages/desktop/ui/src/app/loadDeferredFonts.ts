@@ -1,28 +1,19 @@
 /**
  * Deferred font loading module.
  *
- * Loads non-critical font weights and families after the initial render so the
- * browser can paint the first frame without waiting for ~130KB of @font-face
- * CSS.  The primary body font (Geist 400) and monospace (Geist Mono 400) are
- * imported eagerly in main.tsx — everything here is an enhancement.
+ * Loads non-critical font families after the initial render so the browser can
+ * paint the first frame without waiting for extra @font-face CSS. The primary
+ * variable body font (Geist Variable) and monospace font (Geist Mono Variable)
+ * are imported eagerly in main.tsx because the shell uses intermediate weights.
  *
  * Uses requestIdleCallback when available, falling back to setTimeout to avoid
  * competing with the initial render cycle.
  */
 
 const DEFERRED_FONT_IMPORTERS: Array<() => Promise<unknown>> = [
-  // Geist — additional weights
-  () => import('@fontsource/geist/500.css'),
-  () => import('@fontsource/geist/600.css'),
-  () => import('@fontsource/geist/700.css'),
-  // Geist Mono — additional weights
-  () => import('@fontsource/geist-mono/500.css'),
-  () => import('@fontsource/geist-mono/600.css'),
-  // Variable fonts (rarely used; loaded last)
+  // Secondary UI family.
   () => import('@fontsource-variable/dm-sans'),
-  () => import('@fontsource-variable/geist'),
-  () => import('@fontsource-variable/geist-mono'),
-  // Editor font
+  // Editor font.
   () => import('@fontsource/jetbrains-mono/400.css'),
   () => import('@fontsource/jetbrains-mono/500.css'),
 ];

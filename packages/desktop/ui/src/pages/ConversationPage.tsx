@@ -8180,7 +8180,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                           void saveTitleEdit();
                         }}
                         placeholder="Name this conversation"
-                        className="ui-conversation-title-input !border-transparent !bg-transparent !px-3 !py-1.5 !text-[2rem] !font-[650] !leading-[1.08] hover:!bg-base/35 focus:!bg-base/35"
+                        className="ui-conversation-title-input !border-transparent !bg-transparent !px-3 !py-1.5 !text-[24px] !font-semibold !leading-[1.15] hover:!bg-base/35 focus:!bg-base/35 sm:!text-[26px]"
                         disabled={titleSaving}
                       />
                       <IconButton

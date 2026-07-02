@@ -3,12 +3,13 @@
 import './wdyr.ts';
 
 // ── Font loading strategy ────────────────────────────────────────────────────
-// Keep only the primary body and monospace fonts in the critical CSS path.
-// Additional weights and families are loaded asynchronously after first paint
-// via loadDeferredFonts(), reducing the main CSS chunk by ~130KB.
+// Keep the primary variable body and monospace fonts in the critical CSS path.
+// The app uses intermediate weights such as 500, 600, and 650 throughout the
+// shell, so loading only a static 400 face causes synthetic-weight rendering.
+// Secondary/editor font families are loaded asynchronously after first paint.
 
-import '@fontsource/geist/400.css';
-import '@fontsource/geist-mono/400.css';
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
 import './index.css';
 import '../../../../ui/src/styles.css';
 import '../extensions/extensionRegistryPrewarm';
