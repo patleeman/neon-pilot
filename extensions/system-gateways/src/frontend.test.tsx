@@ -139,13 +139,6 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     </button>
   ),
   WindowedPageButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
-  WindowedPageInspector: ({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: React.ReactNode }) => (
-    <aside>
-      {eyebrow ? <span>{eyebrow}</span> : null}
-      <h2>{title}</h2>
-      {children}
-    </aside>
-  ),
   WindowedPageMain: ({
     eyebrow,
     title,

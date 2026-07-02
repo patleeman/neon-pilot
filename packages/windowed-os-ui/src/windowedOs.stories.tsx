@@ -19,7 +19,6 @@ import {
   WindowedMenuPanel,
   WindowedMessageBubble,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -246,7 +245,7 @@ export const DenseAppPage: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell>
+        <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Gateways" accent="gateways">
             <WindowedPageSection title="Providers" meta="2 enabled">
               <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
@@ -273,8 +272,6 @@ export const DenseAppPage: Story = {
             <WindowedPageSection title="Approved users" meta="1 approved">
               <WindowedKeyValueList items={[{ label: 'User ID', value: '1191448898' }]} />
             </WindowedPageSection>
-          </WindowedPageMain>
-          <WindowedPageInspector eyebrow="Gateway context" title="Telegram">
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
                 items={[
@@ -287,7 +284,7 @@ export const DenseAppPage: Story = {
                 ]}
               />
             </WindowedPageSection>
-          </WindowedPageInspector>
+          </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
     </div>
@@ -306,7 +303,7 @@ export const CanonicalDensity: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell layout="wide">
+        <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Applications" accent="extensions">
             <WindowedPageSection title="Pages" meta="Dense">
               <WindowedList>
@@ -398,9 +395,6 @@ export const CanonicalDensity: Story = {
                 </div>
               </div>
             </WindowedPageSection>
-          </WindowedPageMain>
-
-          <WindowedPageInspector eyebrow="Inspection" title="Density">
             <WindowedPageSection title="Scale">
               <WindowedKeyValueList
                 items={[
@@ -420,7 +414,7 @@ export const CanonicalDensity: Story = {
                 ]}
               />
             </WindowedPageSection>
-          </WindowedPageInspector>
+          </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
     </div>
@@ -503,8 +497,6 @@ export const AutomationFormPrimitives: Story = {
                 <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
               </div>
             </WindowedPageSection>
-          </WindowedPageMain>
-          <WindowedPageInspector eyebrow="Run context" title="Daily release notes">
             <WindowedPageSection title="State">
               <WindowedKeyValueList
                 items={[
@@ -526,7 +518,7 @@ export const AutomationFormPrimitives: Story = {
                 ]}
               />
             </WindowedPageSection>
-          </WindowedPageInspector>
+          </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
     </div>
@@ -627,8 +619,6 @@ export const RoutinesListDetailPrimitives: Story = {
                 </WindowedTimelineItem>
               </WindowedTimeline>
             </WindowedPageSection>
-          </WindowedPageMain>
-          <WindowedPageInspector eyebrow="Routine context" title="Repo context loader">
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
                 items={[
@@ -650,7 +640,7 @@ export const RoutinesListDetailPrimitives: Story = {
                 ]}
               />
             </WindowedPageSection>
-          </WindowedPageInspector>
+          </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
     </div>
@@ -784,7 +774,7 @@ export const EmbeddedExtensionPage: Story = {
               <div className="ui-context-rail">
                 <div className="ui-context-rail-header">
                   <div className="ui-context-rail-header-copy">
-                    <span className="ui-section-label ui-section-label-accent">Gateway context</span>
+                    <span className="ui-section-label ui-section-label-accent">Gateway status</span>
                     <h2 className="ui-context-rail-title">Telegram</h2>
                     <div className="ui-context-rail-subtitle">Needs attention</div>
                   </div>
