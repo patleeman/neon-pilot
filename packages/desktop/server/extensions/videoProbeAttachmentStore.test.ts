@@ -31,4 +31,32 @@ describe('videoProbeAttachmentStore', () => {
       ),
     ).toContain('image ID img_bbbbbbbbbbbb');
   });
+
+  it('extracts sampled frames as scaled JPEGs for vision models', () => {
+    const args = testExports.buildFrameExtractionArgs({
+      videoPath: '/tmp/video.mp4',
+      timestampSec: 12.3456,
+      outputPath: '/tmp/frame-1.jpg',
+    });
+
+    expect(testExports.FRAME_MIME_TYPE).toBe('image/jpeg');
+    expect(args).toEqual([
+      '-y',
+      '-ss',
+      '12.346',
+      '-i',
+      '/tmp/video.mp4',
+      '-frames:v',
+      '1',
+      '-vf',
+      testExports.buildFrameScaleFilter(),
+      '-q:v',
+      '3',
+      '-f',
+      'image2',
+      '/tmp/frame-1.jpg',
+    ]);
+    expect(testExports.buildFrameScaleFilter()).toContain(String(testExports.FRAME_MAX_DIMENSION));
+    expect(testExports.buildFrameScaleFilter()).toContain('force_original_aspect_ratio=decrease');
+  });
 });

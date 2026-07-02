@@ -35,7 +35,10 @@ interface VideoProbeInvocationContext {
 
 const attachmentsBySession = new Map<string, Map<string, StoredVideoProbeAttachment>>();
 const MAX_VIDEO_FRAME_COUNT = 12;
-const FRAME_MIME_TYPE = 'image/png';
+const FRAME_MIME_TYPE = 'image/jpeg';
+const FRAME_FILE_EXTENSION = 'jpg';
+const FRAME_MAX_DIMENSION = 2000;
+const FRAME_JPEG_QUALITY = 3;
 const MEDIA_PROBE_RUNTIME_DIR = 'media-probes';
 const LEGACY_VIDEO_PROBE_RUNTIME_DIR = 'video-probes';
 
@@ -283,6 +286,34 @@ function buildFrameSummary(
   return [`Sampled ${frames.length} frame${frames.length === 1 ? '' : 's'} from ${video.id} (${label}).`, ...lines].join('\n');
 }
 
+function buildFrameScaleFilter(maxDimension = FRAME_MAX_DIMENSION): string {
+  return [
+    `scale='min(${maxDimension},iw)'`,
+    `'min(${maxDimension},ih)'`,
+    'force_original_aspect_ratio=decrease',
+    'force_divisible_by=2',
+  ].join(':');
+}
+
+function buildFrameExtractionArgs(input: { videoPath: string; timestampSec: number; outputPath: string }): string[] {
+  return [
+    '-y',
+    '-ss',
+    input.timestampSec.toFixed(3),
+    '-i',
+    input.videoPath,
+    '-frames:v',
+    '1',
+    '-vf',
+    buildFrameScaleFilter(),
+    '-q:v',
+    String(FRAME_JPEG_QUALITY),
+    '-f',
+    'image2',
+    input.outputPath,
+  ];
+}
+
 function addSegmentOffset(segment: { text: string; startMs?: number; endMs?: number }, offsetMs: number) {
   return {
     text: segment.text,
@@ -379,8 +410,8 @@ export async function sampleVideoFrames(input: unknown, context?: VideoProbeInvo
     const frames: Array<{ timestampMs: number; mimeType: string; data: string; sizeBytes: number }> = [];
     for (let index = 0; index < timestamps.length; index += 1) {
       const timestampSec = timestamps[index] ?? startSec;
-      const outputPath = join(tempRoot, `frame-${index + 1}.png`);
-      await runFfmpeg(['-y', '-ss', timestampSec.toFixed(3), '-i', video.path, '-frames:v', '1', '-f', 'image2', outputPath]);
+      const outputPath = join(tempRoot, `frame-${index + 1}.${FRAME_FILE_EXTENSION}`);
+      await runFfmpeg(buildFrameExtractionArgs({ videoPath: video.path, timestampSec, outputPath }));
       if (!existsSync(outputPath)) {
         throw new Error(`ffmpeg did not produce a frame at ${timestampSec.toFixed(3)}s.`);
       }
@@ -399,7 +430,7 @@ export async function sampleVideoFrames(input: unknown, context?: VideoProbeInvo
             type: 'image' as const,
             data: frame.data,
             mimeType: frame.mimeType,
-            name: `${video.id}-frame-${index + 1}-${(frame.timestampMs / 1000).toFixed(3)}s.png`,
+            name: `${video.id}-frame-${index + 1}-${(frame.timestampMs / 1000).toFixed(3)}s.${FRAME_FILE_EXTENSION}`,
           })),
         )
       : [];
@@ -493,7 +524,11 @@ export function clearVideoProbeAttachmentCacheForTests(): void {
 }
 
 export const testExports = {
+  buildFrameExtractionArgs,
+  buildFrameScaleFilter,
   buildFrameSummary,
+  FRAME_MAX_DIMENSION,
+  FRAME_MIME_TYPE,
   parseDurationMs,
   parseFps,
   parseVideoDimensions,
