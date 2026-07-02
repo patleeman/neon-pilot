@@ -24,6 +24,7 @@ import {
   TextInput,
   ToolbarButton,
   WindowedBadge,
+  WindowedDialog,
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
@@ -629,6 +630,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [windowedRunsOpen, setWindowedRunsOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<RoutinePosition | null>(null);
   const [dragTargetRoutineId, setDragTargetRoutineId] = useState<string | null>(null);
@@ -1927,8 +1929,8 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const selectedRoutine = selectedRoutineId ? hookRoutines.find((routine) => routine.id === selectedRoutineId) : null;
 
   if (context.shellPresentation === 'windowed') {
+    const selectedRuns = data.runs.filter((run) => run.hookId === selectedHook.id);
     const renderWindowedRoutine = (routine: Routine, index: number) => {
-      const isEditing = selectedRoutineId === routine.id && draft?.id === routine.id;
       const isUnsaved = unsavedRoutineIds.has(routine.id);
       return (
         <WindowedTimelineItem
@@ -1949,19 +1951,12 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             <div className="wos-routine-row__actions">
               <WindowedPageButton
                 onClick={() => {
-                  if (isEditing) closeEditor();
-                  else selectRoutine(routine);
+                  selectRoutine(routine);
                 }}
               >
-                {isEditing ? 'Done' : 'Edit'}
+                Open
               </WindowedPageButton>
-              {isEditing ? (
-                <WindowedPageButton tone="accent" onClick={() => void save()}>
-                  {saving ? 'Saving...' : 'Save'}
-                </WindowedPageButton>
-              ) : (
-                <WindowedPageButton onClick={() => void deleteRoutine(routine)}>Delete</WindowedPageButton>
-              )}
+              <WindowedPageButton onClick={() => void deleteRoutine(routine)}>Delete</WindowedPageButton>
             </div>
           </div>
           {routine.type === 'decision' && routine.outcomes.length ? (
@@ -1982,104 +1977,133 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               })}
             </WindowedList>
           ) : null}
-          {isEditing ? <div className="wos-routine-editor-bridge">{renderEditor(routine)}</div> : null}
         </WindowedTimelineItem>
       );
     };
 
     return (
-      <WindowedPageShell layout="two-column">
-        <WindowedPageRail title="Routines" accent="routines">
-          <WindowedList>
-            {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
-              <div key={`group:${group}`} className="wos-page-eyebrow">
-                {group}
-              </div>,
-              ...hooks.map((hook) => (
-                <WindowedListItem
-                  key={hook.id}
-                  title={hook.title}
-                  meta={ownerLabel(hook.ownerExtensionId)}
-                  detail={hook.summary}
-                  active={hook.id === selectedHook.id}
-                  accent="routines"
-                  onSelect={() => {
-                    setSelectedHookId(hook.id);
-                    void navigateRoutines(pa, hook.id);
-                  }}
-                />
-              )),
-            ])}
-          </WindowedList>
-        </WindowedPageRail>
-        <WindowedPageMain
-          eyebrow="Routine event"
-          title={selectedHook.title}
-          description="Put setup checks in Before, follow-up work in After, or choose a path when the event needs a decision."
-          actions={
-            <>
-              <WindowedPageButton tone="accent" onClick={() => addRoutine('instruction')}>
-                Run prompt
-              </WindowedPageButton>
-              <WindowedPageButton onClick={() => addRoutine('decision')}>Choose path</WindowedPageButton>
-              <WindowedPageButton onClick={() => addRoutine('stop')}>Stop event</WindowedPageButton>
-            </>
-          }
-        >
-          {actionError ? (
-            <WindowedPageSection title="Action needed">
-              <div className="wos-routine-error">{actionError}</div>
+      <div className="h-full overflow-hidden">
+        <WindowedPageShell layout="two-column">
+          <WindowedPageRail title="Routines" accent="routines">
+            <WindowedList>
+              {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
+                <div key={`group:${group}`} className="wos-page-eyebrow">
+                  {group}
+                </div>,
+                ...hooks.map((hook) => (
+                  <WindowedListItem
+                    key={hook.id}
+                    title={hook.title}
+                    meta={ownerLabel(hook.ownerExtensionId)}
+                    detail={hook.summary}
+                    active={hook.id === selectedHook.id}
+                    accent="routines"
+                    onSelect={() => {
+                      closeEditor();
+                      setWindowedRunsOpen(false);
+                      setSelectedHookId(hook.id);
+                      void navigateRoutines(pa, hook.id);
+                    }}
+                  />
+                )),
+              ])}
+            </WindowedList>
+          </WindowedPageRail>
+          <WindowedPageMain
+            eyebrow="Routine event"
+            title={selectedHook.title}
+            description="Put setup checks in Before, follow-up work in After, or choose a path when the event needs a decision."
+            actions={
+              <>
+                <WindowedPageButton tone="accent" onClick={() => addRoutine('instruction')}>
+                  Run prompt
+                </WindowedPageButton>
+                <WindowedPageButton onClick={() => addRoutine('decision')}>Choose path</WindowedPageButton>
+                <WindowedPageButton onClick={() => addRoutine('stop')}>Stop event</WindowedPageButton>
+                <WindowedPageButton onClick={() => setWindowedRunsOpen(true)}>Runs</WindowedPageButton>
+              </>
+            }
+          >
+            {actionError ? (
+              <WindowedPageSection title="Action needed">
+                <div className="wos-routine-error">{actionError}</div>
+              </WindowedPageSection>
+            ) : null}
+            <WindowedPageSection title="Before" meta={`${beforeRoutines.length} routines`}>
+              {beforeRoutines.length ? (
+                <WindowedTimeline>{beforeRoutines.map((routine, index) => renderWindowedRoutine(routine, index))}</WindowedTimeline>
+              ) : (
+                <div className="wos-routine-empty">No routines before this event.</div>
+              )}
             </WindowedPageSection>
-          ) : null}
-          <WindowedPageSection title="Before" meta={`${beforeRoutines.length} routines`}>
-            {beforeRoutines.length ? (
-              <WindowedTimeline>{beforeRoutines.map((routine, index) => renderWindowedRoutine(routine, index))}</WindowedTimeline>
-            ) : (
-              <div className="wos-routine-empty">No routines before this event.</div>
-            )}
-          </WindowedPageSection>
-          <WindowedPageSection title="After" meta={`${afterRoutines.length} routines`}>
-            {afterRoutines.length ? (
-              <WindowedTimeline>{afterRoutines.map((routine, index) => renderWindowedRoutine(routine, index))}</WindowedTimeline>
-            ) : (
-              <div className="wos-routine-empty">No routines after this event.</div>
-            )}
-          </WindowedPageSection>
-          <WindowedPageSection title="Status" meta={selectedRoutine?.name ?? selectedHook.title}>
-            <WindowedKeyValueList
-              items={[
-                { label: 'Owner', value: ownerLabel(selectedHook.ownerExtensionId) },
-                { label: 'Before', value: beforeRoutines.length },
-                { label: 'After', value: afterRoutines.length },
-                {
-                  label: 'Active',
-                  value: selectedRoutine ? (
-                    <WindowedBadge tone={routineTone(selectedRoutine)}>{routineStatusLabel(selectedRoutine)}</WindowedBadge>
-                  ) : (
-                    'Event'
-                  ),
-                },
-              ]}
-            />
-          </WindowedPageSection>
-          <WindowedPageSection title="Runs" meta={`${data.runs.filter((run) => run.hookId === selectedHook.id).length} total`}>
-            {data.runs.filter((run) => run.hookId === selectedHook.id).length ? (
+            <WindowedPageSection title="After" meta={`${afterRoutines.length} routines`}>
+              {afterRoutines.length ? (
+                <WindowedTimeline>{afterRoutines.map((routine, index) => renderWindowedRoutine(routine, index))}</WindowedTimeline>
+              ) : (
+                <div className="wos-routine-empty">No routines after this event.</div>
+              )}
+            </WindowedPageSection>
+            <WindowedPageSection title="Status" meta={selectedRoutine?.name ?? selectedHook.title}>
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Owner', value: ownerLabel(selectedHook.ownerExtensionId) },
+                  { label: 'Before', value: beforeRoutines.length },
+                  { label: 'After', value: afterRoutines.length },
+                  { label: 'Runs', value: selectedRuns.length },
+                  {
+                    label: 'Active',
+                    value: selectedRoutine ? (
+                      <WindowedBadge tone={routineTone(selectedRoutine)}>{routineStatusLabel(selectedRoutine)}</WindowedBadge>
+                    ) : (
+                      'Event'
+                    ),
+                  },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+
+        {selectedRoutine && draft ? (
+          <WindowedDialog
+            title={selectedRoutine.name}
+            meta={draftIsDirty ? 'Unsaved changes' : routineStatusLabel(selectedRoutine)}
+            accent="routines"
+            onClose={closeEditor}
+            actions={
+              <>
+                <WindowedPageButton tone="accent" onClick={() => void save()}>
+                  {saving ? 'Saving...' : 'Save'}
+                </WindowedPageButton>
+                <WindowedPageButton onClick={() => void deleteRoutine(selectedRoutine)}>Delete</WindowedPageButton>
+              </>
+            }
+          >
+            <div className="wos-routine-editor-bridge">{renderEditor(draft)}</div>
+          </WindowedDialog>
+        ) : null}
+
+        {windowedRunsOpen ? (
+          <WindowedDialog
+            title="Routine runs"
+            meta={`${selectedRuns.length} total`}
+            accent="routines"
+            onClose={() => setWindowedRunsOpen(false)}
+          >
+            {selectedRuns.length ? (
               <WindowedTimeline>
-                {data.runs
-                  .filter((run) => run.hookId === selectedHook.id)
-                  .slice(0, 5)
-                  .map((run) => (
-                    <WindowedTimelineItem key={run.id} title={run.status} meta={new Date(run.startedAt).toLocaleString()}>
-                      {run.steps.length ? `${run.steps.length} recorded steps` : `${selectedHook.title} ran without recorded steps.`}
-                    </WindowedTimelineItem>
-                  ))}
+                {selectedRuns.slice(0, 12).map((run) => (
+                  <WindowedTimelineItem key={run.id} title={run.status} meta={new Date(run.startedAt).toLocaleString()}>
+                    {run.steps.length ? `${run.steps.length} recorded steps` : `${selectedHook.title} ran without recorded steps.`}
+                  </WindowedTimelineItem>
+                ))}
               </WindowedTimeline>
             ) : (
               <div className="wos-routine-empty">Run history appears here after routines execute.</div>
             )}
-          </WindowedPageSection>
-        </WindowedPageMain>
-      </WindowedPageShell>
+          </WindowedDialog>
+        ) : null}
+      </div>
     );
   }
 

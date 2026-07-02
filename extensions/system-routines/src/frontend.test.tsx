@@ -222,7 +222,14 @@ describe('RoutinesPage', () => {
     expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Active')).toBeTruthy();
     expect(screen.queryByText('Selected')).toBeNull();
-    expect(screen.getByText('Runs')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Runs' })).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Review code changes' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    expect(screen.getByRole('dialog', { name: 'Review code changes' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Close Review code changes'));
+    fireEvent.click(screen.getByRole('button', { name: 'Runs' }));
+    expect(screen.getByRole('dialog', { name: 'Routine runs' })).toBeTruthy();
     expect(screen.queryByText('Routine context')).toBeNull();
   });
 
