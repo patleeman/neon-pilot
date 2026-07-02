@@ -3442,6 +3442,10 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }:
     }
 
     function handleDesktopNavigate(event: Event) {
+      if (event.defaultPrevented) {
+        return;
+      }
+
       const detail = (event as CustomEvent<unknown>).detail;
       if (!isDesktopNavigateDetail(detail)) {
         return;

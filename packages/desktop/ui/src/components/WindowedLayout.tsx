@@ -277,6 +277,18 @@ function findLauncherItemForRoute(route: string, launcherItems: LauncherItem[]):
   return launcherItems.find((item) => routeMatchesLauncherItem(route, item)) ?? null;
 }
 
+function chatSessionIdForRoute(route: string): string | null {
+  const pathname = routePathname(route).replace(/\/+$/, '');
+  if (pathname === '/conversations' || pathname === '/conversations/new') return 'draft';
+  const match = pathname.match(/^\/conversations\/([^/]+)$/);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1] ?? '');
+  } catch {
+    return match[1] ?? null;
+  }
+}
+
 function isTopLevelRoute(route: string): boolean {
   const pathname = routePathname(route).replace(/\/+$/, '');
   if (!pathname || pathname === '/') return false;
@@ -465,18 +477,54 @@ export function WindowedLayout() {
     [launcherItems],
   );
 
+  const openChatWindow = useCallback(
+    (route: string) => {
+      const sessionId = chatSessionIdForRoute(route);
+      if (!sessionId) return false;
+      const isDraft = sessionId === 'draft';
+      const session = isDraft ? null : (chatSessions.find((candidate) => candidate.id === sessionId) ?? null);
+      const id = isDraft ? 'chat:draft' : `chat:${sessionId}`;
+      setLauncherOpen(false);
+      setWindows((current) => {
+        const existing = current.find((windowModel) => windowModel.id === id);
+        if (existing) {
+          const title = session ? conversationWindowTitle(session) : existing.title;
+          return [
+            ...current.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
+            { ...existing, title, route, minimized: false, focused: true },
+          ];
+        }
+        const next: DesktopWindowModel = {
+          id,
+          kind: 'chat',
+          title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : 'Chat',
+          route: isDraft ? '/conversations/new' : route,
+          bounds: defaultBounds(current.length, 'chat'),
+          minimized: false,
+          focused: true,
+          archivedOnClose: !isDraft,
+        };
+        return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
+      });
+      return true;
+    },
+    [chatSessions],
+  );
+
   useEffect(() => {
     const handleDesktopNavigate = (event: Event) => {
       const detail = (event as CustomEvent<{ route?: unknown; to?: unknown }>).detail;
       const route = typeof detail?.route === 'string' ? detail.route : typeof detail?.to === 'string' ? detail.to : '';
       if (!route) return;
-      if (openRouteWindow(route)) {
+      if (openChatWindow(route) || openRouteWindow(route)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
         event.stopPropagation();
       }
     };
-    window.addEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate);
-    return () => window.removeEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate);
-  }, [openRouteWindow]);
+    window.addEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate, true);
+    return () => window.removeEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate, true);
+  }, [openChatWindow, openRouteWindow]);
 
   const closeWindow = useCallback(
     (windowModel: DesktopWindowModel) => {

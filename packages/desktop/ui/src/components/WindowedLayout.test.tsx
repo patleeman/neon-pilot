@@ -258,6 +258,99 @@ describe('WindowedLayout route windows', () => {
     expect(within(taskbar).queryByText('Follow-up thread')).toBeNull();
   });
 
+  it('opens existing chat sessions as focused taskbar windows from desktop navigation events', async () => {
+    mocks.tabs = [
+      { id: 'session-1', title: 'Planning thread', messageCount: 4 },
+      { id: 'session-2', title: 'Follow-up thread', messageCount: 2 },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent(
+      window,
+      new CustomEvent('neon-pilot-desktop-navigate', {
+        detail: { route: '/conversations/session-1' },
+      }),
+    );
+
+    const planningWindow = await screen.findByRole('region', { name: /planning thread/i });
+    expect(planningWindow.getAttribute('data-focused')).toBe('true');
+    expect(within(planningWindow).getByTestId('embedded-layout')).toBeTruthy();
+
+    const taskbar = screen.getByRole('navigation', { name: /open windows/i });
+    expect(
+      within(taskbar)
+        .getByRole('button', { name: /planning thread/i })
+        .getAttribute('data-focused'),
+    ).toBe('true');
+    expect(
+      within(taskbar)
+        .getByRole('button', { name: /new conversation/i })
+        .getAttribute('data-focused'),
+    ).toBe('false');
+  });
+
+  it('consumes handled desktop navigation events before embedded stable listeners see them', async () => {
+    mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
+    const earlierBubbleListener = vi.fn();
+    const laterBubbleListener = vi.fn();
+
+    window.addEventListener('neon-pilot-desktop-navigate', earlierBubbleListener);
+    renderWindowedLayout();
+    window.addEventListener('neon-pilot-desktop-navigate', laterBubbleListener);
+
+    const event = new CustomEvent('neon-pilot-desktop-navigate', {
+      cancelable: true,
+      detail: { route: '/conversations/session-1' },
+    });
+
+    fireEvent(window, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(await screen.findByRole('region', { name: /planning thread/i })).toBeTruthy();
+    expect(earlierBubbleListener).not.toHaveBeenCalled();
+    expect(laterBubbleListener).not.toHaveBeenCalled();
+
+    window.removeEventListener('neon-pilot-desktop-navigate', earlierBubbleListener);
+    window.removeEventListener('neon-pilot-desktop-navigate', laterBubbleListener);
+  });
+
+  it('marks draft chat navigation events as handled', () => {
+    renderWindowedLayout();
+
+    const event = new CustomEvent('neon-pilot-desktop-navigate', {
+      cancelable: true,
+      detail: { route: '/conversations/new' },
+    });
+
+    fireEvent(window, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(screen.getAllByRole('region', { name: /new conversation/i })).toHaveLength(1);
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+  });
+
+  it('reuses the draft chat window for new-conversation navigation events', () => {
+    renderWindowedLayout();
+
+    fireEvent(
+      window,
+      new CustomEvent('neon-pilot-desktop-navigate', {
+        detail: { route: '/conversations/session-1' },
+      }),
+    );
+
+    fireEvent(
+      window,
+      new CustomEvent('neon-pilot-desktop-navigate', {
+        detail: { route: '/conversations/new' },
+      }),
+    );
+
+    expect(screen.getAllByRole('region', { name: /new conversation/i })).toHaveLength(1);
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+  });
+
   it('prunes persisted route windows when their nav item is no longer available', async () => {
     seedWindowedWindows([
       {
