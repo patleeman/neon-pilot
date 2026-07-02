@@ -24,6 +24,7 @@ import {
   WindowedPageShell,
   WindowedSegmentedControl,
   WindowedSelect,
+  WindowedStateBlock,
   WindowedTextarea,
   WindowedTextInput,
   WindowedTimeline,
@@ -400,13 +401,17 @@ export const CanonicalDensity: Story = {
               />
             </WindowedPageSection>
             <WindowedPageSection title="States">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Ready', value: <WindowedBadge tone="positive">Healthy</WindowedBadge> },
-                  { label: 'Warning', value: <WindowedBadge tone="warning">Review</WindowedBadge> },
-                  { label: 'Danger', value: <WindowedBadge tone="danger">Failed</WindowedBadge> },
-                ]}
-              />
+              <div style={{ display: 'grid', gap: 8 }}>
+                <WindowedStateBlock tone="positive" title="Ready">
+                  Gateway runtime is accepting work from approved chats.
+                </WindowedStateBlock>
+                <WindowedStateBlock tone="warning" title="Needs attention" action={<WindowedPageButton>Retry</WindowedPageButton>}>
+                  Telegram polling failed. Check whether another bot process is active.
+                </WindowedStateBlock>
+                <WindowedStateBlock tone="danger" title="Unavailable">
+                  Gateway settings could not be loaded.
+                </WindowedStateBlock>
+              </div>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>

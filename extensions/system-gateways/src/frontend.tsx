@@ -32,6 +32,7 @@ import {
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedStateBlock,
   WindowedTextInput,
   WindowedToggle,
 } from '@neon-pilot/extensions/ui';
@@ -281,7 +282,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
             actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
           >
             <WindowedPageSection title="Status" meta="Unavailable">
-              <div className="wos-gateway-error">{error ?? 'Gateway settings could not be loaded.'}</div>
+              <WindowedStateBlock tone="danger">{error ?? 'Gateway settings could not be loaded.'}</WindowedStateBlock>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
@@ -352,7 +353,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
         >
           {error ? (
             <WindowedPageSection title="Action needed">
-              <div className="wos-gateway-error">{error}</div>
+              <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
             </WindowedPageSection>
           ) : null}
           {notice ? (
@@ -696,7 +697,9 @@ function WindowedGatewaysLoading() {
       </WindowedPageRail>
       <WindowedPageMain eyebrow="Gateway provider" title="Telegram">
         <WindowedPageSection title="Status" meta="Loading">
-          <QuietLoadingState label="Loading gateway settings" className="min-h-24" />
+          <WindowedStateBlock>
+            <QuietLoadingState label="Loading gateway settings" className="min-h-24" />
+          </WindowedStateBlock>
         </WindowedPageSection>
       </WindowedPageMain>
     </WindowedPageShell>

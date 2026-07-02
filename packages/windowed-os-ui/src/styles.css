@@ -1386,6 +1386,47 @@
   color: var(--wos-telemetry);
 }
 
+.wos-state-block {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--wos-space-5);
+  padding: var(--wos-space-5);
+  color: var(--wos-ink-700);
+  font: var(--wos-text-body);
+}
+
+.wos-state-block[data-tone='positive'] {
+  color: oklch(42% 0.11 150);
+}
+
+.wos-state-block[data-tone='warning'] {
+  color: oklch(42% 0.12 70);
+}
+
+.wos-state-block[data-tone='danger'] {
+  color: oklch(42% 0.12 25);
+}
+
+.wos-state-block__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-2);
+}
+
+.wos-state-block__title {
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
+}
+
+.wos-state-block__body {
+  min-width: 0;
+}
+
+.wos-state-block__action {
+  flex: 0 0 auto;
+}
+
 .wos-toggle {
   position: relative;
   display: inline-flex;
@@ -2606,12 +2647,7 @@
 }
 
 .windowed-os-shell
-  :where(
-    .wos-window-route-body .ui-context-rail-title,
-    .wos-page-rail__header,
-    .wos-page-section__header h3,
-    .wos-chat-main__header
-  ) {
+  :where(.wos-window-route-body .ui-context-rail-title, .wos-page-rail__header, .wos-page-section__header h3, .wos-chat-main__header) {
   font-family: var(--wos-font-display);
   font-size: 15px;
   font-weight: 800;

@@ -306,6 +306,26 @@ export function WindowedBadge({ children, tone = 'neutral', className }: Windowe
   );
 }
 
+export interface WindowedStateBlockProps {
+  title?: string;
+  children: ReactNode;
+  tone?: 'neutral' | 'positive' | 'warning' | 'danger';
+  action?: ReactNode;
+  className?: string;
+}
+
+export function WindowedStateBlock({ title, children, tone = 'neutral', action, className }: WindowedStateBlockProps) {
+  return (
+    <div className={cx('wos-state-block', className)} data-tone={tone}>
+      <div className="wos-state-block__copy">
+        {title ? <div className="wos-state-block__title">{title}</div> : null}
+        <div className="wos-state-block__body">{children}</div>
+      </div>
+      {action ? <div className="wos-state-block__action">{action}</div> : null}
+    </div>
+  );
+}
+
 export interface WindowedToggleProps {
   checked?: boolean;
   accent?: AppAccent;

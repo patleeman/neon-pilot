@@ -178,6 +178,22 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </div>
   ),
+  WindowedStateBlock: ({
+    title,
+    children,
+    action,
+  }: {
+    title?: string;
+    children: React.ReactNode;
+    action?: React.ReactNode;
+    tone?: string;
+  }) => (
+    <div>
+      {title ? <strong>{title}</strong> : null}
+      {children}
+      {action}
+    </div>
+  ),
   WindowedTextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   WindowedTimeline: ({ children }: { children: React.ReactNode }) => <ol>{children}</ol>,
   WindowedTimelineItem: ({ title, meta }: { title: string; meta?: string }) => (

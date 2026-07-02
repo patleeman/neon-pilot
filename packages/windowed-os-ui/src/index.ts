@@ -56,6 +56,8 @@ export {
   type WindowedSegmentedOption,
   WindowedSelect,
   type WindowedSelectProps,
+  WindowedStateBlock,
+  type WindowedStateBlockProps,
   WindowedTextarea,
   type WindowedTextareaProps,
   WindowedTextButton,
