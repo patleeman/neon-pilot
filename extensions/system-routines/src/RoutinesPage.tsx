@@ -1183,7 +1183,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           <WindowedPageMain
             eyebrow="Routines"
             title="How Routines work"
-            description="Routines are prompt blocks that run automatically before or after lifecycle events."
             actions={
               <WindowedPageButton tone="accent" onClick={() => addExampleRoutine('checkpoint', checkpointExampleRoutine)}>
                 Create checkpoint routine
@@ -1986,7 +1985,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           <WindowedPageMain
             eyebrow="Routine event"
             title={selectedHook.title}
-            description="Put setup checks in Before, follow-up work in After, or choose a path when the event needs a decision."
             actions={
               <>
                 <WindowedPageButton tone="accent" onClick={() => addRoutine('instruction')}>

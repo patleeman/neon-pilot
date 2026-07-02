@@ -329,6 +329,7 @@ describe('GatewaysPage', () => {
     expect(await screen.findByText('Gateway provider')).toBeTruthy();
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(container.querySelector('.wos-page-rail')).toBeNull();
+    expect(container.querySelector('main > p')).toBeNull();
     expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
     expect(screen.getByText('Providers')).toBeTruthy();
     expect(screen.getByText('Gateway tools')).toBeTruthy();

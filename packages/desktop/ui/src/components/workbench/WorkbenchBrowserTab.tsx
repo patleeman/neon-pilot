@@ -49,6 +49,22 @@ function isInsideUnfocusedWindow(host: HTMLElement | null): boolean {
   return windowElement?.dataset.focused === 'false';
 }
 
+function isInsideBackgroundWindowedWindow(host: HTMLElement | null): boolean {
+  const ownWindow = host?.closest<HTMLElement>('.wos-window');
+  const shell = ownWindow?.closest('.windowed-os-shell');
+  if (!host || !ownWindow || !shell) {
+    return false;
+  }
+
+  const windows = Array.from(shell.querySelectorAll<HTMLElement>('.wos-window')).filter(isVisibleStyle);
+  if (windows.length <= 1) {
+    return false;
+  }
+
+  const topWindow = windows.reduce((top, candidate) => (windowLayer(candidate) >= windowLayer(top) ? candidate : top), windows[0]!);
+  return topWindow !== ownWindow;
+}
+
 function rectsOverlap(first: DOMRect, second: DOMRect): boolean {
   return first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
 }
@@ -329,6 +345,7 @@ export function WorkbenchBrowserTab({
       hasBlockingHtmlModal() ||
       hasWindowedShellOverlay() ||
       isInsideUnfocusedWindow(host) ||
+      isInsideBackgroundWindowedWindow(host) ||
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||
       isCoveredByRendererLayer(host);

@@ -333,7 +333,6 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
           <WindowedPageMain
             eyebrow="Gateway provider"
             title={telegramProvider?.label ?? 'Telegram'}
-            description={telegramProvider?.description ?? 'Run Neon Pilot from Telegram DMs, groups, and topics.'}
             actions={
               <>
                 <WindowedPageButton disabled={busy || !tokenConfigured} onClick={testToken}>

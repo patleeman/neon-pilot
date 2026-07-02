@@ -148,6 +148,7 @@ describe('Dynamic Workflows surfaces', () => {
     expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(screen.queryByText('Workflow context')).toBeNull();
+    expect(screen.queryByText('Create, run, and inspect coordinated background agent workflows.')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Inventory' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Runs' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Library' })).toBeTruthy();

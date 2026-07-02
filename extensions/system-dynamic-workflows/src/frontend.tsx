@@ -595,7 +595,6 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
           <WindowedPageMain
             eyebrow="Dynamic workflows"
             title="Workflows"
-            description="Create, run, and inspect coordinated background agent workflows."
             actions={
               <>
                 <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
