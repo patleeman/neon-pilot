@@ -62,6 +62,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Repo audit"');
   });
 
+  it('documents the canonical Automations desktop page', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const AutomationsPage');
+    expect(source).toContain('title="Automations"');
+    expect(source).toContain('eyebrow="Scheduled work"');
+    expect(source).toContain('title="Queue"');
+    expect(source).toContain('title="Selected automation"');
+    expect(source).toContain('ariaLabel="Automation filter"');
+  });
+
   it('documents the canonical Model Arena desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

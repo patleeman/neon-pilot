@@ -660,6 +660,108 @@ export const AutomationFormPrimitives: Story = {
   ),
 };
 
+export const AutomationsPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="Automations"
+        accent="automations"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Scheduled work"
+            title="Automations"
+            actions={
+              <>
+                <WindowedSegmentedControl
+                  ariaLabel="Automation filter"
+                  accent="automations"
+                  value="active"
+                  options={[
+                    { id: 'active', label: 'Active' },
+                    { id: 'paused', label: 'Paused' },
+                    { id: 'all', label: 'All' },
+                  ]}
+                  onChange={() => undefined}
+                />
+                <WindowedPageButton>Run selected</WindowedPageButton>
+                <WindowedPageButton tone="accent">New automation</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Queue" meta="live">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Enabled', value: <WindowedBadge tone="positive">5</WindowedBadge> },
+                  { label: 'Due today', value: 3 },
+                  { label: 'Running', value: <WindowedBadge tone="warning">1</WindowedBadge> },
+                  { label: 'Paused', value: 2 },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Automations" meta="selected: Release watch">
+              <WindowedDataTable columns={[{ label: 'Automation' }, { label: 'Next run' }, { label: 'Enabled', align: 'right' }]}>
+                <WindowedDataRow
+                  name="Release watch"
+                  meta="Summarize merged changes"
+                  enabled
+                  status={<WindowedBadge tone="positive">09:00</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="Dependency audit"
+                  meta="Check package drift"
+                  enabled
+                  status={<WindowedBadge tone="warning">running</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="Inbox sweep"
+                  meta="Group follow-up threads"
+                  enabled={false}
+                  status={<WindowedBadge tone="neutral">paused</WindowedBadge>}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Selected automation" meta="Release watch">
+              <div className="wos-form-grid" data-columns="3">
+                <WindowedField label="Schedule">
+                  <WindowedTextInput defaultValue="0 9 * * 1-5" aria-label="Automation schedule" />
+                </WindowedField>
+                <WindowedField label="Timezone">
+                  <WindowedTextInput defaultValue="America/New_York" aria-label="Automation timezone" />
+                </WindowedField>
+                <WindowedField label="Model">
+                  <WindowedSelect defaultValue="gpt-5" aria-label="Automation model">
+                    <option value="gpt-5">GPT-5</option>
+                    <option value="gpt-5-mini">GPT-5 mini</option>
+                  </WindowedSelect>
+                </WindowedField>
+                <WindowedField label="Instruction" span="full">
+                  <WindowedTextarea
+                    aria-label="Automation instruction"
+                    defaultValue="Draft release notes from merged work and append them to the Release notes chat."
+                  />
+                </WindowedField>
+              </div>
+              <div className="wos-form-actions">
+                <WindowedPageButton>Reset</WindowedPageButton>
+                <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
+              </div>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const RoutinesListDetailPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
@@ -1085,8 +1187,8 @@ export const ExtensionsPage: Story = {
                   ariaLabel="Extensions view"
                   value="installed"
                   options={[
-                    { value: 'installed', label: 'Installed' },
-                    { value: 'sources', label: 'Sources' },
+                    { id: 'installed', label: 'Installed' },
+                    { id: 'sources', label: 'Sources' },
                   ]}
                   onChange={() => undefined}
                 />
