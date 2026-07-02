@@ -195,10 +195,18 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 9px;
+  gap: 0;
 }
 
 .wos-app-tile[data-variant='taskbar'] {
+  gap: 0;
+}
+
+.wos-app-tile:has(.wos-app-monogram) {
+  gap: 9px;
+}
+
+.wos-app-tile[data-variant='taskbar']:has(.wos-app-monogram) {
   gap: 6px;
 }
 
@@ -281,7 +289,7 @@
 }
 
 .wos-start-menu__search {
-  padding: 8px 8px 2px;
+  padding: 8px 8px 4px;
 }
 
 .wos-start-menu__search input {
@@ -306,17 +314,10 @@
   outline-offset: 2px;
 }
 
-.wos-start-menu__section-label {
-  color: var(--wos-ink-500);
-  padding: 8px 14px 2px;
-  font: var(--wos-text-eyebrow);
-  letter-spacing: 0.02em;
-}
-
 .wos-start-menu__grid {
   display: grid;
   gap: 1px;
-  padding: 0 8px 8px;
+  padding: 0 8px 7px;
 }
 
 .wos-start-menu__item {
@@ -327,7 +328,7 @@
   border-color: transparent;
   border-radius: 6px;
   background: transparent;
-  padding: 5px 6px;
+  padding: 4px 6px;
   text-align: left;
 }
 

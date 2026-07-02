@@ -38,13 +38,21 @@ export interface WindowedAppTileProps {
   accent?: AppAccent;
   variant?: 'menu' | 'taskbar';
   count?: number;
+  showMonogram?: boolean;
   className?: string;
 }
 
-export function WindowedAppTile({ label, accent = 'settings', variant = 'menu', count, className }: WindowedAppTileProps) {
+export function WindowedAppTile({
+  label,
+  accent = 'settings',
+  variant = 'menu',
+  count,
+  showMonogram = false,
+  className,
+}: WindowedAppTileProps) {
   return (
     <span className={cx('wos-app-tile', className)} data-variant={variant}>
-      <AppMonogram label={label} accent={accent} />
+      {showMonogram ? <AppMonogram label={label} accent={accent} /> : null}
       <span className="wos-app-tile__copy">
         <span className="wos-app-tile__label">
           {label}
@@ -105,14 +113,15 @@ export interface WindowedPageRailProps {
   title: string;
   accent?: AppAccent;
   children: ReactNode;
+  showMonogram?: boolean;
   className?: string;
 }
 
-export function WindowedPageRail({ title, accent = 'settings', children, className }: WindowedPageRailProps) {
+export function WindowedPageRail({ title, accent = 'settings', children, showMonogram = false, className }: WindowedPageRailProps) {
   return (
     <aside className={cx('wos-page-rail', className)}>
       <div className="wos-page-rail__header">
-        <AppMonogram label={title} accent={accent} />
+        {showMonogram ? <AppMonogram label={title} accent={accent} /> : null}
         <span>{title}</span>
       </div>
       {children}
@@ -669,7 +678,6 @@ export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) 
           aria-label="Search apps"
         />
       </div>
-      <div className="wos-start-menu__section-label">APPS</div>
       <div className="wos-start-menu__grid">
         {visibleItems.length > 0 ? (
           visibleItems.map((item) => (

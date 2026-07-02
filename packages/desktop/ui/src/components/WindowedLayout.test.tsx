@@ -91,4 +91,17 @@ describe('WindowedLayout route windows', () => {
     expect(within(routinesWindow).queryByTestId('embedded-layout')).toBeNull();
     expect(screen.getAllByTestId('embedded-layout')).toHaveLength(1);
   });
+
+  it('keeps the windowed shell app controls text-only without monogram badges or secondary labels', () => {
+    const { container } = renderWindowedLayout();
+
+    expect(container.querySelector('.wos-taskbar .wos-app-monogram')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /start/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    expect(within(startMenu).getByText('Neon Pilot OS')).toBeTruthy();
+    expect(within(startMenu).queryByText('APPS')).toBeNull();
+    expect(startMenu.querySelector('.wos-app-monogram')).toBeNull();
+  });
 });
