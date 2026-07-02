@@ -22,6 +22,8 @@ export interface DesktopApplicationMenuActions {
   onFindInPage: () => void;
   onToggleSidebar: () => void;
   onToggleRightRail: () => void;
+  onShowStableShell: () => void;
+  onShowWindowedShell: () => void;
   onShowConversationMode: () => void;
   onShowWorkbenchMode: () => void;
   onNewWorkbenchTab: () => void;
@@ -183,6 +185,19 @@ export function buildDesktopApplicationMenuTemplate(
       { type: 'separator' },
       menuShortcut('toggleSidebar', 'Toggle Sidebar', actions, keyboardShortcuts),
       menuShortcut('toggleRightRail', 'Toggle Right Sidebar', actions, keyboardShortcuts),
+      {
+        label: 'Shell',
+        submenu: [
+          {
+            label: 'Stable Shell',
+            click: actions.onShowStableShell,
+          },
+          {
+            label: 'Windowed Shell',
+            click: actions.onShowWindowedShell,
+          },
+        ],
+      },
       menuShortcut('conversationMode', 'Conversation Mode', actions, keyboardShortcuts),
       menuShortcut('workbenchMode', 'Workbench Mode', actions, keyboardShortcuts),
       { type: 'separator' },

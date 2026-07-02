@@ -34,6 +34,8 @@ describe('buildDesktopApplicationMenuTemplate', () => {
         onFindInPage: noop,
         onToggleSidebar: noop,
         onToggleRightRail: noop,
+        onShowStableShell: noop,
+        onShowWindowedShell: noop,
         onShowConversationMode: noop,
         onShowWorkbenchMode: noop,
         onNewWorkbenchTab: noop,
@@ -123,6 +125,8 @@ describe('buildDesktopApplicationMenuTemplate', () => {
     const items = buildDesktopApplicationMenuTemplate({
       onToggleSidebar: noop,
       onToggleRightRail: noop,
+      onShowStableShell: noop,
+      onShowWindowedShell: noop,
       onShowConversationMode: noop,
       onShowWorkbenchMode: noop,
       onNewWorkbenchTab: noop,
@@ -156,6 +160,28 @@ describe('buildDesktopApplicationMenuTemplate', () => {
             (sub as Record<string, unknown>).label === 'Workbench Mode',
         ),
       ).toBe(true);
+      const shellMenu = viewMenu.submenu.find(
+        (sub: unknown) =>
+          typeof sub === 'object' &&
+          sub !== null &&
+          'label' in (sub as Record<string, unknown>) &&
+          (sub as Record<string, unknown>).label === 'Shell',
+      ) as Electron.MenuItemConstructorOptions | undefined;
+      expect(shellMenu).toBeDefined();
+      expect(Array.isArray(shellMenu?.submenu)).toBe(true);
+      if (shellMenu && Array.isArray(shellMenu.submenu)) {
+        for (const label of ['Stable Shell', 'Windowed Shell']) {
+          expect(
+            shellMenu.submenu.some(
+              (sub: unknown) =>
+                typeof sub === 'object' &&
+                sub !== null &&
+                'label' in (sub as Record<string, unknown>) &&
+                (sub as Record<string, unknown>).label === label,
+            ),
+          ).toBe(true);
+        }
+      }
       for (const label of [
         'New Workbench Tab',
         'Close Workbench Tab',

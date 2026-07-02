@@ -516,6 +516,12 @@ async function bootstrapDesktopApp(): Promise<void> {
     onToggleRightRail: () => {
       windowController?.sendShortcutToFocusedWindow('toggle-right-rail');
     },
+    onShowStableShell: () => {
+      void openMainRoute('/?shell=stable');
+    },
+    onShowWindowedShell: () => {
+      void openMainRoute('/?shell=windowed');
+    },
     onShowConversationMode: () => {
       windowController?.sendShortcutToFocusedWindow('show-conversation-mode');
     },
