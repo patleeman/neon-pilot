@@ -1164,6 +1164,18 @@
   padding: var(--wos-space-4) var(--wos-space-5);
 }
 
+.wos-page-grid,
+.wos-page-stack {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-page-grid[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
 .wos-page-eyebrow,
 .wos-page-section__header span {
   color: var(--wos-ink-500);
@@ -1516,6 +1528,7 @@
     justify-content: flex-start;
   }
 
+  .wos-page-grid[data-columns='2'],
   .wos-form-grid[data-columns='2'],
   .wos-form-grid[data-columns='3'] {
     grid-template-columns: 1fr;

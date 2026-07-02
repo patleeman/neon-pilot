@@ -86,6 +86,19 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('ariaLabel="Gateway filter"');
   });
 
+  it('documents the canonical Routines desktop page', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const RoutinesPage');
+    expect(source).toContain('title="Routines"');
+    expect(source).toContain('eyebrow="Agent hooks"');
+    expect(source).toContain('title="Overview"');
+    expect(source).toContain('title="Selected routine"');
+    expect(source).toContain('title="Recent runs"');
+    expect(source).toContain('ariaLabel="Routine scope"');
+  });
+
   it('documents the canonical Model Arena desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

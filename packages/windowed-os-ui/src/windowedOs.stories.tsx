@@ -877,119 +877,118 @@ export const GatewaysPage: Story = {
   ),
 };
 
-export const RoutinesListDetailPrimitives: Story = {
+export const RoutinesPage: Story = {
   render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
       <WindowFrame
         title="Routines"
         accent="routines"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(1080px, 100%)', height: 620 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Hook"
-            title="before_agent_start"
+            eyebrow="Agent hooks"
+            title="Routines"
             actions={
               <>
-                <WindowedPageButton>Disable hook</WindowedPageButton>
+                <WindowedSegmentedControl
+                  accent="routines"
+                  ariaLabel="Routine scope"
+                  value="repo"
+                  options={[
+                    { id: 'repo', label: 'Repo' },
+                    { id: 'global', label: 'Global' },
+                    { id: 'all', label: 'All' },
+                  ]}
+                  onChange={() => undefined}
+                />
                 <WindowedPageButton tone="accent">New routine</WindowedPageButton>
               </>
             }
           >
-            <WindowedPageSection title="Hooks" meta="4">
-              <WindowedList>
-                <WindowedListItem title="before_agent_start" meta="3 routines" detail="Instruction context" active accent="routines" />
-                <WindowedListItem title="after_agent_turn" meta="2 routines" detail="Status bookkeeping" accent="routines" />
-                <WindowedListItem title="before_tool_call" meta="1 routine" detail="Safety checks" accent="routines" />
-                <WindowedListItem title="after_tool_call" meta="No routines" detail="Available" accent="routines" />
-              </WindowedList>
-            </WindowedPageSection>
-            <WindowedPageSection title="Position" meta="3 routines">
-              <div className="wos-form-grid" data-columns="2">
-                <WindowedField label="Mode">
-                  <WindowedSegmentedControl
-                    accent="routines"
-                    ariaLabel="Routine position"
-                    value="before"
-                    options={[
-                      { id: 'before', label: 'Before' },
-                      { id: 'after', label: 'After' },
+            <div className="wos-page-grid" data-columns="2">
+              <div className="wos-page-stack">
+                <WindowedPageSection title="Overview" meta="workspace">
+                  <WindowedKeyValueGrid
+                    columns={4}
+                    items={[
+                      { label: 'Hooks', value: 4 },
+                      { label: 'Enabled', value: <WindowedBadge tone="positive">6</WindowedBadge> },
+                      { label: 'Paused', value: <WindowedBadge>1</WindowedBadge> },
+                      { label: 'Failures', value: <WindowedBadge tone="warning">1</WindowedBadge> },
                     ]}
                   />
-                </WindowedField>
-                <WindowedField label="Selected routine">
-                  <WindowedSelect defaultValue="repo-context" aria-label="Selected routine">
-                    <option value="repo-context">Repo context loader</option>
-                    <option value="taste">Taste checklist</option>
-                    <option value="handoff">Session handoff</option>
-                  </WindowedSelect>
-                </WindowedField>
+                </WindowedPageSection>
+
+                <WindowedPageSection title="Hooks" meta="4">
+                  <WindowedList>
+                    <WindowedListItem title="before_agent_start" meta="3 routines" detail="Instruction context" active accent="routines" />
+                    <WindowedListItem title="after_agent_turn" meta="2 routines" detail="Status bookkeeping" accent="routines" />
+                    <WindowedListItem title="before_tool_call" meta="1 routine" detail="Safety checks" accent="routines" />
+                  </WindowedList>
+                </WindowedPageSection>
               </div>
-            </WindowedPageSection>
-            <WindowedPageSection title="Routine stack" meta="Before agent">
-              <WindowedList>
-                <WindowedListItem
-                  title="Repo context loader"
-                  meta="Runs first"
-                  detail="Loads glossary, repo rules, and active workspace notes"
-                  active
-                  accent="routines"
-                  status={<WindowedBadge tone="positive">On</WindowedBadge>}
-                />
-                <WindowedListItem
-                  title="Taste checklist"
-                  meta="Runs second"
-                  detail="Adds UI evaluation reminders when editing app surfaces"
-                  accent="routines"
-                  status={<WindowedBadge tone="positive">On</WindowedBadge>}
-                />
-                <WindowedListItem
-                  title="Session handoff"
-                  meta="Runs third"
-                  detail="Summarizes state when context is compacted"
-                  accent="routines"
-                  status={<WindowedBadge>Paused</WindowedBadge>}
-                />
-              </WindowedList>
-            </WindowedPageSection>
-            <WindowedPageSection title="Recent runs" meta="Last 24h">
-              <WindowedTimeline>
-                <WindowedTimelineItem title="Loaded repo context" meta="09:58" tone="positive">
-                  Applied Neon Pilot route and extension boundary rules.
-                </WindowedTimelineItem>
-                <WindowedTimelineItem title="Skipped taste checklist" meta="09:22">
-                  No user-visible UI files were edited in that turn.
-                </WindowedTimelineItem>
-                <WindowedTimelineItem title="Recovered stale handoff" meta="Yesterday" tone="warning">
-                  Reconciled compacted notes with the current git status.
-                </WindowedTimelineItem>
-              </WindowedTimeline>
-            </WindowedPageSection>
-            <WindowedPageSection title="Status">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Hook', value: 'before_agent_start' },
-                  { label: 'Order', value: '1' },
-                  { label: 'State', value: <WindowedBadge tone="positive">Enabled</WindowedBadge> },
-                  {
-                    label: 'Auto-run',
-                    value: <WindowedToggle checked accent="routines" label="Toggle Repo context loader" />,
-                  },
-                ]}
-              />
-            </WindowedPageSection>
-            <WindowedPageSection title="Scope">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Applies to', value: 'Neon Pilot repo' },
-                  { label: 'Source', value: 'Workspace rules' },
-                ]}
-              />
-            </WindowedPageSection>
+
+              <div className="wos-page-stack">
+                <WindowedPageSection title="Selected routine" meta="Repo context loader">
+                  <div className="wos-form-grid" data-columns="3">
+                    <WindowedField label="Mode">
+                      <WindowedSegmentedControl
+                        accent="routines"
+                        ariaLabel="Routine position"
+                        value="before"
+                        options={[
+                          { id: 'before', label: 'Before' },
+                          { id: 'after', label: 'After' },
+                        ]}
+                      />
+                    </WindowedField>
+                    <WindowedField label="Routine">
+                      <WindowedSelect defaultValue="repo-context" aria-label="Selected routine">
+                        <option value="repo-context">Repo context</option>
+                        <option value="taste">Taste checklist</option>
+                        <option value="handoff">Session handoff</option>
+                      </WindowedSelect>
+                    </WindowedField>
+                    <WindowedField label="State">
+                      <WindowedToggle checked accent="routines" label="Toggle Repo context loader" />
+                    </WindowedField>
+                    <WindowedField label="Instruction" span="full">
+                      <WindowedTextarea
+                        aria-label="Routine instruction"
+                        defaultValue="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
+                      />
+                    </WindowedField>
+                  </div>
+                  <div className="wos-form-actions">
+                    <WindowedPageButton>Test routine</WindowedPageButton>
+                    <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
+                  </div>
+                </WindowedPageSection>
+
+                <WindowedPageSection title="Recent runs" meta="Last 24h">
+                  <WindowedDataTable columns={[{ label: 'Run' }, { label: 'Hook' }, { label: 'State', align: 'right' }]}>
+                    <WindowedDataRow
+                      name="Loaded repo context"
+                      meta="09:58"
+                      enabled
+                      status={<WindowedBadge tone="positive">ok</WindowedBadge>}
+                    />
+                    <WindowedDataRow name="Taste checklist skipped" meta="09:22" enabled status={<WindowedBadge>skipped</WindowedBadge>} />
+                    <WindowedDataRow
+                      name="Recovered stale handoff"
+                      meta="Yesterday"
+                      enabled
+                      status={<WindowedBadge tone="warning">review</WindowedBadge>}
+                    />
+                  </WindowedDataTable>
+                </WindowedPageSection>
+              </div>
+            </div>
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
