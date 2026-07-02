@@ -35,6 +35,7 @@ import {
 } from '../ui-state/windowedShell';
 import { Layout } from './Layout';
 import { QuietLoadingState } from './ui';
+import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
 
 type WindowKind = 'chat' | 'route';
 
@@ -239,6 +240,11 @@ function boundsStyle(bounds: WindowBounds): CSSProperties {
 
 function isPrimaryNativeMouse(event: MouseEvent): boolean {
   return event.button === 0;
+}
+
+function suspendWindowedBrowserViews(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT));
 }
 
 function sameBounds(first: WindowBounds, second: WindowBounds): boolean {
@@ -564,11 +570,16 @@ export function WindowedLayout() {
   }, [chatSessions]);
 
   const focusWindow = useCallback((windowId: string) => {
+    const focusedWindow = windowsRef.current.find((windowModel) => windowModel.focused);
+    if (focusedWindow?.id !== windowId) {
+      suspendWindowedBrowserViews();
+    }
     setWindows((current) => withFocusedWindow(current, windowId));
   }, []);
 
   const openLauncherItem = useCallback((item: LauncherItem, session?: SessionMeta) => {
     const id = createId(item, session?.id);
+    suspendWindowedBrowserViews();
     setLauncherOpen(false);
     setWindows((current) => {
       const existing = current.find((windowModel) => windowModel.id === id);
@@ -594,6 +605,7 @@ export function WindowedLayout() {
     (route: string) => {
       const item = findLauncherItemForRoute(route, launcherItems);
       if (!item) return false;
+      suspendWindowedBrowserViews();
       setLauncherOpen(false);
       setWindows((current) => focusRouteWindowIn(current, route, item));
       return true;
@@ -605,6 +617,7 @@ export function WindowedLayout() {
     (route: string) => {
       const sessionId = chatSessionIdForRoute(route);
       if (!sessionId) return false;
+      suspendWindowedBrowserViews();
       setLauncherOpen(false);
       setWindows((current) => focusChatWindowIn(current, route, chatSessions));
       return true;
@@ -657,6 +670,7 @@ export function WindowedLayout() {
 
   const closeWindow = useCallback(
     (windowModel: DesktopWindowModel) => {
+      suspendWindowedBrowserViews();
       if (windowModel.kind === 'chat' && windowModel.archivedOnClose) {
         const conversationId = windowModel.id.slice('chat:'.length);
         conversations.archiveSession(conversationId);
@@ -667,6 +681,7 @@ export function WindowedLayout() {
   );
 
   const minimizeWindow = useCallback((windowId: string) => {
+    suspendWindowedBrowserViews();
     setWindows((current) =>
       ensureFocusedWindow(
         current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
@@ -676,6 +691,7 @@ export function WindowedLayout() {
 
   const maximizeWindow = useCallback(
     (windowModel: DesktopWindowModel) => {
+      suspendWindowedBrowserViews();
       const rect = desktopRect(desktopRef.current);
       const maximizedBounds = boundsForSnapTarget('maximize', rect);
       const restored = restoreBounds[windowModel.id];
@@ -704,6 +720,7 @@ export function WindowedLayout() {
 
   const toggleMaximize = useCallback(
     (windowModel: DesktopWindowModel) => {
+      suspendWindowedBrowserViews();
       const restored = restoreBounds[windowModel.id];
       if (restored) {
         setRestoreBounds((current) => {
@@ -731,6 +748,7 @@ export function WindowedLayout() {
     (event: MouseEvent, windowModel: DesktopWindowModel) => {
       if (!isPrimaryNativeMouse(event) || event.detail > 1 || (event.target as HTMLElement).closest('button')) return;
       event.preventDefault();
+      suspendWindowedBrowserViews();
       const pointerInDesktop = (event: MouseEvent) => {
         const rect = desktopRef.current?.getBoundingClientRect();
         return {
@@ -812,6 +830,7 @@ export function WindowedLayout() {
       if (!isPrimaryNativeMouse(event)) return;
       event.stopPropagation();
       event.preventDefault();
+      suspendWindowedBrowserViews();
       focusWindow(windowModel.id);
       setRestoreBounds((current) => {
         if (!current[windowModel.id]) return current;
@@ -906,6 +925,11 @@ export function WindowedLayout() {
     };
   }, [maximizeWindow, startDrag, startResize]);
 
+  useEffect(() => {
+    if (!launcherOpen && !drag && !resize && !snapTarget) return;
+    suspendWindowedBrowserViews();
+  }, [drag, launcherOpen, resize, snapTarget]);
+
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
   const startMenuItems = launcherItems.map(
     (item): StartMenuItem => ({
@@ -994,6 +1018,7 @@ export function WindowedLayout() {
       <Taskbar
         startOpen={launcherOpen}
         onToggleStart={() => {
+          suspendWindowedBrowserViews();
           setLauncherOpen((open) => !open);
         }}
         groups={chatTaskGroups}

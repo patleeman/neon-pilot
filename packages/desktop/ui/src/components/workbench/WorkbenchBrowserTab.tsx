@@ -13,6 +13,7 @@ import { findMatchingExtensionKeybinding } from '../../extensions/keybindings';
 import type { ExtensionKeybindingRegistration } from '../../extensions/types';
 import { type BrowserTabItem, type BrowserTabsState, getTabSessionKey } from '../../local/workbenchBrowserTabs';
 import { Button, IconButton, Textarea, TextInput, ToolbarButton } from '../ui';
+import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbenchBrowserEvents';
 
 const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-added';
 export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
@@ -289,6 +290,32 @@ export function WorkbenchBrowserTab({
     }));
   }, []);
 
+  const hideBrowserView = useCallback(
+    (options?: { force?: boolean }) => {
+      if (!bridge || closedRef.current) {
+        return;
+      }
+
+      const requestKey = `${browserSessionKey}:hidden`;
+      if (!options?.force && lastBoundsRequestRef.current === requestKey) {
+        return;
+      }
+      lastBoundsRequestRef.current = requestKey;
+      void bridge
+        .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey })
+        .then((nextState) => {
+          if (nextState) {
+            if (tabsStateRef.current.activeTabId === activeTab.id) {
+              setState(nextState);
+            }
+            syncUrlDraftFromBrowserState(nextState, activeTab.id);
+          }
+        })
+        .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
+    },
+    [activeTab.id, bridge, browserSessionKey, syncUrlDraftFromBrowserState],
+  );
+
   const syncBounds = useCallback(() => {
     const host = browserHostRef.current;
     if (!bridge || !host || closedRef.current) {
@@ -304,22 +331,7 @@ export function WorkbenchBrowserTab({
       isCoveredByRendererLayer(host);
 
     if (blocked) {
-      const requestKey = `${browserSessionKey}:hidden`;
-      if (lastBoundsRequestRef.current === requestKey) {
-        return;
-      }
-      lastBoundsRequestRef.current = requestKey;
-      void bridge
-        .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey })
-        .then((nextState) => {
-          if (nextState) {
-            if (tabsStateRef.current.activeTabId === activeTab.id) {
-              setState(nextState);
-            }
-            syncUrlDraftFromBrowserState(nextState, activeTab.id);
-          }
-        })
-        .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
+      hideBrowserView();
       return;
     }
 
@@ -355,7 +367,13 @@ export function WorkbenchBrowserTab({
         }
       })
       .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
-  }, [bridge, browserSessionKey, syncUrlDraftFromBrowserState]);
+  }, [bridge, browserSessionKey, hideBrowserView, syncUrlDraftFromBrowserState]);
+
+  useEffect(() => {
+    const handleSuspend = () => hideBrowserView({ force: true });
+    window.addEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
+    return () => window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
+  }, [hideBrowserView]);
 
   useEffect(() => {
     const previousSessionKey = previousBrowserSessionKeyRef.current;
