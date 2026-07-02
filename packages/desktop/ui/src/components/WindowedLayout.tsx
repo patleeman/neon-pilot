@@ -1,6 +1,14 @@
 import { type AppAccent, StartMenu, type StartMenuItem, Taskbar, type TaskbarItem, WindowFrame } from '@neon-pilot/windowed-os-ui';
-import { type CSSProperties, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { type CSSProperties, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createPath,
+  type NavigateOptions,
+  Route,
+  Routes,
+  type To,
+  UNSAFE_LocationContext as LocationContext,
+  UNSAFE_NavigationContext as NavigationContext,
+} from 'react-router-dom';
 
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
@@ -52,6 +60,8 @@ type ResizeEdge = 'n' | 'e' | 's' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 type ResizeState = DragState & {
   edge: ResizeEdge;
 };
+
+type WindowNavigate = (to: To) => void;
 
 const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
@@ -254,6 +264,10 @@ function routeLocation(route: string) {
   };
 }
 
+function routeFromTo(to: To): string {
+  return typeof to === 'string' ? to : createPath(to);
+}
+
 function routePathname(route: string): string {
   try {
     return new URL(route, window.location.origin).pathname;
@@ -305,50 +319,89 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
 }
 
-function WindowRouteBody({ route }: { route: string }) {
+function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode; onNavigate: WindowNavigate; route: string }) {
+  const location = useMemo(() => routeLocation(route), [route]);
+  const navigator = useMemo(
+    () => ({
+      createHref: routeFromTo,
+      go: () => undefined,
+      push: (to: To, _state?: unknown, _options?: NavigateOptions) => onNavigate(to),
+      replace: (to: To, _state?: unknown, _options?: NavigateOptions) => onNavigate(to),
+    }),
+    [onNavigate],
+  );
+  const navigationContext = useMemo(
+    () => ({
+      basename: '',
+      navigator,
+      static: false,
+      future: { v7_relativeSplatPath: false },
+    }),
+    [navigator],
+  );
+  const locationContext = useMemo(
+    () => ({
+      location,
+      navigationType: 'POP' as const,
+    }),
+    [location],
+  );
+
+  return (
+    <NavigationContext.Provider value={navigationContext}>
+      <LocationContext.Provider value={locationContext}>{children}</LocationContext.Provider>
+    </NavigationContext.Provider>
+  );
+}
+
+function WindowRouteBody({ onNavigate, route }: { onNavigate: WindowNavigate; route: string }) {
   const isChatRoute = route.startsWith('/conversations');
 
   if (!isChatRoute) {
     return (
       <div className="wos-window-route-body wos-window-route-body--extension">
-        <Routes location={routeLocation(route)}>
-          <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
-        </Routes>
+        <WindowRouteScope route={route} onNavigate={onNavigate}>
+          <Routes>
+            <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
+          </Routes>
+        </WindowRouteScope>
       </div>
     );
   }
 
   return (
     <div className="wos-window-route-body wos-window-route-body--chat">
-      <Routes location={routeLocation(route)}>
-        <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
-          <Route
-            path="conversations"
-            element={
-              <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
-                <ConversationPage key="draft" draft />
-              </Suspense>
-            }
-          />
-          <Route
-            path="conversations/new"
-            element={
-              <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
-                <ConversationPage key="draft" draft />
-              </Suspense>
-            }
-          />
-          <Route
-            path="conversations/:id"
-            element={
-              <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
-                <ConversationPage />
-              </Suspense>
-            }
-          />
-          <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
-        </Route>
-      </Routes>
+      <WindowRouteScope route={route} onNavigate={onNavigate}>
+        <Routes>
+          <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
+            <Route
+              path="conversations"
+              element={
+                <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                  <ConversationPage key="draft" draft />
+                </Suspense>
+              }
+            />
+            <Route
+              path="conversations/new"
+              element={
+                <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                  <ConversationPage key="draft" draft />
+                </Suspense>
+              }
+            />
+            <Route
+              path="conversations/:id"
+              element={
+                <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                  <ConversationPage />
+                </Suspense>
+              }
+            />
+            <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
+          </Route>
+        </Routes>
+      </WindowRouteScope>
     </div>
   );
 }
@@ -507,6 +560,41 @@ export function WindowedLayout() {
         return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
       });
       return true;
+    },
+    [chatSessions],
+  );
+
+  const navigateWindow = useCallback(
+    (windowId: string, to: To) => {
+      const route = routeFromTo(to);
+      setWindows((current) => {
+        const existing = current.find((windowModel) => windowModel.id === windowId);
+        if (!existing) return current;
+
+        if (existing.kind !== 'chat') {
+          return current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, route } : windowModel));
+        }
+
+        const sessionId = chatSessionIdForRoute(route);
+        if (!sessionId) return current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, route } : windowModel));
+
+        const isDraft = sessionId === 'draft';
+        const session = isDraft ? null : (chatSessions.find((candidate) => candidate.id === sessionId) ?? null);
+        const nextId = isDraft ? 'chat:draft' : `chat:${sessionId}`;
+        const nextWindow: DesktopWindowModel = {
+          ...existing,
+          id: nextId,
+          route: isDraft ? '/conversations/new' : route,
+          title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : existing.title,
+          archivedOnClose: !isDraft,
+        };
+
+        return current.flatMap((windowModel) => {
+          if (windowModel.id === windowId) return [nextWindow];
+          if (windowModel.id === nextId) return [];
+          return [windowModel];
+        });
+      });
     },
     [chatSessions],
   );
@@ -831,7 +919,7 @@ export function WindowedLayout() {
               <div key={edge} className={`wos-resize-handle wos-resize-${edge}`} data-resize-edge={edge} aria-hidden="true" />
             ))}
           >
-            <WindowRouteBody route={windowModel.route} />
+            <WindowRouteBody route={windowModel.route} onNavigate={(to) => navigateWindow(windowModel.id, to)} />
           </WindowFrame>
         ))}
       </main>

@@ -36,9 +36,12 @@ const mocks = vi.hoisted(() => ({
   }>,
 }));
 
-vi.mock('./Layout', () => ({
-  Layout: mocks.layout,
-}));
+vi.mock('./Layout', async () => {
+  const { Outlet } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    Layout: () => mocks.layout({ children: <Outlet /> }),
+  };
+});
 
 vi.mock('../extensions/ExtensionRouteHost', async () => {
   const { useLocation } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -67,9 +70,23 @@ vi.mock('../hooks/useConversations', () => ({
   }),
 }));
 
-vi.mock('../pages/ConversationPage', () => ({
-  ConversationPage: () => <div data-testid="conversation-page">Conversation</div>,
-}));
+vi.mock('../pages/ConversationPage', async () => {
+  const { useLocation, useNavigate } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ConversationPage: () => {
+      const location = useLocation();
+      const navigate = useNavigate();
+      return (
+        <div data-testid="conversation-page" data-pathname={location.pathname}>
+          Conversation
+          <button type="button" onClick={() => navigate('/conversations/session-2')}>
+            Navigate inside window
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 function renderWindowedLayout() {
   return render(
@@ -288,6 +305,37 @@ describe('WindowedLayout route windows', () => {
         .getByRole('button', { name: /new conversation/i })
         .getAttribute('data-focused'),
     ).toBe('false');
+  });
+
+  it('keeps embedded chat navigation scoped to the window route', async () => {
+    mocks.tabs = [
+      { id: 'session-1', title: 'Planning thread', messageCount: 4 },
+      { id: 'session-2', title: 'Review thread', messageCount: 2 },
+    ];
+    window.history.replaceState(null, '', '/settings/providers');
+
+    renderWindowedLayout();
+
+    fireEvent(
+      window,
+      new CustomEvent('neon-pilot-desktop-navigate', {
+        detail: { route: '/conversations/session-1' },
+      }),
+    );
+
+    const planningWindow = await screen.findByRole('region', { name: /planning thread/i });
+    expect(within(planningWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/session-1');
+
+    fireEvent.click(within(planningWindow).getByRole('button', { name: /navigate inside window/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: /review thread/i }).getAttribute('data-focused')).toBe('true');
+    });
+    expect(window.location.pathname).toBe('/settings/providers');
+    expect(screen.queryByRole('region', { name: /planning thread/i })).toBeNull();
+    expect(within(screen.getByRole('region', { name: /review thread/i })).getByTestId('conversation-page').dataset.pathname).toBe(
+      '/conversations/session-2',
+    );
   });
 
   it('consumes handled desktop navigation events before embedded stable listeners see them', async () => {
