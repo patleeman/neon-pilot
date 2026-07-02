@@ -263,12 +263,18 @@ function routePathname(route: string): string {
 }
 
 function isWindowRouteAvailable(route: string, launcherItems: LauncherItem[]): boolean {
+  return launcherItems.some((item) => routeMatchesLauncherItem(route, item));
+}
+
+function routeMatchesLauncherItem(route: string, item: LauncherItem): boolean {
+  if (item.kind !== 'route') return false;
   const pathname = routePathname(route);
-  return launcherItems.some((item) => {
-    if (item.kind !== 'route') return false;
-    const itemPathname = routePathname(item.route);
-    return pathname === itemPathname || pathname.startsWith(`${itemPathname.replace(/\/$/, '')}/`);
-  });
+  const itemPathname = routePathname(item.route);
+  return pathname === itemPathname || pathname.startsWith(`${itemPathname.replace(/\/$/, '')}/`);
+}
+
+function findLauncherItemForRoute(route: string, launcherItems: LauncherItem[]): LauncherItem | null {
+  return launcherItems.find((item) => routeMatchesLauncherItem(route, item)) ?? null;
 }
 
 function isTopLevelRoute(route: string): boolean {
@@ -427,6 +433,50 @@ export function WindowedLayout() {
       return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
     });
   }, []);
+
+  const openRouteWindow = useCallback(
+    (route: string) => {
+      const item = findLauncherItemForRoute(route, launcherItems);
+      if (!item) return false;
+      const id = createId(item);
+      setLauncherOpen(false);
+      setWindows((current) => {
+        const existing = current.find((windowModel) => windowModel.id === id);
+        if (existing) {
+          return [
+            ...current.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
+            { ...existing, route, minimized: false, focused: true },
+          ];
+        }
+        const next: DesktopWindowModel = {
+          id,
+          kind: 'route',
+          title: item.title,
+          route,
+          bounds: defaultBounds(current.length, 'route'),
+          minimized: false,
+          focused: true,
+          singleton: true,
+        };
+        return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
+      });
+      return true;
+    },
+    [launcherItems],
+  );
+
+  useEffect(() => {
+    const handleDesktopNavigate = (event: Event) => {
+      const detail = (event as CustomEvent<{ route?: unknown; to?: unknown }>).detail;
+      const route = typeof detail?.route === 'string' ? detail.route : typeof detail?.to === 'string' ? detail.to : '';
+      if (!route) return;
+      if (openRouteWindow(route)) {
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate);
+    return () => window.removeEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate);
+  }, [openRouteWindow]);
 
   const closeWindow = useCallback(
     (windowModel: DesktopWindowModel) => {

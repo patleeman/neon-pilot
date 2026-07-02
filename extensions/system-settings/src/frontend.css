@@ -419,7 +419,7 @@
 }
 
 .settings-page-windowed .settings-page-section-heading {
-  padding-bottom: 0.375rem;
+  display: none;
 }
 
 .settings-page-windowed .settings-page-section-title {

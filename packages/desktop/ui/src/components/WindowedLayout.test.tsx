@@ -210,6 +210,24 @@ describe('WindowedLayout route windows', () => {
     expect(within(startMenu).getByRole('button', { name: /^settings$/i })).toBeTruthy();
   });
 
+  it('opens matching route windows from desktop navigation events', async () => {
+    renderWindowedLayout();
+
+    fireEvent(
+      window,
+      new CustomEvent('neon-pilot-desktop-navigate', {
+        detail: { route: '/settings/providers' },
+      }),
+    );
+
+    const routeHosts = await screen.findAllByTestId('extension-route-host');
+    expect(routeHosts.some((host) => host.textContent === '/settings/providers:windowed')).toBe(true);
+
+    const settingsWindow = screen.getByRole('region', { name: /settings/i });
+    expect(within(settingsWindow).getByText('/settings/providers:windowed')).toBeTruthy();
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /settings/i })).toBeTruthy();
+  });
+
   it('renders chat windows directly in the taskbar with larger default bounds', () => {
     const { container } = renderWindowedLayout();
 

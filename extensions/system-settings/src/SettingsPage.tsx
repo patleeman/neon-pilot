@@ -91,6 +91,17 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-desktop', label: 'Desktop' },
 ] as const satisfies readonly { id: string; label: string }[];
 
+const SETTINGS_ROOT_ROUTES: Record<(typeof SETTINGS_QUICK_LINKS)[number]['id'], string> = {
+  'settings-appearance': '/settings/appearance',
+  'settings-providers': '/settings/providers',
+  'settings-conversation': '/settings/conversation',
+  'settings-workspace': '/settings/workspace',
+  'settings-commands': '/settings/commands',
+  'settings-security': '/settings/security',
+  'settings-extensions': '/settings/extensions',
+  'settings-desktop': '/settings/desktop',
+};
+
 const SETTINGS_PANEL_COMPACT_CLASS = 'settings-page-panel-compact';
 const SETTINGS_PANEL_DENSE_CLASS = 'settings-page-panel-dense';
 
@@ -126,6 +137,7 @@ type SettingsQuickLink = {
 };
 type SettingsQuickLinkId = string;
 const VisibleSettingsSectionsContext = createContext<ReadonlySet<SettingsQuickLinkId> | null>(null);
+const HideSettingsSectionHeadingsContext = createContext(false);
 type ModelOption = ModelState['models'][number];
 type SettingsIconName = 'check' | 'edit' | 'external' | 'key' | 'plus' | 'refresh' | 'trash' | 'x';
 
@@ -869,6 +881,7 @@ function SettingsSection({
   className?: string;
 }) {
   const visibleSections = useContext(VisibleSettingsSectionsContext);
+  const hideHeading = useContext(HideSettingsSectionHeadingsContext);
   if (visibleSections && !visibleSections.has(id)) {
     return null;
   }
@@ -881,9 +894,11 @@ function SettingsSection({
       style={{ order: sectionOrder === -1 ? 1000 : sectionOrder }}
       className={cx('settings-page-section scroll-mt-20 space-y-4 pt-4 first:pt-0', className)}
     >
-      <div className="settings-page-section-heading">
-        <h1 className="settings-page-section-title text-[22px] font-semibold leading-tight tracking-[-0.01em] text-primary">{label}</h1>
-      </div>
+      {hideHeading ? null : (
+        <div className="settings-page-section-heading">
+          <h1 className="settings-page-section-title text-[22px] font-semibold leading-tight tracking-[-0.01em] text-primary">{label}</h1>
+        </div>
+      )}
       {children}
     </section>
   );
@@ -967,6 +982,10 @@ function settingsQuickLinkLabelText(label: ReactNode): string {
     return String(label);
   }
   return 'Settings';
+}
+
+function settingsQuickLinkRoute(item: SettingsQuickLink): string {
+  return item.route ?? SETTINGS_ROOT_ROUTES[item.id as keyof typeof SETTINGS_ROOT_ROUTES] ?? `/settings#${item.id}`;
 }
 
 let cachedExtensionSettingsQuickLinks: SettingsQuickLink[] = [];
@@ -3785,17 +3804,19 @@ export function SettingsPage({
 
   const activeRootLink = settingsNavLinks.find((item) => item.id === activeRootSectionId) ?? settingsNavLinks[0] ?? null;
   const activeSectionTitle = settingsQuickLinkLabelText(activeExtensionSettingsLink?.label ?? activeRootLink?.label ?? 'Settings');
-  const activeSectionDescription = activeRootLink?.summary
-    ? settingsQuickLinkLabelText(activeRootLink.summary)
-    : 'Configure Neon Pilot preferences.';
 
-  function focusSettingsSection(sectionId: SettingsQuickLinkId) {
-    setActiveQuickLinkId(sectionId);
+  function focusSettingsSection(item: SettingsQuickLink) {
+    setActiveQuickLinkId(item.id);
     if (isWindowedSettingsSurface) {
-      settingsScrollRef.current?.scrollTo({ top: 0 });
+      if (typeof settingsScrollRef.current?.scrollTo === 'function') {
+        settingsScrollRef.current.scrollTo({ top: 0 });
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: settingsQuickLinkRoute(item) } }));
+      }
       return;
     }
-    scheduleSettingsSectionScroll(settingsScrollRef.current, sectionId);
+    scheduleSettingsSectionScroll(settingsScrollRef.current, item.id);
   }
 
   const settingsSections = (
@@ -5075,7 +5096,7 @@ export function SettingsPage({
                 title={settingsQuickLinkLabelText(item.label)}
                 active={item.id === activeRootSectionId}
                 accent="settings"
-                onSelect={() => focusSettingsSection(item.id)}
+                onSelect={() => focusSettingsSection(item)}
               />
             );
             const showChildren =
@@ -5091,7 +5112,7 @@ export function SettingsPage({
                   title={settingsQuickLinkLabelText(child.label)}
                   active={child.id === effectiveActiveQuickLinkId}
                   accent="extensions"
-                  onSelect={() => focusSettingsSection(child.id)}
+                  onSelect={() => focusSettingsSection(child)}
                 />
               )),
             ];
@@ -5099,7 +5120,7 @@ export function SettingsPage({
         </WindowedList>
       </WindowedPageRail>
 
-      <WindowedPageMain eyebrow="Preferences" title={activeSectionTitle} description={activeSectionDescription}>
+      <WindowedPageMain eyebrow="Preferences" title={activeSectionTitle}>
         <div ref={settingsScrollRef} className="settings-page-windowed-scroll h-full min-h-0 overflow-y-auto">
           {settingsSections}
         </div>
@@ -5113,5 +5134,11 @@ export function SettingsPage({
     </div>
   );
 
-  return <VisibleSettingsSectionsContext.Provider value={renderedSectionIds}>{settingsContent}</VisibleSettingsSectionsContext.Provider>;
+  return (
+    <VisibleSettingsSectionsContext.Provider value={renderedSectionIds}>
+      <HideSettingsSectionHeadingsContext.Provider value={isWindowedSettingsSurface}>
+        {settingsContent}
+      </HideSettingsSectionHeadingsContext.Provider>
+    </VisibleSettingsSectionsContext.Provider>
+  );
 }

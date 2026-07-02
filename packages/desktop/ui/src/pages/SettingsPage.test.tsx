@@ -375,6 +375,8 @@ describe('SettingsPage', () => {
     expect(html).toContain('>Preferences</div>');
     expect(html).toContain('>Settings</span>');
     expect(html).toContain('>Appearance</h1>');
+    expect(html).not.toContain('settings-page-section-title');
+    expect(html).not.toContain('Configure Neon Pilot preferences.');
     expect(html).not.toContain('Preference group');
     expect(html).not.toContain('Extension panel');
     expect(html).not.toContain('panels');

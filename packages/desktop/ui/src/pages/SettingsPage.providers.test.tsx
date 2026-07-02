@@ -42,7 +42,7 @@ function buildUseApiResult<T>(data: T) {
 function renderPage(
   sectionId?: string,
   pathname = '/settings',
-  context: Partial<Pick<ExtensionSurfaceProps['context'], 'route' | 'pathname' | 'search' | 'hash'>> & {
+  context: Partial<Pick<ExtensionSurfaceProps['context'], 'route' | 'pathname' | 'search' | 'hash' | 'shellPresentation'>> & {
     conversationId?: string | null;
     cwd?: string | null;
   } = {},
@@ -65,6 +65,7 @@ function renderPage(
                   pathname: context.pathname ?? pathname,
                   search: context.search ?? '',
                   hash: context.hash ?? '',
+                  shellPresentation: context.shellPresentation,
                   conversationId: context.conversationId ?? null,
                   cwd: context.cwd ?? null,
                 }}
@@ -635,6 +636,31 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
     expect(querySettingsTocLink(conversationContainer.container, 'settings-conversation').getAttribute('aria-current')).toBe('page');
     expect(querySettingsTocLink(conversationContainer.container, 'settings-appearance').getAttribute('aria-current')).toBeNull();
+  });
+
+  it('uses direct section routes from the windowed settings rail', async () => {
+    const navigationEvents: string[] = [];
+    const listener = (event: Event) => {
+      navigationEvents.push((event as CustomEvent<{ route?: string }>).detail?.route ?? '');
+    };
+    window.addEventListener('neon-pilot-desktop-navigate', listener);
+
+    const { container } = renderPage(undefined, '/settings', { shellPresentation: 'windowed', pathname: '/settings' });
+    await flushAsyncWork();
+
+    const providersButton = queryButton(container, 'Providers');
+
+    act(() => {
+      providersButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+    await flushAsyncWork();
+
+    expect(navigationEvents).toContain('/settings/providers');
+    expect(providersButton.getAttribute('data-active')).toBe('true');
+    expect(container.querySelector('#settings-providers')).toBeInstanceOf(HTMLElement);
+    expect(container.querySelector('#settings-appearance')).toBeNull();
+
+    window.removeEventListener('neon-pilot-desktop-navigate', listener);
   });
 
   it('renders the conversation section for direct settings routes', async () => {
