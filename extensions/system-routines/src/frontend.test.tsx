@@ -220,6 +220,8 @@ describe('RoutinesPage', () => {
     expect(screen.getAllByText('Before').length).toBeGreaterThan(1);
     expect(screen.getAllByText('After').length).toBeGreaterThan(1);
     expect(screen.getByText('Status')).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
+    expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.getByText('Runs')).toBeTruthy();
     expect(screen.queryByText('Routine context')).toBeNull();
   });

@@ -1286,7 +1286,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               {[
                 ['1', 'Pick an event', 'Events are moments Neon Pilot can react to, like Checkpoint or Before agent starts.'],
                 ['2', 'Place routines', 'Use Before for setup checks and After for follow-up work once the event finishes.'],
-                ['3', 'Review runs', 'Each execution records status, warnings, stops, and branch choices in the context rail.'],
+                ['3', 'Review runs', 'Each execution records status, warnings, stops, and branch choices in the run inspector.'],
               ].map(([index, title, body], itemIndex) => (
                 <div key={title} className={cx('p-4', itemIndex > 0 ? 'border-t border-border-subtle md:border-l md:border-t-0' : '')}>
                   <Pill tone="accent" mono>
@@ -2052,7 +2052,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 { label: 'Before', value: beforeRoutines.length },
                 { label: 'After', value: afterRoutines.length },
                 {
-                  label: 'Selected',
+                  label: 'Active',
                   value: selectedRoutine ? (
                     <WindowedBadge tone={routineTone(selectedRoutine)}>{routineStatusLabel(selectedRoutine)}</WindowedBadge>
                   ) : (
