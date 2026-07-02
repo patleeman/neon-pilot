@@ -28,11 +28,8 @@ import {
   WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
-  WindowedList,
-  WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
   WindowedSelect,
@@ -503,36 +500,24 @@ function ModelArenaWindowedPage({
 
   return (
     <div className="h-full overflow-hidden">
-      <WindowedPageShell layout="two-column">
-        <WindowedPageRail title="Model Arena" accent="gateways">
-          <WindowedList>
-            <WindowedListItem
-              title="All task types"
-              meta={state ? `${ranked.length} models` : 'Loading'}
-              detail="Every duel"
-              active={taskFilter === 'all'}
-              accent="gateways"
-              onSelect={() => onTaskFilterChange('all')}
-            />
-            {tasks.map((task) => (
-              <WindowedListItem
-                key={task}
-                title={task}
-                meta="Task type"
-                detail="Task duels"
-                active={taskFilter === task}
-                accent="gateways"
-                onSelect={() => onTaskFilterChange(task)}
-              />
-            ))}
-          </WindowedList>
-        </WindowedPageRail>
-
+      <WindowedPageShell layout="standard" className="model-arena-page-windowed">
         <WindowedPageMain
           eyebrow="Blind model duels"
           title="Model Arena"
           actions={
             <>
+              <WindowedSelect
+                aria-label="Task type"
+                value={taskFilter}
+                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onTaskFilterChange(event.target.value)}
+              >
+                <option value="all">All task types</option>
+                {tasks.map((task) => (
+                  <option key={task} value={task}>
+                    {task}
+                  </option>
+                ))}
+              </WindowedSelect>
               <WindowedBadge tone={arenaReady ? 'positive' : 'warning'}>{arenaReady ? 'Running' : 'Needs setup'}</WindowedBadge>
               <WindowedPageButton disabled={saving} onClick={() => void onRefresh()}>
                 Refresh
