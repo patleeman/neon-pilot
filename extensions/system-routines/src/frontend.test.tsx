@@ -213,10 +213,12 @@ describe('RoutinesPage', () => {
     const { container } = render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
 
     expect((await screen.findAllByText('Review code changes')).length).toBeGreaterThan(1);
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.ui-app-page-intro')).toBeNull();
     expect(screen.getByRole('button', { name: 'Choose path' })).toBeTruthy();
+    expect(screen.getByText('Events')).toBeTruthy();
     expect(screen.getAllByText('Before').length).toBeGreaterThan(1);
     expect(screen.getAllByText('After').length).toBeGreaterThan(1);
     expect(screen.getByText('Status')).toBeTruthy();

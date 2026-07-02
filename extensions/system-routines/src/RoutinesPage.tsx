@@ -30,7 +30,6 @@ import {
   WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
-  WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
   WindowedTimeline,
@@ -1180,30 +1179,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
     if (context.shellPresentation === 'windowed') {
       return (
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Routines" accent="routines">
-            <WindowedList>
-              {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
-                <div key={`group:${group}`} className="wos-page-eyebrow">
-                  {group}
-                </div>,
-                ...hooks.map((hook) => (
-                  <WindowedListItem
-                    key={hook.id}
-                    title={hook.title}
-                    meta={ownerLabel(hook.ownerExtensionId)}
-                    detail={hook.summary}
-                    active={hook.id === selectedHookId}
-                    accent="routines"
-                    onSelect={() => {
-                      setSelectedHookId(hook.id);
-                      void navigateRoutines(pa, hook.id);
-                    }}
-                  />
-                )),
-              ])}
-            </WindowedList>
-          </WindowedPageRail>
+        <WindowedPageShell layout="standard" className="routines-page-windowed">
           <WindowedPageMain
             eyebrow="Routines"
             title="How Routines work"
@@ -1226,6 +1202,29 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   Each execution records status, warnings, stops, and branch choices in the inspector.
                 </WindowedTimelineItem>
               </WindowedTimeline>
+            </WindowedPageSection>
+            <WindowedPageSection title="Events" meta={`${data.hooks.length} available`}>
+              <WindowedList>
+                {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
+                  <div key={`group:${group}`} className="wos-page-eyebrow">
+                    {group}
+                  </div>,
+                  ...hooks.map((hook) => (
+                    <WindowedListItem
+                      key={hook.id}
+                      title={hook.title}
+                      meta={ownerLabel(hook.ownerExtensionId)}
+                      detail={hook.summary}
+                      active={hook.id === selectedHookId}
+                      accent="routines"
+                      onSelect={() => {
+                        setSelectedHookId(hook.id);
+                        void navigateRoutines(pa, hook.id);
+                      }}
+                    />
+                  )),
+                ])}
+              </WindowedList>
             </WindowedPageSection>
             <WindowedPageSection title="Ready-made routines" meta={`${exampleRows.length} templates`}>
               <WindowedList>
@@ -1983,32 +1982,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
 
     return (
       <div className="h-full overflow-hidden">
-        <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Routines" accent="routines">
-            <WindowedList>
-              {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
-                <div key={`group:${group}`} className="wos-page-eyebrow">
-                  {group}
-                </div>,
-                ...hooks.map((hook) => (
-                  <WindowedListItem
-                    key={hook.id}
-                    title={hook.title}
-                    meta={ownerLabel(hook.ownerExtensionId)}
-                    detail={hook.summary}
-                    active={hook.id === selectedHook.id}
-                    accent="routines"
-                    onSelect={() => {
-                      closeEditor();
-                      setWindowedRunsOpen(false);
-                      setSelectedHookId(hook.id);
-                      void navigateRoutines(pa, hook.id);
-                    }}
-                  />
-                )),
-              ])}
-            </WindowedList>
-          </WindowedPageRail>
+        <WindowedPageShell layout="standard" className="routines-page-windowed">
           <WindowedPageMain
             eyebrow="Routine event"
             title={selectedHook.title}
@@ -2029,6 +2003,31 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 <div className="wos-routine-error">{actionError}</div>
               </WindowedPageSection>
             ) : null}
+            <WindowedPageSection title="Events" meta={`${data.hooks.length} available`}>
+              <WindowedList>
+                {groupedHooks(data.hooks).flatMap(([group, hooks]) => [
+                  <div key={`group:${group}`} className="wos-page-eyebrow">
+                    {group}
+                  </div>,
+                  ...hooks.map((hook) => (
+                    <WindowedListItem
+                      key={hook.id}
+                      title={hook.title}
+                      meta={ownerLabel(hook.ownerExtensionId)}
+                      detail={hook.summary}
+                      active={hook.id === selectedHook.id}
+                      accent="routines"
+                      onSelect={() => {
+                        closeEditor();
+                        setWindowedRunsOpen(false);
+                        setSelectedHookId(hook.id);
+                        void navigateRoutines(pa, hook.id);
+                      }}
+                    />
+                  )),
+                ])}
+              </WindowedList>
+            </WindowedPageSection>
             <WindowedPageSection title="Before" meta={`${beforeRoutines.length} routines`}>
               {beforeRoutines.length ? (
                 <WindowedTimeline>{beforeRoutines.map((routine, index) => renderWindowedRoutine(routine, index))}</WindowedTimeline>
