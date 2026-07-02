@@ -89,6 +89,19 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('Export trace');
   });
 
+  it('documents the canonical Skills desktop page', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const SkillsPage');
+    expect(source).toContain('title="Skills"');
+    expect(source).toContain('eyebrow="Skill library"');
+    expect(source).toContain('title="Inventory"');
+    expect(source).toContain('title="Installed skills"');
+    expect(source).toContain('title="Marketplace"');
+    expect(source).toContain('ariaLabel="Skills view"');
+  });
+
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

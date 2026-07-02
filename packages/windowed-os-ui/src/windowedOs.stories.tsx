@@ -1063,6 +1063,97 @@ export const DiagnosticsPage: Story = {
   ),
 };
 
+export const SkillsPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="Skills"
+        accent="extensions"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            eyebrow="Skill library"
+            title="Skills"
+            actions={
+              <>
+                <WindowedSegmentedControl
+                  ariaLabel="Skills view"
+                  value="installed"
+                  options={[
+                    { value: 'installed', label: 'Installed' },
+                    { value: 'marketplace', label: 'Marketplace' },
+                  ]}
+                  onChange={() => undefined}
+                />
+                <WindowedPageButton>Refresh</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Inventory" meta="ready">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Installed', value: 12 },
+                  { label: 'Enabled', value: <WindowedBadge tone="positive">9</WindowedBadge> },
+                  { label: 'Sources', value: '3 indexes' },
+                  { label: 'Updates', value: <WindowedBadge tone="warning">2 pending</WindowedBadge> },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Installed skills" meta="12 total">
+              <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Enabled', align: 'right' }]}>
+                <WindowedDataRow
+                  name="code-review"
+                  meta="OpenAI Skills · repository review"
+                  enabled
+                  status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="local-qa"
+                  meta="Agent plugin · browser and app checks"
+                  enabled
+                  status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
+                />
+                <WindowedDataRow
+                  name="zotero"
+                  meta="Connector · citation workflow"
+                  enabled={false}
+                  status={<WindowedBadge tone="neutral">disabled</WindowedBadge>}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Marketplace" meta="recommended">
+              <WindowedList>
+                <WindowedListItem
+                  title="cloudflare-workers"
+                  meta="OpenAI Skills"
+                  detail="Workers, Durable Objects, and deploy workflow guidance."
+                  accent="extensions"
+                  status={<WindowedBadge tone="neutral">available</WindowedBadge>}
+                />
+                <WindowedListItem
+                  title="ios-debugger-agent"
+                  meta="Curated"
+                  detail="Simulator build, run, screenshots, and log capture."
+                  accent="extensions"
+                  status={<WindowedBadge tone="warning">review</WindowedBadge>}
+                />
+              </WindowedList>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const CoreDataPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
