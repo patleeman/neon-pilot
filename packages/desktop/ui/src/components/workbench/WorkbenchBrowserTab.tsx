@@ -32,7 +32,9 @@ function hasWindowedShellOverlay(): boolean {
   }
 
   return Boolean(
-    document.querySelector('.windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .wos-snap-preview'),
+    document.querySelector(
+      '.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .wos-snap-preview',
+    ),
   );
 }
 
@@ -100,10 +102,14 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
 
   const points = [
     [left + (right - left) / 2, top + (bottom - top) / 2],
-    [left + 8, top + 8],
-    [right - 8, top + 8],
-    [left + 8, bottom - 8],
-    [right - 8, bottom - 8],
+    [left + Math.min(8, (right - left) / 3), top + Math.min(8, (bottom - top) / 3)],
+    [right - Math.min(8, (right - left) / 3), top + Math.min(8, (bottom - top) / 3)],
+    [left + Math.min(8, (right - left) / 3), bottom - Math.min(8, (bottom - top) / 3)],
+    [right - Math.min(8, (right - left) / 3), bottom - Math.min(8, (bottom - top) / 3)],
+    [left + (right - left) / 2, top + Math.min(8, (bottom - top) / 3)],
+    [left + (right - left) / 2, bottom - Math.min(8, (bottom - top) / 3)],
+    [left + Math.min(8, (right - left) / 3), top + (bottom - top) / 2],
+    [right - Math.min(8, (right - left) / 3), top + (bottom - top) / 2],
   ];
 
   return points.some(([x, y]) => {

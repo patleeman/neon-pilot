@@ -507,8 +507,8 @@ export function WindowedLayout() {
     if (stored.length > 0) return stored;
     return [defaultDraftWindow()];
   });
-  const [, setDrag] = useState<DragState | null>(null);
-  const [, setResize] = useState<ResizeState | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [resize, setResize] = useState<ResizeState | null>(null);
   const [snapTarget, setSnapTarget] = useState<SnapTarget | null>(null);
   const [restoreBounds, setRestoreBounds] = useState<Record<string, WindowBounds>>({});
 
@@ -966,7 +966,7 @@ export function WindowedLayout() {
   const taskbarItems = shouldGroupChatTaskItems ? routeTaskItems : [...chatTaskItems, ...routeTaskItems];
 
   return (
-    <div className="windowed-os-shell h-screen overflow-hidden">
+    <div className="windowed-os-shell h-screen overflow-hidden" data-window-interaction={drag || resize ? 'true' : undefined}>
       <StartMenu open={launcherOpen} items={startMenuItems} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
