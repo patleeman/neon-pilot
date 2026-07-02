@@ -685,14 +685,13 @@ export class WorkbenchBrowserViewController {
       ownerWindow,
       owner: ownerWindow.webContents,
       view,
-      attached: true,
+      attached: false,
       active: false,
       deactivated: false,
       browserRevision: 0,
       lastSnapshotRevision: 0,
     };
     this.views.set(viewKey, entry);
-    ownerWindow.contentView.addChildView(view);
     view.setBounds({ x: -10_000, y: -10_000, width: 1, height: 1 });
     view.webContents.setWindowOpenHandler(({ url }) => {
       let target: string;

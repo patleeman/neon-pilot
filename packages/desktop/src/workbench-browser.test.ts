@@ -53,6 +53,8 @@ describe('workbench browser validation', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 
     expect(source).toContain('attached: boolean');
+    expect(source).toContain('attached: false');
+    expect(source).not.toContain('ownerWindow.contentView.addChildView(view);\n    view.setBounds({ x: -10_000');
     expect(source).toContain('this.attach(entry);');
     expect(source).toContain('private detach(entry: WorkbenchBrowserViewEntry)');
     expect(source).toContain('entry.ownerWindow.contentView.removeChildView(entry.view);');
