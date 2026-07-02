@@ -152,7 +152,8 @@ describe('Dynamic Workflows surfaces', () => {
     expect(screen.getByText('Active')).toBeTruthy();
     expect(screen.queryByText('Selection')).toBeNull();
     expect(screen.queryByText('Selected')).toBeNull();
-    expect(screen.getByText('Actions')).toBeTruthy();
+    expect(screen.queryByText('Actions')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Live workflow' })).toBeTruthy();
     expect(screen.getByText(/1\/2 complete, 1 running/)).toBeTruthy();
   });
 });

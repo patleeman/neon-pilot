@@ -18,6 +18,7 @@ import {
   TextInput,
   ToolbarButton,
   WindowedBadge,
+  WindowedDialog,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
@@ -578,108 +579,133 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
     const workflowRows = workflows.slice(0, 24);
     const templateRows = [...savedWorkflows, ...templates].slice(0, 24);
     const selectedAgents = selected?.agents;
-    const detailsTitle = selected?.name ?? selectedTemplate?.name ?? 'Workflow details';
+    const dialogTitle = draftOpen ? (draft.id ? 'Edit saved workflow' : 'New saved workflow') : (selected?.name ?? selectedTemplate?.name);
+    const dialogMeta = draftOpen
+      ? (draftStatus ?? 'Saved workflow')
+      : selected
+        ? selected.status
+        : selectedTemplate
+          ? savedWorkflows.some((item) => item.id === selectedTemplate.id)
+            ? 'Saved workflow'
+            : 'Template'
+          : undefined;
 
     return (
-      <WindowedPageShell layout="two-column">
-        <WindowedPageRail title="Workflows" accent="routines">
-          <WindowedPageSection title="Runs" meta={workflows.length ? `${workflows.length} total` : 'Empty'}>
-            {workflowRows.length ? (
-              <WindowedList>
-                {workflowRows.map((workflow) => (
-                  <WindowedListItem
-                    key={workflow.id}
-                    title={workflow.name}
-                    meta={workflow.activePhase ?? workflow.cwd}
-                    detail={formatDate(workflow.updatedAt)}
-                    active={selectedId === workflow.id}
-                    accent="routines"
-                    status={<WindowedBadge tone={windowedStatusTone(workflow.status)}>{workflow.status}</WindowedBadge>}
-                    onSelect={() => {
-                      setSelectedId(workflow.id);
-                      setSelectedTemplateId(null);
-                      void navigateWorkflows(pa, { kind: 'run', id: workflow.id });
-                    }}
-                  />
-                ))}
-              </WindowedList>
-            ) : (
-              <div className="wos-windowed-empty">No workflow runs yet.</div>
-            )}
-          </WindowedPageSection>
-
-          <WindowedPageSection title="Library" meta={templateRows.length ? `${templateRows.length} templates` : 'Empty'}>
-            {templateRows.length ? (
-              <WindowedList>
-                {templateRows.map((template) => (
-                  <WindowedListItem
-                    key={`${savedWorkflows.some((item) => item.id === template.id) ? 'saved' : 'template'}:${template.id}`}
-                    title={template.name}
-                    meta={savedWorkflows.some((item) => item.id === template.id) ? 'Saved workflow' : 'Template'}
-                    detail={template.description}
-                    active={!selectedId && selectedTemplate?.id === template.id}
-                    accent="routines"
-                    onSelect={() => {
-                      setSelectedId(null);
-                      setSelectedTemplateId(template.id);
-                      void navigateWorkflows(pa, { kind: 'template', id: template.id });
-                    }}
-                  />
-                ))}
-              </WindowedList>
-            ) : (
-              <div className="wos-windowed-empty">No workflow templates yet.</div>
-            )}
-          </WindowedPageSection>
-        </WindowedPageRail>
-
-        <WindowedPageMain
-          eyebrow="Dynamic workflows"
-          title={detailsTitle}
-          description={
-            selected
-              ? selected.description || 'Inspect workflow run progress, agents, events, and output.'
-              : selectedTemplate
-                ? selectedTemplate.description || 'Review and run a saved workflow or bundled workflow template.'
-                : 'Create, run, and inspect coordinated background agent workflows.'
-          }
-          actions={
-            <>
-              <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
-              <WindowedPageButton
-                tone="accent"
-                onClick={() => {
-                  setDraft(EMPTY_DRAFT);
-                  setDraftError(null);
-                  setDraftStatus(null);
-                  setDraftOpen(true);
-                }}
-              >
-                New saved workflow
-              </WindowedPageButton>
-            </>
-          }
-        >
-          {error ? (
-            <WindowedPageSection title="Action needed">
-              <p className="wos-windowed-error">{error}</p>
+      <div className="h-full overflow-hidden">
+        <WindowedPageShell layout="two-column">
+          <WindowedPageRail title="Workflows" accent="routines">
+            <WindowedPageSection title="Runs" meta={workflows.length ? `${workflows.length} total` : 'Empty'}>
+              {workflowRows.length ? (
+                <WindowedList>
+                  {workflowRows.map((workflow) => (
+                    <WindowedListItem
+                      key={workflow.id}
+                      title={workflow.name}
+                      meta={workflow.activePhase ?? workflow.cwd}
+                      detail={formatDate(workflow.updatedAt)}
+                      active={selectedId === workflow.id}
+                      accent="routines"
+                      status={<WindowedBadge tone={windowedStatusTone(workflow.status)}>{workflow.status}</WindowedBadge>}
+                      onSelect={() => {
+                        setDraftOpen(false);
+                        setSelectedId(workflow.id);
+                        setSelectedTemplateId(null);
+                        void navigateWorkflows(pa, { kind: 'run', id: workflow.id });
+                      }}
+                    />
+                  ))}
+                </WindowedList>
+              ) : (
+                <div className="wos-windowed-empty">No workflow runs yet.</div>
+              )}
             </WindowedPageSection>
-          ) : null}
 
-          <WindowedPageSection title="Inventory" meta={selected?.status ?? (selectedTemplate ? 'Template' : 'Ready')}>
-            <WindowedKeyValueList
-              items={[
-                { label: 'Runs', value: workflows.length },
-                { label: 'Saved', value: savedWorkflows.length },
-                { label: 'Templates', value: templates.length },
-                { label: 'Active', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
-              ]}
-            />
-          </WindowedPageSection>
+            <WindowedPageSection title="Library" meta={templateRows.length ? `${templateRows.length} templates` : 'Empty'}>
+              {templateRows.length ? (
+                <WindowedList>
+                  {templateRows.map((template) => (
+                    <WindowedListItem
+                      key={`${savedWorkflows.some((item) => item.id === template.id) ? 'saved' : 'template'}:${template.id}`}
+                      title={template.name}
+                      meta={savedWorkflows.some((item) => item.id === template.id) ? 'Saved workflow' : 'Template'}
+                      detail={template.description}
+                      active={!selectedId && selectedTemplate?.id === template.id}
+                      accent="routines"
+                      onSelect={() => {
+                        setDraftOpen(false);
+                        setSelectedId(null);
+                        setSelectedTemplateId(template.id);
+                        void navigateWorkflows(pa, { kind: 'template', id: template.id });
+                      }}
+                    />
+                  ))}
+                </WindowedList>
+              ) : (
+                <div className="wos-windowed-empty">No workflow templates yet.</div>
+              )}
+            </WindowedPageSection>
+          </WindowedPageRail>
 
-          <WindowedPageSection title="Actions">
-            <div className="wos-workflows-actions">
-              {selectedTemplate ? (
+          <WindowedPageMain
+            eyebrow="Dynamic workflows"
+            title="Workflows"
+            description="Create, run, and inspect coordinated background agent workflows."
+            actions={
+              <>
+                <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
+                <WindowedPageButton
+                  tone="accent"
+                  onClick={() => {
+                    setSelectedId(null);
+                    setSelectedTemplateId(null);
+                    setDraft(EMPTY_DRAFT);
+                    setDraftError(null);
+                    setDraftStatus(null);
+                    setDraftOpen(true);
+                  }}
+                >
+                  New saved workflow
+                </WindowedPageButton>
+              </>
+            }
+          >
+            {error ? (
+              <WindowedPageSection title="Action needed">
+                <p className="wos-windowed-error">{error}</p>
+              </WindowedPageSection>
+            ) : null}
+
+            <WindowedPageSection title="Inventory" meta={selected?.status ?? (selectedTemplate ? 'Template selected' : 'Ready')}>
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Runs', value: workflows.length },
+                  { label: 'Saved', value: savedWorkflows.length },
+                  { label: 'Templates', value: templates.length },
+                  { label: 'Active', value: selected?.id ?? selectedTemplate?.id ?? 'none' },
+                ]}
+              />
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+
+        {dialogTitle ? (
+          <WindowedDialog
+            title={dialogTitle}
+            meta={dialogMeta}
+            accent="routines"
+            onClose={() => {
+              if (draftOpen) {
+                setDraftOpen(false);
+                setDraftError(null);
+                setDraftStatus(null);
+                savedDraftRef.current = null;
+                return;
+              }
+              setSelectedId(null);
+              setSelectedTemplateId(null);
+            }}
+            actions={
+              draftOpen ? null : selectedTemplate ? (
                 <>
                   <WindowedPageButton tone="accent" onClick={() => void runSaved(selectedTemplate)}>
                     Run
@@ -692,89 +718,82 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                   ) : null}
                   <WindowedPageButton onClick={() => void saveTemplate(selectedTemplate)}>Save copy</WindowedPageButton>
                 </>
-              ) : null}
-              {selected?.status === 'running' ? (
+              ) : selected?.status === 'running' ? (
                 <WindowedPageButton onClick={() => void cancelSelected()}>Cancel</WindowedPageButton>
-              ) : null}
-              <WindowedPageButton onClick={() => void refresh()}>Refresh</WindowedPageButton>
-            </div>
-          </WindowedPageSection>
-
-          {draftOpen ? (
-            <WindowedPageSection title={draft.id ? 'Edit saved workflow' : 'New saved workflow'} meta={draftStatus ?? 'Autosaves'}>
-              <div className="wos-form-grid" data-columns="2">
-                <Field label="Name">
-                  <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
-                </Field>
-                <Field label="Description">
-                  <TextInput
-                    value={draft.description}
-                    onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
-                  />
-                </Field>
-                <Field label="Agent model">
-                  <TextInput
-                    placeholder="opencode-go/deepseek-v4-flash"
-                    value={draft.agentModel}
-                    onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
-                  />
-                </Field>
-                <Field label="Allowed tools">
-                  <div className="wos-workflows-tool-grid">
-                    {KNOWN_WORKFLOW_TOOLS.map((tool) => (
-                      <label key={tool} className="wos-workflows-tool-option">
-                        <Checkbox
-                          checked={draft.selectedAllowedTools.includes(tool)}
-                          onChange={() => setDraft((current) => toggleDraftAllowedTool(current, tool))}
-                        />
-                        <span>{tool}</span>
-                      </label>
-                    ))}
+              ) : null
+            }
+          >
+            {draftOpen ? (
+              <>
+                <div className="wos-form-grid" data-columns="2">
+                  <Field label="Name">
+                    <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
+                  </Field>
+                  <Field label="Description">
                     <TextInput
-                      aria-label="Additional allowed tools"
-                      placeholder="Additional tools"
-                      value={draft.additionalAllowedToolsText}
-                      onChange={(event) => setDraft((current) => ({ ...current, additionalAllowedToolsText: event.target.value }))}
+                      value={draft.description}
+                      onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
                     />
-                  </div>
-                </Field>
-                <Field label="Workflow input JSON" span="full">
-                  <Textarea
-                    className="h-24 font-mono text-[12px]"
-                    value={draft.argsText}
-                    onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
-                  />
-                </Field>
-                <Field label="Script" span="full">
-                  <Textarea
-                    className="h-56 font-mono text-[12px]"
-                    value={draft.script}
-                    onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
-                  />
-                </Field>
-              </div>
-              {draftError ? <p className="wos-windowed-error">{draftError}</p> : null}
-              <div className="wos-form-actions">
-                <WindowedPageButton
-                  onClick={() => {
-                    setDraftOpen(false);
-                    setDraftError(null);
-                    setDraftStatus(null);
-                    savedDraftRef.current = null;
-                  }}
-                >
-                  Close editor
-                </WindowedPageButton>
-              </div>
-            </WindowedPageSection>
-          ) : null}
+                  </Field>
+                  <Field label="Agent model">
+                    <TextInput
+                      placeholder="opencode-go/deepseek-v4-flash"
+                      value={draft.agentModel}
+                      onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
+                    />
+                  </Field>
+                  <Field label="Allowed tools">
+                    <div className="wos-workflows-tool-grid">
+                      {KNOWN_WORKFLOW_TOOLS.map((tool) => (
+                        <label key={tool} className="wos-workflows-tool-option">
+                          <Checkbox
+                            checked={draft.selectedAllowedTools.includes(tool)}
+                            onChange={() => setDraft((current) => toggleDraftAllowedTool(current, tool))}
+                          />
+                          <span>{tool}</span>
+                        </label>
+                      ))}
+                      <TextInput
+                        aria-label="Additional allowed tools"
+                        placeholder="Additional tools"
+                        value={draft.additionalAllowedToolsText}
+                        onChange={(event) => setDraft((current) => ({ ...current, additionalAllowedToolsText: event.target.value }))}
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Workflow input JSON" span="full">
+                    <Textarea
+                      className="h-24 font-mono text-[12px]"
+                      value={draft.argsText}
+                      onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
+                    />
+                  </Field>
+                  <Field label="Script" span="full">
+                    <Textarea
+                      className="h-56 font-mono text-[12px]"
+                      value={draft.script}
+                      onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
+                    />
+                  </Field>
+                </div>
+                {draftError ? <p className="wos-windowed-error">{draftError}</p> : null}
+                <div className="wos-form-actions">
+                  <WindowedPageButton
+                    onClick={() => {
+                      setDraftOpen(false);
+                      setDraftError(null);
+                      setDraftStatus(null);
+                      savedDraftRef.current = null;
+                    }}
+                  >
+                    Close editor
+                  </WindowedPageButton>
+                </div>
+              </>
+            ) : null}
 
-          {selectedTemplate ? (
-            <>
-              <WindowedPageSection
-                title="Template"
-                meta={savedWorkflows.some((item) => item.id === selectedTemplate.id) ? 'Saved' : 'Bundled'}
-              >
+            {!draftOpen && selectedTemplate ? (
+              <div className="grid gap-3">
                 <WindowedKeyValueGrid
                   columns={3}
                   items={[
@@ -786,18 +805,14 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                     { label: 'Source', value: selectedTemplate.id },
                   ]}
                 />
-              </WindowedPageSection>
-              <WindowedPageSection title="Script preview">
                 <CodeBlock compact className="max-h-[28rem] overflow-auto border-0 bg-transparent p-3 text-secondary">
                   {selectedTemplate.script}
                 </CodeBlock>
-              </WindowedPageSection>
-            </>
-          ) : null}
+              </div>
+            ) : null}
 
-          {selected ? (
-            <>
-              <WindowedPageSection title="Run summary" meta={selected.status}>
+            {!draftOpen && selected ? (
+              <div className="grid gap-3">
                 <WindowedKeyValueGrid
                   columns={3}
                   items={[
@@ -814,25 +829,19 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                     { label: 'Completed', value: formatDate(selected.completedAt) || 'not completed' },
                   ]}
                 />
-              </WindowedPageSection>
 
-              {selected.resultText ? (
-                <WindowedPageSection title="Result">
+                {selected.resultText ? (
                   <CodeBlock compact className="max-h-80 border-0 bg-transparent p-3 text-secondary">
                     {selected.resultText}
                   </CodeBlock>
-                </WindowedPageSection>
-              ) : null}
-              {selected.error ? (
-                <WindowedPageSection title="Failure">
+                ) : null}
+                {selected.error ? (
                   <CodeBlock compact className="max-h-64 border-0 bg-transparent p-3 text-danger">
                     {selected.error}
                   </CodeBlock>
-                </WindowedPageSection>
-              ) : null}
+                ) : null}
 
-              {detail?.nodes.length ? (
-                <WindowedPageSection title="Agents" meta={`${detail.nodes.length} nodes`}>
+                {detail?.nodes.length ? (
                   <WindowedList>
                     {detail.nodes.map((node) => (
                       <WindowedListItem
@@ -845,11 +854,9 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                       />
                     ))}
                   </WindowedList>
-                </WindowedPageSection>
-              ) : null}
+                ) : null}
 
-              {detail?.events.length ? (
-                <WindowedPageSection title="Events" meta={`${detail.events.length} events`}>
+                {detail?.events.length ? (
                   <div className="wos-workflows-events">
                     {detail.events.slice(-80).map((event, index) => (
                       <div key={`${event.createdAt}-${index}`} className="wos-workflows-event">
@@ -860,25 +867,12 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                       </div>
                     ))}
                   </div>
-                </WindowedPageSection>
-              ) : null}
-            </>
-          ) : null}
-
-          {!selected && !selectedTemplate && !draftOpen ? (
-            <WindowedPageSection title="Details">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Status', value: 'No run selected' },
-                  { label: 'Agents', value: '0 total' },
-                  { label: 'Events', value: '0 recorded' },
-                  { label: 'Result', value: 'Waiting for a workflow run' },
-                ]}
-              />
-            </WindowedPageSection>
-          ) : null}
-        </WindowedPageMain>
-      </WindowedPageShell>
+                ) : null}
+              </div>
+            ) : null}
+          </WindowedDialog>
+        ) : null}
+      </div>
     );
   }
 
