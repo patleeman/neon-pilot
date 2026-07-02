@@ -401,6 +401,7 @@
   gap: 10px;
   border-bottom: 2px solid var(--wos-ink-900);
   padding: 0 8px;
+  cursor: grab;
   touch-action: none;
 }
 
@@ -435,6 +436,11 @@
   justify-content: center;
   border-radius: 7px;
   padding: 0;
+  cursor: pointer;
+}
+
+.wos-window .wos-window__controls button[data-control='close']:hover {
+  background: oklch(78% 0.13 28);
 }
 
 .wos-window__control-glyph {
