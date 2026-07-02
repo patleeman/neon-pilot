@@ -9,6 +9,7 @@ import {
   WindowedChatRail,
   WindowedChatSurface,
   WindowedDataRow,
+  WindowedDataTable,
   WindowedMessageBubble,
   WindowedPageButton,
   WindowedPageInspector,
@@ -106,10 +107,10 @@ export const DenseAppPage: Story = {
         <WindowedPageShell>
           <WindowedPageRail title="Gateways" accent="gateways">
             <WindowedPageSection title="Providers" meta="2 enabled">
-              <div style={{ display: 'grid', padding: '0 8px 8px' }}>
+              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
                 <WindowedDataRow name="Telegram" meta="Gateway" enabled status={<WindowedBadge tone="positive">Enabled</WindowedBadge>} />
                 <WindowedDataRow name="Local tools" meta="Runtime" enabled={false} />
-              </div>
+              </WindowedDataTable>
             </WindowedPageSection>
           </WindowedPageRail>
           <WindowedPageMain
@@ -164,28 +165,11 @@ export const CoreDataPrimitives: Story = {
       >
         <WindowedPageMain title="Extensions" actions={<WindowedPageButton tone="accent">New</WindowedPageButton>}>
           <WindowedPageSection title="Installed" meta="3 enabled">
-            <div style={{ padding: '0 10px 10px' }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1.4fr 0.7fr',
-                  gap: 8,
-                  padding: '7px 6px',
-                  color: 'var(--wos-ink-500)',
-                  fontFamily: 'IBM Plex Mono, Geist Mono, ui-monospace, monospace',
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                }}
-              >
-                <div>EXTENSION</div>
-                <div>STATUS</div>
-                <div style={{ textAlign: 'right' }}>ENABLED</div>
-              </div>
+            <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
               <WindowedDataRow name="GitHub Sync" meta="Chat tool · Skill" enabled />
               <WindowedDataRow name="Voice Mode" meta="Chat tool" enabled />
               <WindowedDataRow name="Web Search" meta="Chat tool · Skill" enabled={false} />
-            </div>
+            </WindowedDataTable>
           </WindowedPageSection>
         </WindowedPageMain>
       </WindowFrame>

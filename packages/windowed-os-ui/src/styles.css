@@ -993,11 +993,45 @@
   left: 16px;
 }
 
+.wos-data-table {
+  min-width: 0;
+  padding: 0 10px 10px;
+}
+
+.wos-data-table__header,
 .wos-data-row {
   display: grid;
   grid-template-columns: 2fr 1.4fr 0.7fr;
   gap: 8px;
   align-items: center;
+}
+
+.wos-data-table__header {
+  color: var(--wos-ink-500);
+  padding: 7px 6px;
+  font-family: 'IBM Plex Mono', 'Geist Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wos-data-table__heading {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-data-table__heading[data-align='right'] {
+  text-align: right;
+}
+
+.wos-data-table__body {
+  min-width: 0;
+}
+
+.wos-data-row {
   border-top: 1.5px solid var(--wos-surface-3);
   padding: 9px 6px;
 }

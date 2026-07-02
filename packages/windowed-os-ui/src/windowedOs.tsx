@@ -196,6 +196,32 @@ export function WindowedDataRow({ name, meta, enabled = false, status, action, o
   );
 }
 
+export interface WindowedDataColumn {
+  label: string;
+  align?: 'left' | 'right';
+}
+
+export interface WindowedDataTableProps {
+  columns: WindowedDataColumn[];
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedDataTable({ columns, children, className }: WindowedDataTableProps) {
+  return (
+    <div className={cx('wos-data-table', className)}>
+      <div className="wos-data-table__header">
+        {columns.map((column) => (
+          <div key={column.label} className="wos-data-table__heading" data-align={column.align ?? 'left'}>
+            {column.label}
+          </div>
+        ))}
+      </div>
+      <div className="wos-data-table__body">{children}</div>
+    </div>
+  );
+}
+
 export interface WindowedChatSurfaceProps {
   children: ReactNode;
   className?: string;
