@@ -1,6 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { StartMenu, Taskbar, WindowFrame } from './windowedOs';
+import {
+  StartMenu,
+  Taskbar,
+  WindowedPageButton,
+  WindowedPageInspector,
+  WindowedPageMain,
+  WindowedPageRail,
+  WindowedPageSection,
+  WindowedPageShell,
+  WindowFrame,
+} from './windowedOs';
 
 const meta = {
   title: 'Windowed OS/Desktop Shell',
@@ -65,6 +75,63 @@ export const DesktopComposition: Story = {
         groups={[{ id: 'chat', title: 'Chat', accent: 'chat', focused: true, count: 3, onSelect: () => undefined }]}
         items={[{ id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined }]}
       />
+    </div>
+  ),
+};
+
+export const DenseAppPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 620, padding: 24 }}>
+      <WindowFrame
+        title="Gateways"
+        accent="gateways"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 560 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell>
+          <WindowedPageRail title="Gateways" accent="gateways">
+            <WindowedPageSection title="Providers" meta="2 enabled">
+              <div style={{ display: 'grid', gap: 6, padding: 8, fontSize: 12 }}>
+                <strong>Telegram</strong>
+                <span>Model gateway</span>
+                <span>Local tools</span>
+              </div>
+            </WindowedPageSection>
+          </WindowedPageRail>
+          <WindowedPageMain
+            eyebrow="Gateway"
+            title="Telegram"
+            description="Only approved users and chats can send work into Neon Pilot."
+            actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}
+          >
+            <WindowedPageSection title="Runtime" meta="Needs attention">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0, fontSize: 12 }}>
+                {['Token', 'Connection', 'Runtime'].map((label) => (
+                  <div key={label} style={{ borderRight: '1.5px solid var(--wos-ink-900)', padding: 10 }}>
+                    <div className="wos-page-eyebrow">{label}</div>
+                    <strong>{label === 'Runtime' ? 'Needs attention' : 'Configured'}</strong>
+                  </div>
+                ))}
+              </div>
+            </WindowedPageSection>
+            <WindowedPageSection title="Approved users" meta="1 approved">
+              <div style={{ padding: 10, fontSize: 12 }}>1191448898</div>
+            </WindowedPageSection>
+          </WindowedPageMain>
+          <WindowedPageInspector eyebrow="Gateway context" title="Telegram">
+            <WindowedPageSection title="Status">
+              <div style={{ display: 'grid', gap: 8, padding: 10, fontSize: 12 }}>
+                <span>Setup /gateways</span>
+                <span>Configuration Gateways page</span>
+                <span>Docs Telegram Bot API</span>
+              </div>
+            </WindowedPageSection>
+          </WindowedPageInspector>
+        </WindowedPageShell>
+      </WindowFrame>
     </div>
   ),
 };
