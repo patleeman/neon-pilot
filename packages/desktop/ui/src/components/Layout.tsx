@@ -1,4 +1,3 @@
-import { WindowedChatRail, WindowedThreadItem } from '@neon-pilot/windowed-os-ui';
 import { Component, type ReactNode, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -937,52 +936,6 @@ function ResizeHandle({ onMouseDown, onDoubleClick }: { onMouseDown: (e: React.M
           left: hovered ? '1.5px' : '2px',
         }}
       />
-    </div>
-  );
-}
-
-function formatWindowedThreadMeta(session: SessionMeta): string {
-  if (session.isRunning) return 'Running';
-  if (session.messageCount > 0) return `${session.messageCount} message${session.messageCount === 1 ? '' : 's'}`;
-  return session.cwdSlug || 'Conversation';
-}
-
-function WindowedChatThreadRail({
-  sessions,
-  activeConversationId,
-  onNewConversation,
-}: {
-  sessions: readonly SessionMeta[];
-  activeConversationId: string | null;
-  onNewConversation: () => void;
-}) {
-  const navigate = useNavigate();
-  const visibleSessions = useMemo(
-    () =>
-      [...sessions]
-        .sort((left, right) => {
-          const leftTime = Date.parse(left.lastActivityAt ?? left.timestamp);
-          const rightTime = Date.parse(right.lastActivityAt ?? right.timestamp);
-          return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
-        })
-        .slice(0, 40),
-    [sessions],
-  );
-
-  return (
-    <div data-windowed-chat-thread-rail="true" className="h-full min-h-0">
-      <WindowedChatRail title="Threads" className="wos-embedded-chat-thread-rail">
-        <WindowedThreadItem title="New conversation" meta="Draft" active={!activeConversationId} onSelect={onNewConversation} />
-        {visibleSessions.map((session) => (
-          <WindowedThreadItem
-            key={session.id}
-            title={session.title || 'Untitled'}
-            meta={formatWindowedThreadMeta(session)}
-            active={session.id === activeConversationId}
-            onSelect={() => navigate(`/conversations/${encodeURIComponent(session.id)}`)}
-          />
-        ))}
-      </WindowedChatRail>
     </div>
   );
 }
@@ -1987,7 +1940,7 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }:
 
   const windowedShellChild = isWindowedShellChild();
   const hideDesktopTopBar = embeddedWindowChrome || windowedShellChild;
-  const effectiveSidebarOpen = windowedShellChild && !embeddedWindowChrome ? false : sidebarOpen;
+  const effectiveSidebarOpen = windowedShellChild || embeddedWindowChrome ? false : sidebarOpen;
   useEffect(() => {
     const root = document.documentElement;
     const previous = root.style.getPropertyValue('--neon-pilot-sidebar-offset');
@@ -3637,25 +3590,15 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }:
                   embeddedWindowChrome ? 'wos-embedded-sidebar' : 'bg-panel border-r border-border-subtle',
                 )}
               >
-                {embeddedWindowChrome ? (
-                  <WindowedChatThreadRail
-                    sessions={layoutSessions}
-                    activeConversationId={activeConversationId}
-                    onNewConversation={() => {
-                      void startNewConversationFromLayout(true);
-                    }}
+                <Suspense fallback={<div className="flex-1 bg-panel" aria-label="Loading sidebar" />}>
+                  <Sidebar
+                    onNewConversation={(args) =>
+                      startNewConversationFromLayout(true, {
+                        cwd: args?.cwd,
+                      })
+                    }
                   />
-                ) : (
-                  <Suspense fallback={<div className="flex-1 bg-panel" aria-label="Loading sidebar" />}>
-                    <Sidebar
-                      onNewConversation={(args) =>
-                        startNewConversationFromLayout(true, {
-                          cwd: args?.cwd,
-                        })
-                      }
-                    />
-                  </Suspense>
-                )}
+                </Suspense>
               </div>
             ) : null}
 

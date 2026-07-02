@@ -53,7 +53,6 @@ export const DesktopComposition: Story = {
       <main className="wos-desktop" style={{ height: 678 }}>
         <StartMenu
           open
-          onSelectStableShell={() => undefined}
           items={[
             { id: 'chat', title: 'Chat', accent: 'chat', onSelect: () => undefined },
             { id: 'automations', title: 'Automations', accent: 'automations', onSelect: () => undefined },
@@ -71,12 +70,6 @@ export const DesktopComposition: Story = {
           onClose={() => undefined}
         >
           <WindowedChatSurface>
-            <WindowedChatRail>
-              <WindowedThreadItem title="Release notes" active />
-              <WindowedThreadItem title="Bug triage" meta="2h" />
-              <WindowedThreadItem title="Onboarding copy" meta="1d" />
-              <WindowedThreadItem title="Deploy check" meta="2d" />
-            </WindowedChatRail>
             <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
               <WindowedMessageBubble from="user">Draft the changelog for v0.9</WindowedMessageBubble>
               <WindowedMessageBubble>On it. Pulling merged PRs since the last tag.</WindowedMessageBubble>
@@ -99,8 +92,11 @@ export const DesktopComposition: Story = {
       <Taskbar
         startOpen
         onToggleStart={() => undefined}
-        groups={[{ id: 'chat', title: 'Chat', accent: 'chat', focused: true, count: 3, onSelect: () => undefined }]}
-        items={[{ id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined }]}
+        items={[
+          { id: 'chat-release-notes', title: 'Release notes', accent: 'chat', focused: true, onSelect: () => undefined },
+          { id: 'chat-bug-triage', title: 'Bug triage', accent: 'chat', onSelect: () => undefined },
+          { id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined },
+        ]}
       />
     </div>
   ),

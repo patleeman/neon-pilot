@@ -242,7 +242,7 @@ describe('Layout workbench toggle', () => {
     expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('renders a windowed thread rail instead of the stable sidebar when embedded in a chat window', async () => {
+  it('omits conversation sidebars when embedded in a chat window', async () => {
     seedConversationCwd('/repo/project', 'conv-1');
     sessionStore.upsert({
       id: 'conv-2',
@@ -257,10 +257,10 @@ describe('Layout workbench toggle', () => {
 
     renderEmbeddedWindowLayout('/conversations/conv-1');
 
-    expect(await screen.findByText('Threads')).toBeTruthy();
-    expect(screen.getByText('Workspace conversation')).toBeTruthy();
-    expect(screen.getByText('Second thread')).toBeTruthy();
-    expect(document.querySelector('[data-windowed-chat-thread-rail="true"]')).not.toBeNull();
+    expect(await screen.findByText('Conversation route conv-1')).toBeTruthy();
+    expect(screen.queryByText('Threads')).toBeNull();
+    expect(screen.queryByText('Second thread')).toBeNull();
+    expect(document.querySelector('[data-windowed-chat-thread-rail="true"]')).toBeNull();
     expect(document.querySelector('.ui-sidebar-nav-item')).toBeNull();
     expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
   });

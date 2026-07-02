@@ -58,6 +58,14 @@
   font: inherit;
 }
 
+.windowed-os-shell button:not(:disabled) {
+  cursor: pointer;
+}
+
+.windowed-os-shell button:disabled {
+  cursor: default;
+}
+
 .wos-desktop {
   position: relative;
   z-index: 0;
@@ -97,7 +105,6 @@
   border: 2px solid var(--wos-ink-900);
   color: var(--wos-ink-900);
   background: var(--wos-surface-1);
-  cursor: default;
 }
 
 .wos-taskbar__start,
@@ -2731,6 +2738,62 @@
 .windowed-os-shell .wos-window-route-body button.ui-action-button,
 .windowed-os-shell .wos-window-route-body button.ui-ghost-button,
 .windowed-os-shell .wos-window-route-body button.ui-icon-button {
+  font-family: var(--wos-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.windowed-os-shell .wos-window-route-body {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.windowed-os-shell .wos-window-route-body .conversation-composer-inner,
+.windowed-os-shell .wos-window-route-body .ui-input-shell {
+  font-family: var(--wos-font-body);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-input-shell > .px-3 {
+  padding: 8px var(--wos-space-5);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-input-shell .border-t {
+  padding-top: var(--wos-space-3);
+}
+
+.windowed-os-shell .wos-window-route-body button.ui-composer-action-button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+
+.windowed-os-shell .wos-window-route-body h2.text-xl {
+  margin-top: var(--wos-space-2);
+  font-family: var(--wos-font-display);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid {
+  gap: var(--wos-space-4);
+  margin-top: var(--wos-space-5);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile {
+  min-height: 42px;
+  padding: 8px var(--wos-space-5);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile-main {
+  gap: var(--wos-space-4);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile-label {
   font-family: var(--wos-font-display);
   font-size: 12.5px;
   font-weight: 700;

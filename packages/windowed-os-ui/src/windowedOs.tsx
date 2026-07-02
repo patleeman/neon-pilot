@@ -648,10 +648,9 @@ export interface StartMenuItem {
 export interface StartMenuProps {
   open: boolean;
   items: StartMenuItem[];
-  onSelectStableShell: () => void;
 }
 
-export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) {
+export function StartMenu({ open, items }: StartMenuProps) {
   const [query, setQuery] = useState('');
   useEffect(() => {
     if (!open) setQuery('');
@@ -667,7 +666,7 @@ export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) 
   return (
     <div className="wos-start-menu" role="dialog" aria-label="Start menu">
       <div className="wos-start-menu__header">
-        <div className="wos-start-menu__title">Neon Pilot OS</div>
+        <div className="wos-start-menu__title">Neon Pilot</div>
       </div>
       <div className="wos-start-menu__search">
         <input
@@ -688,11 +687,6 @@ export function StartMenu({ open, items, onSelectStableShell }: StartMenuProps) 
         ) : (
           <div className="wos-start-menu__empty">No apps match.</div>
         )}
-      </div>
-      <div className="wos-start-menu__footer">
-        <button type="button" className="wos-start-menu__stable" onClick={onSelectStableShell}>
-          Stable shell
-        </button>
       </div>
     </div>
   );
@@ -725,7 +719,9 @@ export interface TaskbarProps {
   items: TaskbarItem[];
 }
 
-export function Taskbar({ startOpen, onToggleStart, groups = [], items }: TaskbarProps) {
+const EMPTY_TASKBAR_GROUPS: TaskbarGroup[] = [];
+
+export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUPS, items }: TaskbarProps) {
   const groupRefs = useRef(new Map<string, HTMLDivElement>());
   const [menuAnchors, setMenuAnchors] = useState<Record<string, { left: number; bottom: number }>>({});
 
@@ -759,7 +755,7 @@ export function Taskbar({ startOpen, onToggleStart, groups = [], items }: Taskba
     <>
       <footer className="wos-taskbar">
         <button type="button" className="wos-taskbar__start" aria-haspopup="dialog" aria-expanded={startOpen} onClick={onToggleStart}>
-          <WindowedAppTile label="Start" accent="extensions" variant="taskbar" />
+          <WindowedAppTile label="Neon Pilot" accent="extensions" variant="taskbar" />
         </button>
         <nav className="wos-taskbar__items" aria-label="Open windows">
           {groups.map((group) => (

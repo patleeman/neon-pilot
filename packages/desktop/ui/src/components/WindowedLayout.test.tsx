@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   )),
   archiveSession: vi.fn(),
   registryLoading: false,
+  pinnedSessions: [] as Array<{ id: string; title?: string; messageCount?: number }>,
+  tabs: [] as Array<{ id: string; title?: string; messageCount?: number }>,
 }));
 
 vi.mock('./Layout', () => ({
@@ -51,8 +53,8 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
 
 vi.mock('../hooks/useConversations', () => ({
   useConversations: () => ({
-    pinnedSessions: [],
-    tabs: [],
+    pinnedSessions: mocks.pinnedSessions,
+    tabs: mocks.tabs,
     archiveSession: mocks.archiveSession,
   }),
 }));
@@ -79,6 +81,8 @@ describe('WindowedLayout route windows', () => {
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
     mocks.registryLoading = false;
+    mocks.pinnedSessions = [];
+    mocks.tabs = [];
   });
 
   it('renders non-chat routes through the extension host without the embedded stable layout', async () => {
@@ -86,7 +90,7 @@ describe('WindowedLayout route windows', () => {
 
     expect(screen.getByTestId('embedded-layout')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /start/i }));
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
     fireEvent.click(screen.getByRole('button', { name: /routines/i }));
 
     const routeHost = await screen.findByTestId('extension-route-host');
@@ -103,12 +107,54 @@ describe('WindowedLayout route windows', () => {
 
     expect(container.querySelector('.wos-taskbar .wos-app-monogram')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /start/i }));
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
 
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
-    expect(within(startMenu).getByText('Neon Pilot OS')).toBeTruthy();
+    expect(within(startMenu).getByText('Neon Pilot')).toBeTruthy();
     expect(within(startMenu).queryByText('APPS')).toBeNull();
+    expect(within(startMenu).queryByText('Stable shell')).toBeNull();
     expect(startMenu.querySelector('.wos-app-monogram')).toBeNull();
+  });
+
+  it('closes the start menu when the desktop is clicked outside it', () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
+
+    fireEvent.mouseDown(screen.getByLabelText(/windowed neon pilot desktop/i));
+
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
+  it('renders chat windows directly in the taskbar with larger default bounds', () => {
+    const { container } = renderWindowedLayout();
+
+    expect(container.querySelector('.wos-taskbar__group')).toBeNull();
+
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    expect(chatWindow.getAttribute('style')).toContain('width: 1180px');
+    expect(chatWindow.getAttribute('style')).toContain('height: 760px');
+    const taskbar = screen.getByRole('navigation', { name: /open windows/i });
+    expect(
+      within(taskbar)
+        .getByRole('button', { name: /new conversation/i })
+        .getAttribute('data-focused'),
+    ).toBe('true');
+  });
+
+  it('does not auto-create taskbar windows for every known chat session', () => {
+    mocks.tabs = [
+      { id: 'session-1', title: 'Planning thread', messageCount: 4 },
+      { id: 'session-2', title: 'Follow-up thread', messageCount: 2 },
+    ];
+
+    renderWindowedLayout();
+
+    const taskbar = screen.getByRole('navigation', { name: /open windows/i });
+    expect(within(taskbar).getByRole('button', { name: /new conversation/i })).toBeTruthy();
+    expect(within(taskbar).queryByText('Planning thread')).toBeNull();
+    expect(within(taskbar).queryByText('Follow-up thread')).toBeNull();
   });
 
   it('prunes persisted route windows when their nav item is no longer available', async () => {

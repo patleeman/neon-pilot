@@ -1,12 +1,4 @@
-import {
-  type AppAccent,
-  StartMenu,
-  type StartMenuItem,
-  Taskbar,
-  type TaskbarItem,
-  WindowedMenuPanel,
-  WindowFrame,
-} from '@neon-pilot/windowed-os-ui';
+import { type AppAccent, StartMenu, type StartMenuItem, Taskbar, type TaskbarItem, WindowFrame } from '@neon-pilot/windowed-os-ui';
 import { type CSSProperties, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
@@ -23,7 +15,6 @@ import {
   resolveSnapTarget,
   type SnapTarget,
   type WindowBounds,
-  writeDesktopShellPresentation,
 } from '../ui-state/windowedShell';
 import { Layout } from './Layout';
 import { QuietLoadingState } from './ui';
@@ -79,7 +70,7 @@ function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: s
 function defaultBounds(index: number, kind: WindowKind): WindowBounds {
   const offset = (index % 7) * 34;
   if (kind === 'chat') {
-    return { x: 42 + offset, y: 34 + offset, width: 980, height: 680 };
+    return { x: 42 + offset, y: 34 + offset, width: 1180, height: 760 };
   }
   return { x: 112 + offset, y: 72 + offset, width: 1040, height: 650 };
 }
@@ -326,7 +317,6 @@ export function WindowedLayout() {
   const conversations = useConversations({ includeArchivedSessions: false });
   const desktopRef = useRef<HTMLElement | null>(null);
   const [launcherOpen, setLauncherOpen] = useState(false);
-  const [chatMenuOpen, setChatMenuOpen] = useState(false);
   const [windows, setWindows] = useState<DesktopWindowModel[]>(() => {
     const stored = readStoredWindows();
     if (stored.length > 0) return stored;
@@ -344,7 +334,6 @@ export function WindowedLayout() {
   );
   const chatWindows = windows.filter((windowModel) => windowModel.kind === 'chat');
   const visibleWindows = windows.filter((windowModel) => !windowModel.minimized);
-  const focusedWindowId = windows.find((windowModel) => windowModel.focused)?.id ?? null;
   const windowsRef = useRef(windows);
 
   useEffect(() => {
@@ -364,34 +353,28 @@ export function WindowedLayout() {
   }, [windows]);
 
   useEffect(() => {
-    if (chatSessions.length === 0) return;
+    if (!launcherOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (!target) return;
+      if (target.closest('.wos-start-menu, .wos-taskbar__start, .wos-taskbar__menu-layer')) return;
+      setLauncherOpen(false);
+    };
+    window.addEventListener('mousedown', handlePointerDown, true);
+    return () => window.removeEventListener('mousedown', handlePointerDown, true);
+  }, [launcherOpen]);
+
+  useEffect(() => {
     setWindows((current) => {
-      const existingIds = new Set(current.map((windowModel) => windowModel.id));
-      const additions = chatSessions.flatMap((session, index): DesktopWindowModel[] => {
-        const id = createId({ id: 'chat', kind: 'chat', route: `/conversations/${session.id}` }, session.id);
-        if (existingIds.has(id)) return [];
-        return [
-          {
-            id,
-            kind: 'chat',
-            title: conversationWindowTitle(session),
-            route: `/conversations/${encodeURIComponent(session.id)}`,
-            bounds: defaultBounds(current.length + index, 'chat'),
-            minimized: true,
-            focused: false,
-            archivedOnClose: true,
-          },
-        ];
+      const next = current.map((windowModel) => {
+        if (windowModel.kind !== 'chat' || !windowModel.id.startsWith('chat:')) return windowModel;
+        const sessionId = windowModel.id.slice('chat:'.length);
+        const session = chatSessions.find((candidate) => candidate.id === sessionId);
+        if (!session) return windowModel;
+        const title = conversationWindowTitle(session);
+        return title === windowModel.title ? windowModel : { ...windowModel, title };
       });
-      if (additions.length === 0) {
-        return current.map((windowModel) => {
-          if (windowModel.kind !== 'chat' || !windowModel.id.startsWith('chat:')) return windowModel;
-          const sessionId = windowModel.id.slice('chat:'.length);
-          const session = chatSessions.find((candidate) => candidate.id === sessionId);
-          return session ? { ...windowModel, title: conversationWindowTitle(session) } : windowModel;
-        });
-      }
-      return [...current, ...additions];
+      return next.every((windowModel, index) => windowModel === current[index]) ? current : next;
     });
   }, [chatSessions]);
 
@@ -402,7 +385,6 @@ export function WindowedLayout() {
   const openLauncherItem = useCallback((item: LauncherItem, session?: SessionMeta) => {
     const id = createId(item, session?.id);
     setLauncherOpen(false);
-    setChatMenuOpen(false);
     setWindows((current) => {
       const existing = current.find((windowModel) => windowModel.id === id);
       if (existing) return withFocusedWindow(current, id);
@@ -674,7 +656,6 @@ export function WindowedLayout() {
     };
   }, [maximizeWindow, startDrag, startResize]);
 
-  const activeChatWindow = chatWindows.find((windowModel) => windowModel.focused) ?? chatWindows[0] ?? null;
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
   const startMenuItems = launcherItems.map(
     (item): StartMenuItem => ({
@@ -696,17 +677,20 @@ export function WindowedLayout() {
         onSelect: () => focusWindow(windowModel.id),
       }),
     );
+  const chatTaskItems = chatWindows.map(
+    (windowModel): TaskbarItem => ({
+      id: windowModel.id,
+      title: windowModel.title,
+      focused: windowModel.focused,
+      minimized: windowModel.minimized,
+      accent: 'chat',
+      onSelect: () => focusWindow(windowModel.id),
+    }),
+  );
 
   return (
     <div className="windowed-os-shell h-screen overflow-hidden">
-      <StartMenu
-        open={launcherOpen}
-        items={startMenuItems}
-        onSelectStableShell={() => {
-          writeDesktopShellPresentation('stable');
-          window.location.assign('/?shell=stable');
-        }}
-      />
+      <StartMenu open={launcherOpen} items={startMenuItems} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
         {visibleWindows.map((windowModel, index) => (
@@ -733,36 +717,9 @@ export function WindowedLayout() {
       <Taskbar
         startOpen={launcherOpen}
         onToggleStart={() => {
-          setChatMenuOpen(false);
           setLauncherOpen((open) => !open);
         }}
-        groups={[
-          {
-            id: 'chat',
-            title: 'Chat',
-            accent: 'chat',
-            focused: activeChatWindow?.id === focusedWindowId,
-            count: chatWindows.length,
-            onSelect: () => {
-              setLauncherOpen(false);
-              setChatMenuOpen((open) => !open);
-            },
-            menu: chatMenuOpen ? (
-              <WindowedMenuPanel
-                ariaLabel="Chat windows"
-                items={[
-                  { id: 'new-chat', label: 'New conversation', onSelect: () => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!) },
-                  ...chatSessions.map((session) => ({
-                    id: session.id,
-                    label: conversationWindowTitle(session),
-                    onSelect: () => openLauncherItem(STATIC_LAUNCHER_ITEMS[0]!, session),
-                  })),
-                ]}
-              />
-            ) : null,
-          },
-        ]}
-        items={routeTaskItems}
+        items={[...chatTaskItems, ...routeTaskItems]}
       />
     </div>
   );
