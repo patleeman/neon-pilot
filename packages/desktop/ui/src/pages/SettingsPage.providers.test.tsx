@@ -638,7 +638,7 @@ describe('SettingsPage provider model editor', () => {
     expect(querySettingsTocLink(conversationContainer.container, 'settings-appearance').getAttribute('aria-current')).toBeNull();
   });
 
-  it('uses direct section routes from the windowed settings rail', async () => {
+  it('uses direct section routes from the windowed settings nav', async () => {
     const navigationEvents: string[] = [];
     const listener = (event: Event) => {
       navigationEvents.push((event as CustomEvent<{ route?: string }>).detail?.route ?? '');
@@ -648,8 +648,8 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage(undefined, '/settings', { shellPresentation: 'windowed', pathname: '/settings' });
     await flushAsyncWork();
 
-    expect(container.querySelector('.wos-page-rail')?.getAttribute('aria-label')).toBe('Settings');
-    expect(container.querySelector('.wos-page-rail__header')).toBeNull();
+    expect(container.querySelector('.settings-page-windowed-nav')?.getAttribute('aria-label')).toBe('Settings sections');
+    expect(container.querySelector('.wos-page-rail')).toBeNull();
 
     const providersButton = queryButton(container, 'Providers');
 

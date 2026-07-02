@@ -371,10 +371,12 @@ describe('SettingsPage', () => {
     const html = renderPage('/settings', undefined, { shellPresentation: 'windowed', pathname: '/settings', hash: '' });
 
     expect(html).toContain('class="wos-page-shell settings-page-windowed"');
-    expect(html).toContain('data-layout="two-column"');
+    expect(html).toContain('data-layout="standard"');
+    expect(html).toContain('class="settings-page-windowed-nav"');
+    expect(html).toContain('aria-label="Settings sections"');
     expect(html).toContain('>Preferences</div>');
-    expect(html).toContain('>Settings</span>');
     expect(html).toContain('>Appearance</h1>');
+    expect(html).not.toContain('wos-page-rail');
     expect(html).not.toContain('settings-page-section-title');
     expect(html).not.toContain('Configure Neon Pilot preferences.');
     expect(html).not.toContain('Preference group');
