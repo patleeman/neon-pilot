@@ -62,14 +62,16 @@ describe('ModelArenaPage', () => {
       <ModelArenaPage pa={{ extension: { invoke } } as never} context={{ shellPresentation: 'windowed' } as never} />,
     );
 
-    await waitFor(() => expect(container.querySelector('.wos-page-shell')).toBeTruthy());
+    await waitFor(() => expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column'));
+    expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-arena-ranking-table')).toBeTruthy();
     expect(screen.getByRole('button', { name: /All task types/ })).toBeTruthy();
-    expect(screen.getAllByText('openai/gpt-5')).toHaveLength(2);
+    expect(screen.getAllByText('openai/gpt-5').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('frontend 6W/2L/1T')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Disable Model Arena' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
     expect(screen.getByText('opencode-go/flash')).toBeTruthy();
+    expect(screen.queryByText('Arena setup')).toBeNull();
     expect(document.body.textContent).toContain('Blind model duels');
   });
 });

@@ -31,7 +31,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -504,7 +503,7 @@ function ModelArenaWindowedPage({
 
   return (
     <div className="h-full overflow-hidden">
-      <WindowedPageShell layout="wide">
+      <WindowedPageShell layout="two-column">
         <WindowedPageRail title="Model Arena" accent="gateways">
           <WindowedList>
             <WindowedListItem
@@ -559,41 +558,9 @@ function ModelArenaWindowedPage({
             />
           </WindowedPageSection>
 
-          <WindowedPageSection title="Rankings" meta={state ? `${ranked.length} models` : 'Loading'}>
-            {!state ? <div className="wos-arena-empty">Loading Model Arena rankings.</div> : null}
-            {state && ranked.length === 0 ? (
-              <div className="wos-arena-empty">Add challenger models and vote on duels to build rankings.</div>
-            ) : null}
-            {ranked.length > 0 ? (
-              <WindowedDataTable
-                className="wos-arena-ranking-table"
-                columns={[
-                  { label: 'Model' },
-                  { label: 'Rating', align: 'right' },
-                  { label: 'Votes', align: 'right' },
-                  { label: 'Confidence', align: 'right' },
-                ]}
-              >
-                {ranked.map((model) => (
-                  <div key={model.modelRef} className="wos-arena-ranking-row">
-                    <div className="wos-arena-ranking-row__model">
-                      <span>{model.modelRef}</span>
-                      {model.summary ? <small>{model.summary}</small> : null}
-                    </div>
-                    <span className="wos-arena-ranking-row__metric">{model.rating}</span>
-                    <span className="wos-arena-ranking-row__metric">{model.votes}</span>
-                    <span className="wos-arena-ranking-row__confidence">{confidenceLabel(model.votes)}</span>
-                  </div>
-                ))}
-              </WindowedDataTable>
-            ) : null}
-          </WindowedPageSection>
-        </WindowedPageMain>
-
-        <WindowedPageInspector eyebrow="Arena setup" title={state?.settings.automaticDuels ? 'Automatic duels on' : 'Automatic duels off'}>
           {state ? (
             <>
-              <WindowedPageSection title="Status">
+              <WindowedPageSection title="Status" meta={state.settings.automaticDuels ? 'Automatic duels on' : 'Automatic duels off'}>
                 <div className="wos-arena-status-row">
                   <span>
                     {arenaReady
@@ -715,7 +682,7 @@ function ModelArenaWindowedPage({
                 </div>
               </WindowedPageSection>
 
-              <WindowedPageSection title={topModel ? 'Leader' : 'Leader'}>
+              <WindowedPageSection title="Leader">
                 <WindowedKeyValueList
                   items={
                     topModel
@@ -735,7 +702,37 @@ function ModelArenaWindowedPage({
               <div className="wos-arena-empty">Reading arena setup.</div>
             </WindowedPageSection>
           )}
-        </WindowedPageInspector>
+
+          <WindowedPageSection title="Rankings" meta={state ? `${ranked.length} models` : 'Loading'}>
+            {!state ? <div className="wos-arena-empty">Loading Model Arena rankings.</div> : null}
+            {state && ranked.length === 0 ? (
+              <div className="wos-arena-empty">Add challenger models and vote on duels to build rankings.</div>
+            ) : null}
+            {ranked.length > 0 ? (
+              <WindowedDataTable
+                className="wos-arena-ranking-table"
+                columns={[
+                  { label: 'Model' },
+                  { label: 'Rating', align: 'right' },
+                  { label: 'Votes', align: 'right' },
+                  { label: 'Confidence', align: 'right' },
+                ]}
+              >
+                {ranked.map((model) => (
+                  <div key={model.modelRef} className="wos-arena-ranking-row">
+                    <div className="wos-arena-ranking-row__model">
+                      <span>{model.modelRef}</span>
+                      {model.summary ? <small>{model.summary}</small> : null}
+                    </div>
+                    <span className="wos-arena-ranking-row__metric">{model.rating}</span>
+                    <span className="wos-arena-ranking-row__metric">{model.votes}</span>
+                    <span className="wos-arena-ranking-row__confidence">{confidenceLabel(model.votes)}</span>
+                  </div>
+                ))}
+              </WindowedDataTable>
+            ) : null}
+          </WindowedPageSection>
+        </WindowedPageMain>
       </WindowedPageShell>
     </div>
   );
