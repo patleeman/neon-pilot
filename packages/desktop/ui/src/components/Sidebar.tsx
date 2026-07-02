@@ -582,7 +582,7 @@ function SidebarPrimaryNav({
 }) {
   return (
     <nav className="relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3" aria-label="Primary navigation">
-      <div className="relative px-1">
+      <div className="relative">
         <SidebarNavButton onClick={onOpenChat} active={chatActive} className="w-full min-w-0 pr-10 text-secondary" title="Chat">
           <Ico d={PATH.chatBubble} size={15} />
           <span className="flex-1 text-left">Chat</span>
