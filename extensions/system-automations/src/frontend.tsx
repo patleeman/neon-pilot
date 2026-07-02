@@ -49,7 +49,6 @@ import {
   WindowedList,
   WindowedListItem,
   WindowedPageButton,
-  WindowedPageInspector,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -714,7 +713,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
 
     return (
       <div className="h-full overflow-hidden">
-        <WindowedPageShell>
+        <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Automations" accent="automations">
             <WindowedList>
               {loading && visibleTasks.length === 0 ? (
@@ -824,12 +823,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                 </div>
               ) : null}
             </WindowedPageSection>
-          </WindowedPageMain>
 
-          <WindowedPageInspector eyebrow="Automation context" title={selectedTask ? taskTitle(selectedTask) : 'No automation selected'}>
-            {selectedTask ? (
-              <>
-                <WindowedPageSection title="Status">
+            <WindowedPageSection
+              title={selectedTask ? 'Selected automation' : 'Selection'}
+              meta={selectedTask ? taskTitle(selectedTask) : 'No automation selected'}
+            >
+              {selectedTask ? (
+                <div className="wos-automation-detail-grid">
                   <WindowedKeyValueList
                     items={[
                       { label: 'State', value: statusLabel(selectedTask) },
@@ -838,8 +838,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       { label: 'Schedule', value: selectedTask.scheduleType === 'at' ? 'Once' : 'Recurring' },
                     ]}
                   />
-                </WindowedPageSection>
-                <WindowedPageSection title="Owner">
                   <WindowedKeyValueList
                     items={[
                       { label: 'Thread', value: selectedTask.threadTitle || selectedTask.threadConversationId || 'None' },
@@ -848,8 +846,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       { label: 'Timeout', value: selectedTask.timeoutSeconds ? `${selectedTask.timeoutSeconds}s` : 'Default' },
                     ]}
                   />
-                </WindowedPageSection>
-                <WindowedPageSection title="Controls">
                   <div className="wos-automation-inspector-actions">
                     <WindowedPageButton
                       disabled={selectedTask.running || busy === `run:${selectedTask.id}`}
@@ -871,14 +867,12 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                       Delete
                     </WindowedPageButton>
                   </div>
-                </WindowedPageSection>
-              </>
-            ) : (
-              <WindowedPageSection title="Selection">
+                </div>
+              ) : (
                 <div className="wos-automation-empty">Select an automation to inspect schedule, owner, and run controls.</div>
-              </WindowedPageSection>
-            )}
-          </WindowedPageInspector>
+              )}
+            </WindowedPageSection>
+          </WindowedPageMain>
         </WindowedPageShell>
 
         {activeAutomation && dialogPa ? (

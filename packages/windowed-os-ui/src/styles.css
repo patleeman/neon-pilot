@@ -2113,6 +2113,13 @@
   align-items: center;
 }
 
+.wos-automation-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(180px, auto);
+  gap: var(--wos-space-4);
+  align-items: start;
+}
+
 .wos-automation-row__actions {
   justify-content: flex-end;
 }
@@ -2122,6 +2129,10 @@
 }
 
 @media (max-width: 1100px) {
+  .wos-automation-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .wos-automation-table__header {
     display: none;
   }
