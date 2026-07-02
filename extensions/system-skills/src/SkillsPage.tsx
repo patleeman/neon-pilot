@@ -32,6 +32,21 @@ import {
   TabList,
   TabPanel,
   ToolbarButton,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedKeyValueList,
+  WindowedList,
+  WindowedListItem,
+  WindowedPageButton,
+  WindowedPageInspector,
+  WindowedPageMain,
+  WindowedPageRail,
+  WindowedPageSection,
+  WindowedPageShell,
+  WindowedSelect,
+  WindowedTextInput,
+  WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -292,11 +307,17 @@ function candidateStateValue(candidate: MarketplaceCandidate, installed: boolean
   return 'available';
 }
 
+function candidateStateTone(stateValue: Exclude<MarketplaceStateFilter, 'all'>): 'neutral' | 'positive' | 'warning' {
+  if (stateValue === 'installed') return 'positive';
+  if (stateValue === 'approval-required') return 'warning';
+  return 'neutral';
+}
+
 function compareText(left: string, right: string): number {
   return left.localeCompare(right, undefined, { sensitivity: 'base' });
 }
 
-export function SkillsPage({ pa }: ExtensionSurfaceProps) {
+export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
   const initialMarketplaceSnapshot = readMarketplaceSnapshot()?.query === '' ? readMarketplaceSnapshot() : null;
   const hydrateMarketplaceInBackgroundRef = useRef(Boolean(initialMarketplaceSnapshot));
   const [skills, setSkills] = useState<SkillItem[]>([]);
@@ -471,6 +492,42 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
     candidates.length === marketplaceRows.length
       ? `${candidates.length} results`
       : `${marketplaceRows.length} of ${candidates.length} results`;
+  const selectedWindowedSelection = useMemo<SkillSelectionData | null>(() => {
+    if (!selectedSkillResourceId) {
+      const firstMarketplaceRow = marketplaceRows[0];
+      if (view === 'marketplace' && firstMarketplaceRow) {
+        return {
+          kind: 'marketplace',
+          candidate: firstMarketplaceRow.candidate,
+          installed: firstMarketplaceRow.installed,
+          capability: firstMarketplaceRow.capability,
+          state: firstMarketplaceRow.state,
+        };
+      }
+      if (view === 'installed' && filteredSkills[0]) return { kind: 'installed', skill: filteredSkills[0] };
+      return null;
+    }
+    if (selectedSkillResourceId.startsWith('marketplace:')) {
+      const candidateId = selectedSkillResourceId.slice('marketplace:'.length);
+      const row = marketplaceRows.find((item) => item.candidate.candidateId === candidateId);
+      return row
+        ? {
+            kind: 'marketplace',
+            candidate: row.candidate,
+            installed: row.installed,
+            capability: row.capability,
+            state: row.state,
+          }
+        : null;
+    }
+    if (selectedSkillResourceId.startsWith('installed:')) {
+      const skill = filteredSkills.find(
+        (item) => skillResourceId('installed', `${item.source}:${item.id}:${item.path}`) === selectedSkillResourceId,
+      );
+      return skill ? { kind: 'installed', skill } : null;
+    }
+    return null;
+  }, [filteredSkills, marketplaceRows, selectedSkillResourceId, view]);
 
   const submitSearch = useCallback(
     (event?: { preventDefault(): void }) => {
@@ -588,6 +645,344 @@ export function SkillsPage({ pa }: ExtensionSurfaceProps) {
   );
 
   if (skillsError && marketplaceError) return <ErrorState title="Skills unavailable" message={`${skillsError} ${marketplaceError}`} />;
+
+  if (context.shellPresentation === 'windowed') {
+    const sourceSummary = `${sources.length} sources`;
+    const trustedSourceCount = sources.filter((source) => source.trustLevel !== 'community').length;
+    const communitySourceCount = sources.filter((source) => source.trustLevel === 'community').length;
+    const viewItems: Array<{ id: SkillView; label: string; meta: string }> = [
+      { id: 'marketplace', label: 'Browse', meta: marketplaceFilterSummary },
+      { id: 'installed', label: 'Installed', meta: `${skillCounts.installed} skills` },
+    ];
+
+    return (
+      <WindowedPageShell>
+        <WindowedPageRail title="Skills" accent="extensions">
+          <WindowedPageSection title="Views" meta={view === 'marketplace' ? marketplaceFilterSummary : `${skillCounts.enabled} on`}>
+            <WindowedList>
+              {viewItems.map((item) => (
+                <WindowedListItem
+                  key={item.id}
+                  title={item.label}
+                  meta={item.meta}
+                  active={view === item.id}
+                  accent="extensions"
+                  onSelect={() => setView(item.id)}
+                />
+              ))}
+            </WindowedList>
+          </WindowedPageSection>
+          <WindowedPageSection title="Sources" meta={sourceSummary}>
+            <WindowedKeyValueList
+              items={[
+                { label: 'Trusted', value: `${trustedSourceCount}` },
+                { label: 'Community', value: `${communitySourceCount}` },
+                { label: 'Refresh', value: refreshingMarketplace ? 'Running' : 'Ready' },
+              ]}
+            />
+          </WindowedPageSection>
+        </WindowedPageRail>
+
+        <WindowedPageMain
+          eyebrow="Skill library"
+          title={view === 'marketplace' ? 'Browse skills' : 'Installed skills'}
+          actions={
+            <>
+              {view === 'marketplace' && hasMarketplaceFilters ? (
+                <WindowedPageButton onClick={clearMarketplaceFilters}>Clear filters</WindowedPageButton>
+              ) : null}
+              <WindowedPageButton disabled={loadingSkills || refreshingMarketplace} onClick={refresh}>
+                {refreshingMarketplace ? 'Refreshing' : 'Refresh'}
+              </WindowedPageButton>
+            </>
+          }
+        >
+          <WindowedPageSection>
+            <form className="flex min-w-0 flex-wrap items-center gap-2" onSubmit={submitSearch}>
+              <WindowedTextInput
+                value={view === 'marketplace' ? marketplaceQueryDraft : installedQueryDraft}
+                onChange={(event) => {
+                  if (view === 'marketplace') {
+                    setMarketplaceQueryDraft(event.target.value);
+                  } else {
+                    setInstalledQueryDraft(event.target.value);
+                  }
+                }}
+                placeholder={view === 'marketplace' ? 'Search marketplace skills' : 'Search installed skills'}
+                aria-label={view === 'marketplace' ? 'Search marketplace skills' : 'Search installed skills'}
+                className="min-w-48 flex-1"
+              />
+              {(view === 'marketplace' ? marketplaceQueryDraft || query : installedQueryDraft) ? (
+                <WindowedPageButton onClick={clearSearch}>Clear</WindowedPageButton>
+              ) : null}
+              <WindowedPageButton type="submit" tone="accent">
+                Search
+              </WindowedPageButton>
+            </form>
+          </WindowedPageSection>
+
+          {view === 'marketplace' ? (
+            <>
+              <WindowedPageSection>
+                <div className="grid min-w-0 gap-2 md:grid-cols-3">
+                  <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
+                    Capability
+                    <WindowedSelect
+                      aria-label="Filter by capability"
+                      value={capabilityFilter}
+                      onChange={(event) => setCapabilityFilter(event.target.value)}
+                    >
+                      <option value="all">All</option>
+                      {capabilityOptions.map((capability) => (
+                        <option key={capability} value={capability}>
+                          {capability}
+                        </option>
+                      ))}
+                    </WindowedSelect>
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
+                    Source
+                    <WindowedSelect
+                      aria-label="Filter by source"
+                      value={sourceFilter}
+                      onChange={(event) => setSourceFilter(event.target.value)}
+                    >
+                      <option value="all">All</option>
+                      {sourceOptions.map((source) => (
+                        <option key={source} value={source}>
+                          {source}
+                        </option>
+                      ))}
+                    </WindowedSelect>
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
+                    State
+                    <WindowedSelect
+                      aria-label="Filter by state"
+                      value={stateFilter}
+                      onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
+                    >
+                      <option value="all">All</option>
+                      <option value="available">Available</option>
+                      <option value="approval-required">Approval required</option>
+                      <option value="installed">Installed</option>
+                    </WindowedSelect>
+                  </label>
+                </div>
+              </WindowedPageSection>
+
+              {marketplaceError ? (
+                <WindowedPageSection>
+                  <Notice tone="danger" title="Marketplace unavailable">
+                    {marketplaceError}
+                  </Notice>
+                </WindowedPageSection>
+              ) : null}
+
+              <WindowedPageSection title="Marketplace" meta={loadingMarketplace ? 'Loading' : marketplaceFilterSummary}>
+                {loadingMarketplace ? (
+                  <QuietLoadingState label="Loading marketplace skills" className="min-h-24" />
+                ) : marketplaceRows.length === 0 ? (
+                  <EmptyState
+                    title="No marketplace skills"
+                    body={
+                      query && !hasMarketplaceFilters
+                        ? 'No marketplace skills match the current search.'
+                        : query || hasMarketplaceFilters
+                          ? 'No marketplace skills match the current filters.'
+                          : 'No installable skills returned.'
+                    }
+                    align="start"
+                  />
+                ) : (
+                  <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
+                    {pagedMarketplaceRows.map(({ candidate, installed, capability, state, stateValue }) => {
+                      const busy = installingId === candidate.candidateId;
+                      const selected = selectedSkillResourceId === skillResourceId('marketplace', candidate.candidateId);
+                      const selectionData: SkillSelectionData = { kind: 'marketplace', candidate, installed, capability, state };
+                      return (
+                        <WindowedDataRow
+                          key={candidate.candidateId}
+                          name={candidate.title}
+                          meta={`${capability} · ${candidate.sourceLabel} · ${candidate.trustLevel === 'community' ? 'Community' : 'Trusted'}`}
+                          status={<WindowedBadge tone={candidateStateTone(stateValue)}>{state.label}</WindowedBadge>}
+                          action={
+                            <span className="flex items-center justify-end gap-2">
+                              <WindowedPageButton
+                                disabled={busy || installed}
+                                tone={installed ? 'neutral' : 'accent'}
+                                onClick={() => void installCandidate(candidate)}
+                              >
+                                {busy ? 'Installing' : installed ? 'Installed' : 'Install'}
+                              </WindowedPageButton>
+                              <WindowedPageButton onClick={() => selectSkill(selectionData)}>Details</WindowedPageButton>
+                            </span>
+                          }
+                          className={selected ? 'is-selected' : undefined}
+                        />
+                      );
+                    })}
+                  </WindowedDataTable>
+                )}
+              </WindowedPageSection>
+
+              {marketplaceRows.length > MARKETPLACE_PAGE_SIZE ? (
+                <WindowedPageSection>
+                  <div className="flex items-center justify-between gap-2 text-[12px] text-secondary">
+                    <span>
+                      Page {marketplacePage} of {marketplacePageCount}
+                    </span>
+                    <span className="flex gap-2">
+                      <WindowedPageButton
+                        onClick={() => setMarketplacePage((current) => Math.max(1, current - 1))}
+                        disabled={marketplacePage <= 1}
+                      >
+                        Previous
+                      </WindowedPageButton>
+                      <WindowedPageButton
+                        onClick={() => setMarketplacePage((current) => Math.min(marketplacePageCount, current + 1))}
+                        disabled={marketplacePage >= marketplacePageCount}
+                      >
+                        Next
+                      </WindowedPageButton>
+                    </span>
+                  </div>
+                </WindowedPageSection>
+              ) : null}
+            </>
+          ) : (
+            <WindowedPageSection title="Installed" meta={`${skillCounts.enabled} enabled · ${skillCounts.disabled} disabled`}>
+              {loadingSkills ? (
+                <QuietLoadingState label="Loading installed skills" className="min-h-24" />
+              ) : filteredSkills.length === 0 ? (
+                <EmptyState
+                  title="No installed skills"
+                  body={
+                    installedQueryDraft.trim()
+                      ? 'No installed skills match the current search.'
+                      : 'Skills give agents reusable instructions for focused work.'
+                  }
+                  align="start"
+                />
+              ) : (
+                <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Controls', align: 'right' }]}>
+                  {filteredSkills.map((skill) => {
+                    const selectionData: SkillSelectionData = { kind: 'installed', skill };
+                    const selected = selectedSkillResourceId === skillResourceId('installed', `${skill.source}:${skill.id}:${skill.path}`);
+                    return (
+                      <WindowedDataRow
+                        key={`${skill.source}:${skill.id}:${skill.path}`}
+                        name={skill.name}
+                        meta={skill.description || sourceLabel(skill)}
+                        enabled={skill.enabled}
+                        status={
+                          <WindowedBadge tone={skill.enabled ? 'positive' : 'neutral'}>
+                            {skill.enabled ? 'Enabled' : 'Disabled'}
+                          </WindowedBadge>
+                        }
+                        action={
+                          <span className="flex items-center justify-end gap-2">
+                            <WindowedToggle
+                              checked={skill.enabled}
+                              disabled={busySkillId === skill.id}
+                              label={skill.enabled ? `Disable ${skill.name}` : `Enable ${skill.name}`}
+                              accent="extensions"
+                              onChange={() => void toggleSkill(skill)}
+                            />
+                            <WindowedPageButton onClick={() => selectSkill(selectionData)}>Details</WindowedPageButton>
+                          </span>
+                        }
+                        className={selected ? 'is-selected' : undefined}
+                      />
+                    );
+                  })}
+                </WindowedDataTable>
+              )}
+            </WindowedPageSection>
+          )}
+        </WindowedPageMain>
+
+        <WindowedPageInspector
+          eyebrow="Skill context"
+          title={
+            selectedWindowedSelection
+              ? selectedWindowedSelection.kind === 'marketplace'
+                ? selectedWindowedSelection.candidate.title
+                : selectedWindowedSelection.skill.name
+              : 'Select a skill'
+          }
+        >
+          {notice ? (
+            <WindowedPageSection>
+              <Notice tone={notice.tone}>{notice.message}</Notice>
+            </WindowedPageSection>
+          ) : null}
+          {skillsError ? (
+            <WindowedPageSection>
+              <Notice tone="warning">Installed skill management is unavailable: {skillsError}</Notice>
+            </WindowedPageSection>
+          ) : null}
+          {selectedWindowedSelection ? (
+            selectedWindowedSelection.kind === 'marketplace' ? (
+              <>
+                <WindowedPageSection title="Details">
+                  {selectedWindowedSelection.candidate.description ? (
+                    <p className="text-[12px] leading-5 text-secondary">{selectedWindowedSelection.candidate.description}</p>
+                  ) : null}
+                </WindowedPageSection>
+                <WindowedPageSection title="Source">
+                  <WindowedKeyValueList
+                    items={[
+                      { label: 'Capability', value: selectedWindowedSelection.capability },
+                      { label: 'Source', value: selectedWindowedSelection.candidate.sourceLabel },
+                      {
+                        label: 'Trust',
+                        value: selectedWindowedSelection.candidate.trustLevel === 'community' ? 'Community' : 'Trusted',
+                      },
+                      {
+                        label: 'State',
+                        value: selectedWindowedSelection.installed
+                          ? 'Installed'
+                          : selectedWindowedSelection.candidate.requiresApproval
+                            ? 'Approval required'
+                            : 'Available',
+                      },
+                      { label: 'Identifier', value: selectedWindowedSelection.candidate.identifier },
+                    ]}
+                  />
+                </WindowedPageSection>
+              </>
+            ) : (
+              <>
+                <WindowedPageSection title="Details">
+                  {selectedWindowedSelection.skill.description ? (
+                    <p className="text-[12px] leading-5 text-secondary">{selectedWindowedSelection.skill.description}</p>
+                  ) : null}
+                </WindowedPageSection>
+                <WindowedPageSection title="Local">
+                  <WindowedKeyValueList
+                    items={[
+                      { label: 'Source', value: sourceLabel(selectedWindowedSelection.skill) },
+                      { label: 'State', value: selectedWindowedSelection.skill.enabled ? 'Enabled' : 'Disabled' },
+                      { label: 'Path', value: selectedWindowedSelection.skill.path },
+                      ...(selectedWindowedSelection.skill.extensionId
+                        ? [{ label: 'Extension', value: selectedWindowedSelection.skill.extensionId }]
+                        : []),
+                    ]}
+                  />
+                </WindowedPageSection>
+              </>
+            )
+          ) : (
+            <EmptyState
+              title="Pick a row to inspect"
+              body="Select a skill to inspect its source, trust level, install state, and local path."
+            />
+          )}
+        </WindowedPageInspector>
+      </WindowedPageShell>
+    );
+  }
 
   return (
     <AppPageLayout contentClassName="space-y-5">

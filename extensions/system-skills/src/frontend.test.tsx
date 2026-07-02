@@ -128,6 +128,30 @@ function createPa({
 }
 
 describe('SkillsPage', () => {
+  it('renders the native windowed skills layout without the stable table chrome', async () => {
+    const pa = createPa({
+      selection: {
+        subscribe: vi.fn(() => ({ unsubscribe: vi.fn() })),
+        set: vi.fn(),
+      },
+    });
+
+    const { container } = render(<SkillsPage pa={pa as never} context={{ shellPresentation: 'windowed' } as never} />);
+
+    await waitFor(() => expect(screen.getAllByText('PDF').length).toBeGreaterThan(1));
+    expect(container.querySelector('.wos-page-shell')).toBeTruthy();
+    expect(container.querySelector('table')).toBeNull();
+    expect(screen.getByText('Sources')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Search marketplace skills' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Details' }).length).toBeGreaterThan(1);
+    expect(document.body.textContent).toContain('Skill context');
+
+    fireEvent.click(screen.getByRole('button', { name: /Installed/ }));
+    expect(await screen.findByText('Build iOS Apps')).toBeTruthy();
+    expect(screen.getByRole('switch', { name: 'Enable Build iOS Apps' })).toBeTruthy();
+  });
+
   it('renders unified marketplace search results from Skill Search', async () => {
     const pa = createPa();
 
