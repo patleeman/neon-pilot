@@ -183,6 +183,62 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
   });
 
+  it('uses product accents for diagnostics, skills, and workflow app windows', async () => {
+    mocks.extensions = [
+      {
+        id: 'system-diagnostics',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'telemetry-nav', label: 'Diagnostics', route: '/telemetry' }],
+        },
+      },
+      {
+        id: 'system-skills',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'skills-nav', label: 'Skills', route: '/skills' }],
+        },
+      },
+      {
+        id: 'system-workflows',
+        enabled: true,
+        contributes: {
+          views: [{ id: 'workflows-page', title: 'Workflows', location: 'main', route: '/workflows' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^diagnostics$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^skills$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^workflows$/i }));
+
+    await screen.findByRole('region', { name: /workflows/i });
+
+    expect(
+      screen
+        .getByRole('region', { name: /diagnostics/i })
+        .querySelector('.wos-window__titlebar')
+        ?.getAttribute('data-accent'),
+    ).toBe('telemetry');
+    expect(
+      screen
+        .getByRole('region', { name: /skills/i })
+        .querySelector('.wos-window__titlebar')
+        ?.getAttribute('data-accent'),
+    ).toBe('extensions');
+    expect(
+      screen
+        .getByRole('region', { name: /workflows/i })
+        .querySelector('.wos-window__titlebar')
+        ?.getAttribute('data-accent'),
+    ).toBe('routines');
+  });
+
   it('deduplicates start menu routes when an extension contributes both nav and a main view', () => {
     mocks.extensions = [
       {
