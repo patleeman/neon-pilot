@@ -209,6 +209,36 @@ export function WindowedPageButton({
   );
 }
 
+export interface WindowedDialogProps {
+  title: string;
+  meta?: string;
+  accent?: AppAccent;
+  actions?: ReactNode;
+  children: ReactNode;
+  onClose: () => void;
+  className?: string;
+}
+
+export function WindowedDialog({ title, meta, accent = 'settings', actions, children, onClose, className }: WindowedDialogProps) {
+  return (
+    <div className="wos-dialog-layer" role="presentation">
+      <section className={cx('wos-dialog', className)} role="dialog" aria-modal="true" aria-label={title}>
+        <header className="wos-dialog__titlebar" data-accent={accent}>
+          <div className="wos-dialog__identity">
+            <div className="wos-dialog__title">{title}</div>
+            {meta ? <div className="wos-dialog__meta">{meta}</div> : null}
+          </div>
+          <button type="button" className="wos-dialog__close" aria-label={`Close ${title}`} onClick={onClose}>
+            <span aria-hidden="true" />
+          </button>
+        </header>
+        {actions ? <div className="wos-dialog__actions">{actions}</div> : null}
+        <div className="wos-dialog__body">{children}</div>
+      </section>
+    </div>
+  );
+}
+
 export type WindowedTextButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
 
 export function WindowedTextButton({ children, className, type = 'button', ...props }: WindowedTextButtonProps) {

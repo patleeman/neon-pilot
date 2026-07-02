@@ -494,6 +494,149 @@
   background: var(--wos-surface-1);
 }
 
+.wos-dialog-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 220;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: auto;
+  padding: 30px 18px;
+}
+
+.wos-dialog {
+  display: grid;
+  width: min(760px, 100%);
+  max-height: min(680px, calc(100% - 12px));
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 14px;
+  background: var(--wos-surface-1);
+  box-shadow: var(--wos-shadow-window);
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+}
+
+.wos-dialog__titlebar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid var(--wos-ink-900);
+  background: var(--wos-settings);
+  padding: 7px 8px 7px 12px;
+}
+
+.wos-dialog__titlebar[data-accent='chat'] {
+  background: var(--wos-chat);
+}
+
+.wos-dialog__titlebar[data-accent='routines'] {
+  background: var(--wos-routines);
+}
+
+.wos-dialog__titlebar[data-accent='automations'] {
+  background: var(--wos-automations);
+}
+
+.wos-dialog__titlebar[data-accent='gateways'] {
+  background: var(--wos-gateways);
+}
+
+.wos-dialog__titlebar[data-accent='extensions'] {
+  background: var(--wos-extensions);
+}
+
+.wos-dialog__titlebar[data-accent='telemetry'] {
+  background: var(--wos-telemetry);
+}
+
+.wos-dialog__identity {
+  min-width: 0;
+}
+
+.wos-dialog__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--wos-text-section);
+}
+
+.wos-dialog__meta {
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--wos-ink-700);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--wos-text-meta);
+}
+
+.wos-dialog__close {
+  position: relative;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  padding: 0;
+}
+
+.wos-dialog__close:hover {
+  background: oklch(78% 0.13 28);
+}
+
+.wos-dialog__close span {
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.wos-dialog__close span::before,
+.wos-dialog__close span::after {
+  position: absolute;
+  top: 5px;
+  left: 1px;
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  content: '';
+}
+
+.wos-dialog__close span::before {
+  transform: rotate(45deg);
+}
+
+.wos-dialog__close span::after {
+  transform: rotate(-45deg);
+}
+
+.wos-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+  padding: 8px 10px;
+}
+
+.wos-dialog__body {
+  min-height: 0;
+  overflow: auto;
+  background: var(--wos-surface-1);
+  padding: 10px;
+}
+
 .wos-window-route-body {
   --color-base: 252 247 236;
   --color-surface: 255 252 244;

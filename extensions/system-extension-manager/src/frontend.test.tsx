@@ -308,7 +308,7 @@ describe('ExtensionManagerPage', () => {
     expect(container.querySelector('.wos-page-shell')).toBeTruthy();
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('two-column');
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
-    expect(container.querySelector('.wos-extension-detail-grid')).toBeTruthy();
+    expect(container.querySelector('.wos-extension-detail-grid')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByPlaceholderText('Search extensions')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /Installed/ }).length).toBeGreaterThan(0);
@@ -317,6 +317,16 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Selected extension')).toBeNull();
     expect(screen.queryByText('Selection')).toBeNull();
     expect(screen.getAllByText('Applications').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
+
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
+    expect(within(detailsDialog).getByText('Appears in')).toBeTruthy();
+    expect(within(detailsDialog).getByText('Folder')).toBeTruthy();
+    expect(container.querySelector('.wos-extension-detail-grid')).toBeTruthy();
+
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Close Menu Test' }));
+    expect(screen.queryByRole('dialog', { name: 'Menu Test' })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /Platform/ }));
 

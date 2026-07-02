@@ -49,6 +49,7 @@ import {
   WindowedBadge,
   WindowedDataRow,
   WindowedDataTable,
+  WindowedDialog,
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
@@ -1704,10 +1705,9 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     return <ErrorState message={error} />;
   }
 
-  const selectedExtension =
-    (detailsExtensionId ? visibleExtensions.find((extension) => extension.id === detailsExtensionId) : null) ??
-    visibleExtensions[0] ??
-    null;
+  const selectedExtension = detailsExtensionId
+    ? (visibleExtensions.find((extension) => extension.id === detailsExtensionId) ?? null)
+    : null;
 
   if (context.shellPresentation === 'windowed') {
     const filterItems: Array<{ id: ExtensionFilter; label: string; meta: string }> = [
@@ -1790,56 +1790,6 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
             {catalogError ? <ErrorState title="Could not load installable extensions" message={catalogError} /> : null}
 
-            <WindowedPageSection
-              title={selectedExtension?.name ?? 'No extension selected'}
-              meta={
-                selectedExtension ? `${extensionStatusLabel(selectedExtension)} · ${extensionSourceLabel(selectedExtension)}` : undefined
-              }
-            >
-              {selectedExtension ? (
-                <div className="wos-extension-detail-grid">
-                  <WindowedKeyValueList
-                    items={[
-                      { label: 'State', value: extensionStatusLabel(selectedExtension) },
-                      { label: 'Source', value: extensionSourceLabel(selectedExtension) },
-                      { label: 'Version', value: selectedExtension.version ? `v${selectedExtension.version}` : 'Unknown' },
-                      { label: 'Settings', value: hasExtensionSettings(selectedExtension) ? 'Configurable' : 'None' },
-                    ]}
-                  />
-                  <WindowedKeyValueList
-                    items={[
-                      { label: 'Appears in', value: formatAppearsInSummary(selectedExtension) },
-                      { label: 'Skills', value: formatSkillSummary(selectedExtension) || 'None' },
-                      { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
-                    ]}
-                  />
-                  <div className="wos-extension-detail-actions">
-                    {firstRoute(selectedExtension) && selectedExtension.enabled ? (
-                      <WindowedPageButton onClick={() => navigate(firstRoute(selectedExtension)!)}>Open</WindowedPageButton>
-                    ) : null}
-                    {hasExtensionSettings(selectedExtension) ? (
-                      <WindowedPageButton onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}>
-                        Settings
-                      </WindowedPageButton>
-                    ) : null}
-                    {selectedExtension.packageRoot ? (
-                      <WindowedPageButton onClick={() => openFolder(selectedExtension)}>Folder</WindowedPageButton>
-                    ) : null}
-                  </div>
-                  {selectedExtension.description ? (
-                    <p className="wos-extension-detail-description">{selectedExtension.description}</p>
-                  ) : null}
-                </div>
-              ) : loading ? (
-                <QuietLoadingState label="Loading extension details" className="min-h-12" />
-              ) : (
-                <EmptyState
-                  title="Pick a row to inspect"
-                  body="Select an extension to inspect its status, surfaces, and install details."
-                />
-              )}
-            </WindowedPageSection>
-
             <WindowedPageSection title="Installed" meta={sectionSummary}>
               {loading ? (
                 <QuietLoadingState label="Loading extensions" className="min-h-24" />
@@ -1921,6 +1871,49 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             onRemoveCatalogSource={(source) => void removeCatalogSource(source)}
             onClose={() => setInstallModalOpen(false)}
           />
+        ) : null}
+
+        {selectedExtension ? (
+          <WindowedDialog
+            title={selectedExtension.name}
+            meta={`${extensionStatusLabel(selectedExtension)} · ${extensionSourceLabel(selectedExtension)}`}
+            accent="extensions"
+            onClose={() => setDetailsExtensionId(null)}
+            actions={
+              <>
+                {firstRoute(selectedExtension) && selectedExtension.enabled ? (
+                  <WindowedPageButton onClick={() => navigate(firstRoute(selectedExtension)!)}>Open</WindowedPageButton>
+                ) : null}
+                {hasExtensionSettings(selectedExtension) ? (
+                  <WindowedPageButton onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}>
+                    Settings
+                  </WindowedPageButton>
+                ) : null}
+                {selectedExtension.packageRoot ? (
+                  <WindowedPageButton onClick={() => openFolder(selectedExtension)}>Folder</WindowedPageButton>
+                ) : null}
+              </>
+            }
+          >
+            <div className="wos-extension-detail-grid">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'State', value: extensionStatusLabel(selectedExtension) },
+                  { label: 'Source', value: extensionSourceLabel(selectedExtension) },
+                  { label: 'Version', value: selectedExtension.version ? `v${selectedExtension.version}` : 'Unknown' },
+                  { label: 'Settings', value: hasExtensionSettings(selectedExtension) ? 'Configurable' : 'None' },
+                ]}
+              />
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Appears in', value: formatAppearsInSummary(selectedExtension) },
+                  { label: 'Skills', value: formatSkillSummary(selectedExtension) || 'None' },
+                  { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
+                ]}
+              />
+              {selectedExtension.description ? <p className="wos-extension-detail-description">{selectedExtension.description}</p> : null}
+            </div>
+          </WindowedDialog>
         ) : null}
       </>
     );
