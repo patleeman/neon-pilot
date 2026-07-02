@@ -112,6 +112,7 @@ function seedWindowedWindows(windows: unknown[]) {
 describe('WindowedLayout route windows', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    delete window.neonPilotDesktop;
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
     mocks.registryLoading = false;
@@ -577,6 +578,56 @@ describe('WindowedLayout route windows', () => {
     } finally {
       window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, suspendListener);
     }
+  });
+
+  it('hides every stored native browser tab when window focus changes', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+    window.localStorage.setItem(
+      'pa:workbench-browser-tabs',
+      JSON.stringify({
+        version: 1,
+        activeTabId: 'tab-a',
+        tabs: [
+          { id: 'tab-a', title: 'Docs', url: 'https://example.com', urlDraft: '' },
+          { id: 'tab-b', title: 'Search', url: 'https://example.org', urlDraft: '' },
+        ],
+        closedTabs: [],
+      }),
+    );
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+    await screen.findByRole('region', { name: /routines/i });
+    setWorkbenchBrowserBounds.mockClear();
+
+    fireEvent.pointerDown(screen.getByRole('region', { name: /new conversation/i }));
+
+    await waitFor(() => {
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a' });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b' });
+    });
   });
 
   it('does not auto-create taskbar windows for every known chat session', () => {

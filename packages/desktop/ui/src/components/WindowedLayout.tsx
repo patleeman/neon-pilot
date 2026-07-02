@@ -19,9 +19,11 @@ import {
   UNSAFE_NavigationContext as NavigationContext,
 } from 'react-router-dom';
 
+import { getDesktopBridge } from '../desktop/desktopBridge';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
+import { getTabSessionKey, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { ConversationPage } from '../pages/ConversationPage';
 import type { SessionMeta } from '../shared/types';
 import {
@@ -256,6 +258,21 @@ function isPrimaryNativeMouse(event: MouseEvent): boolean {
 function suspendWindowedBrowserViews(): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new Event(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT));
+  const bridge = getDesktopBridge();
+  if (!bridge) return;
+
+  const sessionKeys = new Set<string | null>([null]);
+  try {
+    for (const tab of readBrowserTabsState().tabs) {
+      sessionKeys.add(getTabSessionKey(tab.id));
+    }
+  } catch {
+    // The renderer-side browser component still receives the suspend event above.
+  }
+
+  for (const sessionKey of sessionKeys) {
+    void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey }).catch(() => undefined);
+  }
 }
 
 function sameBounds(first: WindowBounds, second: WindowBounds): boolean {
