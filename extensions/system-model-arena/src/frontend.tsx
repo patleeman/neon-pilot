@@ -395,7 +395,7 @@ export function ModelArenaPage({ pa, context }: ExtensionSurfaceProps) {
                     title="Compare models during real conversations"
                     body="Model Arena samples normal prompts, runs challenger models in parallel, and records blind votes after you choose the better answer."
                     steps={[
-                      'Add at least one challenger model in the context rail.',
+                      'Add at least one challenger model in Model Arena settings.',
                       'Keep automatic duels on so eligible prompts can create comparisons.',
                       'Vote on the inline duel to build local preference stats.',
                     ]}
@@ -509,7 +509,7 @@ function ModelArenaWindowedPage({
             <WindowedListItem
               title="All task types"
               meta={state ? `${ranked.length} models` : 'Loading'}
-              detail="Combined rankings"
+              detail="Every duel"
               active={taskFilter === 'all'}
               accent="gateways"
               onSelect={() => onTaskFilterChange('all')}
@@ -519,7 +519,7 @@ function ModelArenaWindowedPage({
                 key={task}
                 title={task}
                 meta="Task type"
-                detail="Filtered duel history"
+                detail="Task duels"
                 active={taskFilter === task}
                 accent="gateways"
                 onSelect={() => onTaskFilterChange(task)}

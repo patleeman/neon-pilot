@@ -66,6 +66,10 @@ describe('ModelArenaPage', () => {
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-arena-ranking-table')).toBeTruthy();
     expect(screen.getByRole('button', { name: /All task types/ })).toBeTruthy();
+    expect(screen.getByText('Every duel')).toBeTruthy();
+    expect(screen.getByText('Task duels')).toBeTruthy();
+    expect(screen.queryByText('Combined rankings')).toBeNull();
+    expect(screen.queryByText('Filtered duel history')).toBeNull();
     expect(screen.getAllByText('openai/gpt-5').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('frontend 6W/2L/1T')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Disable Model Arena' })).toBeTruthy();
