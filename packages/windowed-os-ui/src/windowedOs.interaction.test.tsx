@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Taskbar, WindowedDataRow, WindowedDialog } from './windowedOs';
+import { Taskbar, WindowedDataRow, WindowedDialog, WindowedMenuPanel } from './windowedOs';
 
 function rect(input: { left: number; top: number; width: number; height: number }): DOMRect {
   return {
@@ -132,6 +132,23 @@ describe('WindowedDataRow interactions', () => {
 });
 
 describe('Taskbar interactions', () => {
+  it('renders menu item status chips for window state', () => {
+    render(
+      <WindowedMenuPanel
+        ariaLabel="Open chat windows"
+        items={[
+          { id: 'planning', label: 'Planning thread', status: 'Focused', onSelect: () => undefined },
+          { id: 'draft', label: 'New conversation', status: 'Minimized', onSelect: () => undefined },
+        ]}
+      />,
+    );
+
+    const menu = screen.getByRole('menu', { name: 'Open chat windows' });
+    expect(screen.getByRole('menuitem', { name: /Planning thread Focused/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /New conversation Minimized/i })).toBeTruthy();
+    expect(menu.querySelectorAll('.wos-menu-panel__status')).toHaveLength(2);
+  });
+
   it('activates grouped windows while exposing their menu', () => {
     const onSelect = vi.fn();
 

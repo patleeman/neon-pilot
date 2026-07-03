@@ -1352,13 +1352,60 @@ describe('WindowedLayout route windows', () => {
 
       const chatMenu = screen.getByRole('menu', { name: /open chat windows/i });
       expect(within(chatMenu).getByRole('menuitem', { name: /planning thread/i })).toBeTruthy();
-      expect(within(chatMenu).getByRole('menuitem', { name: /new conversation/i })).toBeTruthy();
+      expect(within(chatMenu).getByRole('menuitem', { name: /new conversation focused/i })).toBeTruthy();
       expect(suspendListener).toHaveBeenCalled();
       const event = suspendListener.mock.calls.at(-1)?.[0] as CustomEvent<{ durationMs?: number }> | undefined;
       expect(event?.detail?.durationMs).toBeGreaterThanOrEqual(1500);
     } finally {
       window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, suspendListener);
     }
+  });
+
+  it('marks minimized chat windows in the grouped taskbar menu', async () => {
+    mocks.tabs = [
+      { id: 'session-1', title: 'Planning thread', messageCount: 4 },
+      { id: 'session-2', title: 'Review thread', messageCount: 2 },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:session-1',
+        kind: 'chat',
+        title: 'Planning thread',
+        route: '/conversations/session-1',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: true,
+        focused: false,
+        archivedOnClose: true,
+      },
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'chat:session-2',
+        kind: 'chat',
+        title: 'Review thread',
+        route: '/conversations/session-2',
+        bounds: { x: 124, y: 104, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        archivedOnClose: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const taskbar = screen.getByRole('navigation', { name: /open windows/i });
+    fireEvent.click(within(taskbar).getByRole('button', { name: /chat \(3 windows\)/i }));
+
+    const chatMenu = await screen.findByRole('menu', { name: /open chat windows/i });
+    expect(within(chatMenu).getByRole('menuitem', { name: /review thread focused/i })).toBeTruthy();
+    expect(within(chatMenu).getByRole('menuitem', { name: /planning thread minimized/i })).toBeTruthy();
   });
 
   it('keeps embedded chat navigation scoped to the window route', async () => {

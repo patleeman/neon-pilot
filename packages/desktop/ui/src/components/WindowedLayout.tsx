@@ -1279,6 +1279,7 @@ export function WindowedLayout() {
               items={chatTaskItems.map((item) => ({
                 id: item.id,
                 label: item.title,
+                status: item.focused ? 'Focused' : item.minimized ? 'Minimized' : undefined,
                 onSelect: () => focusWindow(item.id),
               }))}
             />

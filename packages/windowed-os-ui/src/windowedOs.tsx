@@ -862,6 +862,7 @@ export interface WindowedMenuItem {
   label: string;
   onSelect: () => void;
   disabled?: boolean;
+  status?: string;
 }
 
 export interface WindowedMenuPanelProps {
@@ -884,6 +885,7 @@ export function WindowedMenuPanel({ items, ariaLabel = 'Window menu', placement 
           onClick={item.onSelect}
         >
           <span className="wos-menu-panel__label">{item.label}</span>
+          {item.status ? <span className="wos-menu-panel__status">{item.status}</span> : null}
         </button>
       ))}
     </div>

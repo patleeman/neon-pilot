@@ -2864,10 +2864,21 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 }
 
 .wos-menu-panel__label {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.wos-menu-panel__status {
+  flex: 0 0 auto;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 999px;
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-700);
+  padding: 2px 6px;
+  font: var(--wos-text-2xs);
 }
 
 .wos-snap-preview {
