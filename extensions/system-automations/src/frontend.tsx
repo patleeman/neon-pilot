@@ -858,6 +858,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             title={activeAutomationTitle}
             meta={activeAutomationMeta}
             accent="automations"
+            parentWindowTitle="Automations"
             onClose={() => setActiveAutomation(null)}
           >
             <AutomationDialogPanel

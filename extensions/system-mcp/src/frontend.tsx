@@ -456,6 +456,7 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
                 title={draft.originalName ? `Server details: ${draft.originalName}` : 'New MCP server'}
                 meta={draft.transport === 'remote' ? 'Remote URL' : 'Local command'}
                 accent="settings"
+                parentWindowTitle="Settings"
                 onClose={() => {
                   setSelectedServerName(null);
                   setDraft(null);

@@ -383,6 +383,8 @@ export interface WindowedDialogProps {
   onClose: () => void;
   className?: string;
   modal?: boolean;
+  parentWindowId?: string;
+  parentWindowTitle?: string;
 }
 
 const DIALOG_MIN_VISIBLE_X = 96;
@@ -421,6 +423,8 @@ export function WindowedDialog({
   onClose,
   className,
   modal = false,
+  parentWindowId,
+  parentWindowTitle,
 }: WindowedDialogProps) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -492,7 +496,13 @@ export function WindowedDialog({
     !modal && (offset.x !== 0 || offset.y !== 0) ? { transform: `translate(${offset.x}px, ${offset.y}px)` } : undefined;
 
   return (
-    <div className="wos-dialog-layer" role="presentation" data-modal={modal ? 'true' : undefined}>
+    <div
+      className="wos-dialog-layer"
+      role="presentation"
+      data-modal={modal ? 'true' : undefined}
+      data-parent-window-id={parentWindowId}
+      data-parent-window-title={parentWindowTitle}
+    >
       <section
         ref={dialogRef}
         className={cx('wos-dialog', className)}
@@ -500,6 +510,9 @@ export function WindowedDialog({
         aria-modal={modal ? true : undefined}
         aria-label={title}
         data-dragging={dragging ? 'true' : undefined}
+        data-parent-window-attached={parentWindowTitle || parentWindowId ? 'true' : undefined}
+        data-parent-window-id={parentWindowId}
+        data-parent-window-title={parentWindowTitle}
         style={dialogStyle}
         tabIndex={-1}
         onKeyDown={handleDialogKeyDown}

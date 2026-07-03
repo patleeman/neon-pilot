@@ -161,7 +161,10 @@ describe('SkillsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Details for PDF' }));
 
-    expect(await screen.findByRole('dialog', { name: 'PDF' })).toBeTruthy();
+    const dialog = await screen.findByRole('dialog', { name: 'PDF' });
+    expect(dialog).toBeTruthy();
+    expect(dialog.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('Skills');
     expect(screen.getByText('Read and verify PDF files.')).toBeTruthy();
     expect(screen.getByText('Marketplace skill')).toBeTruthy();
     expect(screen.getByText('Identifier')).toBeTruthy();

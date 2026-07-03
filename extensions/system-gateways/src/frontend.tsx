@@ -505,7 +505,13 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
         </WindowedPageShell>
 
         {dialogTitle ? (
-          <WindowedDialog title={dialogTitle} meta={dialogMeta} accent="gateways" onClose={() => setWindowedDialog(null)}>
+          <WindowedDialog
+            title={dialogTitle}
+            meta={dialogMeta}
+            accent="gateways"
+            parentWindowTitle="Gateways"
+            onClose={() => setWindowedDialog(null)}
+          >
             {windowedDialog === 'configuration' ? (
               <WindowedDialogStack>
                 <WindowedKeyValueList

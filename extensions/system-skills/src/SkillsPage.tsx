@@ -959,6 +959,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
             }
             meta={selectedWindowedSelection.kind === 'marketplace' ? 'Marketplace skill' : 'Installed skill'}
             accent="skills"
+            parentWindowTitle="Skills"
             onClose={() => setSelectedSkillResourceId(null)}
           >
             {selectedWindowedSelection.kind === 'marketplace' ? (

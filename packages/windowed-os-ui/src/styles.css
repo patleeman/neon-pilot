@@ -659,6 +659,12 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   width: min(760px, 100%);
 }
 
+.wos-dialog[data-parent-window-attached='true'] {
+  box-shadow:
+    8px 8px 0 color-mix(in srgb, var(--wos-ink-900) 13%, transparent),
+    var(--wos-shadow-window);
+}
+
 .wos-dialog__titlebar {
   display: flex;
   min-width: 0;

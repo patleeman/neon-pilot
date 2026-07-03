@@ -253,7 +253,10 @@ describe('RoutinesPage', () => {
     expect(container.querySelector('.wos-routine-row__body')).toBeNull();
     fireEvent.click(screen.getByLabelText('Close Review code changes'));
     fireEvent.click(screen.getByRole('button', { name: 'Runs' }));
-    expect(screen.getByRole('dialog', { name: 'Routine runs' })).toBeTruthy();
+    const runsDialog = screen.getByRole('dialog', { name: 'Routine runs' });
+    expect(runsDialog).toBeTruthy();
+    expect(runsDialog.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(runsDialog.getAttribute('data-parent-window-title')).toBe('Routines');
     expect(screen.getByText('Run history appears here after routines execute.')).toBeTruthy();
     expect(screen.queryByText('Routine context')).toBeNull();
   });

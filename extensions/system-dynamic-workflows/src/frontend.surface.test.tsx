@@ -203,6 +203,8 @@ describe('Dynamic Workflows surfaces', () => {
     render(<WorkflowsPage {...props(pa, { shellPresentation: 'windowed' })} />);
 
     const dialog = await screen.findByRole('dialog', { name: 'Saved review workflow' });
+    expect(dialog.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('Workflows');
     expect(within(dialog).getByRole('button', { name: 'Delete' }).getAttribute('data-tone')).toBe('danger');
   });
 

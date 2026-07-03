@@ -2381,6 +2381,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             title={selectedRoutine.name}
             meta={draftIsDirty ? 'Unsaved changes' : routineStatusLabel(selectedRoutine)}
             accent="routines"
+            parentWindowTitle="Routines"
             onClose={closeEditor}
             actions={
               <>
@@ -2402,6 +2403,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             title="Routine runs"
             meta={`${selectedRuns.length} total`}
             accent="routines"
+            parentWindowTitle="Routines"
             onClose={() => setWindowedRunsOpen(false)}
           >
             {selectedRuns.length ? (

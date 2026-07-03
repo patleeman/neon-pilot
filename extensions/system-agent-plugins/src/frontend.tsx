@@ -364,6 +364,7 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
                     title={selectedPlugin.displayName}
                     meta={`${ecosystemLabel(selectedPlugin.ecosystem)} · ${statusLabel(selectedPlugin)}`}
                     accent="extensions"
+                    parentWindowTitle="Settings"
                     onClose={() => setSelectedId(null)}
                     actions={
                       <>

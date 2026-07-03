@@ -1914,6 +1914,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             title={selectedExtension.name}
             meta={`${extensionStatusLabel(selectedExtension)} · ${extensionSourceLabel(selectedExtension)}`}
             accent="extensions"
+            parentWindowTitle="Extensions"
             onClose={() => setDetailsExtensionId(null)}
             actions={
               <>
@@ -2285,6 +2286,7 @@ function WindowedInstallExtensionDialog({
       title="Install extension"
       meta={`${catalogItems.length} available · ${catalogSources.length} sources`}
       accent="extensions"
+      parentWindowTitle="Extensions"
       className="wos-extension-install-dialog"
       onClose={onClose}
     >

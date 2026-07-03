@@ -354,6 +354,24 @@ describe('WindowedDialog content primitives', () => {
     expect(html).not.toContain('data-modal="true"');
   });
 
+  it('marks modeless subwindows as attached to their parent app window', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDialog
+        title="Automation details"
+        accent="automations"
+        parentWindowId="route:system-automations:nav"
+        parentWindowTitle="Automations"
+        onClose={() => undefined}
+      >
+        Details
+      </WindowedDialog>,
+    );
+
+    expect(html).toContain('data-parent-window-attached="true"');
+    expect(html).toContain('data-parent-window-id="route:system-automations:nav"');
+    expect(html).toContain('data-parent-window-title="Automations"');
+  });
+
   it('supports explicit modal subwindows for blocking flows', () => {
     const html = renderToStaticMarkup(
       <WindowedDialog title="Confirm install" accent="extensions" modal onClose={() => undefined}>
@@ -714,6 +732,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(northEastRule).toContain('right: 0;');
   });
 
+  it('styles parent-attached subwindows distinctly from blocking modals', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true']");
+    expect(stylesSource).toContain('8px 8px 0 color-mix(in srgb, var(--wos-ink-900) 13%, transparent)');
+  });
+
   it('styles attached terminal panels with scoped windowed tokens', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
@@ -979,7 +1005,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="wos-automation-actions"');
     expect(source).not.toContain('wos-automation-table');
     expect(source).not.toContain('wos-automation-row');
-    expect(source).toContain('<WindowedDialog title="Automation details"');
+    expect(source).toContain('title="Automation details"');
     expect(source).toContain('title="Automation context"');
     expect(source).not.toContain('title="Selected automation"');
     expect(source).not.toContain('ariaLabel="Automation filter"');
@@ -994,7 +1020,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('eyebrow="Ingress"');
     expect(source).toContain('title="Status"');
     expect(source).toContain('title="Gateway tools"');
-    expect(source).toContain('<WindowedDialog title="Telegram configuration"');
+    expect(source).toContain('title="Telegram configuration"');
     expect(source).not.toContain('title="Selected gateway"');
     expect(source).not.toContain('ariaLabel="Gateway filter"');
   });

@@ -133,15 +133,25 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     meta,
     actions,
     children,
+    parentWindowId,
+    parentWindowTitle,
     onClose,
   }: {
     title: string;
     meta?: string;
     actions?: React.ReactNode;
     children: React.ReactNode;
+    parentWindowId?: string;
+    parentWindowTitle?: string;
     onClose: () => void;
   }) => (
-    <section role="dialog" aria-label={title}>
+    <section
+      role="dialog"
+      aria-label={title}
+      data-parent-window-attached={parentWindowTitle || parentWindowId ? 'true' : undefined}
+      data-parent-window-id={parentWindowId}
+      data-parent-window-title={parentWindowTitle}
+    >
       <header>
         <h2>{title}</h2>
         {meta ? <p>{meta}</p> : null}
@@ -405,7 +415,10 @@ describe('GatewaysPage', () => {
     const configurationRow = screen.getByText('Configuration').closest('[data-selectable="true"]');
     if (!configurationRow) throw new Error('Missing configuration row');
     fireEvent.click(configurationRow);
-    expect(screen.getByRole('dialog', { name: 'Telegram configuration' })).toBeTruthy();
+    const configurationDialog = screen.getByRole('dialog', { name: 'Telegram configuration' });
+    expect(configurationDialog).toBeTruthy();
+    expect(configurationDialog.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(configurationDialog.getAttribute('data-parent-window-title')).toBe('Gateways');
     expect(configurationRow.getAttribute('data-selected')).toBe('true');
     expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
 

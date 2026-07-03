@@ -326,6 +326,8 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Details for Menu Test' }));
 
     const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
+    expect(detailsDialog.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(detailsDialog.getAttribute('data-parent-window-title')).toBe('Extensions');
     expect(within(detailsDialog).getByText('Appears in')).toBeTruthy();
     expect(within(detailsDialog).getByText('Folder')).toBeTruthy();
     expect(container.querySelector('.wos-extension-detail-grid')).toBeTruthy();

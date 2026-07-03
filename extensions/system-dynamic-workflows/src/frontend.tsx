@@ -697,6 +697,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
             title={dialogTitle}
             meta={dialogMeta}
             accent="workflows"
+            parentWindowTitle="Workflows"
             onClose={() => {
               if (draftOpen) {
                 setDraftOpen(false);

@@ -147,6 +147,8 @@ describe('AutomationsPage windowed surface', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Automation details' });
     expect(row.getAttribute('data-selected')).toBe('true');
     expect(dialog.className).toContain('wos-dialog');
+    expect(dialog.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('Automations');
     expect(within(dialog).getByRole('heading', { name: 'Actions' })).toBeTruthy();
     expect(within(dialog).getByRole('heading', { name: 'Schedule' })).toBeTruthy();
     expect(within(dialog).getByRole('heading', { name: 'Owner' })).toBeTruthy();

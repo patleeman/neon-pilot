@@ -964,7 +964,13 @@ export const AutomationsPage: Story = {
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
-      <WindowedDialog title="Automation details" meta="Running · 0 9 * * 1-5" accent="automations" onClose={() => undefined}>
+      <WindowedDialog
+        title="Automation details"
+        meta="Running · 0 9 * * 1-5"
+        accent="automations"
+        parentWindowTitle="Automations"
+        onClose={() => undefined}
+      >
         <WindowedPageSection title="Automation context">
           <WindowedKeyValueList
             items={[
@@ -1067,7 +1073,13 @@ export const GatewaysPage: Story = {
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
-      <WindowedDialog title="Telegram configuration" meta="Token configured" accent="gateways" onClose={() => undefined}>
+      <WindowedDialog
+        title="Telegram configuration"
+        meta="Token configured"
+        accent="gateways"
+        parentWindowTitle="Gateways"
+        onClose={() => undefined}
+      >
         <WindowedKeyValueList
           items={[
             { label: 'Setup', value: '/settings/gateways/telegram' },
@@ -1297,6 +1309,7 @@ export const RoutinesPage: Story = {
           title="Repo context loader"
           meta="enabled"
           accent="routines"
+          parentWindowTitle="Routines"
           onClose={() => undefined}
           actions={
             <>
@@ -1326,7 +1339,7 @@ export const RoutinesPage: Story = {
             </WindowedFormGrid>
           </div>
         </WindowedDialog>
-        <WindowedDialog title="Routine runs" meta="12 total" accent="routines" onClose={() => undefined}>
+        <WindowedDialog title="Routine runs" meta="12 total" accent="routines" parentWindowTitle="Routines" onClose={() => undefined}>
           <WindowedTimeline>
             <WindowedTimelineItem title="completed" meta="Today, 09:58" tone="positive">
               Loaded repo context and appended active windowed-mode notes.
@@ -1419,6 +1432,7 @@ export const WorkflowsPage: Story = {
           title="Repo audit"
           meta="running"
           accent="workflows"
+          parentWindowTitle="Workflows"
           onClose={() => undefined}
           actions={<WindowedPageButton>Cancel</WindowedPageButton>}
         >
@@ -1851,6 +1865,7 @@ export const ExtensionsPage: Story = {
           title="system-browser"
           meta="update available"
           accent="extensions"
+          parentWindowTitle="Extensions"
           onClose={() => undefined}
           actions={
             <>
@@ -1915,6 +1930,7 @@ export const ExtensionsInstallDialog: Story = {
           title="Install extension"
           meta="3 available · 2 sources"
           accent="extensions"
+          parentWindowTitle="Extensions"
           className="wos-extension-install-dialog"
           onClose={() => undefined}
         >
@@ -2114,7 +2130,7 @@ export const SkillsPage: Story = {
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
-        <WindowedDialog title="local-qa" meta="Marketplace skill" accent="skills" onClose={() => undefined}>
+        <WindowedDialog title="local-qa" meta="Marketplace skill" accent="skills" parentWindowTitle="Skills" onClose={() => undefined}>
           <WindowedDialogStack>
             <WindowedDialogCopy>Browser and app checks for local product QA.</WindowedDialogCopy>
             <WindowedKeyValueList
