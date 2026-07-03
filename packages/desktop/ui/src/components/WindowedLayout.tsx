@@ -1196,9 +1196,7 @@ export function WindowedLayout() {
 
   const browserBlockedByWindowStack = hasCoveredChatWindow(visibleWindows) || hasCompetingWindowedSurface(visibleWindows);
 
-  const nativeBrowserBlocked = Boolean(
-    launcherOpen || drag || resize || snapTarget || browserLayerSettling || browserBlockedByWindowStack || focusedWindow?.kind === 'route',
-  );
+  const nativeBrowserBlocked = true;
 
   useWindowedBrowserSuppression(nativeBrowserBlocked);
 

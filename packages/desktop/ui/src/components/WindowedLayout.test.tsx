@@ -160,6 +160,35 @@ describe('WindowedLayout route windows', () => {
     });
   });
 
+  it('keeps native browser views blocked for a single focused chat window after shell settling', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
+
+    const { container } = renderWindowedLayout();
+    const shell = container.querySelector('.windowed-os-shell');
+    await screen.findByRole('region', { name: /new conversation/i });
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 700));
+    });
+
+    expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBe('true');
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+  });
+
   it('renders non-chat routes through the extension host without the embedded stable layout', async () => {
     renderWindowedLayout();
 
