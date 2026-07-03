@@ -423,8 +423,8 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
 
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, destroy: true }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true, destroy: true });
   });
 
   it('hides the native browser view while shared renderer overlays are open', async () => {
@@ -931,9 +931,19 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
 
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+      visible: false,
+      sessionKey: '@global:tab-tab-a',
+      deactivate: true,
+      destroy: true,
+    });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+      visible: false,
+      sessionKey: '@global:tab-tab-b',
+      deactivate: true,
+      destroy: true,
+    });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true, destroy: true });
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 

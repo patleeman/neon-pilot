@@ -737,7 +737,7 @@ export function WorkbenchBrowserTab({
   }, []);
 
   const hideBrowserView = useCallback(
-    (options?: { force?: boolean }) => {
+    (options?: { force?: boolean; destroy?: boolean }) => {
       if (!bridge || closedRef.current) {
         return;
       }
@@ -752,7 +752,12 @@ export function WorkbenchBrowserTab({
       }
       lastBoundsRequestRef.current = requestKey;
       void bridge
-        .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey, ...(options?.force ? { deactivate: true } : {}) })
+        .setWorkbenchBrowserBounds({
+          visible: false,
+          sessionKey: browserSessionKey,
+          ...(options?.force ? { deactivate: true } : {}),
+          ...(options?.destroy ? { destroy: true } : {}),
+        })
         .then((nextState) => {
           if (nextState) {
             if (tabsStateRef.current.activeTabId === activeTab.id) {
@@ -767,9 +772,16 @@ export function WorkbenchBrowserTab({
         if (sessionKey === browserSessionKey) {
           continue;
         }
-        void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey, deactivate: true }).catch((error) => {
-          setStatus(formatWorkbenchBrowserError(error));
-        });
+        void bridge
+          .setWorkbenchBrowserBounds({
+            visible: false,
+            sessionKey,
+            deactivate: true,
+            ...(options?.destroy ? { destroy: true } : {}),
+          })
+          .catch((error) => {
+            setStatus(formatWorkbenchBrowserError(error));
+          });
       }
 
       if (options?.force) {
@@ -779,16 +791,30 @@ export function WorkbenchBrowserTab({
             if (closedRef.current) {
               return;
             }
-            void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey, deactivate: true }).catch((error) => {
-              setStatus(formatWorkbenchBrowserError(error));
-            });
+            void bridge
+              .setWorkbenchBrowserBounds({
+                visible: false,
+                sessionKey: browserSessionKey,
+                deactivate: true,
+                ...(options?.destroy ? { destroy: true } : {}),
+              })
+              .catch((error) => {
+                setStatus(formatWorkbenchBrowserError(error));
+              });
             for (const sessionKey of ownerSessionKeys) {
               if (sessionKey === browserSessionKey) {
                 continue;
               }
-              void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey, deactivate: true }).catch((error) => {
-                setStatus(formatWorkbenchBrowserError(error));
-              });
+              void bridge
+                .setWorkbenchBrowserBounds({
+                  visible: false,
+                  sessionKey,
+                  deactivate: true,
+                  ...(options?.destroy ? { destroy: true } : {}),
+                })
+                .catch((error) => {
+                  setStatus(formatWorkbenchBrowserError(error));
+                });
             }
           }, delay);
           hiddenReassertTimersRef.current.push(timer);
@@ -805,7 +831,7 @@ export function WorkbenchBrowserTab({
     }
 
     if (isInsideWindowedShell(host) || isWindowedShellActive()) {
-      hideBrowserView({ force: true });
+      hideBrowserView({ force: true, destroy: true });
       return;
     }
 
@@ -867,7 +893,7 @@ export function WorkbenchBrowserTab({
           ? Math.max(WINDOWED_SHELL_BROWSER_SUSPEND_MS, detail.durationMs)
           : WINDOWED_SHELL_BROWSER_SUSPEND_MS;
       windowedShellSuspendUntilRef.current = Math.max(windowedShellSuspendUntilRef.current, Date.now() + durationMs);
-      hideBrowserView({ force: true });
+      hideBrowserView({ force: true, destroy: true });
     };
     window.addEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
     return () => window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
