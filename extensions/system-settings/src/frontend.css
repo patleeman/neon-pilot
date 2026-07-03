@@ -150,7 +150,8 @@
   line-height: 1;
 }
 
-.settings-page-control-actions.ui-settings-row-actions > .flex {
+.settings-page-control-actions.ui-settings-row-actions > .flex,
+.settings-page-control-actions.wos-settings-row__actions > .flex {
   width: 100%;
   justify-content: flex-end;
 }
@@ -162,28 +163,38 @@
 }
 
 .settings-page-cwd-actions.ui-settings-row-actions,
+.settings-page-cwd-actions.wos-settings-row__actions,
 .settings-page-secret-actions.ui-settings-row-actions,
+.settings-page-secret-actions.wos-settings-row__actions,
 .settings-page-command-actions.ui-settings-row-actions,
+.settings-page-command-actions.wos-settings-row__actions,
 .settings-page-shortcut-actions.ui-settings-row-actions,
-.settings-page-provider-add-actions.ui-settings-row-actions {
+.settings-page-shortcut-actions.wos-settings-row__actions,
+.settings-page-provider-add-actions.ui-settings-row-actions,
+.settings-page-provider-add-actions.wos-settings-row__actions {
   max-width: none;
 }
 
-.settings-page-cwd-actions.ui-settings-row-actions {
+.settings-page-cwd-actions.ui-settings-row-actions,
+.settings-page-cwd-actions.wos-settings-row__actions {
   width: min(100%, 24rem);
 }
 
-.settings-page-command-actions.ui-settings-row-actions {
+.settings-page-command-actions.ui-settings-row-actions,
+.settings-page-command-actions.wos-settings-row__actions {
   min-width: 20rem;
   width: min(100%, 34rem);
 }
 
-.settings-page-secret-actions.ui-settings-row-actions {
+.settings-page-secret-actions.ui-settings-row-actions,
+.settings-page-secret-actions.wos-settings-row__actions {
   width: min(100%, 32rem);
 }
 
 .settings-page-shortcut-actions.ui-settings-row-actions,
-.settings-page-provider-add-actions.ui-settings-row-actions {
+.settings-page-shortcut-actions.wos-settings-row__actions,
+.settings-page-provider-add-actions.ui-settings-row-actions,
+.settings-page-provider-add-actions.wos-settings-row__actions {
   width: min(100%, 28rem);
 }
 
@@ -465,14 +476,16 @@
   gap: 0.625rem;
 }
 
-.settings-page-windowed .settings-page-row-group.ui-settings-panel {
+.settings-page-windowed .settings-page-row-group.ui-settings-panel,
+.settings-page-windowed .settings-page-row-group.wos-settings-group {
   border-width: 1.5px;
   border-color: var(--wos-ink-900);
   border-radius: 0.5rem;
   background: var(--wos-surface-2);
 }
 
-.settings-page-windowed .settings-page-row-group > .ui-settings-panel-header {
+.settings-page-windowed .settings-page-row-group > .ui-settings-panel-header,
+.settings-page-windowed .settings-page-row-group > .wos-settings-group__header {
   min-height: 2rem;
   border-bottom-width: 1.5px;
   border-bottom-color: var(--wos-ink-900);
@@ -480,8 +493,10 @@
 }
 
 .settings-page-windowed .settings-page-row-group .ui-settings-panel-title,
+.settings-page-windowed .settings-page-row-group .wos-settings-group__title,
 .settings-page-windowed .settings-page-subsection-title,
 .settings-page-windowed .settings-page-control-row .ui-settings-row-title,
+.settings-page-windowed .settings-page-control-row .wos-settings-row__title,
 .settings-page-windowed .settings-page-row-group .ui-field-label {
   font-family: var(--wos-font-display);
   font-size: 0.75rem;
@@ -491,12 +506,14 @@
 }
 
 .settings-page-windowed .settings-page-control-row.ui-settings-row,
+.settings-page-windowed .settings-page-control-row.wos-settings-row,
 .settings-page-windowed .settings-page-row-group .ui-settings-field {
   min-height: 2.375rem;
   padding: 0.5rem 0.625rem;
 }
 
 .settings-page-windowed .settings-page-control-row .ui-settings-row-description,
+.settings-page-windowed .settings-page-control-row .wos-settings-row__description,
 .settings-page-windowed .settings-page-row-group .ui-field-hint,
 .settings-page-windowed .settings-page-panel-message,
 .settings-page-windowed .ui-card-meta {
@@ -504,7 +521,8 @@
   line-height: 1.35;
 }
 
-.settings-page-windowed .settings-page-control-actions.ui-settings-row-actions {
+.settings-page-windowed .settings-page-control-actions.ui-settings-row-actions,
+.settings-page-windowed .settings-page-control-actions.wos-settings-row__actions {
   min-width: 8rem;
 }
 
@@ -543,7 +561,8 @@
     max-width: none;
   }
 
-  .settings-page-control-actions.ui-settings-row-actions {
+  .settings-page-control-actions.ui-settings-row-actions,
+  .settings-page-control-actions.wos-settings-row__actions {
     align-items: stretch;
     justify-content: flex-start;
     min-width: 0;
@@ -551,11 +570,13 @@
     max-width: none;
   }
 
-  .settings-page-control-actions.ui-settings-row-actions > .flex {
+  .settings-page-control-actions.ui-settings-row-actions > .flex,
+  .settings-page-control-actions.wos-settings-row__actions > .flex {
     justify-content: flex-start;
   }
 
-  .settings-page-command-actions.ui-settings-row-actions {
+  .settings-page-command-actions.ui-settings-row-actions,
+  .settings-page-command-actions.wos-settings-row__actions {
     min-width: 0;
   }
 }

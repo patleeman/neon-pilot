@@ -602,9 +602,9 @@ export class WorkbenchBrowserViewController {
       this.activeViewKeysByOwner.delete(entry.owner.id);
       entry.view.webContents.stop();
     }
-    this.detach(entry);
     entry.view.setVisible(false);
     entry.view.setBounds({ x: -10_000, y: -10_000, width: 1, height: 1 });
+    this.detach(entry);
   }
 
   private attach(entry: WorkbenchBrowserViewEntry): void {

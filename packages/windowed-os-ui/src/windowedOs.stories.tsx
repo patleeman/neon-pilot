@@ -32,6 +32,8 @@ import {
   WindowedPageShell,
   WindowedSegmentedControl,
   WindowedSelect,
+  WindowedSettingsGroup,
+  WindowedSettingsRow,
   WindowedStateBlock,
   WindowedTerminalFrame,
   WindowedTextarea,
@@ -494,33 +496,47 @@ export const SettingsTwoColumnPage: Story = {
             </WindowedList>
           </WindowedPageRail>
           <WindowedPageMain
-            title="Providers"
+            title="Appearance"
             actions={
               <>
-                <WindowedPageButton>Refresh</WindowedPageButton>
-                <WindowedPageButton tone="accent">Add provider</WindowedPageButton>
+                <WindowedPageButton>Reset</WindowedPageButton>
+                <WindowedPageButton tone="accent">Apply</WindowedPageButton>
               </>
             }
           >
-            <WindowedPageSection title="Model providers" meta="2 configured">
+            <WindowedSettingsGroup title="Appearance">
+              <WindowedSettingsRow
+                title="Theme"
+                description="Follows the current system appearance"
+                actionsClassName="settings-page-control-actions"
+              >
+                <WindowedSelect aria-label="Theme">
+                  <option>System</option>
+                  <option>Light</option>
+                  <option>Dark</option>
+                </WindowedSelect>
+              </WindowedSettingsRow>
+              <WindowedSettingsRow title="Accent" description="Used for selection and focused controls">
+                <WindowedSegmentedControl
+                  ariaLabel="Accent"
+                  value="orange"
+                  options={[
+                    { value: 'orange', label: 'Orange' },
+                    { value: 'cobalt', label: 'Cobalt' },
+                    { value: 'green', label: 'Green' },
+                  ]}
+                />
+              </WindowedSettingsRow>
+              <WindowedSettingsRow title="Desktop mode" description="Open apps as movable windows">
+                <WindowedToggle checked accent="settings" label="Toggle windowed desktop mode" />
+              </WindowedSettingsRow>
+            </WindowedSettingsGroup>
+            <WindowedSettingsGroup title="Providers" actions={<WindowedPageButton>Add provider</WindowedPageButton>}>
               <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
                 <WindowedDataRow name="OpenAI" meta="Default" enabled status={<WindowedBadge tone="positive">Connected</WindowedBadge>} />
                 <WindowedDataRow name="Local" meta="Ollama" status={<WindowedBadge tone="warning">Setup</WindowedBadge>} />
               </WindowedDataTable>
-            </WindowedPageSection>
-            <WindowedPageSection title="Desktop mode">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Shell', value: 'Windowed OS' },
-                  { label: 'Launch mode', value: 'Menu item' },
-                  { label: 'Workbench', value: 'Attached to Chat' },
-                  {
-                    label: 'Enabled',
-                    value: <WindowedToggle checked accent="settings" label="Toggle windowed desktop mode" />,
-                  },
-                ]}
-              />
-            </WindowedPageSection>
+            </WindowedSettingsGroup>
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>

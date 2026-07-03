@@ -522,6 +522,11 @@
   pointer-events: auto;
 }
 
+.windowed-os-shell[data-native-browser-blocked='true'] .ui-windowed-browser-host[data-windowed-browser-host='true'] {
+  overflow: hidden;
+  isolation: isolate;
+}
+
 .wos-window[data-focused='false'] .wos-composited-frame,
 .wos-window[data-focused='false'] .wos-window__body iframe,
 .wos-window[data-iframe-blocked='true'] .wos-composited-frame,
@@ -1862,6 +1867,98 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 .wos-chart-panel__body {
   min-width: 0;
   padding: var(--wos-space-4);
+}
+
+.wos-settings-group {
+  min-width: 0;
+  overflow: hidden;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: var(--wos-radius-md);
+  background: var(--wos-surface-2);
+}
+
+.wos-settings-group__header {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wos-space-4);
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  padding: 5px var(--wos-space-4);
+}
+
+.wos-settings-group__title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-settings-group__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--wos-space-2);
+}
+
+.wos-settings-group__body {
+  display: grid;
+  min-width: 0;
+  gap: 0;
+}
+
+.wos-settings-row {
+  display: flex;
+  min-height: 38px;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wos-space-5);
+  border-top: 1.5px solid color-mix(in oklab, var(--wos-ink-900) 28%, transparent);
+  padding: 7px var(--wos-space-4);
+  color: var(--wos-ink-900);
+}
+
+.wos-settings-group__body > .wos-settings-row:first-child,
+.wos-settings-group__body > .ui-settings-field:first-child {
+  border-top: 0;
+}
+
+.wos-settings-row[data-disabled='true'] {
+  opacity: 0.58;
+}
+
+.wos-settings-row__copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.wos-settings-row__title {
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
+  letter-spacing: 0;
+}
+
+.wos-settings-row__description {
+  max-width: 42rem;
+  color: var(--wos-ink-500);
+  font: var(--wos-text-meta);
+}
+
+.wos-settings-row__actions {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 8rem;
+  max-width: 22rem;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--wos-space-2);
 }
 
 .wos-heatmap .wos-chart-panel__body {

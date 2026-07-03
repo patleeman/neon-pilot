@@ -55,7 +55,10 @@ describe('workbench browser validation', () => {
     expect(source).toContain('attached: boolean');
     expect(source).toContain('attached: false');
     expect(source).not.toContain('ownerWindow.contentView.addChildView(view);\n    view.setBounds({ x: -10_000');
-    expect(source.indexOf('this.detach(entry);\n    entry.view.setVisible(false);')).toBeGreaterThan(-1);
+    expect(source.indexOf('entry.view.setVisible(false);\n    entry.view.setBounds({ x: -10_000')).toBeGreaterThan(-1);
+    expect(
+      source.indexOf('entry.view.setBounds({ x: -10_000, y: -10_000, width: 1, height: 1 });\n    this.detach(entry);'),
+    ).toBeGreaterThan(-1);
     expect(source).toContain('this.attach(entry);');
     expect(source).toContain('entry.view.setVisible(true);');
     expect(source).toContain('private detach(entry: WorkbenchBrowserViewEntry)');

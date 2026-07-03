@@ -376,6 +376,8 @@ describe('SettingsPage', () => {
     expect(html).toContain('class="wos-page-shell settings-page-windowed"');
     expect(html).toContain('data-layout="two-column"');
     expect(html).toContain('class="wos-page-rail settings-page-windowed-nav"');
+    expect(html).toContain('class="wos-settings-group settings-page-row-group');
+    expect(html).toContain('class="wos-settings-row settings-page-control-row"');
     expect(html).toContain('aria-label="Sections"');
     expect(html).toContain('>Appearance</h1>');
     expect(html).toContain('>Providers</span>');
@@ -394,6 +396,7 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('wos-page-inspector');
     expect(html).not.toContain('>Providers</h1>');
     expect(html).not.toContain('ui-app-page-shell');
+    expect(html).not.toContain('ui-settings-panel settings-page-row-group');
   });
 
   it('renders a single routed settings page in the windowed settings app', () => {
@@ -423,6 +426,8 @@ describe('SettingsPage', () => {
     expect(itemRule).not.toContain('border: 1.5px solid var(--wos-ink-900);');
     expect(itemRule).not.toContain('border-radius: 0.5rem;');
     expect(itemRule).toContain('border-radius: 0;');
+    expect(source).toContain('.settings-page-windowed .settings-page-row-group.wos-settings-group');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-row.wos-settings-row');
   });
 
   it('right-aligns appearance accent choices within the settings action column', () => {

@@ -76,6 +76,8 @@ import {
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageShell,
+  WindowedSettingsGroup,
+  WindowedSettingsRow,
 } from '@neon-pilot/extensions/ui';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -139,6 +141,7 @@ type SettingsQuickLink = {
 type SettingsQuickLinkId = string;
 const VisibleSettingsSectionsContext = createContext<ReadonlySet<SettingsQuickLinkId> | null>(null);
 const HideSettingsSectionHeadingsContext = createContext(false);
+const WindowedSettingsChromeContext = createContext(false);
 type ModelOption = ModelState['models'][number];
 type SettingsIconName = 'check' | 'edit' | 'external' | 'key' | 'plus' | 'refresh' | 'trash' | 'x';
 
@@ -815,6 +818,22 @@ function SettingsGroup({
   id?: string;
   hideHeader?: boolean;
 }) {
+  const useWindowedChrome = useContext(WindowedSettingsChromeContext);
+  if (useWindowedChrome) {
+    return (
+      <WindowedSettingsGroup
+        id={id}
+        title={title}
+        actions={actions}
+        hideHeader={hideHeader}
+        className={cx(SETTINGS_ROW_GROUP_CLASS, className)}
+        bodyClassName={cx('settings-page-row-list', contentClassName)}
+      >
+        {children}
+      </WindowedSettingsGroup>
+    );
+  }
+
   if (hideHeader) {
     return (
       <section
@@ -856,6 +875,21 @@ function SettingsControlRow({
   className?: string;
   actionsClassName?: string;
 }) {
+  const useWindowedChrome = useContext(WindowedSettingsChromeContext);
+  if (useWindowedChrome) {
+    return (
+      <WindowedSettingsRow
+        title={title}
+        description={description}
+        disabled={disabled}
+        className={cx('settings-page-control-row', className)}
+        actionsClassName={cx('settings-page-control-actions', actionsClassName)}
+      >
+        {children}
+      </WindowedSettingsRow>
+    );
+  }
+
   return (
     <SettingsRow
       title={title}
@@ -5144,7 +5178,7 @@ export function SettingsPage({
   return (
     <VisibleSettingsSectionsContext.Provider value={renderedSectionIds}>
       <HideSettingsSectionHeadingsContext.Provider value={isWindowedSettingsSurface}>
-        {settingsContent}
+        <WindowedSettingsChromeContext.Provider value={isWindowedSettingsSurface}>{settingsContent}</WindowedSettingsChromeContext.Provider>
       </HideSettingsSectionHeadingsContext.Provider>
     </VisibleSettingsSectionsContext.Provider>
   );

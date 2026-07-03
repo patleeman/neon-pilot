@@ -239,6 +239,71 @@ export function WindowedChartPanel({ title, meta, children, className, bodyClass
   );
 }
 
+export interface WindowedSettingsGroupProps {
+  title?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  id?: string;
+  hideHeader?: boolean;
+}
+
+export function WindowedSettingsGroup({
+  title,
+  actions,
+  children,
+  className,
+  bodyClassName,
+  id,
+  hideHeader = false,
+}: WindowedSettingsGroupProps) {
+  return (
+    <section
+      id={id}
+      className={cx('wos-settings-group', className)}
+      aria-label={hideHeader && typeof title === 'string' ? title : undefined}
+      data-header-hidden={hideHeader ? 'true' : undefined}
+    >
+      {!hideHeader && (title || actions) ? (
+        <header className="wos-settings-group__header">
+          {title ? <h3 className="wos-settings-group__title">{title}</h3> : null}
+          {actions ? <div className="wos-settings-group__actions">{actions}</div> : null}
+        </header>
+      ) : null}
+      <div className={cx('wos-settings-group__body', bodyClassName)}>{children}</div>
+    </section>
+  );
+}
+
+export interface WindowedSettingsRowProps {
+  title: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
+  disabled?: boolean;
+  className?: string;
+  actionsClassName?: string;
+}
+
+export function WindowedSettingsRow({
+  title,
+  description,
+  children,
+  disabled = false,
+  className,
+  actionsClassName,
+}: WindowedSettingsRowProps) {
+  return (
+    <div className={cx('wos-settings-row', className)} data-disabled={disabled ? 'true' : undefined}>
+      <div className="wos-settings-row__copy">
+        <div className="wos-settings-row__title">{title}</div>
+        {description ? <div className="wos-settings-row__description">{description}</div> : null}
+      </div>
+      {children ? <div className={cx('wos-settings-row__actions', actionsClassName)}>{children}</div> : null}
+    </div>
+  );
+}
+
 export interface WindowedToolbarProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   end?: ReactNode;

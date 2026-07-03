@@ -20,6 +20,8 @@ import {
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedSettingsGroup,
+  WindowedSettingsRow,
   WindowedTerminalFrame,
   WindowedToolbar,
   WindowFrame,
@@ -104,6 +106,27 @@ describe('WindowedChartPanel', () => {
     expect(html).toContain('<h4>Token Activity</h4>');
     expect(html).toContain('24H · 1.4M total');
     expect(html).toContain('class="wos-chart-panel__body"');
+  });
+});
+
+describe('WindowedSettingsGroup', () => {
+  it('provides shared compact settings row-list chrome for windowed apps', () => {
+    const html = renderToStaticMarkup(
+      <WindowedSettingsGroup title="Appearance" actions={<button type="button">Reset</button>} className="settings-page-row-group">
+        <WindowedSettingsRow title="Theme" description="System" actionsClassName="settings-page-control-actions">
+          <select aria-label="Theme">
+            <option>System</option>
+          </select>
+        </WindowedSettingsRow>
+      </WindowedSettingsGroup>,
+    );
+
+    expect(html).toContain('class="wos-settings-group settings-page-row-group"');
+    expect(html).toContain('class="wos-settings-group__header"');
+    expect(html).toContain('class="wos-settings-row');
+    expect(html).toContain('class="wos-settings-row__actions settings-page-control-actions"');
+    expect(html).toContain('Theme');
+    expect(html).toContain('System');
   });
 });
 
@@ -409,6 +432,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-composited-frame {\n  position: relative;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__blocker {');
+    expect(stylesSource).toContain(
+      ".windowed-os-shell[data-native-browser-blocked='true'] .ui-windowed-browser-host[data-windowed-browser-host='true']",
+    );
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('.wos-window__iframe-shield');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {\n  position: relative;\n  z-index: 0 !important;');
@@ -629,7 +655,19 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<WindowedPageRail');
     expect(source).toContain('showHeader={false}');
     expect(source).toContain('title="Sections"');
+    expect(source).toContain('<WindowedSettingsGroup title="Appearance"');
+    expect(source).toContain('title="Theme"');
     expect(source).not.toContain('title="Settings sections"');
+  });
+
+  it('styles shared windowed settings row-list primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-settings-group {');
+    expect(stylesSource).toContain('.wos-settings-group__header {');
+    expect(stylesSource).toContain('.wos-settings-row {');
+    expect(stylesSource).toContain('.wos-settings-row__actions {');
   });
 
   it('documents the canonical Workflows desktop page and subwindow pattern', () => {
