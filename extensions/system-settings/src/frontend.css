@@ -405,16 +405,24 @@
 }
 
 .settings-page-windowed-nav .wos-list {
-  display: grid;
-  gap: 0.375rem;
+  display: block;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--wos-surface-1);
 }
 
 .settings-page-windowed-nav .wos-list-item {
   min-height: 2rem;
-  border: 1.5px solid var(--wos-ink-900);
-  border-radius: 0.5rem;
-  background: var(--wos-surface-1);
+  border-top-color: color-mix(in oklab, var(--wos-ink-900) 20%, transparent);
+  border-radius: 0;
   padding: 0.375rem 0.5rem;
+}
+
+.settings-page-windowed-nav .wos-list-item[data-depth='1'] {
+  width: 100%;
+  margin-left: 0;
+  padding-left: 1.25rem;
 }
 
 .settings-page-windowed-nav .wos-list-item[data-active='true'] {

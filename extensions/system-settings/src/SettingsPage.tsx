@@ -104,6 +104,7 @@ const SETTINGS_ROOT_ROUTES: Record<(typeof SETTINGS_QUICK_LINKS)[number]['id'], 
 
 const SETTINGS_PANEL_COMPACT_CLASS = 'settings-page-panel-compact';
 const SETTINGS_PANEL_DENSE_CLASS = 'settings-page-panel-dense';
+const DESKTOP_NAVIGATE_EVENT = 'neon-pilot-desktop-navigate';
 
 const SETTINGS_ENTRY_LABELS: Record<string, string> = {
   'conversation.transcriptDisclosure': 'Tool and reasoning details',
@@ -876,7 +877,6 @@ function SettingsSection({
 }: {
   id: SettingsQuickLinkId;
   label: ReactNode;
-  description?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
@@ -1867,7 +1867,7 @@ async function navigateSettingsSidebar(pa: ExtensionSurfaceProps['pa'], item: Se
   const to = item.route ?? `/settings#${item.id}`;
   const handled = await pa.commands?.execute?.('app.navigate', { to });
   if (!handled && typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: to } }));
+    window.dispatchEvent(new CustomEvent(DESKTOP_NAVIGATE_EVENT, { detail: { route: to } }));
   }
 }
 
@@ -3820,7 +3820,11 @@ export function SettingsPage({
       if (typeof settingsScrollRef.current?.scrollTo === 'function') {
         settingsScrollRef.current.scrollTo({ top: 0 });
       }
-      navigate(settingsQuickLinkRoute(item));
+      const route = settingsQuickLinkRoute(item);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(DESKTOP_NAVIGATE_EVENT, { detail: { route } }));
+      }
+      navigate(route);
       return;
     }
     scheduleSettingsSectionScroll(settingsScrollRef.current, item.id);
@@ -3829,7 +3833,7 @@ export function SettingsPage({
   const settingsSections = (
     <div className="settings-page-detail flex min-w-0 flex-col">
       <div className="settings-page-sections flex flex-col gap-6">
-        <SettingsSection id="settings-appearance" label="Appearance" description="Theme, accent, and visual defaults.">
+        <SettingsSection id="settings-appearance" label="Appearance">
           <SettingsGroup title="Theme" className={SETTINGS_PANEL_COMPACT_CLASS} hideHeader>
             <SettingsControlRow
               title="Mode"
@@ -3905,7 +3909,7 @@ export function SettingsPage({
           </SettingsGroup>
         </SettingsSection>
 
-        <SettingsSection id="settings-conversation" label="Conversation" description="Model and transcript defaults for new conversations.">
+        <SettingsSection id="settings-conversation" label="Conversation">
           <div className="settings-page-section-stack">
             <SettingsGroup title="Model defaults">
               {modelsLoading && !modelState ? (
@@ -3994,7 +3998,7 @@ export function SettingsPage({
           </div>
         </SettingsSection>
 
-        <SettingsSection id="settings-workspace" label="Workspace" description="Working directory defaults for tools and shell commands.">
+        <SettingsSection id="settings-workspace" label="Workspace">
           <div className="settings-page-section-stack">
             <SettingsGroup title="Working directory">
               {defaultCwdLoading && !defaultCwdState ? (
@@ -4078,19 +4082,15 @@ export function SettingsPage({
           </div>
         </SettingsSection>
 
-        <SettingsSection id="settings-commands" label="Commands" description="Command palette actions and keyboard shortcuts.">
+        <SettingsSection id="settings-commands" label="Commands">
           <CommandsSettingsSection />
         </SettingsSection>
 
-        <SettingsSection id="settings-security" label="Security" description="Secret storage and extension credentials.">
+        <SettingsSection id="settings-security" label="Security">
           <ExtensionSecretsSection />
         </SettingsSection>
 
-        <SettingsSection
-          id="settings-extensions"
-          label={activeExtensionSettingsLink?.label ?? 'Extensions'}
-          description="Installed extension preferences and integration setup."
-        >
+        <SettingsSection id="settings-extensions" label={activeExtensionSettingsLink?.label ?? 'Extensions'}>
           {activeExtensionSettingsLink?.extensionId ? (
             <>
               <ExtensionSettingsSection includeExtensionIds={[activeExtensionSettingsLink.extensionId]} extensionLabels={extensionLabels} />
@@ -4112,11 +4112,7 @@ export function SettingsPage({
           )}
         </SettingsSection>
 
-        <SettingsSection
-          id="settings-providers"
-          label="Providers"
-          description="Connect model providers, save credentials, and add model overrides."
-        >
+        <SettingsSection id="settings-providers" label="Providers">
           <div className="settings-page-section-stack">
             <SettingsGroup title="Model providers">
               <>
@@ -5087,7 +5083,7 @@ export function SettingsPage({
           </div>
         </SettingsSection>
 
-        <SettingsSection id="settings-desktop" label="Desktop" description="Desktop app behavior and diagnostics.">
+        <SettingsSection id="settings-desktop" label="Desktop">
           <DesktopConnectionsSettingsPanel />
           <DesktopKeyboardShortcutsSettingsSection />
           <TelemetryLogsSettingsPanel />

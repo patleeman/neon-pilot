@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -376,6 +379,9 @@ describe('SettingsPage', () => {
     expect(html).toContain('aria-label="Sections"');
     expect(html).toContain('>Appearance</h1>');
     expect(html).toContain('>Providers</span>');
+    expect(html).not.toContain('Theme, accent, and visual defaults.');
+    expect(html).not.toContain('Model and transcript defaults for new conversations.');
+    expect(html).not.toContain('Connect model providers, save credentials, and add model overrides.');
     expect(html).not.toContain('settings-page-section-title');
     expect(html).not.toContain('Configure Neon Pilot preferences.');
     expect(html).not.toContain('>Preferences</div>');
@@ -405,6 +411,18 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Theme mode selection');
     expect(html).not.toContain('Default project folder');
     expect(html).not.toContain('Command palette actions and keyboard shortcuts');
+  });
+
+  it('keeps the windowed settings rail on the shared list-row grammar', () => {
+    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/frontend.css'), 'utf8');
+    const listRule = source.match(/\.settings-page-windowed-nav \.wos-list \{[^}]+}/)?.[0] ?? '';
+    const itemRule = source.match(/\.settings-page-windowed-nav \.wos-list-item \{[^}]+}/)?.[0] ?? '';
+
+    expect(listRule).toContain('border: 1.5px solid var(--wos-ink-900);');
+    expect(listRule).toContain('overflow: hidden;');
+    expect(itemRule).not.toContain('border: 1.5px solid var(--wos-ink-900);');
+    expect(itemRule).not.toContain('border-radius: 0.5rem;');
+    expect(itemRule).toContain('border-radius: 0;');
   });
 
   it('right-aligns appearance accent choices within the settings action column', () => {
