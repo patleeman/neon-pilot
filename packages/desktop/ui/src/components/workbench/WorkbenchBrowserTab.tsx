@@ -776,7 +776,15 @@ export function WorkbenchBrowserTab({
     const modalObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(syncBounds) : null;
     modalObserver?.observe(document.body, {
       attributes: true,
-      attributeFilter: ['aria-modal', 'class', 'data-focused', 'data-focused-window-id', 'data-window-interaction', 'style'],
+      attributeFilter: [
+        'aria-modal',
+        'class',
+        'data-focused',
+        'data-focused-window-id',
+        'data-native-browser-blocked',
+        'data-window-interaction',
+        'style',
+      ],
       childList: true,
       subtree: true,
     });
