@@ -939,28 +939,30 @@ export const RoutinesPage: Story = {
             <WindowedPageSection title="Before" meta="2 routines">
               <WindowedTimeline>
                 <WindowedTimelineItem title="Repo context loader" meta="1 · Run prompt" tone="positive">
-                  <div className="wos-routine-row">
-                    <div className="wos-routine-row__body">
-                      <div>Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts.</div>
-                      <div>enabled · gpt-5</div>
-                    </div>
-                    <div className="wos-routine-row__actions">
-                      <WindowedPageButton>Open</WindowedPageButton>
-                      <WindowedPageButton>Delete</WindowedPageButton>
-                    </div>
-                  </div>
+                  <WindowedDataRow
+                    name="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
+                    meta="enabled · gpt-5"
+                    status={<WindowedBadge tone="positive">Continues</WindowedBadge>}
+                    action={
+                      <>
+                        <WindowedPageButton>Open</WindowedPageButton>
+                        <WindowedPageButton tone="danger">Delete</WindowedPageButton>
+                      </>
+                    }
+                  />
                 </WindowedTimelineItem>
                 <WindowedTimelineItem title="Taste gate" meta="2 · Choose path" tone="warning">
-                  <div className="wos-routine-row">
-                    <div className="wos-routine-row__body">
-                      <div>Route frontend-heavy changes through the design taste checklist before editing.</div>
-                      <div>enabled</div>
-                    </div>
-                    <div className="wos-routine-row__actions">
-                      <WindowedPageButton>Open</WindowedPageButton>
-                      <WindowedPageButton>Delete</WindowedPageButton>
-                    </div>
-                  </div>
+                  <WindowedDataRow
+                    name="Route frontend-heavy changes through the design taste checklist before editing."
+                    meta="enabled"
+                    status={<WindowedBadge tone="warning">2 paths</WindowedBadge>}
+                    action={
+                      <>
+                        <WindowedPageButton>Open</WindowedPageButton>
+                        <WindowedPageButton tone="danger">Delete</WindowedPageButton>
+                      </>
+                    }
+                  />
                   <WindowedList className="wos-routine-path-list">
                     <WindowedListItem
                       title="frontend"
@@ -984,16 +986,17 @@ export const RoutinesPage: Story = {
             <WindowedPageSection title="After" meta="1 routine">
               <WindowedTimeline>
                 <WindowedTimelineItem title="Session handoff" meta="1 · Run prompt" tone="neutral">
-                  <div className="wos-routine-row">
-                    <div className="wos-routine-row__body">
-                      <div>Write a compact handoff when a long-running desktop-mode task changes state.</div>
-                      <div>enabled</div>
-                    </div>
-                    <div className="wos-routine-row__actions">
-                      <WindowedPageButton>Open</WindowedPageButton>
-                      <WindowedPageButton>Delete</WindowedPageButton>
-                    </div>
-                  </div>
+                  <WindowedDataRow
+                    name="Write a compact handoff when a long-running desktop-mode task changes state."
+                    meta="enabled"
+                    status={<WindowedBadge tone="positive">Warns on fail</WindowedBadge>}
+                    action={
+                      <>
+                        <WindowedPageButton>Open</WindowedPageButton>
+                        <WindowedPageButton tone="danger">Delete</WindowedPageButton>
+                      </>
+                    }
+                  />
                 </WindowedTimelineItem>
               </WindowedTimeline>
             </WindowedPageSection>

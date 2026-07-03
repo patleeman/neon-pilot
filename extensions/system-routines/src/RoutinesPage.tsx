@@ -24,6 +24,7 @@ import {
   TextInput,
   ToolbarButton,
   WindowedBadge,
+  WindowedDataRow,
   WindowedDialog,
   WindowedDialogStack,
   WindowedEmptyState,
@@ -2036,27 +2037,28 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           meta={`${index + 1} · ${routineLabel(routine.type)}`}
           tone={routineTone(routine)}
         >
-          <div className="wos-routine-row" data-routine-id={routine.id}>
-            <div className="wos-routine-row__body">
-              <div>{routine.instruction || 'No instruction yet.'}</div>
-              <div>
-                {routineStatusLabel(routine)}
-                {isUnsaved ? ' · unsaved' : ''}
-                {routine.modelRef ? ` · ${routine.modelRef}` : ''}
-              </div>
-            </div>
-            <div className="wos-routine-row__actions">
-              <WindowedPageButton
-                onClick={() => {
-                  selectRoutine(routine);
-                }}
-              >
-                Open
-              </WindowedPageButton>
-              <WindowedPageButton tone="danger" onClick={() => void deleteRoutine(routine)}>
-                Delete
-              </WindowedPageButton>
-            </div>
+          <div data-routine-id={routine.id}>
+            <WindowedDataRow
+              name={routine.instruction || 'No instruction yet.'}
+              meta={[isUnsaved ? 'unsaved' : null, routine.modelRef ? routine.modelRef : null, routine.enabled ? 'enabled' : 'disabled']
+                .filter(Boolean)
+                .join(' · ')}
+              status={<WindowedBadge tone={routineTone(routine)}>{routineStatusLabel(routine)}</WindowedBadge>}
+              action={
+                <>
+                  <WindowedPageButton
+                    onClick={() => {
+                      selectRoutine(routine);
+                    }}
+                  >
+                    Open
+                  </WindowedPageButton>
+                  <WindowedPageButton tone="danger" onClick={() => void deleteRoutine(routine)}>
+                    Delete
+                  </WindowedPageButton>
+                </>
+              }
+            />
           </div>
           {routine.type === 'decision' && routine.outcomes.length ? (
             <WindowedList className="wos-routine-path-list">
