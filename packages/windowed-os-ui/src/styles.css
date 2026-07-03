@@ -2105,6 +2105,65 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   align-self: start;
 }
 
+.wos-model-usage,
+.wos-cache-system {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-model-usage__summary,
+.wos-cache-system__summary {
+  margin-bottom: 0;
+}
+
+.wos-model-usage__grid,
+.wos-cache-system__grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--wos-space-4);
+}
+
+.wos-model-usage__throughput {
+  grid-column: 1 / -1;
+}
+
+.wos-model-usage__models .wos-data-row__name,
+.wos-model-usage__costs .wos-data-row__name,
+.wos-model-usage__throughput .wos-data-row__name,
+.wos-cache-system__cache .wos-data-row__name,
+.wos-cache-system__prompts .wos-data-row__name {
+  font-family: var(--wos-font-mono);
+}
+
+.wos-model-usage-bar,
+.wos-cache-system-bar {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+}
+
+.wos-model-usage-bar span,
+.wos-cache-system-bar span {
+  display: block;
+  min-width: 2px;
+  height: 100%;
+  background: var(--wos-diagnostics);
+}
+
+.wos-model-usage-bar[data-tone='warning'] span {
+  background: var(--wos-warning);
+}
+
+.wos-cache-system-bar[data-tone='prompt'] span {
+  background: var(--wos-telemetry);
+}
+
 .wos-auto-mode {
   display: grid;
   min-width: 0;
@@ -2297,6 +2356,8 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 @media (max-width: 900px) {
   .wos-tool-flow__grid,
   .wos-tool-health__bash,
+  .wos-model-usage__grid,
+  .wos-cache-system__grid,
   .wos-auto-mode__grid,
   .wos-context-pressure__grid {
     grid-template-columns: minmax(0, 1fr);

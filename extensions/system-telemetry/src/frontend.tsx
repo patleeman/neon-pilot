@@ -231,6 +231,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
                       tokensCachedWrite={summary.tokensCachedWrite}
                       cacheHitRate={summary.cacheHitRate}
                       cacheEfficiency={cacheEfficiency}
+                      presentation="windowed"
                     />
                   )}
                   {tokensDaily && <TracesBraidChart data={tokensDaily} presentation="windowed" />}
@@ -249,7 +250,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
                   <TracesContextPointers data={contextPointers} presentation="windowed" />
                   <TracesAutoMode data={autoMode} presentation="windowed" />
                   <TracesSessionIntegrity events={sessionIntegrity ?? []} presentation="windowed" />
-                  <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
+                  <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} presentation="windowed" />
                   <TracesContextPressure
                     sessions={contextSessions ?? []}
                     compactions={compactions ?? []}

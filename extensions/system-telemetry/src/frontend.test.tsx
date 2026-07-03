@@ -72,6 +72,70 @@ describe('TelemetryPage', () => {
           { modelId: 'gpt-5.4', tokens: 3200, cost: 0.72, calls: 3 },
           { modelId: 'deepseek-v4-flash', tokens: 1367, cost: 0.12, calls: 1 },
         ],
+        throughput: [
+          {
+            modelId: 'gpt-5.4',
+            avgTokensPerSec: 72,
+            peakTokensPerSec: 96,
+            tokensOutput: 1500,
+            durationMs: 21_000,
+          },
+          {
+            modelId: 'deepseek-v4-flash',
+            avgTokensPerSec: 48,
+            peakTokensPerSec: 64,
+            tokensOutput: 900,
+            durationMs: 18_000,
+          },
+        ],
+        cacheEfficiency: {
+          overallHitRate: 32.5,
+          requestCacheHitRate: 66.6,
+          totalInput: 20_000,
+          totalCached: 6_500,
+          totalCachedWrite: 1_000,
+          requests: 3,
+          cachedRequests: 2,
+          byModel: [
+            {
+              modelId: 'gpt-5.4',
+              hitRate: 44.4,
+              requestCacheHitRate: 75,
+              totalInput: 14_000,
+              totalCached: 6_200,
+              totalCachedWrite: 800,
+              requests: 2,
+              cachedRequests: 1,
+            },
+            {
+              modelId: 'deepseek-v4-flash',
+              hitRate: 5,
+              requestCacheHitRate: 0,
+              totalInput: 6_000,
+              totalCached: 300,
+              totalCachedWrite: 200,
+              requests: 1,
+              cachedRequests: 0,
+            },
+          ],
+        },
+        systemPrompt: {
+          avgSystemPromptTokens: 1800,
+          avgPctOfTotal: 12.5,
+          avgPctOfContextWindow: 2.1,
+          maxSystemPromptTokens: 2200,
+          samples: 2,
+          byModel: [
+            {
+              modelId: 'gpt-5.4',
+              avgSystemPromptTokens: 1900,
+              maxSystemPromptTokens: 2200,
+              contextWindow: 200_000,
+              avgPctOfContextWindow: 0.95,
+              samples: 2,
+            },
+          ],
+        },
         toolHealth: [
           { toolName: 'exec_command', calls: 3, errors: 0, successRate: 100, avgLatencyMs: 120, p95LatencyMs: 250, maxLatencyMs: 300 },
           { toolName: 'browser_snapshot', calls: 1, errors: 1, successRate: 0, avgLatencyMs: 900, p95LatencyMs: 900, maxLatencyMs: 900 },
@@ -238,6 +302,9 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.ui-heatmap-cell-4')).toBeNull();
     expect(container.querySelector('.wos-braid-chart')).toBeTruthy();
     expect(container.querySelector('.wos-braid-line--errors')).toBeTruthy();
+    expect(container.querySelector('.wos-model-usage')).toBeTruthy();
+    expect(container.querySelector('.wos-model-usage__throughput')).toBeTruthy();
+    expect(container.querySelector('.wos-model-usage-bar')).toBeTruthy();
     expect(container.querySelector('.wos-tool-health')).toBeTruthy();
     expect(container.querySelector('.wos-tool-health__bash')).toBeTruthy();
     expect(screen.getByText('rg').closest('.wos-data-row')).toBeTruthy();
@@ -252,9 +319,17 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.wos-context-pointers-bar')).toBeTruthy();
     expect(screen.getByText('37.5%').closest('.wos-key-value-grid__item')).toBeTruthy();
     expect(screen.getByText('2026-07-02').closest('.wos-data-row')).toBeTruthy();
+    expect(container.querySelector('.wos-cache-system')).toBeTruthy();
+    expect(container.querySelector('.wos-cache-system__cache')).toBeTruthy();
+    expect(container.querySelector('.wos-cache-system-bar')).toBeTruthy();
+    expect(screen.getByText('44.4%').closest('.wos-data-row')).toBeTruthy();
+    expect(screen.getByText('/200K').closest('.wos-data-row')).toBeTruthy();
     const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
       table.style.getPropertyValue('--wos-data-column-template'),
     );
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(6rem, 0.4fr) minmax(5.5rem, 0.36fr)');
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(6rem, 0.44fr) minmax(8rem, 0.72fr)');
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(4.5rem, 0.32fr) minmax(4.5rem, 0.32fr) minmax(8rem, 0.72fr)');
     expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(7rem, 0.42fr) minmax(5rem, 0.32fr)');
     expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(6rem, 0.36fr) minmax(5rem, 0.32fr)');
     expect(tableTemplates).toContain('minmax(7rem, 0.9fr) repeat(8, minmax(4.6rem, 0.46fr)) minmax(5rem, 0.5fr)');
@@ -266,6 +341,8 @@ describe('TelemetryPage', () => {
     expect(tableTemplates).toContain('minmax(6rem, 0.55fr) minmax(5.5rem, 0.38fr) minmax(5.5rem, 0.38fr) minmax(10rem, 1fr)');
     expect(tableTemplates).toContain('minmax(9rem, 1fr) minmax(4.5rem, 0.34fr) minmax(6.5rem, 0.46fr) minmax(10rem, 0.9fr)');
     expect(tableTemplates).toContain('minmax(5rem, 0.4fr) minmax(10rem, 1fr) minmax(5rem, 0.38fr)');
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(5.5rem, 0.36fr) minmax(5rem, 0.34fr) minmax(8rem, 0.72fr)');
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(5rem, 0.34fr) minmax(5.5rem, 0.36fr) minmax(8rem, 0.72fr)');
     expect(container.querySelector('.ui-data-table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('Highest context pressure')).toBeTruthy();

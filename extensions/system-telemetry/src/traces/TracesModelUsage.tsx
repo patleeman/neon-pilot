@@ -12,6 +12,11 @@ import {
   ProgressRow,
   SectionLabel,
   SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedKeyValueGrid,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
@@ -25,6 +30,7 @@ export function TracesModelUsage({
   tokensCachedWrite,
   cacheHitRate,
   cacheEfficiency,
+  presentation = 'stable',
 }: {
   models: TraceModelUsage[];
   throughput: TraceThroughput[];
@@ -35,6 +41,7 @@ export function TracesModelUsage({
   tokensCachedWrite: number;
   cacheHitRate: number;
   cacheEfficiency?: CacheEfficiencyAggregate | null;
+  presentation?: 'stable' | 'windowed';
 }) {
   const maxTokens = Math.max(...models.map((m) => m.tokens), 1);
   const cacheByModel = Object.fromEntries((cacheEfficiency?.byModel ?? []).map((m) => [m.modelId, m.hitRate]));
@@ -44,6 +51,117 @@ export function TracesModelUsage({
     totalThroughputDurationMs > 0 ? Math.round(totalThroughputOutputTokens / (totalThroughputDurationMs / 1000)) : 0;
   const peakThroughputTokensPerSec = Math.max(...throughput.map((t) => t.peakTokensPerSec), 0);
   const cacheHitRateLabel = formatPercent(cacheHitRate);
+
+  if (presentation === 'windowed') {
+    if (models.length === 0 && throughput.length === 0) {
+      return <WindowedEmptyState>Model usage appears after traced model calls are retained.</WindowedEmptyState>;
+    }
+
+    return (
+      <div className="wos-model-usage">
+        <WindowedKeyValueGrid
+          className="wos-model-usage__summary"
+          columns={4}
+          items={[
+            { label: 'Total', value: formatNumber(totalTokens) },
+            { label: 'Input', value: formatNumber(tokensInput) },
+            { label: 'Output', value: formatNumber(tokensOutput) },
+            { label: 'Cached', value: <WindowedBadge tone={cacheHitRate > 0 ? 'positive' : 'neutral'}>{cacheHitRateLabel}</WindowedBadge> },
+          ]}
+        />
+        <div className="wos-model-usage__grid">
+          <WindowedDataTable
+            className="wos-model-usage__models"
+            columns={[{ label: 'Model' }, { label: 'Tokens', align: 'right' }, { label: 'Cache', align: 'right' }]}
+            columnTemplate="minmax(12rem, 1fr) minmax(6rem, 0.4fr) minmax(5.5rem, 0.36fr)"
+          >
+            {models.map((model) => {
+              const hitRate = cacheByModel[model.modelId];
+              return (
+                <WindowedDataRow
+                  key={model.modelId}
+                  name={model.modelId}
+                  meta={`${model.calls} call${model.calls === 1 ? '' : 's'}`}
+                  cells={[
+                    {
+                      value: <WindowedBadge tone={model.tokens > 0 ? 'positive' : 'neutral'}>{formatNumber(model.tokens)}</WindowedBadge>,
+                      align: 'right',
+                    },
+                    { value: hitRate != null ? formatPercent(hitRate) : '-', align: 'right' },
+                  ]}
+                />
+              );
+            })}
+          </WindowedDataTable>
+          <WindowedDataTable
+            className="wos-model-usage__costs"
+            columns={[{ label: 'Model' }, { label: 'Cost', align: 'right' }, { label: 'Share' }]}
+            columnTemplate="minmax(12rem, 1fr) minmax(6rem, 0.44fr) minmax(8rem, 0.72fr)"
+          >
+            {models.slice(0, 6).map((model) => (
+              <WindowedDataRow
+                key={model.modelId}
+                name={model.modelId}
+                meta={`${formatNumber(model.tokens)} tokens`}
+                cells={[
+                  { value: `$${model.cost.toFixed(2)}`, align: 'right' },
+                  {
+                    value: (
+                      <WindowedBar
+                        percent={(model.cost / Math.max(...models.map((m) => m.cost), 0.01)) * 100}
+                        label={`${model.modelId} cost share`}
+                        tone="warning"
+                      />
+                    ),
+                  },
+                ]}
+              />
+            ))}
+          </WindowedDataTable>
+          <WindowedDataTable
+            className="wos-model-usage__throughput"
+            columns={[{ label: 'Model' }, { label: 'Avg', align: 'right' }, { label: 'Peak', align: 'right' }, { label: 'Rate' }]}
+            columnTemplate="minmax(12rem, 1fr) minmax(4.5rem, 0.32fr) minmax(4.5rem, 0.32fr) minmax(8rem, 0.72fr)"
+          >
+            {throughput.length > 0 ? (
+              throughput.map((row) => (
+                <WindowedDataRow
+                  key={row.modelId}
+                  name={row.modelId}
+                  meta={`${formatNumber(row.tokensOutput)} output tokens`}
+                  cells={[
+                    { value: `${row.avgTokensPerSec}`, align: 'right' },
+                    {
+                      value: (
+                        <WindowedBadge tone={row.peakTokensPerSec > peakThroughputTokensPerSec * 0.8 ? 'warning' : 'neutral'}>
+                          {row.peakTokensPerSec}
+                        </WindowedBadge>
+                      ),
+                      align: 'right',
+                    },
+                    {
+                      value: (
+                        <WindowedBar
+                          percent={(row.avgTokensPerSec / Math.max(...throughput.map((t) => t.avgTokensPerSec), 1)) * 100}
+                          label={`${row.modelId} average throughput`}
+                        />
+                      ),
+                    },
+                  ]}
+                />
+              ))
+            ) : (
+              <WindowedDataRow
+                name="No throughput data"
+                meta="Current range"
+                cells={[{ value: '0', align: 'right' }, { value: '0', align: 'right' }, { value: 'Waiting' }]}
+              />
+            )}
+          </WindowedDataTable>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SurfacePanel className="overflow-hidden">
@@ -146,6 +264,14 @@ export function TracesModelUsage({
         </DashboardGridCell>
       </DashboardGrid>
     </SurfacePanel>
+  );
+}
+
+function WindowedBar({ percent, label, tone = 'accent' }: { percent: number; label: string; tone?: 'accent' | 'warning' }) {
+  return (
+    <span className="wos-model-usage-bar" data-tone={tone} aria-label={label}>
+      <span style={{ width: `${Math.max(2, Math.min(100, percent))}%` }} />
+    </span>
   );
 }
 

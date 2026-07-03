@@ -12,17 +12,34 @@ import {
   ProgressRow,
   SectionLabel,
   SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedKeyValueGrid,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 export function TracesCacheAndSystemPrompt({
   cacheEfficiency,
   systemPrompt,
+  presentation = 'stable',
 }: {
   cacheEfficiency: CacheEfficiencyAggregate | null;
   systemPrompt: SystemPromptAggregate | null;
+  presentation?: 'stable' | 'windowed';
 }) {
-  if (!cacheEfficiency && !systemPrompt) return null;
+  if (!cacheEfficiency && !systemPrompt) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>Cache and system prompt metrics appear after traced model calls are retained.</WindowedEmptyState>;
+    }
+
+    return null;
+  }
+
+  if (presentation === 'windowed') {
+    return <WindowedCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />;
+  }
 
   return (
     <SurfacePanel className="overflow-hidden">
@@ -116,6 +133,126 @@ export function TracesCacheAndSystemPrompt({
         </DashboardGridCell>
       </DashboardGrid>
     </SurfacePanel>
+  );
+}
+
+function WindowedCacheAndSystemPrompt({
+  cacheEfficiency,
+  systemPrompt,
+}: {
+  cacheEfficiency: CacheEfficiencyAggregate | null;
+  systemPrompt: SystemPromptAggregate | null;
+}) {
+  return (
+    <div className="wos-cache-system">
+      <WindowedKeyValueGrid
+        className="wos-cache-system__summary"
+        columns={4}
+        items={[
+          {
+            label: 'Req Hit',
+            value: cacheEfficiency ? (
+              <WindowedBadge tone={cacheEfficiency.requestCacheHitRate > 50 ? 'positive' : 'warning'}>
+                {fmtPercent(cacheEfficiency.requestCacheHitRate)}%
+              </WindowedBadge>
+            ) : (
+              '-'
+            ),
+          },
+          {
+            label: 'Cached',
+            value: cacheEfficiency ? (
+              <WindowedBadge tone={cacheEfficiency.overallHitRate > 30 ? 'positive' : 'warning'}>
+                {fmtPercent(cacheEfficiency.overallHitRate)}%
+              </WindowedBadge>
+            ) : (
+              '-'
+            ),
+          },
+          { label: 'Read', value: cacheEfficiency ? fmt(cacheEfficiency.totalCached) : '-' },
+          { label: 'Avg Prompt', value: systemPrompt ? fmt(systemPrompt.avgSystemPromptTokens) : '-' },
+        ]}
+      />
+      <div className="wos-cache-system__grid">
+        <WindowedDataTable
+          className="wos-cache-system__cache"
+          columns={[{ label: 'Model' }, { label: 'Requests', align: 'right' }, { label: 'Tokens', align: 'right' }, { label: 'Read' }]}
+          columnTemplate="minmax(12rem, 1fr) minmax(5.5rem, 0.36fr) minmax(5rem, 0.34fr) minmax(8rem, 0.72fr)"
+        >
+          {cacheEfficiency && cacheEfficiency.byModel.length > 0 ? (
+            cacheEfficiency.byModel.map((model) => (
+              <WindowedDataRow
+                key={model.modelId}
+                name={model.modelId}
+                meta={`${model.cachedRequests}/${model.requests} cached requests`}
+                cells={[
+                  {
+                    value: (
+                      <WindowedBadge
+                        tone={model.requestCacheHitRate > 50 ? 'positive' : model.requestCacheHitRate > 10 ? 'warning' : 'danger'}
+                      >
+                        {fmtPercent(model.requestCacheHitRate)}%
+                      </WindowedBadge>
+                    ),
+                    align: 'right',
+                  },
+                  { value: `${fmtPercent(model.hitRate)}%`, align: 'right' },
+                  { value: <WindowedCacheBar percent={model.requestCacheHitRate} label={`${model.modelId} request cache hit rate`} /> },
+                ]}
+              />
+            ))
+          ) : (
+            <WindowedDataRow
+              name="No cache rows"
+              meta="Current range"
+              cells={[{ value: '-', align: 'right' }, { value: '-', align: 'right' }, { value: 'Waiting' }]}
+            />
+          )}
+        </WindowedDataTable>
+        <WindowedDataTable
+          className="wos-cache-system__prompts"
+          columns={[{ label: 'Model' }, { label: 'Avg', align: 'right' }, { label: 'Window', align: 'right' }, { label: 'Share' }]}
+          columnTemplate="minmax(12rem, 1fr) minmax(5rem, 0.34fr) minmax(5.5rem, 0.36fr) minmax(8rem, 0.72fr)"
+        >
+          {systemPrompt && systemPrompt.byModel.length > 0 ? (
+            systemPrompt.byModel.map((model) => (
+              <WindowedDataRow
+                key={model.modelId}
+                name={model.modelId}
+                meta={`${systemPrompt.samples} sampled session${systemPrompt.samples === 1 ? '' : 's'}`}
+                cells={[
+                  { value: fmt(model.avgSystemPromptTokens), align: 'right' },
+                  { value: `/${fmt(model.contextWindow)}`, align: 'right' },
+                  {
+                    value: (
+                      <WindowedCacheBar
+                        percent={model.avgPctOfContextWindow}
+                        label={`${model.modelId} average system prompt context share`}
+                        tone="prompt"
+                      />
+                    ),
+                  },
+                ]}
+              />
+            ))
+          ) : (
+            <WindowedDataRow
+              name="No prompt rows"
+              meta="Current range"
+              cells={[{ value: '-', align: 'right' }, { value: '-', align: 'right' }, { value: 'Waiting' }]}
+            />
+          )}
+        </WindowedDataTable>
+      </div>
+    </div>
+  );
+}
+
+function WindowedCacheBar({ percent, label, tone = 'cache' }: { percent: number; label: string; tone?: 'cache' | 'prompt' }) {
+  return (
+    <span className="wos-cache-system-bar" data-tone={tone} aria-label={label}>
+      <span style={{ width: `${Math.max(2, Math.min(100, percent))}%` }} />
+    </span>
   );
 }
 
