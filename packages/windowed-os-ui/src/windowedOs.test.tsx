@@ -87,6 +87,18 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('.wos-key-value__label');
     expect(stylesSource).toContain('.wos-automation-queue .wos-data-row');
   });
+
+  it('stacks Model Arena status controls in compact window containers', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-arena-status-row__copy');
+    expect(stylesSource).toContain('.wos-arena-status-row__copy {\n  min-width: 0;');
+    expect(stylesSource).toContain('overflow-wrap: anywhere;');
+    expect(stylesSource).toContain('@container (max-width: 640px)');
+    expect(stylesSource).toContain('.wos-arena-status-row {\n    grid-template-columns: minmax(0, 1fr);');
+    expect(stylesSource).toContain('justify-items: start;');
+  });
 });
 
 describe('WindowedPageShell', () => {

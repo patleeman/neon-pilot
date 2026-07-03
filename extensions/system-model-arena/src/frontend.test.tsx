@@ -79,6 +79,9 @@ describe('ModelArenaPage', () => {
     expect(screen.getByText('frontend 6W/2L/1T')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Disable Model Arena' })).toBeTruthy();
     expect(container.querySelector('.wos-toggle[data-accent="model-arena"]')).toBeTruthy();
+    expect(container.querySelector('.wos-arena-status-row__copy')?.textContent).toContain(
+      'Comparing challenger runs against conversation models.',
+    );
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add selected challenger model' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove DeepSeek V4 Flash · opencode-go' })).toBeTruthy();

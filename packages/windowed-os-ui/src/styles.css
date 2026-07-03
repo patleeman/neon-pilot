@@ -3359,6 +3359,11 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 @container (max-width: 640px) {
+  .wos-arena-status-row {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+
   .wos-automation-queue .wos-data-table__header {
     display: none;
   }
@@ -3871,6 +3876,11 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   grid-template-columns: minmax(0, 1fr) auto;
   color: var(--wos-ink-600);
   font: var(--wos-text-body);
+}
+
+.wos-arena-status-row__copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .wos-arena-add-row {

@@ -551,7 +551,7 @@ function ModelArenaWindowedPage({
             <>
               <WindowedPageSection title="Status" meta={state.settings.automaticDuels ? 'Automatic duels on' : 'Automatic duels off'}>
                 <div className="wos-arena-status-row">
-                  <span>
+                  <span className="wos-arena-status-row__copy">
                     {arenaReady
                       ? 'Comparing challenger runs against conversation models.'
                       : state.settings.challengerModels.length === 0
