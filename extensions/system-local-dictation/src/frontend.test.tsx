@@ -476,6 +476,9 @@ describe('DictationSettingsPanel', () => {
     });
 
     expect(container.querySelector('.wos-page-section')).not.toBeNull();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.local-dictation-page-windowed')).not.toBeNull();
+    expect(container.textContent).toContain('Local Dictation');
     expect(container.querySelector('.wos-field')).not.toBeNull();
     expect(container.querySelector('.wos-key-value-grid')).not.toBeNull();
     expect(container.textContent).toContain('Model');
