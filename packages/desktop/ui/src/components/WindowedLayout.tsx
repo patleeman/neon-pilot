@@ -1255,7 +1255,7 @@ export function WindowedLayout() {
             accent={accentForWindow(windowModel)}
             focused={windowModel.focused}
             style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
-            iframeBlocked={isWindowCoveredByHigherWindow(windowModel, visibleWindows)}
+            iframeBlocked={nativeBrowserBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows)}
             onPointerDown={() => focusWindow(windowModel.id)}
             onMinimize={() => minimizeWindow(windowModel.id)}
             onMaximize={() => toggleMaximize(windowModel)}

@@ -920,6 +920,8 @@ describe('WindowedLayout route windows', () => {
     await screen.findByRole('region', { name: /routines/i });
 
     expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-native-browser-blocked')).toBe('true');
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBe('true');
+    expect(screen.getByRole('region', { name: /routines/i }).getAttribute('data-iframe-blocked')).toBe('true');
   });
 
   it('publishes the single focused window id for native browser layering checks', async () => {
@@ -1064,7 +1066,7 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
 
-  it('marks lower overlapping windows so embedded iframes cannot paint over the foreground stack', async () => {
+  it('marks overlapping windows so embedded iframes cannot paint over the foreground stack', async () => {
     seedWindowedWindows([
       {
         id: 'chat:draft',
@@ -1095,7 +1097,7 @@ describe('WindowedLayout route windows', () => {
     expect(chatWindow).toBeTruthy();
     expect(routinesWindow).toBeTruthy();
     expect(chatWindow!.getAttribute('data-iframe-blocked')).toBe('true');
-    expect(routinesWindow!.hasAttribute('data-iframe-blocked')).toBe(false);
+    expect(routinesWindow!.getAttribute('data-iframe-blocked')).toBe('true');
   });
 
   it('keeps window stacks browser-blocking while multiple windows are visible', async () => {
