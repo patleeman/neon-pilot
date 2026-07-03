@@ -16,6 +16,7 @@ import {
   WindowedFormActions,
   WindowedFormGrid,
   WindowedListItem,
+  WindowedNumberStepper,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
@@ -214,6 +215,20 @@ describe('WindowedFormGrid', () => {
     expect(html).toContain('class="wos-form-grid" data-columns="3"');
     expect(html).toContain('class="wos-form-actions"');
     expect(html).toContain('Save');
+  });
+});
+
+describe('WindowedNumberStepper', () => {
+  it('renders compact bounded numeric controls with unit labels', () => {
+    const html = renderToStaticMarkup(
+      <WindowedNumberStepper aria-label="Sample rate" value={20} onChange={() => undefined} min={0} max={100} unit="%" />,
+    );
+
+    expect(html).toContain('class="wos-number-stepper"');
+    expect(html).toContain('aria-label="Decrease Sample rate"');
+    expect(html).toContain('aria-label="Increase Sample rate"');
+    expect(html).toContain('type="number"');
+    expect(html).toContain('aria-hidden="true">%</span>');
   });
 });
 
@@ -807,6 +822,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Status"');
     expect(source).toContain('title="Challengers"');
     expect(source).toContain('title="Sampling"');
+    expect(source).toContain('<WindowedNumberStepper');
+    expect(source).toContain('unit="%"');
+    expect(source).toContain('unit="votes"');
+    expect(source).toContain('unit="chars"');
     expect(source).toContain('title="Leader"');
     expect(source).toContain('title="Rankings"');
     expect(source).toContain('aria-label="Task type"');

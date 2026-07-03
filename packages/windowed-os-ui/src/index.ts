@@ -57,6 +57,8 @@ export {
   type WindowedMenuPanelProps,
   WindowedMessageBubble,
   type WindowedMessageBubbleProps,
+  WindowedNumberStepper,
+  type WindowedNumberStepperProps,
   WindowedPageButton,
   type WindowedPageButtonProps,
   WindowedPageMain,

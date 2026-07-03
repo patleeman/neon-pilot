@@ -25,6 +25,7 @@ import {
   WindowedListItem,
   WindowedMenuPanel,
   WindowedMessageBubble,
+  WindowedNumberStepper,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageRail,
@@ -1356,16 +1357,24 @@ export const ModelArenaPage: Story = {
             <WindowedPageSection title="Sampling">
               <div className="wos-arena-settings-grid">
                 <WindowedField label="Initial rate">
-                  <WindowedTextInput aria-label="Initial rate" type="number" defaultValue="20" min={0} max={100} />
+                  <WindowedNumberStepper aria-label="Initial rate" value={20} onChange={() => undefined} min={0} max={100} unit="%" />
                 </WindowedField>
                 <WindowedField label="Later rate">
-                  <WindowedTextInput aria-label="Later rate" type="number" defaultValue="5" min={0} max={100} />
+                  <WindowedNumberStepper aria-label="Later rate" value={5} onChange={() => undefined} min={0} max={100} unit="%" />
                 </WindowedField>
                 <WindowedField label="Ramp after">
-                  <WindowedTextInput aria-label="Ramp after" type="number" defaultValue="120" min={0} max={5000} />
+                  <WindowedNumberStepper aria-label="Ramp after" value={120} onChange={() => undefined} min={0} max={5000} unit="votes" />
                 </WindowedField>
                 <WindowedField label="Minimum prompt">
-                  <WindowedTextInput aria-label="Minimum prompt" type="number" defaultValue="280" min={0} max={2000} />
+                  <WindowedNumberStepper
+                    aria-label="Minimum prompt"
+                    value={280}
+                    onChange={() => undefined}
+                    min={0}
+                    max={2000}
+                    step={10}
+                    unit="chars"
+                  />
                 </WindowedField>
               </div>
             </WindowedPageSection>

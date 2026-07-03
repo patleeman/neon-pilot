@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Taskbar, WindowedDataRow, WindowedDialog, WindowedMenuPanel } from './windowedOs';
+import { Taskbar, WindowedDataRow, WindowedDialog, WindowedMenuPanel, WindowedNumberStepper } from './windowedOs';
 
 function rect(input: { left: number; top: number; width: number; height: number }): DOMRect {
   return {
@@ -162,6 +162,34 @@ describe('WindowedDataRow interactions', () => {
 
     expect(onAction).toHaveBeenCalledTimes(1);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
+describe('WindowedNumberStepper interactions', () => {
+  it('increments, decrements, and clamps bounded numeric values', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <WindowedNumberStepper aria-label="Sample rate" value={20} onChange={onChange} min={0} max={100} unit="%" />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /increase sample rate/i }));
+    expect(onChange).toHaveBeenLastCalledWith(21);
+
+    rerender(<WindowedNumberStepper aria-label="Sample rate" value={0} onChange={onChange} min={0} max={100} unit="%" />);
+    fireEvent.click(screen.getByRole('button', { name: /decrease sample rate/i }));
+    expect(onChange).toHaveBeenLastCalledWith(0);
+
+    fireEvent.change(screen.getByRole('spinbutton', { name: /sample rate/i }), { target: { value: '125' } });
+    expect(onChange).toHaveBeenLastCalledWith(100);
+  });
+
+  it('honors custom step sizes for threshold controls', () => {
+    const onChange = vi.fn();
+    render(<WindowedNumberStepper aria-label="Minimum prompt" value={280} onChange={onChange} min={0} max={2000} step={10} unit="chars" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /increase minimum prompt/i }));
+
+    expect(onChange).toHaveBeenCalledWith(290);
   });
 });
 

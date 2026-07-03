@@ -30,13 +30,13 @@ import {
   WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
+  WindowedNumberStepper,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
   WindowedSelect,
   WindowedStateBlock,
-  WindowedTextInput,
   WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import React, { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
@@ -633,54 +633,47 @@ function ModelArenaWindowedPage({
               <WindowedPageSection title="Sampling">
                 <div className="wos-arena-settings-grid">
                   <WindowedField label="Initial rate">
-                    <WindowedTextInput
+                    <WindowedNumberStepper
                       aria-label="Initial rate"
-                      type="number"
                       min={0}
                       max={100}
+                      unit="%"
                       value={Math.round(state.settings.sampleRate * 100)}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                        onStateChange({ ...state, settings: { ...state.settings, sampleRate: Number(event.target.value) / 100 } })
-                      }
+                      onChange={(value) => onStateChange({ ...state, settings: { ...state.settings, sampleRate: value / 100 } })}
                       onBlur={() => void save()}
                     />
                   </WindowedField>
                   <WindowedField label="Later rate">
-                    <WindowedTextInput
+                    <WindowedNumberStepper
                       aria-label="Later rate"
-                      type="number"
                       min={0}
                       max={100}
+                      unit="%"
                       value={Math.round(state.settings.rampedSampleRate * 100)}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                        onStateChange({ ...state, settings: { ...state.settings, rampedSampleRate: Number(event.target.value) / 100 } })
-                      }
+                      onChange={(value) => onStateChange({ ...state, settings: { ...state.settings, rampedSampleRate: value / 100 } })}
                       onBlur={() => void save()}
                     />
                   </WindowedField>
                   <WindowedField label="Ramp after">
-                    <WindowedTextInput
+                    <WindowedNumberStepper
                       aria-label="Ramp after"
-                      type="number"
                       min={0}
                       max={5000}
+                      unit="votes"
                       value={state.settings.rampDownAfterVotes}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                        onStateChange({ ...state, settings: { ...state.settings, rampDownAfterVotes: Number(event.target.value) } })
-                      }
+                      onChange={(value) => onStateChange({ ...state, settings: { ...state.settings, rampDownAfterVotes: value } })}
                       onBlur={() => void save()}
                     />
                   </WindowedField>
                   <WindowedField label="Minimum prompt">
-                    <WindowedTextInput
+                    <WindowedNumberStepper
                       aria-label="Minimum prompt"
-                      type="number"
                       min={0}
                       max={2000}
+                      step={10}
+                      unit="chars"
                       value={state.settings.minPromptChars}
-                      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                        onStateChange({ ...state, settings: { ...state.settings, minPromptChars: Number(event.target.value) } })
-                      }
+                      onChange={(value) => onStateChange({ ...state, settings: { ...state.settings, minPromptChars: value } })}
                       onBlur={() => void save()}
                     />
                   </WindowedField>

@@ -573,6 +573,77 @@ export function WindowedTextInput({ className, ...props }: WindowedTextInputProp
   return <input className={cx('wos-input', className)} {...props} />;
 }
 
+export interface WindowedNumberStepperProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'type' | 'value'> {
+  value: number;
+  onChange: (value: number) => void;
+  unit?: string;
+}
+
+function clampNumber(value: number, min?: number | string, max?: number | string): number {
+  const numericMin = typeof min === 'number' ? min : typeof min === 'string' && min !== '' ? Number(min) : undefined;
+  const numericMax = typeof max === 'number' ? max : typeof max === 'string' && max !== '' ? Number(max) : undefined;
+  let next = Number.isFinite(value) ? value : 0;
+  if (typeof numericMin === 'number' && Number.isFinite(numericMin)) next = Math.max(numericMin, next);
+  if (typeof numericMax === 'number' && Number.isFinite(numericMax)) next = Math.min(numericMax, next);
+  return next;
+}
+
+export function WindowedNumberStepper({
+  className,
+  value,
+  onChange,
+  unit,
+  step = 1,
+  min,
+  max,
+  disabled,
+  ...props
+}: WindowedNumberStepperProps) {
+  const numericStep = typeof step === 'number' ? step : Number(step) || 1;
+  const changeBy = (delta: number) => {
+    onChange(clampNumber(value + delta, min, max));
+  };
+
+  return (
+    <div className={cx('wos-number-stepper', className)} data-disabled={disabled ? 'true' : undefined}>
+      <button
+        type="button"
+        className="wos-number-stepper__button"
+        aria-label={`Decrease ${props['aria-label'] ?? 'value'}`}
+        disabled={disabled}
+        onClick={() => changeBy(-numericStep)}
+      >
+        -
+      </button>
+      <input
+        className="wos-number-stepper__input"
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        disabled={disabled}
+        onChange={(event) => onChange(clampNumber(Number(event.target.value), min, max))}
+        {...props}
+      />
+      {unit ? (
+        <span className="wos-number-stepper__unit" aria-hidden="true">
+          {unit}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className="wos-number-stepper__button"
+        aria-label={`Increase ${props['aria-label'] ?? 'value'}`}
+        disabled={disabled}
+        onClick={() => changeBy(numericStep)}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 export type WindowedTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 export function WindowedTextarea({ className, ...props }: WindowedTextareaProps) {
