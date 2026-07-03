@@ -390,6 +390,23 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('ui-app-page-shell');
   });
 
+  it('renders a single routed settings page in the windowed settings app', () => {
+    const html = renderPage('/settings/providers', undefined, {
+      shellPresentation: 'windowed',
+      pathname: '/settings/providers',
+      hash: '',
+    });
+
+    expect(html).toContain('class="wos-page-shell settings-page-windowed"');
+    expect(html).toContain('>Providers</h1>');
+    expect(html).toContain('Model providers');
+    expect(html).toContain('data-active="true"');
+    expect(html).not.toContain('>Appearance</h1>');
+    expect(html).not.toContain('Theme mode selection');
+    expect(html).not.toContain('Default project folder');
+    expect(html).not.toContain('Command palette actions and keyboard shortcuts');
+  });
+
   it('right-aligns appearance accent choices within the settings action column', () => {
     const html = renderPage('/settings', ['settings-appearance']);
 

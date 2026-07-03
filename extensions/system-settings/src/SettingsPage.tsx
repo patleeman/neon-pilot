@@ -78,7 +78,7 @@ import {
   WindowedPageShell,
 } from '@neon-pilot/extensions/ui';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const SETTINGS_QUICK_LINKS = [
   { id: 'settings-appearance', label: 'Appearance' },
@@ -2624,6 +2624,7 @@ export function SettingsPage({
   context,
 }: { sectionIds?: SettingsQuickLinkId[]; context?: ExtensionSurfaceProps['context'] } = {}) {
   const location = useLocation();
+  const navigate = useNavigate();
   const extensionRegistry = useExtensionRegistry();
   const {
     theme,
@@ -2746,8 +2747,14 @@ export function SettingsPage({
     const sectionId = visibleTocLinks.some((item) => item.id === rawSectionId) ? rawSectionId : '';
     if (!sectionId) return;
     setActiveQuickLinkId(sectionId);
+    if (isWindowedSettingsSurface) {
+      if (typeof settingsScrollRef.current?.scrollTo === 'function') {
+        settingsScrollRef.current.scrollTo({ top: 0 });
+      }
+      return undefined;
+    }
     return scheduleSettingsSectionScroll(settingsScrollRef.current, sectionId);
-  }, [context, location.hash, location.pathname, visibleTocLinks]);
+  }, [context, isWindowedSettingsSurface, location.hash, location.pathname, visibleTocLinks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3813,9 +3820,7 @@ export function SettingsPage({
       if (typeof settingsScrollRef.current?.scrollTo === 'function') {
         settingsScrollRef.current.scrollTo({ top: 0 });
       }
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('neon-pilot-desktop-navigate', { detail: { route: settingsQuickLinkRoute(item) } }));
-      }
+      navigate(settingsQuickLinkRoute(item));
       return;
     }
     scheduleSettingsSectionScroll(settingsScrollRef.current, item.id);
