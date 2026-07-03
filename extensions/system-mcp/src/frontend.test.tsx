@@ -203,4 +203,51 @@ describe('McpSettingsPanel', () => {
     });
     expect(refetch).toHaveBeenCalled();
   });
+
+  it('renders windowed MCP servers as tables with details in a dialog', () => {
+    mocks.useApi.mockReturnValue(
+      buildUseApiResult({
+        configPath: '/tmp/mcp_servers.json',
+        configExists: true,
+        searchedPaths: ['/tmp/mcp_servers.json'],
+        explicitConfigJson:
+          '{\n  "mcpServers": {\n    "github": {\n      "command": "npx",\n      "args": ["@mcp/github"]\n    }\n  }\n}\n',
+        servers: [
+          {
+            name: 'github',
+            transport: 'stdio',
+            command: 'npx',
+            args: ['@mcp/github'],
+            source: 'config',
+            sourcePath: '/tmp/mcp_servers.json',
+            hasOAuth: false,
+            raw: {},
+          },
+        ],
+        bundledSkills: [
+          {
+            skillName: 'dd-atlassian-mcp',
+            skillPath: '/knowledge/skills/dd-atlassian-mcp',
+            manifestPath: '/knowledge/skills/dd-atlassian-mcp/mcp.json',
+            serverNames: ['atlassian'],
+            overriddenServerNames: [],
+          },
+        ],
+      }),
+    );
+
+    render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    expect(screen.getByRole('heading', { name: 'Explicit config' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Explicit servers' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Skill-bundled servers' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open MCP server details for github' })).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'Server details: github' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open MCP server details for github' }));
+
+    expect(screen.getByRole('dialog', { name: 'Server details: github' })).toBeTruthy();
+    expect(screen.getByDisplayValue('npx')).toBeTruthy();
+    expect(screen.getByDisplayValue('@mcp/github')).toBeTruthy();
+  });
 });
