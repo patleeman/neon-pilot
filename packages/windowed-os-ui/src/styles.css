@@ -2156,6 +2156,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   position: relative;
   display: grid;
   min-width: 0;
+  align-items: start;
   grid-template-columns: 14px minmax(0, 1fr);
   gap: 8px;
   padding: 7px 0 0;
@@ -2198,6 +2199,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 
 .wos-timeline-item__body {
   min-width: 0;
+  overflow: visible;
   border-bottom: 1.5px solid var(--wos-surface-3);
   padding-bottom: 7px;
 }
@@ -2239,6 +2241,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   margin-top: 4px;
   color: var(--wos-ink-700);
   font: var(--wos-text-body);
+  overflow-wrap: anywhere;
 }
 
 .wos-routine-row {

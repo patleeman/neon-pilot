@@ -279,6 +279,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-list-item[data-depth='1'] .wos-list-item__title");
   });
 
+  it('keeps timeline content visible for log and activity rows with long copy', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-timeline-item {\n  --wos-timeline-marker: var(--wos-ink-500);');
+    expect(stylesSource).toContain('align-items: start;');
+    expect(stylesSource).toContain('.wos-timeline-item__body {\n  min-width: 0;\n  overflow: visible;');
+    expect(stylesSource).toContain('.wos-timeline-item__content {\n  margin-top: 4px;');
+    expect(stylesSource).toContain('overflow-wrap: anywhere;');
+  });
+
   it('contains iframe paint inside window bodies and hides iframes during shell interaction', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
