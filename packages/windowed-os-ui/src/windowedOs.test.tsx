@@ -676,6 +676,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
     expect(source).toContain('CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source).toContain('const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS');
+    expect(source.slice(source.indexOf('export const WorkflowsPage'), source.indexOf('export const ModelArenaPage'))).toContain(
+      'title="Workflows"\n        accent="workflows"',
+    );
+    expect(source.slice(source.indexOf('export const ModelArenaPage'), source.indexOf('export const DiagnosticsPage'))).toContain(
+      'title="Model Arena"\n        accent="model-arena"',
+    );
+    expect(source.slice(source.indexOf('export const SkillsPage'), source.indexOf('export const CoreDataPrimitives'))).toContain(
+      'title="Skills"\n        accent="skills"',
+    );
     expect(source).not.toContain("title: 'Prompt Assembly'");
   });
 });

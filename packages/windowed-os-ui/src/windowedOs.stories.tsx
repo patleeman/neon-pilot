@@ -1069,7 +1069,7 @@ export const WorkflowsPage: Story = {
     <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
       <WindowFrame
         title="Workflows"
-        accent="routines"
+        accent="workflows"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 612 }}
         onMinimize={() => undefined}
@@ -1104,21 +1104,21 @@ export const WorkflowsPage: Story = {
                   meta="review"
                   detail="Updated 2m ago"
                   active
-                  accent="routines"
+                  accent="workflows"
                   status={<WindowedBadge tone="warning">running</WindowedBadge>}
                 />
                 <WindowedListItem
                   title="Visual regression sweep"
                   meta="/Users/patrick/workingdir/neon-pilot"
                   detail="Completed today"
-                  accent="routines"
+                  accent="workflows"
                   status={<WindowedBadge tone="positive">completed</WindowedBadge>}
                 />
                 <WindowedListItem
                   title="Extension hardening"
                   meta="verification"
                   detail="Failed yesterday"
-                  accent="routines"
+                  accent="workflows"
                   status={<WindowedBadge tone="danger">failed</WindowedBadge>}
                 />
               </WindowedList>
@@ -1130,10 +1130,10 @@ export const WorkflowsPage: Story = {
                   title="Code review fanout"
                   meta="Saved workflow"
                   detail="Review changed files in parallel"
-                  accent="routines"
+                  accent="workflows"
                 />
-                <WindowedListItem title="Finding validation" meta="Template" detail="Validate each reported issue" accent="routines" />
-                <WindowedListItem title="Research synthesis" meta="Template" detail="Explore angles, then summarize" accent="routines" />
+                <WindowedListItem title="Finding validation" meta="Template" detail="Validate each reported issue" accent="workflows" />
+                <WindowedListItem title="Research synthesis" meta="Template" detail="Explore angles, then summarize" accent="workflows" />
               </WindowedList>
             </WindowedPageSection>
           </WindowedPageMain>
@@ -1141,7 +1141,7 @@ export const WorkflowsPage: Story = {
         <WindowedDialog
           title="Repo audit"
           meta="running"
-          accent="routines"
+          accent="workflows"
           onClose={() => undefined}
           actions={<WindowedPageButton>Cancel</WindowedPageButton>}
         >
@@ -1161,14 +1161,14 @@ export const WorkflowsPage: Story = {
               title="reviewer"
               meta="review · gpt-5.4-mini"
               detail="Inspect changed desktop shell files."
-              accent="routines"
+              accent="workflows"
               status={<WindowedBadge tone="warning">running</WindowedBadge>}
             />
             <WindowedListItem
               title="visual-check"
               meta="verification · gpt-5.4-mini"
               detail="No horizontal overflow found in the Storybook target."
-              accent="routines"
+              accent="workflows"
               status={<WindowedBadge tone="positive">completed</WindowedBadge>}
             />
           </WindowedList>
@@ -1183,7 +1183,7 @@ export const ModelArenaPage: Story = {
     <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
       <WindowFrame
         title="Model Arena"
-        accent="gateways"
+        accent="model-arena"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
         onMinimize={() => undefined}
@@ -1220,7 +1220,7 @@ export const ModelArenaPage: Story = {
             <WindowedPageSection title="Status" meta="Automatic duels on">
               <div className="wos-arena-status-row">
                 <span>Comparing challenger runs against conversation models.</span>
-                <WindowedToggle checked accent="gateways" label="Disable Model Arena" />
+                <WindowedToggle checked accent="model-arena" label="Disable Model Arena" />
               </div>
             </WindowedPageSection>
 
@@ -1686,7 +1686,7 @@ export const SkillsPage: Story = {
     <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
       <WindowFrame
         title="Skills"
-        accent="extensions"
+        accent="skills"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
         onMinimize={() => undefined}
@@ -1700,7 +1700,7 @@ export const SkillsPage: Story = {
               <>
                 <WindowedSegmentedControl
                   ariaLabel="Skills view"
-                  accent="extensions"
+                  accent="skills"
                   value="marketplace"
                   options={[
                     { id: 'marketplace', label: 'Browse 27' },
@@ -1808,7 +1808,7 @@ export const SkillsPage: Story = {
                   status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
                   action={
                     <span className="wos-inline-actions">
-                      <WindowedToggle checked accent="extensions" label="Disable design" />
+                      <WindowedToggle checked accent="skills" label="Disable design" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
                   }
@@ -1820,7 +1820,7 @@ export const SkillsPage: Story = {
                   status={<WindowedBadge tone="neutral">Disabled</WindowedBadge>}
                   action={
                     <span className="wos-inline-actions">
-                      <WindowedToggle accent="extensions" label="Enable zotero" />
+                      <WindowedToggle accent="skills" label="Enable zotero" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
                   }
@@ -1829,7 +1829,7 @@ export const SkillsPage: Story = {
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
-        <WindowedDialog title="local-qa" meta="Marketplace skill" accent="extensions" onClose={() => undefined}>
+        <WindowedDialog title="local-qa" meta="Marketplace skill" accent="skills" onClose={() => undefined}>
           <WindowedDialogStack>
             <WindowedDialogCopy>Browser and app checks for local product QA.</WindowedDialogCopy>
             <WindowedKeyValueList
