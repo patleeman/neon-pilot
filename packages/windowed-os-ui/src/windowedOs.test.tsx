@@ -629,6 +629,9 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain(".wos-window-route-body > [role='status'][aria-live='polite']");
     expect(stylesSource).toContain('content: attr(aria-label);');
+    expect(stylesSource).toContain('.wos-window-route-loading {\n  display: grid;');
+    expect(stylesSource).toContain('place-items: center;');
+    expect(stylesSource).toContain('.wos-window-route-loading .wos-state-block');
   });
 
   it('scopes drawing modal chrome to the windowed shell', () => {

@@ -921,6 +921,19 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   content: attr(aria-label);
 }
 
+.wos-window-route-loading {
+  display: grid;
+  height: 100%;
+  min-height: 100%;
+  place-items: center;
+  padding: var(--wos-space-6);
+  background: var(--wos-surface-1);
+}
+
+.wos-window-route-loading .wos-state-block {
+  width: min(360px, 100%);
+}
+
 .wos-window-route-body--chat {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

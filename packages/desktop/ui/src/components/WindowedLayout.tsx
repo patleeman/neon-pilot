@@ -9,6 +9,7 @@ import {
   WindowedChatSurface,
   WindowedMenuPanel,
   WindowedSegmentedControl,
+  WindowedStateBlock,
   WindowFrame,
 } from '@neon-pilot/windowed-os-ui';
 import { type CSSProperties, type ReactNode, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -48,7 +49,6 @@ import {
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
 import { Layout } from './Layout';
-import { QuietLoadingState } from './ui';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
 type WindowKind = 'chat' | 'route';
@@ -746,7 +746,7 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
             <Route
               path="conversations"
               element={
-                <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                <Suspense fallback={<WindowedRouteLoading label="Loading conversation" />}>
                   <ConversationPage key="draft" draft />
                 </Suspense>
               }
@@ -754,7 +754,7 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
             <Route
               path="conversations/new"
               element={
-                <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                <Suspense fallback={<WindowedRouteLoading label="Loading conversation" />}>
                   <ConversationPage key="draft" draft />
                 </Suspense>
               }
@@ -762,7 +762,7 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
             <Route
               path="conversations/:id"
               element={
-                <Suspense fallback={<QuietLoadingState label="Loading conversation" />}>
+                <Suspense fallback={<WindowedRouteLoading label="Loading conversation" />}>
                   <ConversationPage />
                 </Suspense>
               }
@@ -772,6 +772,14 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
         </Routes>
       </WindowRouteScope>
     </WindowedChatSurface>
+  );
+}
+
+function WindowedRouteLoading({ label }: { label: string }) {
+  return (
+    <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label={label}>
+      <WindowedStateBlock title={label}>Preparing the window contents.</WindowedStateBlock>
+    </div>
   );
 }
 

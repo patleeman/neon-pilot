@@ -1,3 +1,4 @@
+import { WindowedStateBlock } from '@neon-pilot/windowed-os-ui';
 import { Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -17,7 +18,7 @@ export function ExtensionRouteHost({ shellPresentation = 'stable' }: { shellPres
   const routeKey = buildExtensionRouteKey(location.pathname, location.search);
 
   return (
-    <Suspense fallback={<QuietExtensionRouteLoading />}>
+    <Suspense fallback={<ExtensionRouteLoading shellPresentation={shellPresentation} />}>
       <ExtensionPage key={routeKey} shellPresentation={shellPresentation} />
     </Suspense>
   );
@@ -25,4 +26,15 @@ export function ExtensionRouteHost({ shellPresentation = 'stable' }: { shellPres
 
 export function QuietExtensionRouteLoading() {
   return <QuietLoadingState label="Loading extension page" />;
+}
+
+function ExtensionRouteLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
+  if (shellPresentation !== 'windowed') {
+    return <QuietExtensionRouteLoading />;
+  }
+  return (
+    <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading extension page">
+      <WindowedStateBlock title="Loading extension page">Preparing the window contents.</WindowedStateBlock>
+    </div>
+  );
 }
