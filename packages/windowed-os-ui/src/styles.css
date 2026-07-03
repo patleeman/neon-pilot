@@ -1885,6 +1885,13 @@
   border-top: 0;
 }
 
+.wos-list-item[data-depth='1'] {
+  width: calc(100% - 14px);
+  margin-left: 14px;
+  border-top-color: color-mix(in oklab, var(--wos-ink-900) 18%, transparent);
+  padding-block: 6px;
+}
+
 .wos-list-item[data-accent='chat'] {
   --wos-list-active: var(--wos-chat);
   --wos-list-active-ink: white;
@@ -1948,6 +1955,11 @@
 
 .wos-list-item__title {
   font: var(--wos-text-row);
+}
+
+.wos-list-item[data-depth='1'] .wos-list-item__title {
+  font: var(--wos-text-meta);
+  font-weight: 750;
 }
 
 .wos-list-item__meta,

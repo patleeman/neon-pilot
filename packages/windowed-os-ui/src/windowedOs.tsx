@@ -575,13 +575,23 @@ export interface WindowedListItemProps {
   detail?: string;
   active?: boolean;
   accent?: AppAccent;
+  depth?: 0 | 1;
   status?: ReactNode;
   onSelect?: () => void;
 }
 
-export function WindowedListItem({ title, meta, detail, active = false, accent = 'settings', status, onSelect }: WindowedListItemProps) {
+export function WindowedListItem({
+  title,
+  meta,
+  detail,
+  active = false,
+  accent = 'settings',
+  depth = 0,
+  status,
+  onSelect,
+}: WindowedListItemProps) {
   return (
-    <button type="button" className="wos-list-item" data-active={active} data-accent={accent} onClick={onSelect}>
+    <button type="button" className="wos-list-item" data-active={active} data-accent={accent} data-depth={depth} onClick={onSelect}>
       <span className="wos-list-item__copy">
         <span className="wos-list-item__title">{title}</span>
         {meta ? <span className="wos-list-item__meta">{meta}</span> : null}

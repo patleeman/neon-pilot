@@ -5100,7 +5100,7 @@ export function SettingsPage({
               <WindowedListItem
                 key={item.id}
                 title={settingsQuickLinkLabelText(item.label)}
-                active={item.id === activeRootSectionId}
+                active={item.id === effectiveActiveQuickLinkId}
                 accent="settings"
                 onSelect={() => focusSettingsSection(item)}
               />
@@ -5118,6 +5118,7 @@ export function SettingsPage({
                   title={settingsQuickLinkLabelText(child.label)}
                   active={child.id === effectiveActiveQuickLinkId}
                   accent="extensions"
+                  depth={1}
                   onSelect={() => focusSettingsSection(child)}
                 />
               )),

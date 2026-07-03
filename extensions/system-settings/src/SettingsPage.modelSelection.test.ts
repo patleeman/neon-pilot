@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -166,5 +169,15 @@ describe('settings section scrolling', () => {
     scrollSettingsSectionIntoView(container, 'settings-extension-missing');
 
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+  });
+});
+
+describe('windowed settings navigation', () => {
+  it('renders nested settings routes as child rows without marking the parent active', () => {
+    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/SettingsPage.tsx'), 'utf8');
+
+    expect(source).toContain('active={item.id === effectiveActiveQuickLinkId}');
+    expect(source).toContain('depth={1}');
+    expect(source).not.toContain('active={item.id === activeRootSectionId}');
   });
 });

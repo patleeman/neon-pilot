@@ -8,6 +8,7 @@ import {
   WindowedDialogCopy,
   WindowedDialogStack,
   WindowedEmptyState,
+  WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageShell,
@@ -84,6 +85,16 @@ describe('WindowedToolbar', () => {
   });
 });
 
+describe('WindowedListItem', () => {
+  it('marks nested rows with a scoped depth attribute', () => {
+    const html = renderToStaticMarkup(<WindowedListItem title="Provider settings" depth={1} />);
+
+    expect(html).toContain('class="wos-list-item"');
+    expect(html).toContain('data-depth="1"');
+    expect(html).toContain('Provider settings');
+  });
+});
+
 describe('WindowedDialog content primitives', () => {
   it('renders scoped dialog stack and copy classes for reusable subwindow content', () => {
     const html = renderToStaticMarkup(
@@ -111,6 +122,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-extensions: oklch(70% 0.15 60);');
     expect(tokensSource).toContain('--wos-titlebar-h: 42px;');
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
+  });
+
+  it('styles nested list rows through scoped depth selectors', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".wos-list-item[data-depth='1']");
+    expect(stylesSource).toContain(".wos-list-item[data-depth='1'] .wos-list-item__title");
   });
 
   it('contains iframe paint inside window bodies and hides iframes during shell interaction', () => {
