@@ -76,13 +76,35 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     meta,
     status,
     action,
+    selected,
+    accent,
+    onSelect,
   }: {
     name: string;
     meta?: string;
     status?: React.ReactNode;
     action?: React.ReactNode;
+    selected?: boolean;
+    accent?: string;
+    onSelect?: () => void;
   }) => (
-    <div>
+    <div
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      data-selected={selected ? 'true' : undefined}
+      data-accent={accent}
+      data-selectable={onSelect ? 'true' : undefined}
+      onClick={(event) => {
+        if ((event.target as HTMLElement | null)?.closest('button, a, input, select, textarea, [role="switch"]')) return;
+        onSelect?.();
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        if ((event.target as HTMLElement | null)?.closest('button, a, input, select, textarea, [role="switch"]')) return;
+        event.preventDefault();
+        onSelect?.();
+      }}
+    >
       <span>{name}</span>
       {meta ? <span>{meta}</span> : null}
       {status}
@@ -352,17 +374,25 @@ describe('GatewaysPage', () => {
     expect(screen.queryByRole('dialog', { name: 'Telegram access' })).toBeNull();
     expect(screen.queryByRole('dialog', { name: 'Recent activity' })).toBeNull();
     expect(screen.queryByText('Gateway context')).toBeNull();
+    expect(screen.getByText('Configuration').closest('[data-selectable="true"]')?.getAttribute('data-accent')).toBe('gateways');
+    expect(screen.getByText('Access').closest('[data-selectable="true"]')?.getAttribute('data-accent')).toBe('gateways');
+    expect(screen.getByText('Activity').closest('[data-selectable="true"]')?.getAttribute('data-accent')).toBe('gateways');
 
     expect(screen.queryByRole('button', { name: 'Open' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Create' })).toBeNull();
-    const configurationButtons = screen.getAllByRole('button', { name: 'Open Telegram configuration' });
-    fireEvent.click(configurationButtons[configurationButtons.length - 1]);
+    const configurationRow = screen.getByText('Configuration').closest('[data-selectable="true"]');
+    if (!configurationRow) throw new Error('Missing configuration row');
+    fireEvent.click(configurationRow);
     expect(screen.getByRole('dialog', { name: 'Telegram configuration' })).toBeTruthy();
+    expect(configurationRow.getAttribute('data-selected')).toBe('true');
     expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Telegram configuration'));
-    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram access' }));
+    const accessRow = screen.getByText('Access').closest('[data-selectable="true"]');
+    if (!accessRow) throw new Error('Missing access row');
+    fireEvent.keyDown(accessRow, { key: 'Enter' });
     expect(screen.getByRole('dialog', { name: 'Telegram access' })).toBeTruthy();
+    expect(accessRow.getAttribute('data-selected')).toBe('true');
     expect(screen.getByText('Approved users')).toBeTruthy();
     expect(screen.getByText('No approved users yet.').classList.contains('wos-empty-state')).toBe(true);
     expect(screen.getByText('No approved chats yet.').classList.contains('wos-empty-state')).toBe(true);
@@ -371,13 +401,17 @@ describe('GatewaysPage', () => {
     expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Telegram access'));
-    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram activity' }));
+    const activityRow = screen.getByText('Activity').closest('[data-selectable="true"]');
+    if (!activityRow) throw new Error('Missing activity row');
+    fireEvent.click(activityRow);
     expect(screen.getByRole('dialog', { name: 'Recent activity' })).toBeTruthy();
+    expect(activityRow.getAttribute('data-selected')).toBe('true');
     expect(screen.getByText('No Telegram gateway events yet.').classList.contains('wos-empty-state')).toBe(true);
     expect(container.querySelector('.wos-gateway-empty')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Recent activity'));
     fireEvent.click(screen.getByRole('button', { name: 'Open Telegram access' }));
+    expect(screen.getByRole('dialog', { name: 'Telegram access' })).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText('Enable Telegram gateway'));
     await waitFor(() =>

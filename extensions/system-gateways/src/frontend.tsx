@@ -432,11 +432,14 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <WindowedDataRow
                   name="Configuration"
                   meta="Setup route, docs, and bot token"
+                  selected={windowedDialog === 'configuration'}
+                  accent="gateways"
                   status={
                     <WindowedBadge tone={tokenConfigured ? 'positive' : 'warning'}>
                       {tokenConfigured ? 'Configured' : 'Missing token'}
                     </WindowedBadge>
                   }
+                  onSelect={() => setWindowedDialog('configuration')}
                   action={
                     <WindowedPageButton
                       aria-label="Open Telegram configuration"
@@ -450,11 +453,14 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <WindowedDataRow
                   name="Access"
                   meta="Approved Telegram users and chats"
+                  selected={windowedDialog === 'access'}
+                  accent="gateways"
                   status={
                     <WindowedBadge tone="neutral">
                       {pageState.access.approvedUserIds.length + pageState.access.approvedChatIds.length} approved
                     </WindowedBadge>
                   }
+                  onSelect={() => setWindowedDialog('access')}
                   action={
                     <WindowedPageButton
                       aria-label="Open Telegram access"
@@ -468,9 +474,12 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <WindowedDataRow
                   name="Activity"
                   meta="Recent gateway events"
+                  selected={windowedDialog === 'activity'}
+                  accent="gateways"
                   status={
                     <WindowedBadge tone={telegramEvents.length ? 'positive' : 'neutral'}>{telegramEvents.length} events</WindowedBadge>
                   }
+                  onSelect={() => setWindowedDialog('activity')}
                   action={
                     <WindowedPageButton
                       aria-label="Open Telegram activity"
