@@ -130,7 +130,7 @@ async function playSound(ctx, settings, options = {}) {
 }
 async function deliverAlert(ctx, alert, settings, options = {}) {
   if (settings.nativeNotifications) {
-    const delivered = ctx.notify.system({
+    const delivered = await ctx.notify.system({
       title: alert.title || "Neon Pilot needs attention",
       subtitle: alert.conversationId ? "Conversation needs attention" : void 0,
       message: notificationBody(alert),
@@ -147,7 +147,7 @@ async function deliverAlert(ctx, alert, settings, options = {}) {
 async function readSettings(_input, ctx) {
   return {
     settings: await loadSettings(ctx),
-    systemNotificationsAvailable: ctx.notify.isSystemAvailable()
+    systemNotificationsAvailable: await ctx.notify.isSystemAvailable()
   };
 }
 async function updateSettings(input, ctx) {
@@ -155,7 +155,7 @@ async function updateSettings(input, ctx) {
   const settings = await saveSettings(ctx, { ...current, ...normalizeUpdate(input) });
   return {
     settings,
-    systemNotificationsAvailable: ctx.notify.isSystemAvailable()
+    systemNotificationsAvailable: await ctx.notify.isSystemAvailable()
   };
 }
 async function sendTestAlert(_input, ctx) {

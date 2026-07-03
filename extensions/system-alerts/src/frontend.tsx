@@ -49,6 +49,26 @@ function statusText(settings: AlertsSettings, systemNotificationsAvailable: bool
   return channels.length > 0 ? channels.join(' and ') : 'No delivery channel selected';
 }
 
+const INTERNAL_ERROR_PATTERNS = [
+  /^Extension "[^"]+" action "[^"]+" failed/i,
+  /^Extension backend action failed/i,
+  /^Extension host/i,
+  /\bworker\.enabled\b/i,
+  /\bCannot find module\b/i,
+  /\bENOENT\b/i,
+  /\bfile:\/\//i,
+  /\/api\//i,
+  /\blocalApi\.js\b/i,
+];
+
+export function formatAlertsSettingsFailure(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  const message = raw.trim();
+  if (!message) return fallback;
+  if (INTERNAL_ERROR_PATTERNS.some((pattern) => pattern.test(message))) return fallback;
+  return message;
+}
+
 export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanelProps) {
   const [state, setState] = useState<AlertsSettingsState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,7 +80,9 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
   }, [pa]);
 
   useEffect(() => {
-    void load().catch((error) => setMessage(error instanceof Error ? error.message : String(error)));
+    void load().catch((error) =>
+      setMessage(formatAlertsSettingsFailure(error, 'Alert settings are unavailable. Reload the extension or restart Neon Pilot.')),
+    );
   }, [load]);
 
   async function save(update: Partial<AlertsSettings>) {
@@ -70,7 +92,7 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
       const next = (await pa.extension.invoke('updateSettings', update)) as AlertsSettingsState;
       setState(next);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(formatAlertsSettingsFailure(error, 'Could not update alert settings. Reload the extension and try again.'));
     } finally {
       setBusy(false);
     }
@@ -83,7 +105,7 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
       await pa.extension.invoke('sendTestAlert');
       setMessage('Test alert sent.');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(formatAlertsSettingsFailure(error, 'Could not send a test alert. Check notification access and try again.'));
     } finally {
       setBusy(false);
     }
@@ -94,9 +116,7 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
   if (!state) {
     return isWindowed ? (
       <div className="alerts-page-windowed flex min-h-0 flex-col gap-3">
-        <WindowedStateBlock tone={message ? 'danger' : 'neutral'}>
-          {message ? `Alert settings failed to load: ${message}` : 'Loading alert settings.'}
-        </WindowedStateBlock>
+        <WindowedStateBlock tone={message ? 'danger' : 'neutral'}>{message ?? 'Loading alert settings.'}</WindowedStateBlock>
       </div>
     ) : (
       <>
@@ -117,7 +137,7 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
           </WindowedStateBlock>
         ) : null}
         <WindowedPageSection title="Delivery" meta={statusText(settings, state.systemNotificationsAvailable)}>
-          <WindowedDataTable>
+          <WindowedDataTable columns={[{ label: 'Alert' }, { label: 'State' }, { label: 'Control', align: 'right' }]}>
             <WindowedDataRow
               name="Attention alerts"
               meta={settings.enabled ? 'On' : 'Paused'}

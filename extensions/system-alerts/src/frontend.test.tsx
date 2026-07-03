@@ -3,7 +3,7 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { AlertsSettingsPanel } from './frontend.js';
+import { AlertsSettingsPanel, formatAlertsSettingsFailure } from './frontend.js';
 
 vi.mock('@neon-pilot/extensions/ui', () => ({
   Notice: ({ children }: { children: React.ReactNode }) => <div role="note">{children}</div>,
@@ -41,7 +41,17 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {action}
     </div>
   ),
-  WindowedDataTable: ({ children }: { children: React.ReactNode }) => <div className="wos-data-table">{children}</div>,
+  WindowedDataTable: ({ columns, children }: { columns: Array<{ label: string }>; children: React.ReactNode }) => {
+    if (!Array.isArray(columns)) throw new Error('WindowedDataTable requires columns');
+    return (
+      <div className="wos-data-table">
+        {columns.map((column) => (
+          <div key={column.label}>{column.label}</div>
+        ))}
+        {children}
+      </div>
+    );
+  },
   WindowedPageMain: ({ title, children }: { title: string; children: React.ReactNode }) => (
     <main className="wos-page-main">
       <h1>{title}</h1>
@@ -245,7 +255,7 @@ describe('AlertsSettingsPanel', () => {
 
   it('shows a windowed error state when alert settings fail to load', async () => {
     const invoke = vi.fn(async () => {
-      throw new Error('settings action unavailable');
+      throw new Error('Extension "system-alerts" action "readSettings" failed: Cannot find module ./missing.js');
     });
 
     const { container } = renderPanel(invoke, 'windowed');
@@ -255,6 +265,66 @@ describe('AlertsSettingsPanel', () => {
     expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
-    expect(container.textContent).toContain('Alert settings failed to load: settings action unavailable');
+    expect(container.textContent).toContain('Alert settings are unavailable. Reload the extension or restart Neon Pilot.');
+    expect(container.textContent).not.toContain('Extension "system-alerts" action');
+    expect(container.textContent).not.toContain('Cannot find module');
+  });
+
+  it('sanitizes stable-shell alert settings load failures', async () => {
+    const invoke = vi.fn(async () => {
+      throw new Error('Extension "system-alerts" action "readSettings" must declare worker.enabled before it can run.');
+    });
+
+    const { container } = renderPanel(invoke, 'stable');
+    await act(async () => flush());
+
+    expect(container.textContent).toContain('Alert settings are unavailable. Reload the extension or restart Neon Pilot.');
+    expect(container.textContent).not.toContain('worker.enabled');
+  });
+
+  it('sanitizes alert settings save failures', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'readSettings') {
+        return {
+          settings: {
+            enabled: true,
+            nativeNotifications: true,
+            soundEnabled: true,
+            severity: 'disruptive',
+            sound: 'ping',
+          },
+          systemNotificationsAvailable: true,
+        };
+      }
+      throw new Error('Extension "system-alerts" action "updateSettings" failed: ENOENT: no such file or directory');
+    });
+
+    const { container } = renderPanel(invoke, 'windowed');
+    await act(async () => flush());
+
+    const toggle = container.querySelector<HTMLButtonElement>('[aria-label="Disable attention alerts"]');
+    expect(toggle).not.toBeNull();
+    await act(async () => {
+      toggle?.click();
+      await flush();
+    });
+
+    expect(container.textContent).toContain('Could not update alert settings. Reload the extension and try again.');
+    expect(container.textContent).not.toContain('ENOENT');
+  });
+
+  it('keeps simple validation failures readable', () => {
+    expect(formatAlertsSettingsFailure(new Error('Choose a sound before testing alerts.'), 'Fallback message.')).toBe(
+      'Choose a sound before testing alerts.',
+    );
+  });
+
+  it('hides internal alert settings failure details', () => {
+    expect(
+      formatAlertsSettingsFailure(
+        new Error('Extension "system-alerts" action "readSettings" failed: file:///tmp/localApi.js crashed'),
+        'Fallback message.',
+      ),
+    ).toBe('Fallback message.');
   });
 });

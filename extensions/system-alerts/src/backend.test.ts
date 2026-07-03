@@ -75,12 +75,21 @@ describe('system-alerts backend', () => {
     });
   });
 
+  it('awaits worker-backed notification availability before returning settings', async () => {
+    const ctx = createCtx();
+    ctx.notify.isSystemAvailable = vi.fn(async () => false) as never;
+
+    await expect(readSettings({}, ctx as never)).resolves.toEqual(
+      expect.objectContaining({
+        systemNotificationsAvailable: false,
+      }),
+    );
+  });
+
   it('updates only recognized settings fields', async () => {
     const ctx = createCtx();
 
-    await expect(
-      updateSettings({ enabled: false, severity: 'all', sound: 'tink', ignored: true }, ctx as never),
-    ).resolves.toEqual(
+    await expect(updateSettings({ enabled: false, severity: 'all', sound: 'tink', ignored: true }, ctx as never)).resolves.toEqual(
       expect.objectContaining({
         settings: expect.objectContaining({
           enabled: false,
@@ -101,6 +110,7 @@ describe('system-alerts backend', () => {
 
   it('delivers active disruptive alerts through native notification and sound', async () => {
     const ctx = createCtx();
+    ctx.notify.system = vi.fn(async () => true) as never;
 
     await onAlertUpserted(event(), ctx as never);
 

@@ -1,7 +1,7 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 
+import type { AlertRecord, AlertSoundId, AlertsSettings, AlertsSettingsState, AlertSubscriptionEvent } from './types.js';
 import { ALERT_SOUND_IDS } from './types.js';
-import type { AlertRecord, AlertsSettings, AlertsSettingsState, AlertSoundId, AlertSubscriptionEvent } from './types.js';
 
 const SETTINGS_KEY = 'settings';
 const NOTIFIED_PREFIX = 'notified/';
@@ -82,7 +82,10 @@ function alertMatchesSettings(alert: AlertRecord, settings: AlertsSettings): boo
 function notificationBody(alert: AlertRecord): string {
   const body = alert.body.trim();
   if (!body) return 'Open Neon Pilot to review the alert.';
-  const firstLine = body.split('\n').map((line) => line.trim()).find(Boolean);
+  const firstLine = body
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean);
   return firstLine ?? 'Open Neon Pilot to review the alert.';
 }
 
@@ -134,7 +137,7 @@ async function deliverAlert(
   options: { forceSound?: boolean } = {},
 ): Promise<void> {
   if (settings.nativeNotifications) {
-    const delivered = ctx.notify.system({
+    const delivered = await ctx.notify.system({
       title: alert.title || 'Neon Pilot needs attention',
       subtitle: alert.conversationId ? 'Conversation needs attention' : undefined,
       message: notificationBody(alert),
@@ -153,7 +156,7 @@ async function deliverAlert(
 export async function readSettings(_input: unknown, ctx: ExtensionBackendContext): Promise<AlertsSettingsState> {
   return {
     settings: await loadSettings(ctx),
-    systemNotificationsAvailable: ctx.notify.isSystemAvailable(),
+    systemNotificationsAvailable: await ctx.notify.isSystemAvailable(),
   };
 }
 
@@ -162,7 +165,7 @@ export async function updateSettings(input: unknown, ctx: ExtensionBackendContex
   const settings = await saveSettings(ctx, { ...current, ...normalizeUpdate(input) });
   return {
     settings,
-    systemNotificationsAvailable: ctx.notify.isSystemAvailable(),
+    systemNotificationsAvailable: await ctx.notify.isSystemAvailable(),
   };
 }
 

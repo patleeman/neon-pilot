@@ -2051,10 +2051,10 @@ var useConversationScrollLayoutEffect = typeof window === "undefined" || /\b(jsd
 
 // packages/desktop/ui/src/pages/ConversationPage.tsx
 var ConversationArtifactModal = lazy(
-  () => import("./chunks/ConversationArtifactModal-P533AAXM.js").then((module) => ({ default: module.ConversationArtifactModal }))
+  () => import("./chunks/ConversationArtifactModal-CNLESLYG.js").then((module) => ({ default: module.ConversationArtifactModal }))
 );
 var ConversationDrawingsPickerModal = lazy(
-  () => import("./chunks/ConversationDrawingsPickerModal-5H7TEJQ4.js").then((module) => ({ default: module.ConversationDrawingsPickerModal }))
+  () => import("./chunks/ConversationDrawingsPickerModal-L3LIV3WT.js").then((module) => ({ default: module.ConversationDrawingsPickerModal }))
 );
 var loadChatView = () => import("./chunks/ChatView-PVQRVGOW.js").then((module) => ({ default: module.ChatView }));
 var ChatView = lazy(loadChatView);
@@ -2090,6 +2090,149 @@ var SettingsPanelErrorBoundary = class extends neon_pilot_shared_react_default.C
   }
 };
 
+// packages/windowed-os-ui/src/windowedOs.tsx
+init_neon_pilot_shared_react();
+function cx2(...classes) {
+  return classes.filter(Boolean).join(" ");
+}
+function WindowedPageSection({ title, meta, children, className }) {
+  return /* @__PURE__ */ jsxs("section", { className: cx2("wos-page-section", className), children: [
+    title || meta ? /* @__PURE__ */ jsxs("header", { className: "wos-page-section__header", children: [
+      title ? /* @__PURE__ */ jsx("h3", { children: title }) : null,
+      meta ? /* @__PURE__ */ jsx("span", { children: meta }) : null
+    ] }) : null,
+    children
+  ] });
+}
+function WindowedPageButton({
+  children,
+  tone = "neutral",
+  type = "button",
+  density = "normal",
+  className,
+  ...props
+}) {
+  return /* @__PURE__ */ jsx("button", { type, className: cx2("wos-page-button", className), "data-tone": tone, "data-density": density, ...props, children });
+}
+function WindowedSelect({ className, children, ...props }) {
+  return /* @__PURE__ */ jsx("select", { className: cx2("wos-select", className), ...props, children });
+}
+function WindowedBadge({ children, tone = "neutral", className }) {
+  return /* @__PURE__ */ jsx("span", { className: cx2("wos-badge", className), "data-tone": tone, children });
+}
+function WindowedStateBlock({ title, children, tone = "neutral", action, className }) {
+  return /* @__PURE__ */ jsxs("div", { className: cx2("wos-state-block", className), "data-tone": tone, children: [
+    /* @__PURE__ */ jsxs("div", { className: "wos-state-block__copy", children: [
+      title ? /* @__PURE__ */ jsx("div", { className: "wos-state-block__title", children: title }) : null,
+      /* @__PURE__ */ jsx("div", { className: "wos-state-block__body", children })
+    ] }),
+    action ? /* @__PURE__ */ jsx("div", { className: "wos-state-block__action", children: action }) : null
+  ] });
+}
+function WindowedToggle({
+  checked = false,
+  accent = "routines",
+  onChange,
+  label = "Toggle",
+  disabled = false,
+  className
+}) {
+  return /* @__PURE__ */ jsx(
+    "button",
+    {
+      type: "button",
+      role: "switch",
+      "aria-checked": checked,
+      "aria-label": label,
+      className: cx2("wos-toggle", className),
+      "data-checked": checked,
+      "data-accent": accent,
+      disabled,
+      onClick: () => onChange?.(!checked),
+      children: /* @__PURE__ */ jsx("span", { className: "wos-toggle__thumb", "aria-hidden": "true" })
+    }
+  );
+}
+function isInteractiveTarget(target, container) {
+  if (!(target instanceof HTMLElement)) return false;
+  const interactive = target.closest('button, a, input, select, textarea, [role="button"], [role="switch"]');
+  return Boolean(interactive && interactive !== container);
+}
+function WindowedDataRow({
+  name,
+  meta,
+  cells,
+  enabled = false,
+  selected = false,
+  accent = "settings",
+  status,
+  action,
+  onToggle,
+  onSelect,
+  className
+}) {
+  const hasCells = Boolean(cells?.length);
+  const renderedCells = cells?.map((cell, index) => {
+    const cellObject = cell && typeof cell === "object" && "value" in cell ? cell : { value: cell };
+    return /* @__PURE__ */ jsx("div", { className: cx2("wos-data-row__cell", cellObject.className), "data-align": cellObject.align ?? "left", children: cellObject.value }, index);
+  });
+  const selectable = Boolean(onSelect);
+  const handleClick = (event) => {
+    if (!selectable || isInteractiveTarget(event.target, event.currentTarget)) return;
+    onSelect?.();
+  };
+  const handleKeyDown = (event) => {
+    if (!selectable || isInteractiveTarget(event.target, event.currentTarget)) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect?.();
+  };
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: cx2("wos-data-row", className),
+      "data-cells": hasCells ? cells?.length : void 0,
+      "data-selected": selected ? "true" : void 0,
+      "data-selectable": selectable ? "true" : void 0,
+      "data-accent": accent,
+      role: selectable ? "button" : void 0,
+      tabIndex: selectable ? 0 : void 0,
+      "aria-pressed": selectable ? selected : void 0,
+      onClick: handleClick,
+      onKeyDown: handleKeyDown,
+      children: [
+        /* @__PURE__ */ jsxs("div", { className: "wos-data-row__identity", children: [
+          /* @__PURE__ */ jsx("div", { className: "wos-data-row__name", children: name }),
+          meta ? /* @__PURE__ */ jsx("div", { className: "wos-data-row__meta", children: meta }) : null
+        ] }),
+        hasCells ? renderedCells : /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx("div", { className: "wos-data-row__status", children: status ?? /* @__PURE__ */ jsx(WindowedBadge, { tone: enabled ? "positive" : "neutral", children: enabled ? "Enabled" : "Disabled" }) }),
+          /* @__PURE__ */ jsx("div", { className: "wos-data-row__action", children: action ?? /* @__PURE__ */ jsx(WindowedToggle, { checked: enabled, accent: "chat", label: `${enabled ? "Disable" : "Enable"} ${name}`, onChange: onToggle }) })
+        ] }),
+        hasCells && action ? /* @__PURE__ */ jsx("div", { className: "wos-data-row__action", children: action }) : null
+      ]
+    }
+  );
+}
+function WindowedDataTable({ columns, children, className, columnTemplate: customColumnTemplate }) {
+  const columnTemplate = customColumnTemplate ?? (columns.length <= 3 ? void 0 : [
+    "minmax(0, 2fr)",
+    ...columns.slice(1).map((column) => column.align === "right" ? "minmax(72px, 0.68fr)" : "minmax(96px, 0.9fr)")
+  ].join(" "));
+  return /* @__PURE__ */ jsxs(
+    "div",
+    {
+      className: cx2("wos-data-table", className),
+      "data-columns": columns.length,
+      style: columnTemplate ? { "--wos-data-column-template": columnTemplate } : void 0,
+      children: [
+        /* @__PURE__ */ jsx("div", { className: "wos-data-table__header", children: columns.map((column) => /* @__PURE__ */ jsx("div", { className: "wos-data-table__heading", "data-align": column.align ?? "left", children: column.label }, column.label)) }),
+        /* @__PURE__ */ jsx("div", { className: "wos-data-table__body", children })
+      ]
+    }
+  );
+}
+
 // extensions/system-alerts/src/frontend.tsx
 init_neon_pilot_shared_react();
 var SOUND_OPTIONS = [
@@ -2116,16 +2259,36 @@ function statusText(settings, systemNotificationsAvailable) {
   ].filter(Boolean);
   return channels.length > 0 ? channels.join(" and ") : "No delivery channel selected";
 }
-function AlertsSettingsPanel({ pa }) {
+var INTERNAL_ERROR_PATTERNS = [
+  /^Extension "[^"]+" action "[^"]+" failed/i,
+  /^Extension backend action failed/i,
+  /^Extension host/i,
+  /\bworker\.enabled\b/i,
+  /\bCannot find module\b/i,
+  /\bENOENT\b/i,
+  /\bfile:\/\//i,
+  /\/api\//i,
+  /\blocalApi\.js\b/i
+];
+function formatAlertsSettingsFailure(error, fallback) {
+  const raw = error instanceof Error ? error.message : String(error ?? "");
+  const message = raw.trim();
+  if (!message) return fallback;
+  if (INTERNAL_ERROR_PATTERNS.some((pattern) => pattern.test(message))) return fallback;
+  return message;
+}
+function AlertsSettingsPanel({ pa, settingsContext }) {
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
   const load = useCallback(async () => {
-    const next = await pa.extension.invoke("readSettings");
+    const next = await pa.extension.invoke("readSettings", {});
     setState(next);
   }, [pa]);
   useEffect(() => {
-    void load().catch((error) => setMessage(error instanceof Error ? error.message : String(error)));
+    void load().catch(
+      (error) => setMessage(formatAlertsSettingsFailure(error, "Alert settings are unavailable. Reload the extension or restart Neon Pilot."))
+    );
   }, [load]);
   async function save(update) {
     setBusy(true);
@@ -2134,7 +2297,7 @@ function AlertsSettingsPanel({ pa }) {
       const next = await pa.extension.invoke("updateSettings", update);
       setState(next);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(formatAlertsSettingsFailure(error, "Could not update alert settings. Reload the extension and try again."));
     } finally {
       setBusy(false);
     }
@@ -2146,15 +2309,113 @@ function AlertsSettingsPanel({ pa }) {
       await pa.extension.invoke("sendTestAlert");
       setMessage("Test alert sent.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(formatAlertsSettingsFailure(error, "Could not send a test alert. Check notification access and try again."));
     } finally {
       setBusy(false);
     }
   }
+  const isWindowed = settingsContext?.shellPresentation === "windowed";
   if (!state) {
-    return /* @__PURE__ */ jsx(QuietLoadingState, { label: "Loading alert settings", className: "min-h-12" });
+    return isWindowed ? /* @__PURE__ */ jsx("div", { className: "alerts-page-windowed flex min-h-0 flex-col gap-3", children: /* @__PURE__ */ jsx(WindowedStateBlock, { tone: message ? "danger" : "neutral", children: message ?? "Loading alert settings." }) }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsx(QuietLoadingState, { label: "Loading alert settings", className: "min-h-12" }),
+      message ? /* @__PURE__ */ jsx(Notice, { tone: "danger", children: message }) : null
+    ] });
   }
   const settings = state.settings;
+  if (isWindowed) {
+    return /* @__PURE__ */ jsxs("div", { className: "alerts-page-windowed flex min-h-0 flex-col gap-3", children: [
+      !state.systemNotificationsAvailable && settings.nativeNotifications ? /* @__PURE__ */ jsx(WindowedStateBlock, { tone: "warning", children: "macOS notifications are not available until the desktop app notification bridge is ready." }) : null,
+      /* @__PURE__ */ jsx(WindowedPageSection, { title: "Delivery", meta: statusText(settings, state.systemNotificationsAvailable), children: /* @__PURE__ */ jsxs(WindowedDataTable, { columns: [{ label: "Alert" }, { label: "State" }, { label: "Control", align: "right" }], children: [
+        /* @__PURE__ */ jsx(
+          WindowedDataRow,
+          {
+            name: "Attention alerts",
+            meta: settings.enabled ? "On" : "Paused",
+            action: /* @__PURE__ */ jsx(
+              WindowedToggle,
+              {
+                checked: settings.enabled,
+                disabled: busy,
+                accent: "settings",
+                label: settings.enabled ? "Disable attention alerts" : "Enable attention alerts",
+                onChange: () => void save({ enabled: !settings.enabled })
+              }
+            )
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          WindowedDataRow,
+          {
+            name: "Native notification",
+            meta: state.systemNotificationsAvailable ? "macOS notifications" : "macOS notifications unavailable",
+            action: /* @__PURE__ */ jsx(
+              WindowedToggle,
+              {
+                checked: settings.nativeNotifications,
+                disabled: busy || !settings.enabled,
+                accent: "settings",
+                label: settings.nativeNotifications ? "Disable native notifications" : "Enable native notifications",
+                onChange: () => void save({ nativeNotifications: !settings.nativeNotifications })
+              }
+            )
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          WindowedDataRow,
+          {
+            name: "Sound",
+            meta: settings.soundEnabled ? settings.sound : "Off",
+            cells: [
+              {
+                value: /* @__PURE__ */ jsx(
+                  WindowedSelect,
+                  {
+                    "aria-label": "Alert sound",
+                    value: settings.sound,
+                    disabled: busy || !settings.enabled || !settings.soundEnabled,
+                    onChange: (event) => void save({ sound: event.target.value }),
+                    children: SOUND_OPTIONS.map((option) => /* @__PURE__ */ jsx("option", { value: option.id, children: option.label }, option.id))
+                  }
+                ),
+                className: "wos-data-row__cell--wide"
+              }
+            ],
+            action: /* @__PURE__ */ jsx(
+              WindowedToggle,
+              {
+                checked: settings.soundEnabled,
+                disabled: busy || !settings.enabled,
+                accent: "settings",
+                label: settings.soundEnabled ? "Disable alert sound" : "Enable alert sound",
+                onChange: () => void save({ soundEnabled: !settings.soundEnabled })
+              }
+            )
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          WindowedDataRow,
+          {
+            name: "Notify for",
+            meta: settings.severity === "all" ? "All active alerts" : "Disruptive alerts",
+            action: /* @__PURE__ */ jsxs(
+              WindowedSelect,
+              {
+                "aria-label": "Alert severity",
+                value: settings.severity,
+                disabled: busy || !settings.enabled,
+                onChange: (event) => void save({ severity: event.target.value }),
+                children: [
+                  /* @__PURE__ */ jsx("option", { value: "disruptive", children: "Disruptive alerts" }),
+                  /* @__PURE__ */ jsx("option", { value: "all", children: "All active alerts" })
+                ]
+              }
+            )
+          }
+        )
+      ] }) }),
+      /* @__PURE__ */ jsx(WindowedPageSection, { title: "Test alert", meta: message ?? "Send a notification and play the selected sound.", children: /* @__PURE__ */ jsx(WindowedPageButton, { type: "button", tone: "accent", disabled: busy, onClick: () => void testAlert(), children: busy ? "Working..." : "Send test" }) })
+    ] });
+  }
   return /* @__PURE__ */ jsxs("div", { className: "space-y-3", children: [
     !state.systemNotificationsAvailable && settings.nativeNotifications ? /* @__PURE__ */ jsx(Notice, { tone: "warning", children: "macOS notifications are not available until the desktop app notification bridge is ready." }) : null,
     /* @__PURE__ */ jsx(SettingsRow, { title: "Attention alerts", description: statusText(settings, state.systemNotificationsAvailable), children: /* @__PURE__ */ jsx(
@@ -2216,5 +2477,6 @@ function AlertsSettingsPanel({ pa }) {
   ] });
 }
 export {
-  AlertsSettingsPanel
+  AlertsSettingsPanel,
+  formatAlertsSettingsFailure
 };
