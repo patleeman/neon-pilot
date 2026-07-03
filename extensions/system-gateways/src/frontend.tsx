@@ -23,6 +23,7 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
+  WindowedDialogStack,
   WindowedEmptyState,
   WindowedField,
   WindowedKeyValueGrid,
@@ -451,7 +452,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
         {dialogTitle ? (
           <WindowedDialog title={dialogTitle} meta={dialogMeta} accent="gateways" onClose={() => setWindowedDialog(null)}>
             {windowedDialog === 'configuration' ? (
-              <div className="grid gap-3">
+              <WindowedDialogStack>
                 <WindowedKeyValueList
                   items={[
                     { label: 'Setup', value: telegramProvider?.setupRoute ?? '/gateways' },
@@ -488,7 +489,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                     ) : null}
                   </div>
                 </div>
-              </div>
+              </WindowedDialogStack>
             ) : null}
 
             {windowedDialog === 'access' ? (

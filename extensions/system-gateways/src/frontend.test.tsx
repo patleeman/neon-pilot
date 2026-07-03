@@ -113,6 +113,7 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </section>
   ),
+  WindowedDialogStack: ({ children }: { children: React.ReactNode }) => <div className="wos-dialog-stack">{children}</div>,
   WindowedEmptyState: ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
     <div className="wos-empty-state" data-tone={tone}>
       {children}
@@ -350,6 +351,7 @@ describe('GatewaysPage', () => {
     const toolButtons = screen.getAllByRole('button', { name: 'Open' });
     fireEvent.click(toolButtons[0]);
     expect(screen.getByRole('dialog', { name: 'Telegram configuration' })).toBeTruthy();
+    expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Telegram configuration'));
     fireEvent.click(toolButtons[1]);
