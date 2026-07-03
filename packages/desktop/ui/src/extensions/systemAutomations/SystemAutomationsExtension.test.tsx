@@ -233,8 +233,8 @@ describe('AutomationsPage', () => {
     expect(container.querySelector('.wos-page-shell')).not.toBeNull();
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(container.querySelector('.wos-page-rail')).toBeNull();
-    expect(container.querySelector('.wos-automation-table')).not.toBeNull();
-    expect(container.textContent).toContain('Scheduled work');
+    expect(container.querySelector('.wos-data-table')).not.toBeNull();
+    expect(container.querySelector('.wos-automation-table')).toBeNull();
     expect(container.textContent).toContain('Task queue');
     expect(container.textContent).toContain('Release watch');
     expect(container.textContent).toContain('Release watch thread');
@@ -246,7 +246,7 @@ describe('AutomationsPage', () => {
 
     await act(async () =>
       Array.from(container.querySelectorAll('button'))
-        .find((button) => button.textContent?.startsWith('Release watch'))
+        .find((button) => button.getAttribute('aria-label') === 'Open details for Release watch')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
     );
 

@@ -75,8 +75,12 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy();
     expect(screen.getByText('Status')).toBeTruthy();
+    expect(container.querySelector('.wos-data-table')).toBeTruthy();
+    expect(container.querySelector('.wos-automation-table')).toBeNull();
     expect(screen.getByText('Quarter-hour chime')).toBeTruthy();
     expect(screen.getByText('Release watch')).toBeTruthy();
+    expect(screen.getByText(/15,45 \* \* \* \*/)).toBeTruthy();
+    expect(screen.getByText(/Automation log/)).toBeTruthy();
     expect(screen.getAllByText('Running').some((element) => element.closest('.wos-badge')?.getAttribute('data-tone') === 'warning')).toBe(
       true,
     );
@@ -87,6 +91,8 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByRole('button', { name: 'Run Quarter-hour chime' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Pause Quarter-hour chime' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit Quarter-hour chime' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open details for Quarter-hour chime' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open owner thread for Quarter-hour chime: Automation log' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Run Release watch' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Resume Release watch' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit Release watch' })).toBeTruthy();
