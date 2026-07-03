@@ -934,7 +934,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('shows the native browser view inside a focused single windowed chat host until blockers mount', async () => {
+  it('keeps the native browser hidden inside a focused single windowed chat host before blockers mount', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
@@ -978,9 +978,8 @@ describe('WorkbenchBrowserTab', () => {
       );
     });
     await flushAsyncWork();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: true, bounds: { x: 20, y: 20, width: 640, height: 420 } }),
-    );
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -1036,9 +1035,8 @@ describe('WorkbenchBrowserTab', () => {
       );
     });
     await flushAsyncWork();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: true, bounds: { x: 20, y: 20, width: 640, height: 420 } }),
-    );
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -1097,9 +1095,8 @@ describe('WorkbenchBrowserTab', () => {
       );
     });
     await flushAsyncWork();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: true, bounds: { x: 20, y: 20, width: 640, height: 420 } }),
-    );
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -1676,7 +1673,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('shows native browser views inside the windowed shell when focused-window markers match', async () => {
+  it('keeps native browser views hidden inside the windowed shell even when focused-window markers match', async () => {
     document.body.innerHTML = '';
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
@@ -1705,7 +1702,6 @@ describe('WorkbenchBrowserTab', () => {
     container.innerHTML =
       '<div class="windowed-os-shell" data-focused-window-id="browser"><section class="wos-window" data-window-id="browser" data-focused="true" style="z-index: 10"><div class="wos-window__body"><div id="browser-root"></div></div></section></div>';
     document.body.appendChild(container);
-    const shell = container.querySelector<HTMLElement>('.windowed-os-shell')!;
     const browserRoot = container.querySelector('#browser-root')!;
     root = createRoot(browserRoot);
     act(() => {
@@ -1722,17 +1718,8 @@ describe('WorkbenchBrowserTab', () => {
       );
     });
     await flushAsyncWork();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: true, bounds: { x: 36, y: 92, width: 728, height: 470 } }),
-    );
 
-    setWorkbenchBrowserBounds.mockClear();
-    act(() => {
-      shell.dataset.focusedWindowId = 'route:routines';
-    });
-    await flushAsyncWork();
-
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 

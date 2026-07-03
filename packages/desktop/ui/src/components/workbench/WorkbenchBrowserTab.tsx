@@ -582,6 +582,10 @@ function shouldSuspendForWindowedShellEvent(host: HTMLElement | null, event: Eve
   );
 }
 
+function isInsideWindowedShell(host: HTMLElement | null): boolean {
+  return Boolean(host?.closest('.windowed-os-shell'));
+}
+
 export function formatWorkbenchBrowserError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? '');
   const firstLine = raw.split('\n')[0]?.trim() ?? '';
@@ -788,6 +792,11 @@ export function WorkbenchBrowserTab({
   const syncBounds = useCallback(() => {
     const host = browserHostRef.current;
     if (!bridge || !host || closedRef.current) {
+      return;
+    }
+
+    if (isInsideWindowedShell(host)) {
+      hideBrowserView({ force: true });
       return;
     }
 

@@ -402,6 +402,9 @@ describe('Windowed OS Storybook examples', () => {
       ".windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.wos-composited-frame) > .wos-window__iframe-shield",
     );
     expect(stylesSource).toContain(
+      ".windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(iframe) > .wos-window__iframe-shield",
+    );
+    expect(stylesSource).toContain(
       ".windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.wos-window__body iframe) > .wos-window__iframe-shield",
     );
     expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window > .wos-window__iframe-shield");
@@ -418,6 +421,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-composited-frame");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-composited-frame");
+    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) .wos-composited-frame');
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-badge) .wos-composited-frame');

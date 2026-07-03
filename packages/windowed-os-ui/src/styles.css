@@ -508,6 +508,7 @@
 .windowed-os-shell[data-frame-paint-blocked='true'] .wos-composited-frame,
 .windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-composited-frame,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-window iframe,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe,
 .wos-window__body:has(.wos-dialog-layer) .wos-composited-frame,
 .wos-window__body:has(.wos-dialog-layer) iframe,
@@ -579,6 +580,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 .windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield,
 .windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.wos-composited-frame) > .wos-window__iframe-shield,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(iframe) > .wos-window__iframe-shield,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.wos-window__body iframe) > .wos-window__iframe-shield {
   display: block;
 }
