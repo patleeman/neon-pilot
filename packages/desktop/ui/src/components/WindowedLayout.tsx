@@ -639,7 +639,8 @@ export function WindowedLayout() {
   );
   const chatWindows = windows.filter((windowModel) => windowModel.kind === 'chat');
   const visibleWindows = windows.filter((windowModel) => !windowModel.minimized);
-  const focusedWindowId = visibleWindows.find((windowModel) => windowModel.focused)?.id ?? null;
+  const focusedWindow = visibleWindows.find((windowModel) => windowModel.focused) ?? null;
+  const focusedWindowId = focusedWindow?.id ?? null;
   const visibleWindowSignature = useMemo(
     () =>
       visibleWindows
@@ -1088,7 +1089,9 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
 
-  useWindowedBrowserSuppression(Boolean(launcherOpen || drag || resize || snapTarget || browserLayerSettling));
+  useWindowedBrowserSuppression(
+    Boolean(launcherOpen || drag || resize || snapTarget || browserLayerSettling || focusedWindow?.kind === 'route'),
+  );
 
   useEffect(() => {
     if (!visibleWindowSignature) return;

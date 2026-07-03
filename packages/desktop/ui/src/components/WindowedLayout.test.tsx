@@ -750,6 +750,53 @@ describe('WindowedLayout route windows', () => {
     });
   });
 
+  it('keeps native browser views suppressed while a route window is focused', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+    window.localStorage.setItem(
+      'pa:workbench-browser-tabs',
+      JSON.stringify({
+        version: 1,
+        activeTabId: 'tab-a',
+        tabs: [{ id: 'tab-a', title: 'Docs', url: 'https://example.com', urlDraft: '' }],
+        closedTabs: [],
+      }),
+    );
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+    await screen.findByRole('region', { name: /routines/i });
+    setWorkbenchBrowserBounds.mockClear();
+
+    await waitFor(
+      () => {
+        expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+        expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
+      },
+      { timeout: 750 },
+    );
+  });
+
   it('publishes the single focused window id for native browser layering checks', async () => {
     seedWindowedWindows([
       {

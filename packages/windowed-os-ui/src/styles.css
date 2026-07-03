@@ -471,10 +471,13 @@
 
 .wos-window__body {
   position: relative;
+  z-index: 0;
   min-height: 0;
   overflow: hidden;
   background: var(--wos-surface-1);
+  clip-path: inset(0);
   contain: paint;
+  isolation: isolate;
 }
 
 .wos-window__body iframe {
@@ -487,12 +490,14 @@
 }
 
 .wos-window[data-focused='false'] .wos-window__body iframe,
+.windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe,
 .windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe,
 .wos-window__body:has(.wos-dialog-layer) iframe,
 .windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-dialog-layer) .wos-window__body iframe {
+  opacity: 0;
   visibility: hidden;
   pointer-events: none;
 }
