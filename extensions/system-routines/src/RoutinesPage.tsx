@@ -2235,6 +2235,15 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     const selectedRuns = data.runs.filter((run) => run.hookId === selectedHook.id);
     const renderWindowedRoutine = (routine: Routine, index: number) => {
       const isUnsaved = unsavedRoutineIds.has(routine.id);
+      const routineSummary = `${routineLabel(routine.type)} · ${routineFailureLabel(routine)}`;
+      const routineMeta = [
+        routine.instruction || 'No instruction yet.',
+        isUnsaved ? 'unsaved' : null,
+        routine.modelRef ? routine.modelRef : null,
+        routine.enabled ? 'enabled' : 'disabled',
+      ]
+        .filter(Boolean)
+        .join(' · ');
       return (
         <WindowedTimelineItem
           key={routine.id}
@@ -2244,10 +2253,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         >
           <div data-routine-id={routine.id}>
             <WindowedDataRow
-              name={routine.instruction || 'No instruction yet.'}
-              meta={[isUnsaved ? 'unsaved' : null, routine.modelRef ? routine.modelRef : null, routine.enabled ? 'enabled' : 'disabled']
-                .filter(Boolean)
-                .join(' · ')}
+              className="wos-routine-summary-row"
+              name={routineSummary}
+              meta={routineMeta}
               status={<WindowedBadge tone={routineTone(routine)}>{routineStatusLabel(routine)}</WindowedBadge>}
               action={
                 <>

@@ -596,7 +596,9 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   position: absolute;
   inset: var(--wos-titlebar-h) 0 0;
   z-index: 95;
-  display: none;
+  display: none !important;
+  visibility: hidden;
+  opacity: 0;
   background: var(--wos-surface-1);
   pointer-events: none;
 }
@@ -3187,6 +3189,11 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   border-radius: 8px;
   background: var(--wos-surface-1);
   margin-top: 8px;
+}
+
+.wos-routine-summary-row .wos-data-row__meta {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .wos-routine-editor-bridge {

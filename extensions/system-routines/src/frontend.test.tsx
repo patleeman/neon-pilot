@@ -246,6 +246,9 @@ describe('RoutinesPage', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Delete' }).every((button) => button.getAttribute('data-tone') === 'danger')).toBe(true);
     expect(container.querySelector('.wos-timeline .wos-data-row')).toBeTruthy();
+    const routineRow = container.querySelector('.wos-routine-summary-row');
+    expect(routineRow?.querySelector('.wos-data-row__name')?.textContent).toBe('Choose path · 1 path');
+    expect(routineRow?.querySelector('.wos-data-row__meta')?.textContent).toContain('Use /skill:autoreview');
     expect(container.querySelector('.wos-routine-row')).toBeNull();
     expect(container.querySelector('.wos-routine-row__body')).toBeNull();
     fireEvent.click(screen.getByLabelText('Close Review code changes'));

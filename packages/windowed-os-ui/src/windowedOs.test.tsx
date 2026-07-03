@@ -539,6 +539,8 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('.wos-window__iframe-shield');
+    expect(stylesSource).toContain('.wos-window__iframe-shield {\n  position: absolute;');
+    expect(stylesSource).toContain('display: none !important;\n  visibility: hidden;\n  opacity: 0;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {\n  position: relative;\n  z-index: 0 !important;');
     expect(stylesSource).toContain('z-index: 95;');
     expect(stylesSource).toContain('.wos-window__titlebar {\n  position: relative;\n  z-index: 70;');
@@ -932,7 +934,9 @@ describe('Windowed OS Storybook examples', () => {
 
   it('documents the canonical Routines desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(source).toContain('export const RoutinesPage');
     expect(source).toContain('title="Routines"');
@@ -945,6 +949,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Routine runs"');
     expect(source).not.toContain('title="Selected routine"');
     expect(source).not.toContain('ariaLabel="Routine scope"');
+    expect(stylesSource).toContain('.wos-routine-summary-row .wos-data-row__meta');
+    expect(stylesSource).toContain('overflow-wrap: anywhere;');
   });
 
   it('documents the canonical Model Arena desktop page', () => {
