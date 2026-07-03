@@ -76,6 +76,9 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy();
     expect(screen.getByText('Status')).toBeTruthy();
     expect(container.querySelector('.wos-data-table')).toBeTruthy();
+    expect(container.querySelector<HTMLElement>('.wos-automation-queue')?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(13rem, 1fr) minmax(6.5rem, 0.42fr) minmax(23rem, 0.95fr)',
+    );
     expect(container.querySelector('.wos-automation-table')).toBeNull();
     expect(screen.getByText('Quarter-hour chime')).toBeTruthy();
     expect(screen.getByText('Release watch')).toBeTruthy();

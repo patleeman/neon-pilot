@@ -398,6 +398,53 @@ function visibleBrowserBoundsForHost(host: HTMLElement): { x: number; y: number;
   return { x, y, width, height };
 }
 
+function isHostOwnedRendererElement(host: HTMLElement, element: Element | null): boolean {
+  if (!element) {
+    return false;
+  }
+  if (element === host || host.contains(element)) {
+    return true;
+  }
+  const hostBody = host.closest<HTMLElement>('.wos-window__body');
+  return Boolean(hostBody && element === hostBody);
+}
+
+function isTopmostRendererOwnerAtHostPoints(host: HTMLElement | null): boolean {
+  if (!host || !host.isConnected || typeof document.elementFromPoint !== 'function') {
+    return true;
+  }
+
+  const bounds = visibleBrowserBoundsForHost(host);
+  if (!bounds) {
+    return false;
+  }
+
+  const left = bounds.x;
+  const top = bounds.y;
+  const right = bounds.x + bounds.width;
+  const bottom = bounds.y + bounds.height;
+  const insetX = Math.min(10, Math.max(1, bounds.width / 4));
+  const insetY = Math.min(10, Math.max(1, bounds.height / 4));
+  const points = [
+    [left + bounds.width / 2, top + bounds.height / 2],
+    [left + insetX, top + insetY],
+    [right - insetX, top + insetY],
+    [left + insetX, bottom - insetY],
+    [right - insetX, bottom - insetY],
+  ];
+
+  for (const [x, y] of points) {
+    const topElement = elementAtPoint(x, y);
+    if (!topElement) {
+      continue;
+    }
+    if (!isHostOwnedRendererElement(host, topElement)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
   if (!host || !host.isConnected || typeof document.elementFromPoint !== 'function') {
     return false;
@@ -731,6 +778,7 @@ export function WorkbenchBrowserTab({
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||
       isCoveredByWindowedShellLayer(host) ||
+      !isTopmostRendererOwnerAtHostPoints(host) ||
       isCoveredByPositionedRendererLayer(host) ||
       isCoveredByWindowDescendantLayer(host) ||
       isCoveredByRendererLayer(host);

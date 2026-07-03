@@ -52,6 +52,19 @@ describe('WindowedDataTable', () => {
     expect(html).toContain('class="wos-data-row__cell" data-align="right">1532</div>');
     expect(html).toContain('frontend 6W/2L/1T');
   });
+
+  it('lets dense product tables provide stable column templates', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDataTable
+        columnTemplate="minmax(14rem, 1fr) minmax(7rem, 0.4fr) minmax(20rem, 0.9fr)"
+        columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}
+      >
+        <WindowedDataRow name="Release watch" meta="Every Monday" action={<button type="button">Details</button>} />
+      </WindowedDataTable>,
+    );
+
+    expect(html).toContain('--wos-data-column-template:minmax(14rem, 1fr) minmax(7rem, 0.4fr) minmax(20rem, 0.9fr)');
+  });
 });
 
 describe('WindowedPageShell', () => {

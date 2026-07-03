@@ -49,6 +49,8 @@ describe('WorkbenchBrowserTab', () => {
     expect(source).toContain('const WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS = 160;');
     expect(source).toContain("browserHostRef.current?.closest('.windowed-os-shell')");
     expect(source).toContain('window.setInterval(syncBounds, syncInterval)');
+    expect(source).toContain('function isTopmostRendererOwnerAtHostPoints');
+    expect(source).toContain('!isTopmostRendererOwnerAtHostPoints(host)');
   });
 
   it('formats stopped native navigations without leaking Chromium abort details', () => {

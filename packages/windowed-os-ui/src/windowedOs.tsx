@@ -713,16 +713,18 @@ export interface WindowedDataTableProps {
   columns: WindowedDataColumn[];
   children: ReactNode;
   className?: string;
+  columnTemplate?: string;
 }
 
-export function WindowedDataTable({ columns, children, className }: WindowedDataTableProps) {
+export function WindowedDataTable({ columns, children, className, columnTemplate: customColumnTemplate }: WindowedDataTableProps) {
   const columnTemplate =
-    columns.length <= 3
+    customColumnTemplate ??
+    (columns.length <= 3
       ? undefined
       : [
           'minmax(0, 2fr)',
           ...columns.slice(1).map((column) => (column.align === 'right' ? 'minmax(72px, 0.68fr)' : 'minmax(96px, 0.9fr)')),
-        ].join(' ');
+        ].join(' '));
 
   return (
     <div

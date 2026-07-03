@@ -252,8 +252,9 @@ describe('AutomationsPage', () => {
 
     expect(container.querySelector('.wos-dialog')).not.toBeNull();
     expect(container.querySelector('.wos-dialog__title')?.textContent).toBe('Automation details');
-    expect(container.textContent).toContain('Automation context');
-    expect(container.textContent).toContain('Run now');
+    expect(container.textContent).not.toContain('Automation context');
+    expect(container.textContent).toContain('Actions');
+    expect(container.textContent).toContain('Run');
 
     await act(async () =>
       Array.from(container.querySelectorAll('button'))
