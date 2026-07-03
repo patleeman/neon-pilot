@@ -785,13 +785,17 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                     const runLabel = `Run ${title}`;
                     const toggleLabel = task.enabled ? `Pause ${title}` : `Resume ${title}`;
                     const editLabel = `Edit ${title}`;
+                    const selected = activeAutomation?.kind === 'automation' && activeAutomation.task.id === task.id;
                     return (
                       <WindowedDataRow
                         key={task.id}
                         className="wos-automation-queue-row"
                         name={title}
                         meta={windowedAutomationMeta(task)}
+                        selected={selected}
+                        accent="automations"
                         status={<WindowedBadge tone={windowedStatusTone(task)}>{statusLabel(task)}</WindowedBadge>}
+                        onSelect={() => selectTask(task)}
                         action={
                           <span className="wos-automation-actions">
                             <WindowedPageButton

@@ -79,6 +79,8 @@ describe('AutomationsPage windowed surface', () => {
     expect(container.querySelector('.wos-automation-table')).toBeNull();
     expect(screen.getByText('Quarter-hour chime')).toBeTruthy();
     expect(screen.getByText('Release watch')).toBeTruthy();
+    expect(screen.getByText('Quarter-hour chime').closest('.wos-data-row')?.getAttribute('data-selectable')).toBe('true');
+    expect(screen.getByText('Quarter-hour chime').closest('.wos-data-row')?.getAttribute('data-accent')).toBe('automations');
     expect(screen.getByText(/15,45 \* \* \* \*/)).toBeTruthy();
     expect(screen.getByText(/Automation log/)).toBeTruthy();
     expect(screen.getAllByText('Running').some((element) => element.closest('.wos-badge')?.getAttribute('data-tone') === 'warning')).toBe(
@@ -112,14 +114,19 @@ describe('AutomationsPage windowed surface', () => {
 
     await waitFor(() => expect(pa.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Delete automation' })));
     await waitFor(() => expect(pa.automations.delete).toHaveBeenCalledWith('task-2'));
+    expect(screen.queryByRole('dialog', { name: 'Automation details' })).toBeNull();
   });
 
   it('opens automation details with native windowed dialog chrome instead of the stable context rail', async () => {
     const { container } = render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Open details for Quarter-hour chime' }));
+    const row = (await screen.findByText('Quarter-hour chime')).closest('.wos-data-row');
+    if (!row) throw new Error('Missing automation row');
+
+    fireEvent.click(row);
 
     const dialog = await screen.findByRole('dialog', { name: 'Automation details' });
+    expect(row.getAttribute('data-selected')).toBe('true');
     expect(dialog.className).toContain('wos-dialog');
     expect(within(dialog).getByRole('heading', { name: 'Actions' })).toBeTruthy();
     expect(within(dialog).getByRole('heading', { name: 'Schedule' })).toBeTruthy();
@@ -128,6 +135,19 @@ describe('AutomationsPage windowed surface', () => {
     expect(dialog.querySelector('.ui-context-rail')).toBeNull();
     expect(dialog.querySelector('.wos-key-value-list')).toBeTruthy();
     expect(container.querySelector('.ui-context-rail')).toBeNull();
+  });
+
+  it('opens automation details from selectable rows with the keyboard', async () => {
+    render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
+
+    const row = (await screen.findByText('Release watch')).closest('.wos-data-row');
+    if (!row) throw new Error('Missing automation row');
+
+    fireEvent.keyDown(row, { key: 'Enter' });
+
+    const dialog = await screen.findByRole('dialog', { name: 'Automation details' });
+    expect(row.getAttribute('data-selected')).toBe('true');
+    expect(within(dialog).getByText('Check release blockers.')).toBeTruthy();
   });
 
   it('opens automation edit forms with native windowed fields', async () => {
