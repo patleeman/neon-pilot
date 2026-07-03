@@ -1422,6 +1422,7 @@ export function Taskbar({
                 type="button"
                 className="wos-taskbar__button"
                 data-focused={group.focused}
+                data-accent={group.accent}
                 aria-haspopup={group.menu ? 'menu' : undefined}
                 aria-expanded={group.menu ? openGroupId === group.id : undefined}
                 aria-label={group.count ? `${group.title} (${group.count} windows)` : group.title}
@@ -1451,6 +1452,7 @@ export function Taskbar({
               className="wos-taskbar__button"
               data-focused={item.focused}
               data-minimized={item.minimized}
+              data-accent={item.accent}
               onClick={item.onSelect}
             >
               <WindowedAppTile label={item.title} accent={item.accent} count={item.count} variant="taskbar" />

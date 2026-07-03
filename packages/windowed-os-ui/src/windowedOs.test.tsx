@@ -243,6 +243,20 @@ describe('WindowedToolbar', () => {
   });
 });
 
+describe('Taskbar', () => {
+  it('uses accent-specific focused taskbar styling', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='chat']");
+    expect(stylesSource).toContain('background: var(--wos-chat);');
+    expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='gateways']");
+    expect(stylesSource).toContain('background: var(--wos-gateways);');
+    expect(stylesSource).toContain('inset 0 -4px 0 var(--wos-ink-900)');
+    expect(stylesSource).toContain('transform: translateY(-1px);');
+  });
+});
+
 describe('WindowedFormGrid', () => {
   it('renders canonical windowed form grid and action regions', () => {
     const html = renderToStaticMarkup(

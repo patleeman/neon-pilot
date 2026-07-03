@@ -207,7 +207,54 @@
 
 .wos-taskbar__button[data-focused='true'] {
   background: var(--wos-settings);
-  box-shadow: inset 0 -3px 0 var(--wos-ink-900);
+  box-shadow:
+    inset 0 -4px 0 var(--wos-ink-900),
+    0 2px 0 var(--wos-ink-900);
+  transform: translateY(-1px);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='chat'] {
+  background: var(--wos-chat);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='routines'] {
+  background: var(--wos-routines);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='workflows'] {
+  background: var(--wos-workflows);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='automations'] {
+  background: var(--wos-automations);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='gateways'] {
+  background: var(--wos-gateways);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='model-arena'] {
+  background: var(--wos-model-arena);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='extensions'] {
+  background: var(--wos-extensions);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='skills'] {
+  background: var(--wos-skills);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='telemetry'] {
+  background: var(--wos-telemetry);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='diagnostics'] {
+  background: var(--wos-diagnostics);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='settings'] {
+  background: var(--wos-settings);
 }
 
 .wos-taskbar__button[data-minimized='true'] {

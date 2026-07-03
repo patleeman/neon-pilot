@@ -215,6 +215,27 @@ describe('WindowedListItem interactions', () => {
 });
 
 describe('Taskbar interactions', () => {
+  it('marks focused taskbar windows with their app accent', () => {
+    render(
+      <Taskbar
+        startOpen={false}
+        onToggleStart={() => undefined}
+        groups={[{ id: 'chat', title: 'Chat', focused: true, count: 2, accent: 'chat', onSelect: () => undefined }]}
+        items={[
+          { id: 'settings', title: 'Settings', focused: false, accent: 'settings', onSelect: () => undefined },
+          { id: 'gateways', title: 'Gateways', focused: true, accent: 'gateways', onSelect: () => undefined },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Chat (2 windows)' }).getAttribute('data-focused')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Chat (2 windows)' }).getAttribute('data-accent')).toBe('chat');
+    expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('data-focused')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('data-accent')).toBe('settings');
+    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('data-focused')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('data-accent')).toBe('gateways');
+  });
+
   it('renders menu item status chips for window state', () => {
     render(
       <WindowedMenuPanel
