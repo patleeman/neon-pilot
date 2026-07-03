@@ -269,6 +269,24 @@ export function WindowedDialog({ title, meta, accent = 'settings', actions, chil
   );
 }
 
+export interface WindowedDialogStackProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedDialogStack({ children, className }: WindowedDialogStackProps) {
+  return <div className={cx('wos-dialog-stack', className)}>{children}</div>;
+}
+
+export interface WindowedDialogCopyProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedDialogCopy({ children, className }: WindowedDialogCopyProps) {
+  return <p className={cx('wos-dialog-copy', className)}>{children}</p>;
+}
+
 export type WindowedTextButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
 
 export function WindowedTextButton({ children, className, type = 'button', ...props }: WindowedTextButtonProps) {

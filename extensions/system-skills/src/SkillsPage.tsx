@@ -36,6 +36,8 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
+  WindowedDialogCopy,
+  WindowedDialogStack,
   WindowedKeyValueList,
   WindowedPageButton,
   WindowedPageMain,
@@ -908,9 +910,9 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
             onClose={() => setSelectedSkillResourceId(null)}
           >
             {selectedWindowedSelection.kind === 'marketplace' ? (
-              <div className="grid gap-3">
+              <WindowedDialogStack>
                 {selectedWindowedSelection.candidate.description ? (
-                  <p className="text-[12px] leading-5 text-secondary">{selectedWindowedSelection.candidate.description}</p>
+                  <WindowedDialogCopy>{selectedWindowedSelection.candidate.description}</WindowedDialogCopy>
                 ) : null}
                 <WindowedKeyValueList
                   items={[
@@ -931,11 +933,11 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                     { label: 'Identifier', value: selectedWindowedSelection.candidate.identifier },
                   ]}
                 />
-              </div>
+              </WindowedDialogStack>
             ) : (
-              <div className="grid gap-3">
+              <WindowedDialogStack>
                 {selectedWindowedSelection.skill.description ? (
-                  <p className="text-[12px] leading-5 text-secondary">{selectedWindowedSelection.skill.description}</p>
+                  <WindowedDialogCopy>{selectedWindowedSelection.skill.description}</WindowedDialogCopy>
                 ) : null}
                 <WindowedKeyValueList
                   items={[
@@ -947,7 +949,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                       : []),
                   ]}
                 />
-              </div>
+              </WindowedDialogStack>
             )}
           </WindowedDialog>
         ) : null}

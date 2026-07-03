@@ -11,6 +11,8 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
+  WindowedDialogCopy,
+  WindowedDialogStack,
   WindowedEmptyState,
   WindowedField,
   WindowedKeyValueGrid,
@@ -1829,8 +1831,8 @@ export const SkillsPage: Story = {
           </WindowedPageMain>
         </WindowedPageShell>
         <WindowedDialog title="local-qa" meta="Marketplace skill" accent="extensions" onClose={() => undefined}>
-          <div className="wos-dialog-stack">
-            <p className="wos-dialog-copy">Browser and app checks for local product QA.</p>
+          <WindowedDialogStack>
+            <WindowedDialogCopy>Browser and app checks for local product QA.</WindowedDialogCopy>
             <WindowedKeyValueList
               items={[
                 { label: 'Capability', value: 'QA' },
@@ -1840,7 +1842,7 @@ export const SkillsPage: Story = {
                 { label: 'Identifier', value: 'agent-plugin:local-qa' },
               ]}
             />
-          </div>
+          </WindowedDialogStack>
         </WindowedDialog>
       </WindowFrame>
     </div>

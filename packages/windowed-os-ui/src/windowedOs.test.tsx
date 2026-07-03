@@ -4,7 +4,15 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { WindowedEmptyState, WindowedPageButton, WindowedPageMain, WindowedPageShell, WindowedToolbar } from './windowedOs';
+import {
+  WindowedDialogCopy,
+  WindowedDialogStack,
+  WindowedEmptyState,
+  WindowedPageButton,
+  WindowedPageMain,
+  WindowedPageShell,
+  WindowedToolbar,
+} from './windowedOs';
 
 describe('WindowedPageShell', () => {
   it('defaults to the canonical single-pane page layout', () => {
@@ -72,6 +80,20 @@ describe('WindowedToolbar', () => {
 
     expect(html).toContain('<form');
     expect(html).toContain('class="wos-toolbar"');
+  });
+});
+
+describe('WindowedDialog content primitives', () => {
+  it('renders scoped dialog stack and copy classes for reusable subwindow content', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDialogStack>
+        <WindowedDialogCopy>Browser and app checks for local product QA.</WindowedDialogCopy>
+      </WindowedDialogStack>,
+    );
+
+    expect(html).toContain('class="wos-dialog-stack"');
+    expect(html).toContain('class="wos-dialog-copy"');
+    expect(html).toContain('Browser and app checks for local product QA.');
   });
 });
 
