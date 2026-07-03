@@ -190,6 +190,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window__body {\n  position: relative;');
     expect(stylesSource).toContain('contain: paint;');
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
+    expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) iframe');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe');
     expect(stylesSource).toContain('visibility: hidden;');
     expect(stylesSource).toContain('pointer-events: none;');
   });

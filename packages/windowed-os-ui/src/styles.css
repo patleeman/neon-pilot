@@ -487,7 +487,12 @@
 }
 
 .wos-window[data-focused='false'] .wos-window__body iframe,
-.windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe {
+.windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe,
+.wos-window__body:has(.wos-dialog-layer) iframe,
+.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe,
+.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe,
+.windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe,
+.windowed-os-shell:has(.wos-dialog-layer) .wos-window__body iframe {
   visibility: hidden;
   pointer-events: none;
 }

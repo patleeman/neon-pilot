@@ -115,6 +115,22 @@ function isInsideBackgroundWindowedWindow(host: HTMLElement | null): boolean {
   return topWindow !== ownWindow;
 }
 
+function isBelowTopWindowedShellWindow(host: HTMLElement | null): boolean {
+  const ownWindow = host?.closest<HTMLElement>('.wos-window');
+  const shell = ownWindow?.closest<HTMLElement>('.windowed-os-shell');
+  if (!host || !ownWindow || !shell) {
+    return false;
+  }
+
+  const windows = Array.from(shell.querySelectorAll<HTMLElement>('.wos-window')).filter(isVisibleStyle);
+  if (windows.length <= 1) {
+    return false;
+  }
+
+  const topLayer = Math.max(...windows.map(windowLayer));
+  return windowLayer(ownWindow) < topLayer;
+}
+
 function rectsOverlap(first: DOMRect, second: DOMRect): boolean {
   return first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
 }
@@ -635,6 +651,7 @@ export function WorkbenchBrowserTab({
       isInsideUnfocusedWindow(host) ||
       isOutsideFocusedWindowedShellWindow(host) ||
       isInsideBackgroundWindowedWindow(host) ||
+      isBelowTopWindowedShellWindow(host) ||
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||
       isCoveredByWindowedShellLayer(host) ||
@@ -730,7 +747,7 @@ export function WorkbenchBrowserTab({
     const modalObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(syncBounds) : null;
     modalObserver?.observe(document.body, {
       attributes: true,
-      attributeFilter: ['aria-modal', 'class', 'data-focused', 'style'],
+      attributeFilter: ['aria-modal', 'class', 'data-focused', 'data-focused-window-id', 'data-window-interaction', 'style'],
       childList: true,
       subtree: true,
     });
