@@ -305,7 +305,6 @@ export const DenseAppPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Gateway"
             title="Telegram"
             description="Only approved users and chats can send work into Neon Pilot."
             actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}
@@ -360,7 +359,7 @@ export const StatePrimitives: Story = {
         onClose={() => undefined}
       >
         <WindowedPageShell layout="standard">
-          <WindowedPageMain eyebrow="Shared states" title="Windowed States">
+          <WindowedPageMain title="Windowed States">
             <WindowedPageSection title="Empty states" meta="Compact">
               <div style={{ display: 'grid', gap: 8 }}>
                 <WindowedEmptyState action={<WindowedPageButton tone="accent">Create workflow</WindowedPageButton>}>
@@ -466,11 +465,7 @@ export const StandardSinglePanePage: Story = {
         onClose={() => undefined}
       >
         <WindowedPageShell layout="standard">
-          <WindowedPageMain
-            eyebrow="Scheduled work"
-            title="Automations"
-            actions={<WindowedPageButton tone="accent">New automation</WindowedPageButton>}
-          >
+          <WindowedPageMain title="Automations" actions={<WindowedPageButton tone="accent">New automation</WindowedPageButton>}>
             <WindowedPageSection title="Overview" meta="3 total">
               <WindowedKeyValueGrid
                 columns={4}
@@ -520,7 +515,6 @@ export const CanonicalDensity: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Desktop OS"
             title="Windowed surface rhythm"
             description="Compact chrome, small metadata, and dense product controls should feel native to the OS without reverting to stable app spacing."
             actions={
@@ -623,7 +617,6 @@ export const AutomationFormPrimitives: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Automation"
             title="Daily release notes"
             actions={
               <>
@@ -725,7 +718,6 @@ export const AutomationsPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Scheduled work"
             title="Automations"
             actions={
               <>
@@ -827,7 +819,6 @@ export const GatewaysPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Ingress"
             title="Gateways"
             actions={
               <>
@@ -942,7 +933,6 @@ export const RoutinesPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Agent hooks"
             title="Routines"
             actions={
               <>
@@ -1061,7 +1051,6 @@ export const WorkflowsPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Dynamic workflows"
             title="Workflows"
             actions={
               <>
@@ -1176,7 +1165,6 @@ export const ModelArenaPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Model duels"
             title="Model Arena"
             actions={
               <>
@@ -1266,7 +1254,6 @@ export const DiagnosticsPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Telemetry"
             title="Diagnostics"
             actions={
               <>
@@ -1344,7 +1331,6 @@ export const ExtensionsPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Extension manager"
             title="Extensions"
             actions={
               <>
@@ -1556,7 +1542,6 @@ export const SkillsPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Skill library"
             title="Skills"
             actions={
               <>
@@ -1673,7 +1658,6 @@ export const EmbeddedExtensionPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            eyebrow="Gateway"
             title="Telegram"
             actions={
               <>

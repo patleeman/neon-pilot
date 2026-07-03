@@ -101,7 +101,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const WorkflowsPage');
     expect(source).toContain('title="Workflows"');
-    expect(source).toContain('eyebrow="Dynamic workflows"');
+    expect(source).not.toContain('eyebrow="Dynamic workflows"');
     expect(source).toContain('title="Inventory"');
     expect(source).toContain('title="Runs"');
     expect(source).toContain('title="Library"');
@@ -135,7 +135,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const AutomationsPage');
     expect(source).toContain('title="Automations"');
-    expect(source).toContain('eyebrow="Scheduled work"');
+    expect(source).not.toContain('eyebrow="Scheduled work"');
     expect(source).toContain('title="Queue"');
     expect(source).toContain('title="Selected automation"');
     expect(source).toContain('ariaLabel="Automation filter"');
@@ -147,7 +147,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const GatewaysPage');
     expect(source).toContain('title="Gateways"');
-    expect(source).toContain('eyebrow="Ingress"');
+    expect(source).not.toContain('eyebrow="Ingress"');
     expect(source).toContain('title="Status"');
     expect(source).toContain('title="Selected gateway"');
     expect(source).toContain('ariaLabel="Gateway filter"');
@@ -159,7 +159,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const RoutinesPage');
     expect(source).toContain('title="Routines"');
-    expect(source).toContain('eyebrow="Agent hooks"');
+    expect(source).not.toContain('eyebrow="Agent hooks"');
     expect(source).toContain('title="Overview"');
     expect(source).toContain('title="Selected routine"');
     expect(source).toContain('title="Recent runs"');
@@ -172,7 +172,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const ModelArenaPage');
     expect(source).toContain('title="Model Arena"');
-    expect(source).toContain('eyebrow="Model duels"');
+    expect(source).not.toContain('eyebrow="Model duels"');
     expect(source).toContain('title="Overview"');
     expect(source).toContain('title="Active duel"');
     expect(source).toContain('title="Rankings"');
@@ -186,7 +186,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const DiagnosticsPage');
     expect(source).toContain('title="Diagnostics"');
-    expect(source).toContain('eyebrow="Telemetry"');
+    expect(source).not.toContain('eyebrow="Telemetry"');
     expect(source).toContain('title="Health"');
     expect(source).toContain('title="Usage"');
     expect(source).toContain('title="Traces"');
@@ -199,7 +199,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const SkillsPage');
     expect(source).toContain('title="Skills"');
-    expect(source).toContain('eyebrow="Skill library"');
+    expect(source).not.toContain('eyebrow="Skill library"');
     expect(source).toContain('title="Inventory"');
     expect(source).toContain('title="Installed skills"');
     expect(source).toContain('title="Marketplace"');
@@ -212,7 +212,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const ExtensionsPage');
     expect(source).toContain('title="Extensions"');
-    expect(source).toContain('eyebrow="Extension manager"');
+    expect(source).not.toContain('eyebrow="Extension manager"');
     expect(source).toContain('title="Inventory"');
     expect(source).toContain('title="Installed extensions"');
     expect(source).toContain('title="Sources"');
