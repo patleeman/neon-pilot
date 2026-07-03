@@ -194,6 +194,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe",
     );
+    expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe');

@@ -319,6 +319,15 @@ function hasWindowAboveFocusedChat(focusedWindow: DesktopWindowModel | null, vis
   return visibleWindows.slice(focusedIndex + 1).some((windowModel) => boundsOverlap(focusedWindow.bounds, windowModel.bounds));
 }
 
+function isWindowCoveredByHigherWindow(windowModel: DesktopWindowModel, visibleWindows: DesktopWindowModel[]): boolean {
+  const index = visibleWindows.findIndex((candidate) => candidate.id === windowModel.id);
+  if (index < 0) {
+    return false;
+  }
+
+  return visibleWindows.slice(index + 1).some((candidate) => boundsOverlap(windowModel.bounds, candidate.bounds));
+}
+
 function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
   let changed = false;
   const next = windows.map((windowModel) => {
@@ -1252,6 +1261,7 @@ export function WindowedLayout() {
             accent={accentForWindow(windowModel)}
             focused={windowModel.focused}
             style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
+            iframeBlocked={isWindowCoveredByHigherWindow(windowModel, visibleWindows)}
             onPointerDown={() => focusWindow(windowModel.id)}
             onMinimize={() => minimizeWindow(windowModel.id)}
             onMaximize={() => toggleMaximize(windowModel)}

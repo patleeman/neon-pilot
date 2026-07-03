@@ -951,6 +951,40 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
 
+  it('marks lower overlapping windows so embedded iframes cannot paint over the foreground stack', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /routines/i });
+    const chatWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="chat:draft"]');
+    const routinesWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="route:system-routines:routines"]');
+    expect(chatWindow).toBeTruthy();
+    expect(routinesWindow).toBeTruthy();
+    expect(chatWindow!.getAttribute('data-iframe-blocked')).toBe('true');
+    expect(routinesWindow!.hasAttribute('data-iframe-blocked')).toBe(false);
+  });
+
   it('marks window stack changes as browser-blocking while native browser bounds settle', async () => {
     seedWindowedWindows([
       {

@@ -490,6 +490,7 @@
 }
 
 .wos-window[data-focused='false'] .wos-window__body iframe,
+.wos-window[data-iframe-blocked='true'] .wos-window__body iframe,
 .windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe,
 .windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe,
 .wos-window__body:has(.wos-dialog-layer) iframe,

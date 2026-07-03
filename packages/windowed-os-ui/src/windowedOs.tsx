@@ -955,6 +955,7 @@ export interface WindowFrameProps {
   title: string;
   accent?: AppAccent;
   focused?: boolean;
+  iframeBlocked?: boolean;
   style?: CSSProperties;
   className?: string;
   children: ReactNode;
@@ -971,6 +972,7 @@ export function WindowFrame({
   title,
   accent = 'settings',
   focused = false,
+  iframeBlocked = false,
   style,
   className,
   children,
@@ -987,6 +989,7 @@ export function WindowFrame({
       className={cx('wos-window', className)}
       data-window-id={windowId}
       data-focused={focused}
+      data-iframe-blocked={iframeBlocked ? 'true' : undefined}
       style={style}
       onPointerDown={onPointerDown}
     >
