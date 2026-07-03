@@ -8,6 +8,7 @@ import {
   type TaskbarItem,
   WindowedChatSurface,
   WindowedMenuPanel,
+  WindowedSegmentedControl,
   WindowFrame,
 } from '@neon-pilot/windowed-os-ui';
 import { type CSSProperties, type ReactNode, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -34,9 +35,14 @@ import {
   boundsForSnapTarget,
   constrainWindowBounds,
   type DesktopRect,
+  readWindowedOsTheme,
   resolveSnapTarget,
   type SnapTarget,
   type WindowBounds,
+  WINDOWED_OS_THEME_CHANGED_EVENT,
+  WINDOWED_OS_THEME_STORAGE_KEY,
+  type WindowedOsTheme,
+  writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
 import { Layout } from './Layout';
 import { QuietLoadingState } from './ui';
@@ -781,6 +787,7 @@ export function WindowedLayout() {
   const [snapTarget, setSnapTarget] = useState<SnapTarget | null>(null);
   const [browserLayerSettling, setBrowserLayerSettling] = useState(false);
   const [restoreBounds, setRestoreBounds] = useState<Record<string, WindowBounds>>({});
+  const [windowedTheme, setWindowedTheme] = useState<WindowedOsTheme>(() => readWindowedOsTheme());
 
   const launcherItems = useMemo(() => buildLauncherItems(extensionRegistry), [extensionRegistry]);
   const chatSessions = useMemo(
@@ -814,6 +821,24 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews(3000);
     return () => {
       document.body.removeAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleThemeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ theme?: WindowedOsTheme }>;
+      setWindowedTheme(customEvent.detail?.theme ?? readWindowedOsTheme());
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === WINDOWED_OS_THEME_STORAGE_KEY) {
+        setWindowedTheme(readWindowedOsTheme());
+      }
+    };
+    window.addEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, handleThemeChange);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, handleThemeChange);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
@@ -1350,18 +1375,36 @@ export function WindowedLayout() {
   const taskbarTopBarElements = extensionRegistry.topBarElements.filter(
     (element) => !STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS.has(`${element.extensionId}:${element.id}`),
   );
-  const taskbarTrailing =
-    taskbarTopBarElements.length > 0 ? (
-      <>
-        {taskbarTopBarElements.map((element) => (
-          <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
-        ))}
-      </>
-    ) : null;
+  const themeControl = (
+    <WindowedSegmentedControl
+      ariaLabel="Windowed OS theme"
+      accent="settings"
+      className="wos-taskbar-theme-toggle"
+      value={windowedTheme}
+      options={[
+        { id: 'light', label: 'Light' },
+        { id: 'dark', label: 'Dark' },
+      ]}
+      onChange={(value) => {
+        const nextTheme: WindowedOsTheme = value === 'dark' ? 'dark' : 'light';
+        setWindowedTheme(nextTheme);
+        writeWindowedOsTheme(nextTheme);
+      }}
+    />
+  );
+  const taskbarTrailing = (
+    <>
+      {themeControl}
+      {taskbarTopBarElements.map((element) => (
+        <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
+      ))}
+    </>
+  );
 
   return (
     <div
       className="windowed-os-shell h-screen overflow-hidden"
+      data-wos-theme={windowedTheme}
       data-focused-window-id={focusedWindowId ?? undefined}
       data-window-interaction={browserBlockingShellInteraction ? 'true' : undefined}
       data-native-browser-blocked={nativeBrowserBlocked ? 'true' : undefined}

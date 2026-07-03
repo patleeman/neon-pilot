@@ -1,7 +1,10 @@
 export const DESKTOP_SHELL_PRESENTATION_STORAGE_KEY = 'pa:desktop-shell-presentation';
+export const WINDOWED_OS_THEME_STORAGE_KEY = 'pa:windowed-os-theme:v1';
+export const WINDOWED_OS_THEME_CHANGED_EVENT = 'pa:windowed-os-theme-changed';
 export const WINDOWED_SHELL_CHILD_PARAM = 'windowed-child';
 
 export type DesktopShellPresentation = 'stable' | 'windowed';
+export type WindowedOsTheme = 'light' | 'dark';
 
 export interface DesktopRect {
   width: number;
@@ -59,6 +62,29 @@ export function writeDesktopShellPresentation(mode: DesktopShellPresentation): v
   } catch {
     // Ignore storage failures.
   }
+}
+
+export function normalizeWindowedOsTheme(value: unknown): WindowedOsTheme | null {
+  return value === 'light' || value === 'dark' ? value : null;
+}
+
+export function readWindowedOsTheme(): WindowedOsTheme {
+  if (typeof window === 'undefined') return 'light';
+  try {
+    return normalizeWindowedOsTheme(window.localStorage.getItem(WINDOWED_OS_THEME_STORAGE_KEY)) ?? 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+export function writeWindowedOsTheme(theme: WindowedOsTheme): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(WINDOWED_OS_THEME_STORAGE_KEY, theme);
+  } catch {
+    // Ignore storage failures; the in-memory shell state still updates.
+  }
+  window.dispatchEvent(new CustomEvent(WINDOWED_OS_THEME_CHANGED_EVENT, { detail: { theme } }));
 }
 
 export function constrainWindowBounds(bounds: WindowBounds, desktop: DesktopRect): WindowBounds {

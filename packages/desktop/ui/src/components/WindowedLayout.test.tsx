@@ -353,6 +353,31 @@ describe('WindowedLayout route windows', () => {
     expect(startMenu.querySelector('.wos-app-monogram')).toBeNull();
   });
 
+  it('defaults the windowed OS shell to the light theme and renders a taskbar theme control', () => {
+    const { container } = renderWindowedLayout();
+
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-wos-theme')).toBe('light');
+    const desktopControls = screen.getByLabelText('Desktop controls');
+    expect(within(desktopControls).getByRole('radiogroup', { name: /windowed os theme/i })).toBeTruthy();
+    expect(within(desktopControls).getByRole('radio', { name: 'Light' }).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('restores the persisted windowed OS theme and updates it from the taskbar', () => {
+    window.localStorage.setItem('pa:windowed-os-theme:v1', 'dark');
+    const { container } = renderWindowedLayout();
+
+    const shell = container.querySelector('.windowed-os-shell');
+    const desktopControls = screen.getByLabelText('Desktop controls');
+    expect(shell?.getAttribute('data-wos-theme')).toBe('dark');
+    expect(within(desktopControls).getByRole('radio', { name: 'Dark' }).getAttribute('aria-checked')).toBe('true');
+
+    fireEvent.click(within(desktopControls).getByRole('radio', { name: 'Light' }));
+
+    expect(shell?.getAttribute('data-wos-theme')).toBe('light');
+    expect(window.localStorage.getItem('pa:windowed-os-theme:v1')).toBe('light');
+    expect(within(desktopControls).getByRole('radio', { name: 'Light' }).getAttribute('aria-checked')).toBe('true');
+  });
+
   it('renders extension top-bar elements in the right side of the windowed taskbar', () => {
     mocks.topBarElements = [
       {

@@ -497,6 +497,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('justify-content: flex-start;');
   });
 
+  it('keeps the taskbar theme segmented control compact inside desktop controls', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-taskbar__trailing .wos-taskbar-theme-toggle');
+    expect(stylesSource).toContain('.wos-taskbar__trailing .wos-taskbar-theme-toggle .wos-segmented-control__item');
+    expect(stylesSource).toContain('border-radius: 0;');
+  });
+
   it('styles the windowed chat workbench toggle as compact window chrome', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');

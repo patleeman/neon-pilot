@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   boundsForRestoredDragStart,
@@ -8,7 +8,11 @@ import {
   constrainWindowBounds,
   isWindowedShellChild,
   readDesktopShellPresentation,
+  readWindowedOsTheme,
   resolveSnapTarget,
+  WINDOWED_OS_THEME_CHANGED_EVENT,
+  WINDOWED_OS_THEME_STORAGE_KEY,
+  writeWindowedOsTheme,
 } from './windowedShell';
 
 describe('windowedShell', () => {
@@ -70,5 +74,23 @@ describe('windowedShell', () => {
     localStorage.setItem('pa:desktop-shell-presentation', 'windowed');
     window.history.replaceState(null, '', '/conversations/new?windowed-child=1');
     expect(readDesktopShellPresentation()).toBe('stable');
+  });
+
+  it('defaults the isolated windowed OS theme to light', () => {
+    expect(readWindowedOsTheme()).toBe('light');
+  });
+
+  it('persists and broadcasts windowed OS theme changes', () => {
+    const listener = vi.fn();
+    window.addEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, listener);
+
+    writeWindowedOsTheme('dark');
+
+    expect(localStorage.getItem(WINDOWED_OS_THEME_STORAGE_KEY)).toBe('dark');
+    expect(readWindowedOsTheme()).toBe('dark');
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect((listener.mock.calls[0]?.[0] as CustomEvent<{ theme: string }>).detail.theme).toBe('dark');
+
+    window.removeEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, listener);
   });
 });

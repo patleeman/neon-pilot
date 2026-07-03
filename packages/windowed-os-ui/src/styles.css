@@ -118,6 +118,25 @@
   background: var(--wos-surface-3);
 }
 
+.wos-taskbar__trailing .wos-taskbar-theme-toggle {
+  flex-shrink: 0;
+  background: var(--wos-surface-1);
+}
+
+.wos-taskbar__trailing .wos-taskbar-theme-toggle .wos-segmented-control__item {
+  min-height: 28px;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 8px;
+}
+
+.wos-taskbar__trailing .wos-taskbar-theme-toggle .wos-segmented-control__item[data-active='true'] {
+  background: var(--wos-segmented-active);
+}
+
 .wos-taskbar__group {
   position: relative;
   flex-shrink: 0;
