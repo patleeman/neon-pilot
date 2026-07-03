@@ -128,7 +128,11 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       ))}
     </div>
   ),
-  WindowedPageButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  WindowedPageButton: ({ children, tone, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: string }) => (
+    <button data-tone={tone} {...props}>
+      {children}
+    </button>
+  ),
   WindowedPageSection: ({ title, children }: { title?: React.ReactNode; children: React.ReactNode }) => (
     <section className="wos-page-section">
       {title ? <h3>{title}</h3> : null}
@@ -274,5 +278,6 @@ describe('AgentPluginsSettingsPanel', () => {
     expect(screen.getByText('Plugin is on')).toBeTruthy();
     expect(screen.getByText('Auto update')).toBeTruthy();
     expect(screen.getByText('Skills (1)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove' }).getAttribute('data-tone')).toBe('danger');
   });
 });

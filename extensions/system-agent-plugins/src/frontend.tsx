@@ -368,7 +368,7 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
                       >
                         Update
                       </WindowedPageButton>
-                      <WindowedPageButton disabled={operation.busy} onClick={() => void removeSelectedPlugin(selectedPlugin)}>
+                      <WindowedPageButton tone="danger" disabled={operation.busy} onClick={() => void removeSelectedPlugin(selectedPlugin)}>
                         Remove
                       </WindowedPageButton>
                     </>
