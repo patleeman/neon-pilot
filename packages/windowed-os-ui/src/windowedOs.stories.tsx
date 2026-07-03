@@ -1015,6 +1015,98 @@ export const GatewaysPage: Story = {
   ),
 };
 
+export const AIGatewayPage: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+      <WindowFrame
+        title="AI Gateway"
+        accent="gateways"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            title="AI Gateway"
+            actions={
+              <>
+                <WindowedBadge tone="positive">Running</WindowedBadge>
+                <WindowedPageButton>Refresh</WindowedPageButton>
+                <WindowedPageButton tone="accent">Save port</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection title="Loopback endpoint" meta="Running">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Status', value: <WindowedBadge tone="positive">Running</WindowedBadge> },
+                  { label: 'Endpoint', value: 'http://127.0.0.1:8766/v1' },
+                  { label: 'Models', value: 42 },
+                  { label: 'Default', value: 'auto' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Listener" meta="Local port">
+              <WindowedFormGrid>
+                <WindowedField label="Port">
+                  <WindowedNumberStepper aria-label="Gateway port" value={8766} onChange={() => undefined} min={1024} max={65535} />
+                </WindowedField>
+                <WindowedField label="Host">
+                  <WindowedTextInput aria-label="Gateway host" defaultValue="127.0.0.1" />
+                </WindowedField>
+                <WindowedField label="Default model">
+                  <WindowedSelect aria-label="Default gateway model" defaultValue="auto">
+                    <option value="auto">auto</option>
+                    <option value="gpt-5">gpt-5</option>
+                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                  </WindowedSelect>
+                </WindowedField>
+              </WindowedFormGrid>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Codex client setup" meta="Responses compatible">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Base URL', value: 'http://127.0.0.1:8766/v1' },
+                  { label: 'Auth token', value: '••••••••••••••••' },
+                  { label: 'Model catalog', value: '/Users/patrick/.local/share/neon-pilot/models.json' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Recent activity" meta="4 retained">
+              <WindowedDataTable columns={[{ label: 'Event' }, { label: 'Status' }, { label: 'Time', align: 'right' }]}>
+                <WindowedDataRow
+                  name="GET /v1/models"
+                  meta="Codex client"
+                  status={<WindowedBadge tone="positive">200</WindowedBadge>}
+                  cells={[{ value: '12:04:19', align: 'right' }]}
+                />
+                <WindowedDataRow
+                  name="POST /v1/responses"
+                  meta="deepseek-v4-flash"
+                  status={<WindowedBadge tone="positive">streaming</WindowedBadge>}
+                  cells={[{ value: '12:03:42', align: 'right' }]}
+                />
+                <WindowedDataRow
+                  name="Model catalog refresh"
+                  meta="42 models indexed"
+                  status={<WindowedBadge tone="neutral">ready</WindowedBadge>}
+                  cells={[{ value: '12:01:07', align: 'right' }]}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 export const RoutinesPage: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>

@@ -900,6 +900,26 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('ariaLabel="Gateway filter"');
   });
 
+  it('documents the canonical AI Gateway desktop page', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+    const aiGatewaySource = source.slice(source.indexOf('export const AIGatewayPage'), source.indexOf('export const RoutinesPage'));
+
+    expect(source).toContain('export const AIGatewayPage');
+    expect(aiGatewaySource).toContain('title="AI Gateway"\n        accent="gateways"');
+    expect(aiGatewaySource).toContain('title="Loopback endpoint"');
+    expect(aiGatewaySource).toContain('title="Listener"');
+    expect(aiGatewaySource).toContain('title="Codex client setup"');
+    expect(aiGatewaySource).toContain('title="Recent activity"');
+    expect(aiGatewaySource).toContain('aria-label="Gateway port"');
+    expect(aiGatewaySource).toContain('aria-label="Default gateway model"');
+    expect(aiGatewaySource).toContain(
+      "<WindowedDataTable columns={[{ label: 'Event' }, { label: 'Status' }, { label: 'Time', align: 'right' }]}",
+    );
+    expect(aiGatewaySource).not.toContain('eyebrow="Loopback"');
+    expect(aiGatewaySource).not.toContain('title="Selected gateway"');
+  });
+
   it('documents the canonical Routines desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
@@ -1036,6 +1056,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source.slice(source.indexOf('export const WorkflowsPage'), source.indexOf('export const ModelArenaPage'))).toContain(
       'title="Workflows"\n        accent="workflows"',
+    );
+    expect(source.slice(source.indexOf('export const GatewaysPage'), source.indexOf('export const ModelArenaPage'))).toContain(
+      'export const AIGatewayPage',
     );
     expect(source.slice(source.indexOf('export const ModelArenaPage'), source.indexOf('export const DiagnosticsPage'))).toContain(
       'title="Model Arena"\n        accent="model-arena"',
