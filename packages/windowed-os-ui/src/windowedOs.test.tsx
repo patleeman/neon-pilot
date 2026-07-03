@@ -214,14 +214,19 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical Skills desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const skillsSource = source.slice(source.indexOf('export const SkillsPage'), source.indexOf('export const CoreDataPrimitives'));
 
     expect(source).toContain('export const SkillsPage');
-    expect(source).toContain('title="Skills"');
-    expect(source).not.toContain('eyebrow="Skill library"');
-    expect(source).toContain('title="Inventory"');
-    expect(source).toContain('title="Installed skills"');
-    expect(source).toContain('title="Marketplace"');
-    expect(source).toContain('ariaLabel="Skills view"');
+    expect(skillsSource).toContain('title="Browse skills"');
+    expect(skillsSource).not.toContain('eyebrow="Skill library"');
+    expect(skillsSource).toContain('title="Sources"');
+    expect(skillsSource).toContain('Search marketplace skills');
+    expect(skillsSource).toContain('title="Marketplace"');
+    expect(skillsSource).toContain('title="Installed"');
+    expect(skillsSource).toContain('ariaLabel="Skills view"');
+    expect(skillsSource).toContain('<WindowedDialog title="local-qa"');
+    expect(skillsSource).not.toContain('title="Inventory"');
+    expect(skillsSource).not.toContain('title="Installed skills"');
   });
 
   it('documents the canonical Extensions desktop page and detail subwindow pattern', () => {
