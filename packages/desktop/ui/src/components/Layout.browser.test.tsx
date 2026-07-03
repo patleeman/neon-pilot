@@ -922,7 +922,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('reacts when the windowed shell starts explicitly blocking native browser surfaces', async () => {
+  it('keeps native browser views hidden inside the windowed shell even before explicit blockers mount', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
@@ -966,7 +966,8 @@ describe('WorkbenchBrowserTab', () => {
       );
     });
     await flushAsyncWork();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -978,7 +979,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('reacts when its window frame starts blocking iframe paint', async () => {
+  it('keeps native browser views hidden inside the windowed shell when iframe paint is unblocked', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
@@ -1022,7 +1023,8 @@ describe('WorkbenchBrowserTab', () => {
       );
     });
     await flushAsyncWork();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -1595,7 +1597,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('reacts when the windowed shell focused-window marker moves away from the browser host', async () => {
+  it('keeps native browser views hidden inside the windowed shell when focused-window markers match', async () => {
     document.body.innerHTML = '';
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
@@ -1641,7 +1643,8 @@ describe('WorkbenchBrowserTab', () => {
       );
     });
     await flushAsyncWork();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
