@@ -188,6 +188,61 @@ describe('WorkbenchBrowserTab', () => {
     }
   });
 
+  it('clips native browser bounds to the visible window body in windowed mode', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.classList.contains('wos-window')) {
+          return { left: 10, top: 10, width: 400, height: 300, right: 410, bottom: 310, x: 10, y: 10, toJSON: () => ({}) };
+        }
+        if (this.classList.contains('wos-window__body')) {
+          return { left: 10, top: 42, width: 400, height: 268, right: 410, bottom: 310, x: 10, y: 42, toJSON: () => ({}) };
+        }
+        if (this.closest('#browser-root')) {
+          return { left: 0, top: 30, width: 500, height: 330, right: 500, bottom: 360, x: 0, y: 30, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<section class="wos-window" data-focused="true"><div class="wos-window__body"><div id="browser-root"></div></div></section>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visible: true,
+        bounds: { x: 10, y: 42, width: 400, height: 268 },
+      }),
+    );
+  });
+
   it('hides the native browser view when its windowed shell window is not focused', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);

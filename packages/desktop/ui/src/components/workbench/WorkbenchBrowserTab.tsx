@@ -148,6 +148,68 @@ function elementAtPoint(x: number, y: number): Element | null {
   return document.elementFromPoint(x, y);
 }
 
+interface BrowserClipRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+function rectFromBounds(rect: DOMRect | BrowserClipRect): BrowserClipRect {
+  return {
+    left: rect.left,
+    top: rect.top,
+    right: rect.right,
+    bottom: rect.bottom,
+  };
+}
+
+function intersectBrowserClip(first: BrowserClipRect, second: BrowserClipRect): BrowserClipRect | null {
+  const left = Math.max(first.left, second.left);
+  const top = Math.max(first.top, second.top);
+  const right = Math.min(first.right, second.right);
+  const bottom = Math.min(first.bottom, second.bottom);
+  if (right <= left || bottom <= top) {
+    return null;
+  }
+  return { left, top, right, bottom };
+}
+
+function visibleBrowserBoundsForHost(host: HTMLElement): { x: number; y: number; width: number; height: number } | null {
+  const hostRect = rectFromBounds(host.getBoundingClientRect());
+  if (hostRect.right - hostRect.left < 1 || hostRect.bottom - hostRect.top < 1) {
+    return null;
+  }
+
+  const clipRects: BrowserClipRect[] = [{ left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight }, hostRect];
+  const windowBody = host.closest<HTMLElement>('.wos-window__body');
+  if (windowBody) {
+    clipRects.push(rectFromBounds(windowBody.getBoundingClientRect()));
+  }
+  const windowFrame = host.closest<HTMLElement>('.wos-window');
+  if (windowFrame) {
+    clipRects.push(rectFromBounds(windowFrame.getBoundingClientRect()));
+  }
+
+  let clipped = clipRects[0]!;
+  for (const rect of clipRects.slice(1)) {
+    const next = intersectBrowserClip(clipped, rect);
+    if (!next) {
+      return null;
+    }
+    clipped = next;
+  }
+
+  const x = Math.round(clipped.left);
+  const y = Math.round(clipped.top);
+  const width = Math.round(clipped.right) - x;
+  const height = Math.round(clipped.bottom) - y;
+  if (width < 24 || height < 24) {
+    return null;
+  }
+  return { x, y, width, height };
+}
+
 function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
   if (!host || !host.isConnected || typeof document.elementFromPoint !== 'function') {
     return false;
@@ -405,16 +467,8 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    const rect = host.getBoundingClientRect();
-    const visible = rect.width >= 24 && rect.height >= 24;
-    const bounds = visible
-      ? {
-          x: Math.round(rect.left),
-          y: Math.round(rect.top),
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
-        }
-      : null;
+    const bounds = visibleBrowserBoundsForHost(host);
+    const visible = Boolean(bounds);
     const requestKey = bounds
       ? `${browserSessionKey}:visible:${bounds.x}:${bounds.y}:${bounds.width}:${bounds.height}`
       : `${browserSessionKey}:hidden`;
