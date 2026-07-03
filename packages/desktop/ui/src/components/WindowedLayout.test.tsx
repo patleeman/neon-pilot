@@ -557,6 +557,36 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
+  it('keeps the leading edge of Start menu rows clickable for pointer launch', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const routines = within(startMenu).getByRole('button', { name: /^routines$/i });
+    fireEvent.mouseDown(routines, { clientX: 2, clientY: 8 });
+    fireEvent.click(routines, { clientX: 2, clientY: 8 });
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/routines:windowed');
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
+  it('keeps ordinary window content mounted while the Start menu is open', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^routines$/i }));
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    expect(within(routinesWindow).getByTestId('extension-route-host').textContent).toBe('/routines:windowed');
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
+    expect(within(routinesWindow).getByTestId('extension-route-host').textContent).toBe('/routines:windowed');
+    expect(routinesWindow.querySelector('.wos-window__iframe-shield')).toBeTruthy();
+  });
+
   it('keeps stored native browser tabs hidden while the start menu is open', async () => {
     vi.useFakeTimers();
     window.localStorage.setItem(
@@ -1143,6 +1173,33 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow.getAttribute('style')).toContain('width: 700px');
     expect(routinesWindow.getAttribute('style')).toContain('height: 616px');
     expect(within(routinesWindow).getByRole('button', { name: /close routines/i })).toBeTruthy();
+  });
+
+  it('does not start a top-right resize gesture from the close button hit area', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    const closeButton = within(routinesWindow).getByRole('button', { name: /close routines/i });
+    const initialStyle = routinesWindow.getAttribute('style');
+
+    fireEvent.mouseDown(closeButton, { button: 0, clientX: 736, clientY: 42 });
+    fireEvent.mouseMove(window, { clientX: 790, clientY: -40 });
+    fireEvent.mouseUp(window);
+
+    expect(routinesWindow.getAttribute('style')).toBe(initialStyle);
   });
 
   it('resizes windows from the bottom-right corner using visible resize handles', async () => {

@@ -545,6 +545,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('z-index: 95;');
     expect(stylesSource).toContain('.wos-window__titlebar {\n  position: relative;\n  z-index: 70;');
     expect(stylesSource).toContain('.wos-resize-handle {\n  position: absolute;\n  z-index: 55;');
+    expect(stylesSource.indexOf('z-index: 70;')).toBeLessThan(stylesSource.indexOf('z-index: 55;'));
     expect(stylesSource).not.toContain(
       ".wos-window[data-focused='false']:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview) > .wos-window__iframe-shield",
     );
@@ -625,6 +626,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('opacity: 0;');
     expect(stylesSource).toContain('visibility: hidden;');
     expect(stylesSource).toContain('pointer-events: none;');
+  });
+
+  it('keeps Start menu rows full-width and pointer-owned by the row button', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-start-menu__grid {\n  display: grid;');
+    expect(stylesSource).toContain('justify-items: stretch;');
+    expect(stylesSource).toContain('.wos-start-menu__item {\n  display: flex;\n  width: 100%;');
+    expect(stylesSource).toContain('justify-content: flex-start;');
+    expect(stylesSource).not.toContain('.wos-start-menu__item::before');
+    expect(stylesSource).not.toContain('.wos-start-menu__item::after');
   });
 
   it('styles attached terminal panels with scoped windowed tokens', () => {
