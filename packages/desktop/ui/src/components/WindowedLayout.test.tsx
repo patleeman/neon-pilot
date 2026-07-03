@@ -202,6 +202,20 @@ describe('WindowedLayout route windows', () => {
     expect(startMenu.querySelector('.wos-app-monogram')).toBeNull();
   });
 
+  it('focuses Start menu search on open and closes it with Escape', () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
+    expect(document.activeElement).toBe(search);
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
   it('orders and accents launcher apps from the canonical windowed desktop roster', () => {
     mocks.extensions = [
       {

@@ -1249,7 +1249,7 @@ export function WindowedLayout() {
       data-window-interaction={browserBlockingShellInteraction ? 'true' : undefined}
       data-native-browser-blocked={nativeBrowserBlocked ? 'true' : undefined}
     >
-      <StartMenu open={launcherOpen} items={startMenuItems} />
+      <StartMenu open={launcherOpen} items={startMenuItems} onClose={() => setLauncherOpen(false)} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
         {visibleWindows.map((windowModel, index) => (

@@ -795,13 +795,29 @@ export interface StartMenuItem {
 export interface StartMenuProps {
   open: boolean;
   items: StartMenuItem[];
+  onClose?: () => void;
 }
 
-export function StartMenu({ open, items }: StartMenuProps) {
+export function StartMenu({ open, items, onClose }: StartMenuProps) {
   const [query, setQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (!open) setQuery('');
   }, [open]);
+  useLayoutEffect(() => {
+    if (!open) return;
+    searchInputRef.current?.focus();
+  }, [open]);
+  useEffect(() => {
+    if (!open || !onClose) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [onClose, open]);
 
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -817,6 +833,7 @@ export function StartMenu({ open, items }: StartMenuProps) {
       </div>
       <div className="wos-start-menu__search">
         <input
+          ref={searchInputRef}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.currentTarget.value)}
