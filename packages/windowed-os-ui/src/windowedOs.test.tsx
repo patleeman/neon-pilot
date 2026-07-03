@@ -174,10 +174,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const RoutinesPage');
     expect(source).toContain('title="Routines"');
     expect(source).not.toContain('eyebrow="Agent hooks"');
-    expect(source).toContain('title="Overview"');
-    expect(source).toContain('title="Selected routine"');
-    expect(source).toContain('title="Recent runs"');
-    expect(source).toContain('ariaLabel="Routine scope"');
+    expect(source).toContain('title="Events"');
+    expect(source).toContain('title="Before"');
+    expect(source).toContain('title="After"');
+    expect(source).toContain('title="Status"');
+    expect(source).toContain('<WindowedDialog');
+    expect(source).toContain('title="Routine runs"');
+    expect(source).not.toContain('title="Selected routine"');
+    expect(source).not.toContain('ariaLabel="Routine scope"');
   });
 
   it('documents the canonical Model Arena desktop page', () => {

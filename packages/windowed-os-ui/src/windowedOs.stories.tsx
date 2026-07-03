@@ -913,105 +913,150 @@ export const RoutinesPage: Story = {
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            title="Routines"
+            title="Before agent start"
             actions={
               <>
-                <WindowedSegmentedControl
-                  accent="routines"
-                  ariaLabel="Routine scope"
-                  value="repo"
-                  options={[
-                    { id: 'repo', label: 'Repo' },
-                    { id: 'global', label: 'Global' },
-                    { id: 'all', label: 'All' },
-                  ]}
-                  onChange={() => undefined}
-                />
-                <WindowedPageButton tone="accent">New routine</WindowedPageButton>
+                <WindowedPageButton tone="accent">Run prompt</WindowedPageButton>
+                <WindowedPageButton>Choose path</WindowedPageButton>
+                <WindowedPageButton>Stop event</WindowedPageButton>
+                <WindowedPageButton>Runs</WindowedPageButton>
               </>
             }
           >
-            <div className="wos-page-grid" data-columns="2">
-              <div className="wos-page-stack">
-                <WindowedPageSection title="Overview" meta="workspace">
-                  <WindowedKeyValueGrid
-                    columns={4}
-                    items={[
-                      { label: 'Hooks', value: 4 },
-                      { label: 'Enabled', value: <WindowedBadge tone="positive">6</WindowedBadge> },
-                      { label: 'Paused', value: <WindowedBadge>1</WindowedBadge> },
-                      { label: 'Failures', value: <WindowedBadge tone="warning">1</WindowedBadge> },
-                    ]}
-                  />
-                </WindowedPageSection>
+            <WindowedPageSection title="Events" meta="4 available">
+              <WindowedList>
+                <div className="wos-page-eyebrow">Agent lifecycle</div>
+                <WindowedListItem
+                  title="Before agent start"
+                  meta="system"
+                  detail="Prepare instructions and context"
+                  active
+                  accent="routines"
+                />
+                <WindowedListItem title="After agent turn" meta="system" detail="Record status and follow-ups" accent="routines" />
+                <div className="wos-page-eyebrow">Tool calls</div>
+                <WindowedListItem title="Before tool call" meta="system" detail="Validate risky commands" accent="routines" />
+              </WindowedList>
+            </WindowedPageSection>
 
-                <WindowedPageSection title="Hooks" meta="4">
-                  <WindowedList>
-                    <WindowedListItem title="before_agent_start" meta="3 routines" detail="Instruction context" active accent="routines" />
-                    <WindowedListItem title="after_agent_turn" meta="2 routines" detail="Status bookkeeping" accent="routines" />
-                    <WindowedListItem title="before_tool_call" meta="1 routine" detail="Safety checks" accent="routines" />
+            <WindowedPageSection title="Before" meta="2 routines">
+              <WindowedTimeline>
+                <WindowedTimelineItem title="Repo context loader" meta="1 · Run prompt" tone="positive">
+                  <div className="wos-routine-row">
+                    <div className="wos-routine-row__body">
+                      <div>Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts.</div>
+                      <div>enabled · gpt-5</div>
+                    </div>
+                    <div className="wos-routine-row__actions">
+                      <WindowedPageButton>Open</WindowedPageButton>
+                      <WindowedPageButton>Delete</WindowedPageButton>
+                    </div>
+                  </div>
+                </WindowedTimelineItem>
+                <WindowedTimelineItem title="Taste gate" meta="2 · Choose path" tone="warning">
+                  <div className="wos-routine-row">
+                    <div className="wos-routine-row__body">
+                      <div>Route frontend-heavy changes through the design taste checklist before editing.</div>
+                      <div>enabled</div>
+                    </div>
+                    <div className="wos-routine-row__actions">
+                      <WindowedPageButton>Open</WindowedPageButton>
+                      <WindowedPageButton>Delete</WindowedPageButton>
+                    </div>
+                  </div>
+                  <WindowedList className="wos-routine-path-list">
+                    <WindowedListItem
+                      title="frontend"
+                      meta="Continue"
+                      detail="Use design references"
+                      accent="routines"
+                      status={<WindowedBadge tone="neutral">continue</WindowedBadge>}
+                    />
+                    <WindowedListItem
+                      title="unsafe"
+                      meta="Block"
+                      detail="Ask for review"
+                      accent="routines"
+                      status={<WindowedBadge tone="danger">block</WindowedBadge>}
+                    />
                   </WindowedList>
-                </WindowedPageSection>
-              </div>
+                </WindowedTimelineItem>
+              </WindowedTimeline>
+            </WindowedPageSection>
 
-              <div className="wos-page-stack">
-                <WindowedPageSection title="Selected routine" meta="Repo context loader">
-                  <div className="wos-form-grid" data-columns="3">
-                    <WindowedField label="Mode">
-                      <WindowedSegmentedControl
-                        accent="routines"
-                        ariaLabel="Routine position"
-                        value="before"
-                        options={[
-                          { id: 'before', label: 'Before' },
-                          { id: 'after', label: 'After' },
-                        ]}
-                      />
-                    </WindowedField>
-                    <WindowedField label="Routine">
-                      <WindowedSelect defaultValue="repo-context" aria-label="Selected routine">
-                        <option value="repo-context">Repo context</option>
-                        <option value="taste">Taste checklist</option>
-                        <option value="handoff">Session handoff</option>
-                      </WindowedSelect>
-                    </WindowedField>
-                    <WindowedField label="State">
-                      <WindowedToggle checked accent="routines" label="Toggle Repo context loader" />
-                    </WindowedField>
-                    <WindowedField label="Instruction" span="full">
-                      <WindowedTextarea
-                        aria-label="Routine instruction"
-                        defaultValue="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
-                      />
-                    </WindowedField>
+            <WindowedPageSection title="After" meta="1 routine">
+              <WindowedTimeline>
+                <WindowedTimelineItem title="Session handoff" meta="1 · Run prompt" tone="neutral">
+                  <div className="wos-routine-row">
+                    <div className="wos-routine-row__body">
+                      <div>Write a compact handoff when a long-running desktop-mode task changes state.</div>
+                      <div>enabled</div>
+                    </div>
+                    <div className="wos-routine-row__actions">
+                      <WindowedPageButton>Open</WindowedPageButton>
+                      <WindowedPageButton>Delete</WindowedPageButton>
+                    </div>
                   </div>
-                  <div className="wos-form-actions">
-                    <WindowedPageButton>Test routine</WindowedPageButton>
-                    <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
-                  </div>
-                </WindowedPageSection>
+                </WindowedTimelineItem>
+              </WindowedTimeline>
+            </WindowedPageSection>
 
-                <WindowedPageSection title="Recent runs" meta="Last 24h">
-                  <WindowedDataTable columns={[{ label: 'Run' }, { label: 'Hook' }, { label: 'State', align: 'right' }]}>
-                    <WindowedDataRow
-                      name="Loaded repo context"
-                      meta="09:58"
-                      enabled
-                      status={<WindowedBadge tone="positive">ok</WindowedBadge>}
-                    />
-                    <WindowedDataRow name="Taste checklist skipped" meta="09:22" enabled status={<WindowedBadge>skipped</WindowedBadge>} />
-                    <WindowedDataRow
-                      name="Recovered stale handoff"
-                      meta="Yesterday"
-                      enabled
-                      status={<WindowedBadge tone="warning">review</WindowedBadge>}
-                    />
-                  </WindowedDataTable>
-                </WindowedPageSection>
-              </div>
-            </div>
+            <WindowedPageSection title="Status" meta="Repo context loader">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Owner', value: 'system' },
+                  { label: 'Before', value: 2 },
+                  { label: 'After', value: 1 },
+                  { label: 'Runs', value: 12 },
+                  { label: 'Active', value: <WindowedBadge tone="positive">enabled</WindowedBadge> },
+                ]}
+              />
+            </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
+        <WindowedDialog
+          title="Repo context loader"
+          meta="enabled"
+          accent="routines"
+          onClose={() => undefined}
+          actions={
+            <>
+              <WindowedPageButton tone="accent">Save</WindowedPageButton>
+              <WindowedPageButton>Delete</WindowedPageButton>
+            </>
+          }
+        >
+          <div className="wos-routine-editor-bridge">
+            <div className="wos-form-grid" data-columns="2">
+              <WindowedField label="Type">
+                <WindowedSelect defaultValue="instruction" aria-label="Routine type">
+                  <option value="instruction">Run prompt</option>
+                  <option value="decision">Choose path</option>
+                  <option value="stop">Stop event</option>
+                </WindowedSelect>
+              </WindowedField>
+              <WindowedField label="State">
+                <WindowedToggle checked accent="routines" label="Toggle Repo context loader" />
+              </WindowedField>
+              <WindowedField label="Instruction" span="full">
+                <WindowedTextarea
+                  aria-label="Routine instruction"
+                  defaultValue="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
+                />
+              </WindowedField>
+            </div>
+          </div>
+        </WindowedDialog>
+        <WindowedDialog title="Routine runs" meta="12 total" accent="routines" onClose={() => undefined}>
+          <WindowedTimeline>
+            <WindowedTimelineItem title="completed" meta="Today, 09:58" tone="positive">
+              Loaded repo context and appended active windowed-mode notes.
+            </WindowedTimelineItem>
+            <WindowedTimelineItem title="skipped" meta="Today, 09:22" tone="neutral">
+              No frontend files changed.
+            </WindowedTimelineItem>
+          </WindowedTimeline>
+        </WindowedDialog>
       </WindowFrame>
     </div>
   ),
