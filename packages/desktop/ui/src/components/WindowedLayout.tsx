@@ -80,7 +80,7 @@ type WindowNavigate = (to: To) => void;
 const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
 const MIN_WINDOW_HEIGHT = 260;
-const WINDOWED_BROWSER_SETTLE_MS = 600;
+const WINDOWED_BROWSER_SETTLE_MS = 1200;
 const FALLBACK_TASKBAR_HEIGHT = 44;
 
 const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [

@@ -6,7 +6,7 @@ const DEFAULT_BROWSER_URL = 'https://www.google.com/';
 const MAX_SNAPSHOT_TEXT_LENGTH = 30_000;
 const BROWSER_COMMENT_CHANNEL = 'neon-pilot-desktop:workbench-browser-comment';
 const SHORTCUT_CHANNEL = 'neon-pilot-desktop:shortcut';
-const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 1_500;
+const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 5_000;
 
 type CdpCommand = (method: string, params?: Record<string, unknown>) => Promise<unknown>;
 

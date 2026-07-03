@@ -1099,7 +1099,7 @@ describe('WindowedLayout route windows', () => {
       () => {
         expect(shell?.hasAttribute('data-window-interaction')).toBe(false);
       },
-      { timeout: 1000 },
+      { timeout: 1500 },
     );
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
