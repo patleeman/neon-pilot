@@ -182,13 +182,12 @@ export interface WindowedPageMainProps {
   className?: string;
 }
 
-export function WindowedPageMain({ title, description, actions, children, className }: WindowedPageMainProps) {
+export function WindowedPageMain({ title, actions, children, className }: WindowedPageMainProps) {
   return (
     <main className={cx('wos-page-main', className)}>
       <header className="wos-page-main__header">
         <div className="wos-page-main__heading">
           <h1>{title}</h1>
-          {description ? <p>{description}</p> : null}
         </div>
         {actions ? <div className="wos-page-main__actions">{actions}</div> : null}
       </header>

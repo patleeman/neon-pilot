@@ -73,6 +73,21 @@ describe('WindowedPageShell', () => {
   });
 });
 
+describe('WindowedPageMain', () => {
+  it('keeps canonical windowed page headers title-only even when legacy callers pass descriptions', () => {
+    const html = renderToStaticMarkup(
+      <WindowedPageMain title="Gateways" description="Only approved users and chats can send work into Neon Pilot.">
+        Gateway settings
+      </WindowedPageMain>,
+    );
+
+    expect(html).toContain('<h1>Gateways</h1>');
+    expect(html).toContain('Gateway settings');
+    expect(html).not.toContain('Only approved users and chats can send work into Neon Pilot.');
+    expect(html).not.toContain('wos-page-main__heading"><h1>Gateways</h1><p>');
+  });
+});
+
 describe('WindowedEmptyState', () => {
   it('renders compact empty content with an optional action', () => {
     const html = renderToStaticMarkup(

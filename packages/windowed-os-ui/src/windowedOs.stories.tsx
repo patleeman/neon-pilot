@@ -296,11 +296,7 @@ export const DenseAppPage: Story = {
         onClose={() => undefined}
       >
         <WindowedPageShell layout="standard">
-          <WindowedPageMain
-            title="Telegram"
-            description="Only approved users and chats can send work into Neon Pilot."
-            actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}
-          >
+          <WindowedPageMain title="Telegram" actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}>
             <WindowedPageSection title="Providers" meta="2 enabled">
               <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
                 <WindowedDataRow name="Telegram" meta="Gateway" enabled status={<WindowedBadge tone="positive">Enabled</WindowedBadge>} />
@@ -513,7 +509,6 @@ export const CanonicalDensity: Story = {
         <WindowedPageShell layout="standard">
           <WindowedPageMain
             title="Windowed surface rhythm"
-            description="Compact chrome, small metadata, and dense product controls should feel native to the OS without reverting to stable app spacing."
             actions={
               <>
                 <WindowedPageButton>Secondary</WindowedPageButton>
