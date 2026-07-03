@@ -25,6 +25,7 @@ import {
   TextInput,
   WindowedBadge,
   WindowedDataTable,
+  WindowedEmptyState,
   WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
@@ -527,7 +528,7 @@ function ModelArenaWindowedPage({
         >
           {error ? (
             <WindowedPageSection title="Action needed">
-              <div className="wos-arena-error">{error}</div>
+              <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
             </WindowedPageSection>
           ) : null}
 
@@ -592,7 +593,7 @@ function ModelArenaWindowedPage({
                   </WindowedPageButton>
                 </div>
                 {selectedModels.length === 0 ? (
-                  <div className="wos-arena-empty">No challenger models selected.</div>
+                  <WindowedEmptyState>No challenger models selected.</WindowedEmptyState>
                 ) : (
                   <div className="wos-arena-challenger-list">
                     {selectedModels.map(({ ref, model }) => (
@@ -684,14 +685,14 @@ function ModelArenaWindowedPage({
             </>
           ) : (
             <WindowedPageSection title="Loading">
-              <div className="wos-arena-empty">Reading arena setup.</div>
+              <WindowedEmptyState>Reading arena setup.</WindowedEmptyState>
             </WindowedPageSection>
           )}
 
           <WindowedPageSection title="Rankings" meta={state ? `${ranked.length} models` : 'Loading'}>
-            {!state ? <div className="wos-arena-empty">Loading Model Arena rankings.</div> : null}
+            {!state ? <WindowedEmptyState>Loading Model Arena rankings.</WindowedEmptyState> : null}
             {state && ranked.length === 0 ? (
-              <div className="wos-arena-empty">Add challenger models and vote on duels to build rankings.</div>
+              <WindowedEmptyState>Add challenger models and vote on duels to build rankings.</WindowedEmptyState>
             ) : null}
             {ranked.length > 0 ? (
               <WindowedDataTable

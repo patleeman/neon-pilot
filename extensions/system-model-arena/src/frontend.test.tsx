@@ -77,6 +77,33 @@ describe('ModelArenaPage', () => {
     expect(screen.queryByText('Arena setup')).toBeNull();
     expect(document.body.textContent).toContain('Blind model duels');
   });
+
+  it('uses shared windowed empty states for setup, rankings, and errors', async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...arenaState,
+        stats: { models: {} },
+        duels: [],
+        settings: { ...arenaState.settings, challengerModels: [] },
+      })
+      .mockRejectedValueOnce(new Error('Arena settings could not be saved.'));
+
+    const { container } = render(
+      <ModelArenaPage pa={{ extension: { invoke } } as never} context={{ shellPresentation: 'windowed' } as never} />,
+    );
+
+    await waitFor(() => expect(screen.getByText('No challenger models selected.')).toBeTruthy());
+    expect(screen.getByText('No challenger models selected.').closest('.wos-empty-state')).toBeTruthy();
+    expect(screen.getByText('Add challenger models and vote on duels to build rankings.').closest('.wos-empty-state')).toBeTruthy();
+    expect(container.querySelector('.wos-arena-empty')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    await waitFor(() => expect(screen.getByText('Arena settings could not be saved.')).toBeTruthy());
+    expect(screen.getByText('Arena settings could not be saved.').closest('.wos-empty-state')?.getAttribute('data-tone')).toBe('danger');
+    expect(container.querySelector('.wos-arena-error')).toBeNull();
+  });
 });
 
 describe('ModelArenaContextRail', () => {
