@@ -1014,9 +1014,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop {
   align-items: flex-start !important;
   justify-content: flex-end !important;
-  background: oklch(96% 0.02 80 / 0.22) !important;
+  background: oklch(96% 0.02 80 / 0.14) !important;
   backdrop-filter: none !important;
-  padding: 76px 22px 58px !important;
+  padding: 82px 36px 58px !important;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker,
@@ -1030,16 +1030,21 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   font-family: var(--wos-font-display);
 }
 
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[data-parent-window-attached],
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal[data-parent-window-attached] {
+  border-radius: 8px !important;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker {
-  width: min(720px, calc(100vw - 44px)) !important;
-  max-height: min(620px, calc(100vh - 134px)) !important;
+  width: min(640px, calc(100vw - 72px)) !important;
+  max-height: min(540px, calc(100vh - 140px)) !important;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
-  width: min(940px, calc(100vw - 72px)) !important;
-  height: min(610px, calc(100vh - 156px)) !important;
-  max-height: min(610px, calc(100vh - 156px)) !important;
-  min-height: min(460px, calc(100vh - 156px)) !important;
+  width: min(860px, calc(100vw - 96px)) !important;
+  height: min(560px, calc(100vh - 156px)) !important;
+  max-height: min(560px, calc(100vh - 156px)) !important;
+  min-height: min(420px, calc(100vh - 156px)) !important;
   transform: none !important;
 }
 
@@ -1056,6 +1061,18 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-title {
   color: var(--wos-ink-900);
   font: var(--wos-text-subsection);
+}
+
+body[data-neon-pilot-windowed-shell-active='true']
+  .ui-windowed-drawings-picker[data-parent-window-title]
+  .ui-dialog-header::after,
+body[data-neon-pilot-windowed-shell-active='true']
+  .ui-windowed-excalidraw-modal[data-parent-window-title]
+  .ui-dialog-header::after {
+  margin-left: auto;
+  color: var(--wos-ink-700);
+  content: 'Attached to Chat';
+  font: var(--wos-text-caption);
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-description,

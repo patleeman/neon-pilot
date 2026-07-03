@@ -127,6 +127,9 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
       onClose={onClose}
       className="ui-windowed-drawings-picker"
       bodyClassName="ui-windowed-drawings-picker-body"
+      data-windowed-subwindow="drawing-picker"
+      data-parent-window-attached="chat"
+      data-parent-window-title="Chat"
       backdropStyle={{ background: 'rgb(0 0 0 / 0.55)', backdropFilter: 'blur(2px)' }}
       style={{ maxWidth: '840px', maxHeight: 'calc(100vh - 5rem)' }}
     >

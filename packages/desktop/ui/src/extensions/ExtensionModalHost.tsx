@@ -263,6 +263,9 @@ export function ExtensionModalHost() {
           windowedShellActive && 'ui-windowed-extension-modal',
           windowedExcalidrawModal && 'ui-windowed-excalidraw-modal',
         )}
+        data-windowed-subwindow={windowedExcalidrawModal ? 'drawing-editor' : undefined}
+        data-parent-window-attached={windowedExcalidrawModal ? 'chat' : undefined}
+        data-parent-window-title={windowedExcalidrawModal ? 'Chat' : undefined}
       >
         {title ? (
           <DialogHeader

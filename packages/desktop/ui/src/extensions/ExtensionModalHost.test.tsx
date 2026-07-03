@@ -198,6 +198,9 @@ describe('ExtensionModalHost modal bridge', () => {
     expect(screen.getByText('Drawing')).not.toBeNull();
     expect(dialog.className).toContain('ui-windowed-extension-modal');
     expect(dialog.className).toContain('ui-windowed-excalidraw-modal');
+    expect(dialog.getAttribute('data-windowed-subwindow')).toBe('drawing-editor');
+    expect(dialog.getAttribute('data-parent-window-attached')).toBe('chat');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('Chat');
     expect(document.querySelector('.ui-windowed-excalidraw-backdrop')).toBeTruthy();
     expect(document.querySelector('.ui-windowed-excalidraw-modal-body')).toBeTruthy();
   });

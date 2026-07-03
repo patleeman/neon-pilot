@@ -95,7 +95,11 @@ describe('ConversationDrawingsPickerModal', () => {
       />,
     );
 
-    expect(screen.getByRole('dialog', { name: 'Conversation drawings' }).className).toContain('ui-windowed-drawings-picker');
+    const dialog = screen.getByRole('dialog', { name: 'Conversation drawings' });
+    expect(dialog.className).toContain('ui-windowed-drawings-picker');
+    expect(dialog.getAttribute('data-windowed-subwindow')).toBe('drawing-picker');
+    expect(dialog.getAttribute('data-parent-window-attached')).toBe('chat');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('Chat');
     expect(document.querySelector('.ui-windowed-drawings-picker-body')).toBeTruthy();
   });
 

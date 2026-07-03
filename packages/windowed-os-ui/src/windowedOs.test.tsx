@@ -704,9 +704,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal");
     expect(stylesSource).toContain('.ui-overlay-backdrop:has(.ui-windowed-drawings-picker)');
-    expect(stylesSource).toContain('width: min(720px, calc(100vw - 44px)) !important;');
-    expect(stylesSource).toContain('width: min(940px, calc(100vw - 72px)) !important;');
-    expect(stylesSource).toContain('height: min(610px, calc(100vh - 156px)) !important;');
+    expect(stylesSource).toContain('background: oklch(96% 0.02 80 / 0.14) !important;');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker[data-parent-window-attached]');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal[data-parent-window-attached]');
+    expect(stylesSource).toContain('width: min(640px, calc(100vw - 72px)) !important;');
+    expect(stylesSource).toContain('width: min(860px, calc(100vw - 96px)) !important;');
+    expect(stylesSource).toContain('height: min(560px, calc(100vh - 156px)) !important;');
+    expect(stylesSource).toContain("content: 'Attached to Chat';");
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');
