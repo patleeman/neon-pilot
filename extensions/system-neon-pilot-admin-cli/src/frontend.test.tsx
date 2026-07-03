@@ -57,13 +57,17 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     </div>
   ),
   WindowedDataTable: ({ children }: { columns: unknown[]; children: React.ReactNode }) => <div role="table">{children}</div>,
-  WindowedEmptyState: ({ children, tone }: { children: React.ReactNode; tone?: string }) => <div data-tone={tone}>{children}</div>,
   WindowedPageButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
   WindowedPageSection: ({ title, children }: { title: string; children?: React.ReactNode }) => (
     <section>
       <h3>{title}</h3>
       {children}
     </section>
+  ),
+  WindowedStateBlock: ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
+    <div className="wos-state-block" data-tone={tone}>
+      {children}
+    </div>
   ),
   WindowedToggle: ({
     checked,
@@ -123,6 +127,31 @@ describe('NeonPilotAgentSettingsPanel', () => {
         cliEnabled: false,
       });
     });
+  });
+
+  it('uses shared windowed state-block chrome when settings fail to load', () => {
+    mocks.useApi.mockImplementation((_loader: unknown, key: string) => {
+      if (key === 'system-neon-pilot-cli-shell-link-setup') {
+        return buildUseApiResult(
+          { status: 'needs_setup', detail: 'Install the shell command.', actions: ['install'] },
+          mocks.refetchShellLink,
+        );
+      }
+      return {
+        data: null,
+        loading: false,
+        refreshing: false,
+        error: new Error('CLI settings unavailable.'),
+        refetch: mocks.refetchSettings,
+      };
+    });
+
+    const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    expect(screen.getByText('CLI settings unavailable.').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
+    expect(container.querySelector('.wos-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
   });
 
   it('keeps the stable settings row presentation outside windowed mode', () => {

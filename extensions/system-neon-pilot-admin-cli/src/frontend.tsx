@@ -4,9 +4,9 @@ import {
   WindowedBadge,
   WindowedDataRow,
   WindowedDataTable,
-  WindowedEmptyState,
   WindowedPageButton,
   WindowedPageSection,
+  WindowedStateBlock,
   WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import React, { useEffect, useState } from 'react';
@@ -135,7 +135,7 @@ export function NeonPilotAgentSettingsPanel({ settingsContext }: { settingsConte
     return (
       <div className="grid gap-3">
         {loading ? <QuietLoadingState label="Loading settings" className="min-h-12" /> : null}
-        {error ? <WindowedEmptyState tone="danger">{error instanceof Error ? error.message : String(error)}</WindowedEmptyState> : null}
+        {error ? <WindowedStateBlock tone="danger">{error instanceof Error ? error.message : String(error)}</WindowedStateBlock> : null}
         <WindowedPageSection title="Command line">
           <WindowedDataTable columns={[{ label: 'Capability' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
             <WindowedDataRow
