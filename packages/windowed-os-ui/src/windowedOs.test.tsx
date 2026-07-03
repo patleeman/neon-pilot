@@ -154,8 +154,25 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('.windowed-os-shell');
     expect(tokensSource).toContain('--wos-surface-0: oklch(95% 0.022 75);');
     expect(tokensSource).toContain('--wos-extensions: oklch(70% 0.15 60);');
+    expect(tokensSource).toContain('--wos-workflows:');
+    expect(tokensSource).toContain('--wos-model-arena:');
+    expect(tokensSource).toContain('--wos-skills:');
+    expect(tokensSource).toContain('--wos-diagnostics:');
     expect(tokensSource).toContain('--wos-titlebar-h: 42px;');
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
+  });
+
+  it('styles canonical app-specific accents across shared windowed primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    for (const accent of ['workflows', 'model-arena', 'skills', 'diagnostics']) {
+      expect(stylesSource).toContain(`.wos-window__titlebar[data-accent='${accent}']`);
+      expect(stylesSource).toContain(`.wos-dialog__titlebar[data-accent='${accent}']`);
+      expect(stylesSource).toContain(`.wos-segmented-control[data-accent='${accent}']`);
+      expect(stylesSource).toContain(`.wos-toggle[data-checked='true'][data-accent='${accent}']`);
+      expect(stylesSource).toContain(`.wos-list-item[data-accent='${accent}']`);
+    }
   });
 
   it('styles nested list rows through scoped depth selectors', () => {
@@ -402,6 +419,14 @@ describe('Windowed OS Storybook examples', () => {
     for (const title of canonicalTitles) {
       expect(source).toContain(`title: '${title}'`);
     }
+    expect(source).toContain("title: 'Workflows', accent: 'workflows'");
+    expect(source).toContain("title: 'Model Arena', accent: 'model-arena'");
+    expect(source).toContain("title: 'Skills', accent: 'skills'");
+    expect(source).toContain("title: 'Diagnostics', accent: 'diagnostics'");
+    expect(source).not.toContain("title: 'Workflows', accent: 'routines'");
+    expect(source).not.toContain("title: 'Model Arena', accent: 'gateways'");
+    expect(source).not.toContain("title: 'Skills', accent: 'extensions'");
+    expect(source).not.toContain("title: 'Diagnostics', accent: 'telemetry'");
     expect(source).not.toContain("title: 'Prompt Assembly'");
 
     const rosterStart = source.indexOf('const canonicalDesktopApps = [');

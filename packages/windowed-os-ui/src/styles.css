@@ -145,6 +145,11 @@
   background: var(--wos-routines);
 }
 
+.wos-app-monogram[data-accent='workflows'],
+.wos-window__titlebar[data-accent='workflows'] {
+  background: var(--wos-workflows);
+}
+
 .wos-app-monogram[data-accent='automations'],
 .wos-window__titlebar[data-accent='automations'] {
   background: var(--wos-automations);
@@ -155,14 +160,29 @@
   background: var(--wos-gateways);
 }
 
+.wos-app-monogram[data-accent='model-arena'],
+.wos-window__titlebar[data-accent='model-arena'] {
+  background: var(--wos-model-arena);
+}
+
 .wos-app-monogram[data-accent='extensions'],
 .wos-window__titlebar[data-accent='extensions'] {
   background: var(--wos-extensions);
 }
 
+.wos-app-monogram[data-accent='skills'],
+.wos-window__titlebar[data-accent='skills'] {
+  background: var(--wos-skills);
+}
+
 .wos-app-monogram[data-accent='telemetry'],
 .wos-window__titlebar[data-accent='telemetry'] {
   background: var(--wos-telemetry);
+}
+
+.wos-app-monogram[data-accent='diagnostics'],
+.wos-window__titlebar[data-accent='diagnostics'] {
+  background: var(--wos-diagnostics);
 }
 
 .wos-app-monogram[data-accent='settings'],
@@ -516,6 +536,10 @@
   background: var(--wos-routines);
 }
 
+.wos-dialog__titlebar[data-accent='workflows'] {
+  background: var(--wos-workflows);
+}
+
 .wos-dialog__titlebar[data-accent='automations'] {
   background: var(--wos-automations);
 }
@@ -524,12 +548,24 @@
   background: var(--wos-gateways);
 }
 
+.wos-dialog__titlebar[data-accent='model-arena'] {
+  background: var(--wos-model-arena);
+}
+
 .wos-dialog__titlebar[data-accent='extensions'] {
   background: var(--wos-extensions);
 }
 
+.wos-dialog__titlebar[data-accent='skills'] {
+  background: var(--wos-skills);
+}
+
 .wos-dialog__titlebar[data-accent='telemetry'] {
   background: var(--wos-telemetry);
+}
+
+.wos-dialog__titlebar[data-accent='diagnostics'] {
+  background: var(--wos-diagnostics);
 }
 
 .wos-dialog__identity {
@@ -1395,6 +1431,11 @@
   --wos-segmented-active-ink: white;
 }
 
+.wos-segmented-control[data-accent='workflows'] {
+  --wos-segmented-active: var(--wos-workflows);
+  --wos-segmented-active-ink: white;
+}
+
 .wos-segmented-control[data-accent='automations'] {
   --wos-segmented-active: var(--wos-automations);
   --wos-segmented-active-ink: white;
@@ -1405,13 +1446,28 @@
   --wos-segmented-active-ink: white;
 }
 
+.wos-segmented-control[data-accent='model-arena'] {
+  --wos-segmented-active: var(--wos-model-arena);
+  --wos-segmented-active-ink: white;
+}
+
 .wos-segmented-control[data-accent='extensions'] {
   --wos-segmented-active: var(--wos-extensions);
   --wos-segmented-active-ink: var(--wos-ink-900);
 }
 
+.wos-segmented-control[data-accent='skills'] {
+  --wos-segmented-active: var(--wos-skills);
+  --wos-segmented-active-ink: var(--wos-ink-900);
+}
+
 .wos-segmented-control[data-accent='telemetry'] {
   --wos-segmented-active: var(--wos-telemetry);
+  --wos-segmented-active-ink: white;
+}
+
+.wos-segmented-control[data-accent='diagnostics'] {
+  --wos-segmented-active: var(--wos-diagnostics);
   --wos-segmented-active-ink: white;
 }
 
@@ -1647,6 +1703,10 @@
   background: var(--wos-routines);
 }
 
+.wos-toggle[data-checked='true'][data-accent='workflows'] {
+  background: var(--wos-workflows);
+}
+
 .wos-toggle[data-checked='true'][data-accent='automations'] {
   background: var(--wos-automations);
 }
@@ -1655,12 +1715,24 @@
   background: var(--wos-gateways);
 }
 
+.wos-toggle[data-checked='true'][data-accent='model-arena'] {
+  background: var(--wos-model-arena);
+}
+
 .wos-toggle[data-checked='true'][data-accent='extensions'] {
   background: var(--wos-extensions);
 }
 
+.wos-toggle[data-checked='true'][data-accent='skills'] {
+  background: var(--wos-skills);
+}
+
 .wos-toggle[data-checked='true'][data-accent='telemetry'] {
   background: var(--wos-telemetry);
+}
+
+.wos-toggle[data-checked='true'][data-accent='diagnostics'] {
+  background: var(--wos-diagnostics);
 }
 
 .wos-toggle[data-checked='true'][data-accent='settings'] {
@@ -1902,6 +1974,11 @@
   --wos-list-active-ink: white;
 }
 
+.wos-list-item[data-accent='workflows'] {
+  --wos-list-active: var(--wos-workflows);
+  --wos-list-active-ink: white;
+}
+
 .wos-list-item[data-accent='automations'] {
   --wos-list-active: var(--wos-automations);
   --wos-list-active-ink: white;
@@ -1912,13 +1989,28 @@
   --wos-list-active-ink: white;
 }
 
+.wos-list-item[data-accent='model-arena'] {
+  --wos-list-active: var(--wos-model-arena);
+  --wos-list-active-ink: white;
+}
+
 .wos-list-item[data-accent='extensions'] {
   --wos-list-active: var(--wos-extensions);
   --wos-list-active-ink: var(--wos-ink-900);
 }
 
+.wos-list-item[data-accent='skills'] {
+  --wos-list-active: var(--wos-skills);
+  --wos-list-active-ink: var(--wos-ink-900);
+}
+
 .wos-list-item[data-accent='telemetry'] {
   --wos-list-active: var(--wos-telemetry);
+  --wos-list-active-ink: white;
+}
+
+.wos-list-item[data-accent='diagnostics'] {
+  --wos-list-active: var(--wos-diagnostics);
   --wos-list-active-ink: white;
 }
 

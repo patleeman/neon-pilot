@@ -236,7 +236,7 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
   });
 
-  it('uses product accents for diagnostics, skills, and workflow app windows', async () => {
+  it('uses canonical product accents for diagnostics, skills, and workflow app windows', async () => {
     mocks.extensions = [
       {
         id: 'system-diagnostics',
@@ -277,19 +277,19 @@ describe('WindowedLayout route windows', () => {
         .getByRole('region', { name: /diagnostics/i })
         .querySelector('.wos-window__titlebar')
         ?.getAttribute('data-accent'),
-    ).toBe('telemetry');
+    ).toBe('diagnostics');
     expect(
       screen
         .getByRole('region', { name: /skills/i })
         .querySelector('.wos-window__titlebar')
         ?.getAttribute('data-accent'),
-    ).toBe('extensions');
+    ).toBe('skills');
     expect(
       screen
         .getByRole('region', { name: /workflows/i })
         .querySelector('.wos-window__titlebar')
         ?.getAttribute('data-accent'),
-    ).toBe('routines');
+    ).toBe('workflows');
   });
 
   it('deduplicates start menu routes when an extension contributes both nav and a main view', () => {

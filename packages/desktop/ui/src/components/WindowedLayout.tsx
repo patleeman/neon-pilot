@@ -227,11 +227,15 @@ function compareLauncherItems(left: LauncherItem, right: LauncherItem): number {
 function accentForTitle(title: string): AppAccent {
   const normalized = title.toLowerCase();
   if (normalized.includes('chat') || normalized.includes('conversation')) return 'chat';
-  if (normalized.includes('routine') || normalized.includes('workflow')) return 'routines';
+  if (normalized.includes('workflow')) return 'workflows';
+  if (normalized.includes('routine')) return 'routines';
   if (normalized.includes('automation')) return 'automations';
-  if (normalized.includes('gateway') || normalized.includes('model')) return 'gateways';
-  if (normalized.includes('extension') || normalized.includes('skill')) return 'extensions';
-  if (normalized.includes('telemetry') || normalized.includes('diagnostic') || normalized.includes('run')) return 'telemetry';
+  if (normalized.includes('model arena')) return 'model-arena';
+  if (normalized.includes('gateway')) return 'gateways';
+  if (normalized.includes('skill')) return 'skills';
+  if (normalized.includes('extension')) return 'extensions';
+  if (normalized.includes('diagnostic')) return 'diagnostics';
+  if (normalized.includes('telemetry') || normalized.includes('run')) return 'telemetry';
   return 'settings';
 }
 

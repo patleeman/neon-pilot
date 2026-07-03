@@ -14,7 +14,18 @@ import {
   useState,
 } from 'react';
 
-export type AppAccent = 'chat' | 'routines' | 'automations' | 'gateways' | 'extensions' | 'telemetry' | 'settings';
+export type AppAccent =
+  | 'chat'
+  | 'routines'
+  | 'workflows'
+  | 'automations'
+  | 'gateways'
+  | 'model-arena'
+  | 'extensions'
+  | 'skills'
+  | 'telemetry'
+  | 'diagnostics'
+  | 'settings';
 
 export function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');

@@ -10,10 +10,14 @@
   --wos-surface-3: oklch(90% 0.015 75);
   --wos-chat: oklch(66% 0.14 250);
   --wos-routines: oklch(62% 0.14 150);
+  --wos-workflows: oklch(64% 0.13 175);
   --wos-automations: oklch(62% 0.14 300);
   --wos-gateways: oklch(62% 0.14 200);
+  --wos-model-arena: oklch(64% 0.15 285);
   --wos-extensions: oklch(70% 0.15 60);
+  --wos-skills: oklch(74% 0.14 85);
   --wos-telemetry: oklch(68% 0.16 25);
+  --wos-diagnostics: oklch(63% 0.16 35);
   --wos-settings: oklch(85% 0.02 75);
   --wos-shadow-window: 0 26px 50px rgba(40, 30, 20, 0.22);
   --wos-shadow-menu: 0 24px 48px rgba(40, 30, 20, 0.28);

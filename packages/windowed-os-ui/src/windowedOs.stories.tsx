@@ -53,13 +53,13 @@ type Story = StoryObj;
 const canonicalDesktopApps = [
   { id: 'chat', title: 'Chat', accent: 'chat', meta: 'Threads', detail: 'Workbench attached' },
   { id: 'automations', title: 'Automations', accent: 'automations', meta: 'Scheduled work', detail: 'Runs and reminders' },
-  { id: 'workflows', title: 'Workflows', accent: 'routines', meta: 'Dynamic flows', detail: 'Saved multi-agent work' },
+  { id: 'workflows', title: 'Workflows', accent: 'workflows', meta: 'Dynamic flows', detail: 'Saved multi-agent work' },
   { id: 'gateways', title: 'Gateways', accent: 'gateways', meta: 'Ingress', detail: 'Telegram ready' },
-  { id: 'model-arena', title: 'Model Arena', accent: 'gateways', meta: 'Duels', detail: 'Model comparisons' },
+  { id: 'model-arena', title: 'Model Arena', accent: 'model-arena', meta: 'Duels', detail: 'Model comparisons' },
   { id: 'routines', title: 'Routines', accent: 'routines', meta: 'Hooks', detail: 'Before and after' },
   { id: 'extensions', title: 'Extensions', accent: 'extensions', meta: 'Installed', detail: 'Extension manager' },
-  { id: 'skills', title: 'Skills', accent: 'extensions', meta: 'Library', detail: 'Installed and marketplace' },
-  { id: 'diagnostics', title: 'Diagnostics', accent: 'telemetry', meta: 'Telemetry', detail: 'Traces and health' },
+  { id: 'skills', title: 'Skills', accent: 'skills', meta: 'Library', detail: 'Installed and marketplace' },
+  { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics', meta: 'Telemetry', detail: 'Traces and health' },
   { id: 'settings', title: 'Settings', accent: 'settings', meta: 'Preferences', detail: 'Providers and desktop' },
 ] as const;
 
