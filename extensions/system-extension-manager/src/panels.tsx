@@ -395,7 +395,7 @@ function ExtensionActionsMenu({
     setOpen(false);
     action();
   }, []);
-  const canDelete = extension.uninstallable === true || extension.packageType !== 'system';
+  const canDelete = canDeleteExtension(extension);
   const hasActions = Boolean(extension.packageRoot || onUpdate || onReinstall || canDelete);
 
   if (!hasActions) {
@@ -470,6 +470,10 @@ const FALLBACK_LOCKED_EXTENSION_IDS = [
   'system-settings',
   'system-terminal',
 ];
+
+function canDeleteExtension(extension: ExtensionInstallSummary): boolean {
+  return extension.uninstallable === true || extension.packageType !== 'system';
+}
 
 function isLocked(extension: ExtensionInstallSummary): boolean {
   return extension.required === true || FALLBACK_LOCKED_EXTENSION_IDS.includes(extension.id);
@@ -1718,6 +1722,8 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
   const selectedExtension = detailsExtensionId
     ? (visibleExtensions.find((extension) => extension.id === detailsExtensionId) ?? null)
     : null;
+  const selectedExtensionCatalogItem = selectedExtension ? catalog?.extensions.find((item) => item.id === selectedExtension.id) : undefined;
+  const selectedExtensionBusy = selectedExtension ? busyId === selectedExtension.id : false;
 
   if (context.shellPresentation === 'windowed') {
     const filterItems: Array<{ id: ExtensionFilter; label: string; meta: string }> = [
@@ -1906,16 +1912,43 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             onClose={() => setDetailsExtensionId(null)}
             actions={
               <>
+                {selectedExtensionBusy ? <span className="wos-extension-dialog-busy">Working</span> : null}
                 {firstRoute(selectedExtension) && selectedExtension.enabled ? (
-                  <WindowedPageButton onClick={() => navigate(firstRoute(selectedExtension)!)}>Open</WindowedPageButton>
+                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => navigate(firstRoute(selectedExtension)!)}>
+                    Open
+                  </WindowedPageButton>
                 ) : null}
                 {hasExtensionSettings(selectedExtension) ? (
-                  <WindowedPageButton onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}>
+                  <WindowedPageButton
+                    disabled={selectedExtensionBusy}
+                    onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}
+                  >
                     Settings
                   </WindowedPageButton>
                 ) : null}
                 {selectedExtension.packageRoot ? (
-                  <WindowedPageButton onClick={() => openFolder(selectedExtension)}>Folder</WindowedPageButton>
+                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => openFolder(selectedExtension)}>
+                    Folder
+                  </WindowedPageButton>
+                ) : null}
+                {selectedExtensionCatalogItem?.updateAvailable && selectedExtension.packageType !== 'system' ? (
+                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void updateExtension(selectedExtension)}>
+                    Update
+                  </WindowedPageButton>
+                ) : null}
+                {selectedExtensionCatalogItem && selectedExtension.packageType !== 'system' ? (
+                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void reinstallExtension(selectedExtension)}>
+                    Reinstall
+                  </WindowedPageButton>
+                ) : null}
+                {canDeleteExtension(selectedExtension) ? (
+                  <WindowedPageButton
+                    tone="danger"
+                    disabled={selectedExtensionBusy}
+                    onClick={() => void deleteExtension(selectedExtension)}
+                  >
+                    Delete
+                  </WindowedPageButton>
                 ) : null}
               </>
             }

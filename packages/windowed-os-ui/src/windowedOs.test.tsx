@@ -231,6 +231,7 @@ describe('Windowed OS tokens', () => {
     expect(stylesSource).toContain('color: var(--wos-success);');
     expect(stylesSource).toContain('background: var(--wos-surface-disabled);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
+    expect(stylesSource).toContain('.wos-extension-dialog-busy');
     expect(stylesSource).toContain(".wos-dialog-layer[data-modal='true']");
     expect(stylesSource).toContain('pointer-events: none;');
     expect(stylesSource).toContain('pointer-events: auto;');

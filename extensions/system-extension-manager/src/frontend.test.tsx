@@ -336,6 +336,80 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('switch', { name: /Disable Settings panels/ })).toBeNull();
   });
 
+  it('restores manager actions inside the windowed extension details dialog', async () => {
+    const confirm = vi.fn().mockResolvedValue(true);
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.10.2',
+          tag: 'v0.10.2',
+          extensions: [
+            {
+              id: 'system-browser',
+              name: 'Browser',
+              description: 'Browse web pages beside a conversation.',
+              version: '0.1.0',
+              availableVersion: '0.1.0',
+              installedVersion: '0.0.1',
+              tag: 'v0.10.2',
+              installed: true,
+              enabled: true,
+              updateAvailable: true,
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      if (action === 'updateCatalogExtension') return { ok: true, updated: true };
+      return { ok: true };
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        description: 'Browse web pages beside a conversation.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.0.1',
+      } as never,
+    ]);
+    mocks.deleteExtension.mockResolvedValue({ ok: true, extensionId: 'system-browser', deleted: true });
+
+    renderWindowedPage({
+      pa: {
+        ui: { toast: vi.fn(), notify: vi.fn(), confirm },
+        commands: { list: vi.fn().mockResolvedValue([]) },
+        extensions: { callAction },
+      },
+    });
+
+    expect(await screen.findByText('Browser')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Browser' }));
+
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Browser' });
+    expect(within(detailsDialog).getByRole('button', { name: 'Update' })).toBeTruthy();
+    expect(within(detailsDialog).getByRole('button', { name: 'Reinstall' })).toBeTruthy();
+    expect(within(detailsDialog).getByRole('button', { name: 'Delete' })).toBeTruthy();
+
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Update' }));
+
+    await waitFor(() => {
+      expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
+    });
+
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(mocks.deleteExtension).toHaveBeenCalledWith('system-browser'));
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Delete extension',
+        message: expect.stringContaining('Browser'),
+      }),
+    );
+  });
+
   it('uses windowed empty-state chrome when no extensions are installed', async () => {
     mocks.extensionInstallations.mockResolvedValue([]);
     const { container } = renderWindowedPage();

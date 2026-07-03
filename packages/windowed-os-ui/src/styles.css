@@ -2513,6 +2513,11 @@
   justify-content: flex-end;
 }
 
+.wos-extension-dialog-busy {
+  color: var(--wos-ink-500);
+  font: var(--wos-text-label);
+}
+
 .wos-extension-detail-description {
   grid-column: 1 / -1;
   margin: 0;
