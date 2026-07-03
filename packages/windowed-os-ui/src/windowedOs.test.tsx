@@ -570,6 +570,10 @@ describe('Windowed OS tokens', () => {
     expect(tokensSource).toContain(".windowed-os-shell[data-wos-theme-mode='auto']");
     expect(tokensSource).toContain("[data-wos-theme-phase='dusk']");
     expect(tokensSource).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(tokensSource).toContain('.wos-window__titlebar');
+    expect(tokensSource).toContain('.wos-chat-window-toolbar');
+    expect(tokensSource).toContain('.wos-terminal-frame__status');
+    expect(tokensSource).toContain('.wos-window-route-body .ui-workbench-panel');
     expect(tokensSource).toContain('color-scheme: dark;');
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-shadow-window: 0 26px 56px rgba(0, 0, 0, 0.42);');
@@ -604,6 +608,27 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-diagnostics:');
     expect(tokensSource).toContain('--wos-titlebar-h: 42px;');
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
+  });
+
+  it('transitions automatic time-of-day theme changes across core desktop chrome', () => {
+    const tokensPath = fileURLToPath(new URL('./tokens.css', import.meta.url));
+    const tokensSource = readFileSync(tokensPath, 'utf8');
+
+    expect(tokensSource).toContain('background-color 900ms var(--wos-easing-standard)');
+    expect(tokensSource).toContain(".windowed-os-shell[data-wos-theme-mode='auto']\n  :where(");
+    for (const selector of [
+      '.wos-taskbar__button',
+      '.wos-start-menu__item',
+      '.wos-window__titlebar',
+      '.wos-window__controls button',
+      '.wos-chat-window-toolbar__button',
+      '.wos-terminal-panel',
+      '.wos-window-route-body .ui-workbench-tab',
+    ]) {
+      expect(tokensSource).toContain(selector);
+    }
+    expect(tokensSource).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(tokensSource).toContain('transition: none;');
   });
 
   it('documents light, dark, and automatic token variants in isolated Storybook examples', () => {

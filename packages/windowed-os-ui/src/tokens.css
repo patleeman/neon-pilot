@@ -109,7 +109,33 @@
     color 900ms var(--wos-easing-standard);
 }
 
-.windowed-os-shell[data-wos-theme-mode='auto'] :where(.wos-desktop, .wos-taskbar, .wos-start-menu, .wos-window, .wos-dialog) {
+.windowed-os-shell[data-wos-theme-mode='auto']
+  :where(
+    .wos-desktop,
+    .wos-taskbar,
+    .wos-taskbar__start,
+    .wos-taskbar__button,
+    .wos-taskbar__trailing :where(button, a),
+    .wos-start-menu,
+    .wos-start-menu__item,
+    .wos-window,
+    .wos-window__titlebar,
+    .wos-window__controls button,
+    .wos-window-route-body,
+    .wos-dialog,
+    .wos-dialog__titlebar,
+    .wos-dialog__close,
+    .wos-chat-window-toolbar,
+    .wos-chat-window-toolbar__button,
+    .wos-terminal-frame,
+    .wos-terminal-frame__status,
+    .wos-terminal-panel,
+    .wos-window-route-body .ui-workbench-panel,
+    .wos-window-route-body .ui-workbench-tab-strip,
+    .wos-window-route-body .ui-workbench-tab,
+    .wos-window-route-body .ui-workbench-header,
+    .wos-window-route-body .ui-workbench-footer
+  ) {
   transition:
     background-color 900ms var(--wos-easing-standard),
     border-color 900ms var(--wos-easing-standard),
@@ -168,7 +194,33 @@
 
 @media (prefers-reduced-motion: reduce) {
   .windowed-os-shell[data-wos-theme-mode='auto'],
-  .windowed-os-shell[data-wos-theme-mode='auto'] :where(.wos-desktop, .wos-taskbar, .wos-start-menu, .wos-window, .wos-dialog) {
+  .windowed-os-shell[data-wos-theme-mode='auto']
+    :where(
+      .wos-desktop,
+      .wos-taskbar,
+      .wos-taskbar__start,
+      .wos-taskbar__button,
+      .wos-taskbar__trailing :where(button, a),
+      .wos-start-menu,
+      .wos-start-menu__item,
+      .wos-window,
+      .wos-window__titlebar,
+      .wos-window__controls button,
+      .wos-window-route-body,
+      .wos-dialog,
+      .wos-dialog__titlebar,
+      .wos-dialog__close,
+      .wos-chat-window-toolbar,
+      .wos-chat-window-toolbar__button,
+      .wos-terminal-frame,
+      .wos-terminal-frame__status,
+      .wos-terminal-panel,
+      .wos-window-route-body .ui-workbench-panel,
+      .wos-window-route-body .ui-workbench-tab-strip,
+      .wos-window-route-body .ui-workbench-tab,
+      .wos-window-route-body .ui-workbench-header,
+      .wos-window-route-body .ui-workbench-footer
+    ) {
     transition: none;
   }
 }
