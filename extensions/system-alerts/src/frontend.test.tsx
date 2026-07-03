@@ -9,31 +9,63 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   Notice: ({ children }: { children: React.ReactNode }) => <div role="note">{children}</div>,
   QuietLoadingState: ({ label }: { label: string }) => <div role="status">{label}</div>,
   Select: (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} />,
-  SettingsRow: ({
-    title,
-    description,
-    children,
-  }: {
-    title: string;
-    description?: React.ReactNode;
-    children: React.ReactNode;
-  }) => (
+  SettingsRow: ({ title, description, children }: { title: string; description?: React.ReactNode; children: React.ReactNode }) => (
     <section aria-label={title}>
       <div>{description}</div>
       {children}
     </section>
   ),
-  Switch: ({
-    checked,
-    label,
-    onClick,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean; label?: string }) => (
+  Switch: ({ checked, label, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean; label?: string }) => (
     <button type="button" aria-pressed={checked} onClick={onClick} {...props}>
       {label}
     </button>
   ),
   ToolbarButton: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props} />,
+  WindowedDataRow: ({
+    name,
+    meta,
+    cells,
+    action,
+  }: {
+    name: string;
+    meta?: string;
+    cells?: Array<React.ReactNode | { value: React.ReactNode }>;
+    action?: React.ReactNode;
+  }) => (
+    <div className="wos-data-row" aria-label={name}>
+      <div>{name}</div>
+      {meta ? <div>{meta}</div> : null}
+      {cells?.map((cell, index) => (
+        <div key={index}>{cell && typeof cell === 'object' && 'value' in cell ? cell.value : cell}</div>
+      ))}
+      {action}
+    </div>
+  ),
+  WindowedDataTable: ({ children }: { children: React.ReactNode }) => <div className="wos-data-table">{children}</div>,
+  WindowedPageButton: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props} />,
+  WindowedPageSection: ({ title, meta, children }: { title?: string; meta?: string; children: React.ReactNode }) => (
+    <section className="wos-page-section" aria-label={title}>
+      {meta ? <div>{meta}</div> : null}
+      {children}
+    </section>
+  ),
+  WindowedSelect: (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} />,
+  WindowedStateBlock: ({ children }: { children: React.ReactNode }) => <div className="wos-state-block">{children}</div>,
+  WindowedToggle: ({
+    checked,
+    label,
+    onChange,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { checked: boolean; label?: string; onChange?: (checked: boolean) => void }) => (
+    <button
+      type="button"
+      className="wos-toggle"
+      aria-pressed={checked}
+      aria-label={label}
+      onClick={() => onChange?.(!checked)}
+      {...props}
+    />
+  ),
 }));
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -45,14 +77,14 @@ async function flush() {
   await Promise.resolve();
 }
 
-function renderPanel(invoke = vi.fn()) {
+function renderPanel(invoke = vi.fn(), shellPresentation?: 'stable' | 'windowed') {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
   roots.push(root);
 
   act(() => {
-    root.render(<AlertsSettingsPanel pa={{ extension: { invoke } } as never} />);
+    root.render(<AlertsSettingsPanel pa={{ extension: { invoke } } as never} settingsContext={{ shellPresentation }} />);
   });
 
   return { container, invoke };
@@ -155,5 +187,32 @@ describe('AlertsSettingsPanel', () => {
 
     expect(invoke).toHaveBeenCalledWith('sendTestAlert');
     expect(container.textContent).toContain('Test alert sent.');
+  });
+
+  it('renders canonical windowed rows in the desktop shell', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'readSettings') {
+        return {
+          settings: {
+            enabled: true,
+            nativeNotifications: true,
+            soundEnabled: true,
+            severity: 'all',
+            sound: 'ping',
+          },
+          systemNotificationsAvailable: true,
+        };
+      }
+      return { ok: true };
+    });
+
+    const { container } = renderPanel(invoke, 'windowed');
+    await act(async () => flush());
+
+    expect(container.querySelector('.wos-page-section')).not.toBeNull();
+    expect(container.querySelectorAll('.wos-data-row')).toHaveLength(4);
+    expect(container.querySelector('.wos-toggle')).not.toBeNull();
+    expect(container.textContent).toContain('macOS notifications');
+    expect(container.querySelector('[aria-label="Attention alerts"]')?.classList.contains('wos-data-row')).toBe(true);
   });
 });

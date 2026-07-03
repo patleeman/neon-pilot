@@ -1,8 +1,22 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
-import { Notice, QuietLoadingState, Select, SettingsRow, Switch, ToolbarButton } from '@neon-pilot/extensions/ui';
+import {
+  Notice,
+  QuietLoadingState,
+  Select,
+  SettingsRow,
+  Switch,
+  ToolbarButton,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedPageButton,
+  WindowedPageSection,
+  WindowedSelect,
+  WindowedStateBlock,
+  WindowedToggle,
+} from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import type { AlertsSettings, AlertsSettingsState, AlertSoundId, AlertSeverityFilter } from './types.js';
+import type { AlertSeverityFilter, AlertSoundId, AlertsSettings, AlertsSettingsState } from './types.js';
 
 const SOUND_OPTIONS: Array<{ id: AlertSoundId; label: string }> = [
   { id: 'basso', label: 'Basso' },
@@ -23,6 +37,7 @@ const SOUND_OPTIONS: Array<{ id: AlertSoundId; label: string }> = [
 
 interface AlertsSettingsPanelProps {
   pa: NativeExtensionClient;
+  settingsContext?: { extensionId?: string; shellPresentation?: 'stable' | 'windowed' };
 }
 
 function statusText(settings: AlertsSettings, systemNotificationsAvailable: boolean): string {
@@ -34,7 +49,7 @@ function statusText(settings: AlertsSettings, systemNotificationsAvailable: bool
   return channels.length > 0 ? channels.join(' and ') : 'No delivery channel selected';
 }
 
-export function AlertsSettingsPanel({ pa }: AlertsSettingsPanelProps) {
+export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanelProps) {
   const [state, setState] = useState<AlertsSettingsState | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -79,6 +94,100 @@ export function AlertsSettingsPanel({ pa }: AlertsSettingsPanelProps) {
   }
 
   const settings = state.settings;
+
+  if (settingsContext?.shellPresentation === 'windowed') {
+    return (
+      <div className="flex min-h-0 flex-col gap-3">
+        {!state.systemNotificationsAvailable && settings.nativeNotifications ? (
+          <WindowedStateBlock tone="warning">
+            macOS notifications are not available until the desktop app notification bridge is ready.
+          </WindowedStateBlock>
+        ) : null}
+        <WindowedPageSection title="Delivery" meta={statusText(settings, state.systemNotificationsAvailable)}>
+          <WindowedDataTable>
+            <WindowedDataRow
+              name="Attention alerts"
+              meta={settings.enabled ? 'On' : 'Paused'}
+              action={
+                <WindowedToggle
+                  checked={settings.enabled}
+                  disabled={busy}
+                  accent="settings"
+                  label={settings.enabled ? 'Disable attention alerts' : 'Enable attention alerts'}
+                  onChange={() => void save({ enabled: !settings.enabled })}
+                />
+              }
+            />
+            <WindowedDataRow
+              name="Native notification"
+              meta={state.systemNotificationsAvailable ? 'macOS notifications' : 'macOS notifications unavailable'}
+              action={
+                <WindowedToggle
+                  checked={settings.nativeNotifications}
+                  disabled={busy || !settings.enabled}
+                  accent="settings"
+                  label={settings.nativeNotifications ? 'Disable native notifications' : 'Enable native notifications'}
+                  onChange={() => void save({ nativeNotifications: !settings.nativeNotifications })}
+                />
+              }
+            />
+            <WindowedDataRow
+              name="Sound"
+              meta={settings.soundEnabled ? settings.sound : 'Off'}
+              cells={[
+                {
+                  value: (
+                    <WindowedSelect
+                      aria-label="Alert sound"
+                      value={settings.sound}
+                      disabled={busy || !settings.enabled || !settings.soundEnabled}
+                      onChange={(event) => void save({ sound: event.target.value as AlertSoundId })}
+                    >
+                      {SOUND_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </WindowedSelect>
+                  ),
+                  className: 'wos-data-row__cell--wide',
+                },
+              ]}
+              action={
+                <WindowedToggle
+                  checked={settings.soundEnabled}
+                  disabled={busy || !settings.enabled}
+                  accent="settings"
+                  label={settings.soundEnabled ? 'Disable alert sound' : 'Enable alert sound'}
+                  onChange={() => void save({ soundEnabled: !settings.soundEnabled })}
+                />
+              }
+            />
+            <WindowedDataRow
+              name="Notify for"
+              meta={settings.severity === 'all' ? 'All active alerts' : 'Disruptive alerts'}
+              action={
+                <WindowedSelect
+                  aria-label="Alert severity"
+                  value={settings.severity}
+                  disabled={busy || !settings.enabled}
+                  onChange={(event) => void save({ severity: event.target.value as AlertSeverityFilter })}
+                >
+                  <option value="disruptive">Disruptive alerts</option>
+                  <option value="all">All active alerts</option>
+                </WindowedSelect>
+              }
+            />
+          </WindowedDataTable>
+        </WindowedPageSection>
+        <WindowedPageSection title="Test alert" meta={message ?? 'Send a notification and play the selected sound.'}>
+          <WindowedPageButton type="button" tone="accent" disabled={busy} onClick={() => void testAlert()}>
+            {busy ? 'Working...' : 'Send test'}
+          </WindowedPageButton>
+        </WindowedPageSection>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
