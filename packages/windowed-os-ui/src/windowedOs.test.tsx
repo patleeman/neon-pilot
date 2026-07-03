@@ -462,6 +462,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('overflow-wrap: anywhere;');
   });
 
+  it('defines a separate host hook for native extension pages in windowed windows', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-window-route-body .wos-native-extension-surface--windowed');
+    expect(stylesSource).toContain('background: transparent;');
+    expect(stylesSource).toContain('font-family: var(--wos-font-body);');
+  });
+
   it('contains iframe paint inside window bodies and hides iframes during shell interaction', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');

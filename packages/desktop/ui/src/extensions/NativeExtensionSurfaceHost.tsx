@@ -2,7 +2,7 @@ import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
 import { addNotification } from '../components/notifications/notificationStore';
-import { ErrorState, QuietLoadingState } from '../components/ui';
+import { cx, ErrorState, QuietLoadingState } from '../components/ui';
 import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlobals';
 import { getExtensionRegistryRevision } from './extensionRegistryEvents';
 import {
@@ -175,11 +175,16 @@ export function NativeExtensionSurfaceHost({
     [conversationId, cwd, hash, instanceId, pathname, search, shellPresentation, surface.extensionId, surface.id, surface.route],
   );
 
-  const shouldUseTransparentChrome = surface.location === 'sidebar' || surface.location === 'rightRail';
+  const isWindowedMainSurface = shellPresentation === 'windowed' && surface.location === 'main';
+  const shouldUseTransparentChrome = surface.location === 'sidebar' || surface.location === 'rightRail' || isWindowedMainSurface;
 
   return (
     <section
-      className={shouldUseTransparentChrome ? 'h-full min-h-0 overflow-auto bg-transparent' : 'h-full min-h-0 overflow-auto bg-base'}
+      className={cx(
+        'h-full min-h-0 overflow-auto',
+        shouldUseTransparentChrome ? 'bg-transparent' : 'bg-base',
+        isWindowedMainSurface && 'wos-native-extension-surface wos-native-extension-surface--windowed',
+      )}
       data-extension-id={surface.extensionId}
       data-extension-surface-id={surface.id}
       data-shell-presentation={shellPresentation}

@@ -842,6 +842,12 @@ body[data-neon-pilot-windowed-shell-active='true'] iframe,
   min-height: 100%;
 }
 
+.wos-window-route-body .wos-native-extension-surface--windowed {
+  background: transparent;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-body);
+}
+
 .wos-window-route-body .bg-base,
 .wos-window-route-body .bg-panel,
 .wos-window-route-body .bg-surface,

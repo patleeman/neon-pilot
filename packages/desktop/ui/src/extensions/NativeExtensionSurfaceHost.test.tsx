@@ -176,6 +176,10 @@ describe('NativeExtensionSurfaceHost', () => {
     await vi.waitFor(() => expect(container.textContent).toContain('windowed shell'));
     const host = container.querySelector('[data-extension-surface-id="page"]');
     expect(host?.getAttribute('data-shell-presentation')).toBe('windowed');
+    expect(host?.className).toContain('wos-native-extension-surface');
+    expect(host?.className).toContain('wos-native-extension-surface--windowed');
+    expect(host?.className).toContain('bg-transparent');
+    expect(host?.className).not.toContain('bg-base');
   });
 
   it('shows a safe message when an extension surface fails to load', async () => {
