@@ -146,6 +146,7 @@ describe('SkillsPage', () => {
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByText('Sources')).toBeTruthy();
     expect(screen.getByRole('radiogroup', { name: 'Skills view' })).toBeTruthy();
+    expect(container.querySelector('.wos-segmented-control[data-accent="skills"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Search marketplace skills' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Install PDF' })).toBeTruthy();
@@ -161,10 +162,12 @@ describe('SkillsPage', () => {
     expect(screen.getByText('Read and verify PDF files.')).toBeTruthy();
     expect(screen.getByText('Marketplace skill')).toBeTruthy();
     expect(screen.getByText('Identifier')).toBeTruthy();
+    expect(container.querySelector('.wos-dialog__titlebar[data-accent="skills"]')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('radio', { name: /Installed/ }));
     expect(await screen.findByText('Build iOS Apps')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Enable Build iOS Apps' })).toBeTruthy();
+    expect(container.querySelector('.wos-toggle[data-accent="skills"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Details for Build iOS Apps' })).toBeTruthy();
   });
 

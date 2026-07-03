@@ -84,6 +84,7 @@ describe('TelemetryPage', () => {
     expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeTruthy();
     expect(screen.queryByText('Diagnostics context')).toBeNull();
     expect(screen.queryByText('Telemetry range')).toBeNull();
+    expect(container.querySelector('.wos-list-item[data-accent="diagnostics"]')).toBeTruthy();
     expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Data' })).toBeTruthy();
     expect(screen.getByText('Health')).toBeTruthy();

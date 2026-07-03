@@ -643,7 +643,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                       meta={workflow.activePhase ?? workflow.cwd}
                       detail={formatDate(workflow.updatedAt)}
                       active={selectedId === workflow.id}
-                      accent="routines"
+                      accent="workflows"
                       status={<WindowedBadge tone={windowedStatusTone(workflow.status)}>{workflow.status}</WindowedBadge>}
                       onSelect={() => {
                         setDraftOpen(false);
@@ -669,7 +669,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                       meta={savedWorkflows.some((item) => item.id === template.id) ? 'Saved workflow' : 'Template'}
                       detail={template.description}
                       active={!selectedId && selectedTemplate?.id === template.id}
-                      accent="routines"
+                      accent="workflows"
                       onSelect={() => {
                         setDraftOpen(false);
                         setSelectedId(null);
@@ -690,7 +690,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
           <WindowedDialog
             title={dialogTitle}
             meta={dialogMeta}
-            accent="routines"
+            accent="workflows"
             onClose={() => {
               if (draftOpen) {
                 setDraftOpen(false);
@@ -847,7 +847,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                         title={node.role ?? 'agent'}
                         meta={[node.phase, node.model, node.runId].filter(Boolean).join(' · ')}
                         detail={node.error ?? node.resultText ?? node.prompt}
-                        accent="routines"
+                        accent="workflows"
                         status={<WindowedBadge tone={windowedStatusTone(node.status)}>{node.status}</WindowedBadge>}
                       />
                     ))}

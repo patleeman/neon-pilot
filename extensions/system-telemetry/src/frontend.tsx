@@ -369,7 +369,7 @@ function WindowedRangeSelector({ value, onChange }: { value: TraceRange; onChang
             key={option.value}
             title={option.label}
             active={option.value === value}
-            accent="telemetry"
+            accent="diagnostics"
             onSelect={() => onChange(option.value)}
           />
         ))}

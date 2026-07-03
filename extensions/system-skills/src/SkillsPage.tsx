@@ -682,7 +682,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
               <>
                 <WindowedSegmentedControl
                   ariaLabel="Skills view"
-                  accent="extensions"
+                  accent="skills"
                   value={view}
                   options={viewItems}
                   onChange={(value) => {
@@ -917,7 +917,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                                 checked={skill.enabled}
                                 disabled={busySkillId === skill.id}
                                 label={skill.enabled ? `Disable ${skill.name}` : `Enable ${skill.name}`}
-                                accent="extensions"
+                                accent="skills"
                                 onChange={() => void toggleSkill(skill)}
                               />
                               <WindowedPageButton
@@ -948,7 +948,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                 : selectedWindowedSelection.skill.name
             }
             meta={selectedWindowedSelection.kind === 'marketplace' ? 'Marketplace skill' : 'Installed skill'}
-            accent="extensions"
+            accent="skills"
             onClose={() => setSelectedSkillResourceId(null)}
           >
             {selectedWindowedSelection.kind === 'marketplace' ? (

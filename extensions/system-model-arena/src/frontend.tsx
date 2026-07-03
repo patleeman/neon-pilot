@@ -560,7 +560,7 @@ function ModelArenaWindowedPage({
                   <WindowedToggle
                     checked={state.settings.automaticDuels}
                     disabled={saving}
-                    accent="gateways"
+                    accent="model-arena"
                     label={state.settings.automaticDuels ? 'Disable Model Arena' : 'Enable Model Arena'}
                     onChange={(checked) => void save({ automaticDuels: checked })}
                   />
