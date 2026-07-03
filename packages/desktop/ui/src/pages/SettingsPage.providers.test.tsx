@@ -649,7 +649,8 @@ describe('SettingsPage provider model editor', () => {
     await flushAsyncWork();
 
     expect(container.querySelector('.settings-page-windowed-nav')?.getAttribute('aria-label')).toBe('Settings sections');
-    expect(container.querySelector('.wos-page-rail')).toBeNull();
+    expect(container.querySelector('.wos-page-rail')).toBeInstanceOf(HTMLElement);
+    expect(queryButton(container, 'Appearance').getAttribute('data-active')).toBe('true');
 
     const providersButton = queryButton(container, 'Providers');
 
@@ -664,6 +665,21 @@ describe('SettingsPage provider model editor', () => {
     expect(container.querySelector('#settings-appearance')).toBeNull();
 
     window.removeEventListener('neon-pilot-desktop-navigate', listener);
+  });
+
+  it('shows the full section rail on direct routes in the windowed settings app', async () => {
+    const { container } = renderPage(undefined, '/settings/providers', {
+      shellPresentation: 'windowed',
+      pathname: '/settings/providers',
+    });
+    await flushAsyncWork();
+
+    expect(container.querySelector('.settings-page-windowed-nav')?.getAttribute('aria-label')).toBe('Settings sections');
+    expect(queryButton(container, 'Appearance')).toBeInstanceOf(HTMLButtonElement);
+    expect(queryButton(container, 'Providers').getAttribute('data-active')).toBe('true');
+    expect(container.querySelector('h1')?.textContent?.trim()).toBe('Providers');
+    expect(container.querySelector('#settings-providers')).toBeInstanceOf(HTMLElement);
+    expect(container.querySelector('#settings-appearance')).toBeNull();
   });
 
   it('renders the conversation section for direct settings routes', async () => {

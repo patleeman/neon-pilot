@@ -5093,7 +5093,7 @@ export function SettingsPage({
 
   const settingsContent = isWindowedSettingsSurface ? (
     <WindowedPageShell layout="two-column" className="settings-page-windowed">
-      <WindowedPageRail title="Sections" accent="settings" showHeader={false} className="settings-page-windowed-nav">
+      <WindowedPageRail title="Settings sections" accent="settings" showHeader={false} className="settings-page-windowed-nav">
         <WindowedList>
           {settingsNavLinks.flatMap((item) => {
             const rootItem = (
@@ -5125,7 +5125,7 @@ export function SettingsPage({
           })}
         </WindowedList>
       </WindowedPageRail>
-      <WindowedPageMain eyebrow="Preferences" title={activeSectionTitle}>
+      <WindowedPageMain title={activeSectionTitle}>
         <div ref={settingsScrollRef} className="settings-page-windowed-scroll h-full min-h-0 overflow-y-auto">
           {settingsSections}
         </div>

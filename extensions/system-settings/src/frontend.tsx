@@ -16,6 +16,10 @@ type SettingsSectionId =
   | 'settings-desktop';
 
 function SettingsSectionPage({ sectionIds, context }: ExtensionSurfaceProps & { sectionIds: SettingsSectionId[] }) {
+  if (context.shellPresentation === 'windowed') {
+    return <SettingsPage context={context} />;
+  }
+
   useEffect(() => {
     window.requestAnimationFrame(() => {
       const section = document.getElementById(sectionIds[0]);
