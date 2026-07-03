@@ -74,6 +74,10 @@ describe('ModelArenaPage', () => {
     expect(screen.getByText('frontend 6W/2L/1T')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Disable Model Arena' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add opencode-go/zeta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove DeepSeek V4 Flash · opencode-go' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
     expect(screen.getByText('opencode-go/flash')).toBeTruthy();
     expect(screen.queryByText('Arena setup')).toBeNull();
     expect(screen.queryByText('Blind model duels')).toBeNull();
@@ -99,7 +103,7 @@ describe('ModelArenaPage', () => {
     expect(screen.getByText('Add challenger models and vote on duels to build rankings.').closest('.wos-empty-state')).toBeTruthy();
     expect(container.querySelector('.wos-arena-empty')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add opencode-go/zeta' }));
 
     await waitFor(() => expect(screen.getByText('Arena settings could not be saved.')).toBeTruthy());
     expect(screen.getByText('Arena settings could not be saved.').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');

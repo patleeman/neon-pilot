@@ -6,6 +6,7 @@ const DEFAULT_BROWSER_URL = 'https://www.google.com/';
 const MAX_SNAPSHOT_TEXT_LENGTH = 30_000;
 const BROWSER_COMMENT_CHANNEL = 'neon-pilot-desktop:workbench-browser-comment';
 const SHORTCUT_CHANNEL = 'neon-pilot-desktop:shortcut';
+const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 1_500;
 
 type CdpCommand = (method: string, params?: Record<string, unknown>) => Promise<unknown>;
 
@@ -288,6 +289,7 @@ async function cdpEvaluate(webContents: WebContents, expression: string): Promis
 export class WorkbenchBrowserViewController {
   private views = new Map<string, WorkbenchBrowserViewEntry>();
   private activeViewKeysByOwner = new Map<number, string>();
+  private suppressedOwnersUntil = new Map<number, number>();
 
   getState(ownerWebContentsId: number, sessionKey?: string | null): WorkbenchBrowserState | null {
     const entry = this.views.get(this.viewKey(ownerWebContentsId, sessionKey));
@@ -349,11 +351,19 @@ export class WorkbenchBrowserViewController {
     }
 
     if (!visible || !bounds) {
+      if (deactivate === true) {
+        this.suppressOwnerViews(owner.id);
+      }
       if (sessionKey === null || sessionKey === undefined) {
         this.hideAllOwnerViews(owner.id, deactivate === true);
         return this.getState(owner.id, sessionKey);
       }
       this.hide(this.viewKey(owner.id, sessionKey), deactivate === true);
+      return this.getState(owner.id, sessionKey);
+    }
+
+    if (this.isOwnerSuppressed(owner.id)) {
+      this.hideAllOwnerViews(owner.id, false);
       return this.getState(owner.id, sessionKey);
     }
 
@@ -627,6 +637,22 @@ export class WorkbenchBrowserViewController {
         this.hide(viewKey, deactivate);
       }
     }
+  }
+
+  private suppressOwnerViews(ownerWebContentsId: number): void {
+    this.suppressedOwnersUntil.set(ownerWebContentsId, Date.now() + WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS);
+  }
+
+  private isOwnerSuppressed(ownerWebContentsId: number): boolean {
+    const suppressedUntil = this.suppressedOwnersUntil.get(ownerWebContentsId);
+    if (!suppressedUntil) {
+      return false;
+    }
+    if (Date.now() >= suppressedUntil) {
+      this.suppressedOwnersUntil.delete(ownerWebContentsId);
+      return false;
+    }
+    return true;
   }
 
   private requireOwnerWindow(owner: WebContents): BrowserWindow {

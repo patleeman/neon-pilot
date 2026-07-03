@@ -499,6 +499,8 @@ function ModelArenaWindowedPage({
   const activeTaskLabel = taskFilter === 'all' ? 'All tasks' : taskFilter;
   const totalVotes = ranked.reduce((sum, model) => sum + model.votes, 0) / 2;
   const arenaReady = Boolean(state?.settings.automaticDuels && state.settings.challengerModels.length > 0);
+  const selectedModelLabel = selectedModelRef || 'selected challenger model';
+  const addModelLabel = `Add ${selectedModelLabel}`;
 
   return (
     <div className="h-full overflow-hidden">
@@ -588,7 +590,13 @@ function ModelArenaWindowedPage({
                       ))}
                     </WindowedSelect>
                   </WindowedField>
-                  <WindowedPageButton tone="accent" disabled={!selectedModelRef || saving} onClick={() => void addModel()}>
+                  <WindowedPageButton
+                    tone="accent"
+                    disabled={!selectedModelRef || saving}
+                    aria-label={addModelLabel}
+                    title={addModelLabel}
+                    onClick={() => void addModel()}
+                  >
                     Add
                   </WindowedPageButton>
                 </div>
@@ -602,7 +610,12 @@ function ModelArenaWindowedPage({
                           <strong>{model ? modelLabel(model) : ref}</strong>
                           <span>{ref}</span>
                         </div>
-                        <WindowedPageButton disabled={saving} onClick={() => void removeModel(ref)}>
+                        <WindowedPageButton
+                          disabled={saving}
+                          aria-label={`Remove ${model ? modelLabel(model) : ref}`}
+                          title={`Remove ${model ? modelLabel(model) : ref}`}
+                          onClick={() => void removeModel(ref)}
+                        >
                           Remove
                         </WindowedPageButton>
                       </div>

@@ -69,6 +69,15 @@ describe('workbench browser validation', () => {
     expect(source).toContain('entry.owner.id === ownerWebContentsId');
   });
 
+  it('rejects late native browser show requests during forced shell suppression', () => {
+    const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
+
+    expect(source).toContain('WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS');
+    expect(source).toContain('this.suppressOwnerViews(owner.id);');
+    expect(source).toContain('if (this.isOwnerSuppressed(owner.id))');
+    expect(source).toContain('this.hideAllOwnerViews(owner.id, false);');
+  });
+
   it('forwards command palette shortcuts out of the embedded browser', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 
