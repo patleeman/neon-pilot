@@ -57,12 +57,23 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     </div>
   ),
   WindowedDataTable: ({ children }: { columns: unknown[]; children: React.ReactNode }) => <div role="table">{children}</div>,
+  WindowedPageMain: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <main className="wos-page-main">
+      <h1>{title}</h1>
+      {children}
+    </main>
+  ),
   WindowedPageButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
   WindowedPageSection: ({ title, children }: { title: string; children?: React.ReactNode }) => (
     <section>
       <h3>{title}</h3>
       {children}
     </section>
+  ),
+  WindowedPageShell: ({ children, className, layout }: { children: React.ReactNode; className?: string; layout?: string }) => (
+    <div className={['wos-page-shell', className].filter(Boolean).join(' ')} data-layout={layout}>
+      {children}
+    </div>
   ),
   WindowedStateBlock: ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
     <div className="wos-state-block" data-tone={tone}>
@@ -113,8 +124,11 @@ describe('NeonPilotAgentSettingsPanel', () => {
   it('renders a windowed settings table and saves CLI toggle changes', async () => {
     mocks.api.invokeExtensionAction.mockResolvedValue({ result: { settings: { cliEnabled: false } } });
 
-    render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
 
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.admin-cli-page-windowed')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Command Line' })).toBeTruthy();
     expect(screen.getByRole('table')).toBeTruthy();
     expect(screen.getByText('Shell command')).toBeTruthy();
     expect(screen.getByText('CLI entrypoint')).toBeTruthy();
@@ -152,6 +166,30 @@ describe('NeonPilotAgentSettingsPanel', () => {
     expect(container.querySelector('.wos-empty-state')).toBeNull();
     expect(container.querySelector('.ui-empty-state')).toBeNull();
     expect(container.querySelector('.ui-error-state')).toBeNull();
+  });
+
+  it('keeps windowed loading state inside the canonical page shell', () => {
+    mocks.useApi.mockImplementation((_loader: unknown, key: string) => {
+      if (key === 'system-neon-pilot-cli-shell-link-setup') {
+        return buildUseApiResult(
+          { status: 'needs_setup', detail: 'Install the shell command.', actions: ['install'] },
+          mocks.refetchShellLink,
+        );
+      }
+      return {
+        data: null,
+        loading: true,
+        refreshing: false,
+        error: null,
+        refetch: mocks.refetchSettings,
+      };
+    });
+
+    const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(screen.getByRole('heading', { name: 'Command Line' })).toBeTruthy();
+    expect(screen.getByText('Loading settings.').closest('.wos-state-block')).toBeTruthy();
   });
 
   it('keeps the stable settings row presentation outside windowed mode', () => {
