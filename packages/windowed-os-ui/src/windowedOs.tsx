@@ -248,12 +248,22 @@ export interface WindowedDialogProps {
   children: ReactNode;
   onClose: () => void;
   className?: string;
+  modal?: boolean;
 }
 
-export function WindowedDialog({ title, meta, accent = 'settings', actions, children, onClose, className }: WindowedDialogProps) {
+export function WindowedDialog({
+  title,
+  meta,
+  accent = 'settings',
+  actions,
+  children,
+  onClose,
+  className,
+  modal = false,
+}: WindowedDialogProps) {
   return (
-    <div className="wos-dialog-layer" role="presentation">
-      <section className={cx('wos-dialog', className)} role="dialog" aria-modal="true" aria-label={title}>
+    <div className="wos-dialog-layer" role="presentation" data-modal={modal ? 'true' : undefined}>
+      <section className={cx('wos-dialog', className)} role="dialog" aria-modal={modal ? true : undefined} aria-label={title}>
         <header className="wos-dialog__titlebar" data-accent={accent}>
           <div className="wos-dialog__identity">
             <div className="wos-dialog__title">{title}</div>

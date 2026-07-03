@@ -510,14 +510,21 @@
   z-index: 220;
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-end;
   overflow: auto;
+  padding: 24px;
+  pointer-events: none;
+}
+
+.wos-dialog-layer[data-modal='true'] {
+  justify-content: center;
   padding: 30px 18px;
+  pointer-events: auto;
 }
 
 .wos-dialog {
   display: grid;
-  width: min(760px, 100%);
+  width: min(720px, calc(100% - 8px));
   max-height: min(680px, calc(100% - 12px));
   grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
@@ -527,6 +534,11 @@
   box-shadow: var(--wos-shadow-window);
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);
+  pointer-events: auto;
+}
+
+.wos-dialog-layer[data-modal='true'] .wos-dialog {
+  width: min(760px, 100%);
 }
 
 .wos-dialog__titlebar {

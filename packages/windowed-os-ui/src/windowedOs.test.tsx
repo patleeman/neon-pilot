@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
+  WindowedDialog,
   WindowedDialogCopy,
   WindowedDialogStack,
   WindowedEmptyState,
@@ -130,6 +131,31 @@ describe('WindowedListItem', () => {
 });
 
 describe('WindowedDialog content primitives', () => {
+  it('renders modeless subwindows by default for windowed desktop detail panels', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDialog title="Telegram configuration" accent="gateways" onClose={() => undefined}>
+        Details
+      </WindowedDialog>,
+    );
+
+    expect(html).toContain('class="wos-dialog-layer"');
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('aria-label="Telegram configuration"');
+    expect(html).not.toContain('aria-modal');
+    expect(html).not.toContain('data-modal="true"');
+  });
+
+  it('supports explicit modal subwindows for blocking flows', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDialog title="Confirm install" accent="extensions" modal onClose={() => undefined}>
+        Install extension
+      </WindowedDialog>,
+    );
+
+    expect(html).toContain('data-modal="true"');
+    expect(html).toContain('aria-modal="true"');
+  });
+
   it('renders scoped dialog stack and copy classes for reusable subwindow content', () => {
     const html = renderToStaticMarkup(
       <WindowedDialogStack>
@@ -172,6 +198,9 @@ describe('Windowed OS tokens', () => {
     expect(stylesSource).toContain('color: var(--wos-success);');
     expect(stylesSource).toContain('background: var(--wos-surface-disabled);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
+    expect(stylesSource).toContain(".wos-dialog-layer[data-modal='true']");
+    expect(stylesSource).toContain('pointer-events: none;');
+    expect(stylesSource).toContain('pointer-events: auto;');
   });
 });
 
