@@ -78,6 +78,7 @@ type WindowNavigate = (to: To) => void;
 const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
 const MIN_WINDOW_HEIGHT = 260;
+const WINDOWED_BROWSER_SETTLE_MS = 600;
 
 const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'chat', title: 'Chat', route: '/conversations/new', kind: 'chat' },
@@ -623,6 +624,7 @@ export function WindowedLayout() {
   const [drag, setDrag] = useState<DragState | null>(null);
   const [resize, setResize] = useState<ResizeState | null>(null);
   const [snapTarget, setSnapTarget] = useState<SnapTarget | null>(null);
+  const [browserLayerSettling, setBrowserLayerSettling] = useState(false);
   const [restoreBounds, setRestoreBounds] = useState<Record<string, WindowBounds>>({});
 
   const launcherItems = useMemo(() => buildLauncherItems(extensionRegistry), [extensionRegistry]);
@@ -1082,15 +1084,18 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
 
-  useWindowedBrowserSuppression(Boolean(launcherOpen || drag || resize || snapTarget));
+  useWindowedBrowserSuppression(Boolean(launcherOpen || drag || resize || snapTarget || browserLayerSettling));
 
   useEffect(() => {
     if (!visibleWindowSignature) return;
+    setBrowserLayerSettling(true);
     suspendWindowedBrowserViews();
+    const settleTimer = window.setTimeout(() => setBrowserLayerSettling(false), WINDOWED_BROWSER_SETTLE_MS);
+    return () => window.clearTimeout(settleTimer);
   }, [visibleWindowSignature]);
 
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
-  const browserBlockingShellInteraction = Boolean(launcherOpen || drag || resize || snapPreview);
+  const browserBlockingShellInteraction = Boolean(launcherOpen || drag || resize || snapPreview || browserLayerSettling);
   const startMenuItems = launcherItems.map(
     (item): StartMenuItem => ({
       id: item.id,
