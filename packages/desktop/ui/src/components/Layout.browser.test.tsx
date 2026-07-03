@@ -845,6 +845,10 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
 
+    const host = container.querySelector('[data-windowed-browser-host="true"]');
+    expect(host).toBeTruthy();
+    expect(host?.className).toContain('ui-windowed-browser-host');
+    expect(container.textContent).toContain('Browser preview is paused in desktop mode');
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });

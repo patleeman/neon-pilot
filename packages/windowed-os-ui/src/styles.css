@@ -497,6 +497,26 @@
   contain: paint;
 }
 
+.windowed-os-shell .ui-windowed-browser-host {
+  position: relative;
+  background: var(--wos-surface-2);
+}
+
+.windowed-os-shell .ui-windowed-browser-host__blocker {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  border: 2px dashed color-mix(in srgb, var(--wos-ink-900) 32%, transparent);
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-700);
+  padding: var(--wos-space-5);
+  text-align: center;
+  font: var(--wos-text-body);
+  pointer-events: auto;
+}
+
 .wos-window[data-focused='false'] .wos-composited-frame,
 .wos-window[data-focused='false'] .wos-window__body iframe,
 .wos-window[data-iframe-blocked='true'] .wos-composited-frame,

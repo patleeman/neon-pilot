@@ -638,6 +638,7 @@ export function WorkbenchBrowserTab({
   onCloseCurrentTab: () => void;
 }) {
   const browserHostRef = useRef<HTMLDivElement | null>(null);
+  const [hostedByWindowedShell, setHostedByWindowedShell] = useState(false);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const closedRef = useRef(false);
   const tabsStateRef = useRef(tabsState);
@@ -894,6 +895,7 @@ export function WorkbenchBrowserTab({
 
   useLayoutEffect(() => {
     closedRef.current = false;
+    setHostedByWindowedShell(Boolean(browserHostRef.current?.closest('.windowed-os-shell')));
     syncBounds();
     const observer = typeof ResizeObserver !== 'undefined' && browserHostRef.current ? new ResizeObserver(syncBounds) : null;
     if (browserHostRef.current) {
@@ -1201,10 +1203,19 @@ export function WorkbenchBrowserTab({
           ×
         </IconButton>
       </form>
-      <div ref={browserHostRef} className="relative min-h-[220px] flex-1 overflow-hidden bg-base">
+      <div
+        ref={browserHostRef}
+        className={`relative min-h-[220px] flex-1 overflow-hidden bg-base${hostedByWindowedShell ? ' ui-windowed-browser-host' : ''}`}
+        data-windowed-browser-host={hostedByWindowedShell ? 'true' : undefined}
+      >
         {!bridge ? (
           <div className="flex h-full items-center justify-center px-4 text-center text-[12px] leading-5 text-dim">
             Browser embedding is only available in the Electron desktop app.
+          </div>
+        ) : null}
+        {hostedByWindowedShell ? (
+          <div className="ui-windowed-browser-host__blocker" role="status">
+            Browser preview is paused in desktop mode while the window system is active.
           </div>
         ) : null}
         {pendingMarkers.map((marker, index) => {
