@@ -311,13 +311,24 @@ export const WindowChromePrimitives: Story = {
 
 export const ThemeVariants: Story = {
   render: () => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', minHeight: 520 }}>
-      {(['light', 'dark'] as const).map((theme) => (
-        <div key={theme} className="windowed-os-shell" data-wos-theme={theme} style={{ minHeight: 520, padding: 18 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', minHeight: 520 }}>
+      {[
+        { mode: 'light', resolved: 'light', phase: 'bright-noon', title: 'Light desktop' },
+        { mode: 'auto', resolved: 'dark', phase: 'dusk', title: 'Auto dusk desktop' },
+        { mode: 'dark', resolved: 'dark', phase: 'night', title: 'Dark desktop' },
+      ].map((theme) => (
+        <div
+          key={theme.mode}
+          className="windowed-os-shell"
+          data-wos-theme={theme.resolved}
+          data-wos-theme-mode={theme.mode}
+          data-wos-theme-phase={theme.phase}
+          style={{ minHeight: 520, padding: 18 }}
+        >
           <WindowFrame
-            title={`${theme === 'light' ? 'Light' : 'Dark'} desktop`}
+            title={theme.title}
             accent="chat"
-            focused={theme === 'light'}
+            focused={theme.mode === 'light'}
             style={{ position: 'relative', left: 0, top: 0, width: '100%', height: 420 }}
             onMinimize={() => undefined}
             onMaximize={() => undefined}
@@ -345,17 +356,18 @@ export const ThemeVariants: Story = {
                   <WindowedToolbar
                     end={
                       <>
-                        <WindowedToggle checked accent="chat" label={`${theme} theme toggle`} />
+                        <WindowedToggle checked accent="chat" label={`${theme.mode} theme toggle`} />
                         <WindowedPageButton>Reset</WindowedPageButton>
                       </>
                     }
                   >
                     <WindowedSegmentedControl
-                      ariaLabel={`${theme} theme mode`}
-                      value={theme}
+                      ariaLabel={`${theme.mode} theme mode`}
+                      value={theme.mode}
                       options={[
-                        { value: 'light', label: 'Light' },
-                        { value: 'dark', label: 'Dark' },
+                        { id: 'light', label: 'Light' },
+                        { id: 'auto', label: 'Auto' },
+                        { id: 'dark', label: 'Dark' },
                       ]}
                     />
                   </WindowedToolbar>
@@ -367,8 +379,8 @@ export const ThemeVariants: Story = {
             startOpen={false}
             onToggleStart={() => undefined}
             items={[
-              { id: `${theme}-chat`, title: 'Chat', accent: 'chat', focused: true, onSelect: () => undefined },
-              { id: `${theme}-settings`, title: 'Settings', accent: 'settings', onSelect: () => undefined },
+              { id: `${theme.mode}-chat`, title: 'Chat', accent: 'chat', focused: true, onSelect: () => undefined },
+              { id: `${theme.mode}-settings`, title: 'Settings', accent: 'settings', onSelect: () => undefined },
             ]}
           />
         </div>

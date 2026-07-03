@@ -439,6 +439,9 @@ describe('Windowed OS tokens', () => {
 
     expect(tokensSource).toContain(".windowed-os-shell[data-wos-theme='light']");
     expect(tokensSource).toContain(".windowed-os-shell[data-wos-theme='dark']");
+    expect(tokensSource).toContain(".windowed-os-shell[data-wos-theme-mode='auto']");
+    expect(tokensSource).toContain("[data-wos-theme-phase='dusk']");
+    expect(tokensSource).toContain('@media (prefers-reduced-motion: reduce)');
     expect(tokensSource).toContain('color-scheme: dark;');
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-shadow-window: 0 26px 56px rgba(0, 0, 0, 0.42);');
@@ -475,13 +478,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
   });
 
-  it('documents light and dark token variants in isolated Storybook examples', () => {
+  it('documents light, dark, and automatic token variants in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
     expect(source).toContain('export const ThemeVariants');
-    expect(source).toContain('data-wos-theme={theme}');
-    expect(source).toContain("(['light', 'dark'] as const)");
+    expect(source).toContain('data-wos-theme={theme.resolved}');
+    expect(source).toContain('data-wos-theme-mode={theme.mode}');
+    expect(source).toContain('data-wos-theme-phase={theme.phase}');
+    expect(source).toContain("mode: 'auto'");
     expect(source).toContain('Theme tokens');
   });
 

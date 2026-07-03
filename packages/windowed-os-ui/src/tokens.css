@@ -102,3 +102,73 @@
   --wos-shadow-desktop: 0 40px 90px rgba(0, 0, 0, 0.5);
   --wos-shadow-menu: 0 24px 54px rgba(0, 0, 0, 0.46);
 }
+
+.windowed-os-shell[data-wos-theme-mode='auto'] {
+  transition:
+    background-color 900ms var(--wos-easing-standard),
+    color 900ms var(--wos-easing-standard);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'] :where(.wos-desktop, .wos-taskbar, .wos-start-menu, .wos-window, .wos-dialog) {
+  transition:
+    background-color 900ms var(--wos-easing-standard),
+    border-color 900ms var(--wos-easing-standard),
+    box-shadow 900ms var(--wos-easing-standard),
+    color 900ms var(--wos-easing-standard);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'][data-wos-theme-phase='deep-night'] {
+  --wos-surface-0: oklch(15% 0.028 265);
+  --wos-surface-1: oklch(20% 0.024 265);
+  --wos-surface-2: oklch(24% 0.027 265);
+  --wos-settings: oklch(34% 0.026 265);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'][data-wos-theme-phase='night'] {
+  --wos-surface-0: oklch(18% 0.026 255);
+  --wos-surface-1: oklch(23% 0.023 255);
+  --wos-surface-2: oklch(28% 0.026 255);
+  --wos-settings: oklch(39% 0.024 255);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'][data-wos-theme-phase='dawn'] {
+  --wos-surface-0: oklch(93% 0.028 68);
+  --wos-surface-1: oklch(98% 0.014 70);
+  --wos-surface-2: oklch(95% 0.026 70);
+  --wos-settings: oklch(84% 0.028 70);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'][data-wos-theme-phase='morning'] {
+  --wos-surface-0: oklch(95% 0.021 82);
+  --wos-surface-1: oklch(99% 0.01 82);
+  --wos-surface-2: oklch(97% 0.02 82);
+  --wos-settings: oklch(86% 0.02 82);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'][data-wos-theme-phase='bright-noon'] {
+  --wos-surface-0: oklch(97% 0.014 88);
+  --wos-surface-1: oklch(99% 0.008 88);
+  --wos-surface-2: oklch(96% 0.017 88);
+  --wos-settings: oklch(87% 0.018 88);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'][data-wos-theme-phase='afternoon'] {
+  --wos-surface-0: oklch(95% 0.024 78);
+  --wos-surface-1: oklch(99% 0.012 78);
+  --wos-surface-2: oklch(96% 0.022 78);
+  --wos-settings: oklch(86% 0.024 78);
+}
+
+.windowed-os-shell[data-wos-theme-mode='auto'][data-wos-theme-phase='dusk'] {
+  --wos-surface-0: oklch(20% 0.03 285);
+  --wos-surface-1: oklch(25% 0.026 285);
+  --wos-surface-2: oklch(30% 0.03 285);
+  --wos-settings: oklch(40% 0.028 285);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .windowed-os-shell[data-wos-theme-mode='auto'],
+  .windowed-os-shell[data-wos-theme-mode='auto'] :where(.wos-desktop, .wos-taskbar, .wos-start-menu, .wos-window, .wos-dialog) {
+    transition: none;
+  }
+}

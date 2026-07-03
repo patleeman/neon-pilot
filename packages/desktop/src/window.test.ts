@@ -23,6 +23,7 @@ import {
   canNavigateWindowInApp,
   constrainDesktopWindowBounds,
   getDesktopWindowChromeOptions,
+  isWindowedDesktopShellUrl,
   shouldGrantDesktopMediaPermission,
   shouldOpenNavigationExternally,
   shouldOpenWindowExternally,
@@ -63,6 +64,19 @@ describe('toDesktopShellRoute', () => {
     const route = toDesktopShellRoute('https://app.neon-pilot.dev/conv/123?file=doc.md&desktop-shell=1');
     expect(route).toContain('file=doc');
     expect(route).not.toContain('desktop-shell');
+  });
+});
+
+describe('isWindowedDesktopShellUrl', () => {
+  it('detects the windowed desktop shell route', () => {
+    expect(isWindowedDesktopShellUrl('neon-pilot://app/?shell=windowed&desktop-shell=1')).toBe(true);
+    expect(isWindowedDesktopShellUrl('https://app.neon-pilot.dev/?desktop-shell=1&shell=windowed')).toBe(true);
+  });
+
+  it('leaves stable desktop shell routes and invalid URLs alone', () => {
+    expect(isWindowedDesktopShellUrl('neon-pilot://app/?desktop-shell=1')).toBe(false);
+    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings?shell=stable&desktop-shell=1')).toBe(false);
+    expect(isWindowedDesktopShellUrl('not a url')).toBe(false);
   });
 });
 

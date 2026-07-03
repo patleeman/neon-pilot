@@ -4,7 +4,9 @@ export const WINDOWED_OS_THEME_CHANGED_EVENT = 'pa:windowed-os-theme-changed';
 export const WINDOWED_SHELL_CHILD_PARAM = 'windowed-child';
 
 export type DesktopShellPresentation = 'stable' | 'windowed';
-export type WindowedOsTheme = 'light' | 'dark';
+export type WindowedOsResolvedTheme = 'light' | 'dark';
+export type WindowedOsTheme = WindowedOsResolvedTheme | 'auto';
+export type WindowedOsThemePhase = 'deep-night' | 'night' | 'dawn' | 'morning' | 'bright-noon' | 'afternoon' | 'dusk';
 
 export interface DesktopRect {
   width: number;
@@ -65,7 +67,7 @@ export function writeDesktopShellPresentation(mode: DesktopShellPresentation): v
 }
 
 export function normalizeWindowedOsTheme(value: unknown): WindowedOsTheme | null {
-  return value === 'light' || value === 'dark' ? value : null;
+  return value === 'light' || value === 'dark' || value === 'auto' ? value : null;
 }
 
 export function readWindowedOsTheme(): WindowedOsTheme {
@@ -85,6 +87,23 @@ export function writeWindowedOsTheme(theme: WindowedOsTheme): void {
     // Ignore storage failures; the in-memory shell state still updates.
   }
   window.dispatchEvent(new CustomEvent(WINDOWED_OS_THEME_CHANGED_EVENT, { detail: { theme } }));
+}
+
+export function resolveWindowedOsThemePhase(date = new Date()): WindowedOsThemePhase {
+  const hour = date.getHours();
+  if (hour < 5) return 'deep-night';
+  if (hour < 7) return 'dawn';
+  if (hour < 11) return 'morning';
+  if (hour < 15) return 'bright-noon';
+  if (hour < 18) return 'afternoon';
+  if (hour < 21) return 'dusk';
+  return 'night';
+}
+
+export function resolveWindowedOsTheme(theme: WindowedOsTheme, date = new Date()): WindowedOsResolvedTheme {
+  if (theme !== 'auto') return theme;
+  const phase = resolveWindowedOsThemePhase(date);
+  return phase === 'deep-night' || phase === 'night' || phase === 'dusk' ? 'dark' : 'light';
 }
 
 export function constrainWindowBounds(bounds: WindowBounds, desktop: DesktopRect): WindowBounds {

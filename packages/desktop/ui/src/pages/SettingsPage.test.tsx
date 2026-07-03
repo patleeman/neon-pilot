@@ -383,6 +383,7 @@ describe('SettingsPage', () => {
     expect(html).toContain('>Providers</span>');
     expect(html).toContain('Windowed OS');
     expect(html).toContain('aria-label="Windowed OS theme"');
+    expect(html).toContain('>Auto</button>');
     expect(html).not.toContain('Theme, accent, and visual defaults.');
     expect(html).not.toContain('Model and transcript defaults for new conversations.');
     expect(html).not.toContain('Connect model providers, save credentials, and add model overrides.');

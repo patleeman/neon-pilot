@@ -210,7 +210,8 @@ describe('windowed settings navigation', () => {
     expect(settingsPageSource).toContain('readWindowedOsTheme');
     expect(settingsPageSource).toContain('writeWindowedOsTheme');
     expect(hostSettingsApiSource).toContain("from '../ui-state/windowedShell'");
-    expect(extensionSettingsTypesSource).toContain("export type WindowedOsTheme = 'light' | 'dark';");
+    expect(settingsPageSource).toContain("{ value: 'auto', label: 'Auto' }");
+    expect(extensionSettingsTypesSource).toContain("export type WindowedOsTheme = 'light' | 'dark' | 'auto';");
     expect(extensionSettingsTypesSource).toContain('export declare function readWindowedOsTheme(): WindowedOsTheme;');
     expect(extensionSettingsTypesSource).toContain('export declare function writeWindowedOsTheme(theme: WindowedOsTheme): void;');
   });

@@ -357,9 +357,12 @@ describe('WindowedLayout route windows', () => {
     const { container } = renderWindowedLayout();
 
     expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-wos-theme')).toBe('light');
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-wos-theme-mode')).toBe('light');
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-wos-theme-phase')).toBeTruthy();
     const desktopControls = screen.getByLabelText('Desktop controls');
     expect(within(desktopControls).getByRole('radiogroup', { name: /windowed os theme/i })).toBeTruthy();
     expect(within(desktopControls).getByRole('radio', { name: 'Light' }).getAttribute('aria-checked')).toBe('true');
+    expect(within(desktopControls).getByRole('radio', { name: 'Auto' }).getAttribute('aria-checked')).toBe('false');
   });
 
   it('restores the persisted windowed OS theme and updates it from the taskbar', () => {
@@ -376,6 +379,25 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-wos-theme')).toBe('light');
     expect(window.localStorage.getItem('pa:windowed-os-theme:v1')).toBe('light');
     expect(within(desktopControls).getByRole('radio', { name: 'Light' }).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('keeps automatic windowed OS theme mode selected while painting the resolved theme', () => {
+    window.localStorage.setItem('pa:windowed-os-theme:v1', 'auto');
+    const { container } = renderWindowedLayout();
+
+    const shell = container.querySelector('.windowed-os-shell');
+    const desktopControls = screen.getByLabelText('Desktop controls');
+
+    expect(shell?.getAttribute('data-wos-theme-mode')).toBe('auto');
+    expect(['light', 'dark']).toContain(shell?.getAttribute('data-wos-theme'));
+    expect(shell?.getAttribute('data-wos-theme-phase')).toBeTruthy();
+    expect(within(desktopControls).getByRole('radio', { name: 'Auto' }).getAttribute('aria-checked')).toBe('true');
+
+    fireEvent.click(within(desktopControls).getByRole('radio', { name: 'Dark' }));
+
+    expect(shell?.getAttribute('data-wos-theme-mode')).toBe('dark');
+    expect(shell?.getAttribute('data-wos-theme')).toBe('dark');
+    expect(window.localStorage.getItem('pa:windowed-os-theme:v1')).toBe('dark');
   });
 
   it('renders extension top-bar elements in the right side of the windowed taskbar', () => {

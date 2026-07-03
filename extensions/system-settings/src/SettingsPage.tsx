@@ -3961,12 +3961,13 @@ export function SettingsPage({
                   ariaLabel="Windowed OS theme"
                   value={windowedOsTheme}
                   onChange={(value) => {
-                    const nextTheme: WindowedOsTheme = value === 'dark' ? 'dark' : 'light';
+                    const nextTheme: WindowedOsTheme = value === 'dark' || value === 'auto' ? value : 'light';
                     setWindowedOsTheme(nextTheme);
                     writeWindowedOsTheme(nextTheme);
                   }}
                   options={[
                     { value: 'light', label: 'Light' },
+                    { value: 'auto', label: 'Auto' },
                     { value: 'dark', label: 'Dark' },
                   ]}
                 />

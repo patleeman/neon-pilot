@@ -111,6 +111,15 @@ export function toDesktopShellRoute(url: string): string {
   return route || '/';
 }
 
+export function isWindowedDesktopShellUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.searchParams.get('shell') === 'windowed';
+  } catch {
+    return false;
+  }
+}
+
 export function canNavigateWindowInApp(currentUrl: string, targetUrl: string): boolean {
   if (!currentUrl || !targetUrl) {
     return false;
@@ -435,6 +444,10 @@ export class DesktopWindowController {
     const bounds = visible ? normalizeWorkbenchBrowserBounds(input?.bounds) : null;
     if (visible && !bounds) {
       throw new Error('Workbench browser bounds are invalid.');
+    }
+
+    if (visible && isWindowedDesktopShellUrl(tracked.window.webContents.getURL())) {
+      return this.workbenchBrowser.setBounds(tracked.window.webContents, false, null, null, true, true);
     }
 
     return this.workbenchBrowser.setBounds(

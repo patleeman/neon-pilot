@@ -37,11 +37,14 @@ import {
   type DesktopRect,
   readWindowedOsTheme,
   resolveSnapTarget,
+  resolveWindowedOsTheme,
+  resolveWindowedOsThemePhase,
   type SnapTarget,
   type WindowBounds,
   WINDOWED_OS_THEME_CHANGED_EVENT,
   WINDOWED_OS_THEME_STORAGE_KEY,
   type WindowedOsTheme,
+  type WindowedOsThemePhase,
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
 import { Layout } from './Layout';
@@ -788,6 +791,7 @@ export function WindowedLayout() {
   const [browserLayerSettling, setBrowserLayerSettling] = useState(false);
   const [restoreBounds, setRestoreBounds] = useState<Record<string, WindowBounds>>({});
   const [windowedTheme, setWindowedTheme] = useState<WindowedOsTheme>(() => readWindowedOsTheme());
+  const [windowedThemePhase, setWindowedThemePhase] = useState<WindowedOsThemePhase>(() => resolveWindowedOsThemePhase());
 
   const launcherItems = useMemo(() => buildLauncherItems(extensionRegistry), [extensionRegistry]);
   const chatSessions = useMemo(
@@ -823,6 +827,18 @@ export function WindowedLayout() {
       document.body.removeAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE);
     };
   }, []);
+
+  useEffect(() => {
+    if (windowedTheme !== 'auto') {
+      setWindowedThemePhase(resolveWindowedOsThemePhase());
+      return undefined;
+    }
+
+    const refreshThemePhase = () => setWindowedThemePhase(resolveWindowedOsThemePhase());
+    refreshThemePhase();
+    const phaseTimer = window.setInterval(refreshThemePhase, 60_000);
+    return () => window.clearInterval(phaseTimer);
+  }, [windowedTheme]);
 
   useEffect(() => {
     const handleThemeChange = (event: Event) => {
@@ -1383,10 +1399,11 @@ export function WindowedLayout() {
       value={windowedTheme}
       options={[
         { id: 'light', label: 'Light' },
+        { id: 'auto', label: 'Auto' },
         { id: 'dark', label: 'Dark' },
       ]}
       onChange={(value) => {
-        const nextTheme: WindowedOsTheme = value === 'dark' ? 'dark' : 'light';
+        const nextTheme: WindowedOsTheme = value === 'dark' || value === 'auto' ? value : 'light';
         setWindowedTheme(nextTheme);
         writeWindowedOsTheme(nextTheme);
       }}
@@ -1404,7 +1421,9 @@ export function WindowedLayout() {
   return (
     <div
       className="windowed-os-shell h-screen overflow-hidden"
-      data-wos-theme={windowedTheme}
+      data-wos-theme={resolveWindowedOsTheme(windowedTheme)}
+      data-wos-theme-mode={windowedTheme}
+      data-wos-theme-phase={windowedThemePhase}
       data-focused-window-id={focusedWindowId ?? undefined}
       data-window-interaction={browserBlockingShellInteraction ? 'true' : undefined}
       data-native-browser-blocked={nativeBrowserBlocked ? 'true' : undefined}

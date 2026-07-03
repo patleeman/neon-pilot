@@ -10,6 +10,8 @@ import {
   readDesktopShellPresentation,
   readWindowedOsTheme,
   resolveSnapTarget,
+  resolveWindowedOsTheme,
+  resolveWindowedOsThemePhase,
   WINDOWED_OS_THEME_CHANGED_EVENT,
   WINDOWED_OS_THEME_STORAGE_KEY,
   writeWindowedOsTheme,
@@ -91,6 +93,28 @@ describe('windowedShell', () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect((listener.mock.calls[0]?.[0] as CustomEvent<{ theme: string }>).detail.theme).toBe('dark');
 
+    writeWindowedOsTheme('auto');
+
+    expect(localStorage.getItem(WINDOWED_OS_THEME_STORAGE_KEY)).toBe('auto');
+    expect(readWindowedOsTheme()).toBe('auto');
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect((listener.mock.calls[1]?.[0] as CustomEvent<{ theme: string }>).detail.theme).toBe('auto');
+
     window.removeEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, listener);
+  });
+
+  it('resolves automatic windowed OS theme phases from local time', () => {
+    expect(resolveWindowedOsThemePhase(new Date(2026, 6, 3, 2))).toBe('deep-night');
+    expect(resolveWindowedOsThemePhase(new Date(2026, 6, 3, 6))).toBe('dawn');
+    expect(resolveWindowedOsThemePhase(new Date(2026, 6, 3, 9))).toBe('morning');
+    expect(resolveWindowedOsThemePhase(new Date(2026, 6, 3, 12))).toBe('bright-noon');
+    expect(resolveWindowedOsThemePhase(new Date(2026, 6, 3, 16))).toBe('afternoon');
+    expect(resolveWindowedOsThemePhase(new Date(2026, 6, 3, 19))).toBe('dusk');
+    expect(resolveWindowedOsThemePhase(new Date(2026, 6, 3, 22))).toBe('night');
+
+    expect(resolveWindowedOsTheme('light', new Date(2026, 6, 3, 22))).toBe('light');
+    expect(resolveWindowedOsTheme('dark', new Date(2026, 6, 3, 12))).toBe('dark');
+    expect(resolveWindowedOsTheme('auto', new Date(2026, 6, 3, 12))).toBe('light');
+    expect(resolveWindowedOsTheme('auto', new Date(2026, 6, 3, 22))).toBe('dark');
   });
 });
