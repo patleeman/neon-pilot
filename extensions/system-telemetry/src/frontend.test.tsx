@@ -75,6 +75,28 @@ describe('TelemetryPage', () => {
         toolHealth: [
           { toolName: 'exec_command', calls: 3, errors: 0, successRate: 100, avgLatencyMs: 120, p95LatencyMs: 250, maxLatencyMs: 300 },
           { toolName: 'browser_snapshot', calls: 1, errors: 1, successRate: 0, avgLatencyMs: 900, p95LatencyMs: 900, maxLatencyMs: 900 },
+          {
+            toolName: 'bash',
+            calls: 2,
+            errors: 0,
+            successRate: 100,
+            avgLatencyMs: 220,
+            p95LatencyMs: 480,
+            maxLatencyMs: 520,
+            bashBreakdown: [{ command: 'rg', calls: 2, errors: 0, errorRate: 0, p95LatencyMs: 480 }],
+            bashComplexity: {
+              avgScore: 1.5,
+              maxScore: 3,
+              maxCommandCount: 2,
+              pipelineCalls: 1,
+              chainCalls: 0,
+              redirectCalls: 0,
+              multilineCalls: 0,
+              shellCalls: 1,
+              substitutionCalls: 0,
+              shapeBreakdown: [{ shape: 'single', calls: 2 }],
+            },
+          },
         ],
         toolFlow: {
           transitions: [{ fromTool: 'exec_command', toTool: 'browser_snapshot', count: 2 }],
@@ -176,6 +198,9 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.ui-heatmap-cell-4')).toBeNull();
     expect(container.querySelector('.wos-braid-chart')).toBeTruthy();
     expect(container.querySelector('.wos-braid-line--errors')).toBeTruthy();
+    expect(container.querySelector('.wos-tool-health')).toBeTruthy();
+    expect(container.querySelector('.wos-tool-health__bash')).toBeTruthy();
+    expect(screen.getByText('rg').closest('.wos-data-row')).toBeTruthy();
     expect(container.querySelector('.wos-tool-flow')).toBeTruthy();
     expect(container.querySelector('.wos-tool-flow__failures')).toBeTruthy();
     expect(screen.getByText('native view unavailable').closest('.wos-data-row')).toBeTruthy();

@@ -2048,8 +2048,40 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   font-family: var(--wos-font-mono);
 }
 
+.wos-tool-health {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-tool-health__summary {
+  margin-bottom: 0;
+}
+
+.wos-tool-health__table .wos-data-row__name,
+.wos-tool-health__bash .wos-data-row__name {
+  font-family: var(--wos-font-mono);
+}
+
+.wos-tool-health__bash {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  gap: var(--wos-space-4);
+}
+
+.wos-tool-health__bash > .wos-data-table:only-child,
+.wos-tool-health__bash > .wos-key-value-grid:only-child {
+  grid-column: 1 / -1;
+}
+
+.wos-tool-health__complexity {
+  align-self: start;
+}
+
 @media (max-width: 900px) {
-  .wos-tool-flow__grid {
+  .wos-tool-flow__grid,
+  .wos-tool-health__bash {
     grid-template-columns: minmax(0, 1fr);
   }
 }

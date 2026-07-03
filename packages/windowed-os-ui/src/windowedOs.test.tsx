@@ -497,6 +497,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-tool-flow__error {');
   });
 
+  it('defines compact windowed telemetry tool health primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-tool-health {');
+    expect(stylesSource).toContain('.wos-tool-health__summary {');
+    expect(stylesSource).toContain('.wos-tool-health__table .wos-data-row__name,');
+    expect(stylesSource).toContain('.wos-tool-health__bash {');
+    expect(stylesSource).toContain('.wos-tool-health__complexity {');
+  });
+
   it('documents the canonical terminal frame in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

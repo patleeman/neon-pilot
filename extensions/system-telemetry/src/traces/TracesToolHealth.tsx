@@ -14,11 +14,20 @@ import {
   SectionLabel,
   StatusDot,
   SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedKeyValueGrid,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
-export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
+export function TracesToolHealth({ tools, presentation = 'stable' }: { tools: TraceToolHealth[]; presentation?: 'stable' | 'windowed' }) {
   if (!tools || tools.length === 0) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>Tool calls will appear after agents execute tools in retained traces.</WindowedEmptyState>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Tool health" meta="No tool data yet" metaClassName="bg-transparent px-0" />
@@ -31,6 +40,10 @@ export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
 
   const totalCalls = tools.reduce((a, t) => a + t.calls, 0);
   const totalErrors = tools.reduce((a, t) => a + t.errors, 0);
+
+  if (presentation === 'windowed') {
+    return <WindowedToolHealth tools={tools} totalCalls={totalCalls} totalErrors={totalErrors} />;
+  }
 
   return (
     <SurfacePanel className="overflow-hidden">
@@ -45,6 +58,114 @@ export function TracesToolHealth({ tools }: { tools: TraceToolHealth[] }) {
       </div>
       <BashBreakdown tools={tools} />
     </SurfacePanel>
+  );
+}
+
+function WindowedToolHealth({ tools, totalCalls, totalErrors }: { tools: TraceToolHealth[]; totalCalls: number; totalErrors: number }) {
+  return (
+    <div className="wos-tool-health">
+      <WindowedKeyValueGrid
+        className="wos-tool-health__summary"
+        columns={3}
+        items={[
+          { label: 'Calls', value: totalCalls },
+          { label: 'Errors', value: <WindowedBadge tone={totalErrors > 0 ? 'warning' : 'positive'}>{totalErrors}</WindowedBadge> },
+          { label: 'Error rate', value: `${((totalErrors / Math.max(totalCalls, 1)) * 100).toFixed(1)}%` },
+        ]}
+      />
+      <WindowedDataTable
+        className="wos-tool-health__table"
+        columns={[
+          { label: 'Tool' },
+          { label: 'Success', align: 'right' },
+          { label: 'Avg', align: 'right' },
+          { label: 'P95', align: 'right' },
+          { label: 'Max', align: 'right' },
+          { label: 'Errors', align: 'right' },
+        ]}
+        columnTemplate="minmax(11rem, 1fr) minmax(5rem, 0.36fr) repeat(3, minmax(4.5rem, 0.32fr)) minmax(5rem, 0.34fr)"
+      >
+        {tools.map((tool) => {
+          const successRate = tool.calls > 0 ? ((tool.calls - tool.errors) / tool.calls) * 100 : 100;
+          const hasTrouble = tool.errors > 0 && successRate < 95;
+          return (
+            <WindowedDataRow
+              key={tool.toolName}
+              name={tool.toolName}
+              meta={`${tool.calls} calls`}
+              status={<WindowedBadge tone={hasTrouble ? 'danger' : tool.errors > 0 ? 'warning' : 'positive'}>{tool.calls}</WindowedBadge>}
+              cells={[
+                { value: `${successRate.toFixed(1)}%`, align: 'right' },
+                { value: formatDuration(tool.avgLatencyMs), align: 'right' },
+                { value: formatDuration(tool.p95LatencyMs), align: 'right' },
+                { value: formatDuration(tool.maxLatencyMs), align: 'right' },
+                {
+                  value: <WindowedBadge tone={tool.errors > 0 ? 'warning' : 'positive'}>{tool.errors}</WindowedBadge>,
+                  align: 'right',
+                },
+              ]}
+            />
+          );
+        })}
+      </WindowedDataTable>
+      <WindowedBashBreakdown tools={tools} />
+    </div>
+  );
+}
+
+function WindowedBashBreakdown({ tools }: { tools: TraceToolHealth[] }) {
+  const bash = tools.find((tool) => tool.toolName === 'bash');
+  const rows = bash?.bashBreakdown ?? [];
+  const complexity = bash?.bashComplexity;
+  if (!bash || (rows.length === 0 && !complexity)) return null;
+
+  return (
+    <div className="wos-tool-health__bash">
+      {rows.length > 0 ? (
+        <WindowedDataTable
+          columns={[
+            { label: 'Command' },
+            { label: 'Calls', align: 'right' },
+            { label: 'Errors', align: 'right' },
+            { label: 'P95', align: 'right' },
+          ]}
+          columnTemplate="minmax(10rem, 1fr) repeat(3, minmax(5rem, 0.36fr))"
+        >
+          {rows.map((row) => {
+            const errorRate = 'errorRate' in row ? row.errorRate : row.calls > 0 ? (row.errors / row.calls) * 100 : 0;
+            return (
+              <WindowedDataRow
+                key={row.command}
+                name={row.command}
+                meta="Bash family"
+                status={<WindowedBadge tone={row.errors > 0 ? 'warning' : 'positive'}>{row.calls}</WindowedBadge>}
+                cells={[
+                  { value: row.calls, align: 'right' },
+                  { value: `${errorRate.toFixed(1)}%`, align: 'right' },
+                  { value: formatDuration(row.p95LatencyMs), align: 'right' },
+                ]}
+              />
+            );
+          })}
+        </WindowedDataTable>
+      ) : null}
+      {complexity ? (
+        <WindowedKeyValueGrid
+          className="wos-tool-health__complexity"
+          columns={4}
+          items={[
+            { label: 'Avg score', value: complexity.avgScore.toFixed(1) },
+            { label: 'Max score', value: complexity.maxScore },
+            { label: 'Piped', value: complexity.pipelineCalls },
+            { label: 'Chained', value: complexity.chainCalls },
+            { label: 'Redirected', value: complexity.redirectCalls },
+            { label: 'Multiline', value: complexity.multilineCalls },
+            { label: 'Shell', value: complexity.shellCalls },
+            { label: 'Substs', value: complexity.substitutionCalls },
+          ]}
+        />
+      ) : null}
+    </div>
   );
 }
 
