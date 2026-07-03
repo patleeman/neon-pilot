@@ -494,6 +494,7 @@ export function WindowedDialog({
 
   const dialogStyle: CSSProperties | undefined =
     !modal && (offset.x !== 0 || offset.y !== 0) ? { transform: `translate(${offset.x}px, ${offset.y}px)` } : undefined;
+  const displayMeta = meta ?? (parentWindowTitle ? `Attached to ${parentWindowTitle}` : undefined);
 
   return (
     <div
@@ -520,7 +521,7 @@ export function WindowedDialog({
         <header className="wos-dialog__titlebar" data-accent={accent} onMouseDown={startDialogDrag}>
           <div className="wos-dialog__identity">
             <div className="wos-dialog__title">{title}</div>
-            {meta ? <div className="wos-dialog__meta">{meta}</div> : null}
+            {displayMeta ? <div className="wos-dialog__meta">{displayMeta}</div> : null}
           </div>
           <button type="button" className="wos-dialog__close" aria-label={`Close ${title}`} onClick={onClose}>
             <span aria-hidden="true" />

@@ -976,13 +976,7 @@ export const AutomationsPage: Story = {
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
-      <WindowedDialog
-        title="Automation details"
-        meta="Running · 0 9 * * 1-5"
-        accent="automations"
-        parentWindowTitle="Automations"
-        onClose={() => undefined}
-      >
+      <WindowedDialog title="Automation details" accent="automations" parentWindowTitle="Automations" onClose={() => undefined}>
         <WindowedPageSection title="Automation context">
           <WindowedKeyValueList
             items={[

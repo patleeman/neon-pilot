@@ -370,6 +370,18 @@ describe('WindowedDialog content primitives', () => {
     expect(html).toContain('data-parent-window-attached="true"');
     expect(html).toContain('data-parent-window-id="route:system-automations:nav"');
     expect(html).toContain('data-parent-window-title="Automations"');
+    expect(html).toContain('Attached to Automations');
+  });
+
+  it('keeps explicit subwindow metadata ahead of the parent fallback label', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDialog title="Telegram access" meta="2 approved" accent="gateways" parentWindowTitle="Gateways" onClose={() => undefined}>
+        Access
+      </WindowedDialog>,
+    );
+
+    expect(html).toContain('2 approved');
+    expect(html).not.toContain('Attached to Gateways');
   });
 
   it('supports explicit modal subwindows for blocking flows', () => {
@@ -1055,6 +1067,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('wos-automation-table');
     expect(source).not.toContain('wos-automation-row');
     expect(source).toContain('title="Automation details"');
+    expect(source).toContain('parentWindowTitle="Automations"');
+    expect(source).not.toContain('meta="Running · 0 9 * * 1-5"');
     expect(source).toContain('title="Automation context"');
     expect(source).not.toContain('title="Selected automation"');
     expect(source).not.toContain('ariaLabel="Automation filter"');
