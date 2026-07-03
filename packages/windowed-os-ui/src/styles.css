@@ -4050,9 +4050,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   cursor: ns-resize;
 }
 
+.wos-resize-n {
+  right: calc((var(--wos-window-control-size) * 3) + 42px);
+}
+
 .wos-resize-e,
 .wos-resize-w {
-  top: 18px;
+  top: var(--wos-titlebar-h);
   bottom: 18px;
   width: 14px;
   cursor: ew-resize;
