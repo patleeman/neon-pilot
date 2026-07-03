@@ -309,6 +309,26 @@ describe('RoutinesPage', () => {
     expect(container.querySelector('.ui-empty-state')).toBeNull();
   });
 
+  it('uses shared windowed state-block chrome when a routine action fails', async () => {
+    const { pa, invoke } = createPa();
+    invoke.mockImplementation(async (action: string) => {
+      if (action === 'listSkills') return { skills: [{ id: 'autoreview', name: 'Autoreview' }] };
+      if (action === 'deleteRoutine') throw new Error('Routine could not be deleted.');
+      return cloneState();
+    });
+
+    const { container } = render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
+
+    await screen.findByRole('button', { name: 'Delete' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
+
+    expect(await screen.findByText('Routine could not be deleted.')).toBeTruthy();
+    expect(screen.getByText('Routine could not be deleted.').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
+    expect(screen.getByText('Routine could not be deleted.').closest('.wos-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+  });
+
   it('opens the add menu for the New Routine command route', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...propsWithContext(pa, { search: '?action=new' })} />);

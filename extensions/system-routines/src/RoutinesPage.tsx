@@ -864,14 +864,19 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         if (next) publishRoutinesState(next);
         return;
       }
-      const result = (await pa.extension.invoke('deleteRoutine', { routineId: routine.id })) as StateResult;
-      setData(result);
-      publishRoutinesState(result);
-      setSelectedRoutineId(null);
-      setDraft(null);
-      setOpenRoutineMenuId(null);
+      setActionError(null);
+      try {
+        const result = (await pa.extension.invoke('deleteRoutine', { routineId: routine.id })) as StateResult;
+        setData(result);
+        publishRoutinesState(result);
+        setSelectedRoutineId(null);
+        setDraft(null);
+        setOpenRoutineMenuId(null);
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : String(err));
+      }
     },
-    [data, pa, selectedHookId, unsavedRoutineIds],
+    [data, pa, unsavedRoutineIds],
   );
 
   const addRoutine = useCallback(
@@ -2036,7 +2041,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           >
             {actionError ? (
               <WindowedPageSection title="Action needed">
-                <WindowedEmptyState tone="danger">{actionError}</WindowedEmptyState>
+                <WindowedStateBlock tone="danger">{actionError}</WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
             <WindowedPageSection title="Events" meta={`${data.hooks.length} available`}>
