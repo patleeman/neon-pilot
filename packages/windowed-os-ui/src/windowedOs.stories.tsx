@@ -1360,80 +1360,98 @@ export const ExtensionsPage: Story = {
             actions={
               <>
                 <WindowedSegmentedControl
-                  ariaLabel="Extensions view"
-                  value="installed"
+                  ariaLabel="Extension view"
+                  accent="extensions"
+                  value="all"
                   options={[
-                    { id: 'installed', label: 'Installed' },
-                    { id: 'sources', label: 'Sources' },
+                    { id: 'all', label: 'Installed 16' },
+                    { id: 'platform', label: 'Platform 8' },
+                    { id: 'attention', label: 'Attention 2' },
                   ]}
                   onChange={() => undefined}
                 />
-                <WindowedPageButton>Refresh</WindowedPageButton>
-                <WindowedPageButton tone="accent">Install extension</WindowedPageButton>
+                <WindowedPageButton>Reload</WindowedPageButton>
+                <WindowedPageButton>Update all (3)</WindowedPageButton>
+                <WindowedPageButton tone="accent">Build</WindowedPageButton>
+                <WindowedPageButton>Install</WindowedPageButton>
               </>
             }
           >
-            <WindowedPageSection title="Inventory" meta="local">
-              <WindowedKeyValueGrid
-                columns={4}
+            <WindowedPageSection title="Sources" meta="2 sources">
+              <WindowedKeyValueList
                 items={[
-                  { label: 'Installed', value: 18 },
-                  { label: 'Enabled', value: <WindowedBadge tone="positive">14</WindowedBadge> },
-                  { label: 'Updates', value: <WindowedBadge tone="warning">3 pending</WindowedBadge> },
-                  { label: 'Sources', value: '2 indexes' },
+                  { label: 'Catalog', value: 'Loaded' },
+                  { label: 'Available', value: '7' },
+                  { label: 'Visible', value: '16 installed · 14 enabled' },
                 ]}
               />
             </WindowedPageSection>
 
-            <WindowedPageSection title="Installed extensions" meta="selected: system-browser">
-              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Enabled', align: 'right' }]}>
+            <WindowedPageSection>
+              <WindowedToolbar>
+                <WindowedTextInput aria-label="Search extensions" placeholder="Search extensions" />
+              </WindowedToolbar>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Installed" meta="16 installed · 14 enabled">
+              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
                 <WindowedDataRow
                   name="system-browser"
-                  meta="Workbench browser and browser automation"
-                  enabled
-                  status={<WindowedBadge tone="warning">update</WindowedBadge>}
+                  meta="Built-in · Workbench, tools"
+                  status={
+                    <span className="flex flex-col items-start gap-1">
+                      <WindowedBadge tone="warning">Update available</WindowedBadge>
+                      <span className="text-[11px] text-accent">0.11.40</span>
+                    </span>
+                  }
+                  action={
+                    <span className="flex items-center justify-end gap-2">
+                      <WindowedToggle checked accent="extensions" label="Disable system-browser" />
+                      <WindowedPageButton>Details</WindowedPageButton>
+                      <WindowedPageButton>Open</WindowedPageButton>
+                    </span>
+                  }
                 />
                 <WindowedDataRow
                   name="system-terminal"
-                  meta="Terminal tabs and shell actions"
-                  enabled
-                  status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
+                  meta="Built-in · Workbench"
+                  status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
+                  action={
+                    <span className="flex items-center justify-end gap-2">
+                      <WindowedToggle checked accent="extensions" label="Disable system-terminal" />
+                      <WindowedPageButton>Details</WindowedPageButton>
+                      <WindowedPageButton>Open</WindowedPageButton>
+                    </span>
+                  }
                 />
                 <WindowedDataRow
                   name="system-model-arena"
-                  meta="Transcript duels and model comparisons"
-                  enabled={false}
-                  status={<WindowedBadge tone="neutral">disabled</WindowedBadge>}
+                  meta="Built-in · Main route"
+                  status={<WindowedBadge tone="neutral">Disabled</WindowedBadge>}
+                  action={
+                    <span className="flex items-center justify-end gap-2">
+                      <WindowedToggle accent="extensions" label="Enable system-model-arena" />
+                      <WindowedPageButton>Details</WindowedPageButton>
+                    </span>
+                  }
+                />
+                <WindowedDataRow
+                  name="workflow-reports"
+                  meta="Personal marketplace · Main route, skills"
+                  status={
+                    <span className="flex flex-col items-start gap-1">
+                      <WindowedBadge tone="danger">Invalid</WindowedBadge>
+                      <span className="text-[11px] text-danger">Manifest missing contribution id</span>
+                    </span>
+                  }
+                  action={
+                    <span className="flex items-center justify-end gap-2">
+                      <WindowedToggle disabled accent="extensions" label="Enable workflow-reports" />
+                      <WindowedPageButton>Details</WindowedPageButton>
+                    </span>
+                  }
                 />
               </WindowedDataTable>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Sources" meta="trusted">
-              <WindowedList>
-                <WindowedListItem
-                  title="Built-in system extensions"
-                  meta="18 extensions"
-                  accent="extensions"
-                  status={<WindowedBadge tone="positive">trusted</WindowedBadge>}
-                />
-                <WindowedListItem
-                  title="Personal marketplace"
-                  meta="7 extensions"
-                  accent="extensions"
-                  status={<WindowedBadge tone="neutral">enabled</WindowedBadge>}
-                />
-              </WindowedList>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Review queue" meta="1 item">
-              <WindowedList>
-                <WindowedListItem
-                  title="automation-dashboard"
-                  meta="Permission change"
-                  accent="extensions"
-                  status={<WindowedBadge tone="warning">review</WindowedBadge>}
-                />
-              </WindowedList>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
@@ -1445,26 +1463,30 @@ export const ExtensionsPage: Story = {
           onClose={() => undefined}
           actions={
             <>
-              <WindowedPageButton>Disable</WindowedPageButton>
-              <WindowedPageButton tone="accent">Update</WindowedPageButton>
+              <WindowedPageButton>Open</WindowedPageButton>
+              <WindowedPageButton>Settings</WindowedPageButton>
+              <WindowedPageButton>Folder</WindowedPageButton>
             </>
           }
         >
-          <WindowedKeyValueGrid
-            columns={3}
-            items={[
-              { label: 'Version', value: '0.11.39' },
-              { label: 'Surfaces', value: 'Workbench tab' },
-              { label: 'State', value: <WindowedBadge tone="warning">update</WindowedBadge> },
-              { label: 'Source', value: 'Built-in' },
-              { label: 'Permissions', value: 'Browser, network' },
-              { label: 'Updated', value: 'Today' },
-            ]}
-          />
-          <WindowedList>
-            <WindowedListItem title="Browser page" meta="Main tool panel" accent="extensions" status="active" />
-            <WindowedListItem title="Backend action" meta="Snapshot and navigation" accent="extensions" status="enabled" />
-          </WindowedList>
+          <div className="wos-extension-detail-grid">
+            <WindowedKeyValueList
+              items={[
+                { label: 'State', value: 'Update available' },
+                { label: 'Source', value: 'Built-in' },
+                { label: 'Version', value: 'v0.11.39' },
+                { label: 'Settings', value: 'Configurable' },
+              ]}
+            />
+            <WindowedKeyValueList
+              items={[
+                { label: 'Appears in', value: 'Workbench, tools' },
+                { label: 'Skills', value: 'None' },
+                { label: 'Tools', value: 'browser_snapshot, browser_cdp' },
+              ]}
+            />
+            <p className="wos-extension-detail-description">Workbench browser and browser automation surfaces.</p>
+          </div>
         </WindowedDialog>
       </WindowFrame>
     </div>

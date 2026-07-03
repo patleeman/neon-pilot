@@ -232,17 +232,24 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical Extensions desktop page and detail subwindow pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const extensionsSource = source.slice(
+      source.indexOf('export const ExtensionsPage'),
+      source.indexOf('export const ExtensionsInstallDialog'),
+    );
 
     expect(source).toContain('export const ExtensionsPage');
-    expect(source).toContain('title="Extensions"');
-    expect(source).not.toContain('eyebrow="Extension manager"');
-    expect(source).toContain('title="Inventory"');
-    expect(source).toContain('title="Installed extensions"');
-    expect(source).toContain('title="Sources"');
-    expect(source).toContain('title="Review queue"');
-    expect(source).toContain('ariaLabel="Extensions view"');
-    expect(source).toContain('<WindowedDialog');
-    expect(source).toContain('title="system-browser"');
+    expect(extensionsSource).toContain('title="Extensions"');
+    expect(extensionsSource).not.toContain('eyebrow="Extension manager"');
+    expect(extensionsSource).toContain('title="Sources"');
+    expect(extensionsSource).toContain('Search extensions');
+    expect(extensionsSource).toContain('title="Installed"');
+    expect(extensionsSource).toContain('ariaLabel="Extension view"');
+    expect(extensionsSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
+    expect(extensionsSource).toContain('<WindowedDialog');
+    expect(extensionsSource).toContain('title="system-browser"');
+    expect(extensionsSource).not.toContain('title="Inventory"');
+    expect(extensionsSource).not.toContain('title="Installed extensions"');
+    expect(extensionsSource).not.toContain('title="Review queue"');
     expect(source).toContain('export const ExtensionsInstallDialog');
     expect(source).toContain('title="Install extension"');
     expect(source).toContain('wos-extension-install-dialog');
