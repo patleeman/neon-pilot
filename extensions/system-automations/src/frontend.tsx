@@ -778,7 +778,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               {visibleTasks.length > 0 ? (
                 <WindowedDataTable
                   className="wos-automation-queue"
-                  columnTemplate="minmax(13rem, 1fr) minmax(6.5rem, 0.42fr) minmax(23rem, 0.95fr)"
+                  columnTemplate="minmax(12rem, 1fr) minmax(5.75rem, 0.34fr) minmax(0, 1.08fr)"
                   columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}
                 >
                   {visibleTasks.map((task) => {

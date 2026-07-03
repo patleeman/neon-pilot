@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -77,7 +80,7 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByText('Status')).toBeTruthy();
     expect(container.querySelector('.wos-data-table')).toBeTruthy();
     expect(container.querySelector<HTMLElement>('.wos-automation-queue')?.style.getPropertyValue('--wos-data-column-template')).toBe(
-      'minmax(13rem, 1fr) minmax(6.5rem, 0.42fr) minmax(23rem, 0.95fr)',
+      'minmax(12rem, 1fr) minmax(5.75rem, 0.34fr) minmax(0, 1.08fr)',
     );
     expect(container.querySelector('.wos-automation-table')).toBeNull();
     expect(screen.getByText('Quarter-hour chime')).toBeTruthy();
@@ -104,6 +107,19 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByRole('button', { name: 'Delete Release watch' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
     expect(screen.queryByRole('button', { name: /actions for/i })).toBeNull();
+  });
+
+  it('keeps windowed automation rows readable inside narrow app windows', () => {
+    const stylesSource = readFileSync(join(process.cwd(), 'packages/windowed-os-ui/src/styles.css'), 'utf8');
+
+    expect(stylesSource).toContain('@container (max-width: 640px)');
+    expect(stylesSource).toContain('.wos-automation-queue .wos-data-table__header');
+    expect(stylesSource).toContain('.wos-automation-queue .wos-data-row');
+    expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(stylesSource).toContain('.wos-automation-queue .wos-automation-actions');
+    expect(stylesSource).toContain('grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));');
+    expect(stylesSource).toContain('.wos-automation-queue .wos-automation-actions .wos-page-button');
+    expect(stylesSource).toContain('width: 100%;');
   });
 
   it('keeps destructive automation actions available in windowed rows', async () => {

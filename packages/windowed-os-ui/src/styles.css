@@ -3340,6 +3340,35 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   justify-content: flex-end;
 }
 
+@container (max-width: 640px) {
+  .wos-automation-queue .wos-data-table__header {
+    display: none;
+  }
+
+  .wos-automation-queue .wos-data-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 5px;
+  }
+
+  .wos-automation-queue .wos-data-row__status,
+  .wos-automation-queue .wos-data-row__action {
+    justify-content: flex-start;
+  }
+
+  .wos-automation-queue .wos-automation-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+  }
+
+  .wos-automation-queue .wos-automation-actions .wos-page-button {
+    width: 100%;
+    padding-inline: 6px;
+  }
+}
+
 .wos-automation-inspector-actions {
   align-items: stretch;
 }
