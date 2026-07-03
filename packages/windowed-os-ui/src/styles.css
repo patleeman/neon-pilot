@@ -2201,6 +2201,33 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   background: var(--wos-ink-500);
 }
 
+.wos-context-pointers {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-context-pointers__summary {
+  margin-bottom: 0;
+}
+
+.wos-context-pointers-bar {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+}
+
+.wos-context-pointers-bar span {
+  display: block;
+  min-width: 2px;
+  height: 100%;
+  background: var(--wos-diagnostics);
+}
+
 .wos-agent-loop {
   display: grid;
   min-width: 0;

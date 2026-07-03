@@ -121,6 +121,20 @@ describe('TelemetryPage', () => {
             { ts: '2026-07-03T12:10:00.000Z', sessionId: 'session-a', enabled: false, stopReason: 'budget' },
           ],
         },
+        contextPointers: {
+          summary: {
+            totalSuggested: 8,
+            totalInspects: 3,
+            totalAnyInspects: 5,
+            usageRate: 37.5,
+            sessionsWithSuggested: 2,
+            avgPointersPerTurn: 2.7,
+          },
+          daily: [
+            { date: '2026-07-02', suggested: 3, inspected: 1 },
+            { date: '2026-07-03', suggested: 5, inspected: 2 },
+          ],
+        },
         contextSessions: [
           {
             sessionId: 'session-a',
@@ -216,7 +230,7 @@ describe('TelemetryPage', () => {
     expect(screen.getAllByText('gpt-5.4').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Tool calls' })).toBeTruthy();
     expect(screen.getAllByText('exec_command').length).toBeGreaterThan(0);
-    expect(screen.getByText('2026-07-03').closest('.wos-data-row')).toBeTruthy();
+    expect(screen.getAllByText('2026-07-03').some((element) => element.closest('.wos-data-row'))).toBe(true);
     expect(screen.getByText('$3.45').closest('.wos-data-row')).toBeTruthy();
     expect(screen.getByText('append-only').closest('.wos-data-row')).toBeTruthy();
     expect(container.querySelector('.wos-heatmap')).toBeTruthy();
@@ -233,6 +247,11 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.wos-auto-mode')).toBeTruthy();
     expect(container.querySelector('.wos-auto-mode__events')).toBeTruthy();
     expect(screen.getAllByText('budget').some((element) => element.closest('.wos-data-row'))).toBe(true);
+    expect(container.querySelector('.wos-context-pointers')).toBeTruthy();
+    expect(container.querySelector('.wos-context-pointers__daily')).toBeTruthy();
+    expect(container.querySelector('.wos-context-pointers-bar')).toBeTruthy();
+    expect(screen.getByText('37.5%').closest('.wos-key-value-grid__item')).toBeTruthy();
+    expect(screen.getByText('2026-07-02').closest('.wos-data-row')).toBeTruthy();
     const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
       table.style.getPropertyValue('--wos-data-column-template'),
     );
@@ -244,6 +263,7 @@ describe('TelemetryPage', () => {
     );
     expect(tableTemplates).toContain('minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(4rem, 0.32fr)');
     expect(tableTemplates).toContain('minmax(5rem, 0.4fr) minmax(7rem, 0.5fr) minmax(9rem, 1fr)');
+    expect(tableTemplates).toContain('minmax(6rem, 0.55fr) minmax(5.5rem, 0.38fr) minmax(5.5rem, 0.38fr) minmax(10rem, 1fr)');
     expect(tableTemplates).toContain('minmax(9rem, 1fr) minmax(4.5rem, 0.34fr) minmax(6.5rem, 0.46fr) minmax(10rem, 0.9fr)');
     expect(tableTemplates).toContain('minmax(5rem, 0.4fr) minmax(10rem, 1fr) minmax(5rem, 0.38fr)');
     expect(container.querySelector('.ui-data-table')).toBeNull();

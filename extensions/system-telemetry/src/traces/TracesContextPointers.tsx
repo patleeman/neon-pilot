@@ -6,11 +6,33 @@
  */
 
 import type { ContextPointerUsageResult } from '@neon-pilot/extensions/data';
-import { DashboardGrid, MetricTile, PanelHeader, ProgressRow, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  DashboardGrid,
+  MetricTile,
+  PanelHeader,
+  ProgressRow,
+  SectionLabel,
+  SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedKeyValueGrid,
+} from '@neon-pilot/extensions/ui';
 import React from 'react';
 
-export function TracesContextPointers({ data }: { data: ContextPointerUsageResult | null }) {
+export function TracesContextPointers({
+  data,
+  presentation = 'stable',
+}: {
+  data: ContextPointerUsageResult | null;
+  presentation?: 'stable' | 'windowed';
+}) {
   if (!data || data.summary.totalSuggested === 0) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>Suggested context usage appears after related-conversation pointers are offered.</WindowedEmptyState>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Suggested Context Usage" meta="No data yet" metaClassName="bg-transparent px-0" />
@@ -21,6 +43,10 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
 
   const { summary, daily } = data;
   const usageRateTone = summary.usageRate >= 50 ? 'success' : summary.usageRate >= 20 ? 'warning' : 'danger';
+
+  if (presentation === 'windowed') {
+    return <WindowedContextPointers data={data} />;
+  }
 
   return (
     <SurfacePanel className="overflow-hidden">
@@ -74,6 +100,67 @@ export function TracesContextPointers({ data }: { data: ContextPointerUsageResul
       )}
     </SurfacePanel>
   );
+}
+
+function WindowedContextPointers({ data }: { data: ContextPointerUsageResult }) {
+  const { summary, daily } = data;
+
+  return (
+    <div className="wos-context-pointers">
+      <WindowedKeyValueGrid
+        className="wos-context-pointers__summary"
+        columns={4}
+        items={[
+          {
+            label: 'Usage',
+            value: <WindowedBadge tone={windowedUsageTone(summary.usageRate)}>{formatPercent(summary.usageRate)}</WindowedBadge>,
+          },
+          { label: 'Inspects', value: summary.totalInspects },
+          { label: 'Suggested', value: summary.totalSuggested },
+          { label: 'Avg / Turn', value: summary.avgPointersPerTurn },
+        ]}
+      />
+      <WindowedDataTable
+        className="wos-context-pointers__daily"
+        columns={[{ label: 'Date' }, { label: 'Suggested', align: 'right' }, { label: 'Inspected', align: 'right' }, { label: 'Use' }]}
+        columnTemplate="minmax(6rem, 0.55fr) minmax(5.5rem, 0.38fr) minmax(5.5rem, 0.38fr) minmax(10rem, 1fr)"
+      >
+        {daily.slice(-10).map((row) => {
+          const pct = row.suggested > 0 ? (row.inspected / row.suggested) * 100 : 0;
+          return (
+            <WindowedDataRow
+              key={row.date}
+              name={row.date}
+              meta={`${row.inspected}/${row.suggested} inspected`}
+              cells={[
+                { value: row.suggested, align: 'right' },
+                { value: row.inspected, align: 'right' },
+                { value: <WindowedPointerBar percent={pct} label={`${row.date} suggested context usage`} /> },
+              ]}
+            />
+          );
+        })}
+      </WindowedDataTable>
+    </div>
+  );
+}
+
+function WindowedPointerBar({ percent, label }: { percent: number; label: string }) {
+  return (
+    <span className="wos-context-pointers-bar" aria-label={label}>
+      <span style={{ width: `${Math.max(2, Math.min(100, percent))}%` }} />
+    </span>
+  );
+}
+
+function windowedUsageTone(rate: number): 'positive' | 'warning' | 'danger' {
+  if (rate >= 50) return 'positive';
+  if (rate >= 20) return 'warning';
+  return 'danger';
+}
+
+function formatPercent(value: number): string {
+  return `${value}%`;
 }
 
 function DailyBars({ daily }: { daily: { date: string; suggested: number; inspected: number }[] }) {
