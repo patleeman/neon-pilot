@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist tsconfig.tsbuildinfo storybook-static",
-    "test": "vitest run src/windowedOs.test.tsx",
+    "test": "vitest run src/windowedOs.test.tsx src/windowedOs.interaction.test.tsx",
     "storybook": "storybook dev -p 6016",
     "build:storybook": "storybook build"
   },

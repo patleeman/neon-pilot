@@ -5,6 +5,7 @@ import {
   type HTMLAttributes,
   type InputHTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
@@ -307,10 +308,66 @@ export function WindowedDialog({
   className,
   modal = false,
 }: WindowedDialogProps) {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const cleanupDragRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      cleanupDragRef.current?.();
+    };
+  }, []);
+
+  const startDialogDrag = (event: ReactMouseEvent<HTMLElement>) => {
+    if (modal || event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+
+    cleanupDragRef.current?.();
+    setDragging(true);
+
+    const start = {
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      x: offset.x,
+      y: offset.y,
+    };
+
+    const handleMove = (event: MouseEvent) => {
+      setOffset({
+        x: start.x + event.clientX - start.pointerX,
+        y: start.y + event.clientY - start.pointerY,
+      });
+    };
+
+    const handleEnd = () => {
+      setDragging(false);
+      cleanupDragRef.current?.();
+      cleanupDragRef.current = null;
+    };
+
+    cleanupDragRef.current = () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+  };
+
+  const dialogStyle: CSSProperties | undefined =
+    !modal && (offset.x !== 0 || offset.y !== 0) ? { transform: `translate(${offset.x}px, ${offset.y}px)` } : undefined;
+
   return (
     <div className="wos-dialog-layer" role="presentation" data-modal={modal ? 'true' : undefined}>
-      <section className={cx('wos-dialog', className)} role="dialog" aria-modal={modal ? true : undefined} aria-label={title}>
-        <header className="wos-dialog__titlebar" data-accent={accent}>
+      <section
+        className={cx('wos-dialog', className)}
+        role="dialog"
+        aria-modal={modal ? true : undefined}
+        aria-label={title}
+        data-dragging={dragging ? 'true' : undefined}
+        style={dialogStyle}
+      >
+        <header className="wos-dialog__titlebar" data-accent={accent} onMouseDown={startDialogDrag}>
           <div className="wos-dialog__identity">
             <div className="wos-dialog__title">{title}</div>
             {meta ? <div className="wos-dialog__meta">{meta}</div> : null}

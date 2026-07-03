@@ -594,6 +594,16 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-settings);
   padding: 7px 8px 7px 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.wos-dialog[data-dragging='true'] .wos-dialog__titlebar {
+  cursor: grabbing;
+}
+
+.wos-dialog-layer[data-modal='true'] .wos-dialog__titlebar {
+  cursor: default;
 }
 
 .wos-dialog__titlebar[data-accent='chat'] {
