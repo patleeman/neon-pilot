@@ -775,6 +775,53 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
+  it('deactivates every windowed browser tab view when the shell blocks native browser surfaces', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = {
+      version: 1,
+      activeTabId: 'tab-a',
+      tabs: [
+        { id: 'tab-a', title: 'Docs', url: 'https://example.com/a', urlDraft: '' },
+        { id: 'tab-b', title: 'Preview', url: 'https://example.com/b', urlDraft: '' },
+      ],
+      closedTabs: [],
+    };
+    const activeBrowserTab = browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 20, top: 30, width: 640, height: 480, right: 660, bottom: 510, x: 20, y: 30, toJSON: () => ({}) }),
+    });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<div class="windowed-os-shell" data-native-browser-blocked="true"><section class="wos-window" data-focused="true"><div id="browser-root"></div></section></div>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+  });
+
   it('hides the native browser view when its window frame blocks iframe paint', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);

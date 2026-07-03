@@ -599,6 +599,9 @@ export function WorkbenchBrowserTab({
       }
 
       const hideAllOwnerViews = options?.force && Boolean(browserHostRef.current?.closest('.windowed-os-shell'));
+      const ownerSessionKeys = hideAllOwnerViews
+        ? Array.from(new Set([null, browserSessionKey, ...tabsStateRef.current.tabs.map((tab) => getTabSessionKey(tab.id))]))
+        : [];
       const requestKey = `${browserSessionKey}:hidden`;
       if (!options?.force && lastBoundsRequestRef.current === requestKey) {
         return;
@@ -616,8 +619,11 @@ export function WorkbenchBrowserTab({
         })
         .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
 
-      if (hideAllOwnerViews) {
-        void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: null, deactivate: true }).catch((error) => {
+      for (const sessionKey of ownerSessionKeys) {
+        if (sessionKey === browserSessionKey) {
+          continue;
+        }
+        void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey, deactivate: true }).catch((error) => {
           setStatus(formatWorkbenchBrowserError(error));
         });
       }
@@ -632,8 +638,11 @@ export function WorkbenchBrowserTab({
             void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey, deactivate: true }).catch((error) => {
               setStatus(formatWorkbenchBrowserError(error));
             });
-            if (hideAllOwnerViews) {
-              void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: null, deactivate: true }).catch((error) => {
+            for (const sessionKey of ownerSessionKeys) {
+              if (sessionKey === browserSessionKey) {
+                continue;
+              }
+              void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey, deactivate: true }).catch((error) => {
                 setStatus(formatWorkbenchBrowserError(error));
               });
             }
