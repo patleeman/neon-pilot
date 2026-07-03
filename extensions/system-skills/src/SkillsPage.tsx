@@ -646,7 +646,6 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
       <div className="h-full overflow-hidden">
         <WindowedPageShell layout="standard" className="skills-page-windowed">
           <WindowedPageMain
-            eyebrow="Skill library"
             title={view === 'marketplace' ? 'Browse skills' : 'Installed skills'}
             actions={
               <>

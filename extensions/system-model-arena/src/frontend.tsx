@@ -503,7 +503,6 @@ function ModelArenaWindowedPage({
     <div className="h-full overflow-hidden">
       <WindowedPageShell layout="standard" className="model-arena-page-windowed">
         <WindowedPageMain
-          eyebrow="Blind model duels"
           title="Model Arena"
           actions={
             <>

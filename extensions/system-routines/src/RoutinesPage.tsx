@@ -1182,7 +1182,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       return (
         <WindowedPageShell layout="standard" className="routines-page-windowed">
           <WindowedPageMain
-            eyebrow="Routines"
             title="How Routines work"
             actions={
               <WindowedPageButton tone="accent" onClick={() => addExampleRoutine('checkpoint', checkpointExampleRoutine)}>
@@ -1984,7 +1983,6 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
       <div className="h-full overflow-hidden">
         <WindowedPageShell layout="standard" className="routines-page-windowed">
           <WindowedPageMain
-            eyebrow="Routine event"
             title={selectedHook.title}
             actions={
               <>

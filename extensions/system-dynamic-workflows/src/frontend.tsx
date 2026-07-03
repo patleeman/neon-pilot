@@ -594,7 +594,6 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
       <div className="h-full overflow-hidden">
         <WindowedPageShell layout="standard" className="workflows-page-windowed">
           <WindowedPageMain
-            eyebrow="Dynamic workflows"
             title="Workflows"
             actions={
               <>

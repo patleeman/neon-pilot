@@ -65,6 +65,7 @@ describe('ModelArenaPage', () => {
     await waitFor(() => expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard'));
     expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
+    expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(container.querySelector('.wos-arena-ranking-table')).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Task type' })).toBeTruthy();
     expect(screen.queryByText('Combined rankings')).toBeNull();
@@ -75,7 +76,7 @@ describe('ModelArenaPage', () => {
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
     expect(screen.getByText('opencode-go/flash')).toBeTruthy();
     expect(screen.queryByText('Arena setup')).toBeNull();
-    expect(document.body.textContent).toContain('Blind model duels');
+    expect(screen.queryByText('Blind model duels')).toBeNull();
   });
 
   it('uses shared windowed empty states for setup, rankings, and errors', async () => {

@@ -711,7 +711,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       <div className="h-full overflow-hidden">
         <WindowedPageShell layout="standard" className="automations-page-windowed">
           <WindowedPageMain
-            eyebrow="Scheduled work"
             title="Automations"
             actions={
               <>

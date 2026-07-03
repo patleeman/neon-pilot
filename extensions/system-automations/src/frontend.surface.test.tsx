@@ -58,6 +58,7 @@ describe('AutomationsPage windowed surface', () => {
 
     expect(container.querySelector('.automations-page-windowed')).toBeTruthy();
     expect(container.querySelector('.ui-app-page-shell')).toBeNull();
+    expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy();
     expect(screen.getByText('Quarter-hour chime')).toBeTruthy();

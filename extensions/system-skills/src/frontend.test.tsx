@@ -142,6 +142,7 @@ describe('SkillsPage', () => {
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
+    expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByText('Sources')).toBeTruthy();
     expect(screen.getByRole('radiogroup', { name: 'Skills view' })).toBeTruthy();

@@ -217,6 +217,7 @@ describe('RoutinesPage', () => {
     expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.ui-app-page-intro')).toBeNull();
+    expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(
       screen.queryByText('Put setup checks in Before, follow-up work in After, or choose a path when the event needs a decision.'),
     ).toBeNull();
