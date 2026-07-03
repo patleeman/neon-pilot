@@ -149,33 +149,6 @@ function windowLayer(windowElement: HTMLElement): number {
   return Number.isFinite(zIndex) ? zIndex : 0;
 }
 
-function windowStackIndex(windowElement: HTMLElement): number {
-  const shell = windowElement.closest<HTMLElement>('.windowed-os-shell');
-  if (!shell) {
-    return 0;
-  }
-  return Array.from(shell.querySelectorAll<HTMLElement>('.wos-window')).indexOf(windowElement);
-}
-
-function isWindowVisuallyAbove(candidate: HTMLElement, ownWindow: HTMLElement): boolean {
-  if (candidate === ownWindow) {
-    return false;
-  }
-  if (candidate.dataset.focused === 'true') {
-    return true;
-  }
-
-  const candidateLayer = windowLayer(candidate);
-  const ownLayer = windowLayer(ownWindow);
-  if (candidateLayer !== ownLayer) {
-    return candidateLayer > ownLayer;
-  }
-
-  const candidateStackIndex = windowStackIndex(candidate);
-  const ownStackIndex = windowStackIndex(ownWindow);
-  return candidateStackIndex >= 0 && ownStackIndex >= 0 && candidateStackIndex > ownStackIndex;
-}
-
 function isCoveredByWindowedWindow(host: HTMLElement | null): boolean {
   const ownWindow = host?.closest<HTMLElement>('.wos-window');
   if (!host || !ownWindow) {
@@ -187,7 +160,7 @@ function isCoveredByWindowedWindow(host: HTMLElement | null): boolean {
 
   return windows.some((candidate) => {
     if (!isVisibleStyle(candidate)) return false;
-    if (!isWindowVisuallyAbove(candidate, ownWindow)) return false;
+    if (candidate === ownWindow) return false;
     return rectsOverlap(hostRect, candidate.getBoundingClientRect());
   });
 }
