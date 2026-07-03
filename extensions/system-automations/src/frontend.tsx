@@ -44,6 +44,7 @@ import {
   TextButton,
   TextInput,
   WindowedDialog,
+  WindowedEmptyState,
   WindowedKeyValueGrid,
   WindowedPageButton,
   WindowedPageMain,
@@ -725,7 +726,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
           >
             {error ? (
               <WindowedPageSection title="Action needed">
-                <div className="wos-automation-error">{error}</div>
+                <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
               </WindowedPageSection>
             ) : null}
 
@@ -742,11 +743,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             </WindowedPageSection>
 
             <WindowedPageSection title="Task queue">
-              {loading && visibleTasks.length === 0 ? <div className="wos-automation-empty">Loading automations.</div> : null}
+              {loading && visibleTasks.length === 0 ? <WindowedEmptyState>Loading automations.</WindowedEmptyState> : null}
               {!loading && visibleTasks.length === 0 ? (
-                <div className="wos-automation-empty">
-                  Schedule prompts into owner threads for recurring reports, checks, and reminders.
-                </div>
+                <WindowedEmptyState>Schedule prompts into owner threads for recurring reports, checks, and reminders.</WindowedEmptyState>
               ) : null}
               {visibleTasks.length > 0 ? (
                 <div className="wos-automation-table">

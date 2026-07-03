@@ -8,35 +8,37 @@ import { AutomationsPage } from './frontend';
 
 Object.assign(globalThis, { React });
 
-function createPa() {
+function createPa(
+  tasks = [
+    {
+      id: 'task-1',
+      title: 'Quarter-hour chime',
+      enabled: true,
+      running: true,
+      scheduleType: 'cron' as const,
+      cron: '15,45 * * * *',
+      prompt: 'Report the current time.',
+      threadConversationId: 'conv-1',
+      threadTitle: 'Automation log',
+      lastStatus: 'completed',
+    },
+    {
+      id: 'task-2',
+      title: 'Release watch',
+      enabled: false,
+      running: false,
+      scheduleType: 'cron' as const,
+      cron: '0 9 * * 1',
+      prompt: 'Check release blockers.',
+      threadConversationId: 'conv-2',
+      threadTitle: 'Release thread',
+      lastStatus: 'failed',
+    },
+  ],
+) {
   return {
     automations: {
-      list: vi.fn(async () => [
-        {
-          id: 'task-1',
-          title: 'Quarter-hour chime',
-          enabled: true,
-          running: true,
-          scheduleType: 'cron',
-          cron: '15,45 * * * *',
-          prompt: 'Report the current time.',
-          threadConversationId: 'conv-1',
-          threadTitle: 'Automation log',
-          lastStatus: 'completed',
-        },
-        {
-          id: 'task-2',
-          title: 'Release watch',
-          enabled: false,
-          running: false,
-          scheduleType: 'cron',
-          cron: '0 9 * * 1',
-          prompt: 'Check release blockers.',
-          threadConversationId: 'conv-2',
-          threadTitle: 'Release thread',
-          lastStatus: 'failed',
-        },
-      ]),
+      list: vi.fn(async () => tasks),
       create: vi.fn(async () => ({})),
       update: vi.fn(async () => ({})),
       delete: vi.fn(async () => ({})),
@@ -64,5 +66,16 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getAllByText('Paused').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByRole('button', { name: 'Run' })).toHaveLength(2);
     expect(screen.queryByRole('button', { name: /actions for/i })).toBeNull();
+  });
+
+  it('uses shared windowed empty-state chrome when no automations exist', async () => {
+    const { container } = render(<AutomationsPage pa={createPa([])} context={{ shellPresentation: 'windowed' }} />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy());
+
+    expect(screen.getByText('Schedule prompts into owner threads for recurring reports, checks, and reminders.')).toBeTruthy();
+    expect(container.querySelectorAll('.wos-empty-state')).toHaveLength(1);
+    expect(container.querySelector('.wos-automation-empty')).toBeNull();
+    expect(container.querySelector('.wos-automation-error')).toBeNull();
   });
 });
