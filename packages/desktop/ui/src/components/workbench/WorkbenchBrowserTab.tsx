@@ -19,6 +19,8 @@ const WORKBENCH_BROWSER_COMMENT_ADDED_EVENT = 'pa:workbench-browser-comment-adde
 export const WORKBENCH_BROWSER_COMMAND_EVENT = 'neon-pilot-workbench-browser-command';
 const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.reopenTab', 'browser.closeTab', 'browser.focusLocation']);
 const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 1500;
+const BROWSER_BOUNDS_SYNC_INTERVAL_MS = 1000;
+const WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS = 160;
 const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '[aria-modal="true"]',
   '[role="dialog"]',
@@ -836,7 +838,10 @@ export function WorkbenchBrowserTab({
       childList: true,
       subtree: true,
     });
-    const timer = window.setInterval(syncBounds, 1000);
+    const syncInterval = browserHostRef.current?.closest('.windowed-os-shell')
+      ? WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS
+      : BROWSER_BOUNDS_SYNC_INTERVAL_MS;
+    const timer = window.setInterval(syncBounds, syncInterval);
 
     return () => {
       closedRef.current = true;

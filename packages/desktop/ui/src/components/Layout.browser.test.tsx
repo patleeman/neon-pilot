@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -39,6 +41,14 @@ describe('WorkbenchBrowserTab', () => {
         ),
       ),
     ).toBe('Enter a web address that starts with http:// or https://.');
+  });
+
+  it('keeps native browser bounds on a faster sync cadence inside the windowed shell', () => {
+    const source = readFileSync('packages/desktop/ui/src/components/workbench/WorkbenchBrowserTab.tsx', 'utf-8');
+
+    expect(source).toContain('const WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS = 160;');
+    expect(source).toContain("browserHostRef.current?.closest('.windowed-os-shell')");
+    expect(source).toContain('window.setInterval(syncBounds, syncInterval)');
   });
 
   it('formats stopped native navigations without leaking Chromium abort details', () => {
