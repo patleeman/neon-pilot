@@ -468,6 +468,7 @@
 
 .wos-window[data-focused='false'] .wos-window__body iframe,
 .windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe {
+  visibility: hidden;
   pointer-events: none;
 }
 
