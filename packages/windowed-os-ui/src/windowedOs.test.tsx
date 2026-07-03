@@ -687,8 +687,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body {\n  --color-base: 252 247 236;');
     expect(stylesSource).toContain('display: flex;\n  flex-direction: column;');
     expect(stylesSource).toContain(
-      '.wos-window-route-body > * {\n  flex: 1 1 auto;\n  min-width: 0;\n  min-height: 100%;\n  height: 100%;',
+      '.wos-window-route-body > :not(.wos-chat-window-toolbar) {\n  flex: 1 1 auto;\n  min-width: 0;\n  min-height: 0;\n  height: 100%;',
     );
+    expect(stylesSource).not.toContain('.wos-window-route-body > * {\n  flex: 1 1 auto;');
     expect(stylesSource).toContain(".wos-window-route-body > [role='status'][aria-live='polite']");
     expect(stylesSource).toContain('content: attr(aria-label);');
     expect(stylesSource).toContain('.wos-window-route-loading {\n  display: grid;');

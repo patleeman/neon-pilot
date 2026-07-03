@@ -968,10 +968,10 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   font-family: var(--wos-font-body);
 }
 
-.wos-window-route-body > * {
+.wos-window-route-body > :not(.wos-chat-window-toolbar) {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 100%;
+  min-height: 0;
   height: 100%;
 }
 
