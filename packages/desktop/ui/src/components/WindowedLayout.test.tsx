@@ -269,6 +269,68 @@ describe('WindowedLayout route windows', () => {
     expect(within(startMenu).getAllByRole('button', { name: /^routines$/i })).toHaveLength(1);
   });
 
+  it('keeps top-level app windows distinct when extensions reuse nav ids', async () => {
+    mocks.extensions = [
+      {
+        id: 'system-alpha',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'page', label: 'Alpha', route: '/alpha' }],
+        },
+      },
+      {
+        id: 'system-beta',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'page', label: 'Beta', route: '/beta' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^alpha$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^beta$/i }));
+
+    const alphaWindow = await screen.findByRole('region', { name: /^alpha$/i });
+    const betaWindow = await screen.findByRole('region', { name: /^beta$/i });
+    expect(alphaWindow.getAttribute('data-window-id')).toBe('route:system-alpha:page');
+    expect(betaWindow.getAttribute('data-window-id')).toBe('route:system-beta:page');
+    expect(within(alphaWindow).getByText('/alpha:windowed')).toBeTruthy();
+    expect(within(betaWindow).getByText('/beta:windowed')).toBeTruthy();
+  });
+
+  it('reuses persisted route windows stored with legacy unqualified ids', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines/checkpoint',
+        bounds: { x: 60, y: 48, width: 800, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    expect(await screen.findByText('/routines/checkpoint:windowed')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^routines$/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('region', { name: /^routines$/i })).toHaveLength(1);
+    });
+    const routinesWindow = screen.getByRole('region', { name: /^routines$/i });
+    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:system-routines:routines');
+    expect(within(routinesWindow).getByText('/routines:windowed')).toBeTruthy();
+  });
+
   it('exposes the canonical top-level desktop apps without nested route duplicates', () => {
     mocks.extensions = [
       {

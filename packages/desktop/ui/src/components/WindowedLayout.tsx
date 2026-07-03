@@ -187,7 +187,7 @@ function buildLauncherItems(extensionRegistry: ReturnType<typeof useExtensionReg
         seen.add(item.route);
         return [
           {
-            id: item.id,
+            id: `${extension.id}:${item.id}`,
             title: item.label,
             route: item.route,
             kind: 'route',
@@ -200,7 +200,7 @@ function buildLauncherItems(extensionRegistry: ReturnType<typeof useExtensionReg
         seen.add(view.route);
         return [
           {
-            id: view.id,
+            id: `${extension.id}:${view.id}`,
             title: view.title,
             route: view.route,
             kind: 'route',
@@ -364,6 +364,10 @@ function findLauncherItemForRoute(route: string, launcherItems: LauncherItem[]):
   return launcherItems.find((item) => routeMatchesLauncherItem(route, item)) ?? null;
 }
 
+function routeWindowMatchesLauncherItem(windowModel: DesktopWindowModel, id: string, item: LauncherItem): boolean {
+  return windowModel.kind === 'route' && (windowModel.id === id || routeMatchesLauncherItem(windowModel.route, item));
+}
+
 function chatSessionIdForRoute(route: string): string | null {
   const pathname = routePathname(route).replace(/\/+$/, '');
   if (pathname === '/conversations' || pathname === '/conversations/new') return 'draft';
@@ -394,11 +398,11 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
 
 function focusRouteWindowIn(windows: DesktopWindowModel[], route: string, item: LauncherItem): DesktopWindowModel[] {
   const id = createId(item);
-  const existing = windows.find((windowModel) => windowModel.id === id);
+  const existing = windows.find((windowModel) => routeWindowMatchesLauncherItem(windowModel, id, item));
   if (existing) {
     return [
-      ...windows.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
-      { ...existing, route, minimized: false, focused: true },
+      ...windows.filter((windowModel) => windowModel.id !== existing.id).map((windowModel) => ({ ...windowModel, focused: false })),
+      { ...existing, id, title: item.title, route, minimized: false, focused: true },
     ];
   }
   const next: DesktopWindowModel = {
@@ -672,8 +676,20 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews();
     setLauncherOpen(false);
     setWindows((current) => {
-      const existing = current.find((windowModel) => windowModel.id === id);
-      if (existing) return withFocusedWindow(current, id);
+      const existing =
+        item.kind === 'route'
+          ? current.find((windowModel) => routeWindowMatchesLauncherItem(windowModel, id, item))
+          : current.find((windowModel) => windowModel.id === id);
+      if (existing) {
+        return withFocusedWindow(
+          current.map((windowModel) =>
+            windowModel.id === existing.id && item.kind === 'route'
+              ? { ...windowModel, id, title: item.title, route: item.route }
+              : windowModel,
+          ),
+          id,
+        );
+      }
       const title = item.kind === 'chat' && session ? conversationWindowTitle(session) : item.title;
       const route = item.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : item.route;
       const next: DesktopWindowModel = {
