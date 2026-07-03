@@ -90,6 +90,36 @@ describe('TelemetryPage', () => {
             systemPromptTokens: 1000,
           },
         ],
+        tokensDaily: [
+          {
+            date: '2026-07-03',
+            turns: 8,
+            messages: 14,
+            tokensInput: 12_000,
+            tokensOutput: 4_000,
+            tokensCached: 18_000,
+            tokensCachedWrite: 1_000,
+            toolErrors: 0,
+            cost: 3.45,
+          },
+        ],
+        sessionIntegrity: [
+          {
+            id: 'integrity-1',
+            ts: '2026-07-03T11:22:33.000Z',
+            source: 'desktop',
+            category: 'conversation',
+            name: 'session_integrity_miss',
+            sessionId: 'session-a',
+            runId: null,
+            route: null,
+            status: null,
+            durationMs: null,
+            count: null,
+            value: null,
+            metadataJson: JSON.stringify({ oldSize: 10, newSize: 16, cacheLoader: 'append-only' }),
+          },
+        ],
         refetch,
       }),
     );
@@ -114,11 +144,19 @@ describe('TelemetryPage', () => {
     expect(screen.getAllByText('gpt-5.4').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Tool calls' })).toBeTruthy();
     expect(screen.getAllByText('exec_command').length).toBeGreaterThan(0);
+    expect(screen.getByText('2026-07-03').closest('.wos-data-row')).toBeTruthy();
+    expect(screen.getByText('$3.45').closest('.wos-data-row')).toBeTruthy();
+    expect(screen.getByText('append-only').closest('.wos-data-row')).toBeTruthy();
     const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
       table.style.getPropertyValue('--wos-data-column-template'),
     );
     expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(7rem, 0.42fr) minmax(5rem, 0.32fr)');
     expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(6rem, 0.36fr) minmax(5rem, 0.32fr)');
+    expect(tableTemplates).toContain('minmax(7rem, 0.9fr) repeat(8, minmax(4.6rem, 0.46fr)) minmax(5rem, 0.5fr)');
+    expect(tableTemplates).toContain(
+      'minmax(5.8rem, 0.46fr) minmax(10rem, 1fr) minmax(4.5rem, 0.36fr) minmax(4.5rem, 0.36fr) minmax(6rem, 0.5fr)',
+    );
+    expect(container.querySelector('.ui-data-table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('Highest context pressure')).toBeTruthy();
     expect(screen.getByText('Tool errors')).toBeTruthy();

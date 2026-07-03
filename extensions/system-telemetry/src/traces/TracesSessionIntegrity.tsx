@@ -15,16 +15,50 @@ import {
   DataTableRow,
   PanelHeader,
   SurfacePanel,
+  WindowedDataRow,
+  WindowedDataTable,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 interface Props {
   events: AppTelemetryEventRow[];
+  presentation?: 'stable' | 'windowed';
 }
 
-export function TracesSessionIntegrity({ events }: Props) {
+export function TracesSessionIntegrity({ events, presentation = 'stable' }: Props) {
   if (events.length === 0) {
     return null;
+  }
+
+  if (presentation === 'windowed') {
+    return (
+      <WindowedDataTable
+        columns={[
+          { label: 'Time' },
+          { label: 'Session' },
+          { label: 'Old', align: 'right' },
+          { label: 'New', align: 'right' },
+          { label: 'Loader' },
+        ]}
+        columnTemplate="minmax(5.8rem, 0.46fr) minmax(10rem, 1fr) minmax(4.5rem, 0.36fr) minmax(4.5rem, 0.36fr) minmax(6rem, 0.5fr)"
+      >
+        {events.map((event) => {
+          const meta = parseMetadata(event.metadataJson);
+          return (
+            <WindowedDataRow
+              key={event.id}
+              name={formatTime(event.ts)}
+              cells={[
+                { value: event.sessionId ?? '-' },
+                { value: meta.oldSize ?? '?', align: 'right' },
+                { value: meta.newSize ?? '?', align: 'right' },
+                { value: meta.cacheLoader ?? '?' },
+              ]}
+            />
+          );
+        })}
+      </WindowedDataTable>
+    );
   }
 
   return (

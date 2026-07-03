@@ -219,7 +219,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
               <WindowedPageSection title="Usage" meta="Tokens and models">
                 <div className="space-y-4">
                   {tokensDaily && <TracesHeatmap data={tokensDaily} />}
-                  {tokensDaily && <TracesDailyUsage data={tokensDaily} />}
+                  {tokensDaily && <TracesDailyUsage data={tokensDaily} presentation="windowed" />}
                   {modelUsage && (
                     <TracesModelUsage
                       models={modelUsage}
@@ -248,7 +248,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
                 <div className="space-y-4">
                   <TracesContextPointers data={contextPointers} />
                   <TracesAutoMode data={autoMode} />
-                  <TracesSessionIntegrity events={sessionIntegrity ?? []} />
+                  <TracesSessionIntegrity events={sessionIntegrity ?? []} presentation="windowed" />
                   <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
                   <TracesContextPressure sessions={contextSessions ?? []} compactions={compactions ?? []} compactionAggs={compactionAggs} />
                   <TracesAgentLoop loop={agentLoop} />

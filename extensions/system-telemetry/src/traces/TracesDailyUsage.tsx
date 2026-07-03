@@ -9,6 +9,9 @@ import {
   PanelHeader,
   PanelMessage,
   SurfacePanel,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
@@ -29,16 +32,61 @@ function cacheMultiplier(row: TraceTokenDaily): number {
   return fresh > 0 ? row.tokensCached / fresh : 0;
 }
 
-export function TracesDailyUsage({ data }: { data: TraceTokenDaily[] }) {
+export function TracesDailyUsage({ data, presentation = 'stable' }: { data: TraceTokenDaily[]; presentation?: 'stable' | 'windowed' }) {
   const rows = [...data].sort((a, b) => b.cost - a.cost || b.date.localeCompare(a.date)).slice(0, 12);
 
   if (rows.length === 0) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>No daily usage data yet.</WindowedEmptyState>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelMessage align="center" className="p-6">
           No daily usage data yet.
         </PanelMessage>
       </SurfacePanel>
+    );
+  }
+
+  if (presentation === 'windowed') {
+    return (
+      <WindowedDataTable
+        columns={[
+          { label: 'Date' },
+          { label: 'Turns', align: 'right' },
+          { label: 'Msgs', align: 'right' },
+          { label: 'Input', align: 'right' },
+          { label: 'Output', align: 'right' },
+          { label: 'Cache R', align: 'right' },
+          { label: 'Cache W', align: 'right' },
+          { label: 'Cache x', align: 'right' },
+          { label: 'Total', align: 'right' },
+          { label: 'Cost', align: 'right' },
+        ]}
+        columnTemplate="minmax(7rem, 0.9fr) repeat(8, minmax(4.6rem, 0.46fr)) minmax(5rem, 0.5fr)"
+      >
+        {rows.map((row) => {
+          const total = row.tokensInput + row.tokensOutput + row.tokensCached + row.tokensCachedWrite;
+          return (
+            <WindowedDataRow
+              key={row.date}
+              name={row.date}
+              cells={[
+                { value: row.turns ?? 0, align: 'right' },
+                { value: row.messages ?? 0, align: 'right' },
+                { value: formatCompact(row.tokensInput), align: 'right' },
+                { value: formatCompact(row.tokensOutput), align: 'right' },
+                { value: formatCompact(row.tokensCached), align: 'right' },
+                { value: formatCompact(row.tokensCachedWrite), align: 'right' },
+                { value: `${cacheMultiplier(row).toFixed(1)}x`, align: 'right' },
+                { value: formatCompact(total), align: 'right' },
+                { value: formatCost(row.cost), align: 'right' },
+              ]}
+            />
+          );
+        })}
+      </WindowedDataTable>
     );
   }
 
