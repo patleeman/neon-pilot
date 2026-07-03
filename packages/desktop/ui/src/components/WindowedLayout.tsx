@@ -297,6 +297,28 @@ function sameBounds(first: WindowBounds, second: WindowBounds): boolean {
   return first.x === second.x && first.y === second.y && first.width === second.width && first.height === second.height;
 }
 
+function boundsOverlap(first: WindowBounds, second: WindowBounds): boolean {
+  return (
+    first.x < second.x + second.width &&
+    first.x + first.width > second.x &&
+    first.y < second.y + second.height &&
+    first.y + first.height > second.y
+  );
+}
+
+function hasWindowAboveFocusedChat(focusedWindow: DesktopWindowModel | null, visibleWindows: DesktopWindowModel[]): boolean {
+  if (!focusedWindow || focusedWindow.kind !== 'chat') {
+    return false;
+  }
+
+  const focusedIndex = visibleWindows.findIndex((windowModel) => windowModel.id === focusedWindow.id);
+  if (focusedIndex < 0) {
+    return false;
+  }
+
+  return visibleWindows.slice(focusedIndex + 1).some((windowModel) => boundsOverlap(focusedWindow.bounds, windowModel.bounds));
+}
+
 function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
   let changed = false;
   const next = windows.map((windowModel) => {
@@ -1089,8 +1111,18 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
 
+  const browserBlockedByWindowStack = hasWindowAboveFocusedChat(focusedWindow, visibleWindows);
+
   useWindowedBrowserSuppression(
-    Boolean(launcherOpen || drag || resize || snapTarget || browserLayerSettling || focusedWindow?.kind === 'route'),
+    Boolean(
+      launcherOpen ||
+      drag ||
+      resize ||
+      snapTarget ||
+      browserLayerSettling ||
+      browserBlockedByWindowStack ||
+      focusedWindow?.kind === 'route',
+    ),
   );
 
   useEffect(() => {
@@ -1102,7 +1134,9 @@ export function WindowedLayout() {
   }, [visibleWindowSignature]);
 
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
-  const browserBlockingShellInteraction = Boolean(launcherOpen || drag || resize || snapPreview || browserLayerSettling);
+  const browserBlockingShellInteraction = Boolean(
+    launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
+  );
   const startMenuItems = launcherItems.map(
     (item): StartMenuItem => ({
       id: item.id,

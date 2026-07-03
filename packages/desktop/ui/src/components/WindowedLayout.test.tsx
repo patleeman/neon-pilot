@@ -846,7 +846,7 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
 
-  it('marks window stack changes as browser-blocking while native browser bounds settle', async () => {
+  it('keeps native browser views suppressed when a higher window overlaps the focused chat', async () => {
     seedWindowedWindows([
       {
         id: 'chat:draft',
@@ -866,6 +866,40 @@ describe('WindowedLayout route windows', () => {
         minimized: false,
         focused: false,
         singleton: true,
+      },
+    ]);
+    const { container } = renderWindowedLayout();
+    const shell = container.querySelector('.windowed-os-shell');
+
+    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 700));
+    });
+
+    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
+  });
+
+  it('marks window stack changes as browser-blocking while native browser bounds settle', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
       },
     ]);
     const { container } = renderWindowedLayout();
