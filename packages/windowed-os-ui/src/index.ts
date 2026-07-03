@@ -72,6 +72,8 @@ export {
   type WindowedSelectProps,
   WindowedStateBlock,
   type WindowedStateBlockProps,
+  WindowedTerminalFrame,
+  type WindowedTerminalFrameProps,
   WindowedTextarea,
   type WindowedTextareaProps,
   WindowedTextButton,

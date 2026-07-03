@@ -19,6 +19,7 @@ import {
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedTerminalFrame,
   WindowedToolbar,
   WindowFrame,
 } from './windowedOs';
@@ -273,6 +274,24 @@ describe('WindowedDialog content primitives', () => {
   });
 });
 
+describe('WindowedTerminalFrame', () => {
+  it('renders a canonical terminal status strip and body for windowed terminal surfaces', () => {
+    const html = renderToStaticMarkup(
+      <WindowedTerminalFrame cwd="/repo" status="PTY shell">
+        <div className="wos-terminal-panel" />
+      </WindowedTerminalFrame>,
+    );
+
+    expect(html).toContain('class="wos-terminal-frame"');
+    expect(html).toContain('aria-label="Terminal status"');
+    expect(html).toContain('class="wos-terminal-frame__cwd"');
+    expect(html).toContain('/repo');
+    expect(html).toContain('PTY shell');
+    expect(html).toContain('class="wos-terminal-frame__body"');
+    expect(html).toContain('class="wos-terminal-panel"');
+  });
+});
+
 describe('Windowed OS tokens', () => {
   it('carries canonical scoped tokens from the design package and consumes them in chrome styles', () => {
     const tokensPath = fileURLToPath(new URL('./tokens.css', import.meta.url));
@@ -428,11 +447,23 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
+    expect(stylesSource).toContain('.wos-terminal-frame');
+    expect(stylesSource).toContain('.wos-terminal-frame__status');
+    expect(stylesSource).toContain('.wos-terminal-frame__body');
     expect(stylesSource).toContain('.wos-terminal-panel');
     expect(stylesSource).toContain('background: var(--wos-surface-1);');
     expect(stylesSource).toContain('color: var(--wos-ink-900);');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).toContain('.wos-terminal-panel :where(.xterm, .xterm-screen, .xterm-viewport)');
+  });
+
+  it('documents the canonical terminal frame in isolated Storybook examples', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const TerminalWindow');
+    expect(source).toContain('<WindowedTerminalFrame cwd="/Users/patrick/workingdir/neon-pilot" status="PTY shell">');
+    expect(source).toContain('PASS terminal frame tokens');
   });
 
   it('defines a reusable danger tone for windowed page buttons', () => {

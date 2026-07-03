@@ -1,6 +1,11 @@
 import '@xterm/xterm/css/xterm.css';
 
-import { buildDesktopWebSocketUrl, type ExtensionSurfaceProps, streamExtensionRouteSse } from '@neon-pilot/extensions/ui';
+import {
+  buildDesktopWebSocketUrl,
+  type ExtensionSurfaceProps,
+  streamExtensionRouteSse,
+  WindowedTerminalFrame,
+} from '@neon-pilot/extensions/ui';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import { useEffect, useRef } from 'react';
@@ -487,15 +492,14 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     };
   }, [pa, context.cwd, context.shellPresentation]);
 
-  return (
+  const terminalHost = (
     <div
       ref={containerRef}
       className={
         context.shellPresentation === 'windowed'
           ? 'wos-terminal-panel'
-          : 'h-full w-full overflow-hidden bg-base [&_.xterm-screen]:bg-base [&_.xterm-viewport]:bg-base [&_.xterm]:bg-base'
+          : 'h-full w-full overflow-hidden bg-base p-1 [&_.xterm-screen]:bg-base [&_.xterm-viewport]:bg-base [&_.xterm]:bg-base'
       }
-      style={{ padding: '4px' }}
       data-shell-presentation={context.shellPresentation}
       tabIndex={0}
       aria-label="Interactive terminal"
@@ -506,4 +510,14 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       }}
     />
   );
+
+  if (context.shellPresentation === 'windowed') {
+    return (
+      <WindowedTerminalFrame cwd={context.cwd} status="PTY shell">
+        {terminalHost}
+      </WindowedTerminalFrame>
+    );
+  }
+
+  return terminalHost;
 }

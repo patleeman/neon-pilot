@@ -859,6 +859,28 @@ export function WindowedTimelineItem({ title, meta, tone = 'neutral', children }
   );
 }
 
+export interface WindowedTerminalFrameProps {
+  cwd?: string | null;
+  status?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}
+
+export function WindowedTerminalFrame({ cwd, status = 'Interactive shell', children, className }: WindowedTerminalFrameProps) {
+  const workspaceLabel = cwd?.trim() ? cwd : 'Workspace';
+  return (
+    <div className={cx('wos-terminal-frame', className)}>
+      <div className="wos-terminal-frame__status" aria-label="Terminal status">
+        <span className="wos-terminal-frame__cwd" title={workspaceLabel}>
+          {workspaceLabel}
+        </span>
+        <span className="wos-terminal-frame__state">{status}</span>
+      </div>
+      <div className="wos-terminal-frame__body">{children}</div>
+    </div>
+  );
+}
+
 export interface WindowedMenuItem {
   id: string;
   label: string;

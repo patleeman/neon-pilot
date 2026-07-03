@@ -95,6 +95,15 @@ vi.mock('@xterm/addon-fit', () => ({ FitAddon: terminalHarness.FakeFitAddon }));
 vi.mock('@neon-pilot/extensions/ui', () => ({
   buildDesktopWebSocketUrl: vi.fn(() => 'ws://127.0.0.1:4321/api/realtime'),
   streamExtensionRouteSse: streamHarness.streamExtensionRouteSse,
+  WindowedTerminalFrame: ({ children, cwd, status }: { children: React.ReactNode; cwd?: string | null; status?: React.ReactNode }) => (
+    <div className="wos-terminal-frame">
+      <div className="wos-terminal-frame__status" aria-label="Terminal status">
+        <span className="wos-terminal-frame__cwd">{cwd}</span>
+        <span className="wos-terminal-frame__state">{status}</span>
+      </div>
+      <div className="wos-terminal-frame__body">{children}</div>
+    </div>
+  ),
 }));
 
 class FakeResizeObserver {
@@ -301,6 +310,9 @@ describe('TerminalPanel', () => {
     expect(options.theme?.foreground).toBe('oklch(20% 0.01 60)');
     expect(options.theme?.cursor).toBe('oklch(70% 0.15 60)');
     expect(options.theme?.selectionBackground).toBe('rgba(43, 36, 29, 0.18)');
+    expect(container?.querySelector('.wos-terminal-frame')).toBeTruthy();
+    expect(container?.querySelector('.wos-terminal-frame__cwd')?.textContent).toBe('/repo');
+    expect(container?.querySelector('.wos-terminal-frame__state')?.textContent).toBe('PTY shell');
     expect(container?.querySelector('.wos-terminal-panel')).toBeTruthy();
     expect(container?.querySelector('[data-shell-presentation="windowed"]')).toBeTruthy();
     getComputedStyleSpy.mockRestore();

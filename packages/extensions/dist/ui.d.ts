@@ -247,6 +247,7 @@ export declare const Dialog: HostComponent;
 export declare const DialogBody: HostComponent;
 export declare const DialogFooter: HostComponent;
 export declare const DialogHeader: HostComponent;
+export declare const WindowedTerminalFrame: HostComponent;
 export declare const EditorToolbar: HostComponent;
 export declare const EditorToolbarButton: HostComponent;
 export declare const EditorToolbarGroup: HostComponent;

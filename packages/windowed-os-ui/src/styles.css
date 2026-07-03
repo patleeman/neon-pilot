@@ -2702,8 +2702,64 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   font-family: var(--wos-font-mono);
 }
 
+.wos-terminal-frame {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+}
+
+.wos-terminal-frame__status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+  padding: 5px 8px;
+  font: var(--wos-text-row);
+}
+
+.wos-terminal-frame__cwd,
+.wos-terminal-frame__state {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-terminal-frame__cwd {
+  font-family: var(--wos-font-mono);
+  font-weight: 700;
+}
+
+.wos-terminal-frame__state {
+  flex-shrink: 0;
+  color: var(--wos-ink-600);
+}
+
+.wos-terminal-frame__body {
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px;
+}
+
 .wos-terminal-panel :where(.xterm, .xterm-screen, .xterm-viewport) {
   background: var(--wos-surface-1) !important;
+}
+
+.wos-terminal-panel pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--wos-font-mono);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .wos-embedded-sidebar {

@@ -32,6 +32,7 @@ import {
   WindowedSegmentedControl,
   WindowedSelect,
   WindowedStateBlock,
+  WindowedTerminalFrame,
   WindowedTextarea,
   WindowedTextInput,
   WindowedTimeline,
@@ -1869,6 +1870,33 @@ export const CoreDataPrimitives: Story = {
             </WindowedDataTable>
           </WindowedPageSection>
         </WindowedPageMain>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const TerminalWindow: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+      <WindowFrame
+        title="Terminal"
+        accent="extensions"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(760px, 100%)', height: 430 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedTerminalFrame cwd="/Users/patrick/workingdir/neon-pilot" status="PTY shell">
+          <div className="wos-terminal-panel" aria-label="Terminal preview">
+            <pre>
+              $ pnpm --dir packages/windowed-os-ui run test{'\n'}
+              PASS windowed desktop shell{'\n'}
+              PASS terminal frame tokens{'\n'}
+              {'\n'}$
+            </pre>
+          </div>
+        </WindowedTerminalFrame>
       </WindowFrame>
     </div>
   ),
