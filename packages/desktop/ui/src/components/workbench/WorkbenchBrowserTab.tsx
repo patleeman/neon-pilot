@@ -475,6 +475,7 @@ export function WorkbenchBrowserTab({
         return;
       }
 
+      const hideAllOwnerViews = options?.force && Boolean(browserHostRef.current?.closest('.windowed-os-shell'));
       const requestKey = `${browserSessionKey}:hidden`;
       if (!options?.force && lastBoundsRequestRef.current === requestKey) {
         return;
@@ -492,6 +493,12 @@ export function WorkbenchBrowserTab({
         })
         .catch((error) => setStatus(formatWorkbenchBrowserError(error)));
 
+      if (hideAllOwnerViews) {
+        void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: null, deactivate: true }).catch((error) => {
+          setStatus(formatWorkbenchBrowserError(error));
+        });
+      }
+
       if (options?.force) {
         for (const delay of [80, 240, 600, 1200]) {
           const timer = window.setTimeout(() => {
@@ -502,6 +509,11 @@ export function WorkbenchBrowserTab({
             void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey, deactivate: true }).catch((error) => {
               setStatus(formatWorkbenchBrowserError(error));
             });
+            if (hideAllOwnerViews) {
+              void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: null, deactivate: true }).catch((error) => {
+                setStatus(formatWorkbenchBrowserError(error));
+              });
+            }
           }, delay);
           hiddenReassertTimersRef.current.push(timer);
         }

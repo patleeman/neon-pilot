@@ -410,6 +410,7 @@ describe('WorkbenchBrowserTab', () => {
     await flushAsyncWork();
 
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
   });
 
   it('hides the native browser view while shared renderer overlays are open', async () => {
@@ -495,6 +496,7 @@ describe('WorkbenchBrowserTab', () => {
     const hiddenCalls = setWorkbenchBrowserBounds.mock.calls.filter(([input]) => input && input.visible === false);
     expect(hiddenCalls.length).toBeGreaterThanOrEqual(3);
     expect(hiddenCalls.every(([input]) => input?.deactivate === true)).toBe(true);
+    expect(hiddenCalls.some(([input]) => input?.sessionKey === null)).toBe(true);
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
