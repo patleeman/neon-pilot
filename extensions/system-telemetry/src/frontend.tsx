@@ -384,7 +384,10 @@ function WindowedModelUsageTable({
   const cacheByModel = Object.fromEntries((cacheEfficiency?.byModel ?? []).map((model) => [model.modelId, model.hitRate]));
 
   return (
-    <WindowedDataTable columns={[{ label: 'Model' }, { label: 'Tokens' }, { label: 'Cache', align: 'right' }]}>
+    <WindowedDataTable
+      columnTemplate="minmax(14rem, 1fr) minmax(7rem, 0.42fr) minmax(5rem, 0.32fr)"
+      columns={[{ label: 'Model' }, { label: 'Tokens' }, { label: 'Cache', align: 'right' }]}
+    >
       {models.slice(0, 6).map((model) => {
         const cacheHitRate = cacheByModel[model.modelId];
         return (
@@ -407,7 +410,10 @@ function WindowedToolHealthTable({ tools }: { tools: NonNullable<ReturnType<type
   }
 
   return (
-    <WindowedDataTable columns={[{ label: 'Tool' }, { label: 'Calls' }, { label: 'Errors', align: 'right' }]}>
+    <WindowedDataTable
+      columnTemplate="minmax(14rem, 1fr) minmax(6rem, 0.36fr) minmax(5rem, 0.32fr)"
+      columns={[{ label: 'Tool' }, { label: 'Calls' }, { label: 'Errors', align: 'right' }]}
+    >
       {tools.slice(0, 8).map((tool) => {
         const hasErrors = tool.errors > 0;
         return (

@@ -361,7 +361,10 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
               </WindowedPageSection>
             ) : null}
             <WindowedPageSection title="Providers" meta={`${pageState.gateway.providers.length} available`}>
-              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Configuration', align: 'right' }]}>
+              <WindowedDataTable
+                columnTemplate="minmax(12rem, 1fr) minmax(6.5rem, 0.42fr) minmax(12rem, 0.72fr)"
+                columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Configuration', align: 'right' }]}
+              >
                 {pageState.gateway.providers.map((provider) => {
                   const connection = pageState.gateway.connections.find((candidate) => candidate.provider === provider.id);
                   const providerEnabled = Boolean(connection?.enabled);
@@ -394,7 +397,10 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
               {telegramConnection?.statusMessage ? <p className="wos-gateway-status-message">{telegramConnection.statusMessage}</p> : null}
             </WindowedPageSection>
             <WindowedPageSection title="Connection">
-              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
+              <WindowedDataTable
+                columnTemplate="minmax(12rem, 1fr) minmax(6.5rem, 0.42fr) minmax(8rem, 0.5fr)"
+                columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}
+              >
                 <WindowedDataRow
                   name={telegramProvider?.label ?? 'Telegram'}
                   meta="Telegram Bot API"
@@ -428,7 +434,10 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
               </WindowedDataTable>
             </WindowedPageSection>
             <WindowedPageSection title="Gateway tools" meta="Subwindows">
-              <WindowedDataTable columns={[{ label: 'Tool' }, { label: 'State' }, { label: 'Open', align: 'right' }]}>
+              <WindowedDataTable
+                columnTemplate="minmax(12rem, 1fr) minmax(7rem, 0.45fr) minmax(6rem, 0.34fr)"
+                columns={[{ label: 'Tool' }, { label: 'State' }, { label: 'Open', align: 'right' }]}
+              >
                 <WindowedDataRow
                   name="Configuration"
                   meta="Setup route, docs, and bot token"

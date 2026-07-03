@@ -67,6 +67,9 @@ describe('ModelArenaPage', () => {
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(container.querySelector('.wos-arena-ranking-table')).toBeTruthy();
+    expect(container.querySelector<HTMLElement>('.wos-arena-ranking-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(15rem, 1fr) minmax(5rem, 0.34fr) minmax(5rem, 0.34fr) minmax(7rem, 0.48fr)',
+    );
     expect(container.querySelector('.wos-arena-ranking-table .wos-data-row[data-cells="3"]')).toBeTruthy();
     expect(container.querySelector('.wos-arena-ranking-row')).toBeNull();
     expect(screen.getByRole('combobox', { name: 'Task type' })).toBeTruthy();
@@ -77,9 +80,12 @@ describe('ModelArenaPage', () => {
     expect(screen.getByRole('switch', { name: 'Disable Model Arena' })).toBeTruthy();
     expect(container.querySelector('.wos-toggle[data-accent="model-arena"]')).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add opencode-go/zeta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add selected challenger model' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove DeepSeek V4 Flash · opencode-go' })).toBeTruthy();
     expect(container.querySelector('.wos-arena-challenger-table .wos-data-row')).toBeTruthy();
+    expect(container.querySelector<HTMLElement>('.wos-arena-challenger-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(14rem, 1fr) minmax(10rem, 0.62fr) minmax(7rem, 0.38fr)',
+    );
     expect(container.querySelector('.wos-arena-challenger-list')).toBeNull();
     expect(container.querySelector('.wos-arena-challenger')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();

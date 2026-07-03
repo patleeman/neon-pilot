@@ -111,7 +111,23 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {action}
     </div>
   ),
-  WindowedDataTable: ({ children }: { columns: unknown[]; children: React.ReactNode }) => <div>{children}</div>,
+  WindowedDataTable: ({
+    children,
+    className,
+    columnTemplate,
+  }: {
+    columns: unknown[];
+    children: React.ReactNode;
+    className?: string;
+    columnTemplate?: string;
+  }) => (
+    <div
+      className={['wos-data-table', className].filter(Boolean).join(' ')}
+      style={columnTemplate ? ({ '--wos-data-column-template': columnTemplate } as React.CSSProperties) : undefined}
+    >
+      {children}
+    </div>
+  ),
   WindowedDialog: ({
     title,
     meta,
@@ -364,6 +380,12 @@ describe('GatewaysPage', () => {
     expect(screen.getByRole('button', { name: 'Test bot' })).toBeTruthy();
     expect(screen.getByText('Providers')).toBeTruthy();
     expect(screen.getByText('Gateway tools')).toBeTruthy();
+    const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
+      table.style.getPropertyValue('--wos-data-column-template'),
+    );
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(6.5rem, 0.42fr) minmax(12rem, 0.72fr)');
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(6.5rem, 0.42fr) minmax(8rem, 0.5fr)');
+    expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(7rem, 0.45fr) minmax(6rem, 0.34fr)');
     expect(
       screen
         .getAllByText('Configured')

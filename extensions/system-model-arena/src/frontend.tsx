@@ -606,6 +606,7 @@ function ModelArenaWindowedPage({
                 ) : (
                   <WindowedDataTable
                     className="wos-arena-challenger-table"
+                    columnTemplate="minmax(14rem, 1fr) minmax(10rem, 0.62fr) minmax(7rem, 0.38fr)"
                     columns={[{ label: 'Model' }, { label: 'Reference' }, { label: 'Action', align: 'right' }]}
                   >
                     {selectedModels.map(({ ref, model }) => (
@@ -715,6 +716,7 @@ function ModelArenaWindowedPage({
             {ranked.length > 0 ? (
               <WindowedDataTable
                 className="wos-arena-ranking-table"
+                columnTemplate="minmax(15rem, 1fr) minmax(5rem, 0.34fr) minmax(5rem, 0.34fr) minmax(7rem, 0.48fr)"
                 columns={[
                   { label: 'Model' },
                   { label: 'Rating', align: 'right' },

@@ -815,7 +815,10 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                           : 'No installable skills returned.'}
                     </WindowedEmptyState>
                   ) : (
-                    <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
+                    <WindowedDataTable
+                      columnTemplate="minmax(15rem, 1fr) minmax(7rem, 0.38fr) minmax(14rem, 0.74fr)"
+                      columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Action', align: 'right' }]}
+                    >
                       {pagedMarketplaceRows.map(({ candidate, installed, capability, state, stateValue }) => {
                         const busy = installingId === candidate.candidateId;
                         const selected = selectedSkillResourceId === skillResourceId('marketplace', candidate.candidateId);
@@ -897,7 +900,10 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                       : 'Skills give agents reusable instructions for focused work.'}
                   </WindowedEmptyState>
                 ) : (
-                  <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Controls', align: 'right' }]}>
+                  <WindowedDataTable
+                    columnTemplate="minmax(15rem, 1fr) minmax(7rem, 0.38fr) minmax(14rem, 0.74fr)"
+                    columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Controls', align: 'right' }]}
+                  >
                     {filteredSkills.map((skill) => {
                       const selectionData: SkillSelectionData = { kind: 'installed', skill };
                       const selected =

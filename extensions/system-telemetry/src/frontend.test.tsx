@@ -114,6 +114,11 @@ describe('TelemetryPage', () => {
     expect(screen.getAllByText('gpt-5.4').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Tool calls' })).toBeTruthy();
     expect(screen.getAllByText('exec_command').length).toBeGreaterThan(0);
+    const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
+      table.style.getPropertyValue('--wos-data-column-template'),
+    );
+    expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(7rem, 0.42fr) minmax(5rem, 0.32fr)');
+    expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(6rem, 0.36fr) minmax(5rem, 0.32fr)');
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('Highest context pressure')).toBeTruthy();
     expect(screen.getByText('Tool errors')).toBeTruthy();
