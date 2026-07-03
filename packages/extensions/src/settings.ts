@@ -34,6 +34,7 @@ export interface ColorTheme {
 }
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type ThemeAccent = 'lime' | 'forest' | 'cobalt' | 'ember' | 'violet' | 'ink';
+export type WindowedOsTheme = 'light' | 'dark';
 export type UnifiedSettingsEntry = unknown;
 
 export declare const SettingsPanel: HostComponent;
@@ -141,6 +142,10 @@ export declare function writeStringRecordDraftEntries(entries: JsonObjectDraftEn
 export declare function readDesktopEnvironment(...args: never[]): unknown;
 export declare function resetStoredConversationUiState(...args: never[]): unknown;
 export declare function resetStoredLayoutPreferences(...args: never[]): unknown;
+export declare const WINDOWED_OS_THEME_CHANGED_EVENT: string;
+export declare const WINDOWED_OS_THEME_STORAGE_KEY: string;
+export declare function readWindowedOsTheme(): WindowedOsTheme;
+export declare function writeWindowedOsTheme(theme: WindowedOsTheme): void;
 export declare function subscribeDesktopProviderOAuthLogin(...args: never[]): unknown;
 export declare function useApi(...args: never[]): unknown;
 export declare function useExtensionRegistry(...args: never[]): unknown;

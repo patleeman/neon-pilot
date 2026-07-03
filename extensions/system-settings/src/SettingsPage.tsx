@@ -34,6 +34,7 @@ import {
   type ProviderOAuthLoginState,
   type ProviderOAuthLoginStreamEvent,
   readDesktopEnvironment,
+  readWindowedOsTheme,
   type SecretsState,
   type SecretStatusEntry,
   SettingsField,
@@ -48,6 +49,9 @@ import {
   useApi,
   useExtensionRegistry,
   useTheme,
+  WINDOWED_OS_THEME_CHANGED_EVENT,
+  type WindowedOsTheme,
+  writeWindowedOsTheme,
 } from '@neon-pilot/extensions/settings';
 import {
   AppPageLayout,
@@ -2737,6 +2741,7 @@ export function SettingsPage({
   const oauthTerminalStateKeyRef = useRef<string | null>(null);
   const openedOAuthAuthUrlRef = useRef<string | null>(null);
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
+  const [windowedOsTheme, setWindowedOsTheme] = useState<WindowedOsTheme>(() => readWindowedOsTheme());
   const settingsScrollRef = useRef<HTMLDivElement | null>(null);
 
   const { settingsNavLinks, visibleSectionIds } = useSettingsNavigation(sectionIds);
@@ -2809,6 +2814,16 @@ export function SettingsPage({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isWindowedSettingsSurface) return undefined;
+    const handleWindowedThemeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ theme?: WindowedOsTheme }>;
+      setWindowedOsTheme(customEvent.detail?.theme ?? readWindowedOsTheme());
+    };
+    window.addEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, handleWindowedThemeChange);
+    return () => window.removeEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, handleWindowedThemeChange);
+  }, [isWindowedSettingsSurface]);
 
   useEffect(() => {
     if (visibleTocLinks.some((item) => item.id === activeQuickLinkId)) {
@@ -3940,6 +3955,23 @@ export function SettingsPage({
                 })}
               </div>
             </SettingsControlRow>
+            {isWindowedSettingsSurface ? (
+              <SettingsControlRow title="Windowed OS" description="Desktop window chrome">
+                <SegmentedControl
+                  ariaLabel="Windowed OS theme"
+                  value={windowedOsTheme}
+                  onChange={(value) => {
+                    const nextTheme: WindowedOsTheme = value === 'dark' ? 'dark' : 'light';
+                    setWindowedOsTheme(nextTheme);
+                    writeWindowedOsTheme(nextTheme);
+                  }}
+                  options={[
+                    { value: 'light', label: 'Light' },
+                    { value: 'dark', label: 'Dark' },
+                  ]}
+                />
+              </SettingsControlRow>
+            ) : null}
           </SettingsGroup>
         </SettingsSection>
 

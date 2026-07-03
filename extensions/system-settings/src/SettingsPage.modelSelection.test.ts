@@ -201,4 +201,17 @@ describe('windowed settings navigation', () => {
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-control');
     expect(source).toContain('width: 100%;');
   });
+
+  it('uses the public extension settings boundary for the windowed OS theme control', () => {
+    const settingsPageSource = readFileSync(join(process.cwd(), 'extensions/system-settings/src/SettingsPage.tsx'), 'utf8');
+    const hostSettingsApiSource = readFileSync(join(process.cwd(), 'packages/desktop/ui/src/extensions/settings.ts'), 'utf8');
+    const extensionSettingsTypesSource = readFileSync(join(process.cwd(), 'packages/extensions/src/settings.ts'), 'utf8');
+
+    expect(settingsPageSource).toContain('readWindowedOsTheme');
+    expect(settingsPageSource).toContain('writeWindowedOsTheme');
+    expect(hostSettingsApiSource).toContain("from '../ui-state/windowedShell'");
+    expect(extensionSettingsTypesSource).toContain("export type WindowedOsTheme = 'light' | 'dark';");
+    expect(extensionSettingsTypesSource).toContain('export declare function readWindowedOsTheme(): WindowedOsTheme;');
+    expect(extensionSettingsTypesSource).toContain('export declare function writeWindowedOsTheme(theme: WindowedOsTheme): void;');
+  });
 });

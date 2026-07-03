@@ -381,6 +381,8 @@ describe('SettingsPage', () => {
     expect(html).toContain('aria-label="Sections"');
     expect(html).toContain('>Appearance</h1>');
     expect(html).toContain('>Providers</span>');
+    expect(html).toContain('Windowed OS');
+    expect(html).toContain('aria-label="Windowed OS theme"');
     expect(html).not.toContain('Theme, accent, and visual defaults.');
     expect(html).not.toContain('Model and transcript defaults for new conversations.');
     expect(html).not.toContain('Connect model providers, save credentials, and add model overrides.');
@@ -412,8 +414,17 @@ describe('SettingsPage', () => {
     expect(html).toContain('data-active="true"');
     expect(html).not.toContain('>Appearance</h1>');
     expect(html).not.toContain('Theme mode selection');
+    expect(html).not.toContain('Windowed OS');
     expect(html).not.toContain('Default project folder');
     expect(html).not.toContain('Command palette actions and keyboard shortcuts');
+  });
+
+  it('does not show the isolated windowed OS theme control in stable settings', () => {
+    const html = renderPage('/settings', ['settings-appearance']);
+
+    expect(html).toContain('Theme mode selection');
+    expect(html).not.toContain('Windowed OS');
+    expect(html).not.toContain('aria-label="Windowed OS theme"');
   });
 
   it('keeps the windowed settings rail on the shared list-row grammar', () => {
