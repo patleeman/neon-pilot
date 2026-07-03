@@ -30,6 +30,7 @@ import {
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
+  WindowedLoadingState,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
@@ -815,9 +816,7 @@ function WindowedGatewaysLoading() {
     <WindowedPageShell layout="standard" className="gateways-page-windowed">
       <WindowedPageMain title="Telegram">
         <WindowedPageSection title="Status" meta="Loading">
-          <WindowedStateBlock>
-            <QuietLoadingState label="Loading gateway settings" className="min-h-24" />
-          </WindowedStateBlock>
+          <WindowedLoadingState label="Loading gateway settings" />
         </WindowedPageSection>
       </WindowedPageMain>
     </WindowedPageShell>

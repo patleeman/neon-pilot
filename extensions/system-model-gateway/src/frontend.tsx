@@ -16,17 +16,21 @@ import {
   SupportingText,
   TextInput,
   ToolbarButton,
+  WindowedActionRow,
   WindowedBadge,
   WindowedDataRow,
   WindowedDataTable,
   WindowedEmptyState,
   WindowedField,
+  WindowedFormGrid,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
+  WindowedLoadingState,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedPageStack,
   WindowedStateBlock,
   WindowedTextInput,
 } from '@neon-pilot/extensions/ui';
@@ -224,8 +228,8 @@ export function ModelGatewaySettingsPanel({
     return (
       <WindowedPageShell layout="standard" className="model-gateway-page-windowed">
         <WindowedPageMain title="AI Gateway">
-          <div className="grid gap-3">
-            {loading ? <WindowedStateBlock>Loading AI Gateway settings.</WindowedStateBlock> : null}
+          <WindowedPageStack>
+            {loading ? <WindowedLoadingState label="Loading AI Gateway settings" /> : null}
 
             {!loading ? (
               <>
@@ -267,7 +271,7 @@ export function ModelGatewaySettingsPanel({
                 ) : null}
 
                 <WindowedPageSection title="Listener" meta="Local port">
-                  <div className="grid gap-3 md:grid-cols-[minmax(14rem,18rem)_auto] md:items-end">
+                  <WindowedFormGrid columns={2}>
                     <WindowedField label="Port" hint="Changing the port restarts the local listener.">
                       <WindowedTextInput
                         id="settings-model-gateway-port"
@@ -279,34 +283,34 @@ export function ModelGatewaySettingsPanel({
                         }}
                       />
                     </WindowedField>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <WindowedActionRow>
                       <WindowedPageButton disabled={busy !== null} onClick={() => void load()}>
                         Refresh
                       </WindowedPageButton>
                       <WindowedPageButton tone="accent" disabled={busy === 'save'} onClick={() => void savePort()}>
                         {busy === 'save' ? 'Saving' : 'Save port'}
                       </WindowedPageButton>
-                    </div>
-                  </div>
+                    </WindowedActionRow>
+                  </WindowedFormGrid>
                 </WindowedPageSection>
 
                 <WindowedPageSection title="Codex client setup" meta={copied ? 'Copied' : 'Responses compatible'}>
-                  <div className="grid gap-3">
+                  <WindowedPageStack>
                     <WindowedKeyValueList
                       items={gatewayConfigRows.map((row) => ({
                         label: row.label,
                         value: row.secret && row.value ? '••••••••••••••••' : row.value || 'not set',
                       }))}
                     />
-                    <div className="flex flex-wrap justify-end gap-2">
+                    <WindowedActionRow>
                       <WindowedPageButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy config'}</WindowedPageButton>
-                    </div>
-                  </div>
+                    </WindowedActionRow>
+                  </WindowedPageStack>
                 </WindowedPageSection>
 
                 <WindowedPageSection title="Recent activity" meta={`${status.logs.length} retained`}>
-                  <div className="grid gap-3">
-                    <div className="flex flex-wrap justify-end gap-2">
+                  <WindowedPageStack>
+                    <WindowedActionRow>
                       <WindowedPageButton
                         tone="danger"
                         disabled={busy === 'clearLogs' || status.logs.length === 0}
@@ -314,7 +318,7 @@ export function ModelGatewaySettingsPanel({
                       >
                         Clear logs
                       </WindowedPageButton>
-                    </div>
+                    </WindowedActionRow>
                     {status.logs.length === 0 ? (
                       <WindowedEmptyState>No gateway activity yet.</WindowedEmptyState>
                     ) : (
@@ -337,11 +341,11 @@ export function ModelGatewaySettingsPanel({
                         ))}
                       </WindowedDataTable>
                     )}
-                  </div>
+                  </WindowedPageStack>
                 </WindowedPageSection>
               </>
             ) : null}
-          </div>
+          </WindowedPageStack>
         </WindowedPageMain>
       </WindowedPageShell>
     );

@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
+  WindowedActionRow,
   WindowedChartPanel,
   WindowedDataRow,
   WindowedDataTable,
@@ -20,9 +21,11 @@ import {
   WindowedLoadingState,
   WindowedNumberStepper,
   WindowedPageButton,
+  WindowedPageGrid,
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedPageStack,
   WindowedSettingsGroup,
   WindowedSettingsRow,
   WindowedTerminalFrame,
@@ -184,6 +187,38 @@ describe('WindowedPageMain', () => {
     expect(html).toContain('Gateway settings');
     expect(html).not.toContain('Only approved users and chats can send work into Neon Pilot.');
     expect(html).not.toContain('wos-page-main__heading"><h1>Gateways</h1><p>');
+  });
+});
+
+describe('WindowedPageStack', () => {
+  it('exposes canonical page stack and grid layout primitives', () => {
+    const html = renderToStaticMarkup(
+      <WindowedPageStack>
+        <WindowedPageGrid columns={2}>
+          <div>First pane</div>
+          <div>Second pane</div>
+        </WindowedPageGrid>
+      </WindowedPageStack>,
+    );
+
+    expect(html).toContain('class="wos-page-stack"');
+    expect(html).toContain('class="wos-page-grid" data-columns="2"');
+    expect(html).toContain('First pane');
+    expect(html).toContain('Second pane');
+  });
+});
+
+describe('WindowedActionRow', () => {
+  it('renders inline action rows without form footer chrome', () => {
+    const html = renderToStaticMarkup(
+      <WindowedActionRow align="start">
+        <button type="button">Refresh</button>
+      </WindowedActionRow>,
+    );
+
+    expect(html).toContain('class="wos-action-row" data-align="start"');
+    expect(html).toContain('Refresh');
+    expect(html).not.toContain('wos-form-actions');
   });
 });
 

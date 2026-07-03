@@ -110,6 +110,10 @@ describe('ModelGatewaySettingsPanel', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Loopback endpoint' })).toBeTruthy());
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
+    expect(container.querySelector('.wos-page-stack')).toBeTruthy();
+    expect(container.querySelector('.wos-form-grid')).toBeTruthy();
+    expect(container.querySelectorAll('.wos-action-row').length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelector('.wos-form-actions')).toBeNull();
     expect(container.querySelector('.wos-page-section')).toBeTruthy();
     expect(container.querySelector('.wos-key-value-grid')).toBeTruthy();
     expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
@@ -138,7 +142,8 @@ describe('ModelGatewaySettingsPanel', () => {
 
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
-    expect(screen.getByText('Loading AI Gateway settings.').closest('.wos-state-block')).toBeTruthy();
+    expect(screen.getByText('Loading AI Gateway settings').closest('.wos-loading-state')).toBeTruthy();
+    expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
   });
 
   it('renders AI Gateway as a windowed route page', async () => {

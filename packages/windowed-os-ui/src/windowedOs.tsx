@@ -200,6 +200,31 @@ export function WindowedPageMain({ title, actions, children, className }: Window
   );
 }
 
+export interface WindowedPageStackProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+}
+
+export function WindowedPageStack({ children, className, ...props }: WindowedPageStackProps) {
+  return (
+    <div className={cx('wos-page-stack', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export interface WindowedPageGridProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  columns?: 1 | 2;
+}
+
+export function WindowedPageGrid({ children, columns = 2, className, ...props }: WindowedPageGridProps) {
+  return (
+    <div className={cx('wos-page-grid', className)} data-columns={columns} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export interface WindowedPageSectionProps {
   title?: string;
   meta?: string;
@@ -357,6 +382,19 @@ export interface WindowedFormActionsProps extends HTMLAttributes<HTMLDivElement>
 export function WindowedFormActions({ children, className, ...props }: WindowedFormActionsProps) {
   return (
     <div className={cx('wos-form-actions', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export interface WindowedActionRowProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  align?: 'start' | 'end';
+}
+
+export function WindowedActionRow({ children, align = 'end', className, ...props }: WindowedActionRowProps) {
+  return (
+    <div className={cx('wos-action-row', className)} data-align={align} {...props}>
       {children}
     </div>
   );

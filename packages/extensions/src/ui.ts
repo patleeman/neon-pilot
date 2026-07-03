@@ -1,5 +1,6 @@
 export type { ExtensionSurfaceProps } from './index.js';
 export type {
+  WindowedActionRowProps,
   WindowedBadgeProps,
   WindowedChartPanelProps,
   WindowedDataColumn,
@@ -15,10 +16,12 @@ export type {
   WindowedListProps,
   WindowedLoadingStateProps,
   WindowedPageButtonProps,
+  WindowedPageGridProps,
   WindowedPageMainProps,
   WindowedPageRailProps,
   WindowedPageSectionProps,
   WindowedPageShellProps,
+  WindowedPageStackProps,
   WindowedSelectProps,
   WindowedSettingsGroupProps,
   WindowedSettingsRowProps,
@@ -30,6 +33,7 @@ export type {
   WindowedToggleProps,
 } from '@neon-pilot/windowed-os-ui';
 export {
+  WindowedActionRow,
   WindowedBadge,
   WindowedChartPanel,
   WindowedDataRow,
@@ -43,10 +47,12 @@ export {
   WindowedListItem,
   WindowedLoadingState,
   WindowedPageButton,
+  WindowedPageGrid,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedPageStack,
   WindowedSelect,
   WindowedSettingsGroup,
   WindowedSettingsRow,

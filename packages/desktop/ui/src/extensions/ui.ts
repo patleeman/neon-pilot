@@ -225,6 +225,7 @@ export { type ExtensionSettingsPanelRegistration, SettingsPanelHost } from './Se
 export { SidebarTreeSection, type SidebarTreeSectionProps } from './SidebarTreeSection';
 export type { ExtensionSurfaceProps } from './types';
 export type {
+  WindowedActionRowProps,
   WindowedBadgeProps,
   WindowedChartPanelProps,
   WindowedDataColumn,
@@ -245,10 +246,12 @@ export type {
   WindowedLoadingStateProps,
   WindowedNumberStepperProps,
   WindowedPageButtonProps,
+  WindowedPageGridProps,
   WindowedPageMainProps,
   WindowedPageRailProps,
   WindowedPageSectionProps,
   WindowedPageShellProps,
+  WindowedPageStackProps,
   WindowedSelectProps,
   WindowedSettingsGroupProps,
   WindowedSettingsRowProps,
@@ -262,6 +265,7 @@ export type {
   WindowedToolbarProps,
 } from '@neon-pilot/windowed-os-ui';
 export {
+  WindowedActionRow,
   WindowedBadge,
   WindowedChartPanel,
   WindowedDataRow,
@@ -280,10 +284,12 @@ export {
   WindowedLoadingState,
   WindowedNumberStepper,
   WindowedPageButton,
+  WindowedPageGrid,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedPageStack,
   WindowedSegmentedControl,
   WindowedSelect,
   WindowedSettingsGroup,

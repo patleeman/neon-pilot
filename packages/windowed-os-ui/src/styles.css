@@ -2272,6 +2272,22 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   padding: var(--wos-space-4);
 }
 
+.wos-action-row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.wos-action-row[data-align='end'] {
+  justify-content: flex-end;
+}
+
+.wos-action-row[data-align='start'] {
+  justify-content: flex-start;
+}
+
 .wos-empty-state {
   min-width: 0;
   display: flex;

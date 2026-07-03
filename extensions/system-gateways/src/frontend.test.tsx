@@ -220,6 +220,12 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </button>
   ),
+  WindowedLoadingState: ({ label }: { label?: string }) => (
+    <div className="wos-state-block wos-loading-state">
+      <strong>{label ?? 'Loading'}</strong>
+      <span>Preparing the window contents.</span>
+    </div>
+  ),
   WindowedPageMain: ({
     title,
     description,
@@ -469,7 +475,8 @@ describe('GatewaysPage', () => {
     expect(screen.getByRole('heading', { name: 'Telegram' })).toBeTruthy();
     expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Loading')).toBeTruthy();
-    expect(screen.getByRole('status', { name: 'Loading gateway settings' })).toBeTruthy();
+    expect(screen.getByText('Loading gateway settings').closest('.wos-loading-state')).toBeTruthy();
+    expect(container.querySelector('[role="status"]')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Loading' })).toBeNull();
     expect(screen.queryByText('Loading gateway settings.')).toBeNull();
   });
