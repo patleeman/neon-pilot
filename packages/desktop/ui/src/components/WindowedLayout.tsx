@@ -1162,17 +1162,11 @@ export function WindowedLayout() {
 
   const browserBlockedByWindowStack = hasWindowAboveFocusedChat(focusedWindow, visibleWindows);
 
-  useWindowedBrowserSuppression(
-    Boolean(
-      launcherOpen ||
-      drag ||
-      resize ||
-      snapTarget ||
-      browserLayerSettling ||
-      browserBlockedByWindowStack ||
-      focusedWindow?.kind === 'route',
-    ),
+  const nativeBrowserBlocked = Boolean(
+    launcherOpen || drag || resize || snapTarget || browserLayerSettling || browserBlockedByWindowStack || focusedWindow?.kind === 'route',
   );
+
+  useWindowedBrowserSuppression(nativeBrowserBlocked);
 
   useEffect(() => {
     if (!visibleWindowSignature) return;
@@ -1249,6 +1243,7 @@ export function WindowedLayout() {
       className="windowed-os-shell h-screen overflow-hidden"
       data-focused-window-id={focusedWindowId ?? undefined}
       data-window-interaction={browserBlockingShellInteraction ? 'true' : undefined}
+      data-native-browser-blocked={nativeBrowserBlocked ? 'true' : undefined}
     >
       <StartMenu open={launcherOpen} items={startMenuItems} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">

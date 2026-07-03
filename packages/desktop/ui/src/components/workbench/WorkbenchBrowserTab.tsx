@@ -72,7 +72,11 @@ function hasWindowedShellOverlay(): boolean {
     return false;
   }
 
-  return Boolean(document.querySelector(`.windowed-os-shell[data-window-interaction="true"], ${TRANSIENT_RENDERER_BLOCKER_SELECTOR}`));
+  return Boolean(
+    document.querySelector(
+      `.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell[data-native-browser-blocked="true"], ${TRANSIENT_RENDERER_BLOCKER_SELECTOR}`,
+    ),
+  );
 }
 
 function isConnectedVisibleElement(element: Element): element is HTMLElement {

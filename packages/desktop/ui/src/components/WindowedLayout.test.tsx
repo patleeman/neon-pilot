@@ -868,6 +868,35 @@ describe('WindowedLayout route windows', () => {
     );
   });
 
+  it('marks the shell as native-browser-blocked while non-chat windows own the foreground', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+    await screen.findByRole('region', { name: /routines/i });
+
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-native-browser-blocked')).toBe('true');
+  });
+
   it('publishes the single focused window id for native browser layering checks', async () => {
     seedWindowedWindows([
       {

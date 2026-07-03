@@ -121,9 +121,9 @@
 
 .wos-app-monogram {
   display: inline-flex;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
+  width: var(--wos-window-control-size);
+  height: var(--wos-window-control-size);
+  flex: 0 0 var(--wos-window-control-size);
   align-items: center;
   justify-content: center;
   border: 2px solid var(--wos-ink-900);
@@ -259,7 +259,7 @@
   z-index: 1001;
   width: min(260px, calc(100vw - 16px));
   border: 2px solid var(--wos-ink-900);
-  border-radius: 14px;
+  border-radius: var(--wos-radius-2xl);
   background: var(--wos-surface-1);
   box-shadow: var(--wos-shadow-menu);
   overflow: hidden;
@@ -411,8 +411,8 @@
 .wos-window__controls button {
   position: relative;
   display: inline-flex;
-  width: 24px;
-  height: 24px;
+  width: var(--wos-window-control-size);
+  height: var(--wos-window-control-size);
   align-items: center;
   justify-content: center;
   border-radius: 7px;
@@ -421,7 +421,7 @@
 }
 
 .wos-window .wos-window__controls button[data-control='close']:hover {
-  background: oklch(78% 0.13 28);
+  background: var(--wos-danger-hover);
 }
 
 .wos-window__control-glyph {
@@ -493,6 +493,7 @@
 .wos-window[data-iframe-blocked='true'] .wos-window__body iframe,
 .windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe,
 .windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe,
 .wos-window__body:has(.wos-dialog-layer) iframe,
 .windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe,
@@ -602,9 +603,9 @@
 .wos-dialog__close {
   position: relative;
   display: inline-flex;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
+  width: var(--wos-window-control-size);
+  height: var(--wos-window-control-size);
+  flex: 0 0 var(--wos-window-control-size);
   align-items: center;
   justify-content: center;
   border: 2px solid var(--wos-ink-900);
@@ -615,7 +616,7 @@
 }
 
 .wos-dialog__close:hover {
-  background: oklch(78% 0.13 28);
+  background: var(--wos-danger-hover);
 }
 
 .wos-dialog__close span {
@@ -1642,7 +1643,7 @@
 }
 
 .wos-badge[data-tone='positive'] {
-  color: oklch(58% 0.14 150);
+  color: var(--wos-success);
 }
 
 .wos-badge[data-tone='warning'] {
@@ -1701,8 +1702,8 @@
   height: 18px;
   flex: 0 0 auto;
   border: 0;
-  border-radius: 999px;
-  background: oklch(88% 0.02 60);
+  border-radius: var(--wos-radius-pill);
+  background: var(--wos-surface-disabled);
   padding: 0;
 }
 
@@ -1756,7 +1757,7 @@
   left: 2px;
   width: 14px;
   height: 14px;
-  border-radius: 999px;
+  border-radius: var(--wos-radius-pill);
   background: white;
 }
 

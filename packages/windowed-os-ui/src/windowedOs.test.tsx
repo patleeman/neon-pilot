@@ -143,6 +143,38 @@ describe('WindowedDialog content primitives', () => {
   });
 });
 
+describe('Windowed OS tokens', () => {
+  it('carries canonical scoped tokens from the design package and consumes them in chrome styles', () => {
+    const tokensPath = fileURLToPath(new URL('./tokens.css', import.meta.url));
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const tokensSource = readFileSync(tokensPath, 'utf8');
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    for (const token of [
+      '--wos-surface-disabled',
+      '--wos-success',
+      '--wos-danger-hover',
+      '--wos-border-hairline',
+      '--wos-border-strong',
+      '--wos-shadow-desktop',
+      '--wos-radius-2xl',
+      '--wos-radius-pill',
+      '--wos-window-control-size',
+      '--wos-duration-fast',
+      '--wos-easing-standard',
+    ]) {
+      expect(tokensSource).toContain(token);
+    }
+
+    expect(stylesSource).toContain('border-radius: var(--wos-radius-2xl);');
+    expect(stylesSource).toContain('width: var(--wos-window-control-size);');
+    expect(stylesSource).toContain('background: var(--wos-danger-hover);');
+    expect(stylesSource).toContain('color: var(--wos-success);');
+    expect(stylesSource).toContain('background: var(--wos-surface-disabled);');
+    expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
+  });
+});
+
 describe('Windowed OS Storybook examples', () => {
   it('keeps canonical design tokens in the scoped token stylesheet', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
@@ -196,6 +228,7 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe');
