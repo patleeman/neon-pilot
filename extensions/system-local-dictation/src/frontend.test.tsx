@@ -476,14 +476,75 @@ describe('DictationSettingsPanel', () => {
     });
 
     expect(container.querySelector('.wos-page-section')).not.toBeNull();
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('.local-dictation-page-windowed')).not.toBeNull();
-    expect(container.textContent).toContain('Local Dictation');
+    expect(container.textContent).not.toContain('Local Dictation');
     expect(container.querySelector('.wos-field')).not.toBeNull();
     expect(container.querySelector('.wos-key-value-grid')).not.toBeNull();
     expect(container.textContent).toContain('Model');
     expect(container.textContent).toContain('Installed locally');
     expect(container.textContent).toContain('Runtime');
     expect(container.querySelector('.settings-row')).toBeNull();
+  });
+
+  it('uses windowed loading chrome while dictation settings load in the desktop shell', async () => {
+    const readSettings = createDeferred<{ settings: { model: string } }>();
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'readSettings') return readSettings.promise;
+      if (action === 'runtimeStatus') return { provider: 'local-whisper', available: true, dependencies: [] };
+      if (action === 'modelStatus') return { model: 'base.en', installed: true };
+      return {};
+    });
+
+    const { container } = renderDictationSettingsPanel({ invoke, shellPresentation: 'windowed' });
+
+    expect(container.querySelector('.local-dictation-page-windowed')).not.toBeNull();
+    expect(container.querySelector('.wos-loading-state')?.textContent).toContain('Loading dictation settings');
+    expect(container.querySelector('.settings-row')).toBeNull();
+
+    await act(async () => {
+      readSettings.resolve({ settings: { model: 'base.en' } });
+      await flushMicrotasks();
+    });
+
+    expect(container.querySelector('.wos-loading-state')).toBeNull();
+    expect(container.textContent).toContain('Runtime');
+  });
+
+  it('uses windowed loading chrome while autosaving dictation settings in the desktop shell', async () => {
+    const updateSettings = createDeferred<{ settings: { model: string } }>();
+    const invoke = vi.fn(async (action: string, input?: { model?: string }) => {
+      if (action === 'readSettings') return { settings: { model: 'base.en' } };
+      if (action === 'runtimeStatus') return { provider: 'local-whisper', available: true, dependencies: [] };
+      if (action === 'modelStatus') return { model: input?.model ?? 'base.en', installed: true };
+      if (action === 'updateSettings') return updateSettings.promise;
+      return {};
+    });
+
+    const { container } = renderDictationSettingsPanel({ invoke, shellPresentation: 'windowed' });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const select = container.querySelector<HTMLSelectElement>('#settings-dictation-model');
+    expect(select).not.toBeNull();
+
+    await act(async () => {
+      select!.value = 'small.en';
+      select!.dispatchEvent(new Event('change', { bubbles: true }));
+      await flushMicrotasks();
+    });
+
+    expect(invoke).toHaveBeenCalledWith('updateSettings', { model: 'small.en' });
+    expect(container.querySelector('.wos-loading-state')?.textContent).toContain('Saving dictation settings');
+    expect(container.querySelector('.settings-row')).toBeNull();
+
+    await act(async () => {
+      updateSettings.resolve({ settings: { model: 'small.en' } });
+      await flushMicrotasks();
+    });
+
+    expect(container.querySelector('.wos-loading-state')).toBeNull();
+    expect(container.textContent).toContain('Saved.');
   });
 });
