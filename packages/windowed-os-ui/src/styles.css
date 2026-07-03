@@ -454,6 +454,7 @@
   min-height: 0;
   overflow: hidden;
   background: var(--wos-surface-1);
+  contain: paint;
 }
 
 .wos-window__body iframe {
@@ -462,6 +463,12 @@
   display: block;
   max-width: 100%;
   isolation: isolate;
+  contain: paint;
+}
+
+.wos-window[data-focused='false'] .wos-window__body iframe,
+.windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe {
+  pointer-events: none;
 }
 
 .wos-dialog-layer {

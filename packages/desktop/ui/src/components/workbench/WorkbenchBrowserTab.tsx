@@ -328,6 +328,24 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
   });
 }
 
+function shouldSuspendForWindowedShellEvent(host: HTMLElement | null, event: Event): boolean {
+  if (!host?.closest('.windowed-os-shell')) {
+    return false;
+  }
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!target) {
+    return false;
+  }
+  if (host.contains(target)) {
+    return false;
+  }
+  return Boolean(
+    target.closest(
+      '.windowed-os-shell, .wos-window, .wos-start-menu, .wos-taskbar, .wos-taskbar__menu-layer, .wos-dialog-layer, .wos-snap-preview',
+    ),
+  );
+}
+
 export function formatWorkbenchBrowserError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? '');
   const firstLine = raw.split('\n')[0]?.trim() ?? '';
@@ -583,6 +601,25 @@ export function WorkbenchBrowserTab({
     };
     window.addEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
     return () => window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, handleSuspend, true);
+  }, [hideBrowserView]);
+
+  useEffect(() => {
+    const handleWindowedShellEvent = (event: Event) => {
+      if (!shouldSuspendForWindowedShellEvent(browserHostRef.current, event)) {
+        return;
+      }
+      windowedShellSuspendUntilRef.current = Math.max(windowedShellSuspendUntilRef.current, Date.now() + WINDOWED_SHELL_BROWSER_SUSPEND_MS);
+      hideBrowserView({ force: true });
+    };
+
+    window.addEventListener('pointerdown', handleWindowedShellEvent, true);
+    window.addEventListener('mousedown', handleWindowedShellEvent, true);
+    window.addEventListener('focusin', handleWindowedShellEvent, true);
+    return () => {
+      window.removeEventListener('pointerdown', handleWindowedShellEvent, true);
+      window.removeEventListener('mousedown', handleWindowedShellEvent, true);
+      window.removeEventListener('focusin', handleWindowedShellEvent, true);
+    };
   }, [hideBrowserView]);
 
   useEffect(() => {

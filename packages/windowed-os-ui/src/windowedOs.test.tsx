@@ -112,6 +112,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
   });
 
+  it('contains iframe paint inside window bodies and disables iframe hit testing during shell interaction', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-window__body {\n  position: relative;');
+    expect(stylesSource).toContain('contain: paint;');
+    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
+    expect(stylesSource).toContain('pointer-events: none;');
+  });
+
   it('keeps isolated Storybook examples on scoped windowed classes instead of app utility CSS', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
