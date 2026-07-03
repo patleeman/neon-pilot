@@ -1,6 +1,15 @@
 import { api, Button, ErrorState, MetaLabel, SettingsRow, Switch, useApi } from '@neon-pilot/extensions/settings';
-import { QuietLoadingState } from '@neon-pilot/extensions/ui';
-import { useEffect, useState } from 'react';
+import {
+  QuietLoadingState,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedPageButton,
+  WindowedPageSection,
+  WindowedToggle,
+} from '@neon-pilot/extensions/ui';
+import React, { useEffect, useState } from 'react';
 
 type Settings = {
   cliEnabled: boolean;
@@ -14,6 +23,10 @@ type CliShellLinkSetupState = {
   status: 'ready' | 'needs_setup' | 'blocked' | 'not_applicable' | 'unknown';
   detail?: string;
   actions?: string[];
+};
+
+type SettingsPanelContext = {
+  shellPresentation?: 'stable' | 'windowed';
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -40,7 +53,22 @@ async function installCliShellLink(): Promise<{ ok: boolean; detail?: string }> 
   return response.result as { ok: boolean; detail?: string };
 }
 
-export function NeonPilotAgentSettingsPanel() {
+function shellLinkStatusLabel(status: CliShellLinkSetupState['status'] | undefined): string {
+  if (status === 'ready') return 'Ready';
+  if (status === 'blocked') return 'Blocked';
+  if (status === 'not_applicable') return 'Not applicable';
+  if (status === 'needs_setup') return 'Needs setup';
+  return 'Unknown';
+}
+
+function shellLinkStatusTone(status: CliShellLinkSetupState['status'] | undefined): 'positive' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'ready') return 'positive';
+  if (status === 'blocked') return 'danger';
+  if (status === 'needs_setup') return 'warning';
+  return 'neutral';
+}
+
+export function NeonPilotAgentSettingsPanel({ settingsContext }: { settingsContext?: SettingsPanelContext }) {
   const { data, loading, error, refetch } = useApi(readAgentSettings, 'system-neon-pilot-cli-settings');
   const {
     data: shellLink,
@@ -97,6 +125,77 @@ export function NeonPilotAgentSettingsPanel() {
 
   const canInstallShellLink = Array.isArray(shellLink?.actions) && shellLink.actions.includes('install');
 
+  if (settingsContext?.shellPresentation === 'windowed') {
+    const shellLinkDetail = shellLinkError
+      ? shellLinkError instanceof Error
+        ? shellLinkError.message
+        : String(shellLinkError)
+      : (shellLink?.detail ?? 'Install the neon-pilot command in your user shell path.');
+
+    return (
+      <div className="grid gap-3">
+        {loading ? <QuietLoadingState label="Loading settings" className="min-h-12" /> : null}
+        {error ? <WindowedEmptyState tone="danger">{error instanceof Error ? error.message : String(error)}</WindowedEmptyState> : null}
+        <WindowedPageSection title="Command line">
+          <WindowedDataTable columns={[{ label: 'Capability' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
+            <WindowedDataRow
+              name="Shell command"
+              meta={shellLinkDetail}
+              status={
+                <WindowedBadge tone={shellLinkStatusTone(shellLink?.status)}>{shellLinkStatusLabel(shellLink?.status)}</WindowedBadge>
+              }
+              action={
+                <span className="flex items-center justify-end gap-2">
+                  <WindowedPageButton disabled={shellLinkLoading || installing} onClick={() => void refetchShellLink()}>
+                    Refresh
+                  </WindowedPageButton>
+                  {canInstallShellLink ? (
+                    <WindowedPageButton tone="accent" disabled={shellLinkLoading || installing} onClick={() => void installShellLink()}>
+                      {installing ? 'Installing' : 'Install'}
+                    </WindowedPageButton>
+                  ) : null}
+                </span>
+              }
+            />
+            <WindowedDataRow
+              name="CLI entrypoint"
+              meta="Administer Neon Pilot, start delegated tasks, inspect runs, and manage extension surfaces."
+              status={
+                <WindowedBadge tone={settings.cliEnabled ? 'positive' : 'neutral'}>
+                  {settings.cliEnabled ? 'Enabled' : 'Paused'}
+                </WindowedBadge>
+              }
+              action={
+                <span className="flex items-center justify-end gap-2">
+                  <WindowedPageButton disabled={saving} onClick={() => void refetch()}>
+                    Refresh
+                  </WindowedPageButton>
+                  <WindowedToggle
+                    checked={settings.cliEnabled}
+                    disabled={saving}
+                    accent="extensions"
+                    label="Toggle CLI entrypoint"
+                    onChange={() => void save({ cliEnabled: !settings.cliEnabled })}
+                  />
+                </span>
+              }
+            />
+          </WindowedDataTable>
+        </WindowedPageSection>
+        {message || saveError || shellLinkMessage || shellLinkSaveError ? (
+          <WindowedPageSection title="Status">
+            <div className="grid gap-1 text-[11px] leading-4">
+              {message ? <span className="text-success">{message}</span> : null}
+              {saveError ? <span className="text-danger">{saveError}</span> : null}
+              {shellLinkMessage ? <span className="text-success">{shellLinkMessage}</span> : null}
+              {shellLinkSaveError ? <span className="text-danger">{shellLinkSaveError}</span> : null}
+            </div>
+          </WindowedPageSection>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {loading ? <QuietLoadingState label="Loading settings" className="min-h-12" /> : null}
@@ -107,7 +206,7 @@ export function NeonPilotAgentSettingsPanel() {
             <span>Shell command</span>
             {shellLink?.status ? (
               <MetaLabel tone={shellLink.status === 'ready' ? 'success' : shellLink.status === 'blocked' ? 'danger' : 'muted'}>
-                {shellLink.status === 'ready' ? 'Ready' : shellLink.status === 'blocked' ? 'Blocked' : 'Needs setup'}
+                {shellLinkStatusLabel(shellLink.status)}
               </MetaLabel>
             ) : null}
           </span>
