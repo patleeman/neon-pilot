@@ -85,6 +85,11 @@ function isInsideBackgroundWindowedWindow(host: HTMLElement | null): boolean {
     return false;
   }
 
+  const focusedWindow = windows.find((candidate) => candidate.dataset.focused === 'true');
+  if (focusedWindow) {
+    return focusedWindow !== ownWindow;
+  }
+
   const topWindow = windows.reduce((top, candidate) => (windowLayer(candidate) >= windowLayer(top) ? candidate : top), windows[0]!);
   return topWindow !== ownWindow;
 }
@@ -115,8 +120,8 @@ function isCoveredByWindowedWindow(host: HTMLElement | null): boolean {
 
   return windows.some((candidate) => {
     if (candidate === ownWindow) return false;
-    if (windowLayer(candidate) <= ownLayer) return false;
     if (!isVisibleStyle(candidate)) return false;
+    if (candidate.dataset.focused !== 'true' && windowLayer(candidate) <= ownLayer) return false;
     return rectsOverlap(hostRect, candidate.getBoundingClientRect());
   });
 }
