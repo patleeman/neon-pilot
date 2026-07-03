@@ -76,6 +76,21 @@ describe('WindowedToolbar', () => {
 });
 
 describe('Windowed OS Storybook examples', () => {
+  it('keeps isolated Storybook examples on scoped windowed classes instead of app utility CSS', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+    const classNames = Array.from(source.matchAll(/className="([^"]+)"/g)).flatMap((match) => (match[1] ?? '').split(/\s+/));
+    const utilityClassNames = classNames.filter(
+      (className) =>
+        className &&
+        !className.startsWith('wos-') &&
+        (['flex', 'grid'].includes(className) ||
+          /^(min-w-|items-|justify-|gap-|space-y-|md:|text-\[|text-secondary|text-accent|text-danger)/.test(className)),
+    );
+
+    expect(utilityClassNames).toEqual([]);
+  });
+
   it('keeps canonical windowed page examples free of stable context rails', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

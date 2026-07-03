@@ -646,6 +646,18 @@
   padding: 10px;
 }
 
+.wos-dialog-stack {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-dialog-copy {
+  margin: 0;
+  color: var(--wos-ink-700);
+  font: var(--wos-text-body);
+}
+
 .wos-window-route-body {
   --color-base: 252 247 236;
   --color-surface: 255 252 244;
@@ -1164,7 +1176,15 @@
   display: flex;
   flex-shrink: 0;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+}
+
+.wos-page-main__actions .wos-select {
+  width: auto;
+  min-width: 168px;
+  max-width: 260px;
 }
 
 .wos-page-main__body {
@@ -1756,6 +1776,41 @@
 .wos-data-row__status,
 .wos-data-row__action {
   min-width: 0;
+}
+
+.wos-inline-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.wos-status-stack {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wos-status-note {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--wos-ink-500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.wos-status-note[data-tone='accent'] {
+  color: var(--wos-extensions);
+}
+
+.wos-status-note[data-tone='danger'] {
+  color: var(--wos-telemetry);
 }
 
 .wos-data-row__name {

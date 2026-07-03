@@ -1500,13 +1500,15 @@ export const ExtensionsPage: Story = {
                   name="system-browser"
                   meta="Built-in · Workbench, tools"
                   status={
-                    <span className="flex flex-col items-start gap-1">
+                    <span className="wos-status-stack">
                       <WindowedBadge tone="warning">Update available</WindowedBadge>
-                      <span className="text-[11px] text-accent">0.11.40</span>
+                      <span className="wos-status-note" data-tone="accent">
+                        0.11.40
+                      </span>
                     </span>
                   }
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedToggle checked accent="extensions" label="Disable system-browser" />
                       <WindowedPageButton>Details</WindowedPageButton>
                       <WindowedPageButton>Open</WindowedPageButton>
@@ -1518,7 +1520,7 @@ export const ExtensionsPage: Story = {
                   meta="Built-in · Workbench"
                   status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedToggle checked accent="extensions" label="Disable system-terminal" />
                       <WindowedPageButton>Details</WindowedPageButton>
                       <WindowedPageButton>Open</WindowedPageButton>
@@ -1530,7 +1532,7 @@ export const ExtensionsPage: Story = {
                   meta="Built-in · Main route"
                   status={<WindowedBadge tone="neutral">Disabled</WindowedBadge>}
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedToggle accent="extensions" label="Enable system-model-arena" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
@@ -1540,13 +1542,15 @@ export const ExtensionsPage: Story = {
                   name="workflow-reports"
                   meta="Personal marketplace · Main route, skills"
                   status={
-                    <span className="flex flex-col items-start gap-1">
+                    <span className="wos-status-stack">
                       <WindowedBadge tone="danger">Invalid</WindowedBadge>
-                      <span className="text-[11px] text-danger">Manifest missing contribution id</span>
+                      <span className="wos-status-note" data-tone="danger">
+                        Manifest missing contribution id
+                      </span>
                     </span>
                   }
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedToggle disabled accent="extensions" label="Enable workflow-reports" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
@@ -1719,11 +1723,7 @@ export const SkillsPage: Story = {
 
             <WindowedPageSection>
               <WindowedToolbar as="form" formProps={{ onSubmit: (event) => event.preventDefault() }}>
-                <WindowedTextInput
-                  aria-label="Search marketplace skills"
-                  placeholder="Search marketplace skills"
-                  className="min-w-48 flex-1"
-                />
+                <WindowedTextInput aria-label="Search marketplace skills" placeholder="Search marketplace skills" />
                 <WindowedPageButton>Clear</WindowedPageButton>
                 <WindowedPageButton tone="accent" type="submit">
                   Search
@@ -1732,34 +1732,31 @@ export const SkillsPage: Story = {
             </WindowedPageSection>
 
             <WindowedPageSection>
-              <div className="grid min-w-0 gap-2 md:grid-cols-3">
-                <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
-                  Capability
+              <div className="wos-form-grid" data-columns="3">
+                <WindowedField label="Capability">
                   <WindowedSelect aria-label="Filter by capability" defaultValue="all">
                     <option value="all">All</option>
                     <option value="coding">Coding</option>
                     <option value="qa">QA</option>
                     <option value="research">Research</option>
                   </WindowedSelect>
-                </label>
-                <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
-                  Source
+                </WindowedField>
+                <WindowedField label="Source">
                   <WindowedSelect aria-label="Filter by source" defaultValue="openai">
                     <option value="all">All</option>
                     <option value="openai">OpenAI Skills</option>
                     <option value="curated">Curated</option>
                     <option value="community">Community</option>
                   </WindowedSelect>
-                </label>
-                <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
-                  State
+                </WindowedField>
+                <WindowedField label="State">
                   <WindowedSelect aria-label="Filter by state" defaultValue="all">
                     <option value="all">All</option>
                     <option value="available">Available</option>
                     <option value="approval-required">Approval required</option>
                     <option value="installed">Installed</option>
                   </WindowedSelect>
-                </label>
+                </WindowedField>
               </div>
             </WindowedPageSection>
 
@@ -1770,7 +1767,7 @@ export const SkillsPage: Story = {
                   meta="Review · OpenAI Skills · Trusted"
                   status={<WindowedBadge tone="positive">Installed</WindowedBadge>}
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedPageButton disabled>Installed</WindowedPageButton>
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
@@ -1781,7 +1778,7 @@ export const SkillsPage: Story = {
                   meta="QA · Agent plugin · Trusted"
                   status={<WindowedBadge tone="neutral">Available</WindowedBadge>}
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedPageButton tone="accent">Install</WindowedPageButton>
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
@@ -1792,7 +1789,7 @@ export const SkillsPage: Story = {
                   meta="iOS · Curated · Trusted"
                   status={<WindowedBadge tone="warning">Approval required</WindowedBadge>}
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedPageButton tone="accent">Install</WindowedPageButton>
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
@@ -1809,7 +1806,7 @@ export const SkillsPage: Story = {
                   enabled
                   status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedToggle checked accent="extensions" label="Disable design" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
@@ -1821,7 +1818,7 @@ export const SkillsPage: Story = {
                   enabled={false}
                   status={<WindowedBadge tone="neutral">Disabled</WindowedBadge>}
                   action={
-                    <span className="flex items-center justify-end gap-2">
+                    <span className="wos-inline-actions">
                       <WindowedToggle accent="extensions" label="Enable zotero" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
@@ -1832,8 +1829,8 @@ export const SkillsPage: Story = {
           </WindowedPageMain>
         </WindowedPageShell>
         <WindowedDialog title="local-qa" meta="Marketplace skill" accent="extensions" onClose={() => undefined}>
-          <div className="grid gap-3">
-            <p className="text-[12px] leading-5 text-secondary">Browser and app checks for local product QA.</p>
+          <div className="wos-dialog-stack">
+            <p className="wos-dialog-copy">Browser and app checks for local product QA.</p>
             <WindowedKeyValueList
               items={[
                 { label: 'Capability', value: 'QA' },
