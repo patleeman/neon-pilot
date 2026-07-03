@@ -1195,12 +1195,6 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
 
-  const browserBlockedByWindowStack = hasCoveredChatWindow(visibleWindows) || hasCompetingWindowedSurface(visibleWindows);
-
-  const nativeBrowserBlocked = true;
-
-  useWindowedBrowserSuppression(nativeBrowserBlocked);
-
   useEffect(() => {
     if (!visibleWindowSignature) return;
     setBrowserLayerSettling(true);
@@ -1210,10 +1204,14 @@ export function WindowedLayout() {
   }, [visibleWindowSignature]);
 
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
+  const browserBlockedByWindowStack = hasCoveredChatWindow(visibleWindows) || hasCompetingWindowedSurface(visibleWindows);
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );
+  const nativeBrowserBlocked = Boolean(!focusedWindow || focusedWindow.kind !== 'chat' || browserBlockingShellInteraction);
   const rendererFramePaintBlocked = browserBlockingShellInteraction;
+
+  useWindowedBrowserSuppression(nativeBrowserBlocked);
   const startMenuItems = launcherItems.map(
     (item): StartMenuItem => ({
       id: item.id,

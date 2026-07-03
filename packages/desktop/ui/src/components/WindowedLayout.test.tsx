@@ -161,7 +161,7 @@ describe('WindowedLayout route windows', () => {
     });
   });
 
-  it('keeps native browser views blocked for a single focused chat window after shell settling', async () => {
+  it('unblocks native browser views for a single focused chat window after shell settling', async () => {
     seedWindowedWindows([
       {
         id: 'chat:draft',
@@ -185,7 +185,7 @@ describe('WindowedLayout route windows', () => {
       await new Promise((resolve) => window.setTimeout(resolve, 1300));
     });
 
-    expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
+    expect(shell?.getAttribute('data-native-browser-blocked')).toBeNull();
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBeNull();
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBeNull();
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });

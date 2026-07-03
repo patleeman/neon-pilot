@@ -80,10 +80,6 @@ function hasWindowedShellOverlay(): boolean {
   );
 }
 
-function isInsideWindowedShell(host: HTMLElement | null): boolean {
-  return Boolean(host?.closest('.windowed-os-shell'));
-}
-
 function isConnectedVisibleElement(element: Element): element is HTMLElement {
   return element instanceof HTMLElement && element.isConnected && isVisibleStyle(element);
 }
@@ -721,7 +717,6 @@ export function WorkbenchBrowserTab({
     }
 
     const blocked =
-      isInsideWindowedShell(host) ||
       Date.now() < windowedShellSuspendUntilRef.current ||
       hasBlockingRendererOverlay(host) ||
       hasWindowedShellOverlay() ||
