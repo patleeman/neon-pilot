@@ -184,10 +184,20 @@ describe('WindowedLayout route windows', () => {
 
     expect(document.body.getAttribute('data-neon-pilot-windowed-shell-active')).toBe('true');
     await waitFor(() => {
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true, destroy: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true, destroy: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+        visible: false,
+        sessionKey: '@global:tab-tab-a',
+        deactivate: true,
+        destroy: true,
+      });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+        visible: false,
+        sessionKey: '@global:tab-tab-b',
+        deactivate: true,
+        destroy: true,
+      });
     });
   });
 
@@ -218,8 +228,8 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBeNull();
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBeNull();
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true, destroy: true });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true, destroy: true });
   });
 
   it('keeps native browser views suppressed while a focused chat window is clipped by the desktop work area', async () => {
@@ -249,7 +259,7 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
     expect(chatWindow.getAttribute('data-iframe-blocked')).toBe('true');
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true, destroy: true });
   });
 
   it('renders non-chat routes through the extension host without the embedded stable layout', async () => {
@@ -610,9 +620,19 @@ describe('WindowedLayout route windows', () => {
       fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
       expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
 
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true, destroy: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+        visible: false,
+        sessionKey: '@global:tab-tab-a',
+        deactivate: true,
+        destroy: true,
+      });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+        visible: false,
+        sessionKey: '@global:tab-tab-b',
+        deactivate: true,
+        destroy: true,
+      });
       const initialHiddenCalls = setWorkbenchBrowserBounds.mock.calls.length;
 
       await act(async () => {
@@ -624,6 +644,7 @@ describe('WindowedLayout route windows', () => {
         visible: false,
         sessionKey: '@global:tab-tab-b',
         deactivate: true,
+        destroy: true,
       });
     } finally {
       vi.useRealTimers();
@@ -1439,9 +1460,19 @@ describe('WindowedLayout route windows', () => {
     fireEvent.pointerDown(screen.getByRole('region', { name: /new conversation/i }));
 
     await waitFor(() => {
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true, destroy: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+        visible: false,
+        sessionKey: '@global:tab-tab-a',
+        deactivate: true,
+        destroy: true,
+      });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+        visible: false,
+        sessionKey: '@global:tab-tab-b',
+        deactivate: true,
+        destroy: true,
+      });
     });
   });
 
@@ -1485,8 +1516,13 @@ describe('WindowedLayout route windows', () => {
 
     await waitFor(
       () => {
-        expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
-        expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
+        expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true, destroy: true });
+        expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
+          visible: false,
+          sessionKey: '@global:tab-tab-a',
+          deactivate: true,
+          destroy: true,
+        });
       },
       { timeout: 750 },
     );

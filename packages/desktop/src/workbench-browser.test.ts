@@ -70,12 +70,23 @@ describe('workbench browser validation', () => {
   it('treats owner-level hide requests as a global native browser suppression', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 
-    expect(source).toContain('this.hideAllOwnerViews(owner.id, deactivate === true, ownerWindow);');
+    expect(source).toContain('this.hideAllOwnerViews(owner.id, deactivate === true, ownerWindow, destroy === true);');
     expect(source).toContain(
-      'private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean, ownerWindow?: BrowserWindow): void',
+      'private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean, ownerWindow?: BrowserWindow, destroy = false): void',
     );
     expect(source).toContain('entry.owner.id === ownerWebContentsId');
     expect(source).toContain('ownerWindow && entry.ownerWindow === ownerWindow');
+  });
+
+  it('can destroy windowed-shell suppressed native browser views instead of only hiding them', () => {
+    const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
+
+    expect(source).toContain('destroy?: boolean');
+    expect(source).toContain('this.hide(this.viewKey(owner.id, sessionKey), deactivate === true, destroy === true);');
+    expect(source).toContain('private hide(viewKey: string, deactivate = false, destroy = false): void');
+    expect(source).toContain('if (destroy) {');
+    expect(source).toContain('this.views.delete(viewKey);');
+    expect(source).toContain('entry.view.webContents.close();');
   });
 
   it('detaches stale attached native browser views from previous renderer owners', () => {

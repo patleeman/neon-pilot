@@ -344,6 +344,7 @@ export class WorkbenchBrowserViewController {
     bounds: WorkbenchBrowserBounds | null,
     sessionKey?: string | null,
     deactivate?: boolean,
+    destroy?: boolean,
   ): WorkbenchBrowserState | null {
     const ownerWindow = BrowserWindow.fromWebContents(owner);
     if (!ownerWindow || ownerWindow.isDestroyed()) {
@@ -355,10 +356,10 @@ export class WorkbenchBrowserViewController {
         this.suppressOwnerViews(owner.id);
       }
       if (sessionKey === null || sessionKey === undefined) {
-        this.hideAllOwnerViews(owner.id, deactivate === true, ownerWindow);
+        this.hideAllOwnerViews(owner.id, deactivate === true, ownerWindow, destroy === true);
         return this.getState(owner.id, sessionKey);
       }
-      this.hide(this.viewKey(owner.id, sessionKey), deactivate === true);
+      this.hide(this.viewKey(owner.id, sessionKey), deactivate === true, destroy === true);
       return this.getState(owner.id, sessionKey);
     }
 
@@ -605,7 +606,7 @@ export class WorkbenchBrowserViewController {
     return `${ownerWebContentsId}:${normalizedSessionKey}`;
   }
 
-  private hide(viewKey: string, deactivate = false): void {
+  private hide(viewKey: string, deactivate = false, destroy = false): void {
     const entry = this.views.get(viewKey);
     if (!entry) {
       return;
@@ -619,6 +620,12 @@ export class WorkbenchBrowserViewController {
     entry.view.setVisible(false);
     entry.view.setBounds({ x: -10_000, y: -10_000, width: 1, height: 1 });
     this.detach(entry);
+    if (destroy) {
+      this.views.delete(viewKey);
+      if (!entry.view.webContents.isDestroyed()) {
+        entry.view.webContents.close();
+      }
+    }
   }
 
   private attach(entry: WorkbenchBrowserViewEntry): void {
@@ -648,10 +655,10 @@ export class WorkbenchBrowserViewController {
     }
   }
 
-  private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean, ownerWindow?: BrowserWindow): void {
+  private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean, ownerWindow?: BrowserWindow, destroy = false): void {
     for (const [viewKey, entry] of this.views) {
       if (entry.owner.id === ownerWebContentsId || (ownerWindow && entry.ownerWindow === ownerWindow)) {
-        this.hide(viewKey, deactivate);
+        this.hide(viewKey, deactivate, destroy);
       }
     }
   }

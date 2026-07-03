@@ -424,7 +424,7 @@ export class DesktopWindowController {
 
   setWorkbenchBrowserBoundsForWebContents(
     webContentsId: number,
-    input: { visible?: boolean; bounds?: unknown; sessionKey?: string | null; deactivate?: boolean },
+    input: { visible?: boolean; bounds?: unknown; sessionKey?: string | null; deactivate?: boolean; destroy?: boolean },
   ): unknown {
     const tracked = this.trackedWindows.get(webContentsId);
     if (!tracked || tracked.window.isDestroyed()) {
@@ -437,7 +437,14 @@ export class DesktopWindowController {
       throw new Error('Workbench browser bounds are invalid.');
     }
 
-    return this.workbenchBrowser.setBounds(tracked.window.webContents, visible, bounds, input.sessionKey, input.deactivate === true);
+    return this.workbenchBrowser.setBounds(
+      tracked.window.webContents,
+      visible,
+      bounds,
+      input.sessionKey,
+      input.deactivate === true,
+      input.destroy === true,
+    );
   }
 
   getWorkbenchBrowserStateForWebContents(webContentsId: number, sessionKey?: string | null): unknown {
