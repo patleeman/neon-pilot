@@ -92,7 +92,14 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {action}
     </div>
   ),
-  WindowedDataTable: ({ children }: { children: React.ReactNode }) => <div className="wos-data-table">{children}</div>,
+  WindowedDataTable: ({ children, columnTemplate }: { children: React.ReactNode; columnTemplate?: string }) => (
+    <div
+      className="wos-data-table"
+      style={columnTemplate ? ({ '--wos-data-column-template': columnTemplate } as React.CSSProperties) : undefined}
+    >
+      {children}
+    </div>
+  ),
   WindowedDialog: ({
     title,
     actions,
@@ -290,7 +297,9 @@ describe('AgentPluginsSettingsPanel', () => {
     expect(screen.getByRole('heading', { name: 'Installed agent plugins' })).toBeTruthy();
     expect(container.querySelector('.wos-form-grid[data-columns="2"]')).toBeTruthy();
     expect(container.querySelector('.wos-form-actions')).toBeTruthy();
-    expect(document.querySelector('.wos-data-table')).toBeTruthy();
+    expect(document.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(14rem, 1fr) minmax(6rem, 0.36fr) minmax(6rem, 0.36fr) minmax(10rem, 0.58fr) minmax(6.5rem, 0.4fr) minmax(6rem, 0.34fr)',
+    );
     expect(screen.getByRole('button', { name: 'Open details for Review Pack' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Plugin is on' })).toBeNull();
 

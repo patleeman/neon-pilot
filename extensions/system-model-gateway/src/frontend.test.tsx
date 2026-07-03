@@ -112,7 +112,9 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
     expect(container.querySelector('.wos-page-section')).toBeTruthy();
     expect(container.querySelector('.wos-key-value-grid')).toBeTruthy();
-    expect(container.querySelector('.wos-data-table')).toBeTruthy();
+    expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(16rem, 1fr) minmax(6.5rem, 0.38fr) minmax(6rem, 0.32fr)',
+    );
     expect(container.querySelector('.ui-data-table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Listener' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Codex client setup' })).toBeTruthy();

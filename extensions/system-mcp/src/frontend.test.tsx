@@ -243,6 +243,11 @@ describe('McpSettingsPanel', () => {
     expect(screen.getByRole('heading', { name: 'Explicit config' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Explicit servers' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Skill-bundled servers' })).toBeTruthy();
+    const windowedTables = Array.from(document.querySelectorAll<HTMLElement>('.wos-data-table'));
+    expect(windowedTables.map((table) => table.style.getPropertyValue('--wos-data-column-template'))).toEqual([
+      'minmax(14rem, 1fr) minmax(7rem, 0.4fr) minmax(6rem, 0.34fr) minmax(16rem, 0.82fr) minmax(6rem, 0.34fr)',
+      'minmax(14rem, 1fr) minmax(10rem, 0.55fr) minmax(10rem, 0.55fr) minmax(16rem, 0.82fr)',
+    ]);
     expect(screen.getByRole('button', { name: 'Open MCP server details for github' })).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: 'Server details: github' })).toBeNull();
 

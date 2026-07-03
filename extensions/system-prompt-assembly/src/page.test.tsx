@@ -148,6 +148,9 @@ describe('PromptAssemblyPage', () => {
     expect(screen.getByDisplayValue('Template')).toBeTruthy();
     expect(screen.getByText('Repo instructions')).toBeTruthy();
     expect(screen.getByText('Tool A')).toBeTruthy();
+    expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(15rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.74fr)',
+    );
     expect(screen.getByPlaceholderText('Search agent context...')).toBeTruthy();
     expect(screen.getByText('No MCP servers found.').closest('.wos-empty-state')).toBeTruthy();
     expect(screen.getByText('No issues found.').closest('.wos-empty-state')).toBeTruthy();

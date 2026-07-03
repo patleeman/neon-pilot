@@ -613,7 +613,10 @@ function WindowedCapabilitySection({
   return (
     <WindowedPageSection title={title} meta={formatCount(rows.length, 'entry')}>
       {rows.length ? (
-        <WindowedDataTable columns={[{ label: 'Name' }, { label: 'Contributes' }, { label: 'Source', align: 'right' }]}>
+        <WindowedDataTable
+          columns={[{ label: 'Name' }, { label: 'Contributes' }, { label: 'Source', align: 'right' }]}
+          columnTemplate="minmax(15rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.74fr)"
+        >
           {rows.map((row) => (
             <WindowedDataRow
               key={`${row.kind}:${row.id}`}

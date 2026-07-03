@@ -318,7 +318,10 @@ export function ModelGatewaySettingsPanel({
                     {status.logs.length === 0 ? (
                       <WindowedEmptyState>No gateway activity yet.</WindowedEmptyState>
                     ) : (
-                      <WindowedDataTable columns={[{ label: 'Route' }, { label: 'Status' }, { label: 'Duration', align: 'right' }]}>
+                      <WindowedDataTable
+                        columns={[{ label: 'Route' }, { label: 'Status' }, { label: 'Duration', align: 'right' }]}
+                        columnTemplate="minmax(16rem, 1fr) minmax(6.5rem, 0.38fr) minmax(6rem, 0.32fr)"
+                      >
                         {status.logs.slice(0, 12).map((entry) => (
                           <WindowedDataRow
                             key={entry.id}

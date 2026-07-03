@@ -317,6 +317,7 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
                         { label: 'Updates' },
                         { label: 'Actions', align: 'right' },
                       ]}
+                      columnTemplate="minmax(14rem, 1fr) minmax(6rem, 0.36fr) minmax(6rem, 0.36fr) minmax(10rem, 0.58fr) minmax(6.5rem, 0.4fr) minmax(6rem, 0.34fr)"
                     >
                       {plugins.map((plugin) => (
                         <WindowedDataRow

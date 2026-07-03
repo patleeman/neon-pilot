@@ -386,6 +386,7 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
                         { label: 'Endpoint' },
                         { label: 'Actions', align: 'right' },
                       ]}
+                      columnTemplate="minmax(14rem, 1fr) minmax(7rem, 0.4fr) minmax(6rem, 0.34fr) minmax(16rem, 0.82fr) minmax(6rem, 0.34fr)"
                     >
                       {explicitServers.map((name) => {
                         const server = mcpState.servers.find((entry) => entry.name === name);
@@ -428,6 +429,7 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
                   {mcpState.bundledSkills.length > 0 ? (
                     <WindowedDataTable
                       columns={[{ label: 'Skill' }, { label: 'Servers' }, { label: 'Overrides' }, { label: 'Manifest', align: 'right' }]}
+                      columnTemplate="minmax(14rem, 1fr) minmax(10rem, 0.55fr) minmax(10rem, 0.55fr) minmax(16rem, 0.82fr)"
                     >
                       {mcpState.bundledSkills.map((bundle) => (
                         <WindowedDataRow
