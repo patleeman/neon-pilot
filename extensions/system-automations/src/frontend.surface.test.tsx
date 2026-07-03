@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -112,6 +112,37 @@ describe('AutomationsPage windowed surface', () => {
 
     await waitFor(() => expect(pa.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Delete automation' })));
     await waitFor(() => expect(pa.automations.delete).toHaveBeenCalledWith('task-2'));
+  });
+
+  it('opens automation details with native windowed dialog chrome instead of the stable context rail', async () => {
+    const { container } = render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Open details for Quarter-hour chime' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Automation details' });
+    expect(dialog.className).toContain('wos-dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Actions' })).toBeTruthy();
+    expect(within(dialog).getByRole('heading', { name: 'Schedule' })).toBeTruthy();
+    expect(within(dialog).getByRole('heading', { name: 'Owner' })).toBeTruthy();
+    expect(within(dialog).getByText('Report the current time.')).toBeTruthy();
+    expect(dialog.querySelector('.ui-context-rail')).toBeNull();
+    expect(dialog.querySelector('.wos-key-value-list')).toBeTruthy();
+    expect(container.querySelector('.ui-context-rail')).toBeNull();
+  });
+
+  it('opens automation edit forms with native windowed fields', async () => {
+    const { container } = render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Quarter-hour chime' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Edit automation' });
+    expect(dialog.querySelector('.ui-context-rail')).toBeNull();
+    expect(dialog.querySelector('.wos-field')).toBeTruthy();
+    expect(dialog.querySelector('.wos-textarea')).toBeTruthy();
+    expect(dialog.querySelector('.wos-select')).toBeTruthy();
+    expect(within(dialog).getByRole('switch', { name: 'Disable automation' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Save automation' })).toBeTruthy();
+    expect(container.querySelector('.ui-context-rail')).toBeNull();
   });
 
   it('uses shared windowed empty-state chrome when no automations exist', async () => {
