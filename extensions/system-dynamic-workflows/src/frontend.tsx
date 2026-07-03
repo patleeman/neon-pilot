@@ -29,6 +29,7 @@ import {
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedStateBlock,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -617,7 +618,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
           >
             {error ? (
               <WindowedPageSection title="Action needed">
-                <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
+                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
 
@@ -653,9 +654,9 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                     />
                   ))}
                 </WindowedList>
-              ) : (
+              ) : !error ? (
                 <WindowedEmptyState>No workflow runs yet.</WindowedEmptyState>
-              )}
+              ) : null}
             </WindowedPageSection>
 
             <WindowedPageSection title="Library" meta={templateRows.length ? `${templateRows.length} templates` : 'Empty'}>
@@ -678,9 +679,9 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                     />
                   ))}
                 </WindowedList>
-              ) : (
+              ) : !error ? (
                 <WindowedEmptyState>No workflow templates yet.</WindowedEmptyState>
-              )}
+              ) : null}
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
@@ -773,7 +774,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                     />
                   </Field>
                 </div>
-                {draftError ? <WindowedEmptyState tone="danger">{draftError}</WindowedEmptyState> : null}
+                {draftError ? <WindowedStateBlock tone="danger">{draftError}</WindowedStateBlock> : null}
                 <div className="wos-form-actions">
                   <WindowedPageButton
                     onClick={() => {

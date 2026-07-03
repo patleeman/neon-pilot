@@ -172,4 +172,25 @@ describe('Dynamic Workflows surfaces', () => {
     expect(container.querySelector('.wos-windowed-empty')).toBeNull();
     expect(container.querySelector('.wos-windowed-error')).toBeNull();
   });
+
+  it('uses shared windowed state-block chrome when workflows fail to load', async () => {
+    const pa = {
+      extension: {
+        invoke: vi.fn(async (action: string) => {
+          if (action === 'listWorkflows') throw new Error('Workflows could not be loaded.');
+          return {};
+        }),
+      },
+      commands: { execute: vi.fn(async () => true) },
+    } as never;
+    const { container } = render(<WorkflowsPage {...props(pa, { shellPresentation: 'windowed' })} />);
+
+    expect(await screen.findByText('Workflows could not be loaded.')).toBeTruthy();
+    expect(screen.getByText('Workflows could not be loaded.').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
+    expect(screen.queryByText('No workflow runs yet.')).toBeNull();
+    expect(screen.queryByText('No workflow templates yet.')).toBeNull();
+    expect(container.querySelector('.wos-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+  });
 });
