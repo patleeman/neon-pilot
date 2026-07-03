@@ -363,7 +363,7 @@ export class WorkbenchBrowserViewController {
     }
 
     if (this.isOwnerSuppressed(owner.id)) {
-      this.hideAllOwnerViews(owner.id, false);
+      this.hideAllOwnerViews(owner.id, true);
       return this.getState(owner.id, sessionKey);
     }
 

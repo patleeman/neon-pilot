@@ -75,7 +75,7 @@ describe('workbench browser validation', () => {
     expect(source).toContain('WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS');
     expect(source).toContain('this.suppressOwnerViews(owner.id);');
     expect(source).toContain('if (this.isOwnerSuppressed(owner.id))');
-    expect(source).toContain('this.hideAllOwnerViews(owner.id, false);');
+    expect(source).toContain('this.hideAllOwnerViews(owner.id, true);');
   });
 
   it('forwards command palette shortcuts out of the embedded browser', () => {
