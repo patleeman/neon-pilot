@@ -52,6 +52,8 @@ export {
   WindowedListItem,
   type WindowedListItemProps,
   type WindowedListProps,
+  WindowedLoadingState,
+  type WindowedLoadingStateProps,
   type WindowedMenuItem,
   WindowedMenuPanel,
   type WindowedMenuPanelProps,

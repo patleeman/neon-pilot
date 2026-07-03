@@ -17,6 +17,7 @@ import {
   WindowedFormActions,
   WindowedFormGrid,
   WindowedListItem,
+  WindowedLoadingState,
   WindowedNumberStepper,
   WindowedPageButton,
   WindowedPageMain,
@@ -187,6 +188,15 @@ describe('WindowedPageMain', () => {
 });
 
 describe('WindowedEmptyState', () => {
+  it('renders loading states as native windowed state blocks', () => {
+    const html = renderToStaticMarkup(<WindowedLoadingState label="Loading extensions page" />);
+
+    expect(html).toContain('class="wos-state-block wos-loading-state"');
+    expect(html).toContain('Loading extensions page');
+    expect(html).toContain('Preparing the window contents.');
+    expect(html).not.toContain('ui-loading');
+  });
+
   it('renders compact empty content with an optional action', () => {
     const html = renderToStaticMarkup(
       <WindowedEmptyState action={<button type="button">Create</button>}>No workflow runs yet.</WindowedEmptyState>,

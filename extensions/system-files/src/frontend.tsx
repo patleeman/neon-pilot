@@ -1,15 +1,20 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { QuietLoadingState } from '@neon-pilot/extensions/ui';
-import { lazy, Suspense } from 'react';
+import { QuietLoadingState, WindowedLoadingState } from '@neon-pilot/extensions/ui';
+import { lazy, type ReactNode, Suspense } from 'react';
 
 const LazyWorkspaceFilesPanel = lazy(async () => ({ default: (await import('./panels.js')).WorkspaceFilesPanel }));
 const LazyWorkspaceFileDetailPanel = lazy(async () => ({ default: (await import('./panels.js')).WorkspaceFileDetailPanel }));
 
-const fallback = <QuietLoadingState label="Loading workspace surface" />;
+function loadingFallback(props: ExtensionSurfaceProps, label: string): ReactNode {
+  if (props.context?.shellPresentation === 'windowed') {
+    return <WindowedLoadingState label={label} />;
+  }
+  return <QuietLoadingState label={label} />;
+}
 
 export function WorkspaceFilesPanel(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={fallback}>
+    <Suspense fallback={loadingFallback(props, 'Loading workspace surface')}>
       <LazyWorkspaceFilesPanel {...props} />
     </Suspense>
   );
@@ -17,7 +22,7 @@ export function WorkspaceFilesPanel(props: ExtensionSurfaceProps) {
 
 export function WorkspaceFileDetailPanel(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={fallback}>
+    <Suspense fallback={loadingFallback(props, 'Loading workspace surface')}>
       <LazyWorkspaceFileDetailPanel {...props} />
     </Suspense>
   );

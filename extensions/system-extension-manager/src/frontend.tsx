@@ -1,6 +1,6 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { QuietLoadingState } from '@neon-pilot/extensions/ui';
-import React, { lazy, Suspense } from 'react';
+import { QuietLoadingState, WindowedLoadingState } from '@neon-pilot/extensions/ui';
+import React, { lazy, type ReactNode, Suspense } from 'react';
 
 const LazyExtensionManagerPage = lazy(async () => ({ default: (await import('./panels.js')).ExtensionManagerPage }));
 const LazyExtensionDetailsRail = lazy(async () => ({ default: (await import('./panels.js')).ExtensionDetailsRail }));
@@ -8,9 +8,16 @@ const LazyExtensionRepositoriesSettingsPanel = lazy(async () => ({
   default: (await import('./panels.js')).ExtensionRepositoriesSettingsPanel,
 }));
 
+function loadingFallback(props: ExtensionSurfaceProps, label: string): ReactNode {
+  if (props.context?.shellPresentation === 'windowed') {
+    return <WindowedLoadingState label={label} />;
+  }
+  return <QuietLoadingState label={label} />;
+}
+
 export function ExtensionManagerPage(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={<QuietLoadingState label="Loading extensions page" />}>
+    <Suspense fallback={loadingFallback(props, 'Loading extensions page')}>
       <LazyExtensionManagerPage {...props} />
     </Suspense>
   );
@@ -18,7 +25,7 @@ export function ExtensionManagerPage(props: ExtensionSurfaceProps) {
 
 export function ExtensionDetailsRail(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={<QuietLoadingState label="Loading extension details" />}>
+    <Suspense fallback={loadingFallback(props, 'Loading extension details')}>
       <LazyExtensionDetailsRail {...props} />
     </Suspense>
   );
@@ -26,7 +33,7 @@ export function ExtensionDetailsRail(props: ExtensionSurfaceProps) {
 
 export function ExtensionRepositoriesSettingsPanel(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={<QuietLoadingState label="Loading extension repository settings" />}>
+    <Suspense fallback={loadingFallback(props, 'Loading extension repository settings')}>
       <LazyExtensionRepositoriesSettingsPanel {...props} />
     </Suspense>
   );

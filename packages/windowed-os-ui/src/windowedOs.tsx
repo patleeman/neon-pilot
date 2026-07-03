@@ -760,6 +760,19 @@ export function WindowedStateBlock({ title, children, tone = 'neutral', action, 
   );
 }
 
+export interface WindowedLoadingStateProps {
+  label?: string;
+  className?: string;
+}
+
+export function WindowedLoadingState({ label = 'Loading', className }: WindowedLoadingStateProps) {
+  return (
+    <WindowedStateBlock title={label} className={cx('wos-loading-state', className)}>
+      Preparing the window contents.
+    </WindowedStateBlock>
+  );
+}
+
 export interface WindowedEmptyStateProps {
   children: ReactNode;
   action?: ReactNode;

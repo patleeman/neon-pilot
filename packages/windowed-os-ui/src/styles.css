@@ -2424,6 +2424,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   flex: 0 0 auto;
 }
 
+.wos-loading-state {
+  min-height: 6rem;
+  align-items: center;
+}
+
 .wos-chart-panel {
   min-width: 0;
   overflow: hidden;
