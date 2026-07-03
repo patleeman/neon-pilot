@@ -113,6 +113,11 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </section>
   ),
+  WindowedEmptyState: ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
+    <div className="wos-empty-state" data-tone={tone}>
+      {children}
+    </div>
+  ),
   WindowedField: ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
     <label>
       {label}
@@ -352,6 +357,17 @@ describe('GatewaysPage', () => {
     fireEvent.click(toolButtons[1]);
     expect(screen.getByRole('dialog', { name: 'Telegram access' })).toBeTruthy();
     expect(screen.getByText('Approved users')).toBeTruthy();
+    expect(screen.getByText('No approved users yet.').classList.contains('wos-empty-state')).toBe(true);
+    expect(screen.getByText('No approved chats yet.').classList.contains('wos-empty-state')).toBe(true);
+
+    fireEvent.click(screen.getByLabelText('Close Telegram access'));
+    fireEvent.click(toolButtons[2]);
+    expect(screen.getByRole('dialog', { name: 'Recent activity' })).toBeTruthy();
+    expect(screen.getByText('No Telegram gateway events yet.').classList.contains('wos-empty-state')).toBe(true);
+    expect(container.querySelector('.wos-gateway-empty')).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Close Recent activity'));
+    fireEvent.click(toolButtons[1]);
 
     fireEvent.click(screen.getByLabelText('Enable Telegram gateway'));
     await waitFor(() =>

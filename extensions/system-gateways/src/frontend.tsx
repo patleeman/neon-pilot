@@ -23,6 +23,7 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
+  WindowedEmptyState,
   WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
@@ -563,7 +564,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                   ))}
                 </ol>
               ) : (
-                <div className="wos-gateway-empty">No Telegram gateway events yet.</div>
+                <WindowedEmptyState>No Telegram gateway events yet.</WindowedEmptyState>
               )
             ) : null}
           </WindowedDialog>
@@ -927,7 +928,7 @@ function WindowedAllowlistEditor({
           ))}
         </WindowedList>
       ) : (
-        <div className="wos-gateway-empty">{emptyLabel}</div>
+        <WindowedEmptyState>{emptyLabel}</WindowedEmptyState>
       )}
     </div>
   );
