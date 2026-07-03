@@ -1,3 +1,4 @@
+import { WindowedStateBlock } from '@neon-pilot/windowed-os-ui';
 import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
@@ -189,7 +190,7 @@ export function NativeExtensionSurfaceHost({
       data-extension-surface-id={surface.id}
       data-shell-presentation={shellPresentation}
     >
-      <Suspense fallback={<QuietExtensionSurfaceLoading />}>
+      <Suspense fallback={<ExtensionSurfaceLoading shellPresentation={shellPresentation} />}>
         <ExtensionErrorBoundary extensionId={surface.extensionId}>
           <Component
             pa={pa}
@@ -204,7 +205,14 @@ export function NativeExtensionSurfaceHost({
   );
 }
 
-function QuietExtensionSurfaceLoading() {
+function ExtensionSurfaceLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
+  if (shellPresentation === 'windowed') {
+    return (
+      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading extension surface">
+        <WindowedStateBlock title="Loading extension surface">Preparing the window contents.</WindowedStateBlock>
+      </div>
+    );
+  }
   return <QuietLoadingState label="Loading extension surface" />;
 }
 

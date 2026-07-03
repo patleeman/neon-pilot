@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from 'react';
+import { WindowedStateBlock } from '@neon-pilot/windowed-os-ui';
+import { type ReactNode, useEffect, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { addNotification } from '../components/notifications/notificationStore';
@@ -86,10 +87,17 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
   }, [registry.error]);
 
   if (registry.loading && !nativeSurface) {
-    return <QuietExtensionPageLoading />;
+    return <ExtensionPageLoading shellPresentation={shellPresentation} />;
   }
 
   if (registry.error && !nativeSurface) {
+    if (shellPresentation === 'windowed') {
+      return (
+        <WindowedExtensionPageState tone="danger" title="Extensions unavailable">
+          {registry.error}
+        </WindowedExtensionPageState>
+      );
+    }
     return <ErrorState message={`Extensions unavailable: ${registry.error}`} />;
   }
 
@@ -110,6 +118,14 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
     return <Navigate to="/conversations/new" replace />;
   }
 
+  if (shellPresentation === 'windowed') {
+    return (
+      <WindowedExtensionPageState title="No page is registered here">
+        This address does not match a conversation, setting, or installed extension page.
+      </WindowedExtensionPageState>
+    );
+  }
+
   return (
     <CenteredMessage
       eyebrow="Route unavailable"
@@ -124,6 +140,27 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
   );
 }
 
-function QuietExtensionPageLoading() {
+function ExtensionPageLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
+  if (shellPresentation === 'windowed') {
+    return <WindowedExtensionPageState title="Loading extension page">Preparing the window contents.</WindowedExtensionPageState>;
+  }
   return <QuietLoadingState label="Loading extension page" />;
+}
+
+function WindowedExtensionPageState({
+  children,
+  title,
+  tone,
+}: {
+  children: ReactNode;
+  title: string;
+  tone?: 'neutral' | 'positive' | 'warning' | 'danger';
+}) {
+  return (
+    <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label={title}>
+      <WindowedStateBlock title={title} tone={tone}>
+        {children}
+      </WindowedStateBlock>
+    </div>
+  );
 }

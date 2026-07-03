@@ -164,6 +164,43 @@ describe('ExtensionPage', () => {
     expect(screen.queryByText(/Loading extension/i)).toBeNull();
   });
 
+  it('shows visible registry loading chrome in the windowed shell', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: true,
+      error: null,
+      extensions: [],
+      routes: [],
+      surfaces: [],
+    } as never);
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/skills']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status', { name: 'Loading extension page' })).toBeTruthy();
+    expect(screen.getByText('Loading extension page')).toBeTruthy();
+    expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
+    expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
+    expect(container.querySelector('.wos-state-block')).toBeTruthy();
+  });
+
+  it('shows visible unavailable route chrome in the windowed shell', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/missing-extension-route']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status', { name: 'No page is registered here' })).toBeTruthy();
+    expect(screen.getByText('No page is registered here')).toBeTruthy();
+    expect(screen.getByText('This address does not match a conversation, setting, or installed extension page.')).toBeTruthy();
+    expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
+    expect(container.querySelector('.wos-state-block')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Go to Chat' })).toBeNull();
+  });
+
   it('renders the most specific extension route when parent and child routes both match', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: false,
