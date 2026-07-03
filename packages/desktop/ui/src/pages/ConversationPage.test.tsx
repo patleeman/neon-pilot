@@ -1151,6 +1151,29 @@ describe('ConversationPage', () => {
     expect(html).not.toContain('right rail');
   });
 
+  it('omits the title-only conversation header inside embedded window chrome', () => {
+    const html = renderToString(
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <ConversationPage draft embeddedWindowChrome />
+      </MemoryRouter>,
+    );
+
+    expect(html).not.toContain('conversation-header');
+    expect(html).not.toContain('ui-conversation-title-display');
+    expect(html).toContain('Saved workspace');
+  });
+
+  it('keeps the conversation title header in the stable draft route', () => {
+    const html = renderToString(
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <ConversationPage draft />
+      </MemoryRouter>,
+    );
+
+    expect(html).toContain('conversation-header');
+    expect(html).toContain('ui-conversation-title-display');
+  });
+
   it('omits the composer context row for a bare draft conversation', () => {
     const html = renderToString(
       <MemoryRouter initialEntries={['/conversations/new']}>

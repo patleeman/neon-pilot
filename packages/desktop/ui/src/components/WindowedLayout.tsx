@@ -768,7 +768,7 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
               path="conversations"
               element={
                 <Suspense fallback={<WindowedRouteLoading label="Loading conversation" />}>
-                  <ConversationPage key="draft" draft />
+                  <ConversationPage key="draft" draft embeddedWindowChrome />
                 </Suspense>
               }
             />
@@ -776,7 +776,7 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
               path="conversations/new"
               element={
                 <Suspense fallback={<WindowedRouteLoading label="Loading conversation" />}>
-                  <ConversationPage key="draft" draft />
+                  <ConversationPage key="draft" draft embeddedWindowChrome />
                 </Suspense>
               }
             />
@@ -784,7 +784,7 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
               path="conversations/:id"
               element={
                 <Suspense fallback={<WindowedRouteLoading label="Loading conversation" />}>
-                  <ConversationPage />
+                  <ConversationPage embeddedWindowChrome />
                 </Suspense>
               }
             />

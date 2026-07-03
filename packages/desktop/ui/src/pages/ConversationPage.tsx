@@ -951,7 +951,15 @@ export function resolveComposerQuestionHotkeyAction(input: {
   return { kind: 'none' };
 }
 
-export function ConversationPage({ draft = false, conversationId }: { draft?: boolean; conversationId?: string | null }) {
+export function ConversationPage({
+  draft = false,
+  conversationId,
+  embeddedWindowChrome = false,
+}: {
+  draft?: boolean;
+  conversationId?: string | null;
+  embeddedWindowChrome?: boolean;
+}) {
   const { id: routeId } = useParams<{ id?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1924,6 +1932,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
   useLayoutEffect(() => {
     const element = conversationHeaderRef.current;
     if (!element) {
+      setConversationHeaderOffset((current) => (current === 0 ? current : 0));
       return;
     }
 
@@ -1945,7 +1954,7 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
     return () => {
       observer.disconnect();
     };
-  }, [draft, isEditingTitle, title, titleSaving]);
+  }, [draft, embeddedWindowChrome, isEditingTitle, title, titleSaving]);
 
   useEffect(() => {
     const { normalizedTitle, shouldPushLiveTitle } = resolveConversationStreamTitleSync({
@@ -7787,6 +7796,12 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       }),
     [conversationRunningForPage, currentCwd, id, lifecycleEvent, sessionError, stream.goalState?.status, stream.isCompacting],
   );
+  const showEmbeddedConversationTitle = !embeddedWindowChrome || isEditingTitle;
+  const showConversationHeader =
+    showEmbeddedConversationTitle ||
+    conversationHeaderElements.length > 0 ||
+    (conversationLifecycleContext && conversationLifecycleElements.length > 0) ||
+    Boolean(visibleConversationBootstrap?.integrityWarning);
   const { top: composerShelvesTop, bottom: composerShelvesBottom } = useMemo(
     () => splitComposerShelvesByPlacement(composerShelves),
     [composerShelves],
@@ -8146,103 +8161,107 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
           data-visible-message-count={visibleTranscriptMessages?.length ?? 0}
           style={{ scrollPaddingTop: `${conversationHeaderOffset + 16}px` }}
         >
-          <div
-            ref={conversationHeaderRef}
-            className="conversation-header sticky top-0 z-30 bg-base/90 px-4 pt-5 backdrop-blur sm:px-6 lg:px-10"
-          >
-            <div className="conversation-header-content mx-auto w-full max-w-6xl pb-4 pt-1">
-              <div className="flex items-start gap-3">
-                <div className="min-w-0 flex-1 max-w-4xl">
-                  {isEditingTitle && !draft ? (
-                    <form
-                      className="-ml-3 flex max-w-4xl items-center gap-2 pr-4"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        void saveTitleEdit();
-                      }}
-                    >
-                      <TextInput
-                        ref={titleInputRef}
-                        value={titleDraft}
-                        onChange={(event) => setTitleDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Escape') {
-                            event.preventDefault();
-                            cancelTitleEdit();
-                            return;
-                          }
-                          if (event.key === 'Enter') {
+          {showConversationHeader ? (
+            <div
+              ref={conversationHeaderRef}
+              className="conversation-header sticky top-0 z-30 bg-base/90 px-4 pt-5 backdrop-blur sm:px-6 lg:px-10"
+            >
+              <div className="conversation-header-content mx-auto w-full max-w-6xl pb-4 pt-1">
+                {showEmbeddedConversationTitle ? (
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1 max-w-4xl">
+                      {isEditingTitle && !draft ? (
+                        <form
+                          className="-ml-3 flex max-w-4xl items-center gap-2 pr-4"
+                          onSubmit={(event) => {
                             event.preventDefault();
                             void saveTitleEdit();
-                          }
-                        }}
-                        onBlur={() => {
-                          void saveTitleEdit();
-                        }}
-                        placeholder="Name this conversation"
-                        className="ui-conversation-title-input !border-transparent !bg-transparent !px-3 !py-1.5 !text-[24px] !font-semibold !leading-[1.15] hover:!bg-base/35 focus:!bg-base/35 sm:!text-[26px]"
-                        disabled={titleSaving}
-                      />
-                      <IconButton
-                        shape="circle"
-                        size="sm"
-                        className="h-8 w-8 text-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={cancelTitleEdit}
-                        disabled={titleSaving}
-                        title="Cancel title edit"
-                        aria-label="Cancel title edit"
-                      >
-                        <svg
-                          width="17"
-                          height="17"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
+                          }}
                         >
-                          <path d="m18 6-12 12" />
-                          <path d="m6 6 12 12" />
-                        </svg>
-                      </IconButton>
-                    </form>
-                  ) : draft ? (
-                    <h1 className="ui-conversation-title-clamp ui-conversation-title-display max-w-4xl break-words pr-4">{title}</h1>
-                  ) : (
-                    <Suspense fallback={<h1 className="ui-conversation-title-clamp ui-conversation-title-display">{title}</h1>}>
-                      <ConversationSavedHeader title={title} onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined} />
-                    </Suspense>
-                  )}
-                </div>
+                          <TextInput
+                            ref={titleInputRef}
+                            value={titleDraft}
+                            onChange={(event) => setTitleDraft(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Escape') {
+                                event.preventDefault();
+                                cancelTitleEdit();
+                                return;
+                              }
+                              if (event.key === 'Enter') {
+                                event.preventDefault();
+                                void saveTitleEdit();
+                              }
+                            }}
+                            onBlur={() => {
+                              void saveTitleEdit();
+                            }}
+                            placeholder="Name this conversation"
+                            className="ui-conversation-title-input !border-transparent !bg-transparent !px-3 !py-1.5 !text-[24px] !font-semibold !leading-[1.15] hover:!bg-base/35 focus:!bg-base/35 sm:!text-[26px]"
+                            disabled={titleSaving}
+                          />
+                          <IconButton
+                            shape="circle"
+                            size="sm"
+                            className="h-8 w-8 text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={cancelTitleEdit}
+                            disabled={titleSaving}
+                            title="Cancel title edit"
+                            aria-label="Cancel title edit"
+                          >
+                            <svg
+                              width="17"
+                              height="17"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="m18 6-12 12" />
+                              <path d="m6 6 12 12" />
+                            </svg>
+                          </IconButton>
+                        </form>
+                      ) : draft ? (
+                        <h1 className="ui-conversation-title-clamp ui-conversation-title-display max-w-4xl break-words pr-4">{title}</h1>
+                      ) : (
+                        <Suspense fallback={<h1 className="ui-conversation-title-clamp ui-conversation-title-display">{title}</h1>}>
+                          <ConversationSavedHeader title={title} onTitleClick={!renameConversationDisabled ? beginTitleEdit : undefined} />
+                        </Suspense>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+                {conversationHeaderElements.length > 0 && (
+                  <div className="flex items-center gap-2 pt-1">
+                    {conversationHeaderElements.map((element) => (
+                      <ConversationHeaderHost key={`${element.extensionId}:${element.id}`} registration={element} />
+                    ))}
+                  </div>
+                )}
+                {conversationLifecycleContext && conversationLifecycleElements.length > 0 ? (
+                  <div className="mt-2 space-y-2">
+                    {conversationLifecycleElements.map((element) => (
+                      <ConversationLifecycleHost
+                        key={`${element.extensionId}:${element.id}`}
+                        registration={element}
+                        lifecycleContext={conversationLifecycleContext}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {visibleConversationBootstrap?.integrityWarning && (
+                  <Notice tone="warning" className="mt-1 py-1.5">
+                    Session file was modified outside the agent. Some context may be stale.
+                  </Notice>
+                )}
               </div>
-              {conversationHeaderElements.length > 0 && (
-                <div className="flex items-center gap-2 pt-1">
-                  {conversationHeaderElements.map((element) => (
-                    <ConversationHeaderHost key={`${element.extensionId}:${element.id}`} registration={element} />
-                  ))}
-                </div>
-              )}
-              {conversationLifecycleContext && conversationLifecycleElements.length > 0 ? (
-                <div className="mt-2 space-y-2">
-                  {conversationLifecycleElements.map((element) => (
-                    <ConversationLifecycleHost
-                      key={`${element.extensionId}:${element.id}`}
-                      registration={element}
-                      lifecycleContext={conversationLifecycleContext}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              {visibleConversationBootstrap?.integrityWarning && (
-                <Notice tone="warning" className="mt-1 py-1.5">
-                  Session file was modified outside the agent. Some context may be stale.
-                </Notice>
-              )}
             </div>
-          </div>
+          ) : null}
           {showBlockingConversationLoadingState ? (
             <CenteredLoadingState label={conversationLoadingStateLabel} className="h-full flex-1" />
           ) : visibleTranscriptMessagesWithEphemeral ? (
@@ -8431,7 +8450,9 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
       selectedArtifactId,
       selectedCheckpointId,
       sessionLoading,
+      showConversationHeader,
       showConversationLoadingState,
+      showEmbeddedConversationTitle,
       showInlineConversationLoadingState,
       showNewConversationSetup,
       showScrollToBottomControl,
