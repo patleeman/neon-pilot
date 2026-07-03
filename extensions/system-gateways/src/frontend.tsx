@@ -519,6 +519,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                     ) : null}
                     {tokenConfigured ? (
                       <WindowedPageButton
+                        tone="danger"
                         disabled={busy}
                         aria-label="Remove Telegram bot token"
                         title="Remove Telegram bot token"
@@ -962,6 +963,7 @@ function WindowedAllowlistEditor({
               accent="gateways"
               status={
                 <WindowedPageButton
+                  tone="danger"
                   disabled={busy}
                   aria-label={`Remove ${entry} from ${title.toLowerCase()}`}
                   title={`Remove ${entry} from ${title.toLowerCase()}`}

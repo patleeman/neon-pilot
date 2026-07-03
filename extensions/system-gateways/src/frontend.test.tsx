@@ -146,7 +146,7 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       ))}
     </dl>
   ),
-  WindowedList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  WindowedList: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className}>{children}</div>,
   WindowedListItem: ({
     title,
     meta,
@@ -160,14 +160,18 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     status?: React.ReactNode;
     onSelect?: () => void;
   }) => (
-    <button type="button" onClick={onSelect}>
+    <div role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} onClick={onSelect}>
       <span>{title}</span>
       {meta ? <span>{meta}</span> : null}
       {detail ? <span>{detail}</span> : null}
       {status}
+    </div>
+  ),
+  WindowedPageButton: ({ children, tone, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: string }) => (
+    <button data-tone={tone} {...props}>
+      {children}
     </button>
   ),
-  WindowedPageButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
   WindowedPageMain: ({
     title,
     description,
@@ -398,6 +402,26 @@ describe('GatewaysPage', () => {
     expect(screen.getByRole('status', { name: 'Loading gateway settings' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Loading' })).toBeNull();
     expect(screen.queryByText('Loading gateway settings.')).toBeNull();
+  });
+
+  it('marks destructive windowed gateway actions with the shared danger tone', async () => {
+    installFetchMock({
+      token: { configured: true },
+      access: { approvedUserIds: ['1191448898'], approvedChatIds: ['-1001192755030'] },
+    });
+    const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
+
+    await screen.findByRole('heading', { name: 'Telegram' });
+
+    const configurationButtons = screen.getAllByRole('button', { name: 'Open Telegram configuration' });
+    fireEvent.click(configurationButtons[configurationButtons.length - 1]);
+    expect(screen.getByRole('button', { name: 'Remove Telegram bot token' }).getAttribute('data-tone')).toBe('danger');
+
+    fireEvent.click(screen.getByLabelText('Close Telegram configuration'));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram access' }));
+    expect(container.querySelector('.wos-gateway-allowlist__values button[aria-label^="Remove"]')?.getAttribute('data-tone')).toBe(
+      'danger',
+    );
   });
 
   it('keeps the windowed recovery state inside the provider shell', async () => {
