@@ -14,6 +14,7 @@ import {
   removeTerminalWorkbenchTabs,
   resolveActiveWorkspaceCwd,
   shouldAllowWorkbenchRailSurface,
+  shouldOpenFilesWorkbenchByDefaultForEmbeddedWindow,
   shouldResetEmptyArtifactsRail,
 } from './Layout';
 import { isArtifactsRailMode, resolveActiveExtensionWorkbenchSurface, resolveWorkbenchRailMode } from './layout/workbenchRailModel';
@@ -122,6 +123,39 @@ describe('Layout workbench rail state', () => {
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: false, hasWorkspaceCwd: false })).toBe(false);
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'files', hasPairedDocument: true })).toBe(true);
     expect(shouldAllowWorkbenchRailSurface({ activeToolSlot: 'artifacts', hasPairedDocument: false })).toBe(false);
+  });
+
+  it('defaults embedded windowed chat workbenches with a workspace to Files', () => {
+    expect(
+      shouldOpenFilesWorkbenchByDefaultForEmbeddedWindow({
+        embeddedWindowChrome: true,
+        forceWorkbench: true,
+        activeWorkbenchTool: 'new',
+        hasWorkspaceCwd: true,
+        hasActiveWorkbenchTab: false,
+        hasSavedConversationTool: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldOpenFilesWorkbenchByDefaultForEmbeddedWindow({
+        embeddedWindowChrome: false,
+        forceWorkbench: true,
+        activeWorkbenchTool: 'new',
+        hasWorkspaceCwd: true,
+        hasActiveWorkbenchTab: false,
+        hasSavedConversationTool: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldOpenFilesWorkbenchByDefaultForEmbeddedWindow({
+        embeddedWindowChrome: true,
+        forceWorkbench: true,
+        activeWorkbenchTool: 'new',
+        hasWorkspaceCwd: true,
+        hasActiveWorkbenchTab: false,
+        hasSavedConversationTool: true,
+      }),
+    ).toBe(false);
   });
 
   it('normalizes declared rail slots to stable built-in modes', () => {

@@ -794,6 +794,24 @@ function writeStoredWorkbenchExplorerOpen(open: boolean, storage: Pick<Storage, 
   }
 }
 
+export function shouldOpenFilesWorkbenchByDefaultForEmbeddedWindow(input: {
+  embeddedWindowChrome: boolean;
+  forceWorkbench: boolean;
+  activeWorkbenchTool: WorkbenchRailMode;
+  hasWorkspaceCwd: boolean;
+  hasActiveWorkbenchTab: boolean;
+  hasSavedConversationTool: boolean;
+}): boolean {
+  return (
+    input.embeddedWindowChrome &&
+    input.forceWorkbench &&
+    input.activeWorkbenchTool === 'new' &&
+    input.hasWorkspaceCwd &&
+    !input.hasActiveWorkbenchTab &&
+    !input.hasSavedConversationTool
+  );
+}
+
 function getFocusableElements(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])')].filter(
     (element) => !element.hasAttribute('disabled') && element.tabIndex >= 0 && Boolean(element.offsetParent),
@@ -2216,6 +2234,34 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }:
     },
     [activeConversationId, openWorkbenchToolTab],
   );
+
+  useEffect(() => {
+    if (
+      !shouldOpenFilesWorkbenchByDefaultForEmbeddedWindow({
+        embeddedWindowChrome,
+        forceWorkbench,
+        activeWorkbenchTool,
+        hasWorkspaceCwd: activeHasProjectWorkspaceCwd,
+        hasActiveWorkbenchTab: Boolean(activeWorkbenchTabId),
+        hasSavedConversationTool: Boolean(activeConversationId && selectedToolByConversation[activeConversationId]),
+      })
+    ) {
+      return;
+    }
+
+    const systemFilesExtensionSurface = findExtensionToolPanelBySlot(extensionRightToolPanels, 'files');
+    openWorkbenchToolTab(systemFilesExtensionSurface ? extensionToolPanelMode(systemFilesExtensionSurface) : 'files');
+  }, [
+    activeConversationId,
+    activeHasProjectWorkspaceCwd,
+    activeWorkbenchTabId,
+    activeWorkbenchTool,
+    embeddedWindowChrome,
+    extensionRightToolPanels,
+    forceWorkbench,
+    openWorkbenchToolTab,
+    selectedToolByConversation,
+  ]);
 
   const openWorkbenchNewTab = useCallback(() => {
     setActiveWorkbenchTabId(null);
