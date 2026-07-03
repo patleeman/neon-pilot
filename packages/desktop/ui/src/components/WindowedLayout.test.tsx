@@ -497,6 +497,30 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
   });
 
+  it('opens AI Gateway as its own windowed app route', async () => {
+    mocks.extensions = [
+      ...mocks.extensions,
+      {
+        id: 'system-model-gateway',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'ai-gateway-nav', label: 'AI Gateway', route: '/ai-gateway' }],
+          views: [{ id: 'ai-gateway-page', title: 'AI Gateway', location: 'main', route: '/ai-gateway' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^ai gateway$/i }));
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/ai-gateway:windowed');
+    const aiGatewayWindow = screen.getByRole('region', { name: /ai gateway/i });
+    expect(aiGatewayWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('gateways');
+  });
+
   it('uses canonical product accents for diagnostics, skills, and workflow app windows', async () => {
     mocks.extensions = [
       {

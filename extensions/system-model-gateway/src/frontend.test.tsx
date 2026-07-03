@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { formatGatewayClientConfig, formatGatewayConfigRows, ModelGatewaySettingsPanel } from './frontend';
+import { formatGatewayClientConfig, formatGatewayConfigRows, ModelGatewayPage, ModelGatewaySettingsPanel } from './frontend';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -139,6 +139,33 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
     expect(screen.getByText('Loading AI Gateway settings.').closest('.wos-state-block')).toBeTruthy();
+  });
+
+  it('renders AI Gateway as a windowed route page', async () => {
+    const pa = {
+      extension: {
+        invoke: vi.fn(async () => ({
+          running: true,
+          host: '127.0.0.1',
+          port: 8766,
+          baseUrl: 'http://127.0.0.1:8766/v1',
+          authToken: 'secret-token',
+          models: 2,
+          defaultModel: 'auto',
+          catalogPath: '/tmp/catalog.json',
+          logs: [],
+        })),
+      },
+      ui: { notify: vi.fn() },
+    };
+
+    const { container } = render(<ModelGatewayPage pa={pa as never} context={{ shellPresentation: 'windowed' }} />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Loopback endpoint' })).toBeTruthy());
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copy config' })).toBeTruthy();
+    expect(container.querySelector('.ui-data-table')).toBeNull();
   });
 
   it('shows a user-facing message when clipboard copy is blocked', async () => {

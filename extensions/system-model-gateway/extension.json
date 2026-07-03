@@ -67,6 +67,26 @@
     ]
   },
   "contributes": {
+    "views": [
+      {
+        "id": "ai-gateway-page",
+        "title": "AI Gateway",
+        "location": "main",
+        "route": "/ai-gateway",
+        "component": "ModelGatewayPage",
+        "activation": "on-route"
+      }
+    ],
+    "nav": [
+      {
+        "id": "ai-gateway-nav",
+        "label": "AI Gateway",
+        "route": "/ai-gateway",
+        "icon": "graph",
+        "pageType": "setup",
+        "section": "primary"
+      }
+    ],
     "settingsComponent": {
       "id": "model-gateway-settings",
       "component": "ModelGatewaySettingsPanel",
@@ -78,12 +98,12 @@
     "commands": [
       {
         "id": "open-model-gateway-settings",
-        "title": "Open AI Gateway Settings",
+        "title": "Open AI Gateway",
         "category": "Settings",
         "description": "Open the AI Gateway setup panel.",
         "action": "app.navigate",
         "args": {
-          "to": "/settings#settings-model-gateway"
+          "to": "/ai-gateway"
         },
         "icon": "graph"
       }

@@ -466,3 +466,7 @@ export function ModelGatewaySettingsPanel({
     </div>
   );
 }
+
+export function ModelGatewayPage({ pa, context }: { pa: NativeExtensionClient; context?: { shellPresentation?: 'stable' | 'windowed' } }) {
+  return <ModelGatewaySettingsPanel pa={pa} settingsContext={{ shellPresentation: context?.shellPresentation }} />;
+}
