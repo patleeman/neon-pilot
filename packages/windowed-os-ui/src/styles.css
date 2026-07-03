@@ -376,6 +376,12 @@
   touch-action: none;
 }
 
+.wos-window__titlebar,
+.wos-window__controls,
+.wos-resize-handle {
+  transform: translateZ(0);
+}
+
 .wos-window__identity {
   display: flex;
   min-width: 0;
@@ -468,6 +474,11 @@
   clip-path: inset(0);
   contain: paint;
   isolation: isolate;
+}
+
+.wos-window__body > * {
+  position: relative;
+  z-index: 0;
 }
 
 .wos-window__body iframe {
@@ -2886,7 +2897,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 
 .wos-resize-handle {
   position: absolute;
-  z-index: 50;
+  z-index: 65;
   pointer-events: auto;
   user-select: none;
   touch-action: none;

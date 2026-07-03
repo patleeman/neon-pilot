@@ -1050,6 +1050,71 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
+  it('hides native browser views when a visible windowed iframe shield overlaps the browser host', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+    document.body.replaceChildren();
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.classList.contains('wos-window__iframe-shield')) {
+          return { left: 10, top: 10, width: 680, height: 470, right: 690, bottom: 480, x: 10, y: 10, toJSON: () => ({}) };
+        }
+        if (this.classList.contains('wos-window')) {
+          return { left: 0, top: 0, width: 700, height: 500, right: 700, bottom: 500, x: 0, y: 0, toJSON: () => ({}) };
+        }
+        if (this.closest('#browser-root')) {
+          return { left: 20, top: 20, width: 640, height: 420, right: 660, bottom: 440, x: 20, y: 20, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<div class="windowed-os-shell"><section class="wos-window" data-focused="true"><div id="browser-root"></div></section></div>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
+      expect.objectContaining({ visible: true, bounds: { x: 20, y: 20, width: 640, height: 420 } }),
+    );
+
+    setWorkbenchBrowserBounds.mockClear();
+    act(() => {
+      const coveringWindow = document.createElement('section');
+      coveringWindow.className = 'wos-window';
+      coveringWindow.dataset.focused = 'false';
+      coveringWindow.innerHTML = '<div class="wos-window__iframe-shield" style="display: block"></div>';
+      container.querySelector('.windowed-os-shell')?.appendChild(coveringWindow);
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+  });
+
   it('hides the native browser view when the windowed shell suspends browser surfaces', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);

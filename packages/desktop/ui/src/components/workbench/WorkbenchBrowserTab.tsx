@@ -325,6 +325,32 @@ function isCoveredByWindowDescendantLayer(host: HTMLElement | null): boolean {
   });
 }
 
+function isCoveredByWindowedIframeShield(host: HTMLElement | null): boolean {
+  if (!host || !host.isConnected) {
+    return false;
+  }
+
+  const ownWindow = host.closest<HTMLElement>('.wos-window');
+  if (!ownWindow) {
+    return false;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  if (hostRect.width < 1 || hostRect.height < 1) {
+    return false;
+  }
+
+  return Array.from(document.querySelectorAll<HTMLElement>('.windowed-os-shell .wos-window__iframe-shield')).some((shield) => {
+    if (!isConnectedVisibleElement(shield)) {
+      return false;
+    }
+    if (ownWindow.contains(shield) && !ownWindow.dataset.iframeBlocked) {
+      return false;
+    }
+    return rectsOverlap(hostRect, shield.getBoundingClientRect());
+  });
+}
+
 function elementAtPoint(x: number, y: number): Element | null {
   if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
     return null;
@@ -778,6 +804,7 @@ export function WorkbenchBrowserTab({
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||
       isCoveredByWindowedShellLayer(host) ||
+      isCoveredByWindowedIframeShield(host) ||
       !isTopmostRendererOwnerAtHostPoints(host) ||
       isCoveredByPositionedRendererLayer(host) ||
       isCoveredByWindowDescendantLayer(host) ||

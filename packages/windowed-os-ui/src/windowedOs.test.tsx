@@ -368,10 +368,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('clip-path: inset(0);');
     expect(stylesSource).toContain('isolation: isolate;');
     expect(stylesSource).toContain('contain: paint;');
+    expect(stylesSource).toContain('.wos-window__body > * {\n  position: relative;\n  z-index: 0;');
+    expect(stylesSource).toContain('.wos-window__titlebar,\n.wos-window__controls,\n.wos-resize-handle {\n  transform: translateZ(0);');
     expect(stylesSource).toContain('.wos-composited-frame {\n  position: relative;');
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('.wos-window__iframe-shield');
     expect(stylesSource).toContain('z-index: 55;');
+    expect(stylesSource).toContain('.wos-resize-handle {\n  position: absolute;\n  z-index: 65;');
     expect(stylesSource).toContain(".wos-window[data-focused='false'] > .wos-window__iframe-shield");
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield");
