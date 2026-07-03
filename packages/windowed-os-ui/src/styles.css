@@ -2099,6 +2099,36 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   align-self: start;
 }
 
+.wos-auto-mode {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-auto-mode__summary {
+  margin-bottom: 0;
+}
+
+.wos-auto-mode__grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: var(--wos-space-4);
+}
+
+.wos-auto-mode__events .wos-data-row__name,
+.wos-auto-mode__stops .wos-data-row__name {
+  font-family: var(--wos-font-mono);
+}
+
+.wos-auto-mode__reason {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .wos-agent-loop {
   display: grid;
   min-width: 0;
@@ -2167,7 +2197,8 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 
 @media (max-width: 900px) {
   .wos-tool-flow__grid,
-  .wos-tool-health__bash {
+  .wos-tool-health__bash,
+  .wos-auto-mode__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

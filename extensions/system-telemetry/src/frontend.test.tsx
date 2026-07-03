@@ -111,6 +111,16 @@ describe('TelemetryPage', () => {
             },
           ],
         },
+        autoMode: {
+          currentActive: 1,
+          enabledCount: 2,
+          disabledCount: 1,
+          topStopReasons: [{ reason: 'budget', count: 1 }],
+          recentEvents: [
+            { ts: '2026-07-03T12:00:00.000Z', sessionId: 'session-a', enabled: true, stopReason: null },
+            { ts: '2026-07-03T12:10:00.000Z', sessionId: 'session-a', enabled: false, stopReason: 'budget' },
+          ],
+        },
         contextSessions: [
           {
             sessionId: 'session-a',
@@ -204,6 +214,9 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.wos-tool-flow')).toBeTruthy();
     expect(container.querySelector('.wos-tool-flow__failures')).toBeTruthy();
     expect(screen.getByText('native view unavailable').closest('.wos-data-row')).toBeTruthy();
+    expect(container.querySelector('.wos-auto-mode')).toBeTruthy();
+    expect(container.querySelector('.wos-auto-mode__events')).toBeTruthy();
+    expect(screen.getAllByText('budget').some((element) => element.closest('.wos-data-row'))).toBe(true);
     const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
       table.style.getPropertyValue('--wos-data-column-template'),
     );
@@ -214,6 +227,7 @@ describe('TelemetryPage', () => {
       'minmax(5.8rem, 0.46fr) minmax(10rem, 1fr) minmax(4.5rem, 0.36fr) minmax(4.5rem, 0.36fr) minmax(6rem, 0.5fr)',
     );
     expect(tableTemplates).toContain('minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(4rem, 0.32fr)');
+    expect(tableTemplates).toContain('minmax(5rem, 0.4fr) minmax(7rem, 0.5fr) minmax(9rem, 1fr)');
     expect(container.querySelector('.ui-data-table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('Highest context pressure')).toBeTruthy();

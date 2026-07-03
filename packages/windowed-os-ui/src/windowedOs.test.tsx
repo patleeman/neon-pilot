@@ -521,6 +521,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-agent-loop-duration__bar {');
   });
 
+  it('defines compact windowed telemetry auto mode primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-auto-mode {');
+    expect(stylesSource).toContain('.wos-auto-mode__summary {');
+    expect(stylesSource).toContain('.wos-auto-mode__grid {');
+    expect(stylesSource).toContain('.wos-auto-mode__events .wos-data-row__name,');
+    expect(stylesSource).toContain('.wos-auto-mode__reason {');
+  });
+
   it('documents the canonical terminal frame in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

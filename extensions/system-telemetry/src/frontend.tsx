@@ -247,7 +247,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
               <WindowedPageSection title="App activity" meta="Context and runtime">
                 <div className="space-y-4">
                   <TracesContextPointers data={contextPointers} />
-                  <TracesAutoMode data={autoMode} />
+                  <TracesAutoMode data={autoMode} presentation="windowed" />
                   <TracesSessionIntegrity events={sessionIntegrity ?? []} presentation="windowed" />
                   <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
                   <TracesContextPressure sessions={contextSessions ?? []} compactions={compactions ?? []} compactionAggs={compactionAggs} />

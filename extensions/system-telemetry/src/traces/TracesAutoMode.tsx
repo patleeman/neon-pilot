@@ -13,11 +13,20 @@ import {
   SectionLabel,
   StatusDot,
   SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedKeyValueGrid,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
-export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
+export function TracesAutoMode({ data, presentation = 'stable' }: { data: AutoModeSummary | null; presentation?: 'stable' | 'windowed' }) {
   if (!data || data.recentEvents.length === 0) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>Auto mode state changes will appear after runs toggle automation.</WindowedEmptyState>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Auto Mode" meta="No auto mode activity" metaClassName="bg-transparent px-0" />
@@ -26,6 +35,10 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
         </PanelMessage>
       </SurfacePanel>
     );
+  }
+
+  if (presentation === 'windowed') {
+    return <WindowedAutoMode data={data} />;
   }
 
   return (
@@ -86,5 +99,76 @@ export function TracesAutoMode({ data }: { data: AutoModeSummary | null }) {
         </DashboardGridCell>
       </DashboardGrid>
     </SurfacePanel>
+  );
+}
+
+function WindowedAutoMode({ data }: { data: AutoModeSummary }) {
+  return (
+    <div className="wos-auto-mode">
+      <WindowedKeyValueGrid
+        className="wos-auto-mode__summary"
+        columns={3}
+        items={[
+          {
+            label: 'Active',
+            value: <WindowedBadge tone={data.currentActive > 0 ? 'warning' : 'neutral'}>{data.currentActive}</WindowedBadge>,
+          },
+          { label: 'Enabled', value: data.enabledCount },
+          {
+            label: 'Stopped',
+            value: <WindowedBadge tone={data.disabledCount > 0 ? 'warning' : 'positive'}>{data.disabledCount}</WindowedBadge>,
+          },
+        ]}
+      />
+      <div className="wos-auto-mode__grid">
+        <WindowedDataTable
+          className="wos-auto-mode__stops"
+          columns={[{ label: 'Stop reason' }, { label: 'Count', align: 'right' }]}
+          columnTemplate="minmax(10rem, 1fr) minmax(4rem, 0.32fr)"
+        >
+          {data.topStopReasons.length > 0 ? (
+            data.topStopReasons
+              .slice(0, 8)
+              .map((reason) => (
+                <WindowedDataRow
+                  key={reason.reason}
+                  name={reason.reason}
+                  meta="Stop reason"
+                  cells={[{ value: <WindowedBadge tone="warning">{reason.count}</WindowedBadge>, align: 'right' }]}
+                />
+              ))
+          ) : (
+            <WindowedDataRow
+              name="None recorded"
+              meta="Stop reason"
+              cells={[{ value: <WindowedBadge tone="neutral">0</WindowedBadge>, align: 'right' }]}
+            />
+          )}
+        </WindowedDataTable>
+        <WindowedDataTable
+          className="wos-auto-mode__events"
+          columns={[{ label: 'Time' }, { label: 'State' }, { label: 'Reason' }]}
+          columnTemplate="minmax(5rem, 0.4fr) minmax(7rem, 0.5fr) minmax(9rem, 1fr)"
+        >
+          {data.recentEvents.slice(0, 15).map((event, index) => (
+            <WindowedDataRow
+              key={`${event.ts}-${event.sessionId}-${index}`}
+              name={event.ts.slice(11, 16)}
+              meta={event.sessionId}
+              cells={[
+                {
+                  value: (
+                    <WindowedBadge tone={event.enabled ? 'positive' : 'neutral'}>{event.enabled ? 'Enabled' : 'Stopped'}</WindowedBadge>
+                  ),
+                },
+                {
+                  value: <span className="wos-auto-mode__reason">{event.stopReason ?? 'Running'}</span>,
+                },
+              ]}
+            />
+          ))}
+        </WindowedDataTable>
+      </div>
+    </div>
   );
 }
