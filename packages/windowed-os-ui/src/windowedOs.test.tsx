@@ -508,6 +508,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-tool-health__complexity {');
   });
 
+  it('defines compact windowed telemetry agent loop primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-agent-loop {');
+    expect(stylesSource).toContain('.wos-agent-loop__metrics {');
+    expect(stylesSource).toContain('.wos-agent-loop__durations {');
+    expect(stylesSource).toContain('.wos-agent-loop-duration {');
+    expect(stylesSource).toContain('.wos-agent-loop-duration__bar {');
+  });
+
   it('documents the canonical terminal frame in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

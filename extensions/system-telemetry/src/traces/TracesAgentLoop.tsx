@@ -14,11 +14,21 @@ import {
   ProgressRow,
   StatGrid,
   SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedKeyValueGrid,
+  WindowedStateBlock,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
-export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
+export function TracesAgentLoop({ loop, presentation = 'stable' }: { loop: TraceAgentLoop | null; presentation?: 'stable' | 'windowed' }) {
   if (!loop) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>Loop metrics appear after agent runs complete.</WindowedEmptyState>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Agent Loop Health" meta="No data yet" metaClassName="bg-transparent px-0" />
@@ -27,6 +37,10 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
         </PanelMessage>
       </SurfacePanel>
     );
+  }
+
+  if (presentation === 'windowed') {
+    return <WindowedAgentLoop loop={loop} />;
   }
 
   return (
@@ -82,6 +96,116 @@ export function TracesAgentLoop({ loop }: { loop: TraceAgentLoop | null }) {
         </div>
       </div>
     </SurfacePanel>
+  );
+}
+
+function WindowedAgentLoop({ loop }: { loop: TraceAgentLoop }) {
+  const hasTimingData = loop.durationP99Ms > 0;
+
+  return (
+    <div className="wos-agent-loop">
+      <WindowedKeyValueGrid
+        className="wos-agent-loop__metrics"
+        columns={4}
+        items={[
+          { label: 'Turns / run', value: formatNumber(loop.turnsPerRun) },
+          { label: 'Steps / turn', value: formatNumber(loop.stepsPerTurn) },
+          { label: 'Tool calls / run', value: formatNumber(loop.toolCallsPerRun) },
+          {
+            label: 'P95 tool calls',
+            value: <WindowedBadge tone={loop.toolCallsP95 > 8 ? 'warning' : 'neutral'}>{formatNumber(loop.toolCallsP95)}</WindowedBadge>,
+          },
+          {
+            label: 'Tool errors',
+            value: (
+              <WindowedBadge tone={loop.toolErrorRatePct > 0 ? 'danger' : 'positive'}>{formatPercent(loop.toolErrorRatePct)}</WindowedBadge>
+            ),
+          },
+          { label: 'Tokens / run', value: formatTokens(loop.avgTokensPerRun) },
+          { label: 'Subagents / run', value: formatNumber(loop.subagentsPerRun) },
+          { label: 'Avg duration', value: formatDuration(loop.avgDurationMs) },
+        ]}
+      />
+
+      <WindowedDataTable
+        className="wos-agent-loop__risk-table"
+        columns={[{ label: 'Signal' }, { label: 'Value', align: 'right' }, { label: 'State', align: 'right' }]}
+        columnTemplate="minmax(12rem, 1fr) minmax(5rem, 0.35fr) minmax(7rem, 0.45fr)"
+      >
+        <WindowedDataRow
+          name="Long runs"
+          meta="Runs over 20 turns"
+          cells={[
+            { value: formatNumber(loop.runsOver20Turns), align: 'right' },
+            {
+              value: (
+                <WindowedBadge tone={loop.runsOver20Turns > 0 ? 'warning' : 'positive'}>
+                  {loop.runsOver20Turns > 0 ? 'Watch' : 'Clear'}
+                </WindowedBadge>
+              ),
+              align: 'right',
+            },
+          ]}
+        />
+        <WindowedDataRow
+          name="Stuck runs"
+          meta="Runs idle over 10 minutes"
+          cells={[
+            { value: formatNumber(loop.stuckRuns), align: 'right' },
+            {
+              value: (
+                <WindowedBadge tone={loop.stuckRuns > 0 ? 'danger' : 'positive'}>
+                  {loop.stuckRuns > 0 ? formatPercent(loop.stuckRunPct) : 'Clear'}
+                </WindowedBadge>
+              ),
+              align: 'right',
+            },
+          ]}
+        />
+      </WindowedDataTable>
+
+      {hasTimingData ? (
+        <div className="wos-agent-loop__durations" aria-label="Run duration distribution">
+          <WindowedDurationRow
+            label="P50"
+            value={formatDuration(loop.durationP50Ms)}
+            percent={durationPct(loop.durationP50Ms, loop.durationP99Ms)}
+          />
+          <WindowedDurationRow
+            label="P95"
+            value={formatDuration(loop.durationP95Ms)}
+            percent={durationPct(loop.durationP95Ms, loop.durationP99Ms)}
+          />
+          <WindowedDurationRow label="P99" value={formatDuration(loop.durationP99Ms)} percent={100} tone="danger" />
+        </div>
+      ) : (
+        <WindowedStateBlock className="wos-agent-loop__empty-duration">
+          Duration percentiles need completed runs with timings.
+        </WindowedStateBlock>
+      )}
+    </div>
+  );
+}
+
+function WindowedDurationRow({
+  label,
+  value,
+  percent,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string;
+  percent: number;
+  tone?: 'neutral' | 'danger';
+}) {
+  return (
+    <div className="wos-agent-loop-duration" data-tone={tone}>
+      <span className="wos-agent-loop-duration__label">{label}</span>
+      <span className="wos-agent-loop-duration__track" aria-hidden="true">
+        <span className="wos-agent-loop-duration__bar" style={{ '--wos-agent-loop-duration': `${percent}%` } as React.CSSProperties} />
+      </span>
+      <span className="wos-agent-loop-duration__value">{value}</span>
+    </div>
   );
 }
 

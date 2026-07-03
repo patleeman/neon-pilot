@@ -2079,6 +2079,72 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   align-self: start;
 }
 
+.wos-agent-loop {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-agent-loop__metrics {
+  margin-bottom: 0;
+}
+
+.wos-agent-loop__risk-table .wos-data-row__name {
+  font-family: var(--wos-font-mono);
+}
+
+.wos-agent-loop__durations {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-2);
+  border: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-0);
+  padding: var(--wos-space-3);
+  box-shadow: var(--wos-shadow-paper);
+}
+
+.wos-agent-loop-duration {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 3rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: var(--wos-space-3);
+  font-size: var(--wos-font-size-xs);
+  line-height: 1.25;
+}
+
+.wos-agent-loop-duration__label,
+.wos-agent-loop-duration__value {
+  font-family: var(--wos-font-mono);
+  color: var(--wos-ink-700);
+}
+
+.wos-agent-loop-duration__value {
+  text-align: right;
+}
+
+.wos-agent-loop-duration__track {
+  height: 10px;
+  min-width: 0;
+  border: 1px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+}
+
+.wos-agent-loop-duration__bar {
+  display: block;
+  width: var(--wos-agent-loop-duration);
+  height: 100%;
+  background: var(--wos-diagnostics);
+}
+
+.wos-agent-loop-duration[data-tone='danger'] .wos-agent-loop-duration__bar {
+  background: var(--wos-danger);
+}
+
+.wos-agent-loop__empty-duration {
+  margin: 0;
+}
+
 @media (max-width: 900px) {
   .wos-tool-flow__grid,
   .wos-tool-health__bash {

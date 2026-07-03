@@ -217,7 +217,10 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.ui-data-table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('Highest context pressure')).toBeTruthy();
-    expect(screen.getByText('Tool errors')).toBeTruthy();
+    expect(screen.getAllByText('Tool errors').length).toBeGreaterThan(0);
+    expect(container.querySelector('.wos-agent-loop')).toBeTruthy();
+    expect(container.querySelector('.wos-agent-loop__durations')).toBeTruthy();
+    expect(screen.getByText('Long runs').closest('.wos-data-row')).toBeTruthy();
     expect(refetch).toHaveBeenCalled();
     expect(useTracesData).toHaveBeenLastCalledWith('7d', expect.anything());
   });
