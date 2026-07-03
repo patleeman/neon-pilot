@@ -55,6 +55,8 @@ export function cx(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(' ');
 }
 
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
 export interface AppMonogramProps {
   label: string;
   accent?: AppAccent;
@@ -1195,6 +1197,9 @@ export interface StartMenuItem {
   id: string;
   title: string;
   accent?: AppAccent;
+  count?: number;
+  focused?: boolean;
+  open?: boolean;
   onSelect: () => void;
 }
 
@@ -1214,7 +1219,7 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
       setActiveIndex(0);
     }
   }, [open]);
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!open) return;
     searchInputRef.current?.focus();
   }, [open]);
@@ -1287,11 +1292,14 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
               type="button"
               className="wos-start-menu__item"
               data-active={index === activeIndex}
+              data-open={item.open ? 'true' : undefined}
+              data-focused={item.focused ? 'true' : undefined}
+              aria-label={item.title}
               onPointerMove={() => setActiveIndex(index)}
               onFocus={() => setActiveIndex(index)}
               onClick={item.onSelect}
             >
-              <WindowedAppTile label={item.title} accent={item.accent} />
+              <WindowedAppTile label={item.title} accent={item.accent} count={item.count} />
             </button>
           ))
         ) : (
@@ -1347,7 +1355,7 @@ export function Taskbar({
   const [openGroupId, setOpenGroupId] = useState<string | null>(defaultOpenGroupId);
   const [menuAnchors, setMenuAnchors] = useState<Record<string, { left: number; bottom: number }>>({});
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const updateMenuAnchors = () => {
       if (typeof window === 'undefined') return;
       const next: Record<string, { left: number; bottom: number }> = {};

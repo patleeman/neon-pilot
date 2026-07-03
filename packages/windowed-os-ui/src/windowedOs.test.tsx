@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CANONICAL_WINDOWED_DESKTOP_APPS,
+  StartMenu,
   WindowedChartPanel,
   WindowedDataRow,
   WindowedDataTable,
@@ -275,6 +276,26 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('overscroll-behavior-x: contain;');
     expect(stylesSource).toContain('.wos-taskbar__items::-webkit-scrollbar');
     expect(stylesSource).toContain('scrollbar-width: thin;');
+  });
+});
+
+describe('StartMenu', () => {
+  it('renders open-window state without changing the app button accessible name', () => {
+    const html = renderToStaticMarkup(
+      <StartMenu
+        open
+        items={[
+          { id: 'chat', title: 'Chat', accent: 'chat', count: 2, open: true, focused: true, onSelect: () => undefined },
+          { id: 'settings', title: 'Settings', accent: 'settings', open: false, onSelect: () => undefined },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('aria-label="Chat"');
+    expect(html).toContain('data-open="true"');
+    expect(html).toContain('data-focused="true"');
+    expect(html).toContain('class="wos-app-tile__count">2</span>');
+    expect(html).not.toContain('aria-label="Chat 2');
   });
 });
 
@@ -835,7 +856,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('justify-items: stretch;');
     expect(stylesSource).toContain('.wos-start-menu__item {\n  display: flex;\n  width: 100%;');
     expect(stylesSource).toContain('justify-content: flex-start;');
-    expect(stylesSource).not.toContain('.wos-start-menu__item::before');
+    expect(stylesSource).toContain(".wos-start-menu__item[data-open='true']::before");
+    expect(stylesSource).toContain(".wos-start-menu__item[data-focused='true']::before");
+    expect(stylesSource).toContain('flex: 0 0 auto;');
     expect(stylesSource).not.toContain('.wos-start-menu__item::after');
   });
 

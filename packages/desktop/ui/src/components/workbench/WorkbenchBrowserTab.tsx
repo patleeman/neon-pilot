@@ -647,6 +647,7 @@ export function WorkbenchBrowserTab({
 }) {
   const browserHostRef = useRef<HTMLDivElement | null>(null);
   const [hostedByWindowedShell, setHostedByWindowedShell] = useState(() => isWindowedShellActive());
+  const [windowedBrowserPaused, setWindowedBrowserPaused] = useState(false);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const closedRef = useRef(false);
   const tabsStateRef = useRef(tabsState);
@@ -842,7 +843,9 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    if (isInsideWindowedShell(host) || isWindowedShellActive()) {
+    const insideWindowedShell = isInsideWindowedShell(host);
+    if (insideWindowedShell || isWindowedShellActive()) {
+      setWindowedBrowserPaused(insideWindowedShell);
       hideBrowserView({ force: true, destroy: true });
       return;
     }
@@ -867,10 +870,12 @@ export function WorkbenchBrowserTab({
       isCoveredByRendererLayer(host);
 
     if (blocked) {
+      setWindowedBrowserPaused(insideWindowedShell);
       hideBrowserView({ force: true });
       return;
     }
 
+    setWindowedBrowserPaused(false);
     const bounds = visibleBrowserBoundsForHost(host);
     const visible = Boolean(bounds);
     const requestKey = bounds
@@ -1261,7 +1266,7 @@ export function WorkbenchBrowserTab({
             Browser embedding is only available in the Electron desktop app.
           </div>
         ) : null}
-        {hostedByWindowedShell ? (
+        {hostedByWindowedShell && windowedBrowserPaused ? (
           <div className="ui-windowed-browser-host__blocker" role="status">
             Browser preview is paused in desktop mode while the window system is active.
           </div>

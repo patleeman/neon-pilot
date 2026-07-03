@@ -925,6 +925,58 @@ describe('WindowedLayout route windows', () => {
     expect(within(betaWindow).getByText('/beta:windowed')).toBeTruthy();
   });
 
+  it('marks already-open desktop apps in the Start menu from the current window stack', async () => {
+    mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'chat:session-1',
+        kind: 'chat',
+        title: 'Planning thread',
+        route: '/conversations/session-1',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        archivedOnClose: true,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 120, y: 96, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+    await screen.findByRole('region', { name: /planning thread/i });
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const chatButton = within(startMenu).getByRole('button', { name: /^chat$/i });
+    const routinesButton = within(startMenu).getByRole('button', { name: /^routines$/i });
+
+    expect(chatButton.getAttribute('data-open')).toBe('true');
+    expect(chatButton.getAttribute('data-focused')).toBe('true');
+    expect(chatButton.querySelector('.wos-app-tile__count')?.textContent).toBe('2');
+    expect(routinesButton.getAttribute('data-open')).toBe('true');
+    expect(routinesButton.getAttribute('data-focused')).toBeNull();
+    expect(routinesButton.querySelector('.wos-app-tile__count')).toBeNull();
+    expect(container.querySelectorAll('.wos-start-menu__item[data-open="true"]')).toHaveLength(2);
+  });
+
   it('reuses persisted route windows stored with legacy unqualified ids', async () => {
     seedWindowedWindows([
       {

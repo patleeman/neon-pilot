@@ -494,6 +494,25 @@
   text-align: left;
 }
 
+.wos-start-menu__item::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+}
+
+.wos-start-menu__item[data-open='true']::before {
+  border-color: var(--wos-ink-900);
+  background: var(--wos-surface-1);
+}
+
+.wos-start-menu__item[data-focused='true']::before {
+  border-color: var(--wos-ink-900);
+  background: var(--wos-ink-900);
+}
+
 .wos-start-menu__item:hover,
 .wos-start-menu__item[data-active='true'],
 .wos-taskbar__button:hover,
@@ -1063,12 +1082,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   font: var(--wos-text-subsection);
 }
 
-body[data-neon-pilot-windowed-shell-active='true']
-  .ui-windowed-drawings-picker[data-parent-window-title]
-  .ui-dialog-header::after,
-body[data-neon-pilot-windowed-shell-active='true']
-  .ui-windowed-excalidraw-modal[data-parent-window-title]
-  .ui-dialog-header::after {
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[data-parent-window-title] .ui-dialog-header::after,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal[data-parent-window-title] .ui-dialog-header::after {
   margin-left: auto;
   color: var(--wos-ink-700);
   content: 'Attached to Chat';

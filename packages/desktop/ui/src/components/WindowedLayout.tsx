@@ -1338,19 +1338,27 @@ export function WindowedLayout() {
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );
-  // Electron's native browser view is not part of the DOM stacking order, so keep it suppressed in desktop beta mode.
+  // Electron BrowserView is a native layer and can escape DOM stacking in the beta desktop shell.
+  // Keep it suppressed until the browser workbench is extracted into a first-class window.
   const nativeBrowserBlocked = true;
   const rendererFramePaintBlocked = browserBlockingShellInteraction;
 
   useWindowedBrowserSuppression(nativeBrowserBlocked);
-  const startMenuItems = launcherItems.map(
-    (item): StartMenuItem => ({
+  const startMenuItems = launcherItems.map((item): StartMenuItem => {
+    const matchingWindows =
+      item.kind === 'chat'
+        ? chatWindows
+        : windows.filter((windowModel) => routeWindowMatchesLauncherItem(windowModel, createId(item), item));
+    return {
       id: item.id,
       title: item.title,
       accent: accentForTitle(item.title),
+      count: matchingWindows.length > 1 ? matchingWindows.length : undefined,
+      open: matchingWindows.length > 0,
+      focused: matchingWindows.some((windowModel) => windowModel.focused && !windowModel.minimized),
       onSelect: () => openLauncherItem(item),
-    }),
-  );
+    };
+  });
   const routeTaskItems = windows
     .filter((windowModel) => windowModel.kind !== 'chat')
     .map(
