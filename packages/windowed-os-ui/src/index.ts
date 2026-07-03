@@ -76,6 +76,8 @@ export {
   type WindowedTitleBarControlsProps,
   WindowedToggle,
   type WindowedToggleProps,
+  WindowedToolbar,
+  type WindowedToolbarProps,
   WindowFrame,
   type WindowFrameProps,
 } from './windowedOs';

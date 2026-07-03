@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { WindowedEmptyState, WindowedPageMain, WindowedPageShell } from './windowedOs';
+import { WindowedEmptyState, WindowedPageButton, WindowedPageMain, WindowedPageShell, WindowedToolbar } from './windowedOs';
 
 describe('WindowedPageShell', () => {
   it('defaults to the canonical single-pane page layout', () => {
@@ -45,6 +45,33 @@ describe('WindowedEmptyState', () => {
 
     expect(html).toContain('data-tone="danger"');
     expect(html).toContain('Could not load workflows.');
+  });
+});
+
+describe('WindowedToolbar', () => {
+  it('renders compact toolbar primary and end slots', () => {
+    const html = renderToStaticMarkup(
+      <WindowedToolbar end={<WindowedPageButton>Clear</WindowedPageButton>}>
+        <input aria-label="Search" />
+      </WindowedToolbar>,
+    );
+
+    expect(html).toContain('class="wos-toolbar"');
+    expect(html).toContain('wos-toolbar__primary');
+    expect(html).toContain('wos-toolbar__end');
+    expect(html).toContain('Search');
+    expect(html).toContain('Clear');
+  });
+
+  it('can render as a form for search and filter controls', () => {
+    const html = renderToStaticMarkup(
+      <WindowedToolbar as="form">
+        <input aria-label="Search" />
+      </WindowedToolbar>,
+    );
+
+    expect(html).toContain('<form');
+    expect(html).toContain('class="wos-toolbar"');
   });
 });
 
@@ -92,6 +119,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('No workflow runs yet.');
     expect(source).toContain('Trace data could not be loaded.');
     expect(source).toContain('Try again');
+  });
+
+  it('documents shared toolbar primitives for windowed filter rows', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('<WindowedToolbar>');
+    expect(source).toContain('aria-label="Search available extensions"');
   });
 
   it('documents the canonical Automations desktop page', () => {

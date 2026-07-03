@@ -1228,6 +1228,38 @@
   text-align: right;
 }
 
+.wos-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wos-space-4);
+  padding: var(--wos-space-4);
+}
+
+.wos-toolbar__primary,
+.wos-toolbar__end {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--wos-space-4);
+}
+
+.wos-toolbar__primary {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+}
+
+.wos-toolbar__end {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+.wos-toolbar .wos-input,
+.wos-toolbar .wos-select {
+  max-width: 360px;
+}
+
 .wos-page-button {
   min-height: 26px;
   border: 2px solid var(--wos-ink-900);
@@ -2242,7 +2274,7 @@
 .wos-prompt-template__path,
 .wos-prompt-template__status,
 .wos-prompt-source,
-.wos-prompt-context-toolbar > span {
+.wos-toolbar__meta {
   min-width: 0;
   overflow: hidden;
   color: var(--wos-ink-500);
@@ -2260,8 +2292,7 @@
   line-height: 1.5;
 }
 
-.wos-prompt-template__status,
-.wos-prompt-context-toolbar {
+.wos-prompt-template__status {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -2270,14 +2301,6 @@
 
 .wos-prompt-template__status {
   justify-content: space-between;
-}
-
-.wos-prompt-context-toolbar {
-  padding: var(--wos-space-4);
-}
-
-.wos-prompt-context-toolbar .wos-input {
-  max-width: 360px;
 }
 
 .wos-prompt-source {
@@ -2449,14 +2472,6 @@
   gap: 10px;
 }
 
-.wos-extension-install__source-form {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
 .wos-extension-install__errors {
   margin-top: 8px;
   color: oklch(42% 0.16 30);
@@ -2478,10 +2493,6 @@
 
   .wos-extension-detail-actions {
     justify-content: flex-start;
-  }
-
-  .wos-extension-install__source-form {
-    grid-template-columns: 1fr;
   }
 
   .wos-automation-table__header {

@@ -33,6 +33,7 @@ import {
   WindowedTimelineItem,
   WindowedTitleBarControls,
   WindowedToggle,
+  WindowedToolbar,
   WindowFrame,
 } from './windowedOs';
 
@@ -1495,10 +1496,10 @@ export const ExtensionsInstallDialog: Story = {
         >
           <div className="wos-extension-install">
             <WindowedPageSection title="Repositories" meta="2">
-              <div className="wos-extension-install__source-form">
+              <WindowedToolbar>
                 <WindowedTextInput aria-label="Extension repository" placeholder="GitHub URL or owner/name" />
                 <WindowedPageButton>Add</WindowedPageButton>
-              </div>
+              </WindowedToolbar>
               <WindowedDataTable columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
                 <WindowedDataRow
                   name="Personal marketplace"
@@ -1516,7 +1517,9 @@ export const ExtensionsInstallDialog: Story = {
             </WindowedPageSection>
 
             <WindowedPageSection title="Available" meta="3">
-              <WindowedTextInput aria-label="Search available extensions" placeholder="Search extensions" />
+              <WindowedToolbar>
+                <WindowedTextInput aria-label="Search available extensions" placeholder="Search extensions" />
+              </WindowedToolbar>
               <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
                 <WindowedDataRow
                   name="agent-browser"

@@ -249,6 +249,7 @@ export type {
   WindowedTimelineItemProps,
   WindowedTimelineProps,
   WindowedToggleProps,
+  WindowedToolbarProps,
 } from '@neon-pilot/windowed-os-ui';
 export {
   WindowedBadge,
@@ -275,4 +276,5 @@ export {
   WindowedTimeline,
   WindowedTimelineItem,
   WindowedToggle,
+  WindowedToolbar,
 } from '@neon-pilot/windowed-os-ui';

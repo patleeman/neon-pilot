@@ -277,6 +277,16 @@ function suspendWindowedBrowserViews(durationMs = 1500): void {
   }
 }
 
+function useWindowedBrowserSuppression(active: boolean): void {
+  useEffect(() => {
+    if (!active) return;
+
+    suspendWindowedBrowserViews();
+    const interval = window.setInterval(() => suspendWindowedBrowserViews(600), 180);
+    return () => window.clearInterval(interval);
+  }, [active]);
+}
+
 function sameBounds(first: WindowBounds, second: WindowBounds): boolean {
   return first.x === second.x && first.y === second.y && first.width === second.width && first.height === second.height;
 }
@@ -1036,6 +1046,8 @@ export function WindowedLayout() {
     if (!launcherOpen && !drag && !resize && !snapTarget) return;
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
+
+  useWindowedBrowserSuppression(Boolean(launcherOpen || drag || resize || snapTarget));
 
   useEffect(() => {
     if (!visibleWindowSignature) return;

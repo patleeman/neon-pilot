@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -169,6 +169,45 @@ describe('WindowedLayout route windows', () => {
     fireEvent.mouseDown(screen.getByLabelText(/windowed neon pilot desktop/i));
 
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
+  it('keeps stored native browser tabs hidden while the start menu is open', async () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem(
+      'pa:workbench-browser-tabs',
+      JSON.stringify({
+        version: 1,
+        activeTabId: 'tab-a',
+        tabs: [
+          { id: 'tab-a', title: 'Docs', url: 'https://example.com', urlDraft: '' },
+          { id: 'tab-b', title: 'Search', url: 'https://example.org', urlDraft: '' },
+        ],
+        closedTabs: [],
+      }),
+    );
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
+
+    try {
+      renderWindowedLayout();
+
+      fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+      expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
+
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a' });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b' });
+      const initialHiddenCalls = setWorkbenchBrowserBounds.mock.calls.length;
+
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+
+      expect(setWorkbenchBrowserBounds.mock.calls.length).toBeGreaterThan(initialHiddenCalls);
+      expect(setWorkbenchBrowserBounds).toHaveBeenLastCalledWith({ visible: false, sessionKey: '@global:tab-tab-b' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('adds enabled main extension views to the start menu even when they do not contribute sidebar nav', async () => {

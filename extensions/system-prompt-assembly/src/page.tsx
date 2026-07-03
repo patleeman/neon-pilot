@@ -34,6 +34,7 @@ import {
   WindowedStateBlock,
   WindowedTextarea,
   WindowedTextInput,
+  WindowedToolbar,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -405,10 +406,15 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
           </WindowedPageSection>
 
           <WindowedPageSection title="Agent context" meta={formatCount(visibleAgentCapabilities.length, 'capability')}>
-            <div className="wos-prompt-context-toolbar">
+            <WindowedToolbar
+              end={
+                <span className="wos-toolbar__meta">
+                  Working directory: {formatPromptAssemblyDisplayPath(data.cwd ?? data.repoRoot, data)}
+                </span>
+              }
+            >
               <WindowedTextInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search agent context..." />
-              <span>Working directory: {formatPromptAssemblyDisplayPath(data.cwd ?? data.repoRoot, data)}</span>
-            </div>
+            </WindowedToolbar>
           </WindowedPageSection>
 
           <WindowedCapabilitySection

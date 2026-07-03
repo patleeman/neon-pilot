@@ -1,6 +1,8 @@
 import {
   type ButtonHTMLAttributes,
   type CSSProperties,
+  type FormHTMLAttributes,
+  type HTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -182,6 +184,36 @@ export function WindowedPageSection({ title, meta, children, className }: Window
       ) : null}
       {children}
     </section>
+  );
+}
+
+export interface WindowedToolbarProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  end?: ReactNode;
+  as?: 'div' | 'form';
+  formProps?: Omit<FormHTMLAttributes<HTMLFormElement>, 'children' | 'className'>;
+}
+
+export function WindowedToolbar({ children, end, as = 'div', className, formProps, ...props }: WindowedToolbarProps) {
+  const content = (
+    <>
+      <div className="wos-toolbar__primary">{children}</div>
+      {end ? <div className="wos-toolbar__end">{end}</div> : null}
+    </>
+  );
+
+  if (as === 'form') {
+    return (
+      <form className={cx('wos-toolbar', className)} {...formProps}>
+        {content}
+      </form>
+    );
+  }
+
+  return (
+    <div className={cx('wos-toolbar', className)} {...props}>
+      {content}
+    </div>
   );
 }
 

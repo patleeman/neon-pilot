@@ -45,6 +45,7 @@ import {
   WindowedSelect,
   WindowedTextInput,
   WindowedToggle,
+  WindowedToolbar,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -679,7 +680,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
             </WindowedPageSection>
 
             <WindowedPageSection>
-              <form className="flex min-w-0 flex-wrap items-center gap-2" onSubmit={submitSearch}>
+              <WindowedToolbar as="form" formProps={{ onSubmit: submitSearch }}>
                 <WindowedTextInput
                   value={view === 'marketplace' ? marketplaceQueryDraft : installedQueryDraft}
                   onChange={(event) => {
@@ -699,7 +700,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                 <WindowedPageButton type="submit" tone="accent">
                   Search
                 </WindowedPageButton>
-              </form>
+              </WindowedToolbar>
             </WindowedPageSection>
 
             {notice ? (

@@ -58,6 +58,7 @@ import {
   WindowedSegmentedControl,
   WindowedTextInput,
   WindowedToggle,
+  WindowedToolbar,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
@@ -1764,12 +1765,14 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             </WindowedPageSection>
 
             <WindowedPageSection>
-              <WindowedTextInput
-                value={query}
-                onChange={(event) => setQuery(event.currentTarget.value)}
-                placeholder="Search extensions"
-                aria-label="Search extensions"
-              />
+              <WindowedToolbar>
+                <WindowedTextInput
+                  value={query}
+                  onChange={(event) => setQuery(event.currentTarget.value)}
+                  placeholder="Search extensions"
+                  aria-label="Search extensions"
+                />
+              </WindowedToolbar>
             </WindowedPageSection>
 
             {notice ? (
@@ -2217,7 +2220,7 @@ function WindowedInstallExtensionDialog({
     >
       <div className="wos-extension-install">
         <WindowedPageSection title="Repositories" meta={`${catalogSources.length}`}>
-          <div className="wos-extension-install__source-form">
+          <WindowedToolbar>
             <WindowedTextInput
               value={catalogSourceInput}
               onChange={(event) => onCatalogSourceInputChange(event.currentTarget.value)}
@@ -2227,7 +2230,7 @@ function WindowedInstallExtensionDialog({
             <WindowedPageButton disabled={catalogBusyId === 'extension-source'} onClick={onAddCatalogSource}>
               {catalogBusyId === 'extension-source' ? 'Adding' : 'Add'}
             </WindowedPageButton>
-          </div>
+          </WindowedToolbar>
           {catalogSources.length > 0 ? (
             <WindowedDataTable columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
               {catalogSources.map((source) => (
