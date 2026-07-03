@@ -416,14 +416,13 @@ export function WindowedStateBlock({ title, children, tone = 'neutral', action, 
 
 export interface WindowedEmptyStateProps {
   children: ReactNode;
-  tone?: 'neutral' | 'danger';
   action?: ReactNode;
   className?: string;
 }
 
-export function WindowedEmptyState({ children, tone = 'neutral', action, className }: WindowedEmptyStateProps) {
+export function WindowedEmptyState({ children, action, className }: WindowedEmptyStateProps) {
   return (
-    <div className={cx('wos-empty-state', className)} data-tone={tone}>
+    <div className={cx('wos-empty-state', className)} data-tone="neutral">
       <div className="wos-empty-state__body">{children}</div>
       {action ? <div className="wos-empty-state__action">{action}</div> : null}
     </div>

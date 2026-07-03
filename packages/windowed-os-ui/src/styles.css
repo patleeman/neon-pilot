@@ -1475,21 +1475,6 @@
   padding: var(--wos-space-4);
 }
 
-.wos-windowed-empty,
-.wos-windowed-error {
-  min-width: 0;
-  padding: var(--wos-space-4);
-  font: var(--wos-text-body);
-}
-
-.wos-windowed-empty {
-  color: var(--wos-ink-500);
-}
-
-.wos-windowed-error {
-  color: var(--wos-telemetry);
-}
-
 .wos-empty-state {
   min-width: 0;
   display: flex;
@@ -1499,10 +1484,6 @@
   padding: var(--wos-space-4);
   color: var(--wos-ink-500);
   font: var(--wos-text-body);
-}
-
-.wos-empty-state[data-tone='danger'] {
-  color: var(--wos-telemetry);
 }
 
 .wos-empty-state__body {

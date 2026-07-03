@@ -371,9 +371,7 @@ export const StatePrimitives: Story = {
                   <strong>No diagnostics yet.</strong> Diagnostics fill in after conversations produce retained usage, tool, and context
                   data.
                 </WindowedEmptyState>
-                <WindowedEmptyState tone="danger" action={<WindowedPageButton>Try again</WindowedPageButton>}>
-                  Trace data could not be loaded.
-                </WindowedEmptyState>
+                <WindowedEmptyState>Marketplace results appear after the first source sync.</WindowedEmptyState>
               </div>
             </WindowedPageSection>
 
@@ -387,6 +385,13 @@ export const StatePrimitives: Story = {
                 </WindowedStateBlock>
                 <WindowedStateBlock tone="danger" title="Unavailable">
                   Gateway settings could not be loaded.
+                </WindowedStateBlock>
+                <WindowedStateBlock
+                  tone="danger"
+                  title="Trace data could not be loaded"
+                  action={<WindowedPageButton>Try again</WindowedPageButton>}
+                >
+                  Check diagnostics storage, then retry the load.
                 </WindowedStateBlock>
               </div>
             </WindowedPageSection>
