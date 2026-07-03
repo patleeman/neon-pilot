@@ -38,11 +38,22 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </label>
   ),
+  WindowedPageMain: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <main className="wos-page-main">
+      <h1>{title}</h1>
+      {children}
+    </main>
+  ),
   WindowedPageSection: ({ title, meta, children }: { title: string; meta?: string; children: React.ReactNode }) => (
     <section className="wos-page-section" aria-label={title}>
       {meta ? <div>{meta}</div> : null}
       {children}
     </section>
+  ),
+  WindowedPageShell: ({ children, className, layout }: { children: React.ReactNode; className?: string; layout?: string }) => (
+    <div className={['wos-page-shell', className].filter(Boolean).join(' ')} data-layout={layout}>
+      {children}
+    </div>
   ),
   WindowedSelect: (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select className="wos-select" {...props} />,
   WindowedStateBlock: ({ title, children }: { title?: string; children: React.ReactNode }) => (
@@ -94,6 +105,9 @@ describe('MultimediaProbeSettings', () => {
 
     const { container } = renderSettings('windowed');
 
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.image-probe-page-windowed')).not.toBeNull();
+    expect(container.querySelector('h1')?.textContent).toBe('Image Probe');
     expect(container.querySelector('.wos-page-section')).not.toBeNull();
     expect(container.querySelector('.wos-field')).not.toBeNull();
     expect(container.querySelector('.wos-select')).not.toBeNull();
@@ -116,5 +130,20 @@ describe('MultimediaProbeSettings', () => {
 
     expect(container.querySelector('.settings-row')).not.toBeNull();
     expect(container.querySelector('.wos-page-section')).toBeNull();
+  });
+
+  it('keeps windowed loading state inside the canonical page shell', () => {
+    modelsMock.mockReturnValue({
+      loading: true,
+      error: null,
+      data: null,
+    });
+
+    const { container } = renderSettings('windowed');
+
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('h1')?.textContent).toBe('Image Probe');
+    expect(container.textContent).toContain('Loading models.');
+    expect(container.querySelector('.wos-state-block')).not.toBeNull();
   });
 });
