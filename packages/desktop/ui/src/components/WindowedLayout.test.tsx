@@ -889,6 +889,66 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow.getAttribute('style')).toContain('height: 500px');
   });
 
+  it('resizes windows from the top-left corner while keeping partial offscreen movement recoverable', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    const resizeHandle = routinesWindow.querySelector<HTMLElement>('.wos-resize-nw');
+    expect(resizeHandle).toBeTruthy();
+
+    fireEvent.mouseDown(resizeHandle!, { button: 0, clientX: 42, clientY: 34 });
+    fireEvent.mouseMove(window, { clientX: -120, clientY: -80 });
+    fireEvent.mouseUp(window);
+
+    expect(routinesWindow.getAttribute('style')).toContain('left: -120px');
+    expect(routinesWindow.getAttribute('style')).toContain('top: -80px');
+    expect(routinesWindow.getAttribute('style')).toContain('width: 862px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 614px');
+  });
+
+  it('resizes windows from the bottom-right corner using visible resize handles', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    const resizeHandle = routinesWindow.querySelector<HTMLElement>('.wos-resize-se');
+    expect(resizeHandle).toBeTruthy();
+
+    fireEvent.mouseDown(resizeHandle!, { button: 0, clientX: 742, clientY: 534 });
+    fireEvent.mouseMove(window, { clientX: 920, clientY: 650 });
+    fireEvent.mouseUp(window);
+
+    expect(routinesWindow.getAttribute('style')).toContain('left: 42px');
+    expect(routinesWindow.getAttribute('style')).toContain('top: 34px');
+    expect(routinesWindow.getAttribute('style')).toContain('width: 878px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 616px');
+  });
+
   it('groups multiple open chat windows under a taskbar chat menu', async () => {
     mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
     seedWindowedWindows([
