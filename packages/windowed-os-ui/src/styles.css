@@ -1914,6 +1914,103 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   font-weight: 700;
 }
 
+.wos-braid-chart {
+  min-width: 0;
+  overflow: hidden;
+  border-top: 1.5px solid var(--wos-ink-900);
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  background: var(--wos-surface-1);
+}
+
+.wos-braid-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wos-space-4);
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  padding: 5px var(--wos-space-4);
+}
+
+.wos-braid-chart-header h4 {
+  margin: 0;
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
+  letter-spacing: 0;
+}
+
+.wos-braid-chart-header span,
+.wos-braid-legend {
+  color: var(--wos-ink-500);
+  font: var(--wos-text-meta);
+}
+
+.wos-braid-chart-body {
+  min-width: 0;
+  padding: var(--wos-space-4);
+}
+
+.wos-braid-chart-svg {
+  display: block;
+  width: 100%;
+  height: 100px;
+}
+
+.wos-braid-grid-line {
+  stroke: oklch(20% 0.02 70 / 0.12);
+}
+
+.wos-braid-line--input {
+  stroke: oklch(57% 0.16 245);
+  background: oklch(57% 0.16 245);
+}
+
+.wos-braid-line--output {
+  stroke: oklch(54% 0.13 150);
+  background: oklch(54% 0.13 150);
+}
+
+.wos-braid-line--cost {
+  stroke: oklch(67% 0.16 76);
+  background: oklch(67% 0.16 76);
+}
+
+.wos-braid-line--errors {
+  stroke: var(--wos-danger);
+  background: var(--wos-danger);
+}
+
+.wos-braid-label {
+  fill: var(--wos-ink-500);
+}
+
+.wos-braid-legend {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--wos-space-4);
+  margin-top: var(--wos-space-3);
+}
+
+.wos-braid-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wos-space-2);
+  white-space: nowrap;
+}
+
+.wos-braid-legend-line {
+  width: 14px;
+  height: 3px;
+  border: 1px solid var(--wos-ink-900);
+  border-radius: var(--wos-radius-pill);
+}
+
+.wos-braid-peak {
+  margin-left: auto;
+  color: var(--wos-ink-700);
+}
+
 .wos-toggle {
   position: relative;
   display: inline-flex;

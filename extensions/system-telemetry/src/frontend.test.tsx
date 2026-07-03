@@ -102,6 +102,17 @@ describe('TelemetryPage', () => {
             toolErrors: 0,
             cost: 3.45,
           },
+          {
+            date: '2026-07-04',
+            turns: 5,
+            messages: 9,
+            tokensInput: 8_000,
+            tokensOutput: 3_000,
+            tokensCached: 10_000,
+            tokensCachedWrite: 600,
+            toolErrors: 1,
+            cost: 2.1,
+          },
         ],
         sessionIntegrity: [
           {
@@ -150,6 +161,8 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.wos-heatmap')).toBeTruthy();
     expect(container.querySelector('.wos-heatmap-cell-4')).toBeTruthy();
     expect(container.querySelector('.ui-heatmap-cell-4')).toBeNull();
+    expect(container.querySelector('.wos-braid-chart')).toBeTruthy();
+    expect(container.querySelector('.wos-braid-line--errors')).toBeTruthy();
     const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
       table.style.getPropertyValue('--wos-data-column-template'),
     );

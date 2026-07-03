@@ -3,11 +3,19 @@
  */
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { PanelHeader, SurfacePanel, WindowedStateBlock } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
-export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
+export function TracesBraidChart({ data, presentation = 'stable' }: { data: TraceTokenDaily[]; presentation?: 'stable' | 'windowed' }) {
   if (!data || data.length < 2) {
+    if (presentation === 'windowed') {
+      return (
+        <WindowedStateBlock className="wos-braid-chart-empty">
+          Need at least two retained daily samples before the time series can render.
+        </WindowedStateBlock>
+      );
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader
@@ -49,6 +57,133 @@ export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
   const costPath = line(costSeries, scaleCost);
   const errPath = line(errorSeries, scaleErr);
 
+  const chart = (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className={presentation === 'windowed' ? 'wos-braid-chart-svg' : 'w-full h-[100px]'}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={`Time series over ${data.length} days`}
+    >
+      {[0.25, 0.5, 0.75].map((r) => (
+        <line
+          key={r}
+          x1="0"
+          y1={pad.top + chartH * (1 - r)}
+          x2={W}
+          y2={pad.top + chartH * (1 - r)}
+          className={presentation === 'windowed' ? 'wos-braid-grid-line' : undefined}
+          stroke={presentation === 'windowed' ? undefined : 'rgba(255,255,255,0.04)'}
+          strokeWidth="0.5"
+        />
+      ))}
+      <path
+        d={inputPath}
+        fill="none"
+        className={presentation === 'windowed' ? 'wos-braid-line wos-braid-line--input' : undefined}
+        stroke={presentation === 'windowed' ? undefined : '#6c8aff'}
+        strokeWidth="1.5"
+        opacity="0.7"
+      />
+      <path
+        d={outputPath}
+        fill="none"
+        className={presentation === 'windowed' ? 'wos-braid-line wos-braid-line--output' : undefined}
+        stroke={presentation === 'windowed' ? undefined : '#4cd964'}
+        strokeWidth="1.5"
+        opacity="0.7"
+      />
+      <path
+        d={costPath}
+        fill="none"
+        className={presentation === 'windowed' ? 'wos-braid-line wos-braid-line--cost' : undefined}
+        stroke={presentation === 'windowed' ? undefined : '#ff9f0a'}
+        strokeWidth="1.5"
+        opacity="0.7"
+      />
+      {hasErrors && (
+        <path
+          d={errPath}
+          fill="none"
+          className={presentation === 'windowed' ? 'wos-braid-line wos-braid-line--errors' : undefined}
+          stroke={presentation === 'windowed' ? undefined : '#ff4757'}
+          strokeWidth="1.5"
+          opacity="0.7"
+        />
+      )}
+      <text
+        x="0"
+        y={H - 4}
+        className={presentation === 'windowed' ? 'wos-braid-label' : undefined}
+        fill={presentation === 'windowed' ? undefined : 'var(--dim)'}
+        fontSize="7"
+      >
+        {data[0]?.date?.slice(5) ?? ''}
+      </text>
+      <text
+        x={W / 2}
+        y={H - 4}
+        className={presentation === 'windowed' ? 'wos-braid-label' : undefined}
+        fill={presentation === 'windowed' ? undefined : 'var(--dim)'}
+        fontSize="7"
+        textAnchor="middle"
+      >
+        {data[Math.floor(data.length / 2)]?.date?.slice(5) ?? ''}
+      </text>
+      <text
+        x={W}
+        y={H - 4}
+        className={presentation === 'windowed' ? 'wos-braid-label' : undefined}
+        fill={presentation === 'windowed' ? undefined : 'var(--dim)'}
+        fontSize="7"
+        textAnchor="end"
+      >
+        {data[data.length - 1]?.date?.slice(5) ?? ''}
+      </text>
+    </svg>
+  );
+
+  const legend = (
+    <>
+      <span className={presentation === 'windowed' ? 'wos-braid-legend-item' : 'flex items-center gap-1'}>
+        <span className={presentation === 'windowed' ? 'wos-braid-legend-line wos-braid-line--input' : 'w-3 h-0.5 rounded bg-[#6c8aff]'} />{' '}
+        Input
+      </span>
+      <span className={presentation === 'windowed' ? 'wos-braid-legend-item' : 'flex items-center gap-1'}>
+        <span className={presentation === 'windowed' ? 'wos-braid-legend-line wos-braid-line--output' : 'w-3 h-0.5 rounded bg-[#4cd964]'} />{' '}
+        Output
+      </span>
+      <span className={presentation === 'windowed' ? 'wos-braid-legend-item' : 'flex items-center gap-1'}>
+        <span className={presentation === 'windowed' ? 'wos-braid-legend-line wos-braid-line--cost' : 'w-3 h-0.5 rounded bg-[#ff9f0a]'} />{' '}
+        Cost
+      </span>
+      {hasErrors && (
+        <span className={presentation === 'windowed' ? 'wos-braid-legend-item' : 'flex items-center gap-1'}>
+          <span
+            className={presentation === 'windowed' ? 'wos-braid-legend-line wos-braid-line--errors' : 'w-3 h-0.5 rounded bg-[#ff4757]'}
+          />{' '}
+          Errors
+        </span>
+      )}
+      <span className={presentation === 'windowed' ? 'wos-braid-peak' : 'ml-auto'}>Peak: {formatNumber(maxVal)} tokens</span>
+    </>
+  );
+
+  if (presentation === 'windowed') {
+    return (
+      <section className="wos-braid-chart" aria-label={`Time Series — Last ${data.length} Days`}>
+        <header className="wos-braid-chart-header">
+          <h4>Time Series</h4>
+          <span>{`${hasErrors ? '4' : '3'} metrics overlaid · ${data.length} days`}</span>
+        </header>
+        <div className="wos-braid-chart-body">
+          {chart}
+          <div className="wos-braid-legend">{legend}</div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <SurfacePanel className="overflow-hidden">
       <PanelHeader
@@ -57,55 +192,8 @@ export function TracesBraidChart({ data }: { data: TraceTokenDaily[] }) {
         metaClassName="bg-transparent px-0"
       />
       <div className="p-3">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[100px]" preserveAspectRatio="none">
-          {/* Grid */}
-          {[0.25, 0.5, 0.75].map((r) => (
-            <line
-              key={r}
-              x1="0"
-              y1={pad.top + chartH * (1 - r)}
-              x2={W}
-              y2={pad.top + chartH * (1 - r)}
-              stroke="rgba(255,255,255,0.04)"
-              strokeWidth="0.5"
-            />
-          ))}
-          {/* Input tokens */}
-          <path d={inputPath} fill="none" stroke="#6c8aff" strokeWidth="1.5" opacity="0.7" />
-          {/* Output tokens */}
-          <path d={outputPath} fill="none" stroke="#4cd964" strokeWidth="1.5" opacity="0.7" />
-          {/* Cost */}
-          <path d={costPath} fill="none" stroke="#ff9f0a" strokeWidth="1.5" opacity="0.7" />
-          {/* Tool errors (only rendered when non-zero data exists) */}
-          {hasErrors && <path d={errPath} fill="none" stroke="#ff4757" strokeWidth="1.5" opacity="0.7" />}
-          {/* X labels: first, middle, last */}
-          <text x="0" y={H - 4} fill="var(--dim)" fontSize="7">
-            {data[0]?.date?.slice(5) ?? ''}
-          </text>
-          <text x={W / 2} y={H - 4} fill="var(--dim)" fontSize="7" textAnchor="middle">
-            {data[Math.floor(data.length / 2)]?.date?.slice(5) ?? ''}
-          </text>
-          <text x={W} y={H - 4} fill="var(--dim)" fontSize="7" textAnchor="end">
-            {data[data.length - 1]?.date?.slice(5) ?? ''}
-          </text>
-        </svg>
-        <div className="flex gap-3 text-[10px] text-dim mt-1">
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-0.5 rounded bg-[#6c8aff]" /> Input
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-0.5 rounded bg-[#4cd964]" /> Output
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-0.5 rounded bg-[#ff9f0a]" /> Cost
-          </span>
-          {hasErrors && (
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-0.5 rounded bg-[#ff4757]" /> Errors
-            </span>
-          )}
-          <span className="ml-auto">Peak: {formatNumber(maxVal)} tokens</span>
-        </div>
+        {chart}
+        <div className="flex gap-3 text-[10px] text-dim mt-1">{legend}</div>
       </div>
     </SurfacePanel>
   );

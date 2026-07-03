@@ -233,7 +233,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
                       cacheEfficiency={cacheEfficiency}
                     />
                   )}
-                  {tokensDaily && <TracesBraidChart data={tokensDaily} />}
+                  {tokensDaily && <TracesBraidChart data={tokensDaily} presentation="windowed" />}
                 </div>
               </WindowedPageSection>
 

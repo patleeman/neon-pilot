@@ -473,6 +473,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-heatmap-share {');
   });
 
+  it('defines compact windowed telemetry braid chart primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-braid-chart {');
+    expect(stylesSource).toContain('.wos-braid-chart-svg {');
+    expect(stylesSource).toContain('.wos-braid-line--input {');
+    expect(stylesSource).toContain('.wos-braid-legend-item {');
+  });
+
   it('documents the canonical terminal frame in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
