@@ -22,6 +22,8 @@ import {
   WindowedDialogStack,
   WindowedEmptyState,
   WindowedField,
+  WindowedFormActions,
+  WindowedFormGrid,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
@@ -729,7 +731,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
           >
             {draftOpen ? (
               <>
-                <div className="wos-form-grid" data-columns="2">
+                <WindowedFormGrid columns={2}>
                   <WindowedField label="Name">
                     <WindowedTextInput
                       aria-label="Name"
@@ -789,9 +791,9 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                       onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
                     />
                   </WindowedField>
-                </div>
+                </WindowedFormGrid>
                 {draftError ? <WindowedStateBlock tone="danger">{draftError}</WindowedStateBlock> : null}
-                <div className="wos-form-actions">
+                <WindowedFormActions>
                   <WindowedPageButton
                     onClick={() => {
                       setDraftOpen(false);
@@ -802,7 +804,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                   >
                     Close editor
                   </WindowedPageButton>
-                </div>
+                </WindowedFormActions>
               </>
             ) : null}
 

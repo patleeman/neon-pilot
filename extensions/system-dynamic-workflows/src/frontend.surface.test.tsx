@@ -177,6 +177,8 @@ describe('Dynamic Workflows surfaces', () => {
     expect(within(editor).getByRole('textbox', { name: 'Workflow input JSON' }).className).toContain('wos-textarea');
     expect(within(editor).getByRole('switch', { name: 'Enable read' })).toBeTruthy();
     expect(container.querySelector('.wos-field')).toBeTruthy();
+    expect(editor.querySelector('.wos-form-grid[data-columns="2"]')).toBeTruthy();
+    expect(editor.querySelector('.wos-form-actions')).toBeTruthy();
     expect(container.querySelector('.ui-field')).toBeNull();
   });
 

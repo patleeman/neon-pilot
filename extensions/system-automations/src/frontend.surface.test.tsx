@@ -137,6 +137,7 @@ describe('AutomationsPage windowed surface', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Edit automation' });
     expect(dialog.querySelector('.ui-context-rail')).toBeNull();
+    expect(dialog.querySelectorAll('.wos-form-grid')).toHaveLength(4);
     expect(dialog.querySelector('.wos-field')).toBeTruthy();
     expect(dialog.querySelector('.wos-textarea')).toBeTruthy();
     expect(dialog.querySelector('.wos-select')).toBeTruthy();

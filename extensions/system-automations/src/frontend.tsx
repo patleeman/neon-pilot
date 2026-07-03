@@ -51,6 +51,7 @@ import {
   WindowedDialogStack,
   WindowedEmptyState,
   WindowedField,
+  WindowedFormGrid,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedPageButton,
@@ -1349,7 +1350,7 @@ export function AutomationDialogPanel({
           <WindowedDialogStack>
             {formError ? <WindowedStateBlock tone="danger">{formError}</WindowedStateBlock> : null}
             <WindowedPageSection title="Prompt">
-              <div className="wos-form-grid">
+              <WindowedFormGrid>
                 <WindowedField label="Name">
                   <WindowedTextInput
                     name="automation-title"
@@ -1368,11 +1369,11 @@ export function AutomationDialogPanel({
                     placeholder="Check the release dashboard and summarize blockers..."
                   />
                 </WindowedField>
-              </div>
+              </WindowedFormGrid>
             </WindowedPageSection>
 
             <WindowedPageSection title="Schedule">
-              <div className="wos-form-grid">
+              <WindowedFormGrid>
                 <WindowedField label="Type">
                   <WindowedSegmentedControl
                     ariaLabel="Schedule type"
@@ -1429,11 +1430,11 @@ export function AutomationDialogPanel({
                     />
                   </WindowedField>
                 ) : null}
-              </div>
+              </WindowedFormGrid>
             </WindowedPageSection>
 
             <WindowedPageSection title="Owner">
-              <div className="wos-form-grid">
+              <WindowedFormGrid>
                 <WindowedField label="Owner thread" hint={ownerThreadHint(ownerConversation)}>
                   <WindowedSelect
                     name="automation-owner-thread"
@@ -1456,11 +1457,11 @@ export function AutomationDialogPanel({
                     onChange={(checked) => setForm({ ...form, enabled: checked })}
                   />
                 </WindowedField>
-              </div>
+              </WindowedFormGrid>
             </WindowedPageSection>
 
             <WindowedPageSection title="Advanced">
-              <div className="wos-form-grid">
+              <WindowedFormGrid>
                 <WindowedField label="Model" hint="Uses the app default when empty.">
                   <WindowedSelect
                     name="automation-model"
@@ -1529,7 +1530,7 @@ export function AutomationDialogPanel({
                     </WindowedPageButton>
                   </div>
                 </WindowedField>
-              </div>
+              </WindowedFormGrid>
             </WindowedPageSection>
 
             <WindowedToolbar
