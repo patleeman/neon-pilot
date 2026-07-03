@@ -145,9 +145,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const AutomationsPage');
     expect(source).toContain('title="Automations"');
     expect(source).not.toContain('eyebrow="Scheduled work"');
-    expect(source).toContain('title="Queue"');
-    expect(source).toContain('title="Selected automation"');
-    expect(source).toContain('ariaLabel="Automation filter"');
+    expect(source).toContain('title="Overview"');
+    expect(source).toContain('title="Task queue"');
+    expect(source).toContain('<WindowedDialog title="Automation details"');
+    expect(source).toContain('title="Automation context"');
+    expect(source).not.toContain('title="Selected automation"');
+    expect(source).not.toContain('ariaLabel="Automation filter"');
   });
 
   it('documents the canonical Gateways desktop page', () => {

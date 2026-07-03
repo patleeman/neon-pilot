@@ -721,86 +721,82 @@ export const AutomationsPage: Story = {
             title="Automations"
             actions={
               <>
-                <WindowedSegmentedControl
-                  ariaLabel="Automation filter"
-                  accent="automations"
-                  value="active"
-                  options={[
-                    { id: 'active', label: 'Active' },
-                    { id: 'paused', label: 'Paused' },
-                    { id: 'all', label: 'All' },
-                  ]}
-                  onChange={() => undefined}
-                />
-                <WindowedPageButton>Run selected</WindowedPageButton>
+                <WindowedPageButton>Refresh</WindowedPageButton>
                 <WindowedPageButton tone="accent">New automation</WindowedPageButton>
               </>
             }
           >
-            <WindowedPageSection title="Queue" meta="live">
+            <WindowedPageSection title="Overview" meta="7 total">
               <WindowedKeyValueGrid
                 columns={4}
                 items={[
-                  { label: 'Enabled', value: <WindowedBadge tone="positive">5</WindowedBadge> },
-                  { label: 'Due today', value: 3 },
                   { label: 'Running', value: <WindowedBadge tone="warning">1</WindowedBadge> },
+                  { label: 'Failed', value: <WindowedBadge tone="danger">1</WindowedBadge> },
                   { label: 'Paused', value: 2 },
+                  { label: 'Enabled', value: <WindowedBadge tone="positive">5</WindowedBadge> },
                 ]}
               />
             </WindowedPageSection>
 
-            <WindowedPageSection title="Automations" meta="selected: Release watch">
-              <WindowedDataTable columns={[{ label: 'Automation' }, { label: 'Next run' }, { label: 'Enabled', align: 'right' }]}>
-                <WindowedDataRow
-                  name="Release watch"
-                  meta="Summarize merged changes"
-                  enabled
-                  status={<WindowedBadge tone="positive">09:00</WindowedBadge>}
-                />
-                <WindowedDataRow
-                  name="Dependency audit"
-                  meta="Check package drift"
-                  enabled
-                  status={<WindowedBadge tone="warning">running</WindowedBadge>}
-                />
-                <WindowedDataRow
-                  name="Inbox sweep"
-                  meta="Group follow-up threads"
-                  enabled={false}
-                  status={<WindowedBadge tone="neutral">paused</WindowedBadge>}
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Selected automation" meta="Release watch">
-              <div className="wos-form-grid" data-columns="3">
-                <WindowedField label="Schedule">
-                  <WindowedTextInput defaultValue="0 9 * * 1-5" aria-label="Automation schedule" />
-                </WindowedField>
-                <WindowedField label="Timezone">
-                  <WindowedTextInput defaultValue="America/New_York" aria-label="Automation timezone" />
-                </WindowedField>
-                <WindowedField label="Model">
-                  <WindowedSelect defaultValue="gpt-5" aria-label="Automation model">
-                    <option value="gpt-5">GPT-5</option>
-                    <option value="gpt-5-mini">GPT-5 mini</option>
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedField label="Instruction" span="full">
-                  <WindowedTextarea
-                    aria-label="Automation instruction"
-                    defaultValue="Draft release notes from merged work and append them to the Release notes chat."
-                  />
-                </WindowedField>
-              </div>
-              <div className="wos-form-actions">
-                <WindowedPageButton>Reset</WindowedPageButton>
-                <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
+            <WindowedPageSection title="Task queue">
+              <div className="wos-automation-table">
+                <div className="wos-automation-table__header">
+                  <span>Automation</span>
+                  <span>Schedule</span>
+                  <span>Next</span>
+                  <span>Owner</span>
+                  <span>Actions</span>
+                </div>
+                {[
+                  ['Release watch', '0 9 * * 1-5', 'Today 09:00', 'Release notes', 'running'],
+                  ['Dependency audit', 'Mondays 08:30', 'Mon 08:30', 'Package drift', 'paused'],
+                  ['Inbox sweep', 'Every 2 hours', '12:00', 'Triage', 'ready'],
+                ].map(([name, schedule, next, owner, status]) => (
+                  <div key={name} className="wos-automation-row" data-active={name === 'Release watch'}>
+                    <button type="button" className="wos-automation-row__identity">
+                      <span>{name}</span>
+                      <small>
+                        {status === 'running'
+                          ? 'Summarize merged changes'
+                          : status === 'paused'
+                            ? 'Check package drift'
+                            : 'Group follow-up threads'}
+                      </small>
+                    </button>
+                    <span className="wos-automation-row__schedule">{schedule}</span>
+                    <span>{next}</span>
+                    <button type="button" className="wos-automation-row__owner">
+                      {owner}
+                    </button>
+                    <span className="wos-automation-row__actions">
+                      <WindowedPageButton>Run</WindowedPageButton>
+                      <WindowedPageButton>{status === 'paused' ? 'Resume' : 'Pause'}</WindowedPageButton>
+                      <WindowedPageButton>Edit</WindowedPageButton>
+                    </span>
+                  </div>
+                ))}
               </div>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
+      <WindowedDialog title="Automation details" meta="Running · 0 9 * * 1-5" accent="automations" onClose={() => undefined}>
+        <WindowedPageSection title="Automation context">
+          <WindowedKeyValueList
+            items={[
+              { label: 'Owner', value: 'Release notes' },
+              { label: 'Next run', value: 'Today 09:00' },
+              { label: 'Model', value: 'GPT-5' },
+            ]}
+          />
+        </WindowedPageSection>
+        <WindowedPageSection title="Instruction">
+          <WindowedTextarea
+            aria-label="Automation instruction"
+            defaultValue="Draft release notes from merged work and append them to the Release notes chat."
+          />
+        </WindowedPageSection>
+      </WindowedDialog>
     </div>
   ),
 };
