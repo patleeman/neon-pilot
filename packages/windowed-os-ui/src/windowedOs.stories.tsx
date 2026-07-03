@@ -1237,22 +1237,21 @@ export const ModelArenaPage: Story = {
                 </WindowedField>
                 <WindowedPageButton tone="accent">Add</WindowedPageButton>
               </div>
-              <div className="wos-arena-challenger-list">
-                <div className="wos-arena-challenger">
-                  <div>
-                    <strong>gpt-5.4-mini</strong>
-                    <span>openai:gpt-5.4-mini</span>
-                  </div>
-                  <WindowedPageButton>Remove</WindowedPageButton>
-                </div>
-                <div className="wos-arena-challenger">
-                  <div>
-                    <strong>claude-sonnet-4.5</strong>
-                    <span>anthropic:claude-sonnet-4.5</span>
-                  </div>
-                  <WindowedPageButton>Remove</WindowedPageButton>
-                </div>
-              </div>
+              <WindowedDataTable
+                className="wos-arena-challenger-table"
+                columns={[{ label: 'Model' }, { label: 'Reference' }, { label: 'Action', align: 'right' }]}
+              >
+                <WindowedDataRow
+                  name="gpt-5.4-mini"
+                  cells={['openai:gpt-5.4-mini']}
+                  action={<WindowedPageButton>Remove</WindowedPageButton>}
+                />
+                <WindowedDataRow
+                  name="claude-sonnet-4.5"
+                  cells={['anthropic:claude-sonnet-4.5']}
+                  action={<WindowedPageButton>Remove</WindowedPageButton>}
+                />
+              </WindowedDataTable>
             </WindowedPageSection>
 
             <WindowedPageSection title="Sampling">

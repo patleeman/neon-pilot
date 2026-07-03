@@ -604,24 +604,28 @@ function ModelArenaWindowedPage({
                 {selectedModels.length === 0 ? (
                   <WindowedEmptyState>No challenger models selected.</WindowedEmptyState>
                 ) : (
-                  <div className="wos-arena-challenger-list">
+                  <WindowedDataTable
+                    className="wos-arena-challenger-table"
+                    columns={[{ label: 'Model' }, { label: 'Reference' }, { label: 'Action', align: 'right' }]}
+                  >
                     {selectedModels.map(({ ref, model }) => (
-                      <div key={ref} className="wos-arena-challenger">
-                        <div>
-                          <strong>{model ? modelLabel(model) : ref}</strong>
-                          <span>{ref}</span>
-                        </div>
-                        <WindowedPageButton
-                          disabled={saving}
-                          aria-label={`Remove ${model ? modelLabel(model) : ref}`}
-                          title={`Remove ${model ? modelLabel(model) : ref}`}
-                          onClick={() => void removeModel(ref)}
-                        >
-                          Remove
-                        </WindowedPageButton>
-                      </div>
+                      <WindowedDataRow
+                        key={ref}
+                        name={model ? modelLabel(model) : ref}
+                        cells={[ref]}
+                        action={
+                          <WindowedPageButton
+                            disabled={saving}
+                            aria-label={`Remove ${model ? modelLabel(model) : ref}`}
+                            title={`Remove ${model ? modelLabel(model) : ref}`}
+                            onClick={() => void removeModel(ref)}
+                          >
+                            Remove
+                          </WindowedPageButton>
+                        }
+                      />
                     ))}
-                  </div>
+                  </WindowedDataTable>
                 )}
               </WindowedPageSection>
 

@@ -79,6 +79,9 @@ describe('ModelArenaPage', () => {
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add opencode-go/zeta' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove DeepSeek V4 Flash · opencode-go' })).toBeTruthy();
+    expect(container.querySelector('.wos-arena-challenger-table .wos-data-row')).toBeTruthy();
+    expect(container.querySelector('.wos-arena-challenger-list')).toBeNull();
+    expect(container.querySelector('.wos-arena-challenger')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
     expect(screen.getByText('opencode-go/flash')).toBeTruthy();

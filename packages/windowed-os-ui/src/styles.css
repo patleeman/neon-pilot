@@ -2862,8 +2862,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 }
 
 .wos-arena-status-row,
-.wos-arena-add-row,
-.wos-arena-challenger {
+.wos-arena-add-row {
   display: grid;
   min-width: 0;
   align-items: center;
@@ -2878,45 +2877,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 
 .wos-arena-add-row {
   grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.wos-arena-challenger-list {
-  display: grid;
-  overflow: hidden;
-  border: 1.5px solid var(--wos-ink-900);
-  border-radius: 9px;
-  background: var(--wos-surface-1);
-}
-
-.wos-arena-challenger {
-  grid-template-columns: minmax(0, 1fr) auto;
-  border-bottom: 1.5px solid var(--wos-ink-900);
-  padding: 7px;
-}
-
-.wos-arena-challenger:last-child {
-  border-bottom: 0;
-}
-
-.wos-arena-challenger strong,
-.wos-arena-challenger span {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wos-arena-challenger strong {
-  color: var(--wos-ink-900);
-  font: var(--wos-text-row);
-}
-
-.wos-arena-challenger span {
-  color: var(--wos-ink-500);
-  font-family: var(--wos-font-mono);
-  font-size: 9.5px;
-  font-weight: 650;
 }
 
 .wos-arena-settings-grid {
@@ -2951,8 +2911,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
     .wos-list-item__title,
     .wos-timeline-item__title,
     .wos-chat-composer__input,
-    .wos-chat-composer__send,
-    .wos-arena-challenger strong
+    .wos-chat-composer__send
   ) {
   font-family: var(--wos-font-display);
   font-size: 12.5px;
