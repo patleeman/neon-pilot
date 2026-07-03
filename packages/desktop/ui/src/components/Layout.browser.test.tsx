@@ -276,7 +276,7 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
 
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
   });
 
   it('hides the native browser view when the shell focused-window id belongs to another window', async () => {
@@ -313,7 +313,7 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
 
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
@@ -436,6 +436,7 @@ describe('WorkbenchBrowserTab', () => {
 
     const hiddenCalls = setWorkbenchBrowserBounds.mock.calls.filter(([input]) => input && input.visible === false);
     expect(hiddenCalls.length).toBeGreaterThanOrEqual(3);
+    expect(hiddenCalls.every(([input]) => input?.deactivate === true)).toBe(true);
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 

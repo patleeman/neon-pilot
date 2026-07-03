@@ -432,7 +432,7 @@ export function WorkbenchBrowserTab({
       }
       lastBoundsRequestRef.current = requestKey;
       void bridge
-        .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey })
+        .setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey, ...(options?.force ? { deactivate: true } : {}) })
         .then((nextState) => {
           if (nextState) {
             if (tabsStateRef.current.activeTabId === activeTab.id) {
@@ -450,7 +450,7 @@ export function WorkbenchBrowserTab({
             if (closedRef.current) {
               return;
             }
-            void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey }).catch((error) => {
+            void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey: browserSessionKey, deactivate: true }).catch((error) => {
               setStatus(formatWorkbenchBrowserError(error));
             });
           }, delay);
