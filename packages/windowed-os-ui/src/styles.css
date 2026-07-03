@@ -1877,6 +1877,76 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   padding: 7px 5px;
 }
 
+.wos-data-row[data-selectable='true'] {
+  cursor: pointer;
+}
+
+.wos-data-row[data-selectable='true']:hover {
+  background: var(--wos-surface-3);
+}
+
+.wos-data-row[data-selected='true'],
+.wos-data-row[data-selected='true']:hover {
+  background: var(--wos-data-row-active, var(--wos-settings));
+}
+
+.wos-data-row[data-selected='true'] .wos-data-row__name,
+.wos-data-row[data-selected='true'] .wos-data-row__meta,
+.wos-data-row[data-selected='true'] .wos-data-row__cell {
+  color: var(--wos-data-row-active-ink, var(--wos-ink-900));
+}
+
+.wos-data-row:focus-visible {
+  outline: 2px solid var(--wos-ink-900);
+  outline-offset: -3px;
+}
+
+.wos-data-row[data-accent='chat'] {
+  --wos-data-row-active: var(--wos-chat);
+  --wos-data-row-active-ink: white;
+}
+
+.wos-data-row[data-accent='routines'] {
+  --wos-data-row-active: var(--wos-routines);
+  --wos-data-row-active-ink: white;
+}
+
+.wos-data-row[data-accent='workflows'] {
+  --wos-data-row-active: var(--wos-workflows);
+  --wos-data-row-active-ink: white;
+}
+
+.wos-data-row[data-accent='automations'] {
+  --wos-data-row-active: var(--wos-automations);
+  --wos-data-row-active-ink: white;
+}
+
+.wos-data-row[data-accent='gateways'] {
+  --wos-data-row-active: var(--wos-gateways);
+  --wos-data-row-active-ink: var(--wos-ink-900);
+}
+
+.wos-data-row[data-accent='model-arena'] {
+  --wos-data-row-active: var(--wos-model-arena);
+  --wos-data-row-active-ink: white;
+}
+
+.wos-data-row[data-accent='extensions'] {
+  --wos-data-row-active: var(--wos-extensions);
+  --wos-data-row-active-ink: var(--wos-ink-900);
+}
+
+.wos-data-row[data-accent='skills'] {
+  --wos-data-row-active: var(--wos-skills);
+  --wos-data-row-active-ink: var(--wos-ink-900);
+}
+
+.wos-data-row[data-accent='telemetry'],
+.wos-data-row[data-accent='diagnostics'] {
+  --wos-data-row-active: var(--wos-diagnostics);
+  --wos-data-row-active-ink: white;
+}
+
 .wos-data-row__identity,
 .wos-data-row__status,
 .wos-data-row__cell,

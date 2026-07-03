@@ -6,7 +6,7 @@ const DEFAULT_BROWSER_URL = 'https://www.google.com/';
 const MAX_SNAPSHOT_TEXT_LENGTH = 30_000;
 const BROWSER_COMMENT_CHANNEL = 'neon-pilot-desktop:workbench-browser-comment';
 const SHORTCUT_CHANNEL = 'neon-pilot-desktop:shortcut';
-const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 5_000;
+const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 30_000;
 
 type CdpCommand = (method: string, params?: Record<string, unknown>) => Promise<unknown>;
 
@@ -601,9 +601,9 @@ export class WorkbenchBrowserViewController {
       this.activeViewKeysByOwner.delete(entry.owner.id);
       entry.view.webContents.stop();
     }
+    this.detach(entry);
     entry.view.setVisible(false);
     entry.view.setBounds({ x: -10_000, y: -10_000, width: 1, height: 1 });
-    this.detach(entry);
   }
 
   private attach(entry: WorkbenchBrowserViewEntry): void {

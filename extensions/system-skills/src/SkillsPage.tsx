@@ -851,7 +851,9 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                                 </WindowedPageButton>
                               </span>
                             }
-                            className={selected ? 'is-selected' : undefined}
+                            selected={selected}
+                            accent="skills"
+                            onSelect={() => selectSkill(selectionData)}
                           />
                         );
                       })}
@@ -929,7 +931,9 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                               </WindowedPageButton>
                             </span>
                           }
-                          className={selected ? 'is-selected' : undefined}
+                          selected={selected}
+                          accent="skills"
+                          onSelect={() => selectSkill(selectionData)}
                         />
                       );
                     })}

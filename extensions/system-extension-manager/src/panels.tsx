@@ -1879,7 +1879,9 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                             ) : null}
                           </span>
                         }
-                        className={selectedExtension?.id === extension.id ? 'is-selected' : undefined}
+                        selected={selectedExtension?.id === extension.id}
+                        accent="extensions"
+                        onSelect={() => selectExtension(extension)}
                       />
                     );
                   })}

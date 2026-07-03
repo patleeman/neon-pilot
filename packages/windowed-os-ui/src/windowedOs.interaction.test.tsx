@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { WindowedDialog } from './windowedOs';
+import { WindowedDataRow, WindowedDialog } from './windowedOs';
 
 function rect(input: { left: number; top: number; width: number; height: number }): DOMRect {
   return {
@@ -86,5 +86,47 @@ describe('WindowedDialog interactions', () => {
 
     expect(dialog.getAttribute('data-dragging')).toBeNull();
     expect(dialog.getAttribute('style')).toBeNull();
+  });
+});
+
+describe('WindowedDataRow interactions', () => {
+  it('selects the row by click and keyboard without treating itself as a nested control', () => {
+    const onSelect = vi.fn();
+
+    render(<WindowedDataRow name="system-browser" meta="Workbench browser" selected accent="extensions" onSelect={onSelect} />);
+
+    const row = screen.getByRole('button', { name: /system-browser/i });
+    expect(row.getAttribute('data-selected')).toBe('true');
+    expect(row.getAttribute('data-selectable')).toBe('true');
+    expect(row.getAttribute('data-accent')).toBe('extensions');
+
+    fireEvent.click(row);
+    fireEvent.keyDown(row, { key: 'Enter' });
+    fireEvent.keyDown(row, { key: ' ' });
+
+    expect(onSelect).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not select the row when nested controls handle the interaction', () => {
+    const onSelect = vi.fn();
+    const onAction = vi.fn();
+
+    render(
+      <WindowedDataRow
+        name="agent-browser"
+        meta="Browser automation surface"
+        onSelect={onSelect}
+        action={
+          <button type="button" onClick={onAction}>
+            Details
+          </button>
+        }
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

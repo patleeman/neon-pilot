@@ -619,13 +619,34 @@ export interface WindowedDataRowProps {
   meta?: string;
   cells?: Array<ReactNode | { value: ReactNode; align?: 'left' | 'right'; className?: string }>;
   enabled?: boolean;
+  selected?: boolean;
+  accent?: AppAccent;
   status?: ReactNode;
   action?: ReactNode;
   onToggle?: (checked: boolean) => void;
+  onSelect?: () => void;
   className?: string;
 }
 
-export function WindowedDataRow({ name, meta, cells, enabled = false, status, action, onToggle, className }: WindowedDataRowProps) {
+function isInteractiveTarget(target: EventTarget | null, container: HTMLElement): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const interactive = target.closest('button, a, input, select, textarea, [role="button"], [role="switch"]');
+  return Boolean(interactive && interactive !== container);
+}
+
+export function WindowedDataRow({
+  name,
+  meta,
+  cells,
+  enabled = false,
+  selected = false,
+  accent = 'settings',
+  status,
+  action,
+  onToggle,
+  onSelect,
+  className,
+}: WindowedDataRowProps) {
   const hasCells = Boolean(cells?.length);
   const renderedCells = cells?.map((cell, index) => {
     const cellObject = cell && typeof cell === 'object' && 'value' in cell ? cell : { value: cell };
@@ -635,9 +656,31 @@ export function WindowedDataRow({ name, meta, cells, enabled = false, status, ac
       </div>
     );
   });
+  const selectable = Boolean(onSelect);
+  const handleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!selectable || isInteractiveTarget(event.target, event.currentTarget)) return;
+    onSelect?.();
+  };
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!selectable || isInteractiveTarget(event.target, event.currentTarget)) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onSelect?.();
+  };
 
   return (
-    <div className={cx('wos-data-row', className)} data-cells={hasCells ? cells?.length : undefined}>
+    <div
+      className={cx('wos-data-row', className)}
+      data-cells={hasCells ? cells?.length : undefined}
+      data-selected={selected ? 'true' : undefined}
+      data-selectable={selectable ? 'true' : undefined}
+      data-accent={accent}
+      role={selectable ? 'button' : undefined}
+      tabIndex={selectable ? 0 : undefined}
+      aria-pressed={selectable ? selected : undefined}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+    >
       <div className="wos-data-row__identity">
         <div className="wos-data-row__name">{name}</div>
         {meta ? <div className="wos-data-row__meta">{meta}</div> : null}

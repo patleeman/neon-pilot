@@ -55,6 +55,7 @@ describe('workbench browser validation', () => {
     expect(source).toContain('attached: boolean');
     expect(source).toContain('attached: false');
     expect(source).not.toContain('ownerWindow.contentView.addChildView(view);\n    view.setBounds({ x: -10_000');
+    expect(source.indexOf('this.detach(entry);\n    entry.view.setVisible(false);')).toBeGreaterThan(-1);
     expect(source).toContain('this.attach(entry);');
     expect(source).toContain('entry.view.setVisible(true);');
     expect(source).toContain('private detach(entry: WorkbenchBrowserViewEntry)');
@@ -75,7 +76,7 @@ describe('workbench browser validation', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 
     expect(source).toContain('WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS');
-    expect(source).toContain('const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 5_000;');
+    expect(source).toContain('const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 30_000;');
     expect(source).toContain('this.suppressOwnerViews(owner.id);');
     expect(source).toContain('if (this.isOwnerSuppressed(owner.id))');
     expect(source).toContain('this.hideAllOwnerViews(owner.id, true);');
