@@ -359,10 +359,6 @@ function routePathname(route: string): string {
   }
 }
 
-function isWindowRouteAvailable(route: string, launcherItems: LauncherItem[]): boolean {
-  return launcherItems.some((item) => routeMatchesLauncherItem(route, item));
-}
-
 function routeMatchesLauncherItem(route: string, item: LauncherItem): boolean {
   if (item.kind !== 'route') return false;
   const pathname = routePathname(route);
@@ -404,6 +400,49 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
   });
   const index = lastVisibleIndex >= 0 ? lastVisibleIndex : windows.length - 1;
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
+}
+
+function canonicalizeRouteWindows(windows: DesktopWindowModel[], launcherItems: LauncherItem[]): DesktopWindowModel[] {
+  let changed = false;
+  const next: DesktopWindowModel[] = [];
+
+  for (const windowModel of windows) {
+    if (windowModel.kind !== 'route') {
+      next.push(windowModel);
+      continue;
+    }
+
+    const launcherItem = findLauncherItemForRoute(windowModel.route, launcherItems);
+    if (!launcherItem) {
+      changed = true;
+      continue;
+    }
+
+    const canonicalId = createId(launcherItem);
+    const canonicalWindow: DesktopWindowModel =
+      windowModel.id === canonicalId && windowModel.title === launcherItem.title && windowModel.singleton === true
+        ? windowModel
+        : {
+            ...windowModel,
+            id: canonicalId,
+            title: launcherItem.title,
+            singleton: true,
+          };
+    changed ||= canonicalWindow !== windowModel;
+
+    const existingIndex = next.findIndex((candidate) => candidate.id === canonicalId);
+    if (existingIndex >= 0) {
+      changed = true;
+      const existing = next[existingIndex]!;
+      next[existingIndex] = canonicalWindow.focused || !existing.focused ? canonicalWindow : existing;
+      continue;
+    }
+
+    next.push(canonicalWindow);
+  }
+
+  if (!changed) return windows;
+  return ensureFocusedWindow(next.length > 0 ? next : [defaultDraftWindow()]);
 }
 
 function focusRouteWindowIn(windows: DesktopWindowModel[], route: string, item: LauncherItem): DesktopWindowModel[] {
@@ -615,11 +654,7 @@ export function WindowedLayout() {
   useEffect(() => {
     if (extensionRegistry.loading) return;
     setWindows((current) => {
-      const next = current.filter(
-        (windowModel) => windowModel.kind !== 'route' || isWindowRouteAvailable(windowModel.route, launcherItems),
-      );
-      if (next.length === current.length) return current;
-      return ensureFocusedWindow(next.length > 0 ? next : [defaultDraftWindow()]);
+      return canonicalizeRouteWindows(current, launcherItems);
     });
   }, [extensionRegistry.loading, launcherItems]);
 

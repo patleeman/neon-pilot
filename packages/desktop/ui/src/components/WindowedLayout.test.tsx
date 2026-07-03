@@ -766,7 +766,7 @@ describe('WindowedLayout route windows', () => {
     fireEvent.pointerDown(await screen.findByRole('region', { name: /routines/i }));
 
     await waitFor(() => {
-      expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('route:routines');
+      expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('route:system-routines:routines');
     });
   });
 
@@ -948,7 +948,7 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /new conversation/i })).toBeTruthy();
   });
 
-  it('keeps persisted nested route windows when their parent nav item is available', async () => {
+  it('keeps persisted nested route windows under the canonical parent app window', async () => {
     seedWindowedWindows([
       {
         id: 'route:routines-detail',
@@ -966,7 +966,45 @@ describe('WindowedLayout route windows', () => {
 
     const routeHost = await screen.findByTestId('extension-route-host');
     expect(routeHost.textContent).toBe('/routines/checkpoint:windowed');
-    expect(screen.getByRole('region', { name: /routines detail/i })).toBeTruthy();
+    const routinesWindow = screen.getByRole('region', { name: /^routines$/i });
+    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:system-routines:routines');
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /^routines$/i })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: /routines detail/i })).toBeNull();
+  });
+
+  it('deduplicates persisted route windows that belong to the same desktop app', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 60, y: 48, width: 800, height: 500 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+      {
+        id: 'route:routines-detail',
+        kind: 'route',
+        title: 'Routines detail',
+        route: '/routines/checkpoint',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByText('/routines/checkpoint:windowed');
+
+    expect(screen.getAllByRole('region', { name: /^routines$/i })).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: /routines detail/i })).toBeNull();
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getAllByRole('button', { name: /^routines$/i })).toHaveLength(
+      1,
+    );
   });
 
   it('recovers persisted windows that load outside the current desktop bounds', async () => {
