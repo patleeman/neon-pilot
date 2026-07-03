@@ -81,6 +81,7 @@ const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
 const MIN_WINDOW_HEIGHT = 260;
 const WINDOWED_BROWSER_SETTLE_MS = 600;
+const FALLBACK_TASKBAR_HEIGHT = 44;
 
 const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'chat', title: 'Chat', route: '/conversations/new', kind: 'chat' },
@@ -96,11 +97,30 @@ function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: s
 }
 
 function defaultBounds(index: number, kind: WindowKind): WindowBounds {
+  const desktop =
+    typeof window === 'undefined'
+      ? { width: 1280, height: 800 }
+      : { width: window.innerWidth, height: Math.max(MIN_WINDOW_HEIGHT, window.innerHeight - FALLBACK_TASKBAR_HEIGHT) };
+  return defaultBoundsForDesktop(index, kind, desktop);
+}
+
+function defaultBoundsForDesktop(index: number, kind: WindowKind, desktop: DesktopRect): WindowBounds {
   const offset = (index % 7) * 34;
-  if (kind === 'chat') {
-    return { x: 42 + offset, y: 34 + offset, width: 1180, height: 760 };
-  }
-  return { x: 112 + offset, y: 72 + offset, width: 1040, height: 650 };
+  const ideal = kind === 'chat' ? { width: 1180, height: 760, x: 42, y: 34 } : { width: 1040, height: 650, x: 112, y: 72 };
+  const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
+  const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
+  const maxX = Math.max(0, desktop.width - width - 24);
+  const maxY = Math.max(0, desktop.height - height - 24);
+  return {
+    x: Math.min(maxX, ideal.x + offset),
+    y: Math.min(maxY, ideal.y + offset),
+    width,
+    height,
+  };
+}
+
+function nextDefaultBounds(index: number, kind: WindowKind, desktopElement: HTMLElement | null): WindowBounds {
+  return defaultBoundsForDesktop(index, kind, desktopRect(desktopElement));
 }
 
 function defaultDraftWindow(): DesktopWindowModel {
@@ -482,7 +502,12 @@ function canonicalizeRouteWindows(windows: DesktopWindowModel[], launcherItems: 
   return ensureFocusedWindow(next.length > 0 ? next : [defaultDraftWindow()]);
 }
 
-function focusRouteWindowIn(windows: DesktopWindowModel[], route: string, item: LauncherItem): DesktopWindowModel[] {
+function focusRouteWindowIn(
+  windows: DesktopWindowModel[],
+  route: string,
+  item: LauncherItem,
+  desktopElement: HTMLElement | null,
+): DesktopWindowModel[] {
   const id = createId(item);
   const existing = windows.find((windowModel) => routeWindowMatchesLauncherItem(windowModel, id, item));
   if (existing) {
@@ -496,7 +521,7 @@ function focusRouteWindowIn(windows: DesktopWindowModel[], route: string, item: 
     kind: 'route',
     title: item.title,
     route,
-    bounds: defaultBounds(windows.length, 'route'),
+    bounds: nextDefaultBounds(windows.length, 'route', desktopElement),
     minimized: false,
     focused: true,
     singleton: true,
@@ -504,7 +529,12 @@ function focusRouteWindowIn(windows: DesktopWindowModel[], route: string, item: 
   return [...windows.map((windowModel) => ({ ...windowModel, focused: false })), next];
 }
 
-function focusChatWindowIn(windows: DesktopWindowModel[], route: string, chatSessions: SessionMeta[]): DesktopWindowModel[] {
+function focusChatWindowIn(
+  windows: DesktopWindowModel[],
+  route: string,
+  chatSessions: SessionMeta[],
+  desktopElement: HTMLElement | null,
+): DesktopWindowModel[] {
   const sessionId = chatSessionIdForRoute(route);
   if (!sessionId) return windows;
   const isDraft = sessionId === 'draft';
@@ -524,7 +554,7 @@ function focusChatWindowIn(windows: DesktopWindowModel[], route: string, chatSes
     kind: 'chat',
     title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : 'Chat',
     route: windowRoute,
-    bounds: defaultBounds(windows.length, 'chat'),
+    bounds: nextDefaultBounds(windows.length, 'chat', desktopElement),
     minimized: false,
     focused: true,
     archivedOnClose: !isDraft,
@@ -826,7 +856,7 @@ export function WindowedLayout() {
         kind: item.kind,
         title,
         route,
-        bounds: defaultBounds(current.length, item.kind),
+        bounds: nextDefaultBounds(current.length, item.kind, desktopRef.current),
         minimized: false,
         focused: true,
         singleton: item.kind === 'route',
@@ -842,7 +872,7 @@ export function WindowedLayout() {
       if (!item) return false;
       suspendWindowedBrowserViews();
       setLauncherOpen(false);
-      setWindows((current) => focusRouteWindowIn(current, route, item));
+      setWindows((current) => focusRouteWindowIn(current, route, item, desktopRef.current));
       return true;
     },
     [launcherItems],
@@ -854,7 +884,7 @@ export function WindowedLayout() {
       if (!sessionId) return false;
       suspendWindowedBrowserViews();
       setLauncherOpen(false);
-      setWindows((current) => focusChatWindowIn(current, route, chatSessions));
+      setWindows((current) => focusChatWindowIn(current, route, chatSessions, desktopRef.current));
       return true;
     },
     [chatSessions],
@@ -868,13 +898,13 @@ export function WindowedLayout() {
         if (!existing) return current;
 
         const chatSessionId = chatSessionIdForRoute(route);
-        if (chatSessionId && existing.kind !== 'chat') return focusChatWindowIn(current, route, chatSessions);
+        if (chatSessionId && existing.kind !== 'chat') return focusChatWindowIn(current, route, chatSessions, desktopRef.current);
 
         const targetLauncherItem = findLauncherItemForRoute(route, launcherItems);
         if (targetLauncherItem) {
           const currentLauncherItem = findLauncherItemForRoute(existing.route, launcherItems);
           if (!currentLauncherItem || currentLauncherItem.id !== targetLauncherItem.id) {
-            return focusRouteWindowIn(current, route, targetLauncherItem);
+            return focusRouteWindowIn(current, route, targetLauncherItem, desktopRef.current);
           }
         }
 

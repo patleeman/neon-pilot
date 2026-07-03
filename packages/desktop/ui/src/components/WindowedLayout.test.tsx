@@ -115,6 +115,8 @@ function seedWindowedWindows(windows: unknown[]) {
 describe('WindowedLayout route windows', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
     delete window.neonPilotDesktop;
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
@@ -734,20 +736,38 @@ describe('WindowedLayout route windows', () => {
     expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /settings/i })).toBeTruthy();
   });
 
-  it('renders chat windows directly in the taskbar with larger default bounds', () => {
+  it('renders chat windows directly in the taskbar with desktop-fitted default bounds', () => {
     const { container } = renderWindowedLayout();
 
     expect(container.querySelector('.wos-taskbar__group')).toBeNull();
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
-    expect(chatWindow.getAttribute('style')).toContain('width: 1180px');
-    expect(chatWindow.getAttribute('style')).toContain('height: 760px');
+    expect(chatWindow.getAttribute('style')).toContain('width: 940px');
+    expect(chatWindow.getAttribute('style')).toContain('height: 648px');
     const taskbar = screen.getByRole('navigation', { name: /open windows/i });
     expect(
       within(taskbar)
         .getByRole('button', { name: /new conversation/i })
         .getAttribute('data-focused'),
     ).toBe('true');
+  });
+
+  it('fits newly opened app windows to the current desktop before first paint', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 820 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 620 });
+
+    renderWindowedLayout();
+
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    expect(chatWindow.getAttribute('style')).toContain('width: 736px');
+    expect(chatWindow.getAttribute('style')).toContain('height: 500px');
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+
+    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
+    expect(routinesWindow.getAttribute('style')).toContain('width: 736px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 544px');
   });
 
   it('groups multiple open chat windows under a taskbar chat menu', async () => {
