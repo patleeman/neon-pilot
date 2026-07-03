@@ -551,6 +551,55 @@ function retargetChatWindowIn(
   });
 }
 
+function reconcileChatWindows(windows: DesktopWindowModel[], chatSessions: SessionMeta[]): DesktopWindowModel[] {
+  const sessionsById = new Map(chatSessions.map((session) => [session.id, session] as const));
+  let changed = false;
+
+  const next = windows.flatMap((windowModel): DesktopWindowModel[] => {
+    if (windowModel.kind !== 'chat' || !windowModel.id.startsWith('chat:')) {
+      return [windowModel];
+    }
+
+    const sessionId = windowModel.id.slice('chat:'.length);
+    if (sessionId === 'draft') {
+      const draftWindow =
+        windowModel.title === 'New conversation' && windowModel.route === '/conversations/new' && windowModel.archivedOnClose === false
+          ? windowModel
+          : {
+              ...windowModel,
+              title: 'New conversation',
+              route: '/conversations/new',
+              archivedOnClose: false,
+            };
+      changed ||= draftWindow !== windowModel;
+      return [draftWindow];
+    }
+
+    const session = sessionsById.get(sessionId);
+    if (!session) {
+      changed = true;
+      return [];
+    }
+
+    const title = conversationWindowTitle(session);
+    const route = `/conversations/${encodeURIComponent(session.id)}`;
+    const reconciledWindow =
+      windowModel.title === title && windowModel.route === route && windowModel.archivedOnClose === true
+        ? windowModel
+        : {
+            ...windowModel,
+            title,
+            route,
+            archivedOnClose: true,
+          };
+    changed ||= reconciledWindow !== windowModel;
+    return [reconciledWindow];
+  });
+
+  if (!changed) return windows;
+  return ensureFocusedWindow(next.length > 0 ? next : [defaultDraftWindow()]);
+}
+
 function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode; onNavigate: WindowNavigate; route: string }) {
   const location = useMemo(() => routeLocation(route), [route]);
   const navigator = useMemo(
@@ -726,18 +775,9 @@ export function WindowedLayout() {
   }, [launcherOpen]);
 
   useEffect(() => {
-    setWindows((current) => {
-      const next = current.map((windowModel) => {
-        if (windowModel.kind !== 'chat' || !windowModel.id.startsWith('chat:')) return windowModel;
-        const sessionId = windowModel.id.slice('chat:'.length);
-        const session = chatSessions.find((candidate) => candidate.id === sessionId);
-        if (!session) return windowModel;
-        const title = conversationWindowTitle(session);
-        return title === windowModel.title ? windowModel : { ...windowModel, title };
-      });
-      return next.every((windowModel, index) => windowModel === current[index]) ? current : next;
-    });
-  }, [chatSessions]);
+    if (conversations.loading) return;
+    setWindows((current) => reconcileChatWindows(current, chatSessions));
+  }, [chatSessions, conversations.loading]);
 
   const focusWindow = useCallback((windowId: string) => {
     const focusedWindow = windowsRef.current.find((windowModel) => windowModel.focused);

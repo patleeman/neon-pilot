@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   registryLoading: false,
   pinnedSessions: [] as Array<{ id: string; title?: string; messageCount?: number }>,
   tabs: [] as Array<{ id: string; title?: string; messageCount?: number }>,
+  conversationsLoading: false,
   extensions: [
     {
       id: 'system-routines',
@@ -75,6 +76,7 @@ vi.mock('../hooks/useConversations', () => ({
   useConversations: () => ({
     pinnedSessions: mocks.pinnedSessions,
     tabs: mocks.tabs,
+    loading: mocks.conversationsLoading,
     archiveSession: mocks.archiveSession,
   }),
 }));
@@ -118,6 +120,7 @@ describe('WindowedLayout route windows', () => {
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
+    mocks.conversationsLoading = false;
     mocks.extensions = [
       {
         id: 'system-routines',
@@ -655,6 +658,74 @@ describe('WindowedLayout route windows', () => {
       expect(screen.queryByRole('menu', { name: /open chat windows/i })).toBeNull();
     });
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+  });
+
+  it('removes stale stored chat windows after conversations load', async () => {
+    mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'Draft',
+        route: '/conversations',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+        archivedOnClose: true,
+      },
+      {
+        id: 'chat:session-1',
+        kind: 'chat',
+        title: 'Old planning title',
+        route: '/conversations/old-session-1',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        archivedOnClose: false,
+      },
+      {
+        id: 'chat:archived-session',
+        kind: 'chat',
+        title: 'Archived thread',
+        route: '/conversations/archived-session',
+        bounds: { x: 120, y: 100, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        archivedOnClose: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await waitFor(() => {
+      expect(screen.queryByRole('region', { name: /archived thread/i })).toBeNull();
+    });
+
+    const draftWindow = screen.getByRole('region', { name: /new conversation/i });
+    const planningWindow = screen.getByRole('region', { name: /planning thread/i });
+    expect(within(draftWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
+    expect(within(planningWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/session-1');
+    expect(planningWindow.getAttribute('data-focused')).toBe('true');
+  });
+
+  it('does not drop stored chat windows while the conversation list is still loading', () => {
+    mocks.conversationsLoading = true;
+    seedWindowedWindows([
+      {
+        id: 'chat:pending-session',
+        kind: 'chat',
+        title: 'Pending thread',
+        route: '/conversations/pending-session',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        archivedOnClose: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    expect(screen.getByRole('region', { name: /pending thread/i })).toBeTruthy();
   });
 
   it('broadcasts browser suspension when window focus changes', async () => {
