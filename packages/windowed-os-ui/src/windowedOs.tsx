@@ -142,7 +142,6 @@ export function WindowedPageRail({
 }
 
 export interface WindowedPageMainProps {
-  eyebrow?: string;
   title: string;
   description?: string;
   actions?: ReactNode;
@@ -150,12 +149,11 @@ export interface WindowedPageMainProps {
   className?: string;
 }
 
-export function WindowedPageMain({ eyebrow, title, description, actions, children, className }: WindowedPageMainProps) {
+export function WindowedPageMain({ title, description, actions, children, className }: WindowedPageMainProps) {
   return (
     <main className={cx('wos-page-main', className)}>
       <header className="wos-page-main__header">
         <div className="wos-page-main__heading">
-          {eyebrow ? <div className="wos-page-eyebrow">{eyebrow}</div> : null}
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
         </div>

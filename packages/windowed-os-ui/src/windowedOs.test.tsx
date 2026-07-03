@@ -129,6 +129,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('aria-label="Search available extensions"');
   });
 
+  it('keeps WindowedPageMain title-only without an eyebrow API', () => {
+    const sourcePath = fileURLToPath(new URL('./windowedOs.tsx', import.meta.url));
+    const source = readFileSync(sourcePath, 'utf8');
+
+    expect(source).toContain('export interface WindowedPageMainProps');
+    expect(source).not.toContain('eyebrow?:');
+    expect(source).not.toContain('function WindowedPageMain({ eyebrow');
+  });
+
   it('documents the canonical Automations desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
