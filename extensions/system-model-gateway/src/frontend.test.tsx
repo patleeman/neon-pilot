@@ -77,6 +77,49 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(screen.getByRole('button', { name: 'Copy Codex config' })).toBeTruthy();
   });
 
+  it('renders a native windowed settings surface without stable table chrome', async () => {
+    const pa = {
+      extension: {
+        invoke: vi.fn(async () => ({
+          running: true,
+          host: '127.0.0.1',
+          port: 8766,
+          baseUrl: 'http://127.0.0.1:8766/v1',
+          authToken: 'secret-token',
+          models: 2,
+          defaultModel: 'auto',
+          catalogPath: '/tmp/catalog.json',
+          logs: [
+            {
+              id: 'log-1',
+              at: '2026-07-03T05:00:00.000Z',
+              method: 'POST',
+              path: '/v1/responses',
+              status: 200,
+              model: 'gpt-5.4',
+              durationMs: 183,
+            },
+          ],
+        })),
+      },
+      ui: { notify: vi.fn() },
+    };
+
+    const { container } = render(<ModelGatewaySettingsPanel pa={pa as never} settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Loopback endpoint' })).toBeTruthy());
+    expect(container.querySelector('.wos-page-section')).toBeTruthy();
+    expect(container.querySelector('.wos-key-value-grid')).toBeTruthy();
+    expect(container.querySelector('.wos-data-table')).toBeTruthy();
+    expect(container.querySelector('.ui-data-table')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Listener' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Codex client setup' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copy config' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
+    expect(screen.getByText('POST /v1/responses')).toBeTruthy();
+    expect(screen.getByText('183ms')).toBeTruthy();
+  });
+
   it('shows a user-facing message when clipboard copy is blocked', async () => {
     const writeText = vi.fn(async () => {
       throw new DOMException("Failed to execute 'writeText' on 'Clipboard': Write permission denied.", 'NotAllowedError');

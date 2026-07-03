@@ -16,6 +16,17 @@ import {
   SupportingText,
   TextInput,
   ToolbarButton,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedField,
+  WindowedKeyValueGrid,
+  WindowedKeyValueList,
+  WindowedPageButton,
+  WindowedPageSection,
+  WindowedStateBlock,
+  WindowedTextInput,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -48,6 +59,10 @@ interface GatewayConfigRow {
   value: string;
   secret?: boolean;
 }
+
+type ModelGatewaySettingsContext = {
+  shellPresentation?: 'stable' | 'windowed';
+};
 
 const DEFAULT_STATUS: GatewayStatus = {
   running: false,
@@ -103,7 +118,13 @@ export function formatGatewayClientConfig(status: GatewayStatus): string {
     .join('\n');
 }
 
-export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient }) {
+export function ModelGatewaySettingsPanel({
+  pa,
+  settingsContext,
+}: {
+  pa: NativeExtensionClient;
+  settingsContext?: ModelGatewaySettingsContext;
+}) {
   const [status, setStatus] = useState<GatewayStatus>(DEFAULT_STATUS);
   const [port, setPort] = useState(String(DEFAULT_STATUS.port));
   const [loading, setLoading] = useState(true);
@@ -195,6 +216,122 @@ export function ModelGatewaySettingsPanel({ pa }: { pa: NativeExtensionClient })
     } finally {
       setBusy(null);
     }
+  }
+
+  if (settingsContext?.shellPresentation === 'windowed') {
+    return (
+      <div className="grid gap-3">
+        {loading ? <WindowedStateBlock>Loading AI Gateway settings.</WindowedStateBlock> : null}
+
+        {!loading ? (
+          <>
+            <WindowedPageSection title="Loopback endpoint" meta={status.running ? 'Running' : 'Unavailable'}>
+              <WindowedKeyValueGrid
+                columns={3}
+                items={[
+                  {
+                    label: 'Status',
+                    value: (
+                      <WindowedBadge tone={status.running ? 'positive' : 'danger'}>
+                        {status.running ? 'Running' : 'Unavailable'}
+                      </WindowedBadge>
+                    ),
+                  },
+                  { label: 'Endpoint', value: status.baseUrl },
+                  { label: 'Models', value: String(status.models) },
+                  { label: 'Default model', value: status.defaultModel },
+                  { label: 'Port', value: String(status.port) },
+                  { label: 'Host', value: status.host },
+                ]}
+              />
+            </WindowedPageSection>
+
+            {status.lastError ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="danger">{status.lastError}</WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
+            {error ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
+            {message ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="positive">{message}</WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
+
+            <WindowedPageSection title="Listener" meta="Local port">
+              <div className="grid gap-3 md:grid-cols-[minmax(14rem,18rem)_auto] md:items-end">
+                <WindowedField label="Port" hint="Changing the port restarts the local listener.">
+                  <WindowedTextInput
+                    id="settings-model-gateway-port"
+                    value={port}
+                    inputMode="numeric"
+                    onChange={(event) => setPort(event.currentTarget.value)}
+                    onBlur={() => {
+                      if (port !== String(status.port)) void savePort();
+                    }}
+                  />
+                </WindowedField>
+                <div className="flex flex-wrap items-center gap-2">
+                  <WindowedPageButton disabled={busy !== null} onClick={() => void load()}>
+                    Refresh
+                  </WindowedPageButton>
+                  <WindowedPageButton tone="accent" disabled={busy === 'save'} onClick={() => void savePort()}>
+                    {busy === 'save' ? 'Saving' : 'Save port'}
+                  </WindowedPageButton>
+                </div>
+              </div>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Codex client setup" meta={copied ? 'Copied' : 'Responses compatible'}>
+              <div className="grid gap-3">
+                <WindowedKeyValueList
+                  items={gatewayConfigRows.map((row) => ({
+                    label: row.label,
+                    value: row.secret && row.value ? '••••••••••••••••' : row.value || 'not set',
+                  }))}
+                />
+                <div className="flex flex-wrap justify-end gap-2">
+                  <WindowedPageButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy config'}</WindowedPageButton>
+                </div>
+              </div>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Recent activity" meta={`${status.logs.length} retained`}>
+              <div className="grid gap-3">
+                <div className="flex flex-wrap justify-end gap-2">
+                  <WindowedPageButton disabled={busy === 'clearLogs' || status.logs.length === 0} onClick={() => void clearLogs()}>
+                    Clear logs
+                  </WindowedPageButton>
+                </div>
+                {status.logs.length === 0 ? (
+                  <WindowedEmptyState>No gateway activity yet.</WindowedEmptyState>
+                ) : (
+                  <WindowedDataTable columns={[{ label: 'Route' }, { label: 'Status' }, { label: 'Duration', align: 'right' }]}>
+                    {status.logs.slice(0, 12).map((entry) => (
+                      <WindowedDataRow
+                        key={entry.id}
+                        name={`${entry.method} ${entry.path}`}
+                        meta={`${formatTime(entry.at)} · ${entry.model || 'auto'}`}
+                        status={
+                          <WindowedBadge tone={entry.error ? 'danger' : entry.status >= 400 ? 'warning' : 'positive'}>
+                            {entry.error ? `${entry.status} error` : entry.status}
+                          </WindowedBadge>
+                        }
+                        action={`${entry.durationMs}ms`}
+                      />
+                    ))}
+                  </WindowedDataTable>
+                )}
+              </div>
+            </WindowedPageSection>
+          </>
+        ) : null}
+      </div>
+    );
   }
 
   return (
