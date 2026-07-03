@@ -148,6 +148,9 @@ describe('PromptAssemblyPage', () => {
     expect(screen.getByText('Repo instructions')).toBeTruthy();
     expect(screen.getByText('Tool A')).toBeTruthy();
     expect(screen.getByPlaceholderText('Search agent context...')).toBeTruthy();
+    expect(screen.getByText('No MCP servers found.').closest('.wos-empty-state')).toBeTruthy();
+    expect(screen.getByText('No issues found.').closest('.wos-empty-state')).toBeTruthy();
+    expect(container.querySelector('.wos-windowed-empty')).toBeNull();
   });
 
   it('does not render or toggle skills from Prompt Assembly settings', async () => {

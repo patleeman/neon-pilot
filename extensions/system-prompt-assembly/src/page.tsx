@@ -26,6 +26,7 @@ import {
   WindowedBadge,
   WindowedDataRow,
   WindowedDataTable,
+  WindowedEmptyState,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
@@ -634,7 +635,7 @@ function WindowedCapabilitySection({
           ))}
         </WindowedDataTable>
       ) : (
-        <div className="wos-windowed-empty">{emptyTitle}.</div>
+        <WindowedEmptyState>{emptyTitle}.</WindowedEmptyState>
       )}
     </WindowedPageSection>
   );
