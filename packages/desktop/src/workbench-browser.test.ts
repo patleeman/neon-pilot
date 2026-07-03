@@ -61,6 +61,14 @@ describe('workbench browser validation', () => {
     expect(source).toContain('this.detach(entry);');
   });
 
+  it('treats owner-level hide requests as a global native browser suppression', () => {
+    const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
+
+    expect(source).toContain('this.hideAllOwnerViews(owner.id, deactivate === true);');
+    expect(source).toContain('private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean): void');
+    expect(source).toContain('entry.owner.id === ownerWebContentsId');
+  });
+
   it('forwards command palette shortcuts out of the embedded browser', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 

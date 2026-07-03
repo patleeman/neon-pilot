@@ -349,6 +349,10 @@ export class WorkbenchBrowserViewController {
     }
 
     if (!visible || !bounds) {
+      if (sessionKey === null || sessionKey === undefined) {
+        this.hideAllOwnerViews(owner.id, deactivate === true);
+        return this.getState(owner.id, sessionKey);
+      }
       this.hide(this.viewKey(owner.id, sessionKey), deactivate === true);
       return this.getState(owner.id, sessionKey);
     }
@@ -614,6 +618,14 @@ export class WorkbenchBrowserViewController {
     const activeViewKey = this.activeViewKeysByOwner.get(ownerWebContentsId);
     if (activeViewKey && activeViewKey !== exceptViewKey) {
       this.hide(activeViewKey);
+    }
+  }
+
+  private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean): void {
+    for (const [viewKey, entry] of this.views) {
+      if (entry.owner.id === ownerWebContentsId) {
+        this.hide(viewKey, deactivate);
+      }
     }
   }
 
