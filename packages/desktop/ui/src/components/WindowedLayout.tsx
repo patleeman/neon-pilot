@@ -357,8 +357,8 @@ function isWindowClippedByDesktop(windowModel: DesktopWindowModel, desktop: Desk
   return bounds.x < 0 || bounds.y < 0 || bounds.x + bounds.width > desktop.width || bounds.y + bounds.height > desktop.height;
 }
 
-function hasClippedChatWindow(visibleWindows: DesktopWindowModel[], desktop: DesktopRect): boolean {
-  return visibleWindows.some((windowModel) => windowModel.kind === 'chat' && isWindowClippedByDesktop(windowModel, desktop));
+function hasClippedWindow(visibleWindows: DesktopWindowModel[], desktop: DesktopRect): boolean {
+  return visibleWindows.some((windowModel) => isWindowClippedByDesktop(windowModel, desktop));
 }
 
 function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
@@ -1237,7 +1237,7 @@ export function WindowedLayout() {
   const browserBlockedByWindowStack =
     hasCoveredChatWindow(visibleWindows) ||
     hasCompetingWindowedSurface(visibleWindows) ||
-    hasClippedChatWindow(visibleWindows, activeDesktopRect);
+    hasClippedWindow(visibleWindows, activeDesktopRect);
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );

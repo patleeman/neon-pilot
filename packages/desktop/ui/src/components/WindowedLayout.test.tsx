@@ -1352,6 +1352,29 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
 
+  it('blocks embedded iframe paint when any route window is dragged beyond the desktop edge', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:system-routines:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: -72, y: 58, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+    const { container } = renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
+    const shell = container.querySelector('.windowed-os-shell');
+
+    expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
+    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
+    expect(routinesWindow.getAttribute('data-iframe-blocked')).toBe('true');
+  });
+
   it('does not auto-create taskbar windows for every known chat session', () => {
     mocks.tabs = [
       { id: 'session-1', title: 'Planning thread', messageCount: 4 },
