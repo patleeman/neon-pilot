@@ -646,7 +646,7 @@ export function WorkbenchBrowserTab({
   onCloseCurrentTab: () => void;
 }) {
   const browserHostRef = useRef<HTMLDivElement | null>(null);
-  const [hostedByWindowedShell, setHostedByWindowedShell] = useState(false);
+  const [hostedByWindowedShell, setHostedByWindowedShell] = useState(() => isWindowedShellActive());
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const closedRef = useRef(false);
   const tabsStateRef = useRef(tabsState);
