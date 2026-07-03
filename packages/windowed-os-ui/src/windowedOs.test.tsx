@@ -286,6 +286,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('clip-path: inset(0);');
     expect(stylesSource).toContain('isolation: isolate;');
     expect(stylesSource).toContain('contain: paint;');
+    expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain(
       ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe",
     );

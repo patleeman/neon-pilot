@@ -519,6 +519,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 .windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-dialog-layer) .wos-window__body iframe {
+  display: none !important;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
