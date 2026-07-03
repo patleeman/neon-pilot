@@ -76,6 +76,20 @@ describe('WindowedToolbar', () => {
 });
 
 describe('Windowed OS Storybook examples', () => {
+  it('keeps canonical design tokens in the scoped token stylesheet', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const tokensPath = fileURLToPath(new URL('./tokens.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+    const tokensSource = readFileSync(tokensPath, 'utf8');
+
+    expect(stylesSource.startsWith("@import './tokens.css';")).toBe(true);
+    expect(tokensSource).toContain('.windowed-os-shell');
+    expect(tokensSource).toContain('--wos-surface-0: oklch(95% 0.022 75);');
+    expect(tokensSource).toContain('--wos-extensions: oklch(70% 0.15 60);');
+    expect(tokensSource).toContain('--wos-titlebar-h: 42px;');
+    expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
+  });
+
   it('keeps isolated Storybook examples on scoped windowed classes instead of app utility CSS', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

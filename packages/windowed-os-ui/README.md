@@ -8,6 +8,11 @@ The canonical visual target is the local design package at:
 
 Keep this package separate from the stable `@neon-pilot/ui` system. Stable app routes may render inside window frames, but shell chrome, taskbar/start menu, window anatomy, app monograms, accent mapping, and windowed-OS tokens should live here.
 
+CSS entry points:
+
+- `@neon-pilot/windowed-os-ui/tokens.css` contains the scoped `.windowed-os-shell` design tokens extracted from the canonical design package.
+- `@neon-pilot/windowed-os-ui/styles.css` imports the tokens and adds the full shell/component/page styling used by Storybook and the desktop app.
+
 Principles:
 
 - Warm parchment surfaces, near-black ink borders, and one accent hue per app.
