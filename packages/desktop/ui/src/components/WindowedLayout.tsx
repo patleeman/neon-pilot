@@ -954,6 +954,17 @@ export function WindowedLayout() {
     );
   }, []);
 
+  const selectTaskbarWindow = useCallback(
+    (windowModel: DesktopWindowModel) => {
+      if (windowModel.focused && !windowModel.minimized) {
+        minimizeWindow(windowModel.id);
+        return;
+      }
+      focusWindow(windowModel.id);
+    },
+    [focusWindow, minimizeWindow],
+  );
+
   const maximizeWindow = useCallback(
     (windowModel: DesktopWindowModel) => {
       suspendWindowedBrowserViews();
@@ -1229,7 +1240,7 @@ export function WindowedLayout() {
         focused: windowModel.focused,
         minimized: windowModel.minimized,
         accent: accentForTitle(windowModel.title),
-        onSelect: () => focusWindow(windowModel.id),
+        onSelect: () => selectTaskbarWindow(windowModel),
       }),
     );
   const chatTaskItems = chatWindows.map(
@@ -1239,7 +1250,7 @@ export function WindowedLayout() {
       focused: windowModel.focused,
       minimized: windowModel.minimized,
       accent: 'chat',
-      onSelect: () => focusWindow(windowModel.id),
+      onSelect: () => selectTaskbarWindow(windowModel),
     }),
   );
   const shouldGroupChatTaskItems = chatTaskItems.length > 1;
@@ -1262,7 +1273,7 @@ export function WindowedLayout() {
               items={chatTaskItems.map((item) => ({
                 id: item.id,
                 label: item.title,
-                onSelect: item.onSelect,
+                onSelect: () => focusWindow(item.id),
               }))}
             />
           ),
