@@ -394,7 +394,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__blocker {');
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('.wos-window__iframe-shield');
-    expect(stylesSource).toContain('z-index: 55;');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {\n  position: relative;\n  z-index: 0 !important;');
+    expect(stylesSource).toContain('z-index: 95;');
+    expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('.wos-resize-handle {\n  position: absolute;\n  z-index: 65;');
     expect(stylesSource).toContain(".wos-window[data-focused='false'] > .wos-window__iframe-shield");
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield");
@@ -530,6 +532,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-auto-mode__grid {');
     expect(stylesSource).toContain('.wos-auto-mode__events .wos-data-row__name,');
     expect(stylesSource).toContain('.wos-auto-mode__reason {');
+  });
+
+  it('defines compact windowed telemetry context pressure primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-context-pressure {');
+    expect(stylesSource).toContain('.wos-context-pressure__summary {');
+    expect(stylesSource).toContain('.wos-context-pressure__grid {');
+    expect(stylesSource).toContain('.wos-context-pressure__sessions .wos-data-row__name,');
+    expect(stylesSource).toContain('.wos-context-pressure-segments {');
+    expect(stylesSource).toContain(".wos-context-pressure-segments span[data-segment='tool']");
   });
 
   it('documents the canonical terminal frame in isolated Storybook examples', () => {

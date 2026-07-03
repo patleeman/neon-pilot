@@ -499,6 +499,11 @@
 
 .windowed-os-shell .ui-windowed-browser-host {
   position: relative;
+  z-index: 0 !important;
+  max-width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  contain: paint;
   background: var(--wos-surface-2);
 }
 
@@ -589,7 +594,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 .wos-window__iframe-shield {
   position: absolute;
   inset: var(--wos-titlebar-h) 0 0;
-  z-index: 55;
+  z-index: 95;
   display: none;
   background: var(--wos-surface-1);
   pointer-events: none;
@@ -603,6 +608,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(iframe) > .wos-window__iframe-shield,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.wos-window__body iframe) > .wos-window__iframe-shield {
   display: block;
+  pointer-events: auto;
 }
 
 .wos-dialog-layer {
@@ -2129,6 +2135,72 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   white-space: nowrap;
 }
 
+.wos-context-pressure {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-context-pressure__summary {
+  margin-bottom: 0;
+}
+
+.wos-context-pressure__grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: var(--wos-space-4);
+}
+
+.wos-context-pressure__sessions .wos-data-row__name,
+.wos-context-pressure__compactions .wos-data-row__name {
+  font-family: var(--wos-font-mono);
+}
+
+.wos-context-pressure__reason {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-context-pressure-segments {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+}
+
+.wos-context-pressure-segments span {
+  display: block;
+  min-width: 1px;
+  height: 100%;
+}
+
+.wos-context-pressure-segments span[data-segment='system'] {
+  background: var(--wos-diagnostics);
+}
+
+.wos-context-pressure-segments span[data-segment='user'] {
+  background: var(--wos-success);
+}
+
+.wos-context-pressure-segments span[data-segment='assistant'] {
+  background: var(--wos-warning);
+}
+
+.wos-context-pressure-segments span[data-segment='tool'] {
+  background: var(--wos-danger);
+}
+
+.wos-context-pressure-segments span[data-segment='summary'] {
+  background: var(--wos-ink-500);
+}
+
 .wos-agent-loop {
   display: grid;
   min-width: 0;
@@ -2198,7 +2270,8 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 @media (max-width: 900px) {
   .wos-tool-flow__grid,
   .wos-tool-health__bash,
-  .wos-auto-mode__grid {
+  .wos-auto-mode__grid,
+  .wos-context-pressure__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

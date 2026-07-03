@@ -250,7 +250,12 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
                   <TracesAutoMode data={autoMode} presentation="windowed" />
                   <TracesSessionIntegrity events={sessionIntegrity ?? []} presentation="windowed" />
                   <TracesCacheAndSystemPrompt cacheEfficiency={cacheEfficiency} systemPrompt={systemPrompt} />
-                  <TracesContextPressure sessions={contextSessions ?? []} compactions={compactions ?? []} compactionAggs={compactionAggs} />
+                  <TracesContextPressure
+                    sessions={contextSessions ?? []}
+                    compactions={compactions ?? []}
+                    compactionAggs={compactionAggs}
+                    presentation="windowed"
+                  />
                   <TracesAgentLoop loop={agentLoop} presentation="windowed" />
                 </div>
               </WindowedPageSection>

@@ -3,19 +3,37 @@
  */
 
 import type { TraceCompactionAggs, TraceCompactionEvent, TraceContextSession } from '@neon-pilot/extensions/data';
-import { DashboardGrid, DashboardGridCell, PanelHeader, ProgressBar, SectionLabel, SurfacePanel } from '@neon-pilot/extensions/ui';
+import {
+  DashboardGrid,
+  DashboardGridCell,
+  PanelHeader,
+  ProgressBar,
+  SectionLabel,
+  SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedKeyValueGrid,
+} from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 export function TracesContextPressure({
   sessions,
   compactions,
   compactionAggs,
+  presentation = 'stable',
 }: {
   sessions: TraceContextSession[];
   compactions: TraceCompactionEvent[];
   compactionAggs: TraceCompactionAggs | null;
+  presentation?: 'stable' | 'windowed';
 }) {
   if ((!sessions || sessions.length === 0) && (!compactions || compactions.length === 0)) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>Context snapshots appear after agent turns complete.</WindowedEmptyState>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Context Pressure" meta="Waiting for data" metaClassName="bg-transparent px-0" />
@@ -27,6 +45,19 @@ export function TracesContextPressure({
   const highCount = sessions.filter((s) => s.pct > 90).length;
   const medCount = sessions.filter((s) => s.pct > 70 && s.pct <= 90).length;
   const lowCount = sessions.filter((s) => s.pct <= 70).length;
+
+  if (presentation === 'windowed') {
+    return (
+      <WindowedContextPressure
+        sessions={sessions}
+        compactions={compactions}
+        compactionAggs={compactionAggs}
+        highCount={highCount}
+        medCount={medCount}
+        lowCount={lowCount}
+      />
+    );
+  }
 
   return (
     <SurfacePanel className="overflow-hidden">
@@ -115,6 +146,128 @@ export function TracesContextPressure({
       </DashboardGrid>
     </SurfacePanel>
   );
+}
+
+function WindowedContextPressure({
+  sessions,
+  compactions,
+  compactionAggs,
+  highCount,
+  medCount,
+  lowCount,
+}: {
+  sessions: TraceContextSession[];
+  compactions: TraceCompactionEvent[];
+  compactionAggs: TraceCompactionAggs | null;
+  highCount: number;
+  medCount: number;
+  lowCount: number;
+}) {
+  const aboveThreshold = highCount + medCount;
+
+  return (
+    <div className="wos-context-pressure">
+      <WindowedKeyValueGrid
+        className="wos-context-pressure__summary"
+        columns={4}
+        items={[
+          { label: 'Sessions', value: sessions.length },
+          { label: 'Under 70%', value: <WindowedBadge tone={lowCount > 0 ? 'positive' : 'neutral'}>{lowCount}</WindowedBadge> },
+          { label: 'Above 70%', value: <WindowedBadge tone={aboveThreshold > 0 ? 'warning' : 'neutral'}>{aboveThreshold}</WindowedBadge> },
+          {
+            label: 'Saved',
+            value: compactionAggs ? (
+              <WindowedBadge tone={compactionAggs.totalTokensSaved > 0 ? 'positive' : 'neutral'}>
+                {formatNumber(compactionAggs.totalTokensSaved)}
+              </WindowedBadge>
+            ) : (
+              '0'
+            ),
+          },
+        ]}
+      />
+      <div className="wos-context-pressure__grid">
+        <WindowedDataTable
+          className="wos-context-pressure__sessions"
+          columns={[{ label: 'Session' }, { label: 'Fill', align: 'right' }, { label: 'Tokens', align: 'right' }, { label: 'Segments' }]}
+          columnTemplate="minmax(9rem, 1fr) minmax(4.5rem, 0.34fr) minmax(6.5rem, 0.46fr) minmax(10rem, 0.9fr)"
+        >
+          {sessions.length > 0 ? (
+            sessions
+              .slice(0, 8)
+              .map((session) => (
+                <WindowedDataRow
+                  key={session.sessionId}
+                  name={shortSessionId(session.sessionId, 18)}
+                  meta={session.sessionId}
+                  cells={[
+                    { value: <WindowedBadge tone={contextTone(session.pct)}>{Math.round(session.pct)}%</WindowedBadge>, align: 'right' },
+                    { value: `${formatNumber(session.totalTokens)}/${formatNumber(session.contextWindow)}`, align: 'right' },
+                    { value: <WindowedSegmentBar session={session} /> },
+                  ]}
+                />
+              ))
+          ) : (
+            <WindowedDataRow
+              name="No context snapshots"
+              meta="Sessions"
+              cells={[{ value: '0%', align: 'right' }, { value: '0', align: 'right' }, { value: 'Waiting' }]}
+            />
+          )}
+        </WindowedDataTable>
+        <WindowedDataTable
+          className="wos-context-pressure__compactions"
+          columns={[{ label: 'Time' }, { label: 'Reason' }, { label: 'Saved', align: 'right' }]}
+          columnTemplate="minmax(5rem, 0.4fr) minmax(10rem, 1fr) minmax(5rem, 0.38fr)"
+        >
+          {compactions.length > 0 ? (
+            compactions
+              .slice(0, 10)
+              .map((compaction) => (
+                <WindowedDataRow
+                  key={`${compaction.ts}-${compaction.sessionId}`}
+                  name={compaction.ts.slice(11, 16)}
+                  meta={shortSessionId(compaction.sessionId, 16)}
+                  cells={[
+                    { value: <span className="wos-context-pressure__reason">{compaction.reason}</span> },
+                    { value: <WindowedBadge tone="positive">-{formatNumber(compaction.tokensSaved)}</WindowedBadge>, align: 'right' },
+                  ]}
+                />
+              ))
+          ) : (
+            <WindowedDataRow
+              name="None"
+              meta={`${compactionAggs?.autoCount ?? 0} auto / ${compactionAggs?.manualCount ?? 0} manual`}
+              cells={[{ value: 'No compactions' }, { value: <WindowedBadge tone="neutral">0</WindowedBadge>, align: 'right' }]}
+            />
+          )}
+        </WindowedDataTable>
+      </div>
+    </div>
+  );
+}
+
+function WindowedSegmentBar({ session }: { session: TraceContextSession }) {
+  const total = session.segSystem + session.segUser + session.segAssistant + session.segTool + session.segSummary || 1;
+  return (
+    <span className="wos-context-pressure-segments" aria-label={`${session.sessionId} context segments`}>
+      <span data-segment="system" style={{ width: `${(session.segSystem / total) * 100}%` }} />
+      <span data-segment="user" style={{ width: `${(session.segUser / total) * 100}%` }} />
+      <span data-segment="assistant" style={{ width: `${(session.segAssistant / total) * 100}%` }} />
+      <span data-segment="tool" style={{ width: `${(session.segTool / total) * 100}%` }} />
+      <span data-segment="summary" style={{ width: `${(session.segSummary / total) * 100}%` }} />
+    </span>
+  );
+}
+
+function contextTone(pct: number): 'positive' | 'warning' | 'danger' {
+  if (pct > 90) return 'danger';
+  if (pct > 70) return 'warning';
+  return 'positive';
+}
+
+function shortSessionId(sessionId: string, maxLength: number): string {
+  return sessionId.length > maxLength ? `${sessionId.slice(0, maxLength)}...` : sessionId;
 }
 
 function SessionGaugeRow({ session }: { session: TraceContextSession }) {

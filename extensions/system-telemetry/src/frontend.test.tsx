@@ -135,6 +135,22 @@ describe('TelemetryPage', () => {
             systemPromptTokens: 1000,
           },
         ],
+        compactions: [
+          {
+            sessionId: 'session-a',
+            ts: '2026-07-03T12:30:00.000Z',
+            reason: 'auto',
+            tokensBefore: 91000,
+            tokensAfter: 62000,
+            tokensSaved: 29000,
+          },
+        ],
+        compactionAggs: {
+          autoCount: 1,
+          manualCount: 0,
+          totalTokensSaved: 29000,
+          overflowPct: 0,
+        },
         tokensDaily: [
           {
             date: '2026-07-03',
@@ -228,6 +244,8 @@ describe('TelemetryPage', () => {
     );
     expect(tableTemplates).toContain('minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(4rem, 0.32fr)');
     expect(tableTemplates).toContain('minmax(5rem, 0.4fr) minmax(7rem, 0.5fr) minmax(9rem, 1fr)');
+    expect(tableTemplates).toContain('minmax(9rem, 1fr) minmax(4.5rem, 0.34fr) minmax(6.5rem, 0.46fr) minmax(10rem, 0.9fr)');
+    expect(tableTemplates).toContain('minmax(5rem, 0.4fr) minmax(10rem, 1fr) minmax(5rem, 0.38fr)');
     expect(container.querySelector('.ui-data-table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('Highest context pressure')).toBeTruthy();
@@ -235,6 +253,10 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.wos-agent-loop')).toBeTruthy();
     expect(container.querySelector('.wos-agent-loop__durations')).toBeTruthy();
     expect(screen.getByText('Long runs').closest('.wos-data-row')).toBeTruthy();
+    expect(container.querySelector('.wos-context-pressure')).toBeTruthy();
+    expect(container.querySelector('.wos-context-pressure__sessions')).toBeTruthy();
+    expect(container.querySelector('.wos-context-pressure-segments')).toBeTruthy();
+    expect(screen.getByText('-29K').closest('.wos-data-row')).toBeTruthy();
     expect(refetch).toHaveBeenCalled();
     expect(useTracesData).toHaveBeenLastCalledWith('7d', expect.anything());
   });
