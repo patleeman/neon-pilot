@@ -715,7 +715,9 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                   {selectedSavedWorkflow ? (
                     <>
                       <WindowedPageButton onClick={() => editSaved(selectedSavedWorkflow)}>Edit</WindowedPageButton>
-                      <WindowedPageButton onClick={() => void deleteSaved(selectedSavedWorkflow)}>Delete</WindowedPageButton>
+                      <WindowedPageButton tone="danger" onClick={() => void deleteSaved(selectedSavedWorkflow)}>
+                        Delete
+                      </WindowedPageButton>
                     </>
                   ) : null}
                   <WindowedPageButton onClick={() => void saveTemplate(selectedTemplate)}>Save copy</WindowedPageButton>

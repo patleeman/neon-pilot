@@ -180,6 +180,30 @@ describe('Dynamic Workflows surfaces', () => {
     expect(container.querySelector('.ui-field')).toBeNull();
   });
 
+  it('marks destructive saved workflow actions with the shared danger tone in windowed mode', async () => {
+    const pa = createPa({
+      workflows: [],
+      templates: [],
+      saved: [
+        {
+          id: 'saved-review',
+          name: 'Saved review workflow',
+          description: 'Saved review flow.',
+          script: 'return workflow.finish({ summary: "done" });',
+          args: {},
+          cwd: '',
+          model: '',
+          agentDefaults: { allowedTools: ['read'] },
+        },
+      ],
+    });
+
+    render(<WorkflowsPage {...props(pa, { shellPresentation: 'windowed' })} />);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Saved review workflow' });
+    expect(within(dialog).getByRole('button', { name: 'Delete' }).getAttribute('data-tone')).toBe('danger');
+  });
+
   it('uses shared windowed empty-state chrome for empty workflow lists', async () => {
     const pa = createPa({ workflows: [], templates: [], saved: [] });
     const { container } = render(<WorkflowsPage {...props(pa, { shellPresentation: 'windowed' })} />);
