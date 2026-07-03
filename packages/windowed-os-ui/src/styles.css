@@ -392,7 +392,7 @@
 
 .wos-window__titlebar {
   position: relative;
-  z-index: 60;
+  z-index: 70;
   display: flex;
   min-width: 0;
   user-select: none;
@@ -3690,7 +3690,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 
 .wos-resize-handle {
   position: absolute;
-  z-index: 65;
+  z-index: 55;
   pointer-events: auto;
   user-select: none;
   touch-action: none;

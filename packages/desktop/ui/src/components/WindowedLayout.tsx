@@ -1202,6 +1202,11 @@ export function WindowedLayout() {
       }
 
       if (target.closest('.wos-window__titlebar')) {
+        const titlebarEdge = resizeEdgeForPointer(event, windowElement);
+        if (titlebarEdge?.includes('n')) {
+          startResize(event, windowModel, titlebarEdge);
+          return;
+        }
         startDrag(event, windowModel);
         return;
       }

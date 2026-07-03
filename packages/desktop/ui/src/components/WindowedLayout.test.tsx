@@ -1005,6 +1005,49 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow.getAttribute('style')).toContain('height: 614px');
   });
 
+  it('resizes from the titlebar top edge while keeping titlebar controls unobstructed', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    routinesWindow.getBoundingClientRect = () =>
+      ({
+        x: 42,
+        y: 34,
+        left: 42,
+        top: 34,
+        right: 742,
+        bottom: 534,
+        width: 700,
+        height: 500,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const titlebar = routinesWindow.querySelector<HTMLElement>('.wos-window__titlebar');
+    expect(titlebar).toBeTruthy();
+
+    fireEvent.mouseDown(titlebar!, { button: 0, clientX: 392, clientY: 36 });
+    fireEvent.mouseMove(window, { clientX: 392, clientY: -80 });
+    fireEvent.mouseUp(window);
+
+    expect(routinesWindow.getAttribute('style')).toContain('left: 42px');
+    expect(routinesWindow.getAttribute('style')).toContain('top: -82px');
+    expect(routinesWindow.getAttribute('style')).toContain('width: 700px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 616px');
+    expect(within(routinesWindow).getByRole('button', { name: /close routines/i })).toBeTruthy();
+  });
+
   it('resizes windows from the bottom-right corner using visible resize handles', async () => {
     seedWindowedWindows([
       {
