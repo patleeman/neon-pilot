@@ -348,26 +348,31 @@ describe('GatewaysPage', () => {
     expect(screen.queryByRole('dialog', { name: 'Recent activity' })).toBeNull();
     expect(screen.queryByText('Gateway context')).toBeNull();
 
-    const toolButtons = screen.getAllByRole('button', { name: 'Open' });
-    fireEvent.click(toolButtons[0]);
+    expect(screen.queryByRole('button', { name: 'Open' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create' })).toBeNull();
+    const configurationButtons = screen.getAllByRole('button', { name: 'Open Telegram configuration' });
+    fireEvent.click(configurationButtons[configurationButtons.length - 1]);
     expect(screen.getByRole('dialog', { name: 'Telegram configuration' })).toBeTruthy();
     expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Telegram configuration'));
-    fireEvent.click(toolButtons[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram access' }));
     expect(screen.getByRole('dialog', { name: 'Telegram access' })).toBeTruthy();
     expect(screen.getByText('Approved users')).toBeTruthy();
     expect(screen.getByText('No approved users yet.').classList.contains('wos-empty-state')).toBe(true);
     expect(screen.getByText('No approved chats yet.').classList.contains('wos-empty-state')).toBe(true);
+    fireEvent.change(screen.getByLabelText('Telegram user ID'), { target: { value: '1191448898' } });
+    expect(screen.getByRole('button', { name: 'Add approved users' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Telegram access'));
-    fireEvent.click(toolButtons[2]);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram activity' }));
     expect(screen.getByRole('dialog', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('No Telegram gateway events yet.').classList.contains('wos-empty-state')).toBe(true);
     expect(container.querySelector('.wos-gateway-empty')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Recent activity'));
-    fireEvent.click(toolButtons[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram access' }));
 
     fireEvent.click(screen.getByLabelText('Enable Telegram gateway'));
     await waitFor(() =>

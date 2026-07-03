@@ -335,7 +335,13 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <WindowedPageButton disabled={busy || !tokenConfigured} onClick={testToken}>
                   Test bot
                 </WindowedPageButton>
-                <WindowedPageButton onClick={() => setWindowedDialog('configuration')}>Configure</WindowedPageButton>
+                <WindowedPageButton
+                  aria-label="Open Telegram configuration"
+                  title="Open Telegram configuration"
+                  onClick={() => setWindowedDialog('configuration')}
+                >
+                  Configure
+                </WindowedPageButton>
                 <WindowedPageButton disabled={busy} onClick={() => void load()}>
                   Refresh
                 </WindowedPageButton>
@@ -406,7 +412,12 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                         onChange={() => setConnectionEnabled(!gatewayEnabled)}
                       />
                     ) : (
-                      <WindowedPageButton disabled={busy} onClick={createConnection}>
+                      <WindowedPageButton
+                        disabled={busy}
+                        aria-label="Create Telegram connection"
+                        title="Create Telegram connection"
+                        onClick={createConnection}
+                      >
                         Create
                       </WindowedPageButton>
                     )
@@ -424,7 +435,15 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                       {tokenConfigured ? 'Configured' : 'Missing token'}
                     </WindowedBadge>
                   }
-                  action={<WindowedPageButton onClick={() => setWindowedDialog('configuration')}>Open</WindowedPageButton>}
+                  action={
+                    <WindowedPageButton
+                      aria-label="Open Telegram configuration"
+                      title="Open Telegram configuration"
+                      onClick={() => setWindowedDialog('configuration')}
+                    >
+                      Open
+                    </WindowedPageButton>
+                  }
                 />
                 <WindowedDataRow
                   name="Access"
@@ -434,7 +453,15 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                       {pageState.access.approvedUserIds.length + pageState.access.approvedChatIds.length} approved
                     </WindowedBadge>
                   }
-                  action={<WindowedPageButton onClick={() => setWindowedDialog('access')}>Open</WindowedPageButton>}
+                  action={
+                    <WindowedPageButton
+                      aria-label="Open Telegram access"
+                      title="Open Telegram access"
+                      onClick={() => setWindowedDialog('access')}
+                    >
+                      Open
+                    </WindowedPageButton>
+                  }
                 />
                 <WindowedDataRow
                   name="Activity"
@@ -442,7 +469,15 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                   status={
                     <WindowedBadge tone={telegramEvents.length ? 'positive' : 'neutral'}>{telegramEvents.length} events</WindowedBadge>
                   }
-                  action={<WindowedPageButton onClick={() => setWindowedDialog('activity')}>Open</WindowedPageButton>}
+                  action={
+                    <WindowedPageButton
+                      aria-label="Open Telegram activity"
+                      title="Open Telegram activity"
+                      onClick={() => setWindowedDialog('activity')}
+                    >
+                      Open
+                    </WindowedPageButton>
+                  }
                 />
               </WindowedDataTable>
             </WindowedPageSection>
@@ -483,7 +518,12 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                       </WindowedPageButton>
                     ) : null}
                     {tokenConfigured ? (
-                      <WindowedPageButton disabled={busy} onClick={removeToken}>
+                      <WindowedPageButton
+                        disabled={busy}
+                        aria-label="Remove Telegram bot token"
+                        title="Remove Telegram bot token"
+                        onClick={removeToken}
+                      >
                         Remove
                       </WindowedPageButton>
                     ) : null}
@@ -902,7 +942,12 @@ function WindowedAllowlistEditor({
           />
         </WindowedField>
         {value.trim() ? (
-          <WindowedPageButton disabled={busy} onClick={onAdd}>
+          <WindowedPageButton
+            disabled={busy}
+            aria-label={`Add ${title.toLowerCase()}`}
+            title={`Add ${title.toLowerCase()}`}
+            onClick={onAdd}
+          >
             Add
           </WindowedPageButton>
         ) : null}
@@ -916,7 +961,12 @@ function WindowedAllowlistEditor({
               meta="Allowed"
               accent="gateways"
               status={
-                <WindowedPageButton disabled={busy} onClick={() => onRemove(entry)}>
+                <WindowedPageButton
+                  disabled={busy}
+                  aria-label={`Remove ${entry} from ${title.toLowerCase()}`}
+                  title={`Remove ${entry} from ${title.toLowerCase()}`}
+                  onClick={() => onRemove(entry)}
+                >
                   Remove
                 </WindowedPageButton>
               }
