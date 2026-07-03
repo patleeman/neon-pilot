@@ -351,8 +351,8 @@ function hasCoveredChatWindow(visibleWindows: DesktopWindowModel[]): boolean {
   return visibleWindows.some((windowModel) => windowModel.kind === 'chat' && isWindowCoveredByHigherWindow(windowModel, visibleWindows));
 }
 
-function hasCompetingWindowedSurface(visibleWindows: DesktopWindowModel[]): boolean {
-  return visibleWindows.length > 1;
+function hasOverlappingWindowedSurface(visibleWindows: DesktopWindowModel[]): boolean {
+  return visibleWindows.some((windowModel) => isWindowCoveredByHigherWindow(windowModel, visibleWindows));
 }
 
 function isWindowClippedByDesktop(windowModel: DesktopWindowModel, desktop: DesktopRect): boolean {
@@ -690,9 +690,10 @@ function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode
   );
 }
 
-function WindowRouteBody({ onNavigate, route }: { onNavigate: WindowNavigate; route: string }) {
+function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boolean; onNavigate: WindowNavigate; route: string }) {
   const isChatRoute = route.startsWith('/conversations');
   const [chatWorkbenchOpen, setChatWorkbenchOpen] = useState(true);
+  const effectiveChatWorkbenchOpen = chatWorkbenchOpen && !compact;
 
   if (!isChatRoute) {
     return (
@@ -709,24 +710,29 @@ function WindowRouteBody({ onNavigate, route }: { onNavigate: WindowNavigate; ro
   return (
     <WindowedChatSurface
       className="wos-window-route-body wos-window-route-body--chat"
-      data-workbench-collapsed={chatWorkbenchOpen ? undefined : 'true'}
+      data-compact={compact ? 'true' : undefined}
+      data-workbench-collapsed={effectiveChatWorkbenchOpen ? undefined : 'true'}
     >
       <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
         {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
         <button
           type="button"
           className="wos-chat-window-toolbar__button"
-          aria-pressed={!chatWorkbenchOpen}
+          aria-pressed={!effectiveChatWorkbenchOpen && !compact}
+          disabled={compact}
+          title={compact ? 'Resize the chat window wider to show the workbench.' : undefined}
           onClick={() => setChatWorkbenchOpen((open) => !open)}
         >
-          {chatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
+          {effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
         </button>
       </div>
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
           <Route
             path="/"
-            element={<Layout embeddedWindowChrome forceWorkbench={chatWorkbenchOpen} suppressWorkbench={!chatWorkbenchOpen} />}
+            element={
+              <Layout embeddedWindowChrome forceWorkbench={effectiveChatWorkbenchOpen} suppressWorkbench={!effectiveChatWorkbenchOpen} />
+            }
           >
             <Route
               path="conversations"
@@ -1272,7 +1278,7 @@ export function WindowedLayout() {
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, activeDesktopRect) : null;
   const browserBlockedByWindowStack =
     hasCoveredChatWindow(visibleWindows) ||
-    hasCompetingWindowedSurface(visibleWindows) ||
+    hasOverlappingWindowedSurface(visibleWindows) ||
     hasClippedWindow(visibleWindows, activeDesktopRect);
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
@@ -1382,7 +1388,11 @@ export function WindowedLayout() {
               <div key={edge} className={`wos-resize-handle wos-resize-${edge}`} data-resize-edge={edge} aria-hidden="true" />
             ))}
           >
-            <WindowRouteBody route={windowModel.route} onNavigate={(to) => navigateWindow(windowModel.id, to)} />
+            <WindowRouteBody
+              compact={windowModel.kind === 'chat' && windowModel.bounds.width < 720}
+              route={windowModel.route}
+              onNavigate={(to) => navigateWindow(windowModel.id, to)}
+            />
           </WindowFrame>
         ))}
       </main>

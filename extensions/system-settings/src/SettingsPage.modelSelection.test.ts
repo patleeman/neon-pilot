@@ -189,4 +189,16 @@ describe('windowed settings navigation', () => {
     expect(source).toContain('export function ConversationSettingsPage');
     expect(source).toContain("sectionIds={['settings-conversation']}");
   });
+
+  it('stacks the windowed settings rail and controls inside narrow windows', () => {
+    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/frontend.css'), 'utf8');
+
+    expect(source).toContain('@container (max-width: 560px)');
+    expect(source).toContain(".settings-page-windowed.wos-page-shell[data-layout='two-column']");
+    expect(source).toContain('grid-template-rows: auto minmax(0, 1fr);');
+    expect(source).toContain('.settings-page-windowed-nav');
+    expect(source).toContain('border-bottom: 2px solid var(--wos-ink-900);');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-control');
+    expect(source).toContain('width: 100%;');
+  });
 });

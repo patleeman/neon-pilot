@@ -302,6 +302,33 @@ describe('WindowedLayout route windows', () => {
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('false');
   });
 
+  it('auto-collapses the attached workbench when a chat window is too narrow', () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 32, y: 32, width: 520, height: 360 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
+    const toggle = within(chatWindow).getByRole('button', { name: /show workbench/i });
+
+    expect(chatSurface?.getAttribute('data-compact')).toBe('true');
+    expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBe('true');
+    expect((toggle as HTMLButtonElement).disabled).toBe(true);
+    expect(toggle.getAttribute('title')).toContain('Resize');
+    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
+    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
+  });
+
   it('keeps the windowed shell app controls text-only without monogram badges or secondary labels', () => {
     const { container } = renderWindowedLayout();
 
@@ -1543,14 +1570,14 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
 
-  it('keeps native browser views suppressed when any additional window is visible beside focused chat', async () => {
+  it('keeps renderer iframe paint enabled when multiple windows are visible but not overlapping', async () => {
     seedWindowedWindows([
       {
         id: 'chat:draft',
         kind: 'chat',
         title: 'New conversation',
         route: '/conversations/new',
-        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        bounds: { x: 42, y: 34, width: 620, height: 500 },
         minimized: false,
         focused: true,
       },
@@ -1559,7 +1586,7 @@ describe('WindowedLayout route windows', () => {
         kind: 'route',
         title: 'Routines',
         route: '/routines',
-        bounds: { x: 800, y: 70, width: 420, height: 360 },
+        bounds: { x: 700, y: 70, width: 300, height: 360 },
         minimized: false,
         focused: false,
         singleton: true,
@@ -1571,7 +1598,13 @@ describe('WindowedLayout route windows', () => {
 
     const shell = container.querySelector('.windowed-os-shell');
     expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
-    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 1300));
+    });
+    expect(shell?.getAttribute('data-window-interaction')).toBeNull();
+    expect(shell?.getAttribute('data-frame-paint-blocked')).toBeNull();
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBeNull();
+    expect(screen.getByRole('region', { name: /routines/i }).getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('marks overlapping windows so embedded iframes cannot paint over the foreground stack', async () => {

@@ -549,6 +549,45 @@
   padding: 0.5rem 0.625rem;
 }
 
+@container (max-width: 560px) {
+  .settings-page-windowed.wos-page-shell[data-layout='two-column'] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .settings-page-windowed-nav {
+    max-height: 8.75rem;
+    border-right: 0;
+    border-bottom: 2px solid var(--wos-ink-900);
+  }
+
+  .settings-page-windowed .settings-page-control-row.ui-settings-row,
+  .settings-page-windowed .settings-page-control-row.wos-settings-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .settings-page-windowed .settings-page-control-actions.ui-settings-row-actions,
+  .settings-page-windowed .settings-page-control-actions.wos-settings-row__actions {
+    align-items: stretch;
+    justify-content: flex-start;
+    min-width: 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  .settings-page-windowed .settings-page-control-actions .ui-segmented-control {
+    width: 100%;
+  }
+
+  .settings-page-windowed .settings-page-control-actions .ui-segmented-button {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-inline: 0.375rem;
+  }
+}
+
 @media (min-width: 1280px) {
   .settings-page-shell.ui-app-page-shell {
     padding-inline: 2.5rem;
