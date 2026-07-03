@@ -587,7 +587,7 @@ export function ToolBlock({
   return (
     <div
       className={cx(
-        'rounded-lg text-[12px] font-mono overflow-hidden transition-colors',
+        'ui-tool-block rounded-lg text-[12px] font-mono overflow-hidden transition-colors',
         meta.color,
         isError && 'border border-border-subtle/70 bg-elevated/25 text-danger',
       )}

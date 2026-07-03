@@ -61,6 +61,7 @@ describe('ToolBlock commands', () => {
       root?.render(<ToolBlock block={toolBlock()} autoOpen={false} />);
     });
 
+    expect(container.querySelector('.ui-tool-block')).not.toBeNull();
     expect(container.textContent).toContain('show');
     expect(container.textContent).not.toContain('result-output');
 

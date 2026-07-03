@@ -729,6 +729,24 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-conversation-setup-empty');
   });
 
+  it('restyles transcript cards, metadata, pills, and tool blocks with scoped windowed chrome', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1']");
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-user');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-assistant');
+    expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-meta');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-action-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-action-button-icon');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill-accent');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill-danger');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-tool-block');
+    expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+  });
+
   it('restyles the attached workbench tab strip with scoped windowed chrome', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
