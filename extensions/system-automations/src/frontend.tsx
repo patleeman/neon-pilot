@@ -781,7 +781,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                         meta={windowedAutomationMeta(task)}
                         status={<WindowedBadge tone={windowedStatusTone(task)}>{statusLabel(task)}</WindowedBadge>}
                         action={
-                          <span className="wos-automation-row__actions">
+                          <span className="wos-automation-actions">
                             <WindowedPageButton
                               aria-label={`Open details for ${title}`}
                               title={`Open details for ${title}`}

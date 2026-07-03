@@ -355,6 +355,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('eyebrow="Scheduled work"');
     expect(source).toContain('title="Overview"');
     expect(source).toContain('title="Task queue"');
+    expect(source).toContain(
+      "<WindowedDataTable columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}",
+    );
+    expect(source).toContain('className="wos-automation-actions"');
+    expect(source).not.toContain('wos-automation-table');
+    expect(source).not.toContain('wos-automation-row');
     expect(source).toContain('<WindowedDialog title="Automation details"');
     expect(source).toContain('title="Automation context"');
     expect(source).not.toContain('title="Selected automation"');

@@ -746,43 +746,48 @@ export const AutomationsPage: Story = {
             </WindowedPageSection>
 
             <WindowedPageSection title="Task queue">
-              <div className="wos-automation-table">
-                <div className="wos-automation-table__header">
-                  <span>Automation</span>
-                  <span>Schedule</span>
-                  <span>Next</span>
-                  <span>Owner</span>
-                  <span>Actions</span>
-                </div>
+              <WindowedDataTable columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}>
                 {[
-                  ['Release watch', '0 9 * * 1-5', 'Today 09:00', 'Release notes', 'running'],
-                  ['Dependency audit', 'Mondays 08:30', 'Mon 08:30', 'Package drift', 'paused'],
-                  ['Inbox sweep', 'Every 2 hours', '12:00', 'Triage', 'ready'],
-                ].map(([name, schedule, next, owner, status]) => (
-                  <div key={name} className="wos-automation-row" data-active={name === 'Release watch'}>
-                    <button type="button" className="wos-automation-row__identity">
-                      <span>{name}</span>
-                      <small>
-                        {status === 'running'
-                          ? 'Summarize merged changes'
-                          : status === 'paused'
-                            ? 'Check package drift'
-                            : 'Group follow-up threads'}
-                      </small>
-                    </button>
-                    <span className="wos-automation-row__schedule">{schedule}</span>
-                    <span>{next}</span>
-                    <button type="button" className="wos-automation-row__owner">
-                      {owner}
-                    </button>
-                    <span className="wos-automation-row__actions">
-                      <WindowedPageButton>Run</WindowedPageButton>
-                      <WindowedPageButton>{status === 'paused' ? 'Resume' : 'Pause'}</WindowedPageButton>
-                      <WindowedPageButton>Edit</WindowedPageButton>
-                    </span>
-                  </div>
+                  {
+                    name: 'Release watch',
+                    schedule: '0 9 * * 1-5',
+                    next: 'Today 09:00',
+                    owner: 'Release notes',
+                    prompt: 'Summarize merged changes',
+                    status: <WindowedBadge tone="warning">Running</WindowedBadge>,
+                  },
+                  {
+                    name: 'Dependency audit',
+                    schedule: 'Mondays 08:30',
+                    next: 'Mon 08:30',
+                    owner: 'Package drift',
+                    prompt: 'Check package drift',
+                    status: <WindowedBadge tone="neutral">Paused</WindowedBadge>,
+                  },
+                  {
+                    name: 'Inbox sweep',
+                    schedule: 'Every 2 hours',
+                    next: '12:00',
+                    owner: 'Triage',
+                    prompt: 'Group follow-up threads',
+                    status: <WindowedBadge tone="positive">Ready</WindowedBadge>,
+                  },
+                ].map((automation) => (
+                  <WindowedDataRow
+                    key={automation.name}
+                    name={automation.name}
+                    meta={`${automation.schedule} · next ${automation.next} · ${automation.owner} · ${automation.prompt}`}
+                    status={automation.status}
+                    action={
+                      <span className="wos-automation-actions">
+                        <WindowedPageButton>Run</WindowedPageButton>
+                        <WindowedPageButton>{automation.name === 'Dependency audit' ? 'Resume' : 'Pause'}</WindowedPageButton>
+                        <WindowedPageButton>Details</WindowedPageButton>
+                      </span>
+                    }
+                  />
                 ))}
-              </div>
+              </WindowedDataTable>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
