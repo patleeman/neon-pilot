@@ -1850,6 +1850,21 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   font: var(--wos-text-row);
 }
 
+.wos-page-button[data-density='icon'] {
+  display: inline-grid;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  place-items: center;
+  padding: 0;
+}
+
+.wos-page-button[data-density='icon'] svg {
+  width: 15px;
+  height: 15px;
+}
+
 .wos-page-button[data-tone='accent'] {
   background: var(--wos-extensions);
 }

@@ -1838,23 +1838,27 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                         name={extension.name}
                         meta={`${extensionSourceLabel(extension)} · ${formatAppearsInSummary(extension)}`}
                         status={
-                          <span className="flex flex-col items-start gap-1">
+                          <span className="wos-status-stack">
                             <WindowedBadge tone={extensionStatusTone(extension, unavailableCatalogItem)}>
                               {extensionStatusLabel(extension, unavailableCatalogItem)}
                             </WindowedBadge>
                             {unavailableCatalogItem ? (
-                              <span className="text-[11px] text-warning">Unavailable</span>
+                              <span className="wos-status-note" data-tone="danger">
+                                Unavailable
+                              </span>
                             ) : catalogItem?.updateAvailable ? (
-                              <span className="text-[11px] text-accent">{catalogItem.availableVersion ?? catalogItem.version}</span>
+                              <span className="wos-status-note" data-tone="accent">
+                                {catalogItem.availableVersion ?? catalogItem.version}
+                              </span>
                             ) : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]) ? (
-                              <span className="text-[11px] text-danger">
+                              <span className="wos-status-note" data-tone="danger">
                                 {extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]}
                               </span>
                             ) : null}
                           </span>
                         }
                         action={
-                          <span className="flex items-center justify-end gap-2">
+                          <span className="wos-inline-actions">
                             {showEnablement ? (
                               <WindowedToggle
                                 checked={extension.enabled}
@@ -1867,17 +1871,19 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                             <WindowedPageButton
                               aria-label={`Details for ${extension.name}`}
                               title={`Details for ${extension.name}`}
+                              density="icon"
                               onClick={() => selectExtension(extension)}
                             >
-                              Details
+                              <DetailsIcon />
                             </WindowedPageButton>
                             {route && extension.enabled ? (
                               <WindowedPageButton
                                 aria-label={`Open ${extension.name}`}
                                 title={`Open ${extension.name}`}
+                                density="icon"
                                 onClick={() => navigate(route)}
                               >
-                                Open
+                                <OpenIcon />
                               </WindowedPageButton>
                             ) : null}
                           </span>

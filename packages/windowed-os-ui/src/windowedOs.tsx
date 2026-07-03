@@ -364,11 +364,19 @@ export interface WindowedPageButtonProps extends Omit<ButtonHTMLAttributes<HTMLB
   children: ReactNode;
   tone?: 'neutral' | 'accent' | 'danger';
   type?: 'button' | 'submit';
+  density?: 'normal' | 'icon';
 }
 
-export function WindowedPageButton({ children, tone = 'neutral', type = 'button', className, ...props }: WindowedPageButtonProps) {
+export function WindowedPageButton({
+  children,
+  tone = 'neutral',
+  type = 'button',
+  density = 'normal',
+  className,
+  ...props
+}: WindowedPageButtonProps) {
   return (
-    <button type={type} className={cx('wos-page-button', className)} data-tone={tone} {...props}>
+    <button type={type} className={cx('wos-page-button', className)} data-tone={tone} data-density={density} {...props}>
       {children}
     </button>
   );

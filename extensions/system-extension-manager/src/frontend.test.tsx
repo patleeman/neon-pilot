@@ -316,9 +316,12 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByRole('radio', { name: /Installed/ })).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Platform/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for Menu Test' }).getAttribute('data-density')).toBe('icon');
     expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
       'minmax(16rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.72fr)',
     );
+    expect(container.querySelector('.wos-inline-actions')).toBeTruthy();
+    expect(container.querySelector('.wos-status-stack')).toBeTruthy();
     expect(screen.queryByText('Selected extension')).toBeNull();
     expect(screen.queryByText('Selection')).toBeNull();
     expect(container.querySelector('.wos-page-eyebrow')).toBeNull();

@@ -312,6 +312,21 @@ describe('WindowedPageButton', () => {
     expect(html).toContain('disabled=""');
     expect(html).toContain('Details');
   });
+
+  it('supports icon-density actions without replacing accessible names', () => {
+    const html = renderToStaticMarkup(
+      <WindowedPageButton aria-label="Open Browser" title="Open Browser" density="icon">
+        <svg aria-hidden="true" viewBox="0 0 16 16" />
+      </WindowedPageButton>,
+    );
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(html).toContain('data-density="icon"');
+    expect(html).toContain('aria-label="Open Browser"');
+    expect(stylesSource).toContain(".wos-page-button[data-density='icon']");
+    expect(stylesSource).toContain('place-items: center;');
+  });
 });
 
 describe('WindowFrame', () => {
