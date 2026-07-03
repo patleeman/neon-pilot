@@ -108,6 +108,8 @@ describe('ModelGatewaySettingsPanel', () => {
     const { container } = render(<ModelGatewaySettingsPanel pa={pa as never} settingsContext={{ shellPresentation: 'windowed' }} />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Loopback endpoint' })).toBeTruthy());
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
     expect(container.querySelector('.wos-page-section')).toBeTruthy();
     expect(container.querySelector('.wos-key-value-grid')).toBeTruthy();
     expect(container.querySelector('.wos-data-table')).toBeTruthy();
@@ -119,6 +121,22 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(screen.getByRole('button', { name: 'Clear logs' }).getAttribute('data-tone')).toBe('danger');
     expect(screen.getByText('POST /v1/responses')).toBeTruthy();
     expect(screen.getByText('183ms')).toBeTruthy();
+  });
+
+  it('keeps windowed loading state inside the canonical page shell', () => {
+    const status = deferred<never>();
+    const pa = {
+      extension: {
+        invoke: vi.fn(() => status.promise),
+      },
+      ui: { notify: vi.fn() },
+    };
+
+    const { container } = render(<ModelGatewaySettingsPanel pa={pa as never} settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
+    expect(screen.getByText('Loading AI Gateway settings.').closest('.wos-state-block')).toBeTruthy();
   });
 
   it('shows a user-facing message when clipboard copy is blocked', async () => {
