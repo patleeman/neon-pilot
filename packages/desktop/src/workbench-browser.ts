@@ -385,42 +385,56 @@ export class WorkbenchBrowserViewController {
 
   async navigate(owner: WebContents, inputUrl: unknown, sessionKey?: string | null): Promise<WorkbenchBrowserState> {
     const ownerWindow = this.requireOwnerWindow(owner);
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     const view = this.ensureView(ownerWindow, owner.id, sessionKey);
     const url = normalizeWorkbenchBrowserUrl(inputUrl);
     await view.webContents.loadURL(url);
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     return getState(view.webContents, this.views.get(this.viewKey(owner.id, sessionKey)));
   }
 
   async goBack(owner: WebContents, sessionKey?: string | null): Promise<WorkbenchBrowserState> {
+    const ownerWindow = this.requireOwnerWindow(owner);
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     const view = this.requireView(owner, sessionKey);
     const nav = view.webContents.navigationHistory;
     if (nav.canGoBack()) {
       nav.goBack();
       await wait(120);
     }
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     return getState(view.webContents, this.views.get(this.viewKey(owner.id, sessionKey)));
   }
 
   async goForward(owner: WebContents, sessionKey?: string | null): Promise<WorkbenchBrowserState> {
+    const ownerWindow = this.requireOwnerWindow(owner);
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     const view = this.requireView(owner, sessionKey);
     const nav = view.webContents.navigationHistory;
     if (nav.canGoForward()) {
       nav.goForward();
       await wait(120);
     }
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     return getState(view.webContents, this.views.get(this.viewKey(owner.id, sessionKey)));
   }
 
   async reload(owner: WebContents, sessionKey?: string | null): Promise<WorkbenchBrowserState> {
+    const ownerWindow = this.requireOwnerWindow(owner);
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     const view = this.requireView(owner, sessionKey);
     view.webContents.reload();
     await wait(120);
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     return getState(view.webContents, this.views.get(this.viewKey(owner.id, sessionKey)));
   }
 
   stop(owner: WebContents, sessionKey?: string | null): WorkbenchBrowserState {
+    const ownerWindow = this.requireOwnerWindow(owner);
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     const view = this.requireView(owner, sessionKey);
     view.webContents.stop();
+    this.hideSuppressedOwnerViews(owner, ownerWindow);
     return getState(view.webContents, this.views.get(this.viewKey(owner.id, sessionKey)));
   }
 
@@ -665,6 +679,12 @@ export class WorkbenchBrowserViewController {
       return false;
     }
     return true;
+  }
+
+  private hideSuppressedOwnerViews(owner: WebContents, ownerWindow: BrowserWindow): void {
+    if (this.isOwnerSuppressed(owner.id)) {
+      this.hideAllOwnerViews(owner.id, true, ownerWindow);
+    }
   }
 
   private requireOwnerWindow(owner: WebContents): BrowserWindow {

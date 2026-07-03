@@ -2921,12 +2921,12 @@ body[data-neon-pilot-windowed-shell-active='true'] iframe,
   --wos-list-active-ink: white;
 }
 
-.wos-list-item:hover {
+.wos-list-item[data-selectable='true']:hover {
   background: var(--wos-surface-3);
 }
 
 .wos-list-item[data-active='true'],
-.wos-list-item[data-active='true']:hover {
+.wos-list-item[data-active='true'][data-selectable='true']:hover {
   background: var(--wos-list-active);
   color: var(--wos-list-active-ink);
 }

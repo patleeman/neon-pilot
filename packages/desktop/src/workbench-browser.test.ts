@@ -101,6 +101,16 @@ describe('workbench browser validation', () => {
     expect(source).toContain('this.hideAllOwnerViews(owner.id, true, ownerWindow);');
   });
 
+  it('keeps navigation commands from re-showing suppressed native browser views', () => {
+    const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
+
+    expect(source).toContain('private hideSuppressedOwnerViews(owner: WebContents, ownerWindow: BrowserWindow): void');
+    expect(source).toContain('this.hideSuppressedOwnerViews(owner, ownerWindow);\n    const view = this.ensureView');
+    expect(source).toContain('await view.webContents.loadURL(url);\n    this.hideSuppressedOwnerViews(owner, ownerWindow);');
+    expect(source).toContain('view.webContents.reload();\n    await wait(120);\n    this.hideSuppressedOwnerViews(owner, ownerWindow);');
+    expect(source).toContain('view.webContents.stop();\n    this.hideSuppressedOwnerViews(owner, ownerWindow);');
+  });
+
   it('forwards command palette shortcuts out of the embedded browser', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 

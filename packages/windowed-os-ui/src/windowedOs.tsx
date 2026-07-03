@@ -986,15 +986,37 @@ export function WindowedListItem({
   status,
   onSelect,
 }: WindowedListItemProps) {
-  return (
-    <button type="button" className="wos-list-item" data-active={active} data-accent={accent} data-depth={depth} onClick={onSelect}>
+  const content = (
+    <>
       <span className="wos-list-item__copy">
         <span className="wos-list-item__title">{title}</span>
         {meta ? <span className="wos-list-item__meta">{meta}</span> : null}
         {detail ? <span className="wos-list-item__detail">{detail}</span> : null}
       </span>
       {status ? <span className="wos-list-item__status">{status}</span> : null}
-    </button>
+    </>
+  );
+
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        className="wos-list-item"
+        data-active={active}
+        data-accent={accent}
+        data-depth={depth}
+        data-selectable="true"
+        onClick={onSelect}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="wos-list-item" data-active={active} data-accent={accent} data-depth={depth}>
+      {content}
+    </div>
   );
 }
 

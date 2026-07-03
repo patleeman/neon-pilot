@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Taskbar, WindowedDataRow, WindowedDialog, WindowedMenuPanel, WindowedNumberStepper } from './windowedOs';
+import { Taskbar, WindowedDataRow, WindowedDialog, WindowedListItem, WindowedMenuPanel, WindowedNumberStepper } from './windowedOs';
 
 function rect(input: { left: number; top: number; width: number; height: number }): DOMRect {
   return {
@@ -190,6 +190,27 @@ describe('WindowedNumberStepper interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: /increase minimum prompt/i }));
 
     expect(onChange).toHaveBeenCalledWith(290);
+  });
+});
+
+describe('WindowedListItem interactions', () => {
+  it('keeps selectable navigation rows keyboard-operable', () => {
+    const onSelect = vi.fn();
+    render(<WindowedListItem title="Providers" active accent="settings" onSelect={onSelect} />);
+
+    const row = screen.getByRole('button', { name: /providers/i });
+    expect(row.getAttribute('data-selectable')).toBe('true');
+
+    fireEvent.click(row);
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not expose informational rows as focusable controls', () => {
+    render(<WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" accent="chat" />);
+
+    expect(screen.queryByRole('button', { name: /changelog/i })).toBeNull();
+    expect(screen.getByText('CHANGELOG.md').closest('.wos-list-item')?.tagName).toBe('DIV');
   });
 });
 

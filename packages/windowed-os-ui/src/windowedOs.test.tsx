@@ -167,6 +167,26 @@ describe('WindowedEmptyState', () => {
   });
 });
 
+describe('WindowedListItem', () => {
+  it('renders informational list rows without button semantics', () => {
+    const html = renderToStaticMarkup(<WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" accent="chat" />);
+
+    expect(html).toContain('<div class="wos-list-item"');
+    expect(html).toContain('CHANGELOG.md');
+    expect(html).not.toContain('<button');
+    expect(html).not.toContain('data-selectable="true"');
+  });
+
+  it('renders selectable list rows as buttons', () => {
+    const html = renderToStaticMarkup(<WindowedListItem title="Appearance" active accent="settings" onSelect={() => undefined} />);
+
+    expect(html).toContain('<button');
+    expect(html).toContain('type="button"');
+    expect(html).toContain('data-selectable="true"');
+    expect(html).toContain('data-active="true"');
+  });
+});
+
 describe('WindowedToolbar', () => {
   it('renders compact toolbar primary and end slots', () => {
     const html = renderToStaticMarkup(
