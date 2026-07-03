@@ -427,10 +427,21 @@ export function WindowedDialog({
   const dialogRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    dialogRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
     return () => {
       cleanupDragRef.current?.();
     };
   }, []);
+
+  const handleDialogKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    onClose();
+  };
 
   const startDialogDrag = (event: ReactMouseEvent<HTMLElement>) => {
     if (modal || event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
@@ -489,6 +500,8 @@ export function WindowedDialog({
         aria-label={title}
         data-dragging={dragging ? 'true' : undefined}
         style={dialogStyle}
+        tabIndex={-1}
+        onKeyDown={handleDialogKeyDown}
       >
         <header className="wos-dialog__titlebar" data-accent={accent} onMouseDown={startDialogDrag}>
           <div className="wos-dialog__identity">

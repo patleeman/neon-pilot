@@ -87,6 +87,40 @@ describe('WindowedDialog interactions', () => {
     expect(dialog.getAttribute('data-dragging')).toBeNull();
     expect(dialog.getAttribute('style')).toBeNull();
   });
+
+  it('focuses newly opened subwindows and closes them with Escape', () => {
+    const onClose = vi.fn();
+    render(
+      <WindowedDialog title="Telegram access" accent="gateways" onClose={onClose}>
+        <button type="button">Approve user</button>
+      </WindowedDialog>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Telegram access' });
+
+    expect(document.activeElement).toBe(dialog);
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Escape handling inside the active subwindow', () => {
+    const onClose = vi.fn();
+    const onParentEscape = vi.fn();
+    render(
+      <div onKeyDown={onParentEscape}>
+        <WindowedDialog title="Automation details" accent="automations" onClose={onClose}>
+          <button type="button">Edit</button>
+        </WindowedDialog>
+      </div>,
+    );
+
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Automation details' }), { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onParentEscape).not.toHaveBeenCalled();
+  });
 });
 
 describe('WindowedDataRow interactions', () => {
