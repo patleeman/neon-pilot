@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { startComposerDictationCapture } from './capture';
-import { DictationButton } from './frontend';
+import { DictationButton, DictationSettingsPanel } from './frontend';
 
 vi.mock('./capture', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./capture')>();
@@ -88,6 +88,28 @@ function renderDictationButton(input: {
           insertText: input.insertText ?? vi.fn(),
           appendText: input.appendText,
         }}
+      />,
+    );
+  });
+
+  return { container, root };
+}
+
+function renderDictationSettingsPanel(input: { invoke: ReturnType<typeof vi.fn>; shellPresentation?: 'stable' | 'windowed' }) {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  roots.push(root);
+
+  act(() => {
+    root.render(
+      <DictationSettingsPanel
+        pa={
+          {
+            extension: { invoke: input.invoke },
+          } as never
+        }
+        settingsContext={{ shellPresentation: input.shellPresentation }}
       />,
     );
   });
@@ -422,5 +444,43 @@ describe('DictationButton', () => {
 
     expect(invoke).toHaveBeenCalledWith('transcribeFile', expect.any(Object));
     expect(appendText).toHaveBeenCalledWith('first run works');
+  });
+});
+
+describe('DictationSettingsPanel', () => {
+  afterEach(() => {
+    for (const root of roots.splice(0)) {
+      act(() => root.unmount());
+    }
+    document.body.innerHTML = '';
+    vi.clearAllMocks();
+  });
+
+  it('renders the canonical windowed settings surface when hosted by the desktop shell', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'readSettings') return { settings: { model: 'base.en' } };
+      if (action === 'runtimeStatus') {
+        return {
+          provider: 'local-whisper',
+          available: true,
+          dependencies: [{ id: 'whisper', label: 'Whisper runtime', available: true }],
+        };
+      }
+      if (action === 'modelStatus') return { model: 'base.en', installed: true, sizeBytes: 147_000_000 };
+      return {};
+    });
+
+    const { container } = renderDictationSettingsPanel({ invoke, shellPresentation: 'windowed' });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(container.querySelector('.wos-page-section')).not.toBeNull();
+    expect(container.querySelector('.wos-field')).not.toBeNull();
+    expect(container.querySelector('.wos-key-value-grid')).not.toBeNull();
+    expect(container.textContent).toContain('Model');
+    expect(container.textContent).toContain('Installed locally');
+    expect(container.textContent).toContain('Runtime');
+    expect(container.querySelector('.settings-row')).toBeNull();
   });
 });
