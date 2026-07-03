@@ -1677,6 +1677,46 @@ describe('WindowedLayout route windows', () => {
     expect(restoredTaskbarButton.getAttribute('data-minimized')).not.toBe('true');
   });
 
+  it('clears stale restore bounds when a maximized singleton route window is closed and reopened', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:system-routines:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /maximize routines/i }));
+    expect(screen.getByRole('button', { name: /restore routines/i })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /close routines/i }));
+    expect(screen.queryByRole('region', { name: /^routines$/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^routines$/i }));
+
+    const reopenedWindow = await screen.findByRole('region', { name: /^routines$/i });
+    expect(within(reopenedWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
+    expect(within(reopenedWindow).queryByRole('button', { name: /restore routines/i })).toBeNull();
+  });
+
   it('focuses the next visible window when the focused route window is closed', async () => {
     seedWindowedWindows([
       {

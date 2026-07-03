@@ -940,6 +940,12 @@ export function WindowedLayout() {
         const conversationId = windowModel.id.slice('chat:'.length);
         conversations.archiveSession(conversationId);
       }
+      setRestoreBounds((current) => {
+        if (!current[windowModel.id]) return current;
+        const next = { ...current };
+        delete next[windowModel.id];
+        return next;
+      });
       setWindows((current) => ensureFocusedWindow(current.filter((candidate) => candidate.id !== windowModel.id)));
     },
     [conversations],
