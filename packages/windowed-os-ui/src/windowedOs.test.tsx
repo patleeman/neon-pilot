@@ -787,11 +787,13 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-window__body {\n  position: relative;');
+    expect(stylesSource).toContain('display: grid;');
     expect(stylesSource).toContain('clip-path: inset(0);');
     expect(stylesSource).toContain('isolation: isolate;');
     expect(stylesSource).toContain('contain: paint;');
     expect(stylesSource).toContain('container-type: inline-size;');
     expect(stylesSource).toContain('.wos-window__body > * {\n  position: relative;\n  z-index: 0;');
+    expect(stylesSource).toContain('min-width: 0;\n  min-height: 0;');
     expect(stylesSource).toContain('.wos-window__titlebar,\n.wos-window__controls,\n.wos-resize-handle {\n  transform: translateZ(0);');
     expect(stylesSource).toContain('.wos-composited-frame {\n  position: relative;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {');
@@ -804,6 +806,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window__iframe-shield');
     expect(stylesSource).toContain('.wos-window__iframe-shield {\n  position: absolute;');
     expect(stylesSource).toContain('display: none !important;\n  visibility: hidden;\n  opacity: 0;');
+    expect(stylesSource).toContain('background: transparent;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {\n  position: relative;\n  z-index: 0 !important;');
     expect(stylesSource).toContain('z-index: 95;');
     expect(stylesSource).toContain('.wos-window__titlebar {\n  position: relative;\n  z-index: 70;');

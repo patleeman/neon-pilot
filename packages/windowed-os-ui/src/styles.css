@@ -654,6 +654,7 @@
 .wos-window__body {
   position: relative;
   z-index: 0;
+  display: grid;
   min-height: 0;
   overflow: hidden;
   background: var(--wos-surface-1);
@@ -665,6 +666,8 @@
 .wos-window__body > * {
   position: relative;
   z-index: 0;
+  min-width: 0;
+  min-height: 0;
 }
 
 .wos-window__body iframe {
@@ -756,7 +759,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   display: none !important;
   visibility: hidden;
   opacity: 0;
-  background: var(--wos-surface-1);
+  background: transparent;
   pointer-events: none;
 }
 
