@@ -55,16 +55,10 @@ export function TracesDailyUsage({ data, presentation = 'stable' }: { data: Trac
         columns={[
           { label: 'Date' },
           { label: 'Turns', align: 'right' },
-          { label: 'Msgs', align: 'right' },
-          { label: 'Input', align: 'right' },
-          { label: 'Output', align: 'right' },
-          { label: 'Cache R', align: 'right' },
-          { label: 'Cache W', align: 'right' },
-          { label: 'Cache x', align: 'right' },
-          { label: 'Total', align: 'right' },
+          { label: 'Tokens', align: 'right' },
           { label: 'Cost', align: 'right' },
         ]}
-        columnTemplate="minmax(7rem, 0.9fr) repeat(8, minmax(4.6rem, 0.46fr)) minmax(5rem, 0.5fr)"
+        columnTemplate="minmax(6.5rem, 0.78fr) minmax(4.5rem, 0.34fr) minmax(7rem, 0.56fr) minmax(4.5rem, 0.34fr)"
       >
         {rows.map((row) => {
           const total = row.tokensInput + row.tokensOutput + row.tokensCached + row.tokensCachedWrite;
@@ -72,14 +66,9 @@ export function TracesDailyUsage({ data, presentation = 'stable' }: { data: Trac
             <WindowedDataRow
               key={row.date}
               name={row.date}
+              meta={`${row.messages ?? 0} msgs · cache ${cacheMultiplier(row).toFixed(1)}x · write ${formatCompact(row.tokensCachedWrite)}`}
               cells={[
                 { value: row.turns ?? 0, align: 'right' },
-                { value: row.messages ?? 0, align: 'right' },
-                { value: formatCompact(row.tokensInput), align: 'right' },
-                { value: formatCompact(row.tokensOutput), align: 'right' },
-                { value: formatCompact(row.tokensCached), align: 'right' },
-                { value: formatCompact(row.tokensCachedWrite), align: 'right' },
-                { value: `${cacheMultiplier(row).toFixed(1)}x`, align: 'right' },
                 { value: formatCompact(total), align: 'right' },
                 { value: formatCost(row.cost), align: 'right' },
               ]}

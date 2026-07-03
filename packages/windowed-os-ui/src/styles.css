@@ -2536,6 +2536,17 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   }
 }
 
+@container (max-width: 760px) {
+  .wos-tool-flow__grid,
+  .wos-tool-health__bash,
+  .wos-model-usage__grid,
+  .wos-cache-system__grid,
+  .wos-auto-mode__grid,
+  .wos-context-pressure__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .wos-toggle {
   position: relative;
   display: inline-flex;
@@ -2793,7 +2804,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   justify-content: flex-end;
 }
 
-@container (max-width: 660px) {
+@container (max-width: 720px) {
   .wos-settings-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr);

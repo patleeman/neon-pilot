@@ -75,7 +75,7 @@ describe('WindowedDataTable', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(stylesSource).toContain('@container (max-width: 660px)');
+    expect(stylesSource).toContain('@container (max-width: 720px)');
     expect(stylesSource).toContain('.wos-data-table:not(.wos-automation-queue) .wos-data-table__header');
     expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-data-table:not(.wos-automation-queue) .wos-data-row__action :where(.wos-inline-actions, .flex)');
@@ -671,6 +671,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-tool-flow__grid {');
     expect(stylesSource).toContain('.wos-tool-flow__path,');
     expect(stylesSource).toContain('.wos-tool-flow__error {');
+  });
+
+  it('collapses dense diagnostics tables at compact window widths', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('@container (max-width: 760px)');
+    expect(stylesSource).toContain('@container (max-width: 720px)');
+    expect(stylesSource).toContain('.wos-model-usage__grid,\n  .wos-cache-system__grid');
+    expect(stylesSource).toContain('.wos-data-table:not(.wos-automation-queue) .wos-data-table__header');
   });
 
   it('defines compact windowed telemetry tool health primitives', () => {

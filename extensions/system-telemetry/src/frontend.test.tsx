@@ -296,6 +296,7 @@ describe('TelemetryPage', () => {
     expect(screen.getAllByText('exec_command').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2026-07-03').some((element) => element.closest('.wos-data-row'))).toBe(true);
     expect(screen.getByText('$3.45').closest('.wos-data-row')).toBeTruthy();
+    expect(screen.getByText('14 msgs · cache 1.1x · write 1.0K').closest('.wos-data-row')).toBeTruthy();
     expect(screen.getByText('append-only').closest('.wos-data-row')).toBeTruthy();
     expect(container.querySelector('.wos-heatmap')).toBeTruthy();
     expect(container.querySelector('.wos-heatmap .wos-chart-panel__header')).toBeTruthy();
@@ -336,7 +337,8 @@ describe('TelemetryPage', () => {
     expect(tableTemplates).toContain('minmax(12rem, 1fr) minmax(4.5rem, 0.32fr) minmax(4.5rem, 0.32fr) minmax(8rem, 0.72fr)');
     expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(7rem, 0.42fr) minmax(5rem, 0.32fr)');
     expect(tableTemplates).toContain('minmax(14rem, 1fr) minmax(6rem, 0.36fr) minmax(5rem, 0.32fr)');
-    expect(tableTemplates).toContain('minmax(7rem, 0.9fr) repeat(8, minmax(4.6rem, 0.46fr)) minmax(5rem, 0.5fr)');
+    expect(tableTemplates).toContain('minmax(6.5rem, 0.78fr) minmax(4.5rem, 0.34fr) minmax(7rem, 0.56fr) minmax(4.5rem, 0.34fr)');
+    expect(tableTemplates).not.toContain('minmax(7rem, 0.9fr) repeat(8, minmax(4.6rem, 0.46fr)) minmax(5rem, 0.5fr)');
     expect(tableTemplates).toContain(
       'minmax(5.8rem, 0.46fr) minmax(10rem, 1fr) minmax(4.5rem, 0.36fr) minmax(4.5rem, 0.36fr) minmax(6rem, 0.5fr)',
     );
