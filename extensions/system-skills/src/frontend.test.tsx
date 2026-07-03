@@ -164,6 +164,31 @@ describe('SkillsPage', () => {
     expect(screen.getByRole('switch', { name: 'Enable Build iOS Apps' })).toBeTruthy();
   });
 
+  it('uses windowed empty and status primitives for empty desktop skill views', async () => {
+    const pa = createPa({
+      invoke: vi.fn(async (action: string) => {
+        if (action === 'listSkills') return { ok: true, skills: [] };
+        return { ok: true };
+      }),
+      callAction: vi.fn(async (_extensionId: string, action: string) => {
+        if (action === 'browseSkills') return { ...allBrowse, candidates: [], installed: [] };
+        return { ok: true };
+      }),
+    });
+
+    const { container } = render(<SkillsPage pa={pa as never} context={{ shellPresentation: 'windowed' } as never} />);
+
+    await screen.findByText('No installable skills returned.');
+    expect(container.querySelector('.wos-empty-state')).toBeTruthy();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Installed/ }));
+
+    await screen.findByText('Skills give agents reusable instructions for focused work.');
+    expect(container.querySelectorAll('.wos-empty-state').length).toBeGreaterThanOrEqual(1);
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+  });
+
   it('renders unified marketplace search results from Skill Search', async () => {
     const pa = createPa();
 

@@ -38,6 +38,7 @@ import {
   WindowedDialog,
   WindowedDialogCopy,
   WindowedDialogStack,
+  WindowedEmptyState,
   WindowedKeyValueList,
   WindowedPageButton,
   WindowedPageMain,
@@ -45,6 +46,7 @@ import {
   WindowedPageShell,
   WindowedSegmentedControl,
   WindowedSelect,
+  WindowedStateBlock,
   WindowedTextInput,
   WindowedToggle,
   WindowedToolbar,
@@ -312,6 +314,12 @@ function candidateStateTone(stateValue: Exclude<MarketplaceStateFilter, 'all'>):
   if (stateValue === 'installed') return 'positive';
   if (stateValue === 'approval-required') return 'warning';
   return 'neutral';
+}
+
+function windowedNoticeTone(tone: 'success' | 'warning' | 'danger' | 'info'): 'neutral' | 'positive' | 'warning' | 'danger' {
+  if (tone === 'success') return 'positive';
+  if (tone === 'info') return 'neutral';
+  return tone;
 }
 
 function compareText(left: string, right: string): number {
@@ -706,12 +714,12 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
 
             {notice ? (
               <WindowedPageSection>
-                <Notice tone={notice.tone}>{notice.message}</Notice>
+                <WindowedStateBlock tone={windowedNoticeTone(notice.tone)}>{notice.message}</WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
             {skillsError ? (
               <WindowedPageSection>
-                <Notice tone="warning">Installed skill management is unavailable: {skillsError}</Notice>
+                <WindowedStateBlock tone="warning">Installed skill management is unavailable: {skillsError}</WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
 
@@ -767,9 +775,9 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
 
                 {marketplaceError ? (
                   <WindowedPageSection>
-                    <Notice tone="danger" title="Marketplace unavailable">
+                    <WindowedStateBlock title="Marketplace unavailable" tone="danger">
                       {marketplaceError}
-                    </Notice>
+                    </WindowedStateBlock>
                   </WindowedPageSection>
                 ) : null}
 
@@ -777,17 +785,14 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                   {loadingMarketplace ? (
                     <QuietLoadingState label="Loading marketplace skills" className="min-h-24" />
                   ) : marketplaceRows.length === 0 ? (
-                    <EmptyState
-                      title="No marketplace skills"
-                      body={
-                        query && !hasMarketplaceFilters
-                          ? 'No marketplace skills match the current search.'
-                          : query || hasMarketplaceFilters
-                            ? 'No marketplace skills match the current filters.'
-                            : 'No installable skills returned.'
-                      }
-                      align="start"
-                    />
+                    <WindowedEmptyState>
+                      <strong>No marketplace skills.</strong>{' '}
+                      {query && !hasMarketplaceFilters
+                        ? 'No marketplace skills match the current search.'
+                        : query || hasMarketplaceFilters
+                          ? 'No marketplace skills match the current filters.'
+                          : 'No installable skills returned.'}
+                    </WindowedEmptyState>
                   ) : (
                     <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
                       {pagedMarketplaceRows.map(({ candidate, installed, capability, state, stateValue }) => {
@@ -849,15 +854,12 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                 {loadingSkills ? (
                   <QuietLoadingState label="Loading installed skills" className="min-h-24" />
                 ) : filteredSkills.length === 0 ? (
-                  <EmptyState
-                    title="No installed skills"
-                    body={
-                      installedQueryDraft.trim()
-                        ? 'No installed skills match the current search.'
-                        : 'Skills give agents reusable instructions for focused work.'
-                    }
-                    align="start"
-                  />
+                  <WindowedEmptyState>
+                    <strong>No installed skills.</strong>{' '}
+                    {installedQueryDraft.trim()
+                      ? 'No installed skills match the current search.'
+                      : 'Skills give agents reusable instructions for focused work.'}
+                  </WindowedEmptyState>
                 ) : (
                   <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Controls', align: 'right' }]}>
                     {filteredSkills.map((skill) => {
