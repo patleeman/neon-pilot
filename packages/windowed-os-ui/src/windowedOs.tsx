@@ -1146,11 +1146,13 @@ export function Taskbar({
                 data-focused={group.focused}
                 aria-haspopup={group.menu ? 'menu' : undefined}
                 aria-expanded={group.menu ? openGroupId === group.id : undefined}
+                aria-label={group.count ? `${group.title} (${group.count} windows)` : group.title}
                 onClick={() => {
                   if (!group.menu) {
                     group.onSelect();
                     return;
                   }
+                  group.onSelect();
                   setOpenGroupId((current) => {
                     const next = current === group.id ? null : group.id;
                     if (next) {

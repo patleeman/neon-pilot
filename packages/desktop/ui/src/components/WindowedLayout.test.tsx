@@ -832,23 +832,26 @@ describe('WindowedLayout route windows', () => {
     expect(container.querySelector('.wos-taskbar__group')).toBeTruthy();
 
     const taskbar = screen.getByRole('navigation', { name: /open windows/i });
-    const chatGroupButton = within(taskbar).getByRole('button', { name: /chat 2/i });
+    const chatGroupButton = within(taskbar).getByRole('button', { name: /chat \(2 windows\)/i });
     expect(chatGroupButton.getAttribute('data-focused')).toBe('true');
     expect(within(taskbar).queryByRole('button', { name: /planning thread/i })).toBeNull();
     expect(screen.queryByRole('menu', { name: /open chat windows/i })).toBeNull();
 
     fireEvent.click(chatGroupButton);
 
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+    expect(screen.getByRole('region', { name: /planning thread/i }).getAttribute('data-focused')).toBe('false');
+
     const chatMenu = screen.getByRole('menu', { name: /open chat windows/i });
     expect(within(chatMenu).getByRole('menuitem', { name: /new conversation/i })).toBeTruthy();
     expect(within(chatMenu).getByRole('menuitem', { name: /planning thread/i })).toBeTruthy();
 
-    fireEvent.click(within(chatMenu).getByRole('menuitem', { name: /new conversation/i }));
+    fireEvent.click(within(chatMenu).getByRole('menuitem', { name: /planning thread/i }));
 
     await waitFor(() => {
       expect(screen.queryByRole('menu', { name: /open chat windows/i })).toBeNull();
     });
-    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
+    expect(screen.getByRole('region', { name: /planning thread/i }).getAttribute('data-focused')).toBe('true');
   });
 
   it('removes stale stored chat windows after conversations load', async () => {
@@ -1339,7 +1342,7 @@ describe('WindowedLayout route windows', () => {
     expect(within(planningWindow).getByTestId('embedded-layout')).toBeTruthy();
 
     const taskbar = screen.getByRole('navigation', { name: /open windows/i });
-    const chatGroupButton = within(taskbar).getByRole('button', { name: /chat 2/i });
+    const chatGroupButton = within(taskbar).getByRole('button', { name: /chat \(2 windows\)/i });
     expect(chatGroupButton.getAttribute('data-focused')).toBe('true');
 
     const suspendListener = vi.fn();

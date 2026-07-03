@@ -1252,8 +1252,9 @@ export function WindowedLayout() {
           count: chatTaskItems.length,
           accent: 'chat',
           onSelect: () => {
-            const focusedChat = chatTaskItems.find((item) => item.focused);
-            (focusedChat ?? chatTaskItems[0])?.onSelect();
+            const focusedIndex = chatTaskItems.findIndex((item) => item.focused);
+            const nextIndex = focusedIndex >= 0 ? (focusedIndex + 1) % chatTaskItems.length : 0;
+            chatTaskItems[nextIndex]?.onSelect();
           },
           menu: (
             <WindowedMenuPanel

@@ -3,7 +3,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { WindowedDataRow, WindowedDialog } from './windowedOs';
+import { Taskbar, WindowedDataRow, WindowedDialog } from './windowedOs';
 
 function rect(input: { left: number; top: number; width: number; height: number }): DOMRect {
   return {
@@ -128,5 +128,37 @@ describe('WindowedDataRow interactions', () => {
 
     expect(onAction).toHaveBeenCalledTimes(1);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
+describe('Taskbar interactions', () => {
+  it('activates grouped windows while exposing their menu', () => {
+    const onSelect = vi.fn();
+
+    render(
+      <Taskbar
+        startOpen={false}
+        onToggleStart={() => undefined}
+        groups={[
+          {
+            id: 'chat',
+            title: 'Chat',
+            count: 2,
+            accent: 'chat',
+            onSelect,
+            menu: <div role="menu" aria-label="Open chat windows" />,
+          },
+        ]}
+        items={[]}
+      />,
+    );
+
+    const groupButton = screen.getByRole('button', { name: 'Chat (2 windows)' });
+    expect(groupButton.getAttribute('aria-haspopup')).toBe('menu');
+
+    fireEvent.click(groupButton);
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('menu', { name: 'Open chat windows' })).toBeTruthy();
   });
 });
