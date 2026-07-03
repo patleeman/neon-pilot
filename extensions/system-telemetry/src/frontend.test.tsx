@@ -91,6 +91,28 @@ describe('TelemetryPage', () => {
     expect(useTracesData).toHaveBeenLastCalledWith('7d', expect.anything());
   });
 
+  it('uses the shared windowed empty state when diagnostics are quiet', () => {
+    vi.mocked(useTracesData).mockReturnValue(telemetryState());
+
+    const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
+
+    expect(screen.getByText('No diagnostics yet.').closest('.wos-empty-state')).toBeTruthy();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+  });
+
+  it('uses the shared windowed empty state for diagnostics load failures', () => {
+    const refetch = vi.fn();
+    vi.mocked(useTracesData).mockReturnValue(telemetryState({ error: 'trace load failed', refetch }));
+
+    const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(screen.getByText('trace load failed').closest('.wos-empty-state')?.getAttribute('data-tone')).toBe('danger');
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(refetch).toHaveBeenCalled();
+  });
+
   it('renders the loading state while diagnostics data is loading', () => {
     vi.mocked(useTracesData).mockReturnValue(telemetryState({ loading: true }));
 

@@ -27,6 +27,7 @@ import {
   SegmentedControl,
   StatGrid,
   WindowedBadge,
+  WindowedEmptyState,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
@@ -101,7 +102,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
             }
           >
             <WindowedPageSection>
-              <ErrorState message={error} />
+              <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
             </WindowedPageSection>
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
@@ -135,21 +136,17 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
       loading && !summary ? (
         <QuietLoadingState label="Loading diagnostics" className="min-h-24" />
       ) : !summary ? (
-        <EmptyState
-          align="start"
-          title="No diagnostics yet"
-          body={
-            loading
-              ? 'Diagnostics will fill in after retained usage, tool, and context data loads.'
-              : 'Diagnostics fill in after conversations produce retained usage, tool, and context data.'
-          }
-        />
+        <WindowedEmptyState>
+          <strong>No diagnostics yet.</strong>{' '}
+          {loading
+            ? 'Diagnostics will fill in after retained usage, tool, and context data loads.'
+            : 'Diagnostics fill in after conversations produce retained usage, tool, and context data.'}
+        </WindowedEmptyState>
       ) : !hasDiagnosticActivity ? (
-        <EmptyState
-          align="start"
-          title="No diagnostic activity in this range"
-          body="Diagnostics populate after conversations, tools, and model runs produce retained usage data."
-        />
+        <WindowedEmptyState>
+          <strong>No diagnostic activity in this range.</strong> Diagnostics populate after conversations, tools, and model runs produce
+          retained usage data.
+        </WindowedEmptyState>
       ) : null;
 
     return (
