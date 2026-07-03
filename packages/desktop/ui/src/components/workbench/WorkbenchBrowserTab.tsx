@@ -757,6 +757,9 @@ export function WorkbenchBrowserTab({
           sessionKey: browserSessionKey,
           ...(options?.force ? { deactivate: true } : {}),
           ...(options?.destroy ? { destroy: true } : {}),
+          ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
+            ? { windowedShellActive: true }
+            : {}),
         })
         .then((nextState) => {
           if (nextState) {
@@ -778,6 +781,9 @@ export function WorkbenchBrowserTab({
             sessionKey,
             deactivate: true,
             ...(options?.destroy ? { destroy: true } : {}),
+            ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
+              ? { windowedShellActive: true }
+              : {}),
           })
           .catch((error) => {
             setStatus(formatWorkbenchBrowserError(error));
@@ -797,6 +803,9 @@ export function WorkbenchBrowserTab({
                 sessionKey: browserSessionKey,
                 deactivate: true,
                 ...(options?.destroy ? { destroy: true } : {}),
+                ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
+                  ? { windowedShellActive: true }
+                  : {}),
               })
               .catch((error) => {
                 setStatus(formatWorkbenchBrowserError(error));
@@ -811,6 +820,9 @@ export function WorkbenchBrowserTab({
                   sessionKey,
                   deactivate: true,
                   ...(options?.destroy ? { destroy: true } : {}),
+                  ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
+                    ? { windowedShellActive: true }
+                    : {}),
                 })
                 .catch((error) => {
                   setStatus(formatWorkbenchBrowserError(error));

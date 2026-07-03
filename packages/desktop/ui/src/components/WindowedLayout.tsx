@@ -318,9 +318,11 @@ function suspendWindowedBrowserViews(durationMs = 1500): void {
     // The renderer-side browser component still receives the suspend event above.
   }
 
-  void bridge.setWorkbenchBrowserBounds({ visible: false, deactivate: true, destroy: true }).catch(() => undefined);
+  const hiddenRequest = { visible: false, deactivate: true, destroy: true, windowedShellActive: true } as const;
+
+  void bridge.setWorkbenchBrowserBounds(hiddenRequest).catch(() => undefined);
   for (const sessionKey of sessionKeys) {
-    void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey, deactivate: true, destroy: true }).catch(() => undefined);
+    void bridge.setWorkbenchBrowserBounds({ ...hiddenRequest, sessionKey }).catch(() => undefined);
   }
 }
 

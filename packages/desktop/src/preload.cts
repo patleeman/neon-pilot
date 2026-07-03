@@ -118,6 +118,8 @@ const desktopBridge = {
     sessionKey?: string | null;
     bounds?: { x: number; y: number; width: number; height: number };
     deactivate?: boolean;
+    destroy?: boolean;
+    windowedShellActive?: boolean;
   }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:workbench-browser-set-bounds`, input),
   getWorkbenchBrowserState: (input?: { sessionKey?: string | null }) =>
     ipcRenderer.invoke(`${CHANNEL_PREFIX}:workbench-browser-state`, input),
