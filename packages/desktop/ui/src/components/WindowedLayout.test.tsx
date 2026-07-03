@@ -1640,6 +1640,39 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /routines/i }).getAttribute('data-iframe-blocked')).toBe('true');
   });
 
+  it('keeps overlapped window contents mounted while browser-frame paint is blocked', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+    const shell = container.querySelector('.windowed-os-shell');
+
+    expect(await screen.findByText('Conversation')).toBeTruthy();
+    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
+    expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
+    expect(within(screen.getByRole('region', { name: /new conversation/i })).getByTestId('conversation-page')).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: /routines/i })).getByTestId('extension-route-host')).toBeTruthy();
+  });
+
   it('publishes the single focused window id for native browser layering checks', async () => {
     seedWindowedWindows([
       {

@@ -131,6 +131,29 @@ type AutomationSelectionData =
       kind: 'new';
     };
 
+function AutomationRowIcon({ name }: { name: 'details' | 'edit' | 'owner' | 'pause' | 'resume' | 'run' }) {
+  const paths = {
+    details: ['M4 7h16', 'M4 12h16', 'M4 17h10'],
+    edit: ['M4 20h4l11-11-4-4L4 16v4Z', 'M13 6l4 4'],
+    owner: ['M5 6h14v9H8l-3 3V6Z'],
+    pause: ['M8 5v14', 'M16 5v14'],
+    resume: ['M8 5v14l11-7-11-7Z'],
+    run: ['M8 5v14l11-7-11-7Z'],
+  } satisfies Record<string, string[]>;
+
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      {paths[name].map((d) => (
+        <path key={d} d={d} strokeLinejoin="round" strokeLinecap="round" />
+      ))}
+    </svg>
+  );
+}
+
+function stopRowAction(event: ReactMouseEvent<HTMLButtonElement>) {
+  event.stopPropagation();
+}
+
 const ROW_ACTION_MENU_GAP = 4;
 const ROW_ACTION_MENU_MARGIN = 8;
 const ROW_ACTION_MENU_MIN_WIDTH = 144;
@@ -802,43 +825,70 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                             <WindowedPageButton
                               aria-label={`Open details for ${title}`}
                               title={`Open details for ${title}`}
-                              onClick={() => selectTask(task)}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                selectTask(task);
+                              }}
                             >
-                              Details
+                              <AutomationRowIcon name="details" />
                             </WindowedPageButton>
                             <WindowedPageButton
                               disabled={!task.threadConversationId}
                               aria-label={`Open owner thread for ${title}: ${task.threadTitle || task.threadConversationId || 'None'}`}
                               title={`Open owner thread for ${title}`}
-                              onClick={() => void openOwnerThread(task)}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void openOwnerThread(task);
+                              }}
                             >
-                              Owner
+                              <AutomationRowIcon name="owner" />
                             </WindowedPageButton>
                             <WindowedPageButton
                               disabled={task.running || busy === `run:${task.id}`}
                               aria-label={runLabel}
                               title={runLabel}
-                              onClick={() => void runNow(task)}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void runNow(task);
+                              }}
                             >
-                              Run
+                              <AutomationRowIcon name="run" />
                             </WindowedPageButton>
                             <WindowedPageButton
                               disabled={Boolean(busy?.endsWith(`:${task.id}`))}
                               aria-label={toggleLabel}
                               title={toggleLabel}
-                              onClick={() => void updateEnabled(task, !task.enabled)}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void updateEnabled(task, !task.enabled);
+                              }}
                             >
-                              {task.enabled ? 'Pause' : 'Resume'}
+                              <AutomationRowIcon name={task.enabled ? 'pause' : 'resume'} />
                             </WindowedPageButton>
-                            <WindowedPageButton aria-label={editLabel} title={editLabel} onClick={() => selectTask(task, 'edit')}>
-                              Edit
+                            <WindowedPageButton
+                              aria-label={editLabel}
+                              title={editLabel}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                selectTask(task, 'edit');
+                              }}
+                            >
+                              <AutomationRowIcon name="edit" />
                             </WindowedPageButton>
                             <WindowedPageButton
                               tone="danger"
                               disabled={task.running || busy === `delete:${task.id}`}
                               aria-label={`Delete ${title}`}
                               title={`Delete ${title}`}
-                              onClick={() => void deleteTask(task)}
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void deleteTask(task);
+                              }}
                             >
                               Delete
                             </WindowedPageButton>

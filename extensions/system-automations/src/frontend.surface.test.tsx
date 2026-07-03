@@ -105,7 +105,19 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByRole('button', { name: 'Resume Release watch' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit Release watch' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Delete Release watch' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open details for Quarter-hour chime' }).getAttribute('data-density')).toBe('icon');
+    expect(
+      screen.getByRole('button', { name: 'Open owner thread for Quarter-hour chime: Automation log' }).getAttribute('data-density'),
+    ).toBe('icon');
+    expect(screen.getByRole('button', { name: 'Run Quarter-hour chime' }).getAttribute('data-density')).toBe('icon');
+    expect(screen.getByRole('button', { name: 'Pause Quarter-hour chime' }).getAttribute('data-density')).toBe('icon');
+    expect(screen.getByRole('button', { name: 'Resume Release watch' }).getAttribute('data-density')).toBe('icon');
+    expect(screen.getByRole('button', { name: 'Edit Release watch' }).getAttribute('data-density')).toBe('icon');
+    expect(screen.getByRole('button', { name: 'Delete Release watch' }).getAttribute('data-density')).toBe('normal');
     expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
     expect(screen.queryByRole('button', { name: /actions for/i })).toBeNull();
   });
 
@@ -117,9 +129,9 @@ describe('AutomationsPage windowed surface', () => {
     expect(stylesSource).toContain('.wos-automation-queue .wos-data-row');
     expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-automation-queue .wos-automation-actions');
-    expect(stylesSource).toContain('grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));');
-    expect(stylesSource).toContain('.wos-automation-queue .wos-automation-actions .wos-page-button');
-    expect(stylesSource).toContain('width: 100%;');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
+    expect(stylesSource).toContain(".wos-automation-queue .wos-automation-actions .wos-page-button:not([data-density='icon'])");
+    expect(stylesSource).toContain('width: auto;');
   });
 
   it('keeps destructive automation actions available in windowed rows', async () => {

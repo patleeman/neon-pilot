@@ -3788,13 +3788,14 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   }
 
   .wos-automation-queue .wos-automation-actions {
-    display: grid;
+    display: flex;
     width: 100%;
-    grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
-  .wos-automation-queue .wos-automation-actions .wos-page-button {
-    width: 100%;
+  .wos-automation-queue .wos-automation-actions .wos-page-button:not([data-density='icon']) {
+    width: auto;
     padding-inline: 6px;
   }
 }
