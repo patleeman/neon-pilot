@@ -179,42 +179,51 @@ export const ChatWithAttachedWorkbench: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <div className="wos-chat-workbench">
-          <WindowedChatSurface>
-            <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
-              <WindowedMessageBubble from="user">Draft the changelog for v0.11.39.</WindowedMessageBubble>
-              <WindowedMessageBubble>Reading the current branch and grouping changes by extension.</WindowedMessageBubble>
-              <WindowedMessageBubble from="user">Keep it compact and include blockers only when action is required.</WindowedMessageBubble>
-              <WindowedMessageBubble>
-                Ready. I found three UI changes, one extension rebuild, and no release blockers.
-              </WindowedMessageBubble>
-            </WindowedChatMain>
-          </WindowedChatSurface>
-          <aside className="wos-chat-workbench__panel" aria-label="Attached workbench">
-            <div className="wos-chat-workbench__tabs" role="tablist" aria-label="Workbench tabs">
-              <button type="button" role="tab" aria-selected="true">
-                Files
-              </button>
-              <button type="button" role="tab" aria-selected="false">
-                Browser
-              </button>
-              <button type="button" role="tab" aria-selected="false">
-                Terminal
-              </button>
-            </div>
-            <WindowedPageSection title="Workspace" meta="3 open">
-              <WindowedList>
-                <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
-                <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
-                <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
-              </WindowedList>
-            </WindowedPageSection>
-            <WindowedPageSection title="Terminal" meta="Last command">
-              <WindowedStateBlock tone="positive" title="Validation passed">
-                pnpm --dir packages/windowed-os-ui run build
-              </WindowedStateBlock>
-            </WindowedPageSection>
-          </aside>
+        <div className="wos-window-route-body wos-window-route-body--chat">
+          <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
+            <button type="button" className="wos-chat-window-toolbar__button" aria-pressed="false">
+              Hide workbench
+            </button>
+          </div>
+          <div className="wos-chat-workbench">
+            <WindowedChatSurface>
+              <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
+                <WindowedMessageBubble from="user">Draft the changelog for v0.11.39.</WindowedMessageBubble>
+                <WindowedMessageBubble>Reading the current branch and grouping changes by extension.</WindowedMessageBubble>
+                <WindowedMessageBubble from="user">
+                  Keep it compact and include blockers only when action is required.
+                </WindowedMessageBubble>
+                <WindowedMessageBubble>
+                  Ready. I found three UI changes, one extension rebuild, and no release blockers.
+                </WindowedMessageBubble>
+              </WindowedChatMain>
+            </WindowedChatSurface>
+            <aside className="wos-chat-workbench__panel" aria-label="Attached workbench">
+              <div className="wos-chat-workbench__tabs" role="tablist" aria-label="Workbench tabs">
+                <button type="button" role="tab" aria-selected="true">
+                  Files
+                </button>
+                <button type="button" role="tab" aria-selected="false">
+                  Browser
+                </button>
+                <button type="button" role="tab" aria-selected="false">
+                  Terminal
+                </button>
+              </div>
+              <WindowedPageSection title="Workspace" meta="3 open">
+                <WindowedList>
+                  <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
+                  <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
+                  <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
+                </WindowedList>
+              </WindowedPageSection>
+              <WindowedPageSection title="Terminal" meta="Last command">
+                <WindowedStateBlock tone="positive" title="Validation passed">
+                  pnpm --dir packages/windowed-os-ui run build
+                </WindowedStateBlock>
+              </WindowedPageSection>
+            </aside>
+          </div>
         </div>
       </WindowFrame>
     </div>

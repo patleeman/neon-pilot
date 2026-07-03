@@ -452,6 +452,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('justify-content: flex-start;');
   });
 
+  it('styles the windowed chat workbench toggle as compact window chrome', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-window-route-body--chat {\n  display: grid;\n  grid-template-rows: auto minmax(0, 1fr);');
+    expect(stylesSource).toContain('.wos-chat-window-toolbar {\n  display: flex;');
+    expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
+  });
+
   it('styles nested list rows through scoped depth selectors', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
@@ -696,6 +706,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const TerminalWindow');
     expect(source).toContain('<WindowedTerminalFrame cwd="/Users/patrick/workingdir/neon-pilot" status="PTY shell">');
     expect(source).toContain('PASS terminal frame tokens');
+  });
+
+  it('documents the chat workbench toggle in the attached-workbench Storybook example', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const ChatWithAttachedWorkbench');
+    expect(source).toContain('className="wos-chat-window-toolbar"');
+    expect(source).toContain('Hide workbench');
   });
 
   it('defines a reusable danger tone for windowed page buttons', () => {

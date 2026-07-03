@@ -1794,9 +1794,10 @@ function WorkbenchKnowledgeRail({
 interface LayoutProps {
   embeddedWindowChrome?: boolean;
   forceWorkbench?: boolean;
+  suppressWorkbench?: boolean;
 }
 
-export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }: LayoutProps = {}) {
+export function Layout({ embeddedWindowChrome = false, forceWorkbench = false, suppressWorkbench = false }: LayoutProps = {}) {
   const location = useLocation();
   useRouteTelemetry();
   const navigate = useNavigate();
@@ -1973,7 +1974,9 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }:
   }, [effectiveSidebarOpen, sidebar.width]);
 
   const showWorkbench =
-    (forceWorkbench || appLayoutMode === 'workbench') && routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
+    !suppressWorkbench &&
+    (forceWorkbench || appLayoutMode === 'workbench') &&
+    routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const canToggleWorkbench = routeSupportsWorkbench(location.pathname, extensionRegistry.surfaces);
   const activeWorkbenchKnowledgeFileId = showWorkbench
     ? (searchParams.get('file') ?? (activeConversationId ? selectedFileByConversation[activeConversationId] : null) ?? null)

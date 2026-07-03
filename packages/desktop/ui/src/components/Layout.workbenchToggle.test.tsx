@@ -174,11 +174,11 @@ function renderLayout(pathname = '/conversations/new') {
   );
 }
 
-function renderEmbeddedWindowLayout(pathname = '/conversations/new') {
+function renderEmbeddedWindowLayout(pathname = '/conversations/new', options: { suppressWorkbench?: boolean } = {}) {
   return render(
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
-        <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
+        <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench suppressWorkbench={options.suppressWorkbench} />}>
           <Route path="conversations/new" element={<div>Conversation draft</div>} />
           <Route path="conversations/:id" element={<ConversationRouteFixture />} />
           <Route path="route-a" element={<RouteRailFixture name="Route A" next="/route-b" detail="/route-a/detail" />} />
@@ -264,6 +264,15 @@ describe('Layout workbench toggle', () => {
     expect(document.querySelector('[data-windowed-chat-thread-rail="true"]')).toBeNull();
     expect(document.querySelector('.ui-sidebar-nav-item')).toBeNull();
     expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
+  });
+
+  it('lets embedded chat windows suppress the forced workbench pane', async () => {
+    seedConversationCwd('/repo/project', 'conv-1');
+
+    renderEmbeddedWindowLayout('/conversations/conv-1', { suppressWorkbench: true });
+
+    expect(await screen.findByText('Conversation route conv-1')).toBeTruthy();
+    expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
   });
 
   it('hides the right-sidebar toggle on routes without a declared right sidebar', () => {

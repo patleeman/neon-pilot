@@ -691,6 +691,7 @@ function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode
 
 function WindowRouteBody({ onNavigate, route }: { onNavigate: WindowNavigate; route: string }) {
   const isChatRoute = route.startsWith('/conversations');
+  const [chatWorkbenchOpen, setChatWorkbenchOpen] = useState(true);
 
   if (!isChatRoute) {
     return (
@@ -705,10 +706,27 @@ function WindowRouteBody({ onNavigate, route }: { onNavigate: WindowNavigate; ro
   }
 
   return (
-    <WindowedChatSurface className="wos-window-route-body wos-window-route-body--chat">
+    <WindowedChatSurface
+      className="wos-window-route-body wos-window-route-body--chat"
+      data-workbench-collapsed={chatWorkbenchOpen ? undefined : 'true'}
+    >
+      <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
+        {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
+        <button
+          type="button"
+          className="wos-chat-window-toolbar__button"
+          aria-pressed={!chatWorkbenchOpen}
+          onClick={() => setChatWorkbenchOpen((open) => !open)}
+        >
+          {chatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
+        </button>
+      </div>
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
-          <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
+          <Route
+            path="/"
+            element={<Layout embeddedWindowChrome forceWorkbench={chatWorkbenchOpen} suppressWorkbench={!chatWorkbenchOpen} />}
+          >
             <Route
               path="conversations"
               element={

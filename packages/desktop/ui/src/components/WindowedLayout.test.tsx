@@ -44,7 +44,27 @@ const mocks = vi.hoisted(() => ({
 vi.mock('./Layout', async () => {
   const { Outlet } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
-    Layout: () => mocks.layout({ children: <Outlet /> }),
+    Layout: ({
+      embeddedWindowChrome,
+      forceWorkbench,
+      suppressWorkbench,
+    }: {
+      embeddedWindowChrome?: boolean;
+      forceWorkbench?: boolean;
+      suppressWorkbench?: boolean;
+    }) =>
+      mocks.layout({
+        children: (
+          <div
+            data-testid="mock-layout-props"
+            data-embedded-window-chrome={embeddedWindowChrome ? 'true' : 'false'}
+            data-force-workbench={forceWorkbench ? 'true' : 'false'}
+            data-suppress-workbench={suppressWorkbench ? 'true' : 'false'}
+          >
+            <Outlet />
+          </div>
+        ),
+      }),
   };
 });
 
@@ -259,7 +279,27 @@ describe('WindowedLayout route windows', () => {
     expect(chatSurface).toBeTruthy();
     expect(chatSurface?.classList.contains('wos-chat-surface')).toBe(true);
     expect(within(chatWindow).getByTestId('embedded-layout')).toBeTruthy();
+    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('true');
+    expect(within(chatWindow).getByRole('button', { name: /hide workbench/i })).toBeTruthy();
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
+  });
+
+  it('collapses and restores the attached workbench from the chat window toolbar', () => {
+    renderWindowedLayout();
+
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
+
+    fireEvent.click(within(chatWindow).getByRole('button', { name: /hide workbench/i }));
+    expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBe('true');
+    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
+    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
+    expect(within(chatWindow).getByRole('button', { name: /show workbench/i })).toBeTruthy();
+
+    fireEvent.click(within(chatWindow).getByRole('button', { name: /show workbench/i }));
+    expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBeNull();
+    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('true');
+    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('false');
   });
 
   it('keeps the windowed shell app controls text-only without monogram badges or secondary labels', () => {

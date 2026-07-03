@@ -867,6 +867,41 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   min-height: 100%;
 }
 
+.wos-window-route-body--chat {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.wos-window-route-body--chat > * {
+  min-height: 0;
+}
+
+.wos-chat-window-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  border-bottom: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+  padding: 6px 8px;
+}
+
+.wos-chat-window-toolbar__button {
+  height: 28px;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-surface-1);
+  padding: 0 10px;
+  color: var(--wos-ink-900);
+  cursor: pointer;
+  font: var(--wos-text-row);
+}
+
+.wos-chat-window-toolbar__button:hover,
+.wos-chat-window-toolbar__button[aria-pressed='true'] {
+  background: var(--wos-chat);
+}
+
 .wos-window-route-body .wos-native-extension-surface--windowed {
   background: transparent;
   color: var(--wos-ink-900);

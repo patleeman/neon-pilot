@@ -1108,13 +1108,16 @@ export function WindowedMenuPanel({ items, ariaLabel = 'Window menu', placement 
   );
 }
 
-export interface WindowedChatSurfaceProps {
+export interface WindowedChatSurfaceProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  className?: string;
 }
 
-export function WindowedChatSurface({ children, className }: WindowedChatSurfaceProps) {
-  return <div className={cx('wos-chat-surface', className)}>{children}</div>;
+export function WindowedChatSurface({ children, className, ...props }: WindowedChatSurfaceProps) {
+  return (
+    <div className={cx('wos-chat-surface', className)} {...props}>
+      {children}
+    </div>
+  );
 }
 
 export interface WindowedChatMainProps {
