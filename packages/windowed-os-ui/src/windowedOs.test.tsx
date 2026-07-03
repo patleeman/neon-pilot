@@ -889,7 +889,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] iframe");
     expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] webview");
     expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-taskbar) .wos-composited-frame');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-composited-frame');
+    expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-start-menu) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-snap-preview) .wos-composited-frame');
     expect(stylesSource).toContain('opacity: 0;');

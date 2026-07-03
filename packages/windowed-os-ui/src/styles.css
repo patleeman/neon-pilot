@@ -743,7 +743,6 @@ body:has(.ui-command-palette-shell) .windowed-os-shell .wos-composited-frame,
 body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-composited-frame,
 body:has(.ui-notification-toaster) .windowed-os-shell .wos-composited-frame,
 body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
-.windowed-os-shell:has(.wos-start-menu) .wos-composited-frame,
 .windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-composited-frame,
 .windowed-os-shell:has(.wos-snap-preview) .wos-composited-frame,
 .windowed-os-shell:has(.wos-dialog-layer) .wos-composited-frame {
