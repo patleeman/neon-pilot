@@ -102,7 +102,9 @@ describe('ExtensionModalHost confirm bridge', () => {
 describe('ExtensionModalHost modal bridge', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    document.body.removeAttribute('data-neon-pilot-windowed-shell-active');
     systemExtensionModules.delete('test-extension');
+    systemExtensionModules.delete('system-excalidraw-input');
     vi.mocked(setExtensionCommandContext).mockClear();
   });
 
@@ -167,6 +169,36 @@ describe('ExtensionModalHost modal bridge', () => {
     expect(await screen.findByText('This extension dialog could not be loaded.')).not.toBeNull();
     expect(document.body.textContent).not.toContain('TestModal');
     await expect(result).resolves.toBeNull();
+  });
+
+  it('marks Excalidraw editor modals for windowed OS sub-window styling', async () => {
+    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+    systemExtensionModules.set('system-excalidraw-input', async () => ({
+      ExcalidrawEditorModal: () => <div>Drawing editor</div>,
+    }));
+    render(<ExtensionModalHost />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot-extension-modal', {
+          detail: {
+            extensionId: 'system-excalidraw-input',
+            component: 'ExcalidrawEditorModal',
+            props: {},
+            size: 'fullscreen',
+            resolve: vi.fn(),
+            reject: vi.fn(),
+          },
+        }),
+      );
+    });
+
+    expect(await screen.findByText('Drawing editor')).not.toBeNull();
+    const dialog = screen.getByRole('dialog', { name: 'Extension dialog' });
+    expect(dialog.className).toContain('ui-windowed-extension-modal');
+    expect(dialog.className).toContain('ui-windowed-excalidraw-modal');
+    expect(document.querySelector('.ui-windowed-excalidraw-backdrop')).toBeTruthy();
+    expect(document.querySelector('.ui-windowed-excalidraw-modal-body')).toBeTruthy();
   });
 });
 

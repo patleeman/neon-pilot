@@ -2,7 +2,7 @@ import React, { type ComponentType, useCallback, useEffect, useRef, useState } f
 
 import { buildApiPath } from '../client/apiBase';
 import { addNotification } from '../components/notifications/notificationStore';
-import { ConfirmDialog, Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
+import { ConfirmDialog, cx, Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
 import { setExtensionCommandContext } from './commands';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { createNativeExtensionClient } from './nativePaClient';
@@ -20,6 +20,7 @@ interface ModalState {
 
 type ExtensionModalSize = 'default' | 'large' | 'fullscreen';
 const EXTENSION_MODAL_ERROR_MESSAGE = 'This extension dialog could not be loaded.';
+const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 
 function FailedExtensionModalBody() {
   return (
@@ -50,6 +51,10 @@ export function resolveExtensionModalSizeClasses(size: ExtensionModalSize | unde
         dialogClassName: 'ui-extension-modal-default',
       };
   }
+}
+
+function isWindowedShellActive(): boolean {
+  return typeof document !== 'undefined' && document.body.getAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE) === 'true';
 }
 
 interface ConfirmState {
@@ -233,6 +238,9 @@ export function ExtensionModalHost() {
 
   const pa = createNativeExtensionClient(modal.extensionId);
   const modalSizeClasses = resolveExtensionModalSizeClasses(modal.size);
+  const windowedShellActive = isWindowedShellActive();
+  const windowedExcalidrawModal =
+    windowedShellActive && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal';
 
   return (
     <>
@@ -241,11 +249,19 @@ export function ExtensionModalHost() {
         onClose={() => handleClose()}
         labelledBy={modal.title ? 'extension-modal-title' : undefined}
         aria-label={modal.title ? undefined : 'Extension dialog'}
-        backdropClassName={modalSizeClasses.backdropClassName}
+        backdropClassName={cx(
+          modalSizeClasses.backdropClassName,
+          windowedShellActive && 'ui-windowed-extension-modal-backdrop',
+          windowedExcalidrawModal && 'ui-windowed-excalidraw-backdrop',
+        )}
         onKeyDown={(e) => {
           if (e.key === 'Escape') handleClose();
         }}
-        className={modalSizeClasses.dialogClassName}
+        className={cx(
+          modalSizeClasses.dialogClassName,
+          windowedShellActive && 'ui-windowed-extension-modal',
+          windowedExcalidrawModal && 'ui-windowed-excalidraw-modal',
+        )}
       >
         {modal.title ? (
           <DialogHeader
@@ -270,7 +286,7 @@ export function ExtensionModalHost() {
             }
           />
         ) : null}
-        <DialogBody className={modalSizeClasses.bodyClassName}>
+        <DialogBody className={cx(modalSizeClasses.bodyClassName, windowedExcalidrawModal && 'ui-windowed-excalidraw-modal-body')}>
           <ExtensionModalErrorBoundary
             extensionId={modal.extensionId}
             onError={() => {

@@ -547,6 +547,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('content: attr(aria-label);');
   });
 
+  it('scopes drawing modal chrome to the windowed shell', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker");
+    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal");
+    expect(stylesSource).toContain('.ui-overlay-backdrop:has(.ui-windowed-drawings-picker)');
+    expect(stylesSource).toContain('width: min(720px, calc(100vw - 44px)) !important;');
+    expect(stylesSource).toContain('width: min(1120px, calc(100vw - 44px)) !important;');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+  });
+
   it('contains iframe paint inside window bodies without blanketing window content with the shield', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
