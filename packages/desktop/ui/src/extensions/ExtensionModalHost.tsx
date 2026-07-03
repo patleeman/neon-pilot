@@ -241,14 +241,15 @@ export function ExtensionModalHost() {
   const windowedShellActive = isWindowedShellActive();
   const windowedExcalidrawModal =
     windowedShellActive && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal';
+  const title = modal.title ?? (windowedExcalidrawModal ? 'Drawing' : undefined);
 
   return (
     <>
       {confirmDialog}
       <Dialog
         onClose={() => handleClose()}
-        labelledBy={modal.title ? 'extension-modal-title' : undefined}
-        aria-label={modal.title ? undefined : 'Extension dialog'}
+        labelledBy={title ? 'extension-modal-title' : undefined}
+        aria-label={title ? undefined : 'Extension dialog'}
         backdropClassName={cx(
           modalSizeClasses.backdropClassName,
           windowedShellActive && 'ui-windowed-extension-modal-backdrop',
@@ -263,9 +264,9 @@ export function ExtensionModalHost() {
           windowedExcalidrawModal && 'ui-windowed-excalidraw-modal',
         )}
       >
-        {modal.title ? (
+        {title ? (
           <DialogHeader
-            title={modal.title}
+            title={title}
             titleId="extension-modal-title"
             actions={
               <IconButton onClick={() => handleClose()} aria-label="Close extension modal" title="Close extension modal">

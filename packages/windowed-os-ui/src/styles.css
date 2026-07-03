@@ -943,7 +943,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
   overflow: hidden;
   border: 2px solid var(--wos-ink-900) !important;
-  border-radius: 14px !important;
+  border-radius: 10px !important;
   background: var(--wos-surface-1) !important;
   box-shadow: var(--wos-shadow-window) !important;
   color: var(--wos-ink-900);
@@ -956,9 +956,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
-  width: min(1120px, calc(100vw - 44px)) !important;
-  height: min(720px, calc(100vh - 134px)) !important;
-  max-height: min(720px, calc(100vh - 134px)) !important;
+  width: min(940px, calc(100vw - 72px)) !important;
+  height: min(610px, calc(100vh - 156px)) !important;
+  max-height: min(610px, calc(100vh - 156px)) !important;
+  min-height: min(460px, calc(100vh - 156px)) !important;
+  transform: none !important;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header,
@@ -992,10 +994,73 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   box-shadow: none;
 }
 
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions .ui-icon-button:hover,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-actions .ui-icon-button:hover,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions .ui-icon-button:focus-visible,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-actions .ui-icon-button:focus-visible {
+  background: var(--wos-surface-2);
+  outline: 2px solid var(--wos-ink-900);
+  outline-offset: 1px;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker-body,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {
   background: var(--wos-surface-1);
   padding: 0;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {
+  min-height: 0;
+  overflow: hidden;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-body);
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar {
+  align-items: center;
+  min-height: 38px;
+  border-bottom: 2px solid var(--wos-ink-900) !important;
+  background: var(--wos-surface-2);
+  padding: 5px 8px;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-icon-button,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-toolbar-button,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-action-button {
+  min-height: 26px;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  box-shadow: none;
+  font: var(--wos-text-row);
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-icon-button:hover,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-toolbar-button:hover,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-action-button:hover {
+  background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {
+  border-top: 0;
+  background: var(--wos-surface-1);
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite {
+  background: var(--wos-surface-1);
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {
+  --color-primary: var(--wos-chat);
+  --color-primary-darker: color-mix(in srgb, var(--wos-chat) 82%, var(--wos-ink-900));
+  --color-primary-darkest: color-mix(in srgb, var(--wos-chat) 68%, var(--wos-ink-900));
+  --color-primary-light: color-mix(in srgb, var(--wos-chat) 22%, var(--wos-surface-1));
+  background: var(--wos-surface-1);
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-resource-picker-toolbar {

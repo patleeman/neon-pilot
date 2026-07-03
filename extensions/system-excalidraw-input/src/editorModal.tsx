@@ -169,6 +169,10 @@ function ensureExcalidrawStyles() {
 }
 
 function getExcalidrawTheme(): 'dark' | 'light' {
+  const windowedShell = document.querySelector<HTMLElement>('.windowed-os-shell');
+  if (document.body.getAttribute('data-neon-pilot-windowed-shell-active') === 'true' || windowedShell) {
+    return windowedShell?.dataset.wosTheme === 'dark' ? 'dark' : 'light';
+  }
   if (document.documentElement.classList.contains('dark')) return 'dark';
   if (document.documentElement.dataset.themeAppearance === 'dark') return 'dark';
   if (document.documentElement.dataset.theme === 'dark' || document.documentElement.dataset.theme === 'studio-dark') return 'dark';
@@ -295,8 +299,8 @@ function ExcalidrawEditor({
   const attachButtonLabel = saveLabel ?? 'Attach to chat';
 
   return (
-    <div className="flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex justify-end gap-2 border-b border-border-subtle px-3 py-2">
+    <div className="excalidraw-editor-modal flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="excalidraw-editor-modal__toolbar flex justify-end gap-2 border-b border-border-subtle px-3 py-2">
         {onMoveToWorkbench ? (
           <IconButton
             compact
@@ -343,7 +347,7 @@ function ExcalidrawEditor({
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="excalidraw-editor-modal__canvas min-h-0 flex-1 overflow-hidden">
         {loadError ? (
           <div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-danger">
             Failed to load Excalidraw: {loadError.message}

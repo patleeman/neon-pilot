@@ -12,8 +12,8 @@ const scene = { elements: [], appState: {}, files: {} };
 vi.mock('@neon-pilot/extensions/excalidraw', () => ({
   buildDrawingFileNames: (title: string) => ({ sourceName: `${title}.excalidraw`, previewName: `${title}.png` }),
   loadExcalidrawComponent: async () =>
-    function FakeExcalidraw() {
-      return <div>Fake Excalidraw</div>;
+    function FakeExcalidraw(props: { theme?: string }) {
+      return <div data-testid="fake-excalidraw-theme">{props.theme ?? 'unset'}</div>;
     },
   parseExcalidrawSceneFromSourceData: () => scene,
   serializeExcalidrawScene: async () => ({
@@ -64,6 +64,7 @@ describe('ExcalidrawEditorModal', () => {
   it('publishes saved composer payloads after persisting a drawing', async () => {
     const pa = createPa();
     const close = vi.fn();
+    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
 
     render(
       <ExcalidrawEditorModal
@@ -78,7 +79,10 @@ describe('ExcalidrawEditorModal', () => {
       />,
     );
 
-    await screen.findByText('Fake Excalidraw');
+    expect((await screen.findByTestId('fake-excalidraw-theme')).textContent).toBe('light');
+    expect(document.querySelector('.excalidraw-editor-modal')).toBeTruthy();
+    expect(document.querySelector('.excalidraw-editor-modal__toolbar')).toBeTruthy();
+    expect(document.querySelector('.excalidraw-editor-modal__canvas')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }));
 
     await waitFor(() => expect(pa.conversations.createAttachment).toHaveBeenCalledTimes(1));

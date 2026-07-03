@@ -194,7 +194,8 @@ describe('ExtensionModalHost modal bridge', () => {
     });
 
     expect(await screen.findByText('Drawing editor')).not.toBeNull();
-    const dialog = screen.getByRole('dialog', { name: 'Extension dialog' });
+    const dialog = screen.getByRole('dialog', { name: 'Drawing' });
+    expect(screen.getByText('Drawing')).not.toBeNull();
     expect(dialog.className).toContain('ui-windowed-extension-modal');
     expect(dialog.className).toContain('ui-windowed-excalidraw-modal');
     expect(document.querySelector('.ui-windowed-excalidraw-backdrop')).toBeTruthy();

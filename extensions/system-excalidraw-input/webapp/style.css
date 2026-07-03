@@ -1,13 +1,13 @@
 :root {
-  color-scheme: dark;
-  --bg: #090b0f;
-  --surface: #10141b;
-  --panel: #0d1117;
-  --border: #273142;
-  --border-strong: #3b465a;
-  --text: #f3f0e8;
-  --muted: #9ba4b5;
-  --accent: #d6c38a;
+  color-scheme: light;
+  --bg: #fffaf0;
+  --surface: #fffdf6;
+  --panel: #fcf7ec;
+  --border: #2c261f;
+  --border-strong: #2c261f;
+  --text: #2c261f;
+  --muted: #6f604f;
+  --accent: #368bd2;
 }
 
 * {
@@ -24,6 +24,7 @@ body,
   background: var(--bg);
   color: var(--text);
   font-family:
+    'Space Grotesk',
     Inter,
     ui-sans-serif,
     system-ui,
@@ -45,9 +46,9 @@ body,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-  padding: 8px 10px;
+  border-bottom: 2px solid var(--border);
+  background: #e8f0ff;
+  padding: 6px 8px;
 }
 
 .title-group {
@@ -69,7 +70,7 @@ input {
   min-width: 0;
   width: min(280px, 40vw);
   height: 28px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 6px;
   /* ui-pattern-ok css-surface-bypass reason="Static localhost Excalidraw sidecar stylesheet cannot consume React primitives; tokenized input surface keeps canvas chrome isolated." */
   background: var(--surface);
@@ -103,7 +104,7 @@ input:focus {
 
 button {
   height: 28px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 6px;
   /* ui-pattern-ok css-surface-bypass reason="Static localhost Excalidraw sidecar stylesheet cannot consume React primitives; tokenized button surface keeps canvas chrome isolated." */
   background: var(--surface);
@@ -120,7 +121,7 @@ button:focus-visible {
 }
 
 button:disabled {
-  color: #5f6878;
+  color: #988979;
 }
 
 .canvas {
@@ -131,10 +132,10 @@ button:disabled {
 }
 
 .excalidraw {
-  --color-primary: #d6c38a;
-  --color-primary-darker: #b8a86f;
-  --color-primary-darkest: #9d8c55;
-  --color-primary-light: #e8d99e;
+  --color-primary: #368bd2;
+  --color-primary-darker: #286ea8;
+  --color-primary-darkest: #205681;
+  --color-primary-light: #dbeaff;
 }
 
 @media (max-width: 680px) {
