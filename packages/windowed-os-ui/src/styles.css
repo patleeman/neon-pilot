@@ -496,6 +496,8 @@
 .windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe,
 .windowed-os-shell[data-frame-paint-blocked='true'] .wos-composited-frame,
 .windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-composited-frame,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe,
 .wos-window__body:has(.wos-dialog-layer) .wos-composited-frame,
 .wos-window__body:has(.wos-dialog-layer) iframe,
 .wos-window__body:has(.ui-workbench-drop-badge) .wos-composited-frame,
@@ -564,7 +566,8 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
 .wos-window[data-focused='false'] > .wos-window__iframe-shield,
 .wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield,
 .windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield,
-.windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield {
+.windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-window > .wos-window__iframe-shield {
   display: block;
 }
 
