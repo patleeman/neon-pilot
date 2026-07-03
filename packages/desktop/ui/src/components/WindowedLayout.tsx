@@ -1241,7 +1241,8 @@ export function WindowedLayout() {
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );
-  const nativeBrowserBlocked = Boolean(!focusedWindow || focusedWindow.kind !== 'chat' || browserBlockingShellInteraction);
+  // Electron's native browser view is not part of the DOM stacking order, so keep it suppressed in desktop beta mode.
+  const nativeBrowserBlocked = true;
   const rendererFramePaintBlocked = browserBlockingShellInteraction;
 
   useWindowedBrowserSuppression(nativeBrowserBlocked);
