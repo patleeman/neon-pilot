@@ -29,6 +29,7 @@ import {
   WindowedDialogStack,
   WindowedEmptyState,
   WindowedField,
+  WindowedFormGrid,
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
@@ -37,6 +38,8 @@ import {
   WindowedPageSection,
   WindowedPageShell,
   WindowedSelect,
+  WindowedSettingsGroup,
+  WindowedSettingsRow,
   WindowedStateBlock,
   WindowedTextarea,
   WindowedTextInput,
@@ -1553,6 +1556,208 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         )}
       </>
     );
+
+    if (options?.windowed) {
+      const modelFields =
+        draft.type !== 'stop' ? (
+          <WindowedSettingsGroup title="Model">
+            <WindowedSettingsRow title="Primary model">
+              {renderSelect({
+                value: draft.modelRef ?? '',
+                disabled: models.length === 0,
+                onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                  setDraft({ ...draft, modelRef: event.target.value || undefined }),
+                children: (
+                  <>
+                    <option value="">Use app default</option>
+                    {!hasModelValue(models, draft.modelRef) && draft.modelRef ? (
+                      <option value={draft.modelRef}>{draft.modelRef}</option>
+                    ) : null}
+                    {groupedModels(models).map(([provider, providerModels]) => (
+                      <optgroup key={provider} label={provider}>
+                        {providerModels.map((model) => (
+                          <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
+                            {modelLabel(model)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </>
+                ),
+              })}
+            </WindowedSettingsRow>
+            <WindowedSettingsRow title="Backup model">
+              {renderSelect({
+                value: draft.fallbackModelRef ?? '',
+                disabled: models.length === 0,
+                onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                  setDraft({ ...draft, fallbackModelRef: event.target.value || undefined }),
+                children: (
+                  <>
+                    <option value="">No backup model</option>
+                    {!hasModelValue(models, draft.fallbackModelRef) && draft.fallbackModelRef ? (
+                      <option value={draft.fallbackModelRef}>{draft.fallbackModelRef}</option>
+                    ) : null}
+                    {groupedModels(models).map(([provider, providerModels]) => (
+                      <optgroup key={provider} label={provider}>
+                        {providerModels.map((model) => (
+                          <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
+                            {modelLabel(model)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </>
+                ),
+              })}
+            </WindowedSettingsRow>
+          </WindowedSettingsGroup>
+        ) : null;
+
+      return (
+        <WindowedDialogStack>
+          <WindowedSettingsGroup title="Routine">
+            {saving || draftIsDirty || lastSavedAt ? (
+              <WindowedStateBlock tone={draftIsDirty ? 'warning' : 'positive'}>
+                {saving ? 'Saving...' : draftIsDirty ? 'Unsaved changes' : lastSavedAt ? `Saved at ${lastSavedAt}` : 'Saved'}
+              </WindowedStateBlock>
+            ) : null}
+            {actionError ? <WindowedStateBlock tone="danger">{actionError}</WindowedStateBlock> : null}
+            {draft.type === 'stop' ? (
+              <WindowedStateBlock tone="warning">
+                Stop event never calls a model. It always blocks this event and uses the instruction below as the explanation.
+              </WindowedStateBlock>
+            ) : null}
+            <WindowedDialogStack>{primaryFields}</WindowedDialogStack>
+          </WindowedSettingsGroup>
+
+          {modelFields}
+
+          <WindowedSettingsGroup title="Available variables">
+            {draftHook.variables.length ? (
+              <WindowedKeyValueList
+                items={draftHook.variables.map((variable) => ({ label: `{{${variable.name}}}`, value: variable.label }))}
+              />
+            ) : (
+              <WindowedEmptyState>No variables are registered for this event.</WindowedEmptyState>
+            )}
+          </WindowedSettingsGroup>
+
+          {draft.type === 'decision' ? (
+            <WindowedSettingsGroup
+              title="Paths"
+              actions={
+                <WindowedPageButton
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      outcomes: [
+                        ...draft.outcomes,
+                        { id: 'new_path', label: 'New path', target: 'Describe this path', behavior: 'continue' },
+                      ],
+                    })
+                  }
+                >
+                  Add path
+                </WindowedPageButton>
+              }
+            >
+              <WindowedStateBlock>The routine must return one enum value. That value selects the matching path.</WindowedStateBlock>
+              {draft.outcomes.map((outcome, index) => (
+                <WindowedSettingsGroup key={index} title={outcome.id || `Path ${index + 1}`} hideHeader={false}>
+                  <WindowedFormGrid columns={3}>
+                    <WindowedField label="Enum value">
+                      <WindowedTextInput
+                        className="font-mono"
+                        placeholder="needs_review"
+                        value={outcome.id}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                          setDraft({
+                            ...draft,
+                            outcomes: draft.outcomes.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, id: event.target.value } : item,
+                            ),
+                          })
+                        }
+                      />
+                    </WindowedField>
+                    <WindowedField label="Path meaning">
+                      <WindowedTextInput
+                        placeholder="Path to review"
+                        value={outcome.target}
+                        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                          setDraft({
+                            ...draft,
+                            outcomes: draft.outcomes.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, target: event.target.value } : item,
+                            ),
+                          })
+                        }
+                      />
+                    </WindowedField>
+                    <WindowedField label="Fallback action" hint={outcomeBehaviorDescription(outcome.behavior)}>
+                      <WindowedSelect
+                        value={outcome.behavior}
+                        onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+                          const behavior = event.target.value as RoutineOutcome['behavior'];
+                          setDraft({
+                            ...draft,
+                            outcomes: draft.outcomes.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...item,
+                                    behavior,
+                                    nextRoutineId: behavior === 'branch' ? item.nextRoutineId || branchRoutineOptions[0]?.id : undefined,
+                                  }
+                                : item,
+                            ),
+                          });
+                        }}
+                      >
+                        <option value="continue">Continue</option>
+                        <option value="warn">Warn and continue</option>
+                        <option value="block">Stop if this path has no next step</option>
+                        <option value="ask">Ask me</option>
+                        <option value="branch">Branch</option>
+                      </WindowedSelect>
+                    </WindowedField>
+                    {outcome.behavior === 'branch' ? (
+                      <WindowedField label="Then run" span="full">
+                        <WindowedSelect
+                          value={outcome.nextRoutineId ?? ''}
+                          onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                            setDraft({
+                              ...draft,
+                              outcomes: draft.outcomes.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, nextRoutineId: event.target.value || undefined } : item,
+                              ),
+                            })
+                          }
+                        >
+                          <option value="">Choose a routine...</option>
+                          {branchRoutineOptions.map((routineOption) => (
+                            <option key={routineOption.id} value={routineOption.id}>
+                              {routineOption.name} ({routineOption.position})
+                            </option>
+                          ))}
+                        </WindowedSelect>
+                      </WindowedField>
+                    ) : null}
+                  </WindowedFormGrid>
+                  <WindowedPageButton
+                    tone="danger"
+                    onClick={() => setDraft({ ...draft, outcomes: draft.outcomes.filter((_, itemIndex) => itemIndex !== index) })}
+                  >
+                    Remove path
+                  </WindowedPageButton>
+                </WindowedSettingsGroup>
+              ))}
+            </WindowedSettingsGroup>
+          ) : null}
+        </WindowedDialogStack>
+      );
+    }
+
     return (
       <div className="border-t border-border-subtle bg-app/35 px-4 py-4" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4">
