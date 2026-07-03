@@ -143,7 +143,20 @@ describe('WindowedLayout route windows', () => {
     const routinesWindow = screen.getByRole('region', { name: /routines/i });
     expect(within(routinesWindow).getByTestId('extension-route-host')).toBeTruthy();
     expect(within(routinesWindow).queryByTestId('embedded-layout')).toBeNull();
+    expect(routinesWindow.querySelector('.wos-window-route-body--extension')?.classList.contains('wos-chat-surface')).toBe(false);
     expect(screen.getAllByTestId('embedded-layout')).toHaveLength(1);
+  });
+
+  it('renders chat windows inside the canonical windowed chat surface with attached workbench layout', () => {
+    renderWindowedLayout();
+
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
+
+    expect(chatSurface).toBeTruthy();
+    expect(chatSurface?.classList.contains('wos-chat-surface')).toBe(true);
+    expect(within(chatWindow).getByTestId('embedded-layout')).toBeTruthy();
+    expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
   });
 
   it('keeps the windowed shell app controls text-only without monogram badges or secondary labels', () => {

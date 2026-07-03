@@ -5,6 +5,7 @@ import {
   Taskbar,
   type TaskbarGroup,
   type TaskbarItem,
+  WindowedChatSurface,
   WindowedMenuPanel,
   WindowFrame,
 } from '@neon-pilot/windowed-os-ui';
@@ -579,7 +580,7 @@ function WindowRouteBody({ onNavigate, route }: { onNavigate: WindowNavigate; ro
   }
 
   return (
-    <div className="wos-window-route-body wos-window-route-body--chat">
+    <WindowedChatSurface className="wos-window-route-body wos-window-route-body--chat">
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
           <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
@@ -611,7 +612,7 @@ function WindowRouteBody({ onNavigate, route }: { onNavigate: WindowNavigate; ro
           </Route>
         </Routes>
       </WindowRouteScope>
-    </div>
+    </WindowedChatSurface>
   );
 }
 
