@@ -75,6 +75,7 @@ describe('AutomationsPage windowed surface', () => {
     expect(container.querySelector('.automations-page-windowed')).toBeTruthy();
     expect(container.querySelector('.ui-app-page-shell')).toBeNull();
     expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
+    expect(container.querySelector('.wos-page-main__body > .wos-page-stack')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy();
     expect(screen.getByText('Status')).toBeTruthy();
@@ -166,6 +167,7 @@ describe('AutomationsPage windowed surface', () => {
     expect(within(dialog).getByRole('heading', { name: 'Owner' })).toBeTruthy();
     expect(within(dialog).getByText('Report the current time.')).toBeTruthy();
     expect(dialog.querySelector('.ui-context-rail')).toBeNull();
+    expect(dialog.querySelector('.wos-action-row')?.getAttribute('data-align')).toBe('start');
     expect(dialog.querySelector('.wos-key-value-list')).toBeTruthy();
     expect(container.querySelector('.ui-context-rail')).toBeNull();
   });
@@ -210,14 +212,15 @@ describe('AutomationsPage windowed surface', () => {
     expect(container.querySelector('.wos-automation-error')).toBeNull();
   });
 
-  it('uses shared windowed state-block chrome while automations are loading', async () => {
+  it('uses shared windowed loading-state chrome while automations are loading', async () => {
     const { container } = render(
       <AutomationsPage pa={createPa(new Promise(() => undefined))} context={{ shellPresentation: 'windowed' }} />,
     );
 
-    await waitFor(() => expect(screen.getByText('Loading automations.')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Loading automations')).toBeTruthy());
 
-    expect(screen.getByText('Loading automations.').closest('.wos-state-block')).toBeTruthy();
+    expect(screen.getByText('Loading automations').closest('.wos-loading-state')).toBeTruthy();
+    expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
     expect(container.querySelector('.wos-empty-state')).toBeNull();
     expect(container.querySelector('.ui-empty-state')).toBeNull();
     expect(container.querySelector('.ui-error-state')).toBeNull();

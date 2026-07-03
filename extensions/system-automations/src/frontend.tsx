@@ -43,6 +43,7 @@ import {
   Textarea,
   TextButton,
   TextInput,
+  WindowedActionRow,
   WindowedBadge,
   WindowedDataRow,
   WindowedDataTable,
@@ -54,10 +55,12 @@ import {
   WindowedFormGrid,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
+  WindowedLoadingState,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedPageStack,
   WindowedSegmentedControl,
   WindowedSelect,
   WindowedStateBlock,
@@ -775,131 +778,133 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               </>
             }
           >
-            {error ? (
-              <WindowedPageSection title="Action needed">
-                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+            <WindowedPageStack>
+              {error ? (
+                <WindowedPageSection title="Action needed">
+                  <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+                </WindowedPageSection>
+              ) : null}
+
+              <WindowedPageSection title="Overview" meta={`${visibleTasks.length} total`}>
+                <WindowedKeyValueGrid
+                  items={[
+                    { label: 'Running', value: String(runningCount) },
+                    { label: 'Failed', value: String(failedCount) },
+                    { label: 'Paused', value: String(pausedCount) },
+                    { label: 'Enabled', value: String(visibleTasks.filter((task) => task.enabled ?? true).length) },
+                  ]}
+                  columns={4}
+                />
               </WindowedPageSection>
-            ) : null}
 
-            <WindowedPageSection title="Overview" meta={`${visibleTasks.length} total`}>
-              <WindowedKeyValueGrid
-                items={[
-                  { label: 'Running', value: String(runningCount) },
-                  { label: 'Failed', value: String(failedCount) },
-                  { label: 'Paused', value: String(pausedCount) },
-                  { label: 'Enabled', value: String(visibleTasks.filter((task) => task.enabled ?? true).length) },
-                ]}
-                columns={4}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Task queue">
-              {loading && visibleTasks.length === 0 ? <WindowedStateBlock>Loading automations.</WindowedStateBlock> : null}
-              {!error && !loading && visibleTasks.length === 0 ? (
-                <WindowedEmptyState>Schedule prompts into owner threads for recurring reports, checks, and reminders.</WindowedEmptyState>
-              ) : null}
-              {visibleTasks.length > 0 ? (
-                <WindowedDataTable
-                  className="wos-automation-queue"
-                  columnTemplate="minmax(12rem, 1fr) minmax(5.75rem, 0.34fr) minmax(0, 1.08fr)"
-                  columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}
-                >
-                  {visibleTasks.map((task) => {
-                    const title = taskTitle(task);
-                    const runLabel = `Run ${title}`;
-                    const toggleLabel = task.enabled ? `Pause ${title}` : `Resume ${title}`;
-                    const editLabel = `Edit ${title}`;
-                    const selected = activeAutomation?.kind === 'automation' && activeAutomation.task.id === task.id;
-                    return (
-                      <WindowedDataRow
-                        key={task.id}
-                        className="wos-automation-queue-row"
-                        name={title}
-                        meta={windowedAutomationMeta(task)}
-                        selected={selected}
-                        accent="automations"
-                        status={<WindowedBadge tone={windowedStatusTone(task)}>{statusLabel(task)}</WindowedBadge>}
-                        onSelect={() => selectTask(task)}
-                        action={
-                          <span className="wos-automation-actions">
-                            <WindowedPageButton
-                              aria-label={`Open details for ${title}`}
-                              title={`Open details for ${title}`}
-                              density="icon"
-                              onClick={(event) => {
-                                stopRowAction(event);
-                                selectTask(task);
-                              }}
-                            >
-                              <AutomationRowIcon name="details" />
-                            </WindowedPageButton>
-                            <WindowedPageButton
-                              disabled={!task.threadConversationId}
-                              aria-label={`Open owner thread for ${title}: ${task.threadTitle || task.threadConversationId || 'None'}`}
-                              title={`Open owner thread for ${title}`}
-                              density="icon"
-                              onClick={(event) => {
-                                stopRowAction(event);
-                                void openOwnerThread(task);
-                              }}
-                            >
-                              <AutomationRowIcon name="owner" />
-                            </WindowedPageButton>
-                            <WindowedPageButton
-                              disabled={task.running || busy === `run:${task.id}`}
-                              aria-label={runLabel}
-                              title={runLabel}
-                              density="icon"
-                              onClick={(event) => {
-                                stopRowAction(event);
-                                void runNow(task);
-                              }}
-                            >
-                              <AutomationRowIcon name="run" />
-                            </WindowedPageButton>
-                            <WindowedPageButton
-                              disabled={Boolean(busy?.endsWith(`:${task.id}`))}
-                              aria-label={toggleLabel}
-                              title={toggleLabel}
-                              density="icon"
-                              onClick={(event) => {
-                                stopRowAction(event);
-                                void updateEnabled(task, !task.enabled);
-                              }}
-                            >
-                              <AutomationRowIcon name={task.enabled ? 'pause' : 'resume'} />
-                            </WindowedPageButton>
-                            <WindowedPageButton
-                              aria-label={editLabel}
-                              title={editLabel}
-                              density="icon"
-                              onClick={(event) => {
-                                stopRowAction(event);
-                                selectTask(task, 'edit');
-                              }}
-                            >
-                              <AutomationRowIcon name="edit" />
-                            </WindowedPageButton>
-                            <WindowedPageButton
-                              tone="danger"
-                              disabled={task.running || busy === `delete:${task.id}`}
-                              aria-label={`Delete ${title}`}
-                              title={`Delete ${title}`}
-                              onClick={(event) => {
-                                stopRowAction(event);
-                                void deleteTask(task);
-                              }}
-                            >
-                              Delete
-                            </WindowedPageButton>
-                          </span>
-                        }
-                      />
-                    );
-                  })}
-                </WindowedDataTable>
-              ) : null}
-            </WindowedPageSection>
+              <WindowedPageSection title="Task queue">
+                {loading && visibleTasks.length === 0 ? <WindowedLoadingState label="Loading automations" /> : null}
+                {!error && !loading && visibleTasks.length === 0 ? (
+                  <WindowedEmptyState>Schedule prompts into owner threads for recurring reports, checks, and reminders.</WindowedEmptyState>
+                ) : null}
+                {visibleTasks.length > 0 ? (
+                  <WindowedDataTable
+                    className="wos-automation-queue"
+                    columnTemplate="minmax(12rem, 1fr) minmax(5.75rem, 0.34fr) minmax(0, 1.08fr)"
+                    columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}
+                  >
+                    {visibleTasks.map((task) => {
+                      const title = taskTitle(task);
+                      const runLabel = `Run ${title}`;
+                      const toggleLabel = task.enabled ? `Pause ${title}` : `Resume ${title}`;
+                      const editLabel = `Edit ${title}`;
+                      const selected = activeAutomation?.kind === 'automation' && activeAutomation.task.id === task.id;
+                      return (
+                        <WindowedDataRow
+                          key={task.id}
+                          className="wos-automation-queue-row"
+                          name={title}
+                          meta={windowedAutomationMeta(task)}
+                          selected={selected}
+                          accent="automations"
+                          status={<WindowedBadge tone={windowedStatusTone(task)}>{statusLabel(task)}</WindowedBadge>}
+                          onSelect={() => selectTask(task)}
+                          action={
+                            <span className="wos-automation-actions">
+                              <WindowedPageButton
+                                aria-label={`Open details for ${title}`}
+                                title={`Open details for ${title}`}
+                                density="icon"
+                                onClick={(event) => {
+                                  stopRowAction(event);
+                                  selectTask(task);
+                                }}
+                              >
+                                <AutomationRowIcon name="details" />
+                              </WindowedPageButton>
+                              <WindowedPageButton
+                                disabled={!task.threadConversationId}
+                                aria-label={`Open owner thread for ${title}: ${task.threadTitle || task.threadConversationId || 'None'}`}
+                                title={`Open owner thread for ${title}`}
+                                density="icon"
+                                onClick={(event) => {
+                                  stopRowAction(event);
+                                  void openOwnerThread(task);
+                                }}
+                              >
+                                <AutomationRowIcon name="owner" />
+                              </WindowedPageButton>
+                              <WindowedPageButton
+                                disabled={task.running || busy === `run:${task.id}`}
+                                aria-label={runLabel}
+                                title={runLabel}
+                                density="icon"
+                                onClick={(event) => {
+                                  stopRowAction(event);
+                                  void runNow(task);
+                                }}
+                              >
+                                <AutomationRowIcon name="run" />
+                              </WindowedPageButton>
+                              <WindowedPageButton
+                                disabled={Boolean(busy?.endsWith(`:${task.id}`))}
+                                aria-label={toggleLabel}
+                                title={toggleLabel}
+                                density="icon"
+                                onClick={(event) => {
+                                  stopRowAction(event);
+                                  void updateEnabled(task, !task.enabled);
+                                }}
+                              >
+                                <AutomationRowIcon name={task.enabled ? 'pause' : 'resume'} />
+                              </WindowedPageButton>
+                              <WindowedPageButton
+                                aria-label={editLabel}
+                                title={editLabel}
+                                density="icon"
+                                onClick={(event) => {
+                                  stopRowAction(event);
+                                  selectTask(task, 'edit');
+                                }}
+                              >
+                                <AutomationRowIcon name="edit" />
+                              </WindowedPageButton>
+                              <WindowedPageButton
+                                tone="danger"
+                                disabled={task.running || busy === `delete:${task.id}`}
+                                aria-label={`Delete ${title}`}
+                                title={`Delete ${title}`}
+                                onClick={(event) => {
+                                  stopRowAction(event);
+                                  void deleteTask(task);
+                                }}
+                              >
+                                Delete
+                              </WindowedPageButton>
+                            </span>
+                          }
+                        />
+                      );
+                    })}
+                  </WindowedDataTable>
+                ) : null}
+              </WindowedPageSection>
+            </WindowedPageStack>
           </WindowedPageMain>
         </WindowedPageShell>
 
@@ -1604,7 +1609,7 @@ export function AutomationDialogPanel({
     }
 
     if (loading && !task) {
-      return <WindowedStateBlock>Loading automations.</WindowedStateBlock>;
+      return <WindowedLoadingState label="Loading automation details" />;
     }
 
     if (!task) {
@@ -1615,7 +1620,7 @@ export function AutomationDialogPanel({
       <WindowedDialogStack>
         {task.prompt ? <WindowedDialogCopy>{task.prompt}</WindowedDialogCopy> : null}
         <WindowedPageSection title="Actions" meta={statusLabel(task)}>
-          <div className="wos-automation-actions">
+          <WindowedActionRow align="start" className="wos-automation-actions">
             <WindowedPageButton disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow()}>
               Run
             </WindowedPageButton>
@@ -1625,7 +1630,7 @@ export function AutomationDialogPanel({
             <WindowedPageButton tone="danger" disabled={task.running || busy === `delete:${task.id}`} onClick={() => void deleteTask()}>
               Delete
             </WindowedPageButton>
-          </div>
+          </WindowedActionRow>
         </WindowedPageSection>
         <WindowedPageSection title="Schedule">
           <WindowedKeyValueList
