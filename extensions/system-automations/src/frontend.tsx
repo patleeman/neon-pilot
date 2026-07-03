@@ -756,35 +756,50 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                     <span>Owner</span>
                     <span>Actions</span>
                   </div>
-                  {visibleTasks.map((task) => (
-                    <div key={task.id} className="wos-automation-row" data-active={selectedTask?.id === task.id}>
-                      <WindowedTextButton className="wos-automation-row__identity" onClick={() => selectTask(task)}>
-                        <span>{taskTitle(task)}</span>
-                        {task.prompt ? <small>{task.prompt}</small> : null}
-                      </WindowedTextButton>
-                      <span className="wos-automation-row__schedule">{scheduleText(task)}</span>
-                      <span>{nextRunText(task)}</span>
-                      <WindowedTextButton
-                        className="wos-automation-row__owner"
-                        disabled={!task.threadConversationId}
-                        onClick={() => void openOwnerThread(task)}
-                      >
-                        {task.threadTitle || task.threadConversationId || 'None'}
-                      </WindowedTextButton>
-                      <span className="wos-automation-row__actions">
-                        <WindowedPageButton disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow(task)}>
-                          Run
-                        </WindowedPageButton>
-                        <WindowedPageButton
-                          disabled={Boolean(busy?.endsWith(`:${task.id}`))}
-                          onClick={() => void updateEnabled(task, !task.enabled)}
+                  {visibleTasks.map((task) => {
+                    const title = taskTitle(task);
+                    const runLabel = `Run ${title}`;
+                    const toggleLabel = task.enabled ? `Pause ${title}` : `Resume ${title}`;
+                    const editLabel = `Edit ${title}`;
+                    return (
+                      <div key={task.id} className="wos-automation-row" data-active={selectedTask?.id === task.id}>
+                        <WindowedTextButton className="wos-automation-row__identity" onClick={() => selectTask(task)}>
+                          <span>{title}</span>
+                          {task.prompt ? <small>{task.prompt}</small> : null}
+                        </WindowedTextButton>
+                        <span className="wos-automation-row__schedule">{scheduleText(task)}</span>
+                        <span>{nextRunText(task)}</span>
+                        <WindowedTextButton
+                          className="wos-automation-row__owner"
+                          disabled={!task.threadConversationId}
+                          onClick={() => void openOwnerThread(task)}
                         >
-                          {task.enabled ? 'Pause' : 'Resume'}
-                        </WindowedPageButton>
-                        <WindowedPageButton onClick={() => selectTask(task, 'edit')}>Edit</WindowedPageButton>
-                      </span>
-                    </div>
-                  ))}
+                          {task.threadTitle || task.threadConversationId || 'None'}
+                        </WindowedTextButton>
+                        <span className="wos-automation-row__actions">
+                          <WindowedPageButton
+                            disabled={task.running || busy === `run:${task.id}`}
+                            aria-label={runLabel}
+                            title={runLabel}
+                            onClick={() => void runNow(task)}
+                          >
+                            Run
+                          </WindowedPageButton>
+                          <WindowedPageButton
+                            disabled={Boolean(busy?.endsWith(`:${task.id}`))}
+                            aria-label={toggleLabel}
+                            title={toggleLabel}
+                            onClick={() => void updateEnabled(task, !task.enabled)}
+                          >
+                            {task.enabled ? 'Pause' : 'Resume'}
+                          </WindowedPageButton>
+                          <WindowedPageButton aria-label={editLabel} title={editLabel} onClick={() => selectTask(task, 'edit')}>
+                            Edit
+                          </WindowedPageButton>
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
             </WindowedPageSection>

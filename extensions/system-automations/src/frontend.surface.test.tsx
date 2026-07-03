@@ -78,7 +78,13 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByText('Release watch')).toBeTruthy();
     expect(screen.getByText('Running')).toBeTruthy();
     expect(screen.getAllByText('Paused').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('button', { name: 'Run' })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Run Quarter-hour chime' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Pause Quarter-hour chime' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit Quarter-hour chime' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Run Release watch' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Resume Release watch' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit Release watch' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
     expect(screen.queryByRole('button', { name: /actions for/i })).toBeNull();
   });
 
