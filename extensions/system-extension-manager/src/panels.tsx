@@ -52,6 +52,7 @@ import {
   WindowedDialog,
   WindowedEmptyState,
   WindowedKeyValueList,
+  WindowedLoadingState,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
@@ -1813,9 +1814,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
             <WindowedPageSection title="Installed" meta={sectionSummary}>
               {loading ? (
-                <WindowedStateBlock>
-                  <QuietLoadingState label="Loading extensions" className="min-h-24" />
-                </WindowedStateBlock>
+                <WindowedLoadingState label="Loading extensions" />
               ) : extensions.length === 0 ? (
                 <WindowedEmptyState>Add capabilities to Neon Pilot.</WindowedEmptyState>
               ) : visibleExtensions.length === 0 ? (

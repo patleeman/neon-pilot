@@ -428,6 +428,19 @@ describe('ExtensionManagerPage', () => {
     expect(container.querySelector('.ui-error-state')).toBeNull();
   });
 
+  it('uses native windowed loading chrome while extensions are loading', async () => {
+    const deferred = createDeferred<never[]>();
+    mocks.extensionInstallations.mockReturnValue(deferred.promise);
+    const { container } = renderWindowedPage();
+
+    expect(await screen.findByText('Loading extensions')).toBeTruthy();
+    expect(screen.getByText('Loading extensions').closest('.wos-loading-state')).toBeTruthy();
+    expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
+    expect(container.querySelector('[role="status"]')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+  });
+
   it('uses windowed error-state chrome when extensions fail to load', async () => {
     mocks.extensionInstallations.mockRejectedValue(new Error('Installations unavailable'));
     const { container } = renderWindowedPage();
