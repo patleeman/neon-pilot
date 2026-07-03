@@ -218,7 +218,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
 
               <WindowedPageSection title="Usage" meta="Tokens and models">
                 <div className="space-y-4">
-                  {tokensDaily && <TracesHeatmap data={tokensDaily} />}
+                  {tokensDaily && <TracesHeatmap data={tokensDaily} presentation="windowed" />}
                   {tokensDaily && <TracesDailyUsage data={tokensDaily} presentation="windowed" />}
                   {modelUsage && (
                     <TracesModelUsage

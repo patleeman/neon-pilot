@@ -457,6 +457,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-terminal-panel :where(.xterm, .xterm-screen, .xterm-viewport)');
   });
 
+  it('defines compact windowed telemetry heatmap primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-heatmap {');
+    expect(stylesSource).toContain('.wos-heatmap-grid {');
+    expect(stylesSource).toContain('.wos-heatmap-cell-4 {');
+    expect(stylesSource).toContain('.wos-heatmap-share {');
+  });
+
   it('documents the canonical terminal frame in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

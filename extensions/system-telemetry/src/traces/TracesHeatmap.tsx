@@ -3,11 +3,15 @@
  */
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
-import { PanelHeader, PanelMessage, SurfacePanel } from '@neon-pilot/extensions/ui';
+import { PanelHeader, PanelMessage, SurfacePanel, WindowedStateBlock } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
-export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
+export function TracesHeatmap({ data, presentation = 'stable' }: { data: TraceTokenDaily[]; presentation?: 'stable' | 'windowed' }) {
   if (!data || data.length === 0) {
+    if (presentation === 'windowed') {
+      return <WindowedStateBlock className="wos-heatmap-empty">Data accumulates after sessions produce tokens.</WindowedStateBlock>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Token Activity — All Retained History" meta="No data yet" metaClassName="bg-transparent px-0" />
@@ -36,13 +40,105 @@ export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
     return 4;
   };
 
-  const cellColors = ['ui-heatmap-cell-0', 'ui-heatmap-cell-1', 'ui-heatmap-cell-2', 'ui-heatmap-cell-3', 'ui-heatmap-cell-4'];
+  const cellColors =
+    presentation === 'windowed'
+      ? ['wos-heatmap-cell-0', 'wos-heatmap-cell-1', 'wos-heatmap-cell-2', 'wos-heatmap-cell-3', 'wos-heatmap-cell-4']
+      : ['ui-heatmap-cell-0', 'ui-heatmap-cell-1', 'ui-heatmap-cell-2', 'ui-heatmap-cell-3', 'ui-heatmap-cell-4'];
 
   const total = data.reduce((a, d) => a + d.tokensInput + d.tokensOutput + d.tokensCached + d.tokensCachedWrite, 0);
   const avg = total / Math.max(data.length, 1);
   const firstDate = data[0]?.date;
   const lastDate = data[data.length - 1]?.date;
   const dateRange = firstDate && lastDate ? `${firstDate} → ${lastDate}` : 'All retained history';
+
+  const heatmapGrid = (
+    <div className={presentation === 'windowed' ? 'wos-heatmap-grid' : 'flex gap-0.5 min-w-[500px]'}>
+      {weeks.map((week, wi) => (
+        <div key={wi} className={presentation === 'windowed' ? 'wos-heatmap-week' : 'flex flex-col gap-0.5'}>
+          {week.map((day, di) => {
+            const v = tokenTotal(day);
+            const lvl = level(v);
+            return (
+              <div
+                key={di}
+                className={presentation === 'windowed' ? `wos-heatmap-cell ${cellColors[lvl]}` : `w-3 h-3 rounded-sm ${cellColors[lvl]}`}
+                title={`${day.date}: ${formatNumber(v)} tokens (in: ${formatNumber(day.tokensInput)}, cache read: ${formatNumber(day.tokensCached)}, cache write: ${formatNumber(day.tokensCachedWrite)}, out: ${formatNumber(day.tokensOutput)})`}
+              />
+            );
+          })}
+          {week.length < 7 &&
+            Array.from({ length: 7 - week.length }).map((_, i) => (
+              <div key={`pad-${i}`} className={presentation === 'windowed' ? 'wos-heatmap-cell wos-heatmap-cell-pad' : 'w-3 h-3'} />
+            ))}
+        </div>
+      ))}
+    </div>
+  );
+
+  const legend = (
+    <>
+      <span>Less</span>
+      {cellColors.map((cellClassName, i) => (
+        <div
+          key={i}
+          className={presentation === 'windowed' ? `wos-heatmap-legend-cell ${cellClassName}` : `w-2.5 h-2.5 rounded-sm ${cellClassName}`}
+        />
+      ))}
+      <span>More</span>
+      <span className={presentation === 'windowed' ? 'wos-heatmap-peak' : 'ml-4 text-warning'}>Peak: {formatNumber(max)} tokens</span>
+      <span className={presentation === 'windowed' ? 'wos-heatmap-share' : 'ml-auto'}>
+        In:{' '}
+        <span className={presentation === 'windowed' ? 'wos-heatmap-share-value' : 'text-accent'}>
+          {pct(
+            data.reduce((a, d) => a + d.tokensInput, 0),
+            total,
+          )}
+        </span>
+      </span>
+      <span>
+        Cache Read:{' '}
+        <span className={presentation === 'windowed' ? 'wos-heatmap-share-value' : 'text-warning'}>
+          {pct(
+            data.reduce((a, d) => a + d.tokensCached, 0),
+            total,
+          )}
+        </span>
+      </span>
+      <span>
+        Cache Write:{' '}
+        <span className={presentation === 'windowed' ? 'wos-heatmap-share-value' : 'text-warning'}>
+          {pct(
+            data.reduce((a, d) => a + d.tokensCachedWrite, 0),
+            total,
+          )}
+        </span>
+      </span>
+      <span>
+        Out:{' '}
+        <span className={presentation === 'windowed' ? 'wos-heatmap-share-value' : 'text-success'}>
+          {pct(
+            data.reduce((a, d) => a + d.tokensOutput, 0),
+            total,
+          )}
+        </span>
+      </span>
+    </>
+  );
+
+  if (presentation === 'windowed') {
+    return (
+      <section className="wos-heatmap" aria-label="Token Activity — All Retained History">
+        <header className="wos-heatmap-header">
+          <h4>Token Activity</h4>
+          <span>{`${dateRange} · ${formatNumber(total)} total · ${formatNumber(avg)} avg/active day`}</span>
+        </header>
+        <div className="wos-heatmap-body">
+          {heatmapGrid}
+          <div className="wos-heatmap-legend">{legend}</div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <SurfacePanel className="overflow-hidden">
@@ -51,69 +147,8 @@ export function TracesHeatmap({ data }: { data: TraceTokenDaily[] }) {
         meta={`${dateRange} · ${formatNumber(total)} total · ${formatNumber(avg)} avg/active day`}
       />
       <div className="p-4 overflow-x-auto">
-        <div className="flex gap-0.5 min-w-[500px]">
-          {weeks.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-0.5">
-              {week.map((day, di) => {
-                const v = tokenTotal(day);
-                const lvl = level(v);
-                return (
-                  <div
-                    key={di}
-                    className={`w-3 h-3 rounded-sm ${cellColors[lvl]}`}
-                    title={`${day.date}: ${formatNumber(v)} tokens (in: ${formatNumber(day.tokensInput)}, cache read: ${formatNumber(day.tokensCached)}, cache write: ${formatNumber(day.tokensCachedWrite)}, out: ${formatNumber(day.tokensOutput)})`}
-                  />
-                );
-              })}
-              {/* Pad incomplete weeks */}
-              {week.length < 7 && Array.from({ length: 7 - week.length }).map((_, i) => <div key={`pad-${i}`} className="w-3 h-3" />)}
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 mt-3 text-[10px] text-dim">
-          <span>Less</span>
-          {cellColors.map((c, i) => (
-            <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
-          ))}
-          <span>More</span>
-          <span className="ml-4 text-warning">● Peak: {formatNumber(max)} tokens</span>
-          <span className="ml-auto">
-            In:{' '}
-            <span className="text-accent">
-              {pct(
-                data.reduce((a, d) => a + d.tokensInput, 0),
-                total,
-              )}
-            </span>
-          </span>
-          <span>
-            Cache Read:{' '}
-            <span className="text-warning">
-              {pct(
-                data.reduce((a, d) => a + d.tokensCached, 0),
-                total,
-              )}
-            </span>
-          </span>
-          <span>
-            Cache Write:{' '}
-            <span className="text-warning">
-              {pct(
-                data.reduce((a, d) => a + d.tokensCachedWrite, 0),
-                total,
-              )}
-            </span>
-          </span>
-          <span>
-            Out:{' '}
-            <span className="text-success">
-              {pct(
-                data.reduce((a, d) => a + d.tokensOutput, 0),
-                total,
-              )}
-            </span>
-          </span>
-        </div>
+        {heatmapGrid}
+        <div className="flex items-center gap-2 mt-3 text-[10px] text-dim">{legend}</div>
       </div>
     </SurfacePanel>
   );

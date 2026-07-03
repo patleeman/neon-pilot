@@ -1799,6 +1799,119 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   flex: 0 0 auto;
 }
 
+.wos-heatmap {
+  min-width: 0;
+  overflow: hidden;
+  border-top: 1.5px solid var(--wos-ink-900);
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  background: var(--wos-surface-1);
+}
+
+.wos-heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wos-space-4);
+  border-bottom: 1.5px solid var(--wos-ink-900);
+  padding: 5px var(--wos-space-4);
+}
+
+.wos-heatmap-header h4 {
+  margin: 0;
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
+  letter-spacing: 0;
+}
+
+.wos-heatmap-header span,
+.wos-heatmap-legend {
+  color: var(--wos-ink-500);
+  font: var(--wos-text-meta);
+}
+
+.wos-heatmap-body {
+  min-width: 0;
+  overflow-x: auto;
+  padding: var(--wos-space-4);
+}
+
+.wos-heatmap-grid {
+  display: flex;
+  min-width: 500px;
+  gap: 2px;
+}
+
+.wos-heatmap-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wos-heatmap-cell,
+.wos-heatmap-legend-cell {
+  flex: 0 0 auto;
+  border: 1px solid var(--wos-ink-900);
+  border-radius: 3px;
+  background: var(--wos-surface-2);
+}
+
+.wos-heatmap-cell {
+  width: 12px;
+  height: 12px;
+}
+
+.wos-heatmap-legend-cell {
+  width: 10px;
+  height: 10px;
+}
+
+.wos-heatmap-cell-pad {
+  border-color: transparent;
+  background: transparent;
+}
+
+.wos-heatmap-cell-0 {
+  background: var(--wos-surface-2);
+}
+
+.wos-heatmap-cell-1 {
+  background: oklch(89% 0.04 155);
+}
+
+.wos-heatmap-cell-2 {
+  background: oklch(78% 0.09 155);
+}
+
+.wos-heatmap-cell-3 {
+  background: oklch(66% 0.13 155);
+}
+
+.wos-heatmap-cell-4 {
+  background: oklch(53% 0.15 155);
+}
+
+.wos-heatmap-legend {
+  display: flex;
+  min-width: 500px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--wos-space-3);
+  margin-top: var(--wos-space-4);
+}
+
+.wos-heatmap-peak {
+  color: var(--wos-extensions);
+}
+
+.wos-heatmap-share {
+  margin-left: auto;
+}
+
+.wos-heatmap-share-value {
+  color: var(--wos-ink-900);
+  font-weight: 700;
+}
+
 .wos-toggle {
   position: relative;
   display: inline-flex;
