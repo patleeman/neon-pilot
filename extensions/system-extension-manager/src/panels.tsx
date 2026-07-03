@@ -1855,9 +1855,21 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                                 onChange={() => toggleExtension(extension)}
                               />
                             ) : null}
-                            <WindowedPageButton onClick={() => selectExtension(extension)}>Details</WindowedPageButton>
+                            <WindowedPageButton
+                              aria-label={`Details for ${extension.name}`}
+                              title={`Details for ${extension.name}`}
+                              onClick={() => selectExtension(extension)}
+                            >
+                              Details
+                            </WindowedPageButton>
                             {route && extension.enabled ? (
-                              <WindowedPageButton onClick={() => navigate(route)}>Open</WindowedPageButton>
+                              <WindowedPageButton
+                                aria-label={`Open ${extension.name}`}
+                                title={`Open ${extension.name}`}
+                                onClick={() => navigate(route)}
+                              >
+                                Open
+                              </WindowedPageButton>
                             ) : null}
                           </span>
                         }

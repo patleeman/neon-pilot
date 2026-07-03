@@ -176,7 +176,7 @@ export function WindowedPageSection({ title, meta, children, className }: Window
     <section className={cx('wos-page-section', className)}>
       {title || meta ? (
         <header className="wos-page-section__header">
-          {title ? <h3>{title}</h3> : <span />}
+          {title ? <h3>{title}</h3> : null}
           {meta ? <span>{meta}</span> : null}
         </header>
       ) : null}
@@ -215,25 +215,15 @@ export function WindowedToolbar({ children, end, as = 'div', className, formProp
   );
 }
 
-export interface WindowedPageButtonProps {
+export interface WindowedPageButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
   children: ReactNode;
-  onClick?: () => void;
   tone?: 'neutral' | 'accent';
   type?: 'button' | 'submit';
-  disabled?: boolean;
-  className?: string;
 }
 
-export function WindowedPageButton({
-  children,
-  onClick,
-  tone = 'neutral',
-  type = 'button',
-  disabled = false,
-  className,
-}: WindowedPageButtonProps) {
+export function WindowedPageButton({ children, tone = 'neutral', type = 'button', className, ...props }: WindowedPageButtonProps) {
   return (
-    <button type={type} className={cx('wos-page-button', className)} data-tone={tone} disabled={disabled} onClick={onClick}>
+    <button type={type} className={cx('wos-page-button', className)} data-tone={tone} {...props}>
       {children}
     </button>
   );

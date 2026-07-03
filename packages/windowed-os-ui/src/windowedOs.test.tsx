@@ -11,6 +11,7 @@ import {
   WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
+  WindowedPageSection,
   WindowedPageShell,
   WindowedToolbar,
 } from './windowedOs';
@@ -82,6 +83,39 @@ describe('WindowedToolbar', () => {
 
     expect(html).toContain('<form');
     expect(html).toContain('class="wos-toolbar"');
+  });
+});
+
+describe('WindowedPageSection', () => {
+  it('omits header chrome for structural wrapper sections', () => {
+    const html = renderToStaticMarkup(<WindowedPageSection>Filters</WindowedPageSection>);
+
+    expect(html).toContain('class="wos-page-section"');
+    expect(html).toContain('Filters');
+    expect(html).not.toContain('wos-page-section__header');
+  });
+
+  it('does not render an empty title placeholder for meta-only sections', () => {
+    const html = renderToStaticMarkup(<WindowedPageSection meta="Loading">Status</WindowedPageSection>);
+
+    expect(html).toContain('wos-page-section__header');
+    expect(html).toContain('<span>Loading</span>');
+    expect(html).not.toContain('<span></span>');
+  });
+});
+
+describe('WindowedPageButton', () => {
+  it('passes native button attributes through for accessible compact actions', () => {
+    const html = renderToStaticMarkup(
+      <WindowedPageButton aria-label="Details for Browser" title="Details for Browser" disabled>
+        Details
+      </WindowedPageButton>,
+    );
+
+    expect(html).toContain('aria-label="Details for Browser"');
+    expect(html).toContain('title="Details for Browser"');
+    expect(html).toContain('disabled=""');
+    expect(html).toContain('Details');
   });
 });
 

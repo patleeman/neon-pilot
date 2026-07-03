@@ -320,7 +320,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Selection')).toBeNull();
     expect(container.querySelector('.wos-page-eyebrow')).toBeNull();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Menu Test' }));
 
     const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
     expect(within(detailsDialog).getByText('Appears in')).toBeTruthy();
