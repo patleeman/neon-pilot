@@ -42,12 +42,23 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     </div>
   ),
   WindowedDataTable: ({ children }: { children: React.ReactNode }) => <div className="wos-data-table">{children}</div>,
+  WindowedPageMain: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <main className="wos-page-main">
+      <h1>{title}</h1>
+      {children}
+    </main>
+  ),
   WindowedPageButton: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props} />,
   WindowedPageSection: ({ title, meta, children }: { title?: string; meta?: string; children: React.ReactNode }) => (
     <section className="wos-page-section" aria-label={title}>
       {meta ? <div>{meta}</div> : null}
       {children}
     </section>
+  ),
+  WindowedPageShell: ({ children, className, layout }: { children: React.ReactNode; className?: string; layout?: string }) => (
+    <div className={['wos-page-shell', className].filter(Boolean).join(' ')} data-layout={layout}>
+      {children}
+    </div>
   ),
   WindowedSelect: (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} />,
   WindowedStateBlock: ({ children }: { children: React.ReactNode }) => <div className="wos-state-block">{children}</div>,
@@ -209,10 +220,25 @@ describe('AlertsSettingsPanel', () => {
     const { container } = renderPanel(invoke, 'windowed');
     await act(async () => flush());
 
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
+    expect(container.querySelector('h1')?.textContent).toBe('Alerts');
     expect(container.querySelector('.wos-page-section')).not.toBeNull();
     expect(container.querySelectorAll('.wos-data-row')).toHaveLength(4);
     expect(container.querySelector('.wos-toggle')).not.toBeNull();
     expect(container.textContent).toContain('macOS notifications');
     expect(container.querySelector('[aria-label="Attention alerts"]')?.classList.contains('wos-data-row')).toBe(true);
+  });
+
+  it('keeps windowed loading state inside the canonical page shell', async () => {
+    const invoke = vi.fn(() => new Promise(() => undefined));
+
+    const { container } = renderPanel(invoke, 'windowed');
+    await act(async () => flush());
+
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('h1')?.textContent).toBe('Alerts');
+    expect(container.textContent).toContain('Loading alert settings.');
+    expect(container.querySelector('.wos-state-block')).not.toBeNull();
   });
 });
