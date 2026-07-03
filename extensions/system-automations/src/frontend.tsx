@@ -43,6 +43,7 @@ import {
   Textarea,
   TextButton,
   TextInput,
+  WindowedBadge,
   WindowedDialog,
   WindowedEmptyState,
   WindowedKeyValueGrid,
@@ -309,6 +310,13 @@ function statusPillTone(task: TaskSummary): 'accent' | 'steel' | 'danger' | 'suc
   if (!task.enabled) return 'steel';
   if (task.lastStatus === 'failed') return 'danger';
   return 'success';
+}
+
+function windowedStatusTone(task: TaskSummary): 'neutral' | 'positive' | 'warning' | 'danger' {
+  if (task.running) return 'warning';
+  if (!task.enabled) return 'neutral';
+  if (task.lastStatus === 'failed') return 'danger';
+  return 'positive';
 }
 
 function parseCronPart(part: string, min: number, max: number): Set<number> | null {
@@ -750,6 +758,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               {visibleTasks.length > 0 ? (
                 <div className="wos-automation-table">
                   <div className="wos-automation-table__header">
+                    <span>Status</span>
                     <span>Automation</span>
                     <span>Schedule</span>
                     <span>Next</span>
@@ -763,6 +772,9 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                     const editLabel = `Edit ${title}`;
                     return (
                       <div key={task.id} className="wos-automation-row" data-active={selectedTask?.id === task.id}>
+                        <span className="wos-automation-row__status">
+                          <WindowedBadge tone={windowedStatusTone(task)}>{statusLabel(task)}</WindowedBadge>
+                        </span>
                         <WindowedTextButton className="wos-automation-row__identity" onClick={() => selectTask(task)}>
                           <span>{title}</span>
                           {task.prompt ? <small>{task.prompt}</small> : null}

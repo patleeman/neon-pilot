@@ -2464,7 +2464,9 @@
 .wos-automation-table__header,
 .wos-automation-row {
   display: grid;
-  grid-template-columns: minmax(160px, 1.55fr) minmax(120px, 1fr) minmax(110px, 0.9fr) minmax(120px, 0.9fr) minmax(210px, auto);
+  grid-template-columns:
+    minmax(74px, 0.55fr) minmax(160px, 1.65fr) minmax(120px, 1fr) minmax(100px, 0.8fr) minmax(118px, 0.85fr)
+    minmax(190px, auto);
   align-items: center;
   min-width: 0;
 }
@@ -2566,6 +2568,12 @@
 
 .wos-automation-row__actions {
   justify-content: flex-end;
+}
+
+.wos-automation-row__status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
 }
 
 .wos-automation-inspector-actions {

@@ -74,10 +74,16 @@ describe('AutomationsPage windowed surface', () => {
     expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy();
+    expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Quarter-hour chime')).toBeTruthy();
     expect(screen.getByText('Release watch')).toBeTruthy();
-    expect(screen.getByText('Running')).toBeTruthy();
+    expect(screen.getAllByText('Running').some((element) => element.closest('.wos-badge')?.getAttribute('data-tone') === 'warning')).toBe(
+      true,
+    );
     expect(screen.getAllByText('Paused').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Paused').some((element) => element.closest('.wos-badge')?.getAttribute('data-tone') === 'neutral')).toBe(
+      true,
+    );
     expect(screen.getByRole('button', { name: 'Run Quarter-hour chime' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Pause Quarter-hour chime' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit Quarter-hour chime' })).toBeTruthy();
