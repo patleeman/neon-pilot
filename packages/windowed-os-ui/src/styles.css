@@ -4358,6 +4358,36 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   opacity: 1;
 }
 
+body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-shell,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-positioned-menu {
+  border: 2px solid var(--wos-ink-900) !important;
+  border-radius: 9px !important;
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-900);
+  box-shadow: var(--wos-shadow-menu) !important;
+  font-family: var(--wos-font-display);
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item {
+  min-height: 26px;
+  border-radius: 6px;
+  color: var(--wos-ink-900) !important;
+  font: var(--wos-text-row);
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item:hover,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-selected='true'] {
+  background: var(--wos-chat, oklch(66% 0.14 250)) !important;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item:disabled,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-disabled='true'] {
+  color: var(--wos-ink-500) !important;
+  opacity: 1;
+}
+
 .windowed-os-shell .wos-window-route-body .ui-row-button,
 .windowed-os-shell .wos-window-route-body button.ui-icon-button {
   border: 2px solid var(--wos-ink-900) !important;

@@ -550,6 +550,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell:focus-within');
     expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-action-button');
+    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell");
+    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item");
+    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated");
+    expect(stylesSource).toContain('background: var(--wos-chat, oklch(66% 0.14 250)) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-row-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-conversation-setup-empty');
   });
