@@ -27,6 +27,7 @@ import {
   WindowedDialog,
   WindowedDialogStack,
   WindowedEmptyState,
+  WindowedField,
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
@@ -34,7 +35,10 @@ import {
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedSelect,
   WindowedStateBlock,
+  WindowedTextarea,
+  WindowedTextInput,
   WindowedTimeline,
   WindowedTimelineItem,
 } from '@neon-pilot/extensions/ui';
@@ -1374,17 +1378,64 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
   const renderEditor = (routine: Routine, options?: { windowed?: boolean }) => {
     if (!draft || draft.id !== routine.id) return null;
     const draftHook = data?.hooks.find((hook) => hook.id === draft.hookId) ?? selectedHook;
+    const renderField = (
+      label: string,
+      children: React.ReactNode,
+      fieldOptions: { hint?: string; compact?: boolean; span?: 'full'; className?: string } = {},
+    ) => {
+      if (options?.windowed) {
+        return (
+          <WindowedField label={label} hint={fieldOptions.hint} span={fieldOptions.span} className={fieldOptions.className}>
+            {children}
+          </WindowedField>
+        );
+      }
+
+      return (
+        <label className={cx('grid gap-1', fieldOptions.className)}>
+          <span
+            className={
+              fieldOptions.compact ? 'text-[10px] uppercase tracking-wider text-dim' : 'text-[11px] uppercase tracking-wider text-secondary'
+            }
+          >
+            {label}
+          </span>
+          {children}
+          {fieldOptions.hint ? <span className="text-[12px] text-secondary">{fieldOptions.hint}</span> : null}
+        </label>
+      );
+    };
+    const renderSelect = ({ children, className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) =>
+      options?.windowed ? (
+        <WindowedSelect className={className} {...props}>
+          {children}
+        </WindowedSelect>
+      ) : (
+        <Select className={cx('w-full', className)} {...props}>
+          {children}
+        </Select>
+      );
+    const renderTextInput = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) =>
+      options?.windowed ? (
+        <WindowedTextInput className={className} {...props} />
+      ) : (
+        <TextInput className={cx('w-full', className)} {...props} />
+      );
+    const renderTextarea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) =>
+      options?.windowed ? (
+        <WindowedTextarea className={className} {...props} />
+      ) : (
+        <Textarea className={cx('w-full', className)} {...props} />
+      );
     const primaryFields = (
       <>
-        <label className="grid gap-1">
-          <span className="text-[11px] uppercase tracking-wider text-secondary">Event</span>
-          <Select
-            name="routine-hook"
-            className="w-full"
-            value={draft.hookId}
-            onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setDraft({ ...draft, hookId: event.target.value })}
-          >
-            {groupedHooks(data?.hooks ?? []).map(([group, hooks]) => (
+        {renderField(
+          'Event',
+          renderSelect({
+            name: 'routine-hook',
+            value: draft.hookId,
+            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setDraft({ ...draft, hookId: event.target.value }),
+            children: groupedHooks(data?.hooks ?? []).map(([group, hooks]) => (
               <optgroup key={group} label={group}>
                 {hooks.map((hook) => (
                   <option key={hook.id} value={hook.id}>
@@ -1392,90 +1443,92 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                   </option>
                 ))}
               </optgroup>
-            ))}
-          </Select>
-        </label>
+            )),
+          }),
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-secondary">Routine type</span>
-            <Select
-              name="routine-type"
-              className="w-full"
-              value={draft.type}
-              onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+          {renderField(
+            'Routine type',
+            renderSelect({
+              name: 'routine-type',
+              value: draft.type,
+              onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
                 setDraft({
                   ...draft,
                   type: event.target.value as RoutineType,
                   outcomes: event.target.value === 'decision' && draft.outcomes.length === 0 ? DEFAULT_OUTCOMES : draft.outcomes,
-                })
-              }
-            >
-              <option value="instruction">Run prompt</option>
-              <option value="decision">Choose path</option>
-              <option value="stop">Stop event</option>
-            </Select>
-          </label>
-          <label className="grid gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-secondary">Position</span>
-            <Select
-              name="routine-position"
-              className="w-full"
-              value={draft.position}
-              onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                setDraft({ ...draft, position: event.target.value as RoutinePosition })
-              }
-            >
-              <option value="before">Before</option>
-              <option value="after">After</option>
-            </Select>
-          </label>
+                }),
+              children: (
+                <>
+                  <option value="instruction">Run prompt</option>
+                  <option value="decision">Choose path</option>
+                  <option value="stop">Stop event</option>
+                </>
+              ),
+            }),
+          )}
+          {renderField(
+            'Position',
+            renderSelect({
+              name: 'routine-position',
+              value: draft.position,
+              onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                setDraft({ ...draft, position: event.target.value as RoutinePosition }),
+              children: (
+                <>
+                  <option value="before">Before</option>
+                  <option value="after">After</option>
+                </>
+              ),
+            }),
+          )}
         </div>
         {draft.type === 'stop' ? (
           <div className="ui-callout-warning">
             Stop event never calls a model. It always blocks this event and uses the instruction below as the explanation.
           </div>
         ) : null}
-        <label className="grid gap-1">
-          <span className="text-[11px] uppercase tracking-wider text-secondary">Name</span>
-          <TextInput
-            className="w-full"
-            value={draft.name}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, name: event.target.value })}
-          />
-        </label>
-        {draft.type === 'instruction' ? (
-          <label className="grid gap-1">
-            <span className="text-[11px] uppercase tracking-wider text-secondary">Pass / fail behavior</span>
-            <Select
-              name="routine-failure-behavior"
-              className="w-full"
-              value={draft.failureBehavior}
-              onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })
-              }
-            >
-              <option value="continue">Continue if this routine fails</option>
-              <option value="warn">Warn and continue if this routine fails</option>
-              <option value="block">Stop this event if the routine fails</option>
-            </Select>
-            <span className="text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</span>
-          </label>
-        ) : null}
-        <label className="grid gap-1">
-          <span className="text-[11px] uppercase tracking-wider text-secondary">Instruction</span>
+        {renderField(
+          'Name',
+          renderTextInput({
+            value: draft.name,
+            onChange: (event: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, name: event.target.value }),
+          }),
+        )}
+        {draft.type === 'instruction'
+          ? renderField(
+              'Pass / fail behavior',
+              renderSelect({
+                name: 'routine-failure-behavior',
+                value: draft.failureBehavior,
+                onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                  setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] }),
+                children: (
+                  <>
+                    <option value="continue">Continue if this routine fails</option>
+                    <option value="warn">Warn and continue if this routine fails</option>
+                    <option value="block">Stop this event if the routine fails</option>
+                  </>
+                ),
+              }),
+              { hint: failureBehaviorDescription(draft.failureBehavior) },
+            )
+          : null}
+        {renderField(
+          'Instruction',
           <div className="relative">
-            <Textarea
-              className="min-h-32 w-full resize-y text-[13px]"
-              value={draft.instruction}
-              onFocus={(event) => onInstructionChange(event.currentTarget.value)}
-              onBlur={() => window.setTimeout(() => setSkillQuery(null), 100)}
-              onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            {renderTextarea({
+              className: 'min-h-32 w-full resize-y text-[13px]',
+              value: draft.instruction,
+              onFocus: (event) => onInstructionChange(event.currentTarget.value),
+              onBlur: () => window.setTimeout(() => setSkillQuery(null), 100),
+              onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
                 if (event.key === 'Escape') setSkillQuery(null);
-              }}
-              onKeyUp={(event) => onInstructionChange(event.currentTarget.value)}
-              onInput={(event) => onInstructionChange(event.currentTarget.value)}
-              onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
-            />
+              },
+              onKeyUp: (event) => onInstructionChange(event.currentTarget.value),
+              onInput: (event) => onInstructionChange(event.currentTarget.value),
+              onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value),
+            })}
             {skillMatches.length ? (
               <MenuShell role="listbox" data-routines-skill-menu="true" className="static mt-1 w-full">
                 {skillMatches.map((skill) => (
@@ -1494,11 +1547,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 ))}
               </MenuShell>
             ) : null}
-          </div>
-          <span className="text-[12px] text-secondary">
-            Type <span className="text-accent">/skill:</span> to reference a skill.
-          </span>
-        </label>
+          </div>,
+          { hint: 'Type /skill: to reference a skill.', span: 'full' },
+        )}
       </>
     );
     return (
@@ -1520,56 +1571,60 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
             {draft.type !== 'stop' ? (
               <div className="ui-flat-panel">
                 <div className="mb-2 text-[11px] uppercase tracking-wider text-secondary">Model for this routine</div>
-                <label className="mb-2 grid gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-dim">Primary model</span>
-                  <Select
-                    className="w-full"
-                    value={draft.modelRef ?? ''}
-                    disabled={models.length === 0}
-                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                      setDraft({ ...draft, modelRef: event.target.value || undefined })
-                    }
-                  >
-                    <option value="">Use app default</option>
-                    {!hasModelValue(models, draft.modelRef) && draft.modelRef ? (
-                      <option value={draft.modelRef}>{draft.modelRef}</option>
-                    ) : null}
-                    {groupedModels(models).map(([provider, providerModels]) => (
-                      <optgroup key={provider} label={provider}>
-                        {providerModels.map((model) => (
-                          <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
-                            {modelLabel(model)}
-                          </option>
+                {renderField(
+                  'Primary model',
+                  renderSelect({
+                    value: draft.modelRef ?? '',
+                    disabled: models.length === 0,
+                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                      setDraft({ ...draft, modelRef: event.target.value || undefined }),
+                    children: (
+                      <>
+                        <option value="">Use app default</option>
+                        {!hasModelValue(models, draft.modelRef) && draft.modelRef ? (
+                          <option value={draft.modelRef}>{draft.modelRef}</option>
+                        ) : null}
+                        {groupedModels(models).map(([provider, providerModels]) => (
+                          <optgroup key={provider} label={provider}>
+                            {providerModels.map((model) => (
+                              <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
+                                {modelLabel(model)}
+                              </option>
+                            ))}
+                          </optgroup>
                         ))}
-                      </optgroup>
-                    ))}
-                  </Select>
-                </label>
-                <label className="grid gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-dim">Backup model</span>
-                  <Select
-                    className="w-full"
-                    value={draft.fallbackModelRef ?? ''}
-                    disabled={models.length === 0}
-                    onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                      setDraft({ ...draft, fallbackModelRef: event.target.value || undefined })
-                    }
-                  >
-                    <option value="">No backup model</option>
-                    {!hasModelValue(models, draft.fallbackModelRef) && draft.fallbackModelRef ? (
-                      <option value={draft.fallbackModelRef}>{draft.fallbackModelRef}</option>
-                    ) : null}
-                    {groupedModels(models).map(([provider, providerModels]) => (
-                      <optgroup key={provider} label={provider}>
-                        {providerModels.map((model) => (
-                          <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
-                            {modelLabel(model)}
-                          </option>
+                      </>
+                    ),
+                  }),
+                  { compact: true, className: 'mb-2' },
+                )}
+                {renderField(
+                  'Backup model',
+                  renderSelect({
+                    value: draft.fallbackModelRef ?? '',
+                    disabled: models.length === 0,
+                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                      setDraft({ ...draft, fallbackModelRef: event.target.value || undefined }),
+                    children: (
+                      <>
+                        <option value="">No backup model</option>
+                        {!hasModelValue(models, draft.fallbackModelRef) && draft.fallbackModelRef ? (
+                          <option value={draft.fallbackModelRef}>{draft.fallbackModelRef}</option>
+                        ) : null}
+                        {groupedModels(models).map(([provider, providerModels]) => (
+                          <optgroup key={provider} label={provider}>
+                            {providerModels.map((model) => (
+                              <option key={`${model.provider ?? ''}/${model.id}`} value={modelSelectionValue(model, models)}>
+                                {modelLabel(model)}
+                              </option>
+                            ))}
+                          </optgroup>
                         ))}
-                      </optgroup>
-                    ))}
-                  </Select>
-                </label>
+                      </>
+                    ),
+                  }),
+                  { compact: true },
+                )}
                 <div className="mt-2 text-[11px] text-secondary">
                   Use the app default unless this routine needs a specific model. Backup retries once if the primary model fails.
                 </div>
@@ -1998,7 +2053,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               >
                 Open
               </WindowedPageButton>
-              <WindowedPageButton onClick={() => void deleteRoutine(routine)}>Delete</WindowedPageButton>
+              <WindowedPageButton tone="danger" onClick={() => void deleteRoutine(routine)}>
+                Delete
+              </WindowedPageButton>
             </div>
           </div>
           {routine.type === 'decision' && routine.outcomes.length ? (
@@ -2115,7 +2172,9 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 <WindowedPageButton tone="accent" onClick={() => void save()}>
                   {saving ? 'Saving...' : 'Save'}
                 </WindowedPageButton>
-                <WindowedPageButton onClick={() => void deleteRoutine(selectedRoutine)}>Delete</WindowedPageButton>
+                <WindowedPageButton tone="danger" onClick={() => void deleteRoutine(selectedRoutine)}>
+                  Delete
+                </WindowedPageButton>
               </>
             }
           >

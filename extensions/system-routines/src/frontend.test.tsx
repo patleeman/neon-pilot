@@ -233,7 +233,12 @@ describe('RoutinesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(screen.getByRole('dialog', { name: 'Review code changes' })).toBeTruthy();
     expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
+    expect(container.querySelector('.wos-dialog-stack .wos-field')).not.toBeNull();
+    expect(container.querySelector('.wos-dialog-stack .wos-select')).not.toBeNull();
+    expect(container.querySelector('.wos-dialog-stack .wos-input')).not.toBeNull();
+    expect(container.querySelector('.wos-dialog-stack .wos-textarea')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Delete' }).every((button) => button.getAttribute('data-tone') === 'danger')).toBe(true);
     fireEvent.click(screen.getByLabelText('Close Review code changes'));
     fireEvent.click(screen.getByRole('button', { name: 'Runs' }));
     expect(screen.getByRole('dialog', { name: 'Routine runs' })).toBeTruthy();
