@@ -373,6 +373,7 @@ export class WorkbenchBrowserViewController {
     const entry = this.views.get(viewKey);
     if (entry) {
       this.attach(entry);
+      entry.view.setVisible(true);
       entry.active = true;
       entry.deactivated = false;
     }
@@ -600,6 +601,7 @@ export class WorkbenchBrowserViewController {
       this.activeViewKeysByOwner.delete(entry.owner.id);
       entry.view.webContents.stop();
     }
+    entry.view.setVisible(false);
     entry.view.setBounds({ x: -10_000, y: -10_000, width: 1, height: 1 });
     this.detach(entry);
   }

@@ -490,10 +490,15 @@
 }
 
 .wos-window[data-focused='false'] .wos-window__body iframe,
+.wos-window[data-focused='false'] iframe,
 .wos-window[data-iframe-blocked='true'] .wos-window__body iframe,
+.wos-window[data-iframe-blocked='true'] iframe,
 .windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe,
+.windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) iframe,
 .windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe,
+.windowed-os-shell[data-window-interaction='true'] iframe,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe,
+.windowed-os-shell[data-native-browser-blocked='true'] iframe,
 .wos-window__body:has(.wos-dialog-layer) iframe,
 .wos-window__body:has(.ui-workbench-drop-badge) iframe,
 .wos-window__body:has(.ui-workbench-drop-popover) iframe,
