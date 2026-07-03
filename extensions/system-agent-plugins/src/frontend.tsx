@@ -20,7 +20,9 @@ import {
   WindowedField,
   WindowedKeyValueGrid,
   WindowedPageButton,
+  WindowedPageMain,
   WindowedPageSection,
+  WindowedPageShell,
   WindowedSelect,
   WindowedTextInput,
 } from '@neon-pilot/extensions/ui';
@@ -262,179 +264,185 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
           {operation.message ? <Notice tone="success">{operation.message}</Notice> : null}
 
           {isWindowed ? (
-            <>
-              <WindowedPageSection title="Install agent plugin" meta="Codex or Claude Code marketplace package">
-                <form className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto]" onSubmit={handleAddPlugin}>
-                  <WindowedField label="Source">
-                    <WindowedSelect
-                      value={draft.sourceKind}
-                      onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
-                    >
-                      <option value="git">Git URL</option>
-                      <option value="local">Local folder</option>
-                    </WindowedSelect>
-                  </WindowedField>
-                  <WindowedField
-                    label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}
-                    hint="Plugin skills, docs, and MCP definitions are enabled after install."
-                  >
-                    <WindowedTextInput
-                      value={draft.source}
-                      onChange={(event) => setDraft({ ...draft, source: event.target.value })}
-                      placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                  </WindowedField>
-                  <div className="flex items-end gap-2">
-                    {draft.sourceKind === 'local' ? (
-                      <WindowedPageButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
-                        Pick folder
-                      </WindowedPageButton>
-                    ) : null}
-                    <WindowedPageButton type="submit" tone="accent" disabled={operation.busy || !draft.source.trim()}>
-                      {operation.busy ? 'Installing...' : 'Install'}
-                    </WindowedPageButton>
-                  </div>
-                </form>
-              </WindowedPageSection>
-
-              <WindowedPageSection title="Installed agent plugins" meta={`${plugins.length} installed`}>
-                {plugins.length > 0 ? (
-                  <WindowedDataTable
-                    columns={[
-                      { label: 'Plugin' },
-                      { label: 'Ecosystem' },
-                      { label: 'Status' },
-                      { label: 'Capabilities' },
-                      { label: 'Updates' },
-                      { label: 'Actions', align: 'right' },
-                    ]}
-                  >
-                    {plugins.map((plugin) => (
-                      <WindowedDataRow
-                        key={plugin.id}
-                        name={plugin.displayName}
-                        meta={pluginSourceLabel(plugin)}
-                        cells={[
-                          <WindowedBadge key="ecosystem" tone="neutral">
-                            {ecosystemLabel(plugin.ecosystem)}
-                          </WindowedBadge>,
-                          <WindowedBadge key="status" tone={windowedStatusTone(plugin)}>
-                            {statusLabel(plugin)}
-                          </WindowedBadge>,
-                          capabilitySummary(plugin),
-                          plugin.autoUpdate ? (
-                            <WindowedBadge key="auto-update" tone="warning">
-                              Auto update
-                            </WindowedBadge>
-                          ) : (
-                            'Manual'
-                          ),
-                        ]}
-                        action={
-                          <WindowedPageButton
-                            aria-label={`Open details for ${plugin.displayName}`}
-                            onClick={() => setSelectedId(plugin.id)}
-                          >
-                            Details
-                          </WindowedPageButton>
-                        }
-                      />
-                    ))}
-                  </WindowedDataTable>
-                ) : (
-                  <SupportingText>
-                    No agent plugins installed. Install a Codex or Claude Code marketplace plugin to give agents its skills, instructions,
-                    docs, and MCP server definitions.
-                  </SupportingText>
-                )}
-              </WindowedPageSection>
-
-              {selectedPlugin ? (
-                <WindowedDialog
-                  title={selectedPlugin.displayName}
-                  meta={`${ecosystemLabel(selectedPlugin.ecosystem)} · ${statusLabel(selectedPlugin)}`}
-                  accent="extensions"
-                  onClose={() => setSelectedId(null)}
-                  actions={
-                    <>
-                      <WindowedPageButton disabled={operation.busy} onClick={() => void checkUpdates(selectedPlugin)}>
-                        Check updates
-                      </WindowedPageButton>
-                      <WindowedPageButton
-                        disabled={operation.busy || selectedPlugin.source.kind !== 'git' || !selectedPlugin.availableUpdate}
-                        onClick={() => void updateSelectedPlugin(selectedPlugin)}
+            <WindowedPageShell layout="standard" className="agent-plugins-page-windowed">
+              <WindowedPageMain title="Agent Plugins">
+                <WindowedPageSection title="Install agent plugin" meta="Codex or Claude Code marketplace package">
+                  <form className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto]" onSubmit={handleAddPlugin}>
+                    <WindowedField label="Source">
+                      <WindowedSelect
+                        value={draft.sourceKind}
+                        onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
                       >
-                        Update
+                        <option value="git">Git URL</option>
+                        <option value="local">Local folder</option>
+                      </WindowedSelect>
+                    </WindowedField>
+                    <WindowedField
+                      label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}
+                      hint="Plugin skills, docs, and MCP definitions are enabled after install."
+                    >
+                      <WindowedTextInput
+                        value={draft.source}
+                        onChange={(event) => setDraft({ ...draft, source: event.target.value })}
+                        placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </WindowedField>
+                    <div className="flex items-end gap-2">
+                      {draft.sourceKind === 'local' ? (
+                        <WindowedPageButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
+                          Pick folder
+                        </WindowedPageButton>
+                      ) : null}
+                      <WindowedPageButton type="submit" tone="accent" disabled={operation.busy || !draft.source.trim()}>
+                        {operation.busy ? 'Installing...' : 'Install'}
                       </WindowedPageButton>
-                      <WindowedPageButton tone="danger" disabled={operation.busy} onClick={() => void removeSelectedPlugin(selectedPlugin)}>
-                        Remove
-                      </WindowedPageButton>
-                    </>
-                  }
-                >
-                  <WindowedDialogStack>
-                    <WindowedDataRow
-                      name={selectedPlugin.enabled ? 'Plugin is on' : 'Plugin is off'}
-                      meta={
-                        selectedPlugin.enabled
-                          ? 'Agents can use the supported skills, instructions, docs, and MCP definitions from this plugin.'
-                          : 'The plugin is installed, but its capabilities are not available to agents.'
-                      }
-                      enabled={selectedPlugin.enabled}
-                      onToggle={() => void togglePlugin(selectedPlugin)}
-                    />
-                    <WindowedDataRow
-                      name="Auto update"
-                      meta="Download and apply Git updates automatically after validation."
-                      enabled={selectedPlugin.autoUpdate}
-                      onToggle={() => void toggleAutoUpdate(selectedPlugin)}
-                    />
-                    <WindowedKeyValueGrid
-                      columns={3}
-                      items={[
-                        { label: 'Source', value: pluginSourceLabel(selectedPlugin) },
-                        { label: 'Skills', value: String(selectedPlugin.capabilities.skills.length) },
-                        { label: 'Docs', value: String(selectedPlugin.capabilities.docs.length) },
-                        { label: 'MCP servers', value: String(selectedPlugin.capabilities.mcp.length) },
-                        { label: 'Ignored hooks', value: String(selectedPlugin.capabilities.hooks.length) },
-                        { label: 'Commit', value: selectedPlugin.source.resolvedCommit?.slice(0, 10) ?? 'Not pinned' },
-                      ]}
-                    />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <CapabilityList
-                        title={`Skills (${selectedPlugin.capabilities.skills.length})`}
-                        empty="No skills found."
-                        items={selectedPlugin.capabilities.skills.map((skill) => ({ label: skill.id, detail: skill.path }))}
-                      />
-                      <CapabilityList
-                        title={`Instructions and docs (${selectedPlugin.capabilities.docs.length})`}
-                        empty="No instruction or doc files found."
-                        items={selectedPlugin.capabilities.docs.map((doc) => ({ label: basename(doc.path), detail: doc.path }))}
-                      />
-                      <CapabilityList
-                        title={`MCP servers (${selectedPlugin.capabilities.mcp.length})`}
-                        empty="No MCP server definitions found."
-                        items={selectedPlugin.capabilities.mcp.map((mcp) => ({ label: basename(mcp.path), detail: mcp.path }))}
-                      />
-                      <CapabilityList
-                        title={`Ignored hooks (${selectedPlugin.capabilities.hooks.length})`}
-                        empty="No unsupported hook files found."
-                        items={selectedPlugin.capabilities.hooks.map((hook) => ({ label: hook.kind, detail: hook.path }))}
-                      />
                     </div>
-                    {selectedPlugin.compatibility.warnings.length > 0 ? (
-                      <WindowedDialogCopy>{selectedPlugin.compatibility.warnings.join(' ')}</WindowedDialogCopy>
-                    ) : null}
-                    {selectedPlugin.compatibility.blockers.length > 0 ? (
-                      <WindowedDialogCopy>{selectedPlugin.compatibility.blockers.join(' ')}</WindowedDialogCopy>
-                    ) : null}
-                    {selectedPlugin.lastError ? <WindowedDialogCopy>{selectedPlugin.lastError}</WindowedDialogCopy> : null}
-                  </WindowedDialogStack>
-                </WindowedDialog>
-              ) : null}
-            </>
+                  </form>
+                </WindowedPageSection>
+
+                <WindowedPageSection title="Installed agent plugins" meta={`${plugins.length} installed`}>
+                  {plugins.length > 0 ? (
+                    <WindowedDataTable
+                      columns={[
+                        { label: 'Plugin' },
+                        { label: 'Ecosystem' },
+                        { label: 'Status' },
+                        { label: 'Capabilities' },
+                        { label: 'Updates' },
+                        { label: 'Actions', align: 'right' },
+                      ]}
+                    >
+                      {plugins.map((plugin) => (
+                        <WindowedDataRow
+                          key={plugin.id}
+                          name={plugin.displayName}
+                          meta={pluginSourceLabel(plugin)}
+                          cells={[
+                            <WindowedBadge key="ecosystem" tone="neutral">
+                              {ecosystemLabel(plugin.ecosystem)}
+                            </WindowedBadge>,
+                            <WindowedBadge key="status" tone={windowedStatusTone(plugin)}>
+                              {statusLabel(plugin)}
+                            </WindowedBadge>,
+                            capabilitySummary(plugin),
+                            plugin.autoUpdate ? (
+                              <WindowedBadge key="auto-update" tone="warning">
+                                Auto update
+                              </WindowedBadge>
+                            ) : (
+                              'Manual'
+                            ),
+                          ]}
+                          action={
+                            <WindowedPageButton
+                              aria-label={`Open details for ${plugin.displayName}`}
+                              onClick={() => setSelectedId(plugin.id)}
+                            >
+                              Details
+                            </WindowedPageButton>
+                          }
+                        />
+                      ))}
+                    </WindowedDataTable>
+                  ) : (
+                    <SupportingText>
+                      No agent plugins installed. Install a Codex or Claude Code marketplace plugin to give agents its skills, instructions,
+                      docs, and MCP server definitions.
+                    </SupportingText>
+                  )}
+                </WindowedPageSection>
+
+                {selectedPlugin ? (
+                  <WindowedDialog
+                    title={selectedPlugin.displayName}
+                    meta={`${ecosystemLabel(selectedPlugin.ecosystem)} · ${statusLabel(selectedPlugin)}`}
+                    accent="extensions"
+                    onClose={() => setSelectedId(null)}
+                    actions={
+                      <>
+                        <WindowedPageButton disabled={operation.busy} onClick={() => void checkUpdates(selectedPlugin)}>
+                          Check updates
+                        </WindowedPageButton>
+                        <WindowedPageButton
+                          disabled={operation.busy || selectedPlugin.source.kind !== 'git' || !selectedPlugin.availableUpdate}
+                          onClick={() => void updateSelectedPlugin(selectedPlugin)}
+                        >
+                          Update
+                        </WindowedPageButton>
+                        <WindowedPageButton
+                          tone="danger"
+                          disabled={operation.busy}
+                          onClick={() => void removeSelectedPlugin(selectedPlugin)}
+                        >
+                          Remove
+                        </WindowedPageButton>
+                      </>
+                    }
+                  >
+                    <WindowedDialogStack>
+                      <WindowedDataRow
+                        name={selectedPlugin.enabled ? 'Plugin is on' : 'Plugin is off'}
+                        meta={
+                          selectedPlugin.enabled
+                            ? 'Agents can use the supported skills, instructions, docs, and MCP definitions from this plugin.'
+                            : 'The plugin is installed, but its capabilities are not available to agents.'
+                        }
+                        enabled={selectedPlugin.enabled}
+                        onToggle={() => void togglePlugin(selectedPlugin)}
+                      />
+                      <WindowedDataRow
+                        name="Auto update"
+                        meta="Download and apply Git updates automatically after validation."
+                        enabled={selectedPlugin.autoUpdate}
+                        onToggle={() => void toggleAutoUpdate(selectedPlugin)}
+                      />
+                      <WindowedKeyValueGrid
+                        columns={3}
+                        items={[
+                          { label: 'Source', value: pluginSourceLabel(selectedPlugin) },
+                          { label: 'Skills', value: String(selectedPlugin.capabilities.skills.length) },
+                          { label: 'Docs', value: String(selectedPlugin.capabilities.docs.length) },
+                          { label: 'MCP servers', value: String(selectedPlugin.capabilities.mcp.length) },
+                          { label: 'Ignored hooks', value: String(selectedPlugin.capabilities.hooks.length) },
+                          { label: 'Commit', value: selectedPlugin.source.resolvedCommit?.slice(0, 10) ?? 'Not pinned' },
+                        ]}
+                      />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <CapabilityList
+                          title={`Skills (${selectedPlugin.capabilities.skills.length})`}
+                          empty="No skills found."
+                          items={selectedPlugin.capabilities.skills.map((skill) => ({ label: skill.id, detail: skill.path }))}
+                        />
+                        <CapabilityList
+                          title={`Instructions and docs (${selectedPlugin.capabilities.docs.length})`}
+                          empty="No instruction or doc files found."
+                          items={selectedPlugin.capabilities.docs.map((doc) => ({ label: basename(doc.path), detail: doc.path }))}
+                        />
+                        <CapabilityList
+                          title={`MCP servers (${selectedPlugin.capabilities.mcp.length})`}
+                          empty="No MCP server definitions found."
+                          items={selectedPlugin.capabilities.mcp.map((mcp) => ({ label: basename(mcp.path), detail: mcp.path }))}
+                        />
+                        <CapabilityList
+                          title={`Ignored hooks (${selectedPlugin.capabilities.hooks.length})`}
+                          empty="No unsupported hook files found."
+                          items={selectedPlugin.capabilities.hooks.map((hook) => ({ label: hook.kind, detail: hook.path }))}
+                        />
+                      </div>
+                      {selectedPlugin.compatibility.warnings.length > 0 ? (
+                        <WindowedDialogCopy>{selectedPlugin.compatibility.warnings.join(' ')}</WindowedDialogCopy>
+                      ) : null}
+                      {selectedPlugin.compatibility.blockers.length > 0 ? (
+                        <WindowedDialogCopy>{selectedPlugin.compatibility.blockers.join(' ')}</WindowedDialogCopy>
+                      ) : null}
+                      {selectedPlugin.lastError ? <WindowedDialogCopy>{selectedPlugin.lastError}</WindowedDialogCopy> : null}
+                    </WindowedDialogStack>
+                  </WindowedDialog>
+                ) : null}
+              </WindowedPageMain>
+            </WindowedPageShell>
           ) : (
             <>
               <RailSubsection title="Install an agent plugin">

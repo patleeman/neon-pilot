@@ -133,11 +133,22 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </button>
   ),
+  WindowedPageMain: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <main className="wos-page-main">
+      <h2>{title}</h2>
+      {children}
+    </main>
+  ),
   WindowedPageSection: ({ title, children }: { title?: React.ReactNode; children: React.ReactNode }) => (
     <section className="wos-page-section">
       {title ? <h3>{title}</h3> : null}
       {children}
     </section>
+  ),
+  WindowedPageShell: ({ children, className, layout }: { children: React.ReactNode; className?: string; layout?: string }) => (
+    <div className={['wos-page-shell', className].filter(Boolean).join(' ')} data-layout={layout}>
+      {children}
+    </div>
   ),
   WindowedSelect: ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props}>{children}</select>,
   WindowedTextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
@@ -264,8 +275,11 @@ describe('AgentPluginsSettingsPanel', () => {
   it('renders windowed plugin details in a dialog instead of a selected settings pane', () => {
     mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [plugin] }));
 
-    render(<AgentPluginsSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<AgentPluginsSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
 
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.agent-plugins-page-windowed')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Agent Plugins' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Install agent plugin' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Installed agent plugins' })).toBeTruthy();
     expect(document.querySelector('.wos-data-table')).toBeTruthy();
