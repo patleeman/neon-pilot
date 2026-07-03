@@ -270,7 +270,10 @@ function accentForWindow(windowModel: Pick<DesktopWindowModel, 'kind' | 'title'>
 }
 
 function desktopRect(element: HTMLElement | null): DesktopRect {
-  return { width: element?.clientWidth || window.innerWidth, height: element?.clientHeight || window.innerHeight };
+  return {
+    width: element?.clientWidth || window.innerWidth,
+    height: element?.clientHeight || Math.max(MIN_WINDOW_HEIGHT, window.innerHeight - FALLBACK_TASKBAR_HEIGHT),
+  };
 }
 
 function boundsStyle(bounds: WindowBounds): CSSProperties {
@@ -347,6 +350,15 @@ function hasCoveredChatWindow(visibleWindows: DesktopWindowModel[]): boolean {
 
 function hasCompetingWindowedSurface(visibleWindows: DesktopWindowModel[]): boolean {
   return visibleWindows.length > 1;
+}
+
+function isWindowClippedByDesktop(windowModel: DesktopWindowModel, desktop: DesktopRect): boolean {
+  const { bounds } = windowModel;
+  return bounds.x < 0 || bounds.y < 0 || bounds.x + bounds.width > desktop.width || bounds.y + bounds.height > desktop.height;
+}
+
+function hasClippedChatWindow(visibleWindows: DesktopWindowModel[], desktop: DesktopRect): boolean {
+  return visibleWindows.some((windowModel) => windowModel.kind === 'chat' && isWindowClippedByDesktop(windowModel, desktop));
 }
 
 function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
@@ -1220,8 +1232,12 @@ export function WindowedLayout() {
     return () => window.clearTimeout(settleTimer);
   }, [visibleWindowSignature]);
 
-  const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
-  const browserBlockedByWindowStack = hasCoveredChatWindow(visibleWindows) || hasCompetingWindowedSurface(visibleWindows);
+  const activeDesktopRect = desktopRect(desktopRef.current);
+  const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, activeDesktopRect) : null;
+  const browserBlockedByWindowStack =
+    hasCoveredChatWindow(visibleWindows) ||
+    hasCompetingWindowedSurface(visibleWindows) ||
+    hasClippedChatWindow(visibleWindows, activeDesktopRect);
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );

@@ -192,6 +192,36 @@ describe('WindowedLayout route windows', () => {
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
   });
 
+  it('keeps native browser views suppressed while a focused chat window is clipped by the desktop work area', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 690, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
+
+    const { container } = renderWindowedLayout();
+    const shell = container.querySelector('.windowed-os-shell');
+    const chatWindow = await screen.findByRole('region', { name: /new conversation/i });
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 1300));
+    });
+
+    expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
+    expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
+    expect(chatWindow.getAttribute('data-iframe-blocked')).toBe('true');
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });
+  });
+
   it('renders non-chat routes through the extension host without the embedded stable layout', async () => {
     renderWindowedLayout();
 
@@ -784,6 +814,21 @@ describe('WindowedLayout route windows', () => {
     ).toBe('true');
   });
 
+  it('maximizes windows to the taskbar-safe desktop work area when layout measurement falls back', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    fireEvent.click(within(routinesWindow).getByRole('button', { name: /maximize routines/i }));
+
+    expect(routinesWindow.getAttribute('style')).toContain('left: 0px');
+    expect(routinesWindow.getAttribute('style')).toContain('top: 0px');
+    expect(routinesWindow.getAttribute('style')).toContain('width: 1024px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 724px');
+  });
+
   it('fits newly opened app windows to the current desktop before first paint', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 820 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 620 });
@@ -799,7 +844,7 @@ describe('WindowedLayout route windows', () => {
 
     const routinesWindow = await screen.findByRole('region', { name: /routines/i });
     expect(routinesWindow.getAttribute('style')).toContain('width: 736px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 544px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 500px');
   });
 
   it('groups multiple open chat windows under a taskbar chat menu', async () => {
