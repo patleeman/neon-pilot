@@ -443,6 +443,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('background: var(--wos-surface-3);');
   });
 
+  it('stretches Start menu app buttons across the full clickable row', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-start-menu__grid {\n  display: grid;\n  gap: 1px;\n  justify-items: stretch;');
+    expect(stylesSource).toContain('.wos-start-menu__item {\n  display: flex;\n  width: 100%;');
+    expect(stylesSource).toContain('justify-content: flex-start;');
+  });
+
   it('styles nested list rows through scoped depth selectors', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');

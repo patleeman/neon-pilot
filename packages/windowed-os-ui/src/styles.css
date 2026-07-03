@@ -338,14 +338,17 @@
 .wos-start-menu__grid {
   display: grid;
   gap: 1px;
+  justify-items: stretch;
   padding: 0 8px 7px;
 }
 
 .wos-start-menu__item {
   display: flex;
+  width: 100%;
   min-width: 0;
   align-items: center;
   gap: 9px;
+  justify-content: flex-start;
   border-color: transparent;
   border-radius: 6px;
   background: transparent;
