@@ -4,6 +4,7 @@ import {
   type FormHTMLAttributes,
   type HTMLAttributes,
   type InputHTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
@@ -824,6 +825,13 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
     if (!normalizedQuery) return items;
     return items.filter((item) => item.title.toLowerCase().includes(normalizedQuery));
   }, [items, query]);
+  const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return;
+    const firstItem = visibleItems[0];
+    if (!firstItem) return;
+    event.preventDefault();
+    firstItem.onSelect();
+  };
 
   if (!open) return null;
   return (
@@ -837,6 +845,7 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.currentTarget.value)}
+          onKeyDown={handleSearchKeyDown}
           placeholder="Search apps..."
           aria-label="Search apps"
         />

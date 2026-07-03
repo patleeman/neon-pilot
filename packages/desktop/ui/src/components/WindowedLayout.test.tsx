@@ -216,6 +216,21 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
+  it('opens the first filtered Start menu app with Enter', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
+    fireEvent.change(search, { target: { value: 'rou' } });
+    fireEvent.keyDown(search, { key: 'Enter' });
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/routines:windowed');
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
   it('orders and accents launcher apps from the canonical windowed desktop roster', () => {
     mocks.extensions = [
       {
