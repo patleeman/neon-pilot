@@ -34,6 +34,7 @@ import {
   WindowedPageSection,
   WindowedPageShell,
   WindowedSelect,
+  WindowedStateBlock,
   WindowedTextInput,
   WindowedToggle,
 } from '@neon-pilot/extensions/ui';
@@ -527,7 +528,7 @@ function ModelArenaWindowedPage({
         >
           {error ? (
             <WindowedPageSection title="Action needed">
-              <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
+              <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
             </WindowedPageSection>
           ) : null}
 
@@ -684,12 +685,12 @@ function ModelArenaWindowedPage({
             </>
           ) : (
             <WindowedPageSection title="Loading">
-              <WindowedEmptyState>Reading arena setup.</WindowedEmptyState>
+              <WindowedStateBlock>Reading arena setup.</WindowedStateBlock>
             </WindowedPageSection>
           )}
 
           <WindowedPageSection title="Rankings" meta={state ? `${ranked.length} models` : 'Loading'}>
-            {!state ? <WindowedEmptyState>Loading Model Arena rankings.</WindowedEmptyState> : null}
+            {!state ? <WindowedStateBlock>Loading Model Arena rankings.</WindowedStateBlock> : null}
             {state && ranked.length === 0 ? (
               <WindowedEmptyState>Add challenger models and vote on duels to build rankings.</WindowedEmptyState>
             ) : null}

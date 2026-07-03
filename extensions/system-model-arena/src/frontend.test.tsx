@@ -79,7 +79,7 @@ describe('ModelArenaPage', () => {
     expect(screen.queryByText('Blind model duels')).toBeNull();
   });
 
-  it('uses shared windowed empty states for setup, rankings, and errors', async () => {
+  it('uses shared windowed states for setup, rankings, and errors', async () => {
     const invoke = vi
       .fn()
       .mockResolvedValueOnce({
@@ -102,8 +102,24 @@ describe('ModelArenaPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     await waitFor(() => expect(screen.getByText('Arena settings could not be saved.')).toBeTruthy());
-    expect(screen.getByText('Arena settings could not be saved.').closest('.wos-empty-state')?.getAttribute('data-tone')).toBe('danger');
+    expect(screen.getByText('Arena settings could not be saved.').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
     expect(container.querySelector('.wos-arena-error')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+  });
+
+  it('uses windowed state blocks while arena setup is loading', async () => {
+    const invoke = vi.fn(() => new Promise(() => undefined));
+
+    const { container } = render(
+      <ModelArenaPage pa={{ extension: { invoke } } as never} context={{ shellPresentation: 'windowed' } as never} />,
+    );
+
+    await waitFor(() => expect(screen.getByText('Reading arena setup.')).toBeTruthy());
+    expect(screen.getByText('Reading arena setup.').closest('.wos-state-block')).toBeTruthy();
+    expect(screen.getByText('Loading Model Arena rankings.').closest('.wos-state-block')).toBeTruthy();
+    expect(container.querySelector('.wos-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
   });
 });
 
