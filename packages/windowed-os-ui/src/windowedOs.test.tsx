@@ -534,6 +534,19 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('font-family: var(--wos-font-body);');
   });
 
+  it('keeps window route bodies and quiet loading fallbacks visibly filled', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-window-route-body {\n  --color-base: 252 247 236;');
+    expect(stylesSource).toContain('display: flex;\n  flex-direction: column;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body > * {\n  flex: 1 1 auto;\n  min-width: 0;\n  min-height: 100%;\n  height: 100%;',
+    );
+    expect(stylesSource).toContain(".wos-window-route-body > [role='status'][aria-live='polite']");
+    expect(stylesSource).toContain('content: attr(aria-label);');
+  });
+
   it('contains iframe paint inside window bodies without blanketing window content with the shield', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
