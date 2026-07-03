@@ -1327,7 +1327,7 @@ function WorkbenchPanel({
   return (
     <section
       style={{ width }}
-      className="flex flex-shrink-0 flex-col overflow-hidden border-l border-r border-border-subtle bg-base select-text"
+      className="ui-workbench-panel flex flex-shrink-0 flex-col overflow-hidden border-l border-r border-border-subtle bg-base select-text"
       aria-label="Workbench note"
       data-workbench-document-pane="true"
       data-has-open-file={
@@ -1591,8 +1591,8 @@ function WorkbenchTabStrip({
   }, [clearWorkbenchSelection, onOpenNewTab]);
 
   return (
-    <div className="flex h-11 shrink-0 items-center gap-1 overflow-hidden border-b border-border-subtle bg-base px-2">
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+    <div className="ui-workbench-tab-strip flex h-11 shrink-0 items-center gap-1 overflow-hidden border-b border-border-subtle bg-base px-2">
+      <div className="ui-workbench-tab-strip__scroller flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {openTabs.map((tab) => {
           const isChatTab = tab.mode === 'chat' && Boolean(tab.conversationId);
           return (
@@ -1643,7 +1643,10 @@ function WorkbenchTabStrip({
       </div>
       <IconButton
         size="sm"
-        className={cx('ml-1 h-8 w-8 shrink-0 rounded-md text-[16px]', isNewWorkbenchTabMode(activeTool) && 'bg-surface text-primary')}
+        className={cx(
+          'ui-workbench-tab-strip__new ml-1 h-8 w-8 shrink-0 rounded-md text-[16px]',
+          isNewWorkbenchTabMode(activeTool) && 'bg-surface text-primary',
+        )}
         title="New tab"
         aria-label="New tab"
         onClick={openNewTab}

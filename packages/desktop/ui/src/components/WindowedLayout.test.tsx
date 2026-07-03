@@ -280,6 +280,40 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getAllByTestId('embedded-layout')).toHaveLength(1);
   });
 
+  it('restores persisted windows with their routed content mounted inside each frame', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:system-routines:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 72, width: 620, height: 440 },
+        minimized: false,
+        focused: false,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+
+    expect(within(chatWindow).getByTestId('embedded-layout')).toBeTruthy();
+    expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
+    expect(chatWindow.querySelector('.wos-window-route-body--chat')?.textContent).toContain('Conversation');
+    expect(within(routinesWindow).getByTestId('extension-route-host').textContent).toBe('/routines:windowed');
+    expect(routinesWindow.querySelector('.wos-window-route-body--extension')?.textContent).toContain('/routines:windowed');
+  });
+
   it('renders chat windows inside the canonical windowed chat surface with attached workbench layout', () => {
     renderWindowedLayout();
 

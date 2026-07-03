@@ -554,6 +554,22 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-conversation-setup-empty');
   });
 
+  it('restyles the attached workbench tab strip with scoped windowed chrome', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab {');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-active');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-close-button');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-action-button');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip__new');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile-icon');
+  });
+
   it('styles nested list rows through scoped depth selectors', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');

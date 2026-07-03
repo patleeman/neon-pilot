@@ -1259,7 +1259,11 @@ describe('Layout workbench toggle', () => {
     const newTabButton = screen.getByRole('button', { name: 'New tab' });
     expect(newTabButton.className).toContain('shrink-0');
     expect(newTabButton.parentElement?.className).toContain('overflow-hidden');
+    expect(newTabButton.parentElement?.className).toContain('ui-workbench-tab-strip');
+    expect(newTabButton.className).toContain('ui-workbench-tab-strip__new');
     expect(newTabButton.closest('.overflow-x-auto')).toBeNull();
+    expect(document.querySelector('[data-workbench-document-pane="true"]')?.className).toContain('ui-workbench-panel');
     expect(document.querySelector('.ui-workbench-tab')?.parentElement?.className).toContain('overflow-x-auto');
+    expect(document.querySelector('.ui-workbench-tab')?.parentElement?.className).toContain('ui-workbench-tab-strip__scroller');
   });
 });
