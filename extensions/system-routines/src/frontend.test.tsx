@@ -235,7 +235,20 @@ describe('RoutinesPage', () => {
     fireEvent.click(screen.getByLabelText('Close Review code changes'));
     fireEvent.click(screen.getByRole('button', { name: 'Runs' }));
     expect(screen.getByRole('dialog', { name: 'Routine runs' })).toBeTruthy();
+    expect(screen.getByText('Run history appears here after routines execute.')).toBeTruthy();
     expect(screen.queryByText('Routine context')).toBeNull();
+  });
+
+  it('uses shared windowed empty-state chrome for empty routine lanes', async () => {
+    const { pa, state } = createPa();
+    state.routines = state.routines.map((routine) => ({ ...routine, position: 'after' }));
+    const { container } = render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
+
+    expect(await screen.findByText('No routines before this event.')).toBeTruthy();
+    expect(screen.getAllByText('Review code changes').length).toBeGreaterThan(1);
+    expect(container.querySelectorAll('.wos-empty-state')).toHaveLength(1);
+    expect(container.querySelector('.wos-routine-empty')).toBeNull();
+    expect(container.querySelector('.wos-routine-error')).toBeNull();
   });
 
   it('opens the add menu for the New Routine command route', async () => {

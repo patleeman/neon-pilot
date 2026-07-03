@@ -25,6 +25,7 @@ import {
   ToolbarButton,
   WindowedBadge,
   WindowedDialog,
+  WindowedEmptyState,
   WindowedKeyValueList,
   WindowedList,
   WindowedListItem,
@@ -1998,7 +1999,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
           >
             {actionError ? (
               <WindowedPageSection title="Action needed">
-                <div className="wos-routine-error">{actionError}</div>
+                <WindowedEmptyState tone="danger">{actionError}</WindowedEmptyState>
               </WindowedPageSection>
             ) : null}
             <WindowedPageSection title="Events" meta={`${data.hooks.length} available`}>
@@ -2030,14 +2031,14 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               {beforeRoutines.length ? (
                 <WindowedTimeline>{beforeRoutines.map((routine, index) => renderWindowedRoutine(routine, index))}</WindowedTimeline>
               ) : (
-                <div className="wos-routine-empty">No routines before this event.</div>
+                <WindowedEmptyState>No routines before this event.</WindowedEmptyState>
               )}
             </WindowedPageSection>
             <WindowedPageSection title="After" meta={`${afterRoutines.length} routines`}>
               {afterRoutines.length ? (
                 <WindowedTimeline>{afterRoutines.map((routine, index) => renderWindowedRoutine(routine, index))}</WindowedTimeline>
               ) : (
-                <div className="wos-routine-empty">No routines after this event.</div>
+                <WindowedEmptyState>No routines after this event.</WindowedEmptyState>
               )}
             </WindowedPageSection>
             <WindowedPageSection title="Status" meta={selectedRoutine?.name ?? selectedHook.title}>
@@ -2096,7 +2097,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
                 ))}
               </WindowedTimeline>
             ) : (
-              <div className="wos-routine-empty">Run history appears here after routines execute.</div>
+              <WindowedEmptyState>Run history appears here after routines execute.</WindowedEmptyState>
             )}
           </WindowedDialog>
         ) : null}
