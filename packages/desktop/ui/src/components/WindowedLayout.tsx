@@ -1194,14 +1194,20 @@ export function WindowedLayout() {
       if (target.closest('.wos-window__controls button')) return;
 
       const resizeHandle = target.closest<HTMLElement>('.wos-resize-handle');
-      const edge = (resizeHandle?.dataset.resizeEdge as ResizeEdge | undefined) ?? resizeEdgeForPointer(event, windowElement);
-      if (edge) {
-        startResize(event, windowModel, edge);
+      const explicitResizeEdge = resizeHandle?.dataset.resizeEdge as ResizeEdge | undefined;
+      if (explicitResizeEdge) {
+        startResize(event, windowModel, explicitResizeEdge);
         return;
       }
 
       if (target.closest('.wos-window__titlebar')) {
         startDrag(event, windowModel);
+        return;
+      }
+
+      const edge = resizeEdgeForPointer(event, windowElement);
+      if (edge) {
+        startResize(event, windowModel, edge);
       }
     };
     const handleDoubleClick = (event: MouseEvent) => {

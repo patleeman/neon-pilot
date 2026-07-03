@@ -519,10 +519,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-composited-frame");
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-composited-frame");
+    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] webview");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-composited-frame");
+    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] webview");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-composited-frame");
+    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] webview");
     expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) .wos-composited-frame');
@@ -548,6 +554,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .wos-composited-frame");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] iframe");
+    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] webview");
     expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-taskbar) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-composited-frame');

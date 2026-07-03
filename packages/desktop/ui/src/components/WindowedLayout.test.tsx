@@ -871,6 +871,40 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow.getAttribute('style')).toContain('height: 724px');
   });
 
+  it('restores a maximized window to its original size when dragged from the titlebar', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    fireEvent.click(within(routinesWindow).getByRole('button', { name: /maximize routines/i }));
+    expect(routinesWindow.getAttribute('style')).toContain('width: 1024px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 724px');
+
+    const titlebar = routinesWindow.querySelector<HTMLElement>('.wos-window__titlebar');
+    expect(titlebar).toBeTruthy();
+
+    fireEvent.mouseDown(titlebar!, { button: 0, clientX: 512, clientY: 18 });
+    fireEvent.mouseMove(window, { clientX: 560, clientY: 80 });
+    fireEvent.mouseUp(window, { clientX: 560, clientY: 80 });
+
+    expect(routinesWindow.getAttribute('style')).toContain('left: 180px');
+    expect(routinesWindow.getAttribute('style')).toContain('top: 62px');
+    expect(routinesWindow.getAttribute('style')).toContain('width: 760px');
+    expect(routinesWindow.getAttribute('style')).toContain('height: 520px');
+    expect(within(routinesWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
+  });
+
   it('fits newly opened app windows to the current desktop before first paint', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 820 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 620 });

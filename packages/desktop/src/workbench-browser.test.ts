@@ -95,7 +95,7 @@ describe('workbench browser validation', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 
     expect(source).toContain('WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS');
-    expect(source).toContain('const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 30_000;');
+    expect(source).toContain('const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 5 * 60_000;');
     expect(source).toContain('this.suppressOwnerViews(owner.id);');
     expect(source).toContain('if (this.isOwnerSuppressed(owner.id))');
     expect(source).toContain('this.hideAllOwnerViews(owner.id, true, ownerWindow);');
