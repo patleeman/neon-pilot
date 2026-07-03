@@ -735,6 +735,10 @@ export function WindowedLayout() {
   const windowsRef = useRef(windows);
 
   useEffect(() => {
+    suspendWindowedBrowserViews(3000);
+  }, []);
+
+  useEffect(() => {
     if (extensionRegistry.loading) return;
     setWindows((current) => {
       return canonicalizeRouteWindows(current, launcherItems);

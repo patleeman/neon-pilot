@@ -132,6 +132,31 @@ describe('WindowedLayout route windows', () => {
     ];
   });
 
+  it('deactivates stale browser views as soon as the windowed shell mounts', async () => {
+    window.localStorage.setItem(
+      'pa:workbench-browser-tabs',
+      JSON.stringify({
+        version: 1,
+        activeTabId: 'tab-a',
+        tabs: [
+          { id: 'tab-a', title: 'Docs', url: 'https://example.com', urlDraft: '' },
+          { id: 'tab-b', title: 'Search', url: 'https://example.org', urlDraft: '' },
+        ],
+        closedTabs: [],
+      }),
+    );
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+
+    await waitFor(() => {
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
+    });
+  });
+
   it('renders non-chat routes through the extension host without the embedded stable layout', async () => {
     renderWindowedLayout();
 
