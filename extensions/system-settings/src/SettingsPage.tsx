@@ -5093,7 +5093,7 @@ export function SettingsPage({
 
   const settingsContent = isWindowedSettingsSurface ? (
     <WindowedPageShell layout="two-column" className="settings-page-windowed">
-      <WindowedPageRail title="Settings sections" accent="settings" showHeader={false} className="settings-page-windowed-nav">
+      <WindowedPageRail title="Sections" accent="settings" showHeader={false} className="settings-page-windowed-nav">
         <WindowedList>
           {settingsNavLinks.flatMap((item) => {
             const rootItem = (

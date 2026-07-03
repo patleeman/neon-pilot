@@ -374,11 +374,11 @@ describe('SettingsPage', () => {
     expect(html).toContain('data-layout="two-column"');
     expect(html).toContain('class="wos-page-rail settings-page-windowed-nav"');
     expect(html).toContain('aria-label="Sections"');
-    expect(html).toContain('>Preferences</div>');
     expect(html).toContain('>Appearance</h1>');
     expect(html).toContain('>Providers</span>');
     expect(html).not.toContain('settings-page-section-title');
     expect(html).not.toContain('Configure Neon Pilot preferences.');
+    expect(html).not.toContain('>Preferences</div>');
     expect(html).not.toContain('Preference group');
     expect(html).not.toContain('Extension panel');
     expect(html).not.toContain('panels');

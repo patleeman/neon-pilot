@@ -648,7 +648,7 @@ describe('SettingsPage provider model editor', () => {
     const { container } = renderPage(undefined, '/settings', { shellPresentation: 'windowed', pathname: '/settings' });
     await flushAsyncWork();
 
-    expect(container.querySelector('.settings-page-windowed-nav')?.getAttribute('aria-label')).toBe('Settings sections');
+    expect(container.querySelector('.settings-page-windowed-nav')?.getAttribute('aria-label')).toBe('Sections');
     expect(container.querySelector('.wos-page-rail')).toBeInstanceOf(HTMLElement);
     expect(queryButton(container, 'Appearance').getAttribute('data-active')).toBe('true');
 
@@ -674,7 +674,7 @@ describe('SettingsPage provider model editor', () => {
     });
     await flushAsyncWork();
 
-    expect(container.querySelector('.settings-page-windowed-nav')?.getAttribute('aria-label')).toBe('Settings sections');
+    expect(container.querySelector('.settings-page-windowed-nav')?.getAttribute('aria-label')).toBe('Sections');
     expect(queryButton(container, 'Appearance')).toBeInstanceOf(HTMLButtonElement);
     expect(queryButton(container, 'Providers').getAttribute('data-active')).toBe('true');
     expect(container.querySelector('h1')?.textContent?.trim()).toBe('Providers');
