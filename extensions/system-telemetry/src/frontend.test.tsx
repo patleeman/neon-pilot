@@ -68,13 +68,35 @@ describe('TelemetryPage', () => {
           durationP95Ms: 60_000,
           durationP99Ms: 90_000,
         },
+        modelUsage: [
+          { modelId: 'gpt-5.4', tokens: 3200, cost: 0.72, calls: 3 },
+          { modelId: 'deepseek-v4-flash', tokens: 1367, cost: 0.12, calls: 1 },
+        ],
+        toolHealth: [
+          { toolName: 'exec_command', calls: 3, errors: 0, successRate: 100, avgLatencyMs: 120, p95LatencyMs: 250, maxLatencyMs: 300 },
+          { toolName: 'browser_snapshot', calls: 1, errors: 1, successRate: 0, avgLatencyMs: 900, p95LatencyMs: 900, maxLatencyMs: 900 },
+        ],
+        contextSessions: [
+          {
+            sessionId: 'session-a',
+            totalTokens: 81000,
+            contextWindow: 100000,
+            pct: 81,
+            segSystem: 10,
+            segUser: 20,
+            segAssistant: 30,
+            segTool: 15,
+            segSummary: 6,
+            systemPromptTokens: 1000,
+          },
+        ],
         refetch,
       }),
     );
 
     const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    fireEvent.click(screen.getByRole('button', { name: /7D/ }));
+    fireEvent.click(screen.getByRole('radio', { name: '7D' }));
 
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(container.querySelector('.wos-page-rail')).toBeNull();
@@ -84,10 +106,16 @@ describe('TelemetryPage', () => {
     expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeTruthy();
     expect(screen.queryByText('Diagnostics context')).toBeNull();
     expect(screen.queryByText('Telemetry range')).toBeNull();
-    expect(container.querySelector('.wos-list-item[data-accent="diagnostics"]')).toBeTruthy();
+    expect(container.querySelector('.wos-segmented-control[data-accent="diagnostics"]')).toBeTruthy();
     expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Data' })).toBeTruthy();
     expect(screen.getByText('Health')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Models' })).toBeTruthy();
+    expect(screen.getAllByText('gpt-5.4').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Tool calls' })).toBeTruthy();
+    expect(screen.getAllByText('exec_command').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
+    expect(screen.getByText('Highest context pressure')).toBeTruthy();
     expect(screen.getByText('Tool errors')).toBeTruthy();
     expect(refetch).toHaveBeenCalled();
     expect(useTracesData).toHaveBeenLastCalledWith('7d', expect.anything());

@@ -27,16 +27,19 @@ import {
   SegmentedControl,
   StatGrid,
   WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
   WindowedEmptyState,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
-  WindowedList,
-  WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedSegmentedControl,
   WindowedStateBlock,
+  WindowedTimeline,
+  WindowedTimelineItem,
 } from '@neon-pilot/extensions/ui';
 import React, { useState } from 'react';
 
@@ -196,6 +199,23 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
 
           {summary && hasDiagnosticActivity ? (
             <>
+              <WindowedPageSection title="Models" meta={modelUsage?.length ? `${modelUsage.length} observed` : 'No model data'}>
+                <WindowedModelUsageTable models={modelUsage ?? []} cacheEfficiency={cacheEfficiency} />
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Tool calls" meta={toolHealth?.length ? `${summary.toolCalls} calls` : 'No tool data'}>
+                <WindowedToolHealthTable tools={toolHealth ?? []} />
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Recent activity" meta="Runtime signals">
+                <WindowedDiagnosticsTimeline
+                  summary={summary}
+                  agentLoop={agentLoop}
+                  contextSessions={contextSessions ?? []}
+                  sessionIntegrity={sessionIntegrity ?? []}
+                />
+              </WindowedPageSection>
+
               <WindowedPageSection title="Usage" meta="Tokens and models">
                 <div className="space-y-4">
                   {tokensDaily && <TracesHeatmap data={tokensDaily} />}
@@ -350,6 +370,114 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
   );
 }
 
+function WindowedModelUsageTable({
+  models,
+  cacheEfficiency,
+}: {
+  models: NonNullable<ReturnType<typeof useTracesData>['modelUsage']>;
+  cacheEfficiency: ReturnType<typeof useTracesData>['cacheEfficiency'];
+}) {
+  if (models.length === 0) {
+    return <WindowedEmptyState>Model usage appears after traced model calls are retained.</WindowedEmptyState>;
+  }
+
+  const cacheByModel = Object.fromEntries((cacheEfficiency?.byModel ?? []).map((model) => [model.modelId, model.hitRate]));
+
+  return (
+    <WindowedDataTable columns={[{ label: 'Model' }, { label: 'Tokens' }, { label: 'Cache', align: 'right' }]}>
+      {models.slice(0, 6).map((model) => {
+        const cacheHitRate = cacheByModel[model.modelId];
+        return (
+          <WindowedDataRow
+            key={model.modelId}
+            name={model.modelId}
+            meta={`${model.calls} calls · $${model.cost.toFixed(2)}`}
+            status={<WindowedBadge tone={model.tokens > 0 ? 'positive' : 'neutral'}>{formatTokens(model.tokens)}</WindowedBadge>}
+            action={typeof cacheHitRate === 'number' ? `${Math.round(cacheHitRate)}%` : 'n/a'}
+          />
+        );
+      })}
+    </WindowedDataTable>
+  );
+}
+
+function WindowedToolHealthTable({ tools }: { tools: NonNullable<ReturnType<typeof useTracesData>['toolHealth']> }) {
+  if (tools.length === 0) {
+    return <WindowedEmptyState>Tool calls appear after agents execute tools in retained traces.</WindowedEmptyState>;
+  }
+
+  return (
+    <WindowedDataTable columns={[{ label: 'Tool' }, { label: 'Calls' }, { label: 'Errors', align: 'right' }]}>
+      {tools.slice(0, 8).map((tool) => {
+        const hasErrors = tool.errors > 0;
+        return (
+          <WindowedDataRow
+            key={tool.toolName}
+            name={tool.toolName}
+            meta={`${Math.round(tool.successRate)}% success · p95 ${formatDuration(tool.p95LatencyMs)}`}
+            status={<WindowedBadge tone={hasErrors ? 'warning' : 'positive'}>{tool.calls}</WindowedBadge>}
+            action={String(tool.errors)}
+          />
+        );
+      })}
+    </WindowedDataTable>
+  );
+}
+
+function WindowedDiagnosticsTimeline({
+  summary,
+  agentLoop,
+  contextSessions,
+  sessionIntegrity,
+}: {
+  summary: NonNullable<ReturnType<typeof useTracesData>['summary']>;
+  agentLoop: ReturnType<typeof useTracesData>['agentLoop'];
+  contextSessions: NonNullable<ReturnType<typeof useTracesData>['contextSessions']>;
+  sessionIntegrity: NonNullable<ReturnType<typeof useTracesData>['sessionIntegrity']>;
+}) {
+  const pressureSession = contextSessions.filter((session) => typeof session.pct === 'number').sort((a, b) => b.pct - a.pct)[0];
+  const durationP95Ms = agentLoop?.durationP95Ms ?? 0;
+
+  return (
+    <WindowedTimeline>
+      <WindowedTimelineItem
+        title={summary.toolErrors > 0 ? 'Tool errors detected' : 'Tool calls healthy'}
+        meta={`${summary.toolCalls} calls · ${summary.toolErrors} errors`}
+        tone={summary.toolErrors > 0 ? 'warning' : 'positive'}
+      >
+        {summary.toolErrors > 0
+          ? 'Inspect the tool table before trusting automation runs in this range.'
+          : 'No retained tool errors in the selected range.'}
+      </WindowedTimelineItem>
+      <WindowedTimelineItem
+        title={pressureSession ? 'Highest context pressure' : 'Context pressure quiet'}
+        meta={pressureSession ? `${Math.round(pressureSession.pct)}% · ${shortSessionId(pressureSession.sessionId)}` : 'No active pressure'}
+        tone={pressureSession && pressureSession.pct > 80 ? 'warning' : 'neutral'}
+      >
+        {pressureSession
+          ? 'The most pressured session is surfaced here so it is visible without opening the stable dashboard rail.'
+          : 'Context rows appear after conversations retain usage snapshots.'}
+      </WindowedTimelineItem>
+      <WindowedTimelineItem
+        title={sessionIntegrity.length > 0 ? 'Session integrity event' : 'Session integrity clean'}
+        meta={sessionIntegrity.length > 0 ? `${sessionIntegrity.length} events` : 'No retained misses'}
+        tone={sessionIntegrity.length > 0 ? 'warning' : 'positive'}
+      >
+        {sessionIntegrity.length > 0
+          ? 'Prompt cache miss rows are available in the detailed diagnostics section below.'
+          : 'No prompt cache integrity events in this range.'}
+      </WindowedTimelineItem>
+      <WindowedTimelineItem
+        title="Run duration p95"
+        meta={formatDuration(durationP95Ms)}
+        tone={durationP95Ms > 10 * 60_000 ? 'warning' : 'neutral'}
+      >
+        Long-running traces stay visible here before opening deeper charts.
+      </WindowedTimelineItem>
+    </WindowedTimeline>
+  );
+}
+
 // ── Time Range Selector ──────────────────────────────────────────────────────
 
 const TRACE_RANGE_OPTIONS: { label: string; value: TraceRange }[] = [
@@ -362,19 +490,13 @@ const TRACE_RANGE_OPTIONS: { label: string; value: TraceRange }[] = [
 
 function WindowedRangeSelector({ value, onChange }: { value: TraceRange; onChange: (v: TraceRange) => void }) {
   return (
-    <WindowedPageSection title="Range" meta={value.toUpperCase()}>
-      <WindowedList>
-        {TRACE_RANGE_OPTIONS.map((option) => (
-          <WindowedListItem
-            key={option.value}
-            title={option.label}
-            active={option.value === value}
-            accent="diagnostics"
-            onSelect={() => onChange(option.value)}
-          />
-        ))}
-      </WindowedList>
-    </WindowedPageSection>
+    <WindowedSegmentedControl
+      ariaLabel="Diagnostics range"
+      accent="diagnostics"
+      value={value}
+      options={TRACE_RANGE_OPTIONS.map((option) => ({ id: option.value, label: option.label }))}
+      onChange={(nextValue) => onChange(nextValue as TraceRange)}
+    />
   );
 }
 
@@ -473,4 +595,15 @@ function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
   return String(n);
+}
+
+function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '0s';
+  if (ms >= 60_000) return `${Math.round(ms / 60_000)}m`;
+  if (ms >= 1000) return `${Math.round(ms / 1000)}s`;
+  return `${Math.round(ms)}ms`;
+}
+
+function shortSessionId(sessionId: string): string {
+  return sessionId.length > 8 ? sessionId.slice(0, 8) : sessionId;
 }
