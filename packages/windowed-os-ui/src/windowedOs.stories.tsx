@@ -818,19 +818,9 @@ export const GatewaysPage: Story = {
             title="Gateways"
             actions={
               <>
-                <WindowedSegmentedControl
-                  ariaLabel="Gateway filter"
-                  accent="gateways"
-                  value="enabled"
-                  options={[
-                    { id: 'enabled', label: 'Enabled' },
-                    { id: 'paused', label: 'Paused' },
-                    { id: 'all', label: 'All' },
-                  ]}
-                  onChange={() => undefined}
-                />
+                <WindowedPageButton>Test bot</WindowedPageButton>
+                <WindowedPageButton>Configure</WindowedPageButton>
                 <WindowedPageButton>Refresh</WindowedPageButton>
-                <WindowedPageButton tone="accent">New gateway</WindowedPageButton>
               </>
             }
           >
@@ -838,79 +828,73 @@ export const GatewaysPage: Story = {
               <WindowedKeyValueGrid
                 columns={4}
                 items={[
-                  { label: 'Enabled', value: <WindowedBadge tone="positive">2</WindowedBadge> },
-                  { label: 'Inbound today', value: 48 },
-                  { label: 'Pending approvals', value: <WindowedBadge tone="warning">3</WindowedBadge> },
-                  { label: 'Failed', value: 0 },
+                  { label: 'Providers', value: 1 },
+                  { label: 'Token', value: <WindowedBadge tone="positive">configured</WindowedBadge> },
+                  { label: 'Runtime', value: <WindowedBadge tone="positive">polling</WindowedBadge> },
+                  { label: 'Approved', value: 7 },
                 ]}
               />
             </WindowedPageSection>
 
-            <WindowedPageSection title="Gateways" meta="selected: Telegram">
-              <WindowedDataTable columns={[{ label: 'Gateway' }, { label: 'State' }, { label: 'Enabled', align: 'right' }]}>
+            <WindowedPageSection title="Providers" meta="1 available">
+              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Configuration', align: 'right' }]}>
                 <WindowedDataRow
                   name="Telegram"
-                  meta="Bot token saved · allowlist"
-                  enabled
+                  meta="Bot token saved"
                   status={<WindowedBadge tone="positive">polling</WindowedBadge>}
-                />
-                <WindowedDataRow
-                  name="Local webhook"
-                  meta="http://127.0.0.1:8787"
-                  enabled
-                  status={<WindowedBadge tone="neutral">idle</WindowedBadge>}
-                />
-                <WindowedDataRow
-                  name="Email digest"
-                  meta="Needs credential"
-                  enabled={false}
-                  status={<WindowedBadge tone="warning">setup</WindowedBadge>}
+                  action="Settings"
                 />
               </WindowedDataTable>
             </WindowedPageSection>
 
-            <WindowedPageSection title="Selected gateway" meta="Telegram">
-              <div className="wos-form-grid" data-columns="3">
-                <WindowedField label="Mode">
-                  <WindowedSelect defaultValue="allowlist" aria-label="Gateway mode">
-                    <option value="allowlist">Allowlist</option>
-                    <option value="private">Private</option>
-                    <option value="open">Open</option>
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedField label="Default model">
-                  <WindowedSelect defaultValue="gpt-5" aria-label="Default gateway model">
-                    <option value="gpt-5">GPT-5</option>
-                    <option value="gpt-5-mini">GPT-5 mini</option>
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedField label="State">
-                  <WindowedSegmentedControl
-                    ariaLabel="Gateway state"
-                    accent="gateways"
-                    value="on"
-                    options={[
-                      { id: 'on', label: 'On' },
-                      { id: 'paused', label: 'Paused' },
-                    ]}
-                    onChange={() => undefined}
-                  />
-                </WindowedField>
-                <WindowedField label="Instruction" span="full">
-                  <WindowedTextarea
-                    aria-label="Gateway instruction"
-                    defaultValue="Create or resume a chat for approved Telegram messages and attach inbound media to the workbench."
-                  />
-                </WindowedField>
-              </div>
-              <div className="wos-form-actions">
-                <WindowedPageButton>Rotate token</WindowedPageButton>
-                <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
-              </div>
+            <WindowedPageSection title="Readiness" meta="Enabled">
+              <WindowedKeyValueGrid
+                columns={3}
+                items={[
+                  { label: 'Token', value: 'Configured' },
+                  { label: 'Connection', value: 'Created' },
+                  { label: 'Runtime', value: 'Polling' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Gateway tools" meta="Subwindows">
+              <WindowedDataTable columns={[{ label: 'Tool' }, { label: 'State' }, { label: 'Open', align: 'right' }]}>
+                <WindowedDataRow
+                  name="Configuration"
+                  meta="Setup route, docs, and bot token"
+                  status={<WindowedBadge tone="positive">configured</WindowedBadge>}
+                  action={<WindowedPageButton>Open</WindowedPageButton>}
+                />
+                <WindowedDataRow
+                  name="Access"
+                  meta="Approved Telegram users and chats"
+                  status={<WindowedBadge tone="neutral">7 approved</WindowedBadge>}
+                  action={<WindowedPageButton>Open</WindowedPageButton>}
+                />
+                <WindowedDataRow
+                  name="Activity"
+                  meta="Recent gateway events"
+                  status={<WindowedBadge tone="positive">8 events</WindowedBadge>}
+                  action={<WindowedPageButton>Open</WindowedPageButton>}
+                />
+              </WindowedDataTable>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
+      <WindowedDialog title="Telegram configuration" meta="Token configured" accent="gateways" onClose={() => undefined}>
+        <WindowedKeyValueList
+          items={[
+            { label: 'Setup', value: '/settings/gateways/telegram' },
+            { label: 'Configuration', value: 'Settings' },
+            { label: 'Docs', value: 'Telegram Bot API' },
+          ]}
+        />
+        <WindowedPageSection title="Token">
+          <WindowedTextarea aria-label="Telegram token" defaultValue="••••••••••••••••••••••••••••••••" />
+        </WindowedPageSection>
+      </WindowedDialog>
     </div>
   ),
 };

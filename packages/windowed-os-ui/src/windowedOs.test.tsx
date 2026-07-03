@@ -161,8 +161,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Gateways"');
     expect(source).not.toContain('eyebrow="Ingress"');
     expect(source).toContain('title="Status"');
-    expect(source).toContain('title="Selected gateway"');
-    expect(source).toContain('ariaLabel="Gateway filter"');
+    expect(source).toContain('title="Gateway tools"');
+    expect(source).toContain('<WindowedDialog title="Telegram configuration"');
+    expect(source).not.toContain('title="Selected gateway"');
+    expect(source).not.toContain('ariaLabel="Gateway filter"');
   });
 
   it('documents the canonical Routines desktop page', () => {
