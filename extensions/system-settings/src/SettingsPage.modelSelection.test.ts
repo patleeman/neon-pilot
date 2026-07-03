@@ -180,4 +180,13 @@ describe('windowed settings navigation', () => {
     expect(source).toContain('depth={1}');
     expect(source).not.toContain('active={item.id === activeRootSectionId}');
   });
+
+  it('exports section pages for every windowed settings root route', () => {
+    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/frontend.tsx'), 'utf8');
+
+    expect(source).toContain('export function AppearanceSettingsPage');
+    expect(source).toContain("sectionIds={['settings-appearance']}");
+    expect(source).toContain('export function ConversationSettingsPage');
+    expect(source).toContain("sectionIds={['settings-conversation']}");
+  });
 });

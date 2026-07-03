@@ -279,6 +279,22 @@
         "activation": "on-route"
       },
       {
+        "id": "appearance",
+        "title": "Appearance settings",
+        "location": "main",
+        "route": "/settings/appearance",
+        "component": "AppearanceSettingsPage",
+        "activation": "on-route"
+      },
+      {
+        "id": "conversation",
+        "title": "Conversation settings",
+        "location": "main",
+        "route": "/settings/conversation",
+        "component": "ConversationSettingsPage",
+        "activation": "on-route"
+      },
+      {
         "id": "workspace",
         "title": "Workspace settings",
         "location": "main",

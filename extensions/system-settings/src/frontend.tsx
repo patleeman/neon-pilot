@@ -34,8 +34,16 @@ function SettingsSectionPage({ sectionIds, context }: ExtensionSurfaceProps & { 
 
 export { SettingsPage, SettingsSidebar };
 
+export function AppearanceSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-appearance']} />;
+}
+
 export function ProviderSettingsPage(props: ExtensionSurfaceProps) {
   return <SettingsSectionPage {...props} sectionIds={['settings-providers']} />;
+}
+
+export function ConversationSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-conversation']} />;
 }
 
 export function WorkspaceSettingsPage(props: ExtensionSurfaceProps) {

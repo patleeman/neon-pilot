@@ -29,11 +29,20 @@ describe('system-settings manifest', () => {
       Object.fromEntries(
         views
           .filter((v: { route?: string }) =>
-            ['/settings/workspace', '/settings/commands', '/settings/security', '/settings/extensions'].includes(v.route ?? ''),
+            [
+              '/settings/appearance',
+              '/settings/conversation',
+              '/settings/workspace',
+              '/settings/commands',
+              '/settings/security',
+              '/settings/extensions',
+            ].includes(v.route ?? ''),
           )
           .map((v: { route: string; component: string }) => [v.route, v.component]),
       ),
     ).toEqual({
+      '/settings/appearance': 'AppearanceSettingsPage',
+      '/settings/conversation': 'ConversationSettingsPage',
       '/settings/workspace': 'WorkspaceSettingsPage',
       '/settings/commands': 'CommandsSettingsPage',
       '/settings/security': 'SecuritySettingsPage',
