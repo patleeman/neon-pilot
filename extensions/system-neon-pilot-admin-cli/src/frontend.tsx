@@ -5,9 +5,7 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedPageButton,
-  WindowedPageMain,
   WindowedPageSection,
-  WindowedPageShell,
   WindowedStateBlock,
   WindowedToggle,
 } from '@neon-pilot/extensions/ui';
@@ -135,70 +133,66 @@ export function NeonPilotAgentSettingsPanel({ settingsContext }: { settingsConte
       : (shellLink?.detail ?? 'Install the neon-pilot command in your user shell path.');
 
     return (
-      <WindowedPageShell layout="standard" className="admin-cli-page-windowed">
-        <WindowedPageMain title="Command Line">
-          <div className="grid gap-3">
-            {loading ? <WindowedStateBlock>Loading settings.</WindowedStateBlock> : null}
-            {error ? <WindowedStateBlock tone="danger">{error instanceof Error ? error.message : String(error)}</WindowedStateBlock> : null}
-            <WindowedPageSection title="Command line">
-              <WindowedDataTable columns={[{ label: 'Capability' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
-                <WindowedDataRow
-                  name="Shell command"
-                  meta={shellLinkDetail}
-                  status={
-                    <WindowedBadge tone={shellLinkStatusTone(shellLink?.status)}>{shellLinkStatusLabel(shellLink?.status)}</WindowedBadge>
-                  }
-                  action={
-                    <span className="flex items-center justify-end gap-2">
-                      <WindowedPageButton disabled={shellLinkLoading || installing} onClick={() => void refetchShellLink()}>
-                        Refresh
-                      </WindowedPageButton>
-                      {canInstallShellLink ? (
-                        <WindowedPageButton tone="accent" disabled={shellLinkLoading || installing} onClick={() => void installShellLink()}>
-                          {installing ? 'Installing' : 'Install'}
-                        </WindowedPageButton>
-                      ) : null}
-                    </span>
-                  }
-                />
-                <WindowedDataRow
-                  name="CLI entrypoint"
-                  meta="Administer Neon Pilot, start delegated tasks, inspect runs, and manage extension surfaces."
-                  status={
-                    <WindowedBadge tone={settings.cliEnabled ? 'positive' : 'neutral'}>
-                      {settings.cliEnabled ? 'Enabled' : 'Paused'}
-                    </WindowedBadge>
-                  }
-                  action={
-                    <span className="flex items-center justify-end gap-2">
-                      <WindowedPageButton disabled={saving} onClick={() => void refetch()}>
-                        Refresh
-                      </WindowedPageButton>
-                      <WindowedToggle
-                        checked={settings.cliEnabled}
-                        disabled={saving}
-                        accent="extensions"
-                        label="Toggle CLI entrypoint"
-                        onChange={() => void save({ cliEnabled: !settings.cliEnabled })}
-                      />
-                    </span>
-                  }
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-            {message || saveError || shellLinkMessage || shellLinkSaveError ? (
-              <WindowedPageSection title="Status">
-                <div className="grid gap-1 text-[11px] leading-4">
-                  {message ? <span className="text-success">{message}</span> : null}
-                  {saveError ? <span className="text-danger">{saveError}</span> : null}
-                  {shellLinkMessage ? <span className="text-success">{shellLinkMessage}</span> : null}
-                  {shellLinkSaveError ? <span className="text-danger">{shellLinkSaveError}</span> : null}
-                </div>
-              </WindowedPageSection>
-            ) : null}
-          </div>
-        </WindowedPageMain>
-      </WindowedPageShell>
+      <div className="admin-cli-page-windowed grid gap-3">
+        {loading ? <WindowedStateBlock>Loading settings.</WindowedStateBlock> : null}
+        {error ? <WindowedStateBlock tone="danger">{error instanceof Error ? error.message : String(error)}</WindowedStateBlock> : null}
+        <WindowedPageSection title="Command line">
+          <WindowedDataTable columns={[{ label: 'Capability' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
+            <WindowedDataRow
+              name="Shell command"
+              meta={shellLinkDetail}
+              status={
+                <WindowedBadge tone={shellLinkStatusTone(shellLink?.status)}>{shellLinkStatusLabel(shellLink?.status)}</WindowedBadge>
+              }
+              action={
+                <span className="flex items-center justify-end gap-2">
+                  <WindowedPageButton disabled={shellLinkLoading || installing} onClick={() => void refetchShellLink()}>
+                    Refresh
+                  </WindowedPageButton>
+                  {canInstallShellLink ? (
+                    <WindowedPageButton tone="accent" disabled={shellLinkLoading || installing} onClick={() => void installShellLink()}>
+                      {installing ? 'Installing' : 'Install'}
+                    </WindowedPageButton>
+                  ) : null}
+                </span>
+              }
+            />
+            <WindowedDataRow
+              name="CLI entrypoint"
+              meta="Administer Neon Pilot, start delegated tasks, inspect runs, and manage extension surfaces."
+              status={
+                <WindowedBadge tone={settings.cliEnabled ? 'positive' : 'neutral'}>
+                  {settings.cliEnabled ? 'Enabled' : 'Paused'}
+                </WindowedBadge>
+              }
+              action={
+                <span className="flex items-center justify-end gap-2">
+                  <WindowedPageButton disabled={saving} onClick={() => void refetch()}>
+                    Refresh
+                  </WindowedPageButton>
+                  <WindowedToggle
+                    checked={settings.cliEnabled}
+                    disabled={saving}
+                    accent="extensions"
+                    label="Toggle CLI entrypoint"
+                    onChange={() => void save({ cliEnabled: !settings.cliEnabled })}
+                  />
+                </span>
+              }
+            />
+          </WindowedDataTable>
+        </WindowedPageSection>
+        {message || saveError || shellLinkMessage || shellLinkSaveError ? (
+          <WindowedPageSection title="Status">
+            <div className="grid gap-1 text-[11px] leading-4">
+              {message ? <span className="text-success">{message}</span> : null}
+              {saveError ? <span className="text-danger">{saveError}</span> : null}
+              {shellLinkMessage ? <span className="text-success">{shellLinkMessage}</span> : null}
+              {shellLinkSaveError ? <span className="text-danger">{shellLinkSaveError}</span> : null}
+            </div>
+          </WindowedPageSection>
+        ) : null}
+      </div>
     );
   }
 

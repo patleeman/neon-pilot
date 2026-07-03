@@ -126,9 +126,9 @@ describe('NeonPilotAgentSettingsPanel', () => {
 
     const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('.admin-cli-page-windowed')).not.toBeNull();
-    expect(screen.getByRole('heading', { name: 'Command Line' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Command Line' })).toBeNull();
     expect(screen.getByRole('table')).toBeTruthy();
     expect(screen.getByText('Shell command')).toBeTruthy();
     expect(screen.getByText('CLI entrypoint')).toBeTruthy();
@@ -168,7 +168,7 @@ describe('NeonPilotAgentSettingsPanel', () => {
     expect(container.querySelector('.ui-error-state')).toBeNull();
   });
 
-  it('keeps windowed loading state inside the canonical page shell', () => {
+  it('keeps windowed loading state inside the embedded settings panel', () => {
     mocks.useApi.mockImplementation((_loader: unknown, key: string) => {
       if (key === 'system-neon-pilot-cli-shell-link-setup') {
         return buildUseApiResult(
@@ -187,8 +187,8 @@ describe('NeonPilotAgentSettingsPanel', () => {
 
     const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
-    expect(screen.getByRole('heading', { name: 'Command Line' })).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Command Line' })).toBeNull();
     expect(screen.getByText('Loading settings.').closest('.wos-state-block')).toBeTruthy();
   });
 

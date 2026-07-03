@@ -90,7 +90,7 @@ describe('MultimediaProbeSettings', () => {
     vi.clearAllMocks();
   });
 
-  it('renders a canonical windowed settings surface in desktop mode', () => {
+  it('renders embedded windowed settings content in desktop mode', () => {
     modelsMock.mockReturnValue({
       loading: false,
       error: null,
@@ -105,9 +105,9 @@ describe('MultimediaProbeSettings', () => {
 
     const { container } = renderSettings('windowed');
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('.image-probe-page-windowed')).not.toBeNull();
-    expect(container.querySelector('h1')?.textContent).toBe('Image Probe');
+    expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('.wos-page-section')).not.toBeNull();
     expect(container.querySelector('.wos-field')).not.toBeNull();
     expect(container.querySelector('.wos-select')).not.toBeNull();
@@ -132,7 +132,7 @@ describe('MultimediaProbeSettings', () => {
     expect(container.querySelector('.wos-page-section')).toBeNull();
   });
 
-  it('keeps windowed loading state inside the canonical page shell', () => {
+  it('keeps windowed loading state inside the embedded settings panel', () => {
     modelsMock.mockReturnValue({
       loading: true,
       error: null,
@@ -141,8 +141,8 @@ describe('MultimediaProbeSettings', () => {
 
     const { container } = renderSettings('windowed');
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
-    expect(container.querySelector('h1')?.textContent).toBe('Image Probe');
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
+    expect(container.querySelector('h1')).toBeNull();
     expect(container.textContent).toContain('Loading models.');
     expect(container.querySelector('.wos-state-block')).not.toBeNull();
   });

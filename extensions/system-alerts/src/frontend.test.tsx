@@ -200,7 +200,7 @@ describe('AlertsSettingsPanel', () => {
     expect(container.textContent).toContain('Test alert sent.');
   });
 
-  it('renders canonical windowed rows in the desktop shell', async () => {
+  it('renders embedded windowed rows in the desktop shell', async () => {
     const invoke = vi.fn(async (action: string) => {
       if (action === 'readSettings') {
         return {
@@ -220,9 +220,9 @@ describe('AlertsSettingsPanel', () => {
     const { container } = renderPanel(invoke, 'windowed');
     await act(async () => flush());
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
-    expect(container.querySelector('h1')?.textContent).toBe('Alerts');
+    expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('.wos-page-section')).not.toBeNull();
     expect(container.querySelectorAll('.wos-data-row')).toHaveLength(4);
     expect(container.querySelector('.wos-toggle')).not.toBeNull();
@@ -230,15 +230,31 @@ describe('AlertsSettingsPanel', () => {
     expect(container.querySelector('[aria-label="Attention alerts"]')?.classList.contains('wos-data-row')).toBe(true);
   });
 
-  it('keeps windowed loading state inside the canonical page shell', async () => {
+  it('keeps windowed loading state inside the embedded settings panel', async () => {
     const invoke = vi.fn(() => new Promise(() => undefined));
 
     const { container } = renderPanel(invoke, 'windowed');
     await act(async () => flush());
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
-    expect(container.querySelector('h1')?.textContent).toBe('Alerts');
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
+    expect(container.querySelector('h1')).toBeNull();
+    expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
     expect(container.textContent).toContain('Loading alert settings.');
     expect(container.querySelector('.wos-state-block')).not.toBeNull();
+  });
+
+  it('shows a windowed error state when alert settings fail to load', async () => {
+    const invoke = vi.fn(async () => {
+      throw new Error('settings action unavailable');
+    });
+
+    const { container } = renderPanel(invoke, 'windowed');
+    await act(async () => flush());
+
+    expect(invoke).toHaveBeenCalledWith('readSettings', {});
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
+    expect(container.querySelector('h1')).toBeNull();
+    expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
+    expect(container.textContent).toContain('Alert settings failed to load: settings action unavailable');
   });
 });

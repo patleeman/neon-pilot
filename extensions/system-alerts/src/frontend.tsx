@@ -9,9 +9,7 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedPageButton,
-  WindowedPageMain,
   WindowedPageSection,
-  WindowedPageShell,
   WindowedSelect,
   WindowedStateBlock,
   WindowedToggle,
@@ -57,7 +55,7 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
   const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const next = (await pa.extension.invoke('readSettings')) as AlertsSettingsState;
+    const next = (await pa.extension.invoke('readSettings', {})) as AlertsSettingsState;
     setState(next);
   }, [pa]);
 
@@ -95,13 +93,16 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
 
   if (!state) {
     return isWindowed ? (
-      <WindowedPageShell layout="standard" className="alerts-page-windowed">
-        <WindowedPageMain title="Alerts">
-          <WindowedStateBlock>Loading alert settings.</WindowedStateBlock>
-        </WindowedPageMain>
-      </WindowedPageShell>
+      <div className="alerts-page-windowed flex min-h-0 flex-col gap-3">
+        <WindowedStateBlock tone={message ? 'danger' : 'neutral'}>
+          {message ? `Alert settings failed to load: ${message}` : 'Loading alert settings.'}
+        </WindowedStateBlock>
+      </div>
     ) : (
-      <QuietLoadingState label="Loading alert settings" className="min-h-12" />
+      <>
+        <QuietLoadingState label="Loading alert settings" className="min-h-12" />
+        {message ? <Notice tone="danger">{message}</Notice> : null}
+      </>
     );
   }
 
@@ -109,99 +110,95 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
 
   if (isWindowed) {
     return (
-      <WindowedPageShell layout="standard" className="alerts-page-windowed">
-        <WindowedPageMain title="Alerts">
-          <div className="flex min-h-0 flex-col gap-3">
-            {!state.systemNotificationsAvailable && settings.nativeNotifications ? (
-              <WindowedStateBlock tone="warning">
-                macOS notifications are not available until the desktop app notification bridge is ready.
-              </WindowedStateBlock>
-            ) : null}
-            <WindowedPageSection title="Delivery" meta={statusText(settings, state.systemNotificationsAvailable)}>
-              <WindowedDataTable>
-                <WindowedDataRow
-                  name="Attention alerts"
-                  meta={settings.enabled ? 'On' : 'Paused'}
-                  action={
-                    <WindowedToggle
-                      checked={settings.enabled}
-                      disabled={busy}
-                      accent="settings"
-                      label={settings.enabled ? 'Disable attention alerts' : 'Enable attention alerts'}
-                      onChange={() => void save({ enabled: !settings.enabled })}
-                    />
-                  }
+      <div className="alerts-page-windowed flex min-h-0 flex-col gap-3">
+        {!state.systemNotificationsAvailable && settings.nativeNotifications ? (
+          <WindowedStateBlock tone="warning">
+            macOS notifications are not available until the desktop app notification bridge is ready.
+          </WindowedStateBlock>
+        ) : null}
+        <WindowedPageSection title="Delivery" meta={statusText(settings, state.systemNotificationsAvailable)}>
+          <WindowedDataTable>
+            <WindowedDataRow
+              name="Attention alerts"
+              meta={settings.enabled ? 'On' : 'Paused'}
+              action={
+                <WindowedToggle
+                  checked={settings.enabled}
+                  disabled={busy}
+                  accent="settings"
+                  label={settings.enabled ? 'Disable attention alerts' : 'Enable attention alerts'}
+                  onChange={() => void save({ enabled: !settings.enabled })}
                 />
-                <WindowedDataRow
-                  name="Native notification"
-                  meta={state.systemNotificationsAvailable ? 'macOS notifications' : 'macOS notifications unavailable'}
-                  action={
-                    <WindowedToggle
-                      checked={settings.nativeNotifications}
-                      disabled={busy || !settings.enabled}
-                      accent="settings"
-                      label={settings.nativeNotifications ? 'Disable native notifications' : 'Enable native notifications'}
-                      onChange={() => void save({ nativeNotifications: !settings.nativeNotifications })}
-                    />
-                  }
+              }
+            />
+            <WindowedDataRow
+              name="Native notification"
+              meta={state.systemNotificationsAvailable ? 'macOS notifications' : 'macOS notifications unavailable'}
+              action={
+                <WindowedToggle
+                  checked={settings.nativeNotifications}
+                  disabled={busy || !settings.enabled}
+                  accent="settings"
+                  label={settings.nativeNotifications ? 'Disable native notifications' : 'Enable native notifications'}
+                  onChange={() => void save({ nativeNotifications: !settings.nativeNotifications })}
                 />
-                <WindowedDataRow
-                  name="Sound"
-                  meta={settings.soundEnabled ? settings.sound : 'Off'}
-                  cells={[
-                    {
-                      value: (
-                        <WindowedSelect
-                          aria-label="Alert sound"
-                          value={settings.sound}
-                          disabled={busy || !settings.enabled || !settings.soundEnabled}
-                          onChange={(event) => void save({ sound: event.target.value as AlertSoundId })}
-                        >
-                          {SOUND_OPTIONS.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </WindowedSelect>
-                      ),
-                      className: 'wos-data-row__cell--wide',
-                    },
-                  ]}
-                  action={
-                    <WindowedToggle
-                      checked={settings.soundEnabled}
-                      disabled={busy || !settings.enabled}
-                      accent="settings"
-                      label={settings.soundEnabled ? 'Disable alert sound' : 'Enable alert sound'}
-                      onChange={() => void save({ soundEnabled: !settings.soundEnabled })}
-                    />
-                  }
-                />
-                <WindowedDataRow
-                  name="Notify for"
-                  meta={settings.severity === 'all' ? 'All active alerts' : 'Disruptive alerts'}
-                  action={
+              }
+            />
+            <WindowedDataRow
+              name="Sound"
+              meta={settings.soundEnabled ? settings.sound : 'Off'}
+              cells={[
+                {
+                  value: (
                     <WindowedSelect
-                      aria-label="Alert severity"
-                      value={settings.severity}
-                      disabled={busy || !settings.enabled}
-                      onChange={(event) => void save({ severity: event.target.value as AlertSeverityFilter })}
+                      aria-label="Alert sound"
+                      value={settings.sound}
+                      disabled={busy || !settings.enabled || !settings.soundEnabled}
+                      onChange={(event) => void save({ sound: event.target.value as AlertSoundId })}
                     >
-                      <option value="disruptive">Disruptive alerts</option>
-                      <option value="all">All active alerts</option>
+                      {SOUND_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
                     </WindowedSelect>
-                  }
+                  ),
+                  className: 'wos-data-row__cell--wide',
+                },
+              ]}
+              action={
+                <WindowedToggle
+                  checked={settings.soundEnabled}
+                  disabled={busy || !settings.enabled}
+                  accent="settings"
+                  label={settings.soundEnabled ? 'Disable alert sound' : 'Enable alert sound'}
+                  onChange={() => void save({ soundEnabled: !settings.soundEnabled })}
                 />
-              </WindowedDataTable>
-            </WindowedPageSection>
-            <WindowedPageSection title="Test alert" meta={message ?? 'Send a notification and play the selected sound.'}>
-              <WindowedPageButton type="button" tone="accent" disabled={busy} onClick={() => void testAlert()}>
-                {busy ? 'Working...' : 'Send test'}
-              </WindowedPageButton>
-            </WindowedPageSection>
-          </div>
-        </WindowedPageMain>
-      </WindowedPageShell>
+              }
+            />
+            <WindowedDataRow
+              name="Notify for"
+              meta={settings.severity === 'all' ? 'All active alerts' : 'Disruptive alerts'}
+              action={
+                <WindowedSelect
+                  aria-label="Alert severity"
+                  value={settings.severity}
+                  disabled={busy || !settings.enabled}
+                  onChange={(event) => void save({ severity: event.target.value as AlertSeverityFilter })}
+                >
+                  <option value="disruptive">Disruptive alerts</option>
+                  <option value="all">All active alerts</option>
+                </WindowedSelect>
+              }
+            />
+          </WindowedDataTable>
+        </WindowedPageSection>
+        <WindowedPageSection title="Test alert" meta={message ?? 'Send a notification and play the selected sound.'}>
+          <WindowedPageButton type="button" tone="accent" disabled={busy} onClick={() => void testAlert()}>
+            {busy ? 'Working...' : 'Send test'}
+          </WindowedPageButton>
+        </WindowedPageSection>
+      </div>
     );
   }
 
