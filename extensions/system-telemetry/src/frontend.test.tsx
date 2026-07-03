@@ -102,17 +102,29 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
   });
 
-  it('uses the shared windowed empty state for diagnostics load failures', () => {
+  it('uses the shared windowed state block for diagnostics load failures', () => {
     const refetch = vi.fn();
     vi.mocked(useTracesData).mockReturnValue(telemetryState({ error: 'trace load failed', refetch }));
 
     const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
-    expect(screen.getByText('trace load failed').closest('.wos-empty-state')?.getAttribute('data-tone')).toBe('danger');
+    expect(screen.getByText('trace load failed').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
     expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(container.querySelector('.wos-empty-state')).toBeNull();
     expect(container.querySelector('.wos-page-eyebrow')).toBeNull();
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('uses the shared windowed state block while diagnostics data is loading', () => {
+    vi.mocked(useTracesData).mockReturnValue(telemetryState({ loading: true }));
+
+    const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
+
+    expect(screen.getByText('Loading diagnostics.').closest('.wos-state-block')).toBeTruthy();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(container.querySelector('.wos-empty-state')).toBeNull();
   });
 
   it('renders the loading state while diagnostics data is loading', () => {

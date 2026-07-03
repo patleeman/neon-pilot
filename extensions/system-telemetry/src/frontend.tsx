@@ -36,6 +36,7 @@ import {
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedStateBlock,
 } from '@neon-pilot/extensions/ui';
 import React, { useState } from 'react';
 
@@ -101,7 +102,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
             }
           >
             <WindowedPageSection>
-              <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
+              <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
             </WindowedPageSection>
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
@@ -133,7 +134,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
   if (context?.shellPresentation === 'windowed') {
     const usageSection =
       loading && !summary ? (
-        <QuietLoadingState label="Loading diagnostics" className="min-h-24" />
+        <WindowedStateBlock>Loading diagnostics.</WindowedStateBlock>
       ) : !summary ? (
         <WindowedEmptyState>
           <strong>No diagnostics yet.</strong>{' '}
