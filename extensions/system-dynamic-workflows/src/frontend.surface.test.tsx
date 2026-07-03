@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -162,6 +162,22 @@ describe('Dynamic Workflows surfaces', () => {
     expect(container.querySelector('.wos-dialog__titlebar[data-accent="workflows"]')).toBeTruthy();
     expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
     expect(screen.getByText(/1\/2 complete, 1 running/)).toBeTruthy();
+  });
+
+  it('uses scoped windowed form controls in the workflow editor dialog', async () => {
+    const pa = createPa();
+    const { container } = render(<WorkflowsPage {...props(pa, { shellPresentation: 'windowed' })} />);
+
+    expect(await screen.findAllByText('Live workflow')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'New saved workflow' }));
+
+    const editor = await screen.findByRole('dialog', { name: 'New saved workflow' });
+    expect(within(editor).getByRole('textbox', { name: 'Name' }).className).toContain('wos-input');
+    expect(within(editor).getByRole('textbox', { name: 'Description' }).className).toContain('wos-input');
+    expect(within(editor).getByRole('textbox', { name: 'Workflow input JSON' }).className).toContain('wos-textarea');
+    expect(within(editor).getByRole('switch', { name: 'Enable read' })).toBeTruthy();
+    expect(container.querySelector('.wos-field')).toBeTruthy();
+    expect(container.querySelector('.ui-field')).toBeNull();
   });
 
   it('uses shared windowed empty-state chrome for empty workflow lists', async () => {

@@ -21,6 +21,7 @@ import {
   WindowedDialog,
   WindowedDialogStack,
   WindowedEmptyState,
+  WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
@@ -30,6 +31,9 @@ import {
   WindowedPageSection,
   WindowedPageShell,
   WindowedStateBlock,
+  WindowedTextarea,
+  WindowedTextInput,
+  WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -724,55 +728,65 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
             {draftOpen ? (
               <>
                 <div className="wos-form-grid" data-columns="2">
-                  <Field label="Name">
-                    <TextInput value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} />
-                  </Field>
-                  <Field label="Description">
-                    <TextInput
+                  <WindowedField label="Name">
+                    <WindowedTextInput
+                      aria-label="Name"
+                      value={draft.name}
+                      onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                    />
+                  </WindowedField>
+                  <WindowedField label="Description">
+                    <WindowedTextInput
+                      aria-label="Description"
                       value={draft.description}
                       onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
                     />
-                  </Field>
-                  <Field label="Agent model">
-                    <TextInput
+                  </WindowedField>
+                  <WindowedField label="Agent model">
+                    <WindowedTextInput
+                      aria-label="Agent model"
                       placeholder="opencode-go/deepseek-v4-flash"
                       value={draft.agentModel}
                       onChange={(event) => setDraft((current) => ({ ...current, agentModel: event.target.value }))}
                     />
-                  </Field>
-                  <Field label="Allowed tools">
+                  </WindowedField>
+                  <WindowedField label="Allowed tools">
                     <div className="wos-workflows-tool-grid">
                       {KNOWN_WORKFLOW_TOOLS.map((tool) => (
-                        <label key={tool} className="wos-workflows-tool-option">
-                          <Checkbox
+                        <div key={tool} className="wos-workflows-tool-option">
+                          <WindowedToggle
                             checked={draft.selectedAllowedTools.includes(tool)}
+                            accent="workflows"
+                            label={`${draft.selectedAllowedTools.includes(tool) ? 'Disable' : 'Enable'} ${tool}`}
                             onChange={() => setDraft((current) => toggleDraftAllowedTool(current, tool))}
                           />
                           <span>{tool}</span>
-                        </label>
+                        </div>
                       ))}
-                      <TextInput
+                      <WindowedTextInput
                         aria-label="Additional allowed tools"
                         placeholder="Additional tools"
                         value={draft.additionalAllowedToolsText}
                         onChange={(event) => setDraft((current) => ({ ...current, additionalAllowedToolsText: event.target.value }))}
                       />
                     </div>
-                  </Field>
-                  <Field label="Workflow input JSON" span="full">
-                    <Textarea
+                  </WindowedField>
+                  <WindowedField label="Workflow input JSON" span="full">
+                    <WindowedTextarea
+                      aria-label="Workflow input JSON"
                       className="h-24 font-mono text-[12px]"
                       value={draft.argsText}
                       onChange={(event) => setDraft((current) => ({ ...current, argsText: event.target.value }))}
                     />
-                  </Field>
-                  <Field label="Script" span="full">
-                    <Textarea
+                  </WindowedField>
+                  <WindowedField label="Script" span="full">
+                    <WindowedTextarea
+                      aria-label="Script"
                       className="h-56 font-mono text-[12px]"
                       value={draft.script}
                       onChange={(event) => setDraft((current) => ({ ...current, script: event.target.value }))}
                     />
-                  </Field>
+                  </WindowedField>
                 </div>
                 {draftError ? <WindowedStateBlock tone="danger">{draftError}</WindowedStateBlock> : null}
                 <div className="wos-form-actions">
