@@ -493,10 +493,22 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('z-index: 95;');
     expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('.wos-resize-handle {\n  position: absolute;\n  z-index: 65;');
-    expect(stylesSource).toContain(".wos-window[data-focused='false'] > .wos-window__iframe-shield");
-    expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield");
-    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield");
-    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield");
+    expect(stylesSource).toContain(
+      ".wos-window[data-focused='false']:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview) > .wos-window__iframe-shield",
+    );
+    expect(stylesSource).toContain(
+      ".wos-window[data-iframe-blocked='true']:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview) > .wos-window__iframe-shield",
+    );
+    expect(stylesSource).toContain(
+      ".windowed-os-shell[data-window-interaction='true'] .wos-window:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview)",
+    );
+    expect(stylesSource).toContain(
+      ".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview)",
+    );
+    expect(stylesSource).not.toContain(".wos-window[data-focused='false'] > .wos-window__iframe-shield");
+    expect(stylesSource).not.toContain(".wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield");
     expect(stylesSource).not.toContain(
       ".windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.ui-windowed-browser-host) > .wos-window__iframe-shield",
     );

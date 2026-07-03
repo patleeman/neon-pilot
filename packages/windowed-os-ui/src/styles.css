@@ -607,10 +607,12 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   pointer-events: none;
 }
 
-.wos-window[data-focused='false'] > .wos-window__iframe-shield,
-.wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield,
-.windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield,
-.windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield {
+.wos-window[data-focused='false']:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview) > .wos-window__iframe-shield,
+.wos-window[data-iframe-blocked='true']:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview) > .wos-window__iframe-shield,
+.windowed-os-shell[data-window-interaction='true'] .wos-window:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview)
+  > .wos-window__iframe-shield,
+.windowed-os-shell[data-frame-paint-blocked='true'] .wos-window:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview)
+  > .wos-window__iframe-shield {
   display: block;
   pointer-events: auto;
 }
