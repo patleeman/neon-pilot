@@ -583,6 +583,7 @@ export function WindowedLayout() {
   );
   const chatWindows = windows.filter((windowModel) => windowModel.kind === 'chat');
   const visibleWindows = windows.filter((windowModel) => !windowModel.minimized);
+  const focusedWindowId = visibleWindows.find((windowModel) => windowModel.focused)?.id ?? null;
   const visibleWindowSignature = useMemo(
     () =>
       visibleWindows
@@ -1101,7 +1102,11 @@ export function WindowedLayout() {
   const taskbarItems = shouldGroupChatTaskItems ? routeTaskItems : [...chatTaskItems, ...routeTaskItems];
 
   return (
-    <div className="windowed-os-shell h-screen overflow-hidden" data-window-interaction={drag || resize ? 'true' : undefined}>
+    <div
+      className="windowed-os-shell h-screen overflow-hidden"
+      data-focused-window-id={focusedWindowId ?? undefined}
+      data-window-interaction={drag || resize ? 'true' : undefined}
+    >
       <StartMenu open={launcherOpen} items={startMenuItems} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}

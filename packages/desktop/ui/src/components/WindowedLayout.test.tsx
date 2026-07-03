@@ -694,6 +694,39 @@ describe('WindowedLayout route windows', () => {
     });
   });
 
+  it('publishes the single focused window id for native browser layering checks', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('chat:draft');
+
+    fireEvent.pointerDown(await screen.findByRole('region', { name: /routines/i }));
+
+    await waitFor(() => {
+      expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('route:routines');
+    });
+  });
+
   it('does not auto-create taskbar windows for every known chat session', () => {
     mocks.tabs = [
       { id: 'session-1', title: 'Planning thread', messageCount: 4 },
