@@ -1337,56 +1337,102 @@ export const DiagnosticsPage: Story = {
             title="Diagnostics"
             actions={
               <>
+                <WindowedSegmentedControl
+                  ariaLabel="Diagnostics range"
+                  accent="telemetry"
+                  value="24h"
+                  options={[
+                    { id: '1h', label: '1H' },
+                    { id: '24h', label: '24H' },
+                    { id: '7d', label: '7D' },
+                  ]}
+                  onChange={() => undefined}
+                />
                 <WindowedPageButton>Refresh</WindowedPageButton>
-                <WindowedPageButton tone="accent">Export trace</WindowedPageButton>
               </>
             }
           >
-            <WindowedPageSection title="Health" meta="live">
-              <WindowedKeyValueGrid
-                columns={4}
+            <WindowedPageSection title="Data" meta="Loaded">
+              <WindowedKeyValueList
                 items={[
-                  { label: 'Store', value: <WindowedBadge tone="positive">ready</WindowedBadge> },
-                  { label: 'Retention', value: '14 days' },
-                  { label: 'Runs', value: 42 },
-                  { label: 'Errors', value: 2 },
+                  { label: 'Sessions', value: '8' },
+                  { label: 'Runs', value: '42' },
+                  { label: 'Tools', value: '216' },
                 ]}
               />
             </WindowedPageSection>
 
-            <WindowedPageSection title="Usage" meta="today">
-              <WindowedDataTable columns={[{ label: 'Surface' }, { label: 'Events' }, { label: 'Last seen', align: 'right' }]}>
+            <WindowedPageSection title="Overview" meta="24H">
+              <WindowedKeyValueGrid
+                columns={4}
+                items={[
+                  { label: 'Input', value: '1.4M' },
+                  { label: 'Output', value: '312K' },
+                  { label: 'Cached', value: '68%' },
+                  { label: 'Errors', value: <WindowedBadge tone="warning">2</WindowedBadge> },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Status" meta="Current range">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Range', value: '24H' },
+                  { label: 'Activity', value: 'Present' },
+                  { label: 'Loading', value: 'No' },
+                  { label: 'Errors', value: '2' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Health">
+              <WindowedBadge tone="positive">Active</WindowedBadge>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Usage" meta="Tokens and models">
+              <WindowedDataTable columns={[{ label: 'Model' }, { label: 'Tokens' }, { label: 'Cache', align: 'right' }]}>
                 <WindowedDataRow
-                  name="Chat"
-                  meta="conversation loop"
-                  status={<WindowedBadge tone="positive">1,284</WindowedBadge>}
-                  action="2m"
+                  name="gpt-5.4"
+                  meta="primary chat"
+                  status={<WindowedBadge tone="positive">1.1M</WindowedBadge>}
+                  action="71%"
                 />
                 <WindowedDataRow
-                  name="Workbench Browser"
-                  meta="native browser view"
-                  status={<WindowedBadge tone="neutral">216</WindowedBadge>}
-                  action="8m"
-                />
-                <WindowedDataRow
-                  name="Extensions"
-                  meta="surface actions"
-                  status={<WindowedBadge tone="neutral">89</WindowedBadge>}
-                  action="12m"
+                  name="gpt-5.4-mini"
+                  meta="subagents and checks"
+                  status={<WindowedBadge tone="neutral">412K</WindowedBadge>}
+                  action="63%"
                 />
               </WindowedDataTable>
             </WindowedPageSection>
 
-            <WindowedPageSection title="Traces" meta="recent">
+            <WindowedPageSection title="Tools" meta="216 calls">
+              <WindowedDataTable columns={[{ label: 'Tool' }, { label: 'Calls' }, { label: 'Errors', align: 'right' }]}>
+                <WindowedDataRow
+                  name="exec_command"
+                  meta="local validation"
+                  status={<WindowedBadge tone="positive">128</WindowedBadge>}
+                  action="0"
+                />
+                <WindowedDataRow
+                  name="browser_snapshot"
+                  meta="workbench browser"
+                  status={<WindowedBadge tone="warning">18</WindowedBadge>}
+                  action="2"
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="App activity" meta="Context and runtime">
               <WindowedTimeline>
-                <WindowedTimelineItem title="Model Arena duel completed" meta="gpt-5.4 · 1.8s" tone="positive">
-                  Captured challenger result and updated the transcript block.
+                <WindowedTimelineItem title="Context pressure rose" meta="chat · 82%" tone="warning">
+                  Compaction is likely if the active task continues without handoff.
                 </WindowedTimelineItem>
-                <WindowedTimelineItem title="Browser view suspended" meta="windowed shell · 0.1s" tone="neutral">
+                <WindowedTimelineItem title="Browser view suspended" meta="windowed shell · 0.1s" tone="positive">
                   Detached hidden native view while a desktop overlay was active.
                 </WindowedTimelineItem>
-                <WindowedTimelineItem title="Extension action failed" meta="system-browser · retryable" tone="warning">
-                  Backend action returned a transient navigation error.
+                <WindowedTimelineItem title="Automation resumed" meta="background run" tone="neutral">
+                  Run state stayed visible in the owning thread.
                 </WindowedTimelineItem>
               </WindowedTimeline>
             </WindowedPageSection>

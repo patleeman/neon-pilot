@@ -209,10 +209,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const DiagnosticsPage');
     expect(source).toContain('title="Diagnostics"');
     expect(source).not.toContain('eyebrow="Telemetry"');
+    expect(source).toContain('ariaLabel="Diagnostics range"');
+    expect(source).toContain('title="Data"');
+    expect(source).toContain('title="Overview"');
+    expect(source).toContain('title="Status"');
     expect(source).toContain('title="Health"');
     expect(source).toContain('title="Usage"');
-    expect(source).toContain('title="Traces"');
-    expect(source).toContain('Export trace');
+    expect(source).toContain('title="Tools"');
+    expect(source).toContain('title="App activity"');
+    expect(source).not.toContain('title="Traces"');
+    expect(source).not.toContain('Export trace');
   });
 
   it('documents the canonical Skills desktop page', () => {
