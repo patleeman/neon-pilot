@@ -200,7 +200,7 @@ describe('WindowFrame', () => {
   it('renders an iframe shield above window body content for blocked composited surfaces', () => {
     const html = renderToStaticMarkup(
       <WindowFrame title="Chat" focused iframeBlocked onMinimize={() => undefined} onMaximize={() => undefined} onClose={() => undefined}>
-        <iframe title="Browser" src="about:blank" />
+        <iframe className="wos-composited-frame" title="Browser" src="about:blank" />
       </WindowFrame>,
     );
 
@@ -355,6 +355,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('clip-path: inset(0);');
     expect(stylesSource).toContain('isolation: isolate;');
     expect(stylesSource).toContain('contain: paint;');
+    expect(stylesSource).toContain('.wos-composited-frame {\n  position: relative;');
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('.wos-window__iframe-shield');
     expect(stylesSource).toContain('z-index: 55;');
@@ -364,44 +365,38 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield");
     expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window > .wos-window__iframe-shield");
     expect(stylesSource).toContain(
-      ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe",
+      ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-composited-frame",
     );
-    expect(stylesSource).toContain(
-      ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) iframe",
-    );
-    expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-window__body iframe");
-    expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
-    expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) iframe');
-    expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-badge) iframe');
-    expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-popover) iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-overlay-backdrop) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-dialog-shell) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-menu-shell) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-context-menu-shell) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-positioned-menu) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-command-palette-shell) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-setup-readiness-popover) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-notification-toaster) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-page-search-popover) .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-overlay-backdrop) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-dialog-shell) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-menu-shell) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-context-menu-shell) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-positioned-menu) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-command-palette-shell) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-notification-toaster) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-taskbar) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe');
+    expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-composited-frame");
+    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-composited-frame");
+    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-composited-frame");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
+    expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) .wos-composited-frame');
+    expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-badge) .wos-composited-frame');
+    expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-popover) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-overlay-backdrop) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-dialog-shell) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-menu-shell) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-context-menu-shell) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-positioned-menu) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-command-palette-shell) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-setup-readiness-popover) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-notification-toaster) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-page-search-popover) .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-overlay-backdrop) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-dialog-shell) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-menu-shell) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-context-menu-shell) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-positioned-menu) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-command-palette-shell) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-notification-toaster) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-taskbar) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-snap-preview) .wos-composited-frame');
     expect(stylesSource).toContain('opacity: 0;');
     expect(stylesSource).toContain('visibility: hidden;');
     expect(stylesSource).toContain('pointer-events: none;');

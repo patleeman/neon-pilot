@@ -206,7 +206,7 @@ function HtmlArtifactViewer({ artifact }: { artifact: ArtifactRecord }) {
       sandbox="allow-scripts"
       referrerPolicy="no-referrer"
       srcDoc={srcDoc}
-      className="h-full w-full border-0 bg-white"
+      className="wos-composited-frame h-full w-full border-0 bg-white"
     />
   );
 }
