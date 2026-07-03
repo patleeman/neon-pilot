@@ -546,19 +546,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-composited-frame",
     );
-    expect(stylesSource).toContain(
-      ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe",
-    );
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-composited-frame");
-    expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-composited-frame");
-    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] webview");
-    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-composited-frame");
-    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] webview");
-    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain(".wos-window[data-focused='false'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain(".wos-window[data-iframe-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-window-interaction='true'] iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-window-interaction='true'] webview");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-frame-paint-blocked='true'] iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-frame-paint-blocked='true'] webview");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain('.windowed-os-shell .wos-window__body iframe');
     expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-composited-frame");
     expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
     expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] webview");
