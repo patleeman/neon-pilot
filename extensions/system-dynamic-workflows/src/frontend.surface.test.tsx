@@ -34,16 +34,16 @@ const workflowState = {
   saved: [],
 };
 
-function createPa() {
+function createPa(state = workflowState) {
   return {
     extension: {
       invoke: vi.fn(async (action: string, input: unknown) => {
-        if (action === 'listWorkflows') return { workflows: workflowState.workflows };
-        if (action === 'listWorkflowTemplates') return { templates: workflowState.templates };
-        if (action === 'listSavedWorkflows') return { workflows: workflowState.saved };
+        if (action === 'listWorkflows') return { workflows: state.workflows };
+        if (action === 'listWorkflowTemplates') return { templates: state.templates };
+        if (action === 'listSavedWorkflows') return { workflows: state.saved };
         if (action === 'getWorkflow') {
           return {
-            workflow: workflowState.workflows.find((workflow) => workflow.id === (input as { workflowId: string }).workflowId),
+            workflow: state.workflows.find((workflow) => workflow.id === (input as { workflowId: string }).workflowId),
             script: 'return workflow.finish({ summary: "done" });',
             args: {},
             nodes: [],
@@ -158,5 +158,16 @@ describe('Dynamic Workflows surfaces', () => {
     expect(screen.queryByText('Actions')).toBeNull();
     expect(screen.getByRole('dialog', { name: 'Live workflow' })).toBeTruthy();
     expect(screen.getByText(/1\/2 complete, 1 running/)).toBeTruthy();
+  });
+
+  it('uses shared windowed empty-state chrome for empty workflow lists', async () => {
+    const pa = createPa({ workflows: [], templates: [], saved: [] });
+    const { container } = render(<WorkflowsPage {...props(pa, { shellPresentation: 'windowed' })} />);
+
+    expect(await screen.findByText('No workflow runs yet.')).toBeTruthy();
+    expect(screen.getByText('No workflow templates yet.')).toBeTruthy();
+    expect(container.querySelectorAll('.wos-empty-state')).toHaveLength(2);
+    expect(container.querySelector('.wos-windowed-empty')).toBeNull();
+    expect(container.querySelector('.wos-windowed-error')).toBeNull();
   });
 });

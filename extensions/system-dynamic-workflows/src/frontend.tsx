@@ -19,6 +19,7 @@ import {
   ToolbarButton,
   WindowedBadge,
   WindowedDialog,
+  WindowedEmptyState,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
@@ -616,7 +617,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
           >
             {error ? (
               <WindowedPageSection title="Action needed">
-                <p className="wos-windowed-error">{error}</p>
+                <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
               </WindowedPageSection>
             ) : null}
 
@@ -653,7 +654,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                   ))}
                 </WindowedList>
               ) : (
-                <div className="wos-windowed-empty">No workflow runs yet.</div>
+                <WindowedEmptyState>No workflow runs yet.</WindowedEmptyState>
               )}
             </WindowedPageSection>
 
@@ -678,7 +679,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                   ))}
                 </WindowedList>
               ) : (
-                <div className="wos-windowed-empty">No workflow templates yet.</div>
+                <WindowedEmptyState>No workflow templates yet.</WindowedEmptyState>
               )}
             </WindowedPageSection>
           </WindowedPageMain>
@@ -772,7 +773,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                     />
                   </Field>
                 </div>
-                {draftError ? <p className="wos-windowed-error">{draftError}</p> : null}
+                {draftError ? <WindowedEmptyState tone="danger">{draftError}</WindowedEmptyState> : null}
                 <div className="wos-form-actions">
                   <WindowedPageButton
                     onClick={() => {
