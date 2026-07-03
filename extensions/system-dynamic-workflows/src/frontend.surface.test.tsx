@@ -158,6 +158,7 @@ describe('Dynamic Workflows surfaces', () => {
     expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.queryByText('Actions')).toBeNull();
     expect(screen.getByRole('dialog', { name: 'Live workflow' })).toBeTruthy();
+    expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
     expect(screen.getByText(/1\/2 complete, 1 running/)).toBeTruthy();
   });
 

@@ -19,6 +19,7 @@ import {
   ToolbarButton,
   WindowedBadge,
   WindowedDialog,
+  WindowedDialogStack,
   WindowedEmptyState,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
@@ -789,7 +790,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
             ) : null}
 
             {!draftOpen && selectedTemplate ? (
-              <div className="grid gap-3">
+              <WindowedDialogStack>
                 <WindowedKeyValueGrid
                   columns={3}
                   items={[
@@ -804,11 +805,11 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                 <CodeBlock compact className="max-h-[28rem] overflow-auto border-0 bg-transparent p-3 text-secondary">
                   {selectedTemplate.script}
                 </CodeBlock>
-              </div>
+              </WindowedDialogStack>
             ) : null}
 
             {!draftOpen && selected ? (
-              <div className="grid gap-3">
+              <WindowedDialogStack>
                 <WindowedKeyValueGrid
                   columns={3}
                   items={[
@@ -864,7 +865,7 @@ export function WorkflowsPage({ pa, context }: ExtensionSurfaceProps) {
                     ))}
                   </div>
                 ) : null}
-              </div>
+              </WindowedDialogStack>
             ) : null}
           </WindowedDialog>
         ) : null}
