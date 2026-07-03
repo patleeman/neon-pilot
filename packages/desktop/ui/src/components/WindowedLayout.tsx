@@ -1,5 +1,6 @@
 import {
   type AppAccent,
+  CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
   type StartMenuItem,
   Taskbar,
@@ -86,7 +87,8 @@ const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'settings', title: 'Settings', route: '/settings', kind: 'route' },
 ];
 
-const CANONICAL_LAUNCHER_ORDER = ['Automations', 'Workflows', 'Gateways', 'Model Arena', 'Routines', 'Extensions', 'Skills', 'Diagnostics'];
+const CANONICAL_WINDOWED_APP_BY_TITLE = new Map(CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]));
+const CANONICAL_LAUNCHER_ORDER = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
 
 function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: string): string {
   if (input.kind === 'chat') return `chat:${suffix ?? 'draft'}`;
@@ -226,6 +228,9 @@ function compareLauncherItems(left: LauncherItem, right: LauncherItem): number {
 }
 
 function accentForTitle(title: string): AppAccent {
+  const canonicalApp = CANONICAL_WINDOWED_APP_BY_TITLE.get(title);
+  if (canonicalApp) return canonicalApp.accent;
+
   const normalized = title.toLowerCase();
   if (normalized.includes('chat') || normalized.includes('conversation')) return 'chat';
   if (normalized.includes('workflow')) return 'workflows';

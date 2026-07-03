@@ -1,5 +1,6 @@
 /* @vitest-environment jsdom */
 
+import { CANONICAL_WINDOWED_DESKTOP_APPS } from '@neon-pilot/windowed-os-ui';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
@@ -199,6 +200,90 @@ describe('WindowedLayout route windows', () => {
     expect(within(startMenu).queryByText('APPS')).toBeNull();
     expect(within(startMenu).queryByText('Stable shell')).toBeNull();
     expect(startMenu.querySelector('.wos-app-monogram')).toBeNull();
+  });
+
+  it('orders and accents launcher apps from the canonical windowed desktop roster', () => {
+    mocks.extensions = [
+      {
+        id: 'system-settings',
+        enabled: true,
+        contributes: {
+          views: [{ id: 'settings-duplicate', title: 'Settings', location: 'main', route: '/settings' }],
+        },
+      },
+      {
+        id: 'system-extension-manager',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'extensions', label: 'Extensions', route: '/extensions' }],
+        },
+      },
+      {
+        id: 'system-telemetry',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'diagnostics', label: 'Diagnostics', route: '/telemetry' }],
+        },
+      },
+      {
+        id: 'system-gateways',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'gateways', label: 'Gateways', route: '/gateways' }],
+        },
+      },
+      {
+        id: 'system-model-arena',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'model-arena', label: 'Model Arena', route: '/model-arena' }],
+        },
+      },
+      {
+        id: 'system-automations',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'automations', label: 'Automations', route: '/automations' }],
+        },
+      },
+      {
+        id: 'system-skills',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'skills', label: 'Skills', route: '/skills' }],
+        },
+      },
+      {
+        id: 'system-routines',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
+        },
+      },
+      {
+        id: 'system-dynamic-workflows',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'workflows', label: 'Workflows', route: '/workflows' }],
+        },
+      },
+    ];
+
+    const { container } = renderWindowedLayout();
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const menuTitles = Array.from(container.querySelectorAll('.wos-start-menu__item .wos-app-tile__label')).map(
+      (element) => element.textContent,
+    );
+    expect(menuTitles).toEqual(CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title));
+
+    for (const app of CANONICAL_WINDOWED_DESKTOP_APPS) {
+      const button = screen.getByRole('button', { name: app.title });
+      expect(button.querySelector('.wos-app-monogram')).toBeNull();
+      const tile = button.querySelector('.wos-app-tile');
+      expect(tile?.getAttribute('data-variant')).toBe('menu');
+      expect(tile?.getAttribute('data-accent')).toBe(app.accent);
+    }
   });
 
   it('closes the start menu when the desktop is clicked outside it', () => {

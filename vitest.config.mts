@@ -19,6 +19,7 @@ export default defineConfig({
       '@neon-pilot/extensions/data': resolve(repoRoot, 'packages/desktop/ui/src/extensions/data.ts'),
       '@neon-pilot/extensions/settings': resolve(repoRoot, 'packages/desktop/ui/src/extensions/settings.ts'),
       '@neon-pilot/extensions/excalidraw': resolve(repoRoot, 'packages/extensions/src/excalidraw.ts'),
+      '@neon-pilot/windowed-os-ui': resolve(repoRoot, 'packages/windowed-os-ui/src/index.ts'),
       '@neon-pilot/extensions/backend/agent': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/agent.ts'),
       '@neon-pilot/extensions/backend/artifacts': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/artifacts.ts'),
       '@neon-pilot/extensions/backend/audio': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/audio.ts'),

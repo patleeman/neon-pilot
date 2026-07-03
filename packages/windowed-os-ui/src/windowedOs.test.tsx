@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
+  CANONICAL_WINDOWED_DESKTOP_APPS,
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
@@ -566,7 +567,9 @@ describe('Windowed OS Storybook examples', () => {
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
-    const canonicalTitles = [
+    const canonicalTitles = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
+
+    expect(canonicalTitles).toEqual([
       'Chat',
       'Automations',
       'Workflows',
@@ -577,28 +580,14 @@ describe('Windowed OS Storybook examples', () => {
       'Skills',
       'Diagnostics',
       'Settings',
-    ];
+    ]);
 
-    for (const title of canonicalTitles) {
-      expect(source).toContain(`title: '${title}'`);
-    }
-    expect(source).toContain("title: 'Workflows', accent: 'workflows'");
-    expect(source).toContain("title: 'Model Arena', accent: 'model-arena'");
-    expect(source).toContain("title: 'Skills', accent: 'skills'");
-    expect(source).toContain("title: 'Diagnostics', accent: 'diagnostics'");
-    expect(source).not.toContain("title: 'Workflows', accent: 'routines'");
-    expect(source).not.toContain("title: 'Model Arena', accent: 'gateways'");
-    expect(source).not.toContain("title: 'Skills', accent: 'extensions'");
-    expect(source).not.toContain("title: 'Diagnostics', accent: 'telemetry'");
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Workflows')?.accent).toBe('workflows');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Model Arena')?.accent).toBe('model-arena');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Skills')?.accent).toBe('skills');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
+    expect(source).toContain('CANONICAL_WINDOWED_DESKTOP_APPS');
+    expect(source).toContain('const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source).not.toContain("title: 'Prompt Assembly'");
-
-    const rosterStart = source.indexOf('const canonicalDesktopApps = [');
-    expect(rosterStart).toBeGreaterThanOrEqual(0);
-    let previousIndex = rosterStart;
-    for (const title of canonicalTitles) {
-      const nextIndex = source.indexOf(`title: '${title}'`, previousIndex);
-      expect(nextIndex).toBeGreaterThan(previousIndex);
-      previousIndex = nextIndex;
-    }
   });
 });
