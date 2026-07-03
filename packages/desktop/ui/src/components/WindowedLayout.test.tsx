@@ -194,9 +194,9 @@ describe('WindowedLayout route windows', () => {
       fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
       expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
 
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a' });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b' });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
       const initialHiddenCalls = setWorkbenchBrowserBounds.mock.calls.length;
 
       await act(async () => {
@@ -204,7 +204,11 @@ describe('WindowedLayout route windows', () => {
       });
 
       expect(setWorkbenchBrowserBounds.mock.calls.length).toBeGreaterThan(initialHiddenCalls);
-      expect(setWorkbenchBrowserBounds).toHaveBeenLastCalledWith({ visible: false, sessionKey: '@global:tab-tab-b' });
+      expect(setWorkbenchBrowserBounds).toHaveBeenLastCalledWith({
+        visible: false,
+        sessionKey: '@global:tab-tab-b',
+        deactivate: true,
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -727,9 +731,9 @@ describe('WindowedLayout route windows', () => {
     fireEvent.pointerDown(screen.getByRole('region', { name: /new conversation/i }));
 
     await waitFor(() => {
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a' });
-      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b' });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
     });
   });
 

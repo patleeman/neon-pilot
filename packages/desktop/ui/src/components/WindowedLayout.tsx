@@ -273,7 +273,7 @@ function suspendWindowedBrowserViews(durationMs = 1500): void {
   }
 
   for (const sessionKey of sessionKeys) {
-    void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey }).catch(() => undefined);
+    void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey, deactivate: true }).catch(() => undefined);
   }
 }
 
