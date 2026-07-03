@@ -240,7 +240,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
               <WindowedPageSection title="Tools" meta={`${summary.toolCalls} calls`}>
                 <div className="space-y-4">
                   {toolHealth && <TracesToolHealth tools={toolHealth} />}
-                  <TracesToolFlow data={toolFlow} />
+                  <TracesToolFlow data={toolFlow} presentation="windowed" />
                 </div>
               </WindowedPageSection>
 

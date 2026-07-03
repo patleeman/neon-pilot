@@ -2011,6 +2011,47 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   color: var(--wos-ink-700);
 }
 
+.wos-tool-flow {
+  display: grid;
+  min-width: 0;
+  gap: var(--wos-space-4);
+}
+
+.wos-tool-flow__grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--wos-space-4);
+}
+
+.wos-tool-flow__table .wos-data-row__name,
+.wos-tool-flow__path {
+  font-family: var(--wos-font-mono);
+}
+
+.wos-tool-flow__path,
+.wos-tool-flow__error {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-tool-flow__error {
+  color: var(--wos-danger);
+}
+
+.wos-tool-flow__failures .wos-data-row__name {
+  font-family: var(--wos-font-mono);
+}
+
+@media (max-width: 900px) {
+  .wos-tool-flow__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .wos-toggle {
   position: relative;
   display: inline-flex;

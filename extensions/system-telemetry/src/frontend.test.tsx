@@ -76,6 +76,19 @@ describe('TelemetryPage', () => {
           { toolName: 'exec_command', calls: 3, errors: 0, successRate: 100, avgLatencyMs: 120, p95LatencyMs: 250, maxLatencyMs: 300 },
           { toolName: 'browser_snapshot', calls: 1, errors: 1, successRate: 0, avgLatencyMs: 900, p95LatencyMs: 900, maxLatencyMs: 900 },
         ],
+        toolFlow: {
+          transitions: [{ fromTool: 'exec_command', toTool: 'browser_snapshot', count: 2 }],
+          coOccurrences: [{ toolA: 'exec_command', toolB: 'apply_patch', sessions: 1 }],
+          failureTrajectories: [
+            {
+              toolName: 'browser_snapshot',
+              errorMessage: 'native view unavailable',
+              previousCalls: ['exec_command', 'browser_snapshot'],
+              ts: '2026-07-03T11:22:33.000Z',
+              sessionId: 'session-a',
+            },
+          ],
+        },
         contextSessions: [
           {
             sessionId: 'session-a',
@@ -163,6 +176,9 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.ui-heatmap-cell-4')).toBeNull();
     expect(container.querySelector('.wos-braid-chart')).toBeTruthy();
     expect(container.querySelector('.wos-braid-line--errors')).toBeTruthy();
+    expect(container.querySelector('.wos-tool-flow')).toBeTruthy();
+    expect(container.querySelector('.wos-tool-flow__failures')).toBeTruthy();
+    expect(screen.getByText('native view unavailable').closest('.wos-data-row')).toBeTruthy();
     const tableTemplates = Array.from(container.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
       table.style.getPropertyValue('--wos-data-column-template'),
     );
@@ -172,6 +188,7 @@ describe('TelemetryPage', () => {
     expect(tableTemplates).toContain(
       'minmax(5.8rem, 0.46fr) minmax(10rem, 1fr) minmax(4.5rem, 0.36fr) minmax(4.5rem, 0.36fr) minmax(6rem, 0.5fr)',
     );
+    expect(tableTemplates).toContain('minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(4rem, 0.32fr)');
     expect(container.querySelector('.ui-data-table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
     expect(screen.getByText('Highest context pressure')).toBeTruthy();

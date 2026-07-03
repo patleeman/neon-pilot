@@ -11,11 +11,19 @@ import {
   ProgressBar,
   SectionLabel,
   SurfacePanel,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
 } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
-export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
+export function TracesToolFlow({ data, presentation = 'stable' }: { data: ToolFlowResult | null; presentation?: 'stable' | 'windowed' }) {
   if (!data || (data.transitions.length === 0 && data.coOccurrences.length === 0)) {
+    if (presentation === 'windowed') {
+      return <WindowedEmptyState>Tool flow appears after multiple tool calls are retained.</WindowedEmptyState>;
+    }
+
     return (
       <SurfacePanel className="overflow-hidden">
         <PanelHeader title="Tool Flow & Trajectories" meta="No tool sequences yet" metaClassName="bg-transparent px-0" />
@@ -23,6 +31,82 @@ export function TracesToolFlow({ data }: { data: ToolFlowResult | null }) {
           Appears after multiple tool calls are recorded.
         </PanelMessage>
       </SurfacePanel>
+    );
+  }
+
+  if (presentation === 'windowed') {
+    return (
+      <div className="wos-tool-flow">
+        <div className="wos-tool-flow__grid">
+          <WindowedDataTable
+            className="wos-tool-flow__table"
+            columns={[{ label: 'From' }, { label: 'To' }, { label: 'Count', align: 'right' }]}
+            columnTemplate="minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(4rem, 0.32fr)"
+          >
+            {data.transitions.slice(0, 8).map((transition, index) => (
+              <WindowedDataRow
+                key={`${transition.fromTool}:${transition.toTool}:${index}`}
+                name={transition.fromTool}
+                meta="Transition"
+                cells={[
+                  transition.toTool,
+                  {
+                    value: <WindowedBadge tone={transition.count > 0 ? 'positive' : 'neutral'}>{transition.count}</WindowedBadge>,
+                    align: 'right',
+                  },
+                ]}
+              />
+            ))}
+          </WindowedDataTable>
+
+          <WindowedDataTable
+            className="wos-tool-flow__table"
+            columns={[{ label: 'Tool' }, { label: 'Pair' }, { label: 'Sessions', align: 'right' }]}
+            columnTemplate="minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(5rem, 0.36fr)"
+          >
+            {data.coOccurrences.slice(0, 8).map((pair, index) => (
+              <WindowedDataRow
+                key={`${pair.toolA}:${pair.toolB}:${index}`}
+                name={pair.toolA}
+                meta="Co-occurs"
+                cells={[
+                  pair.toolB,
+                  {
+                    value: <WindowedBadge tone={pair.sessions > 0 ? 'positive' : 'neutral'}>{pair.sessions}</WindowedBadge>,
+                    align: 'right',
+                  },
+                ]}
+              />
+            ))}
+          </WindowedDataTable>
+        </div>
+
+        <WindowedDataTable
+          className="wos-tool-flow__failures"
+          columns={[{ label: 'Time' }, { label: 'Path' }, { label: 'Error' }]}
+          columnTemplate="minmax(4rem, 0.32fr) minmax(14rem, 1fr) minmax(12rem, 0.8fr)"
+        >
+          {data.failureTrajectories.length > 0 ? (
+            data.failureTrajectories.slice(0, 10).map((failure, index) => (
+              <WindowedDataRow
+                key={`${failure.sessionId}:${failure.ts}:${index}`}
+                name={failure.ts.slice(11, 16)}
+                meta={failure.toolName}
+                cells={[
+                  <span className="wos-tool-flow__path">
+                    {`${failure.previousCalls.length > 0 ? failure.previousCalls.join(' -> ') : '(first call)'} -> ${failure.toolName}`}
+                  </span>,
+                  <span className="wos-tool-flow__error" title={failure.errorMessage}>
+                    {failure.errorMessage}
+                  </span>,
+                ]}
+              />
+            ))
+          ) : (
+            <WindowedDataRow name="No failures" meta="Current range" cells={['No tool errors recorded yet.', '']} />
+          )}
+        </WindowedDataTable>
+      </div>
     );
   }
 

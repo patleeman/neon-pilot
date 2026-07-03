@@ -483,6 +483,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-braid-legend-item {');
   });
 
+  it('defines compact windowed telemetry tool flow primitives', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-tool-flow {');
+    expect(stylesSource).toContain('.wos-tool-flow__grid {');
+    expect(stylesSource).toContain('.wos-tool-flow__path,');
+    expect(stylesSource).toContain('.wos-tool-flow__error {');
+  });
+
   it('documents the canonical terminal frame in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
