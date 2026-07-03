@@ -34,6 +34,7 @@ import {
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedStateBlock,
   WindowedTimeline,
   WindowedTimelineItem,
 } from '@neon-pilot/extensions/ui';
@@ -78,6 +79,18 @@ const DEFAULT_OUTCOMES: RoutineOutcome[] = [
 
 function RoutinesLoadingState() {
   return <div role="status" aria-label="Loading routines" />;
+}
+
+function WindowedRoutinesState({ message, tone = 'neutral' }: { message: React.ReactNode; tone?: 'neutral' | 'danger' }) {
+  return (
+    <WindowedPageShell layout="standard" className="routines-page-windowed">
+      <WindowedPageMain title="Routines">
+        <WindowedPageSection title={tone === 'danger' ? 'Action needed' : 'Loading'}>
+          <WindowedStateBlock tone={tone}>{message}</WindowedStateBlock>
+        </WindowedPageSection>
+      </WindowedPageMain>
+    </WindowedPageShell>
+  );
 }
 
 function RoutineSidebarIcon({ name }: { name: 'check' | 'plus' }) {
@@ -1116,9 +1129,27 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     setSkillQuery(null);
   }, []);
 
-  if (loading) return <RoutinesLoadingState />;
-  if (error) return <ErrorState title="Failed to load routines" message={error} />;
-  if (!data) return <ErrorState title="No routine events" message="No lifecycle events are available." />;
+  if (loading) {
+    return context.shellPresentation === 'windowed' ? (
+      <WindowedRoutinesState message={<RoutinesLoadingState />} />
+    ) : (
+      <RoutinesLoadingState />
+    );
+  }
+  if (error) {
+    return context.shellPresentation === 'windowed' ? (
+      <WindowedRoutinesState tone="danger" message={error} />
+    ) : (
+      <ErrorState title="Failed to load routines" message={error} />
+    );
+  }
+  if (!data) {
+    return context.shellPresentation === 'windowed' ? (
+      <WindowedRoutinesState tone="danger" message="No lifecycle events are available." />
+    ) : (
+      <ErrorState title="No routine events" message="No lifecycle events are available." />
+    );
+  }
 
   const renderEventMenu = (align: 'left' | 'right' = 'right') => (
     <PositionedMenu

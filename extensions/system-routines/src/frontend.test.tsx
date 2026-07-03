@@ -253,6 +253,62 @@ describe('RoutinesPage', () => {
     expect(container.querySelector('.wos-routine-error')).toBeNull();
   });
 
+  it('uses windowed loading chrome before routines are available', async () => {
+    let resolveState: (value: typeof baseState) => void = () => {};
+    const statePromise = new Promise<typeof baseState>((resolve) => {
+      resolveState = resolve;
+    });
+    const pa = {
+      extension: {
+        invoke: vi.fn(async (action: string) => {
+          if (action === 'listSkills') return { skills: [] };
+          return statePromise;
+        }),
+      },
+      models: vi.fn(async () => []),
+      ui: {
+        toast: vi.fn(),
+        confirm: vi.fn(async () => true),
+        subscribeInvalidations: vi.fn(() => ({ unsubscribe: vi.fn() })),
+      },
+    } as never;
+
+    const { container } = render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
+
+    expect(screen.getByRole('status', { name: 'Loading routines' })).toBeTruthy();
+    expect(container.querySelector('.wos-state-block')).toBeTruthy();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+
+    await act(async () => {
+      resolveState(cloneState());
+      await statePromise;
+    });
+  });
+
+  it('uses windowed error chrome when routines fail to load', async () => {
+    const pa = {
+      extension: {
+        invoke: vi.fn(async (action: string) => {
+          if (action === 'listSkills') return { skills: [] };
+          throw new Error('Routines unavailable');
+        }),
+      },
+      models: vi.fn(async () => []),
+      ui: {
+        toast: vi.fn(),
+        confirm: vi.fn(async () => true),
+        subscribeInvalidations: vi.fn(() => ({ unsubscribe: vi.fn() })),
+      },
+    } as never;
+
+    const { container } = render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
+
+    expect(await screen.findByText('Routines unavailable')).toBeTruthy();
+    expect(container.querySelector('.wos-state-block[data-tone="danger"]')).toBeTruthy();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+  });
+
   it('opens the add menu for the New Routine command route', async () => {
     const { pa } = createPa();
     render(<RoutinesPage {...propsWithContext(pa, { search: '?action=new' })} />);
