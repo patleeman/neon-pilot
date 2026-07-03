@@ -125,6 +125,18 @@ function isInsideBackgroundWindowedWindow(host: HTMLElement | null): boolean {
   return topWindow !== ownWindow;
 }
 
+function hasSiblingWindowedShellWindow(host: HTMLElement | null): boolean {
+  const ownWindow = host?.closest<HTMLElement>('.wos-window');
+  const shell = ownWindow?.closest('.windowed-os-shell');
+  if (!host || !ownWindow || !shell) {
+    return false;
+  }
+
+  return Array.from(shell.querySelectorAll<HTMLElement>('.wos-window')).some(
+    (candidate) => candidate !== ownWindow && isVisibleStyle(candidate),
+  );
+}
+
 function isBelowTopWindowedShellWindow(host: HTMLElement | null): boolean {
   const ownWindow = host?.closest<HTMLElement>('.wos-window');
   const shell = ownWindow?.closest<HTMLElement>('.windowed-os-shell');
@@ -712,6 +724,7 @@ export function WorkbenchBrowserTab({
       isInsideIframeBlockedWindow(host) ||
       isOutsideFocusedWindowedShellWindow(host) ||
       isInsideBackgroundWindowedWindow(host) ||
+      hasSiblingWindowedShellWindow(host) ||
       isBelowTopWindowedShellWindow(host) ||
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||
