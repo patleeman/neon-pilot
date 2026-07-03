@@ -153,6 +153,7 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
+    expect(document.body.getAttribute('data-neon-pilot-windowed-shell-active')).toBe('true');
     await waitFor(() => {
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
@@ -292,6 +293,47 @@ describe('WindowedLayout route windows', () => {
 
     const routeHost = await screen.findByTestId('extension-route-host');
     expect(routeHost.textContent).toBe('/routines:windowed');
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
+  it('opens the highlighted filtered Start menu app with arrow navigation and Enter', async () => {
+    mocks.extensions = [
+      {
+        id: 'system-gateways',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'gateways', label: 'Gateways', route: '/gateways' }],
+        },
+      },
+      {
+        id: 'system-telemetry',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'diagnostics', label: 'Diagnostics', route: '/telemetry' }],
+        },
+      },
+    ];
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
+    fireEvent.change(search, { target: { value: 'g' } });
+
+    const gateways = within(startMenu).getByRole('button', { name: 'Gateways' });
+    const diagnostics = within(startMenu).getByRole('button', { name: 'Diagnostics' });
+    expect(gateways.getAttribute('data-active')).toBe('true');
+
+    fireEvent.keyDown(search, { key: 'ArrowDown' });
+
+    expect(gateways.getAttribute('data-active')).toBe('false');
+    expect(diagnostics.getAttribute('data-active')).toBe('true');
+
+    fireEvent.keyDown(search, { key: 'Enter' });
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/telemetry:windowed');
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 

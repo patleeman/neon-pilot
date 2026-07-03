@@ -400,6 +400,14 @@ describe('Windowed OS Storybook examples', () => {
     }
   });
 
+  it('styles keyboard-highlighted Start menu results inside the scoped desktop chrome', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".wos-start-menu__item[data-active='true']");
+    expect(stylesSource).toContain('background: var(--wos-surface-3);');
+  });
+
   it('styles nested list rows through scoped depth selectors', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');

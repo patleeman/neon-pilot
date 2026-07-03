@@ -21,6 +21,7 @@ const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.
 const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 1500;
 const BROWSER_BOUNDS_SYNC_INTERVAL_MS = 1000;
 const WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS = 160;
+const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '[aria-modal="true"]',
   '[role="dialog"]',
@@ -80,6 +81,13 @@ function hasWindowedShellOverlay(): boolean {
       `.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell[data-native-browser-blocked="true"], ${TRANSIENT_RENDERER_BLOCKER_SELECTOR}`,
     ),
   );
+}
+
+function isWindowedShellActive(): boolean {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  return document.body.hasAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE) || Boolean(document.querySelector('.windowed-os-shell'));
 }
 
 function isConnectedVisibleElement(element: Element): element is HTMLElement {
@@ -796,7 +804,7 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    if (isInsideWindowedShell(host)) {
+    if (isInsideWindowedShell(host) || isWindowedShellActive()) {
       hideBrowserView({ force: true });
       return;
     }
@@ -913,6 +921,7 @@ export function WorkbenchBrowserTab({
       attributeFilter: [
         'aria-modal',
         'class',
+        WINDOWED_SHELL_ACTIVE_ATTRIBUTE,
         'data-focused',
         'data-focused-window-id',
         'data-frame-paint-blocked',
@@ -924,9 +933,10 @@ export function WorkbenchBrowserTab({
       childList: true,
       subtree: true,
     });
-    const syncInterval = browserHostRef.current?.closest('.windowed-os-shell')
-      ? WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS
-      : BROWSER_BOUNDS_SYNC_INTERVAL_MS;
+    const syncInterval =
+      browserHostRef.current?.closest('.windowed-os-shell') || isWindowedShellActive()
+        ? WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS
+        : BROWSER_BOUNDS_SYNC_INTERVAL_MS;
     const timer = window.setInterval(syncBounds, syncInterval);
 
     return () => {

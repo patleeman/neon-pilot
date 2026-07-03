@@ -82,6 +82,7 @@ const MIN_WINDOW_WIDTH = 360;
 const MIN_WINDOW_HEIGHT = 260;
 const WINDOWED_BROWSER_SETTLE_MS = 1200;
 const FALLBACK_TASKBAR_HEIGHT = 44;
+const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 
 const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'chat', title: 'Chat', route: '/conversations/new', kind: 'chat' },
@@ -783,7 +784,11 @@ export function WindowedLayout() {
   const windowsRef = useRef(windows);
 
   useEffect(() => {
+    document.body.setAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE, 'true');
     suspendWindowedBrowserViews(3000);
+    return () => {
+      document.body.removeAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE);
+    };
   }, []);
 
   useEffect(() => {

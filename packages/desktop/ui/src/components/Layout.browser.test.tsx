@@ -30,6 +30,7 @@ describe('WorkbenchBrowserTab', () => {
       root = null;
     }
     delete window.neonPilotDesktop;
+    document.body.removeAttribute('data-neon-pilot-windowed-shell-active');
     vi.restoreAllMocks();
   });
 
@@ -988,6 +989,51 @@ describe('WorkbenchBrowserTab', () => {
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
       container.querySelector('.windowed-os-shell')?.setAttribute('data-native-browser-blocked', 'true');
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+  });
+
+  it('keeps native browser views hidden when desktop mode is active outside the host DOM tree', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+    document.body.replaceChildren();
+    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.closest('#browser-root')) {
+          return { left: 20, top: 20, width: 640, height: 420, right: 660, bottom: 440, x: 20, y: 20, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+
+    const browserRoot = document.createElement('div');
+    browserRoot.id = 'browser-root';
+    document.body.appendChild(browserRoot);
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
     });
     await flushAsyncWork();
 

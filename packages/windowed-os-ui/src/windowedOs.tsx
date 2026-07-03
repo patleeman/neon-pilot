@@ -1074,9 +1074,13 @@ export interface StartMenuProps {
 
 export function StartMenu({ open, items, onClose }: StartMenuProps) {
   const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
-    if (!open) setQuery('');
+    if (!open) {
+      setQuery('');
+      setActiveIndex(0);
+    }
   }, [open]);
   useLayoutEffect(() => {
     if (!open) return;
@@ -1098,12 +1102,32 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
     if (!normalizedQuery) return items;
     return items.filter((item) => item.title.toLowerCase().includes(normalizedQuery));
   }, [items, query]);
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query]);
+  useEffect(() => {
+    setActiveIndex((current) => Math.min(current, Math.max(visibleItems.length - 1, 0)));
+  }, [visibleItems.length]);
   const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Enter') return;
-    const firstItem = visibleItems[0];
-    if (!firstItem) return;
-    event.preventDefault();
-    firstItem.onSelect();
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (!visibleItems.length) return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      setActiveIndex((current) => (current + direction + visibleItems.length) % visibleItems.length);
+      return;
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      if (!visibleItems.length) return;
+      event.preventDefault();
+      setActiveIndex(event.key === 'Home' ? 0 : visibleItems.length - 1);
+      return;
+    }
+    if (event.key === 'Enter') {
+      const activeItem = visibleItems[activeIndex] ?? visibleItems[0];
+      if (!activeItem) return;
+      event.preventDefault();
+      activeItem.onSelect();
+    }
   };
 
   if (!open) return null;
@@ -1125,8 +1149,16 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
       </div>
       <div className="wos-start-menu__grid">
         {visibleItems.length > 0 ? (
-          visibleItems.map((item) => (
-            <button key={item.id} type="button" className="wos-start-menu__item" onClick={item.onSelect}>
+          visibleItems.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              className="wos-start-menu__item"
+              data-active={index === activeIndex}
+              onPointerMove={() => setActiveIndex(index)}
+              onFocus={() => setActiveIndex(index)}
+              onClick={item.onSelect}
+            >
               <WindowedAppTile label={item.title} accent={item.accent} />
             </button>
           ))

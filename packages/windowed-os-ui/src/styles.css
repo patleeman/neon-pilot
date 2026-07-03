@@ -329,6 +329,7 @@
 }
 
 .wos-start-menu__item:hover,
+.wos-start-menu__item[data-active='true'],
 .wos-taskbar__button:hover,
 .wos-taskbar__start:hover,
 .wos-window__controls button:hover {
