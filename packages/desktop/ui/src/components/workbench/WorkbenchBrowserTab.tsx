@@ -201,6 +201,47 @@ function isCoveredByWindowedShellLayer(host: HTMLElement | null): boolean {
   });
 }
 
+function isCoveredByPositionedRendererLayer(host: HTMLElement | null): boolean {
+  if (!host || !host.isConnected) {
+    return false;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  if (hostRect.width < 1 || hostRect.height < 1) {
+    return false;
+  }
+
+  const ownWindow = host.closest<HTMLElement>('.wos-window');
+  const candidates = Array.from(document.body.querySelectorAll<HTMLElement>('*'));
+
+  return candidates.some((element) => {
+    if (element === host || host.contains(element) || element.contains(host)) {
+      return false;
+    }
+    if (ownWindow && ownWindow.contains(element)) {
+      return false;
+    }
+    if (!isConnectedVisibleElement(element)) {
+      return false;
+    }
+
+    const style = window.getComputedStyle(element);
+    if (style.pointerEvents === 'none') {
+      return false;
+    }
+
+    const zIndex = Number.parseInt(style.zIndex, 10);
+    const isStackedOverlay =
+      ['absolute', 'fixed', 'sticky'].includes(style.position) && Number.isFinite(zIndex) && zIndex > windowLayer(ownWindow ?? host);
+    const isNativeTopLayer = element.matches('[aria-modal="true"], [role="dialog"]');
+    if (!isStackedOverlay && !isNativeTopLayer) {
+      return false;
+    }
+
+    return rectsOverlap(hostRect, element.getBoundingClientRect());
+  });
+}
+
 function elementAtPoint(x: number, y: number): Element | null {
   if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
     return null;
@@ -556,6 +597,7 @@ export function WorkbenchBrowserTab({
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||
       isCoveredByWindowedShellLayer(host) ||
+      isCoveredByPositionedRendererLayer(host) ||
       isCoveredByRendererLayer(host);
 
     if (blocked) {
