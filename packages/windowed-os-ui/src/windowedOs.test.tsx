@@ -70,6 +70,23 @@ describe('WindowedDataTable', () => {
 
     expect(html).toContain('--wos-data-column-template:minmax(14rem, 1fr) minmax(7rem, 0.4fr) minmax(20rem, 0.9fr)');
   });
+
+  it('stacks shared data rows in narrow window containers without clipping actions', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('@container (max-width: 660px)');
+    expect(stylesSource).toContain('.wos-data-table:not(.wos-automation-queue) .wos-data-table__header');
+    expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(stylesSource).toContain('.wos-data-table:not(.wos-automation-queue) .wos-data-row__action :where(.wos-inline-actions, .flex)');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
+    expect(stylesSource).toContain('overflow-wrap: anywhere;');
+    expect(stylesSource).toContain('.wos-settings-row__copy');
+    expect(stylesSource).toContain('.wos-settings-row {\n    display: grid;');
+    expect(stylesSource).toContain('.wos-settings-row__actions {\n    min-width: 0;');
+    expect(stylesSource).toContain('.wos-key-value__label');
+    expect(stylesSource).toContain('.wos-automation-queue .wos-data-row');
+  });
 });
 
 describe('WindowedPageShell', () => {

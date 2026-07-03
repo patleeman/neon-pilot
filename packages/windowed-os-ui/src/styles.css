@@ -2036,6 +2036,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   display: grid;
   min-width: 0;
   gap: 2px;
+  overflow-wrap: anywhere;
 }
 
 .wos-settings-row__title {
@@ -2792,6 +2793,58 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   justify-content: flex-end;
 }
 
+@container (max-width: 660px) {
+  .wos-settings-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .wos-settings-row__actions {
+    min-width: 0;
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .wos-data-table:not(.wos-automation-queue) .wos-data-table__header {
+    display: none;
+  }
+
+  .wos-data-table:not(.wos-automation-queue) .wos-data-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    align-items: stretch;
+    padding: 9px 5px;
+  }
+
+  .wos-data-table:not(.wos-automation-queue) .wos-data-row__cell {
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .wos-data-table:not(.wos-automation-queue) .wos-data-row__cell[data-align='right'] {
+    text-align: left;
+  }
+
+  .wos-data-table:not(.wos-automation-queue) .wos-data-row__name,
+  .wos-data-table:not(.wos-automation-queue) .wos-data-row__meta,
+  .wos-data-table:not(.wos-automation-queue) .wos-status-note {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .wos-data-table:not(.wos-automation-queue) .wos-data-row__action {
+    justify-content: flex-start;
+  }
+
+  .wos-data-table:not(.wos-automation-queue) .wos-data-row__action :where(.wos-inline-actions, .flex) {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
 .wos-page-rail .wos-data-table__header {
   display: none;
 }
@@ -2852,8 +2905,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-key-value__label {
   overflow: hidden;
   color: var(--wos-ink-500);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font: var(--wos-text-eyebrow);
   letter-spacing: 0.02em;
   text-transform: uppercase;
