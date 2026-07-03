@@ -82,6 +82,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Repo audit"');
   });
 
+  it('documents shared empty and error state primitives for windowed pages', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const StatePrimitives');
+    expect(source).toContain('<WindowedEmptyState action=');
+    expect(source).toContain('<WindowedEmptyState tone="danger"');
+    expect(source).toContain('No workflow runs yet.');
+    expect(source).toContain('Trace data could not be loaded.');
+    expect(source).toContain('Try again');
+  });
+
   it('documents the canonical Automations desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

@@ -11,6 +11,7 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
+  WindowedEmptyState,
   WindowedField,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
@@ -337,6 +338,55 @@ export const DenseAppPage: Story = {
                   },
                 ]}
               />
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const StatePrimitives: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 560, padding: 24 }}>
+      <WindowFrame
+        title="States"
+        accent="telemetry"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(760px, 100%)', height: 500 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain eyebrow="Shared states" title="Windowed States">
+            <WindowedPageSection title="Empty states" meta="Compact">
+              <div style={{ display: 'grid', gap: 8 }}>
+                <WindowedEmptyState action={<WindowedPageButton tone="accent">Create workflow</WindowedPageButton>}>
+                  No workflow runs yet.
+                </WindowedEmptyState>
+                <WindowedEmptyState>
+                  <strong>No diagnostics yet.</strong> Diagnostics fill in after conversations produce retained usage, tool, and context
+                  data.
+                </WindowedEmptyState>
+                <WindowedEmptyState tone="danger" action={<WindowedPageButton>Try again</WindowedPageButton>}>
+                  Trace data could not be loaded.
+                </WindowedEmptyState>
+              </div>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Status blocks" meta="Inline">
+              <div style={{ display: 'grid', gap: 8 }}>
+                <WindowedStateBlock tone="positive" title="Ready">
+                  Gateway runtime is accepting work from approved chats.
+                </WindowedStateBlock>
+                <WindowedStateBlock tone="warning" title="Needs attention" action={<WindowedPageButton>Retry</WindowedPageButton>}>
+                  Telegram polling failed. Check whether another bot process is active.
+                </WindowedStateBlock>
+                <WindowedStateBlock tone="danger" title="Unavailable">
+                  Gateway settings could not be loaded.
+                </WindowedStateBlock>
+              </div>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
