@@ -235,7 +235,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('layout="two-column"');
     expect(source).toContain('<WindowedPageRail');
     expect(source).toContain('showHeader={false}');
-    expect(source).toContain('title="Settings sections"');
+    expect(source).toContain('title="Sections"');
+    expect(source).not.toContain('title="Settings sections"');
   });
 
   it('documents the canonical Workflows desktop page and subwindow pattern', () => {

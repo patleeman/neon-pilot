@@ -415,7 +415,7 @@ export const SettingsTwoColumnPage: Story = {
         onClose={() => undefined}
       >
         <WindowedPageShell layout="two-column">
-          <WindowedPageRail title="Settings sections" accent="settings" showHeader={false}>
+          <WindowedPageRail title="Sections" accent="settings" showHeader={false}>
             <WindowedList>
               <WindowedListItem title="Appearance" active accent="settings" />
               <WindowedListItem title="Providers" accent="settings" status={<WindowedBadge tone="positive">2</WindowedBadge>} />
