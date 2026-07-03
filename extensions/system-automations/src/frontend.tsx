@@ -50,6 +50,7 @@ import {
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
+  WindowedStateBlock,
   WindowedTextButton,
 } from '@neon-pilot/extensions/ui';
 import { type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -725,7 +726,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
           >
             {error ? (
               <WindowedPageSection title="Action needed">
-                <WindowedEmptyState tone="danger">{error}</WindowedEmptyState>
+                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
 
@@ -742,8 +743,8 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             </WindowedPageSection>
 
             <WindowedPageSection title="Task queue">
-              {loading && visibleTasks.length === 0 ? <WindowedEmptyState>Loading automations.</WindowedEmptyState> : null}
-              {!loading && visibleTasks.length === 0 ? (
+              {loading && visibleTasks.length === 0 ? <WindowedStateBlock>Loading automations.</WindowedStateBlock> : null}
+              {!error && !loading && visibleTasks.length === 0 ? (
                 <WindowedEmptyState>Schedule prompts into owner threads for recurring reports, checks, and reminders.</WindowedEmptyState>
               ) : null}
               {visibleTasks.length > 0 ? (

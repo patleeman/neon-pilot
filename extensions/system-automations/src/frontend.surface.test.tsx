@@ -8,8 +8,21 @@ import { AutomationsPage } from './frontend';
 
 Object.assign(globalThis, { React });
 
+type SurfaceTask = {
+  id: string;
+  title: string;
+  enabled: boolean;
+  running: boolean;
+  scheduleType: 'cron';
+  cron: string;
+  prompt: string;
+  threadConversationId: string;
+  threadTitle: string;
+  lastStatus: string;
+};
+
 function createPa(
-  tasks = [
+  tasks: SurfaceTask[] | Promise<SurfaceTask[]> = [
     {
       id: 'task-1',
       title: 'Quarter-hour chime',
@@ -78,5 +91,32 @@ describe('AutomationsPage windowed surface', () => {
     expect(container.querySelectorAll('.wos-empty-state')).toHaveLength(1);
     expect(container.querySelector('.wos-automation-empty')).toBeNull();
     expect(container.querySelector('.wos-automation-error')).toBeNull();
+  });
+
+  it('uses shared windowed state-block chrome while automations are loading', async () => {
+    const { container } = render(
+      <AutomationsPage pa={createPa(new Promise(() => undefined))} context={{ shellPresentation: 'windowed' }} />,
+    );
+
+    await waitFor(() => expect(screen.getByText('Loading automations.')).toBeTruthy());
+
+    expect(screen.getByText('Loading automations.').closest('.wos-state-block')).toBeTruthy();
+    expect(container.querySelector('.wos-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+  });
+
+  it('uses shared windowed state-block chrome when automations fail to load', async () => {
+    const pa = createPa([]);
+    vi.mocked(pa.automations.list).mockRejectedValueOnce(new Error('Automations could not be loaded.'));
+
+    const { container } = render(<AutomationsPage pa={pa} context={{ shellPresentation: 'windowed' }} />);
+
+    await waitFor(() => expect(screen.getByText('Automations could not be loaded.')).toBeTruthy());
+
+    expect(screen.getByText('Automations could not be loaded.').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
+    expect(container.querySelector('.wos-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
   });
 });
