@@ -811,7 +811,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('z-index: 95;');
     expect(stylesSource).toContain('.wos-window__titlebar {\n  position: relative;\n  z-index: 70;');
     expect(stylesSource).toContain('.wos-resize-handle {\n  position: absolute;\n  z-index: 55;');
-    expect(stylesSource).toContain('.wos-resize-n {\n  right: calc((var(--wos-window-control-size) * 3) + 42px);');
+    expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 42px);');
+    expect(stylesSource).toContain('.wos-resize-n {\n  right: var(--wos-window-control-clearance);');
     expect(stylesSource).toContain('.wos-resize-e,\n.wos-resize-w {\n  top: var(--wos-titlebar-h);');
     expect(stylesSource.indexOf('z-index: 70;')).toBeLessThan(stylesSource.indexOf('z-index: 55;'));
     expect(stylesSource).not.toContain(
@@ -916,7 +917,8 @@ describe('Windowed OS Storybook examples', () => {
     const northEastRule = stylesSource.match(/\.wos-resize-ne \{[^}]+}/)?.[0] ?? '';
 
     expect(northEastRule).toContain('top: var(--wos-titlebar-h);');
-    expect(northEastRule).toContain('right: 0;');
+    expect(northEastRule).toContain('right: var(--wos-window-control-clearance);');
+    expect(northEastRule).not.toContain('right: 0;');
   });
 
   it('styles parent-attached subwindows distinctly from blocking modals', () => {

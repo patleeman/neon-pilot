@@ -1,6 +1,7 @@
 @import './tokens.css';
 
 .windowed-os-shell {
+  --wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 42px);
   min-height: 100vh;
   overflow: hidden;
   background: var(--wos-surface-0);
@@ -4321,7 +4322,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-resize-n {
-  right: calc((var(--wos-window-control-size) * 3) + 42px);
+  right: var(--wos-window-control-clearance);
 }
 
 .wos-resize-e,
@@ -4358,7 +4359,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-resize-ne {
   top: var(--wos-titlebar-h);
-  right: 0;
+  right: var(--wos-window-control-clearance);
   cursor: nesw-resize;
 }
 
