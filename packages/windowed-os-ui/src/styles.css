@@ -61,7 +61,6 @@
 .wos-taskbar__start,
 .wos-taskbar__button,
 .wos-start-menu__item,
-.wos-start-menu__stable,
 .wos-window__controls button {
   border: 2px solid var(--wos-ink-900);
   color: var(--wos-ink-900);
@@ -332,7 +331,6 @@
 .wos-start-menu__item:hover,
 .wos-taskbar__button:hover,
 .wos-taskbar__start:hover,
-.wos-start-menu__stable:hover,
 .wos-window__controls button:hover {
   background: var(--wos-surface-3);
 }
@@ -343,14 +341,6 @@
   font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
   font-size: 12px;
   font-weight: 650;
-}
-
-.wos-start-menu__stable {
-  height: 30px;
-  border-radius: 9px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .wos-window {
