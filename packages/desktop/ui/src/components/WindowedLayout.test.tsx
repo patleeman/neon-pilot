@@ -1008,6 +1008,37 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
 
+  it('keeps native browser views suppressed when any additional window is visible beside focused chat', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 800, y: 70, width: 420, height: 360 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+    await screen.findByRole('region', { name: /routines/i });
+
+    const shell = container.querySelector('.windowed-os-shell');
+    expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
+    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
+  });
+
   it('marks lower overlapping windows so embedded iframes cannot paint over the foreground stack', async () => {
     seedWindowedWindows([
       {
@@ -1042,7 +1073,7 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow!.hasAttribute('data-iframe-blocked')).toBe(false);
   });
 
-  it('marks window stack changes as browser-blocking while native browser bounds settle', async () => {
+  it('keeps window stacks browser-blocking while multiple windows are visible', async () => {
     seedWindowedWindows([
       {
         id: 'route:routines',
@@ -1069,12 +1100,11 @@ describe('WindowedLayout route windows', () => {
 
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
 
-    await waitFor(
-      () => {
-        expect(shell?.hasAttribute('data-window-interaction')).toBe(false);
-      },
-      { timeout: 1000 },
-    );
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 700));
+    });
+
+    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
 
     fireEvent.pointerDown(await screen.findByRole('region', { name: /routines/i }));
 

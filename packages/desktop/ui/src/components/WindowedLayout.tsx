@@ -319,6 +319,10 @@ function hasCoveredChatWindow(visibleWindows: DesktopWindowModel[]): boolean {
   return visibleWindows.some((windowModel) => windowModel.kind === 'chat' && isWindowCoveredByHigherWindow(windowModel, visibleWindows));
 }
 
+function hasCompetingWindowedSurface(visibleWindows: DesktopWindowModel[]): boolean {
+  return visibleWindows.length > 1;
+}
+
 function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
   let changed = false;
   const next = windows.map((windowModel) => {
@@ -1151,7 +1155,7 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
 
-  const browserBlockedByWindowStack = hasCoveredChatWindow(visibleWindows);
+  const browserBlockedByWindowStack = hasCoveredChatWindow(visibleWindows) || hasCompetingWindowedSurface(visibleWindows);
 
   const nativeBrowserBlocked = Boolean(
     launcherOpen || drag || resize || snapTarget || browserLayerSettling || browserBlockedByWindowStack || focusedWindow?.kind === 'route',
