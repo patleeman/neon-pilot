@@ -313,6 +313,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-terminal-panel :where(.xterm, .xterm-screen, .xterm-viewport)');
   });
 
+  it('defines a reusable danger tone for windowed page buttons', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".wos-page-button[data-tone='danger']");
+    expect(stylesSource).toContain('background: var(--wos-danger);');
+  });
+
   it('keeps isolated Storybook examples on scoped windowed classes instead of app utility CSS', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

@@ -816,6 +816,15 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                             <WindowedPageButton aria-label={editLabel} title={editLabel} onClick={() => selectTask(task, 'edit')}>
                               Edit
                             </WindowedPageButton>
+                            <WindowedPageButton
+                              tone="danger"
+                              disabled={task.running || busy === `delete:${task.id}`}
+                              aria-label={`Delete ${title}`}
+                              title={`Delete ${title}`}
+                              onClick={() => void deleteTask(task)}
+                            >
+                              Delete
+                            </WindowedPageButton>
                           </span>
                         }
                       />

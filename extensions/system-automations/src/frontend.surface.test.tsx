@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -96,8 +96,22 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByRole('button', { name: 'Run Release watch' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Resume Release watch' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Edit Release watch' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Delete Release watch' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
     expect(screen.queryByRole('button', { name: /actions for/i })).toBeNull();
+  });
+
+  it('keeps destructive automation actions available in windowed rows', async () => {
+    const pa = createPa();
+    render(<AutomationsPage pa={pa} context={{ shellPresentation: 'windowed' }} />);
+
+    const deleteButton = await screen.findByRole('button', { name: 'Delete Release watch' });
+    expect(deleteButton.closest('.wos-page-button')?.getAttribute('data-tone')).toBe('danger');
+
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => expect(pa.ui.confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Delete automation' })));
+    await waitFor(() => expect(pa.automations.delete).toHaveBeenCalledWith('task-2'));
   });
 
   it('uses shared windowed empty-state chrome when no automations exist', async () => {

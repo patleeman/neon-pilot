@@ -228,7 +228,7 @@ export function WindowedToolbar({ children, end, as = 'div', className, formProp
 
 export interface WindowedPageButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
   children: ReactNode;
-  tone?: 'neutral' | 'accent';
+  tone?: 'neutral' | 'accent' | 'danger';
   type?: 'button' | 'submit';
 }
 

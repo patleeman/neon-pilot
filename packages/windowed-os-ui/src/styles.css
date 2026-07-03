@@ -1325,6 +1325,11 @@
   background: var(--wos-extensions);
 }
 
+.wos-page-button[data-tone='danger'] {
+  background: var(--wos-danger);
+  color: var(--wos-ink-900);
+}
+
 .wos-page-button:hover {
   background: var(--wos-surface-3);
 }
