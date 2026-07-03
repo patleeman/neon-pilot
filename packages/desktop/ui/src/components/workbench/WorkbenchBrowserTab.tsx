@@ -22,9 +22,17 @@ const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 1500;
 const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '[aria-modal="true"]',
   '[role="dialog"]',
+  '[role="menu"]',
+  '[role="listbox"]',
   '.ui-overlay-backdrop',
+  '.ui-dialog-shell',
   '.ui-menu-shell',
+  '.ui-context-menu-shell',
+  '.ui-positioned-menu',
   '.ui-command-palette-shell',
+  '.ui-setup-readiness-popover',
+  '.ui-workbench-drop-popover',
+  '.ui-composer-drop-overlay',
   '.ui-notification-toaster',
   '.ui-page-search-popover',
   '.wos-start-menu',
@@ -64,11 +72,7 @@ function hasWindowedShellOverlay(): boolean {
     return false;
   }
 
-  return Boolean(
-    document.querySelector(
-      '.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell .wos-start-menu, .windowed-os-shell .wos-taskbar__menu-layer, .wos-snap-preview, .ui-overlay-backdrop',
-    ),
-  );
+  return Boolean(document.querySelector(`.windowed-os-shell[data-window-interaction="true"], ${TRANSIENT_RENDERER_BLOCKER_SELECTOR}`));
 }
 
 function isConnectedVisibleElement(element: Element): element is HTMLElement {
@@ -356,7 +360,26 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
       return false;
     }
     const blocker = topElement.closest<HTMLElement>(
-      '.wos-window, .wos-start-menu, .wos-taskbar, .wos-taskbar__menu-layer, .wos-snap-preview, .wos-dialog-layer, .ui-overlay-backdrop, [aria-modal="true"]',
+      [
+        '.wos-window',
+        '.wos-start-menu',
+        '.wos-taskbar',
+        '.wos-taskbar__menu-layer',
+        '.wos-snap-preview',
+        '.wos-dialog-layer',
+        '.ui-overlay-backdrop',
+        '.ui-dialog-shell',
+        '.ui-menu-shell',
+        '.ui-context-menu-shell',
+        '.ui-positioned-menu',
+        '.ui-setup-readiness-popover',
+        '.ui-workbench-drop-popover',
+        '.ui-composer-drop-overlay',
+        '[aria-modal="true"]',
+        '[role="dialog"]',
+        '[role="menu"]',
+        '[role="listbox"]',
+      ].join(', '),
     );
     if (blocker && isVisibleStyle(blocker)) {
       return true;
@@ -382,7 +405,25 @@ function shouldSuspendForWindowedShellEvent(host: HTMLElement | null, event: Eve
   }
   return Boolean(
     target.closest(
-      '.windowed-os-shell, .wos-window, .wos-start-menu, .wos-taskbar, .wos-taskbar__menu-layer, .wos-dialog-layer, .wos-snap-preview',
+      [
+        '.windowed-os-shell',
+        '.wos-window',
+        '.wos-start-menu',
+        '.wos-taskbar',
+        '.wos-taskbar__menu-layer',
+        '.wos-dialog-layer',
+        '.wos-snap-preview',
+        '.ui-dialog-shell',
+        '.ui-menu-shell',
+        '.ui-context-menu-shell',
+        '.ui-positioned-menu',
+        '.ui-setup-readiness-popover',
+        '.ui-workbench-drop-popover',
+        '.ui-composer-drop-overlay',
+        '[role="dialog"]',
+        '[role="menu"]',
+        '[role="listbox"]',
+      ].join(', '),
     ),
   );
 }
