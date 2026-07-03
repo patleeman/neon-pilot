@@ -243,6 +243,64 @@ describe('WorkbenchBrowserTab', () => {
     );
   });
 
+  it('clips native browser bounds to the windowed desktop work area', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.classList.contains('wos-desktop')) {
+          return { left: 0, top: 0, width: 1024, height: 720, right: 1024, bottom: 720, x: 0, y: 0, toJSON: () => ({}) };
+        }
+        if (this.classList.contains('wos-window')) {
+          return { left: 32, top: 64, width: 760, height: 720, right: 792, bottom: 784, x: 32, y: 64, toJSON: () => ({}) };
+        }
+        if (this.classList.contains('wos-window__body')) {
+          return { left: 32, top: 106, width: 760, height: 678, right: 792, bottom: 784, x: 32, y: 106, toJSON: () => ({}) };
+        }
+        if (this.closest('#browser-root')) {
+          return { left: 32, top: 106, width: 760, height: 678, right: 792, bottom: 784, x: 32, y: 106, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<main class="wos-desktop"><section class="wos-window" data-focused="true"><div class="wos-window__body"><div id="browser-root"></div></div></section></main>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visible: true,
+        bounds: { x: 32, y: 106, width: 760, height: 614 },
+      }),
+    );
+  });
+
   it('hides the native browser view when its windowed shell window is not focused', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
@@ -948,6 +1006,57 @@ describe('WorkbenchBrowserTab', () => {
     document.body.appendChild(container);
     const floatingLayer = container.querySelector('.floating-windowed-layer')!;
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => floatingLayer) });
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+  });
+
+  it('hides the native browser view when floating shell chrome geometrically covers its host', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.classList.contains('floating-windowed-layer')) {
+          return { left: 420, top: 220, width: 260, height: 220, right: 680, bottom: 440, x: 420, y: 220, toJSON: () => ({}) };
+        }
+        if (this.closest('#browser-root')) {
+          return { left: 36, top: 92, width: 728, height: 470, right: 764, bottom: 562, x: 36, y: 92, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<div class="windowed-os-shell"><section class="wos-window" data-window-id="browser" data-focused="true" style="z-index: 10"><div id="browser-root"></div></section><div class="floating-windowed-layer" style="position: absolute; z-index: 999;"></div></div>';
+    document.body.appendChild(container);
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(() => container.querySelector('#browser-root')),
+    });
     const browserRoot = container.querySelector('#browser-root')!;
     root = createRoot(browserRoot);
     act(() => {

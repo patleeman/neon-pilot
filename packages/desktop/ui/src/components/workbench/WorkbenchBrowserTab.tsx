@@ -33,6 +33,13 @@ const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '.wos-dialog-layer',
 ].join(', ');
 const RENDERER_CHROME_BLOCKER_SELECTOR = [TRANSIENT_RENDERER_BLOCKER_SELECTOR, '.wos-taskbar'].join(', ');
+const WINDOWED_SHELL_LAYER_SELECTOR = [
+  '.wos-start-menu',
+  '.wos-taskbar',
+  '.wos-taskbar__menu-layer',
+  '.wos-snap-preview',
+  '.wos-dialog-layer',
+].join(', ');
 
 function hasBlockingRendererOverlay(host: HTMLElement | null): boolean {
   if (typeof document === 'undefined') {
@@ -156,6 +163,44 @@ function isCoveredByWindowedChrome(host: HTMLElement | null): boolean {
   });
 }
 
+function isCoveredByWindowedShellLayer(host: HTMLElement | null): boolean {
+  if (!host || !host.isConnected) {
+    return false;
+  }
+
+  const ownWindow = host.closest<HTMLElement>('.wos-window');
+  const shell = ownWindow?.closest<HTMLElement>('.windowed-os-shell');
+  if (!ownWindow || !shell) {
+    return false;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  if (hostRect.width < 1 || hostRect.height < 1) {
+    return false;
+  }
+
+  const explicitLayers = Array.from(shell.querySelectorAll<HTMLElement>(WINDOWED_SHELL_LAYER_SELECTOR));
+  const unknownFloatingLayers = Array.from(shell.children).filter((element): element is HTMLElement => {
+    if (!(element instanceof HTMLElement)) return false;
+    if (element.matches('.wos-desktop')) return false;
+    if (element.matches(WINDOWED_SHELL_LAYER_SELECTOR)) return false;
+    if (element.closest('.wos-window')) return false;
+    const style = window.getComputedStyle(element);
+    const zIndex = Number.parseInt(style.zIndex, 10);
+    return ['absolute', 'fixed', 'sticky'].includes(style.position) && Number.isFinite(zIndex) && zIndex > windowLayer(ownWindow);
+  });
+
+  return [...explicitLayers, ...unknownFloatingLayers].some((element) => {
+    if (!isConnectedVisibleElement(element)) {
+      return false;
+    }
+    if (host.contains(element) || element.contains(host)) {
+      return false;
+    }
+    return rectsOverlap(hostRect, element.getBoundingClientRect());
+  });
+}
+
 function elementAtPoint(x: number, y: number): Element | null {
   if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
     return null;
@@ -200,6 +245,10 @@ function visibleBrowserBoundsForHost(host: HTMLElement): { x: number; y: number;
   const windowBody = host.closest<HTMLElement>('.wos-window__body');
   if (windowBody) {
     clipRects.push(rectFromBounds(windowBody.getBoundingClientRect()));
+  }
+  const desktop = host.closest<HTMLElement>('.wos-desktop');
+  if (desktop) {
+    clipRects.push(rectFromBounds(desktop.getBoundingClientRect()));
   }
   const windowFrame = host.closest<HTMLElement>('.wos-window');
   if (windowFrame) {
@@ -476,6 +525,7 @@ export function WorkbenchBrowserTab({
       isInsideBackgroundWindowedWindow(host) ||
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||
+      isCoveredByWindowedShellLayer(host) ||
       isCoveredByRendererLayer(host);
 
     if (blocked) {
