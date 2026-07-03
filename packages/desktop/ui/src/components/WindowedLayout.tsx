@@ -297,6 +297,21 @@ function boundsStyle(bounds: WindowBounds): CSSProperties {
   };
 }
 
+function windowFrameStyle(windowModel: DesktopWindowModel, visibleWindows: DesktopWindowModel[]): CSSProperties {
+  const visibleIndex = visibleWindows.findIndex((candidate) => candidate.id === windowModel.id);
+  if (windowModel.minimized) {
+    return {
+      ...boundsStyle(windowModel.bounds),
+      display: 'none',
+      zIndex: 0,
+    };
+  }
+  return {
+    ...boundsStyle(windowModel.bounds),
+    zIndex: 10 + Math.max(visibleIndex, 0),
+  };
+}
+
 function isPrimaryNativeMouse(event: MouseEvent): boolean {
   return event.button === 0;
 }
@@ -1454,16 +1469,19 @@ export function WindowedLayout() {
       <StartMenu open={launcherOpen} items={startMenuItems} onClose={() => setLauncherOpen(false)} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
-        {visibleWindows.map((windowModel, index) => (
+        {windows.map((windowModel) => (
           <WindowFrame
             key={windowModel.id}
             windowId={windowModel.id}
             title={windowModel.title}
             accent={accentForWindow(windowModel)}
             focused={windowModel.focused}
-            style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
+            minimized={windowModel.minimized}
+            style={windowFrameStyle(windowModel, visibleWindows)}
             iframeBlocked={
-              canHostBrowserFrame(windowModel) && (rendererFramePaintBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows))
+              !windowModel.minimized &&
+              canHostBrowserFrame(windowModel) &&
+              (rendererFramePaintBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows))
             }
             onPointerDown={() => focusWindow(windowModel.id)}
             onMinimize={() => minimizeWindow(windowModel.id)}

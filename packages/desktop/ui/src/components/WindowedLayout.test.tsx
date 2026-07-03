@@ -2385,13 +2385,21 @@ describe('WindowedLayout route windows', () => {
       },
     ]);
 
-    renderWindowedLayout();
+    const { container } = renderWindowedLayout();
 
     expect(await screen.findByText('/routines:windowed')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /minimize routines/i }));
 
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
     expect(screen.queryByRole('region', { name: /routines/i })).toBeNull();
+    const minimizedWindow = Array.from(container.querySelectorAll<HTMLElement>('.wos-window[data-minimized="true"]')).find(
+      (windowElement) => windowElement.textContent?.includes('/routines:windowed'),
+    );
+    expect(minimizedWindow).not.toBeNull();
+    expect(minimizedWindow?.getAttribute('data-minimized')).toBe('true');
+    expect(minimizedWindow?.getAttribute('aria-hidden')).toBe('true');
+    expect(minimizedWindow?.style.display).toBe('none');
+    expect(minimizedWindow?.querySelector('[data-testid="extension-route-host"]')?.textContent).toBe('/routines:windowed');
     expect(screen.getByRole('button', { name: /routines/i }).getAttribute('data-minimized')).toBe('true');
   });
 

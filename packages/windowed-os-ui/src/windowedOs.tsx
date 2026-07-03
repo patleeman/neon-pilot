@@ -1553,6 +1553,7 @@ export interface WindowFrameProps {
   title: string;
   accent?: AppAccent;
   focused?: boolean;
+  minimized?: boolean;
   iframeBlocked?: boolean;
   style?: CSSProperties;
   className?: string;
@@ -1570,6 +1571,7 @@ export function WindowFrame({
   title,
   accent = 'settings',
   focused = false,
+  minimized = false,
   iframeBlocked = false,
   style,
   className,
@@ -1587,7 +1589,9 @@ export function WindowFrame({
       className={cx('wos-window', className)}
       data-window-id={windowId}
       data-focused={focused}
+      data-minimized={minimized ? 'true' : undefined}
       data-iframe-blocked={iframeBlocked ? 'true' : undefined}
+      aria-hidden={minimized ? 'true' : undefined}
       style={style}
       onPointerDown={onPointerDown}
     >

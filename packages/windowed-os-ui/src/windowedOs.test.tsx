@@ -443,6 +443,18 @@ describe('WindowFrame', () => {
     expect(html).toContain('class="wos-window__iframe-shield"');
     expect(html.indexOf('class="wos-window__body"')).toBeLessThan(html.indexOf('class="wos-window__iframe-shield"'));
   });
+
+  it('marks minimized windows while preserving their body subtree for attached subwindows', () => {
+    const html = renderToStaticMarkup(
+      <WindowFrame title="Chat" minimized onMinimize={() => undefined} onMaximize={() => undefined} onClose={() => undefined}>
+        <div data-testid="attached-subwindow-state">Drawing editor</div>
+      </WindowFrame>,
+    );
+
+    expect(html).toContain('data-minimized="true"');
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain('attached-subwindow-state');
+  });
 });
 
 describe('WindowedListItem', () => {
