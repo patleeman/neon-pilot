@@ -5,6 +5,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
+  WindowedDataRow,
+  WindowedDataTable,
   WindowedDialog,
   WindowedDialogCopy,
   WindowedDialogStack,
@@ -16,6 +18,37 @@ import {
   WindowedPageShell,
   WindowedToolbar,
 } from './windowedOs';
+
+describe('WindowedDataTable', () => {
+  it('supports shared metric cells for dense windowed tables', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDataTable
+        columns={[
+          { label: 'Model' },
+          { label: 'Rating', align: 'right' },
+          { label: 'Votes', align: 'right' },
+          { label: 'Confidence', align: 'right' },
+        ]}
+      >
+        <WindowedDataRow
+          name="openai/gpt-5"
+          meta="frontend 6W/2L/1T"
+          cells={[
+            { value: 1532, align: 'right' },
+            { value: 9, align: 'right' },
+            { value: 'Low', align: 'right' },
+          ]}
+        />
+      </WindowedDataTable>,
+    );
+
+    expect(html).toContain('data-columns="4"');
+    expect(html).toContain('--wos-data-column-template');
+    expect(html).toContain('class="wos-data-row" data-cells="3"');
+    expect(html).toContain('class="wos-data-row__cell" data-align="right">1532</div>');
+    expect(html).toContain('frontend 6W/2L/1T');
+  });
+});
 
 describe('WindowedPageShell', () => {
   it('defaults to the canonical single-pane page layout', () => {
@@ -413,6 +446,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Rankings"');
     expect(source).toContain('aria-label="Task type"');
     expect(source).toContain('Disable Model Arena');
+    expect(source).toContain('<WindowedDataRow');
+    expect(source).toContain('cells={[');
+    expect(source).not.toContain('wos-arena-ranking-row');
     expect(source).not.toContain('title="Active duel"');
   });
 

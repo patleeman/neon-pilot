@@ -24,6 +24,7 @@ import {
   Switch,
   TextInput,
   WindowedBadge,
+  WindowedDataRow,
   WindowedDataTable,
   WindowedEmptyState,
   WindowedField,
@@ -718,15 +719,16 @@ function ModelArenaWindowedPage({
                 ]}
               >
                 {ranked.map((model) => (
-                  <div key={model.modelRef} className="wos-arena-ranking-row">
-                    <div className="wos-arena-ranking-row__model">
-                      <span>{model.modelRef}</span>
-                      {model.summary ? <small>{model.summary}</small> : null}
-                    </div>
-                    <span className="wos-arena-ranking-row__metric">{model.rating}</span>
-                    <span className="wos-arena-ranking-row__metric">{model.votes}</span>
-                    <span className="wos-arena-ranking-row__confidence">{confidenceLabel(model.votes)}</span>
-                  </div>
+                  <WindowedDataRow
+                    key={model.modelRef}
+                    name={model.modelRef}
+                    meta={model.summary}
+                    cells={[
+                      { value: model.rating, align: 'right' },
+                      { value: model.votes, align: 'right' },
+                      { value: confidenceLabel(model.votes), align: 'right' },
+                    ]}
+                  />
                 ))}
               </WindowedDataTable>
             ) : null}

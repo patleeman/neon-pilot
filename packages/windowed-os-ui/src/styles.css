@@ -1785,7 +1785,7 @@
 .wos-data-table__header,
 .wos-data-row {
   display: grid;
-  grid-template-columns: 2fr 1.4fr 0.7fr;
+  grid-template-columns: var(--wos-data-column-template, 2fr 1.4fr 0.7fr);
   gap: 8px;
   align-items: center;
 }
@@ -1820,8 +1820,22 @@
 
 .wos-data-row__identity,
 .wos-data-row__status,
+.wos-data-row__cell,
 .wos-data-row__action {
   min-width: 0;
+}
+
+.wos-data-row__cell {
+  overflow: hidden;
+  color: var(--wos-ink-700);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--wos-text-row);
+}
+
+.wos-data-row__cell[data-align='right'] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .wos-inline-actions {
@@ -2860,62 +2874,6 @@
   color: oklch(36% 0.13 28);
 }
 
-.wos-arena-ranking-table .wos-data-table__header,
-.wos-arena-ranking-row {
-  grid-template-columns: minmax(0, 1fr) 66px 56px 82px;
-}
-
-.wos-arena-ranking-row {
-  display: grid;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
-  border-bottom: 1.5px solid var(--wos-ink-900);
-  background: var(--wos-surface-1);
-  padding: 6px 8px;
-  color: var(--wos-ink-900);
-  font: var(--wos-text-row);
-}
-
-.wos-arena-ranking-row:last-child {
-  border-bottom: 0;
-}
-
-.wos-arena-ranking-row__model {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 1px;
-  font-family: var(--wos-font-mono);
-}
-
-.wos-arena-ranking-row__model span,
-.wos-arena-ranking-row__model small {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wos-arena-ranking-row__model small {
-  color: var(--wos-ink-500);
-  font: var(--wos-text-meta);
-}
-
-.wos-arena-ranking-row__metric,
-.wos-arena-ranking-row__confidence {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-}
-
-.wos-arena-ranking-row__confidence {
-  color: var(--wos-ink-500);
-  font-size: 10.5px;
-}
-
 .wos-arena-status-row,
 .wos-arena-add-row,
 .wos-arena-challenger {
@@ -3007,7 +2965,6 @@
     .wos-timeline-item__title,
     .wos-chat-composer__input,
     .wos-chat-composer__send,
-    .wos-arena-ranking-row,
     .wos-arena-challenger strong
   ) {
   font-family: var(--wos-font-display);
@@ -3024,15 +2981,7 @@
   line-height: 1.3;
 }
 
-.windowed-os-shell
-  :where(
-    .wos-badge,
-    .wos-data-row__meta,
-    .wos-list-item__meta,
-    .wos-list-item__detail,
-    .wos-list-item__status,
-    .wos-arena-ranking-row__model small
-  ) {
+.windowed-os-shell :where(.wos-badge, .wos-data-row__meta, .wos-list-item__meta, .wos-list-item__detail, .wos-list-item__status) {
   font-family: var(--wos-font-display);
   font-size: 11px;
   font-weight: 600;

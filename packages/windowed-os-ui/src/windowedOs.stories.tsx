@@ -1305,24 +1305,24 @@ export const ModelArenaPage: Story = {
                   { label: 'Confidence', align: 'right' },
                 ]}
               >
-                <div className="wos-arena-ranking-row">
-                  <div className="wos-arena-ranking-row__model">
-                    <span>openai:gpt-5.4</span>
-                    <small>42 wins / 61 votes</small>
-                  </div>
-                  <span className="wos-arena-ranking-row__metric">1684</span>
-                  <span className="wos-arena-ranking-row__metric">61</span>
-                  <span className="wos-arena-ranking-row__confidence">High</span>
-                </div>
-                <div className="wos-arena-ranking-row">
-                  <div className="wos-arena-ranking-row__model">
-                    <span>anthropic:claude-sonnet-4.5</span>
-                    <small>31 wins / 52 votes</small>
-                  </div>
-                  <span className="wos-arena-ranking-row__metric">1612</span>
-                  <span className="wos-arena-ranking-row__metric">52</span>
-                  <span className="wos-arena-ranking-row__confidence">Medium</span>
-                </div>
+                <WindowedDataRow
+                  name="openai:gpt-5.4"
+                  meta="42 wins / 61 votes"
+                  cells={[
+                    { value: 1684, align: 'right' },
+                    { value: 61, align: 'right' },
+                    { value: 'High', align: 'right' },
+                  ]}
+                />
+                <WindowedDataRow
+                  name="anthropic:claude-sonnet-4.5"
+                  meta="31 wins / 52 votes"
+                  cells={[
+                    { value: 1612, align: 'right' },
+                    { value: 52, align: 'right' },
+                    { value: 'Medium', align: 'right' },
+                  ]}
+                />
               </WindowedDataTable>
             </WindowedPageSection>
           </WindowedPageMain>

@@ -477,6 +477,7 @@ export function WindowedToggle({
 export interface WindowedDataRowProps {
   name: string;
   meta?: string;
+  cells?: Array<ReactNode | { value: ReactNode; align?: 'left' | 'right'; className?: string }>;
   enabled?: boolean;
   status?: ReactNode;
   action?: ReactNode;
@@ -484,21 +485,38 @@ export interface WindowedDataRowProps {
   className?: string;
 }
 
-export function WindowedDataRow({ name, meta, enabled = false, status, action, onToggle, className }: WindowedDataRowProps) {
+export function WindowedDataRow({ name, meta, cells, enabled = false, status, action, onToggle, className }: WindowedDataRowProps) {
+  const hasCells = Boolean(cells?.length);
+  const renderedCells = cells?.map((cell, index) => {
+    const cellObject = cell && typeof cell === 'object' && 'value' in cell ? cell : { value: cell };
+    return (
+      <div key={index} className={cx('wos-data-row__cell', cellObject.className)} data-align={cellObject.align ?? 'left'}>
+        {cellObject.value}
+      </div>
+    );
+  });
+
   return (
-    <div className={cx('wos-data-row', className)}>
+    <div className={cx('wos-data-row', className)} data-cells={hasCells ? cells?.length : undefined}>
       <div className="wos-data-row__identity">
         <div className="wos-data-row__name">{name}</div>
         {meta ? <div className="wos-data-row__meta">{meta}</div> : null}
       </div>
-      <div className="wos-data-row__status">
-        {status ?? <WindowedBadge tone={enabled ? 'positive' : 'neutral'}>{enabled ? 'Enabled' : 'Disabled'}</WindowedBadge>}
-      </div>
-      <div className="wos-data-row__action">
-        {action ?? (
-          <WindowedToggle checked={enabled} accent="chat" label={`${enabled ? 'Disable' : 'Enable'} ${name}`} onChange={onToggle} />
-        )}
-      </div>
+      {hasCells ? (
+        renderedCells
+      ) : (
+        <>
+          <div className="wos-data-row__status">
+            {status ?? <WindowedBadge tone={enabled ? 'positive' : 'neutral'}>{enabled ? 'Enabled' : 'Disabled'}</WindowedBadge>}
+          </div>
+          <div className="wos-data-row__action">
+            {action ?? (
+              <WindowedToggle checked={enabled} accent="chat" label={`${enabled ? 'Disable' : 'Enable'} ${name}`} onChange={onToggle} />
+            )}
+          </div>
+        </>
+      )}
+      {hasCells && action ? <div className="wos-data-row__action">{action}</div> : null}
     </div>
   );
 }
@@ -515,8 +533,20 @@ export interface WindowedDataTableProps {
 }
 
 export function WindowedDataTable({ columns, children, className }: WindowedDataTableProps) {
+  const columnTemplate =
+    columns.length <= 3
+      ? undefined
+      : [
+          'minmax(0, 2fr)',
+          ...columns.slice(1).map((column) => (column.align === 'right' ? 'minmax(72px, 0.68fr)' : 'minmax(96px, 0.9fr)')),
+        ].join(' ');
+
   return (
-    <div className={cx('wos-data-table', className)}>
+    <div
+      className={cx('wos-data-table', className)}
+      data-columns={columns.length}
+      style={columnTemplate ? ({ '--wos-data-column-template': columnTemplate } as CSSProperties) : undefined}
+    >
       <div className="wos-data-table__header">
         {columns.map((column) => (
           <div key={column.label} className="wos-data-table__heading" data-align={column.align ?? 'left'}>

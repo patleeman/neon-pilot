@@ -67,6 +67,8 @@ describe('ModelArenaPage', () => {
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(container.querySelector('.wos-arena-ranking-table')).toBeTruthy();
+    expect(container.querySelector('.wos-arena-ranking-table .wos-data-row[data-cells="3"]')).toBeTruthy();
+    expect(container.querySelector('.wos-arena-ranking-row')).toBeNull();
     expect(screen.getByRole('combobox', { name: 'Task type' })).toBeTruthy();
     expect(screen.queryByText('Combined rankings')).toBeNull();
     expect(screen.queryByText('Filtered duel history')).toBeNull();
