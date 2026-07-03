@@ -298,6 +298,33 @@ export interface WindowedDialogProps {
   modal?: boolean;
 }
 
+const DIALOG_MIN_VISIBLE_X = 96;
+const DIALOG_MIN_VISIBLE_Y = 34;
+const DIALOG_TITLEBAR_MIN_VISIBLE_Y = 18;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function constrainDialogOffset(
+  proposedOffset: { x: number; y: number },
+  initialOffset: { x: number; y: number },
+  dialogRect: DOMRect,
+  layerRect: DOMRect,
+  titlebarHeight: number,
+): { x: number; y: number } {
+  const minLeft = layerRect.left + DIALOG_MIN_VISIBLE_X - dialogRect.width;
+  const maxLeft = layerRect.right - DIALOG_MIN_VISIBLE_X;
+  const maxHiddenTitlebar = Math.max(0, titlebarHeight - DIALOG_TITLEBAR_MIN_VISIBLE_Y);
+  const minTop = layerRect.top - maxHiddenTitlebar;
+  const maxTop = layerRect.bottom - DIALOG_MIN_VISIBLE_Y;
+
+  return {
+    x: clamp(proposedOffset.x, initialOffset.x + minLeft - dialogRect.left, initialOffset.x + maxLeft - dialogRect.left),
+    y: clamp(proposedOffset.y, initialOffset.y + minTop - dialogRect.top, initialOffset.y + maxTop - dialogRect.top),
+  };
+}
+
 export function WindowedDialog({
   title,
   meta,
@@ -311,6 +338,7 @@ export function WindowedDialog({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const cleanupDragRef = useRef<(() => void) | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -331,12 +359,20 @@ export function WindowedDialog({
       x: offset.x,
       y: offset.y,
     };
+    const dialogRect = dialogRef.current?.getBoundingClientRect() ?? null;
+    const layerRect = dialogRef.current?.parentElement?.getBoundingClientRect() ?? null;
+    const titlebarHeight = event.currentTarget.getBoundingClientRect().height || DIALOG_MIN_VISIBLE_Y;
 
     const handleMove = (event: MouseEvent) => {
-      setOffset({
+      const proposedOffset = {
         x: start.x + event.clientX - start.pointerX,
         y: start.y + event.clientY - start.pointerY,
-      });
+      };
+      setOffset(
+        dialogRect && layerRect && dialogRect.width > 0 && dialogRect.height > 0 && layerRect.width > 0 && layerRect.height > 0
+          ? constrainDialogOffset(proposedOffset, { x: start.x, y: start.y }, dialogRect, layerRect, titlebarHeight)
+          : proposedOffset,
+      );
     };
 
     const handleEnd = () => {
@@ -360,6 +396,7 @@ export function WindowedDialog({
   return (
     <div className="wos-dialog-layer" role="presentation" data-modal={modal ? 'true' : undefined}>
       <section
+        ref={dialogRef}
         className={cx('wos-dialog', className)}
         role="dialog"
         aria-modal={modal ? true : undefined}
