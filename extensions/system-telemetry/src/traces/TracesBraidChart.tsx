@@ -3,7 +3,7 @@
  */
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
-import { PanelHeader, SurfacePanel, WindowedStateBlock } from '@neon-pilot/extensions/ui';
+import { PanelHeader, SurfacePanel, WindowedChartPanel, WindowedStateBlock } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 export function TracesBraidChart({ data, presentation = 'stable' }: { data: TraceTokenDaily[]; presentation?: 'stable' | 'windowed' }) {
@@ -171,16 +171,15 @@ export function TracesBraidChart({ data, presentation = 'stable' }: { data: Trac
 
   if (presentation === 'windowed') {
     return (
-      <section className="wos-braid-chart" aria-label={`Time Series — Last ${data.length} Days`}>
-        <header className="wos-braid-chart-header">
-          <h4>Time Series</h4>
-          <span>{`${hasErrors ? '4' : '3'} metrics overlaid · ${data.length} days`}</span>
-        </header>
-        <div className="wos-braid-chart-body">
-          {chart}
-          <div className="wos-braid-legend">{legend}</div>
-        </div>
-      </section>
+      <WindowedChartPanel
+        className="wos-braid-chart"
+        title="Time Series"
+        meta={`${hasErrors ? '4' : '3'} metrics overlaid · ${data.length} days`}
+        ariaLabel={`Time Series — Last ${data.length} Days`}
+      >
+        {chart}
+        <div className="wos-braid-legend">{legend}</div>
+      </WindowedChartPanel>
     );
   }
 

@@ -3,7 +3,7 @@
  */
 
 import type { TraceTokenDaily } from '@neon-pilot/extensions/data';
-import { PanelHeader, PanelMessage, SurfacePanel, WindowedStateBlock } from '@neon-pilot/extensions/ui';
+import { PanelHeader, PanelMessage, SurfacePanel, WindowedChartPanel, WindowedStateBlock } from '@neon-pilot/extensions/ui';
 import React from 'react';
 
 export function TracesHeatmap({ data, presentation = 'stable' }: { data: TraceTokenDaily[]; presentation?: 'stable' | 'windowed' }) {
@@ -127,16 +127,15 @@ export function TracesHeatmap({ data, presentation = 'stable' }: { data: TraceTo
 
   if (presentation === 'windowed') {
     return (
-      <section className="wos-heatmap" aria-label="Token Activity — All Retained History">
-        <header className="wos-heatmap-header">
-          <h4>Token Activity</h4>
-          <span>{`${dateRange} · ${formatNumber(total)} total · ${formatNumber(avg)} avg/active day`}</span>
-        </header>
-        <div className="wos-heatmap-body">
-          {heatmapGrid}
-          <div className="wos-heatmap-legend">{legend}</div>
-        </div>
-      </section>
+      <WindowedChartPanel
+        className="wos-heatmap"
+        title="Token Activity"
+        meta={`${dateRange} · ${formatNumber(total)} total · ${formatNumber(avg)} avg/active day`}
+        ariaLabel="Token Activity — All Retained History"
+      >
+        {heatmapGrid}
+        <div className="wos-heatmap-legend">{legend}</div>
+      </WindowedChartPanel>
     );
   }
 

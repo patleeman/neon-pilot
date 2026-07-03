@@ -298,10 +298,14 @@ describe('TelemetryPage', () => {
     expect(screen.getByText('$3.45').closest('.wos-data-row')).toBeTruthy();
     expect(screen.getByText('append-only').closest('.wos-data-row')).toBeTruthy();
     expect(container.querySelector('.wos-heatmap')).toBeTruthy();
+    expect(container.querySelector('.wos-heatmap .wos-chart-panel__header')).toBeTruthy();
     expect(container.querySelector('.wos-heatmap-cell-4')).toBeTruthy();
     expect(container.querySelector('.ui-heatmap-cell-4')).toBeNull();
     expect(container.querySelector('.wos-braid-chart')).toBeTruthy();
+    expect(container.querySelector('.wos-braid-chart .wos-chart-panel__header')).toBeTruthy();
     expect(container.querySelector('.wos-braid-line--errors')).toBeTruthy();
+    expect(container.querySelector('.wos-heatmap-header')).toBeNull();
+    expect(container.querySelector('.wos-braid-chart-header')).toBeNull();
     expect(container.querySelector('.wos-model-usage')).toBeTruthy();
     expect(container.querySelector('.wos-model-usage__throughput')).toBeTruthy();
     expect(container.querySelector('.wos-model-usage-bar')).toBeTruthy();

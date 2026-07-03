@@ -15,6 +15,8 @@ export {
   type WindowedAppTileProps,
   WindowedBadge,
   type WindowedBadgeProps,
+  WindowedChartPanel,
+  type WindowedChartPanelProps,
   WindowedChatComposer,
   type WindowedChatComposerProps,
   WindowedChatMain,

@@ -226,6 +226,7 @@ export { SidebarTreeSection, type SidebarTreeSectionProps } from './SidebarTreeS
 export type { ExtensionSurfaceProps } from './types';
 export type {
   WindowedBadgeProps,
+  WindowedChartPanelProps,
   WindowedDataColumn,
   WindowedDataRowProps,
   WindowedDataTableProps,
@@ -258,6 +259,7 @@ export type {
 } from '@neon-pilot/windowed-os-ui';
 export {
   WindowedBadge,
+  WindowedChartPanel,
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,

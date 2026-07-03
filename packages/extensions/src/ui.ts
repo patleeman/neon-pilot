@@ -1,6 +1,7 @@
 export type { ExtensionSurfaceProps } from './index.js';
 export type {
   WindowedBadgeProps,
+  WindowedChartPanelProps,
   WindowedDataColumn,
   WindowedDataRowProps,
   WindowedDataTableProps,
@@ -27,6 +28,7 @@ export type {
 } from '@neon-pilot/windowed-os-ui';
 export {
   WindowedBadge,
+  WindowedChartPanel,
   WindowedDataRow,
   WindowedDataTable,
   WindowedField,

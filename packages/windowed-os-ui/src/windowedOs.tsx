@@ -218,6 +218,27 @@ export function WindowedPageSection({ title, meta, children, className }: Window
   );
 }
 
+export interface WindowedChartPanelProps {
+  title: string;
+  meta?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  ariaLabel?: string;
+}
+
+export function WindowedChartPanel({ title, meta, children, className, bodyClassName, ariaLabel }: WindowedChartPanelProps) {
+  return (
+    <section className={cx('wos-chart-panel', className)} aria-label={ariaLabel ?? title}>
+      <header className="wos-chart-panel__header">
+        <h4>{title}</h4>
+        {meta ? <span>{meta}</span> : null}
+      </header>
+      <div className={cx('wos-chart-panel__body', bodyClassName)}>{children}</div>
+    </section>
+  );
+}
+
 export interface WindowedToolbarProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   end?: ReactNode;

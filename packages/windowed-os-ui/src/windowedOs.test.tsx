@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CANONICAL_WINDOWED_DESKTOP_APPS,
+  WindowedChartPanel,
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
@@ -87,6 +88,22 @@ describe('WindowedPageShell', () => {
     );
 
     expect(html).toContain('data-layout="two-column"');
+  });
+});
+
+describe('WindowedChartPanel', () => {
+  it('provides shared chart frame chrome for dense diagnostics panels', () => {
+    const html = renderToStaticMarkup(
+      <WindowedChartPanel title="Token Activity" meta="24H · 1.4M total" className="wos-heatmap">
+        <div className="chart-content">chart</div>
+      </WindowedChartPanel>,
+    );
+
+    expect(html).toContain('class="wos-chart-panel wos-heatmap"');
+    expect(html).toContain('class="wos-chart-panel__header"');
+    expect(html).toContain('<h4>Token Activity</h4>');
+    expect(html).toContain('24H · 1.4M total');
+    expect(html).toContain('class="wos-chart-panel__body"');
   });
 });
 
@@ -403,6 +420,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield");
     expect(stylesSource).toContain(
+      ".windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.ui-windowed-browser-host) > .wos-window__iframe-shield",
+    );
+    expect(stylesSource).toContain(
       ".windowed-os-shell[data-native-browser-blocked='true'] .wos-window:has(.wos-composited-frame) > .wos-window__iframe-shield",
     );
     expect(stylesSource).toContain(
@@ -475,7 +495,10 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(stylesSource).toContain('.wos-heatmap {');
+    expect(stylesSource).toContain('.wos-chart-panel {');
+    expect(stylesSource).toContain('.wos-chart-panel__header {');
+    expect(stylesSource).toContain('.wos-chart-panel__body {');
+    expect(stylesSource).toContain('.wos-heatmap .wos-chart-panel__body {');
     expect(stylesSource).toContain('.wos-heatmap-grid {');
     expect(stylesSource).toContain('.wos-heatmap-cell-4 {');
     expect(stylesSource).toContain('.wos-heatmap-share {');
@@ -485,7 +508,8 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(stylesSource).toContain('.wos-braid-chart {');
+    expect(stylesSource).toContain('.wos-chart-panel {');
+    expect(stylesSource).toContain('.wos-chart-panel {');
     expect(stylesSource).toContain('.wos-braid-chart-svg {');
     expect(stylesSource).toContain('.wos-braid-line--input {');
     expect(stylesSource).toContain('.wos-braid-legend-item {');
@@ -633,6 +657,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('No workflow runs yet.');
     expect(source).toContain('Trace data could not be loaded');
     expect(source).toContain('Try again');
+  });
+
+  it('documents shared chart panel primitives for windowed diagnostics', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const ChartPrimitives');
+    expect(source).toContain('<WindowedChartPanel title="Token Activity"');
+    expect(source).toContain('<WindowedChartPanel title="Time Series"');
+    expect(source).not.toContain('wos-heatmap-header');
+    expect(source).not.toContain('wos-braid-chart-header');
   });
 
   it('documents shared toolbar primitives for windowed filter rows', () => {

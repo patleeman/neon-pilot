@@ -6,6 +6,7 @@ import {
   Taskbar,
   WindowedAppTile,
   WindowedBadge,
+  WindowedChartPanel,
   WindowedChatComposer,
   WindowedChatMain,
   WindowedChatSurface,
@@ -383,6 +384,85 @@ export const StatePrimitives: Story = {
                   Check diagnostics storage, then retry the load.
                 </WindowedStateBlock>
               </div>
+            </WindowedPageSection>
+          </WindowedPageMain>
+        </WindowedPageShell>
+      </WindowFrame>
+    </div>
+  ),
+};
+
+export const ChartPrimitives: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+      <WindowFrame
+        title="Diagnostics"
+        accent="diagnostics"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(960px, 100%)', height: 460 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain title="Diagnostics">
+            <WindowedPageSection title="Usage" meta="Shared chart chrome">
+              <WindowedChartPanel title="Token Activity" meta="24H · 1.4M total · 58K avg" className="wos-heatmap">
+                <div className="wos-heatmap-grid" aria-hidden="true">
+                  {Array.from({ length: 12 }).map((_, week) => (
+                    <div key={week} className="wos-heatmap-week">
+                      {Array.from({ length: 7 }).map((__, day) => (
+                        <span key={day} className={`wos-heatmap-cell wos-heatmap-cell-${(week + day) % 5}`} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div className="wos-heatmap-legend">
+                  <span>Less</span>
+                  {[0, 1, 2, 3, 4].map((level) => (
+                    <span key={level} className={`wos-heatmap-legend-cell wos-heatmap-cell-${level}`} />
+                  ))}
+                  <span>More</span>
+                  <span className="wos-heatmap-peak">Peak: 312K tokens</span>
+                </div>
+              </WindowedChartPanel>
+
+              <WindowedChartPanel title="Time Series" meta="4 metrics overlaid · 7 days" className="wos-braid-chart">
+                <svg
+                  className="wos-braid-chart-svg"
+                  viewBox="0 0 700 110"
+                  preserveAspectRatio="none"
+                  role="img"
+                  aria-label="Sample time series"
+                >
+                  <path
+                    d="M0,72 L116,50 L232,65 L348,30 L464,44 L580,24 L700,38"
+                    className="wos-braid-line wos-braid-line--input"
+                    fill="none"
+                  />
+                  <path
+                    d="M0,82 L116,76 L232,70 L348,58 L464,62 L580,40 L700,46"
+                    className="wos-braid-line wos-braid-line--output"
+                    fill="none"
+                  />
+                  <path
+                    d="M0,88 L116,80 L232,85 L348,74 L464,70 L580,64 L700,60"
+                    className="wos-braid-line wos-braid-line--cost"
+                    fill="none"
+                  />
+                </svg>
+                <div className="wos-braid-legend">
+                  <span className="wos-braid-legend-item">
+                    <span className="wos-braid-legend-line wos-braid-line--input" />
+                    Input
+                  </span>
+                  <span className="wos-braid-legend-item">
+                    <span className="wos-braid-legend-line wos-braid-line--output" />
+                    Output
+                  </span>
+                  <span className="wos-braid-peak">Peak: 312K tokens</span>
+                </div>
+              </WindowedChartPanel>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
