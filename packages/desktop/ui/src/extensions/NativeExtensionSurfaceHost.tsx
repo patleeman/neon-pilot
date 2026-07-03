@@ -70,11 +70,11 @@ function lazyExtensionComponent(surface: NativeExtensionViewSummary, revision: n
   return lazy(async () => {
     const module = await loadExtensionModuleWithRetry(surface, revision);
     if (typeof surface.component !== 'string') {
-      return { default: ExtensionSurfaceError as ExtensionComponent };
+      return { default: ExtensionSurfaceErrorComponent };
     }
     const component = module[surface.component];
     if (typeof component !== 'function') {
-      return { default: ExtensionSurfaceError as ExtensionComponent };
+      return { default: ExtensionSurfaceErrorComponent };
     }
     return { default: component as ExtensionComponent };
   });
@@ -129,8 +129,21 @@ function lazyHostViewSurfaceComponent(surface: NativeExtensionViewSummary, revis
 
 const EXTENSION_SURFACE_ERROR_MESSAGE = 'This extension surface could not be loaded.';
 
-function ExtensionSurfaceError() {
+function ExtensionSurfaceError({ shellPresentation }: { shellPresentation?: 'stable' | 'windowed' }) {
+  if (shellPresentation === 'windowed') {
+    return (
+      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Extension surface failed to load">
+        <WindowedStateBlock tone="danger" title="Extension surface failed to load">
+          {EXTENSION_SURFACE_ERROR_MESSAGE}
+        </WindowedStateBlock>
+      </div>
+    );
+  }
   return <ErrorState message={EXTENSION_SURFACE_ERROR_MESSAGE} className="m-6" />;
+}
+
+function ExtensionSurfaceErrorComponent({ context }: ExtensionHostViewComponentProps) {
+  return <ExtensionSurfaceError shellPresentation={context.shellPresentation} />;
 }
 
 export function NativeExtensionSurfaceHost({
@@ -191,7 +204,7 @@ export function NativeExtensionSurfaceHost({
       data-shell-presentation={shellPresentation}
     >
       <Suspense fallback={<ExtensionSurfaceLoading shellPresentation={shellPresentation} />}>
-        <ExtensionErrorBoundary extensionId={surface.extensionId}>
+        <ExtensionErrorBoundary extensionId={surface.extensionId} shellPresentation={shellPresentation}>
           <Component
             pa={pa}
             context={context}
@@ -216,7 +229,10 @@ function ExtensionSurfaceLoading({ shellPresentation }: { shellPresentation: 'st
   return <QuietLoadingState label="Loading extension surface" />;
 }
 
-class ExtensionErrorBoundary extends React.Component<{ children: React.ReactNode; extensionId: string }, { message: string | null }> {
+class ExtensionErrorBoundary extends React.Component<
+  { children: React.ReactNode; extensionId: string; shellPresentation: 'stable' | 'windowed' },
+  { message: string | null }
+> {
   state = { message: null };
 
   static getDerivedStateFromError(error: unknown) {
@@ -234,6 +250,6 @@ class ExtensionErrorBoundary extends React.Component<{ children: React.ReactNode
   }
 
   render() {
-    return this.state.message ? <ExtensionSurfaceError /> : this.props.children;
+    return this.state.message ? <ExtensionSurfaceError shellPresentation={this.props.shellPresentation} /> : this.props.children;
   }
 }

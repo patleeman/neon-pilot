@@ -206,4 +206,33 @@ describe('NativeExtensionSurfaceHost', () => {
     expect(container.textContent).not.toContain('/Users/patrick');
     expect(container.textContent).not.toContain('dist/frontend.js');
   });
+
+  it('shows windowed error chrome when a windowed extension surface fails to load', async () => {
+    const surface: NativeExtensionViewSummary = {
+      extensionId: 'system-broken-extension',
+      id: 'page',
+      title: 'Broken',
+      location: 'main',
+      route: '/broken',
+      component: 'MissingExport',
+      frontend: { entry: '/Users/patrick/private-extension/dist/frontend.js' },
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoots.push(root);
+
+    await act(async () => {
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/broken" search="" hash="" shellPresentation="windowed" />);
+    });
+
+    await vi.waitFor(() => expect(container.textContent).toContain('Extension surface failed to load'));
+    expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
+    expect(container.querySelector('.wos-state-block[data-tone="danger"]')).toBeTruthy();
+    expect(container.textContent).toContain('This extension surface could not be loaded.');
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(container.textContent).not.toContain('MissingExport');
+    expect(container.textContent).not.toContain('/Users/patrick');
+    expect(container.textContent).not.toContain('dist/frontend.js');
+  });
 });
