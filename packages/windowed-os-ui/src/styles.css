@@ -2406,55 +2406,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   border-top: 1.5px solid var(--wos-ink-900);
 }
 
-.wos-gateway-event-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.wos-gateway-event {
-  display: grid;
-  gap: 4px;
-  border-bottom: 1px solid rgba(44, 31, 20, 0.18);
-  padding-bottom: 8px;
-}
-
-.wos-gateway-event:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.wos-gateway-event::before {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--wos-ink-900);
-  border-radius: 999px;
-  background: var(--wos-ink-500);
-}
-
-.wos-gateway-event[data-tone='danger']::before {
-  background: var(--wos-telemetry);
-}
-
-.wos-gateway-event > div {
-  min-width: 0;
-  color: var(--wos-ink-700);
-  font-size: 12px;
-  line-height: 1.3;
-}
-
-.wos-gateway-event > span {
-  min-width: 0;
-  color: var(--wos-ink-500);
-  font-family: var(--wos-font-mono);
-  font-size: 10px;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
 @media (max-width: 980px) {
   .wos-gateway-access-grid,
   .wos-gateway-token-row {

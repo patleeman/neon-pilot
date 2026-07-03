@@ -225,12 +225,13 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     </div>
   ),
   WindowedTextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
-  WindowedTimeline: ({ children }: { children: React.ReactNode }) => <ol>{children}</ol>,
-  WindowedTimelineItem: ({ title, meta }: { title: string; meta?: string }) => (
-    <li>
+  WindowedTimeline: ({ children }: { children: React.ReactNode }) => <div className="wos-timeline">{children}</div>,
+  WindowedTimelineItem: ({ title, meta, tone, children }: { title: string; meta?: string; tone?: string; children?: React.ReactNode }) => (
+    <div className="wos-timeline-item" data-tone={tone}>
       <span>{title}</span>
       {meta ? <span>{meta}</span> : null}
-    </li>
+      {children ? <div>{children}</div> : null}
+    </div>
   ),
   WindowedToggle: ({
     checked,
@@ -422,6 +423,36 @@ describe('GatewaysPage', () => {
     expect(container.querySelector('.wos-gateway-allowlist__values button[aria-label^="Remove"]')?.getAttribute('data-tone')).toBe(
       'danger',
     );
+  });
+
+  it('renders windowed gateway activity with the shared timeline primitives', async () => {
+    installFetchMock({
+      token: { configured: true },
+      gateway: {
+        ...baseGateway,
+        events: [
+          {
+            id: 'event-1',
+            provider: 'telegram',
+            kind: 'error',
+            message: 'Telegram polling failed: Unauthorized',
+            createdAt: '2026-06-26T12:01:00.000Z',
+          },
+        ],
+      },
+    });
+    const { container } = render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
+
+    await screen.findByRole('heading', { name: 'Telegram' });
+    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram activity' }));
+
+    expect(screen.getByRole('dialog', { name: 'Recent activity' })).toBeTruthy();
+    expect(screen.getByText('Error')).toBeTruthy();
+    expect(screen.getByText('Telegram polling failed: Unauthorized')).toBeTruthy();
+    expect(container.querySelector('.wos-timeline')).toBeTruthy();
+    expect(container.querySelector('.wos-timeline-item')?.getAttribute('data-tone')).toBe('danger');
+    expect(container.querySelector('.wos-gateway-event-list')).toBeNull();
+    expect(container.querySelector('.wos-gateway-event')).toBeNull();
   });
 
   it('keeps the windowed recovery state inside the provider shell', async () => {

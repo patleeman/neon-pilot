@@ -36,6 +36,8 @@ import {
   WindowedPageShell,
   WindowedStateBlock,
   WindowedTextInput,
+  WindowedTimeline,
+  WindowedTimelineItem,
   WindowedToggle,
 } from '@neon-pilot/extensions/ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -590,16 +592,18 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
 
             {windowedDialog === 'activity' ? (
               telegramEvents.length > 0 ? (
-                <ol className="wos-gateway-event-list">
+                <WindowedTimeline>
                   {telegramEvents.map((event) => (
-                    <li key={event.id} className="wos-gateway-event" data-tone={event.kind === 'error' ? 'danger' : 'neutral'}>
-                      <div>{event.message}</div>
-                      <span>
-                        {formatEventKind(event.kind)} · {formatDate(event.createdAt)}
-                      </span>
-                    </li>
+                    <WindowedTimelineItem
+                      key={event.id}
+                      title={formatEventKind(event.kind)}
+                      meta={formatDate(event.createdAt)}
+                      tone={event.kind === 'error' ? 'danger' : 'neutral'}
+                    >
+                      {event.message}
+                    </WindowedTimelineItem>
                   ))}
-                </ol>
+                </WindowedTimeline>
               ) : (
                 <WindowedEmptyState>No Telegram gateway events yet.</WindowedEmptyState>
               )
