@@ -318,7 +318,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
     expect(screen.queryByText('Selected extension')).toBeNull();
     expect(screen.queryByText('Selection')).toBeNull();
-    expect(screen.getAllByText('Applications').length).toBeGreaterThan(0);
+    expect(container.querySelector('.wos-page-eyebrow')).toBeNull();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
 

@@ -1719,7 +1719,6 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       <>
         <WindowedPageShell layout="standard" className="extension-manager-page-windowed">
           <WindowedPageMain
-            eyebrow="Applications"
             title={sectionTitle}
             actions={
               <>
