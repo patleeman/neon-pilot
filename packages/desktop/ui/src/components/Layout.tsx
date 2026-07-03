@@ -2071,13 +2071,13 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false }:
     [extensionRightToolPanels],
   );
   const routePrimaryRailSurface = useMemo(() => {
-    if (showWorkbench) return null;
+    if (showWorkbench || embeddedWindowChrome || windowedShellChild) return null;
     return resolveRouteRightSidebarSurface({
       pathname: location.pathname,
       navItems: routeShellNavItems,
       surfaces: extensionRegistry.surfaces,
     });
-  }, [extensionRegistry.surfaces, location.pathname, routeShellNavItems, showWorkbench]);
+  }, [embeddedWindowChrome, extensionRegistry.surfaces, location.pathname, routeShellNavItems, showWorkbench, windowedShellChild]);
   const showRoutePrimaryRail = routePrimaryRailSurface !== null && railOpen;
   const knowledgeRouteFileId =
     !showWorkbench && routeIsKnowledge(location.pathname, extensionRegistry.surfaces) ? (searchParams.get('file') ?? null) : null;

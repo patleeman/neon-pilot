@@ -181,6 +181,7 @@ function renderEmbeddedWindowLayout(pathname = '/conversations/new') {
         <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench />}>
           <Route path="conversations/new" element={<div>Conversation draft</div>} />
           <Route path="conversations/:id" element={<ConversationRouteFixture />} />
+          <Route path="route-a" element={<RouteRailFixture name="Route A" next="/route-b" detail="/route-a/detail" />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -271,6 +272,41 @@ describe('Layout workbench toggle', () => {
     expect(screen.getByText('Automations route')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Show workbench' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
+  });
+
+  it('suppresses route-owned right sidebars inside embedded desktop windows', () => {
+    extensionRegistryMock.state.extensions = [
+      {
+        id: 'route-shell-fixture',
+        name: 'Route Shell Fixture',
+        enabled: true,
+        packageRoot: '/tmp/route-shell-fixture',
+        packageType: 'system',
+        schemaVersion: 2,
+        contributes: {
+          nav: [{ id: 'route-a', label: 'Route A', route: '/route-a', rightSidebarView: 'route-a-context' }],
+        },
+      },
+    ];
+    extensionRegistryMock.state.surfaces = [
+      {
+        extensionId: 'route-shell-fixture',
+        id: 'route-a-context',
+        title: 'Route A Context',
+        location: 'rightRail',
+        scope: 'global',
+        placement: 'primary',
+        component: 'RouteAContext',
+        frontend: { entry: 'dist/frontend.js' },
+      },
+    ];
+
+    renderEmbeddedWindowLayout('/route-a');
+
+    expect(screen.getByText('Route A route')).toBeTruthy();
+    expect(screen.queryByTestId('native-extension-surface')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
+    expect(evaluateCommandEnablement('layout.canToggleRightSidebar')).toBe(false);
   });
 
   it('hides the right-sidebar toggle when the declared route rail is missing', () => {
