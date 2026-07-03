@@ -705,6 +705,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).not.toContain('.wos-start-menu__item::after');
   });
 
+  it('keeps the north-east resize handle below titlebar controls', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+    const northEastRule = stylesSource.match(/\.wos-resize-ne \{[^}]+}/)?.[0] ?? '';
+
+    expect(northEastRule).toContain('top: var(--wos-titlebar-h);');
+    expect(northEastRule).toContain('right: 0;');
+  });
+
   it('styles attached terminal panels with scoped windowed tokens', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
