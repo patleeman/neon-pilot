@@ -1461,13 +1461,22 @@ export function WindowedLayout() {
       data-wos-theme={resolveWindowedOsTheme(windowedTheme)}
       data-wos-theme-mode={windowedTheme}
       data-wos-theme-phase={windowedThemePhase}
+      data-start-menu-open={launcherOpen ? 'true' : undefined}
       data-focused-window-id={focusedWindowId ?? undefined}
       data-window-interaction={browserBlockingShellInteraction ? 'true' : undefined}
       data-native-browser-blocked={nativeBrowserBlocked ? 'true' : undefined}
       data-frame-paint-blocked={rendererFramePaintBlocked ? 'true' : undefined}
     >
       <StartMenu open={launcherOpen} items={startMenuItems} onClose={() => setLauncherOpen(false)} />
-      <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
+      <main
+        ref={desktopRef}
+        className="wos-desktop"
+        aria-label="Windowed Neon Pilot desktop"
+        onMouseDown={(event) => {
+          if (!launcherOpen || event.target !== event.currentTarget) return;
+          setLauncherOpen(false);
+        }}
+      >
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
         {windows.map((windowModel) => (
           <WindowFrame

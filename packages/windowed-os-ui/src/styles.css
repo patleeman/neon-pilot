@@ -37,6 +37,11 @@
   -webkit-app-region: drag;
 }
 
+.windowed-os-shell[data-start-menu-open='true'] .wos-desktop {
+  cursor: default;
+  -webkit-app-region: no-drag;
+}
+
 .wos-taskbar,
 .wos-start-menu,
 .wos-window,
@@ -83,6 +88,23 @@
 .wos-taskbar__start {
   flex-shrink: 0;
   font: var(--wos-text-row);
+}
+
+.wos-taskbar__start,
+.wos-taskbar__button,
+.wos-start-menu__item,
+.wos-window__controls button,
+.wos-dialog__close,
+.wos-page-button,
+.wos-text-button,
+.wos-segmented-control__item,
+.wos-list-item,
+.wos-menu-panel__item {
+  cursor: pointer;
+}
+
+.wos-window__titlebar {
+  cursor: move;
 }
 
 .wos-taskbar__items {

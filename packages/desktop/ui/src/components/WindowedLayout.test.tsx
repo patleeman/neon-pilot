@@ -667,14 +667,16 @@ describe('WindowedLayout route windows', () => {
   });
 
   it('closes the start menu when the desktop is clicked outside it', () => {
-    renderWindowedLayout();
+    const { container } = renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
     expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-start-menu-open')).toBe('true');
 
     fireEvent.mouseDown(screen.getByLabelText(/windowed neon pilot desktop/i));
 
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-start-menu-open')).toBeNull();
   });
 
   it('keeps the leading edge of Start menu rows clickable for pointer launch', async () => {
