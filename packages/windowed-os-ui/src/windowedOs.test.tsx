@@ -526,7 +526,23 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-taskbar__trailing .wos-taskbar-theme-toggle');
     expect(stylesSource).toContain('.wos-taskbar__trailing .wos-taskbar-theme-toggle .wos-segmented-control__item');
-    expect(stylesSource).toContain('border-radius: 0;');
+    expect(stylesSource).toContain('border-radius: 0 !important;');
+    expect(stylesSource).toContain('background: var(--wos-segmented-active) !important;');
+  });
+
+  it('restyles injected stable top-bar actions as compact windowed taskbar controls', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(
+      '.wos-taskbar__trailing :where(.ui-toolbar-button.ui-desktop-top-bar__icon-button, .ui-icon-button.ui-desktop-top-bar__icon-button)',
+    );
+    expect(stylesSource).toContain('width: 30px !important;');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('filter: none !important;');
+    expect(stylesSource).toContain('.wos-taskbar__trailing .ui-notification-badge');
+    expect(stylesSource).toContain('.wos-taskbar__trailing .ui-tooltip');
+    expect(stylesSource).toContain('z-index: 1100;');
   });
 
   it('styles the windowed chat workbench toggle as compact window chrome', () => {
