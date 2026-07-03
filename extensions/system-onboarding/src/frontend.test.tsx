@@ -140,6 +140,31 @@ describe('OnboardingBootstrap', () => {
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
   });
 
+  it('stays dormant inside the windowed desktop shell', async () => {
+    const { pa, invoke } = createPa({
+      ensureResult: {
+        state: { status: 'unseen', stepIndex: 0, updatedAt: '2026-06-25T00:00:00.000Z' },
+        shouldStart: true,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <div className="windowed-os-shell">
+          <OnboardingBootstrap pa={pa} />
+        </div>
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    await advanceEnsureTimer();
+
+    expect(invoke).not.toHaveBeenCalledWith('ensure', expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith('update', expect.anything());
+    expect(screen.queryByTestId('onboarding-tour')).toBeNull();
+    expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
+  });
+
   it('moves through real app routes with next and back', async () => {
     const { pa, invoke } = createPa({
       ensureResult: {

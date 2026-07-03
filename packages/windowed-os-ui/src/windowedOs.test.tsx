@@ -490,7 +490,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('font-family: var(--wos-font-body);');
   });
 
-  it('contains iframe paint inside window bodies and scopes native browser blocking to the browser host', () => {
+  it('contains iframe paint inside window bodies without blanketing window content with the shield', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
@@ -510,19 +510,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window__iframe-shield');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {\n  position: relative;\n  z-index: 0 !important;');
     expect(stylesSource).toContain('z-index: 95;');
-    expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('.wos-window__titlebar {\n  position: relative;\n  z-index: 70;');
     expect(stylesSource).toContain('.wos-resize-handle {\n  position: absolute;\n  z-index: 55;');
-    expect(stylesSource).toContain(
+    expect(stylesSource).not.toContain(
       ".wos-window[data-focused='false']:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview) > .wos-window__iframe-shield",
     );
-    expect(stylesSource).toContain(
+    expect(stylesSource).not.toContain(
       ".wos-window[data-iframe-blocked='true']:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview) > .wos-window__iframe-shield",
     );
-    expect(stylesSource).toContain(
+    expect(stylesSource).not.toContain(
       ".windowed-os-shell[data-window-interaction='true'] .wos-window:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview)",
     );
-    expect(stylesSource).toContain(
+    expect(stylesSource).not.toContain(
       ".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window:has(.ui-windowed-browser-host, .wos-composited-frame, iframe, webview)",
     );
     expect(stylesSource).not.toContain(".wos-window[data-focused='false'] > .wos-window__iframe-shield");

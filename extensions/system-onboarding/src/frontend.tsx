@@ -1,12 +1,13 @@
 import type { NeonPilotClient } from '@neon-pilot/extensions';
 import React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const ONBOARDING_ENSURE_DELAY_MS = 900;
 const COMPOSER_DRAFT_RETRY_MS = 100;
 const COMPOSER_DRAFT_MAX_ATTEMPTS = 20;
+const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 const HELLO_AGENT_PROMPT =
   "Hi, I'm new to Neon Pilot. Can you give me a quick tour of what I can do here, then help me choose a good first thing to try?";
 
@@ -84,6 +85,34 @@ function shouldSuppressOnboardingAutoStart(locationState: unknown): boolean {
     typeof locationState === 'object' &&
     (locationState as { suppressOnboardingAutoStart?: unknown }).suppressOnboardingAutoStart === true,
   );
+}
+
+function isWindowedShellActive(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.body.hasAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE) || Boolean(document.querySelector('.windowed-os-shell'));
+}
+
+function useWindowedShellActive(): boolean {
+  const [active, setActive] = useState(() => isWindowedShellActive());
+
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
+      return undefined;
+    }
+
+    const update = () => setActive(isWindowedShellActive());
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: [WINDOWED_SHELL_ACTIVE_ATTRIBUTE],
+      childList: true,
+      subtree: true,
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  return active;
 }
 
 function clampStepIndex(index: number): number {
@@ -292,6 +321,7 @@ function resolvePanelPosition(rect: DOMRect | null): { left: number; top: number
 export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const windowedShellActive = useWindowedShellActive();
   const startedPathnameRef = useRef(location.pathname);
   const suppressAutoStartRef = useRef(shouldSuppressOnboardingAutoStart(location.state));
   const pathnameRef = useRef(location.pathname);
@@ -331,6 +361,9 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
 
   const startTour = useCallback(
     async (replace = true) => {
+      if (isWindowedShellActive()) {
+        return;
+      }
       setBusy(true);
       try {
         navigateToStep(0, replace);
@@ -349,13 +382,21 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
   }, [location.pathname, location.state]);
 
   useEffect(() => {
+    if (windowedShellActive) {
+      return undefined;
+    }
+
     let cancelled = false;
     const startedPathname = startedPathnameRef.current;
     const timer = window.setTimeout(() => {
+      if (isWindowedShellActive()) {
+        return;
+      }
       void pa.extension
         .invoke('ensure', { source: 'frontend' })
         .then((result) => {
           if (cancelled) return;
+          if (isWindowedShellActive()) return;
           const ensuredState = readEnsureState(result);
           if (ensuredState?.status === 'active') {
             setState(ensuredState);
@@ -385,7 +426,7 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [navigateToStep, pa, startTour]);
+  }, [navigateToStep, pa, startTour, windowedShellActive]);
 
   const moveToStep = useCallback(
     async (nextIndex: number) => {
@@ -422,7 +463,7 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
     }
   }, [navigate, stepIndex, updateTour]);
 
-  if (!active || typeof document === 'undefined') {
+  if (!active || windowedShellActive || typeof document === 'undefined') {
     return null;
   }
 

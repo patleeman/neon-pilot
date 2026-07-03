@@ -92,6 +92,7 @@ const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
 
 const CANONICAL_WINDOWED_APP_BY_TITLE = new Map(CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]));
 const CANONICAL_LAUNCHER_ORDER = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
+const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
 function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: string): string {
   if (input.kind === 'chat') return `chat:${suffix ?? 'draft'}`;
@@ -1340,10 +1341,13 @@ export function WindowedLayout() {
       ]
     : [];
   const taskbarItems = shouldGroupChatTaskItems ? routeTaskItems : [...chatTaskItems, ...routeTaskItems];
+  const taskbarTopBarElements = extensionRegistry.topBarElements.filter(
+    (element) => !STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS.has(`${element.extensionId}:${element.id}`),
+  );
   const taskbarTrailing =
-    extensionRegistry.topBarElements.length > 0 ? (
+    taskbarTopBarElements.length > 0 ? (
       <>
-        {extensionRegistry.topBarElements.map((element) => (
+        {taskbarTopBarElements.map((element) => (
           <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
         ))}
       </>

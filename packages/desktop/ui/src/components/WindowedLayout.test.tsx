@@ -335,6 +335,29 @@ describe('WindowedLayout route windows', () => {
     expect(within(desktopControls).getByRole('button', { name: 'Caffeinate toggle' })).toBeTruthy();
   });
 
+  it('does not render stable-shell-only top-bar bootstraps in the windowed taskbar', () => {
+    mocks.topBarElements = [
+      {
+        extensionId: 'system-onboarding',
+        id: 'onboarding-bootstrap',
+        component: 'OnboardingBootstrap',
+        label: 'Setup tour',
+      },
+      {
+        extensionId: 'system-caffeinate',
+        id: 'caffeinate-toggle',
+        component: 'CaffeinateToggle',
+        label: 'Caffeinate toggle',
+      },
+    ];
+
+    renderWindowedLayout();
+
+    const desktopControls = screen.getByLabelText('Desktop controls');
+    expect(within(desktopControls).queryByRole('button', { name: 'Setup tour' })).toBeNull();
+    expect(within(desktopControls).getByRole('button', { name: 'Caffeinate toggle' })).toBeTruthy();
+  });
+
   it('focuses Start menu search on open and closes it with Escape', () => {
     renderWindowedLayout();
 
