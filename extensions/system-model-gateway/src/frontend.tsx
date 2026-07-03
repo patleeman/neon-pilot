@@ -67,6 +67,7 @@ interface GatewayConfigRow {
 }
 
 type ModelGatewaySettingsContext = {
+  sectionId?: string;
   shellPresentation?: 'stable' | 'windowed';
 };
 
@@ -225,128 +226,134 @@ export function ModelGatewaySettingsPanel({
   }
 
   if (settingsContext?.shellPresentation === 'windowed') {
+    const content = (
+      <WindowedPageStack>
+        {loading ? <WindowedLoadingState label="Loading AI Gateway settings" /> : null}
+
+        {!loading ? (
+          <>
+            <WindowedPageSection title="Loopback endpoint" meta={status.running ? 'Running' : 'Unavailable'}>
+              <WindowedKeyValueGrid
+                columns={3}
+                items={[
+                  {
+                    label: 'Status',
+                    value: (
+                      <WindowedBadge tone={status.running ? 'positive' : 'danger'}>
+                        {status.running ? 'Running' : 'Unavailable'}
+                      </WindowedBadge>
+                    ),
+                  },
+                  { label: 'Endpoint', value: status.baseUrl },
+                  { label: 'Models', value: String(status.models) },
+                  { label: 'Default model', value: status.defaultModel },
+                  { label: 'Port', value: String(status.port) },
+                  { label: 'Host', value: status.host },
+                ]}
+              />
+            </WindowedPageSection>
+
+            {status.lastError ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="danger">{status.lastError}</WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
+            {error ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
+            {message ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="positive">{message}</WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
+
+            <WindowedPageSection title="Listener" meta="Local port">
+              <WindowedFormGrid columns={2}>
+                <WindowedField label="Port" hint="Changing the port restarts the local listener.">
+                  <WindowedTextInput
+                    id="settings-model-gateway-port"
+                    value={port}
+                    inputMode="numeric"
+                    onChange={(event) => setPort(event.currentTarget.value)}
+                    onBlur={() => {
+                      if (port !== String(status.port)) void savePort();
+                    }}
+                  />
+                </WindowedField>
+                <WindowedActionRow>
+                  <WindowedPageButton disabled={busy !== null} onClick={() => void load()}>
+                    Refresh
+                  </WindowedPageButton>
+                  <WindowedPageButton tone="accent" disabled={busy === 'save'} onClick={() => void savePort()}>
+                    {busy === 'save' ? 'Saving' : 'Save port'}
+                  </WindowedPageButton>
+                </WindowedActionRow>
+              </WindowedFormGrid>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Codex client setup" meta={copied ? 'Copied' : 'Responses compatible'}>
+              <WindowedPageStack>
+                <WindowedKeyValueList
+                  items={gatewayConfigRows.map((row) => ({
+                    label: row.label,
+                    value: row.secret && row.value ? '••••••••••••••••' : row.value || 'not set',
+                  }))}
+                />
+                <WindowedActionRow>
+                  <WindowedPageButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy config'}</WindowedPageButton>
+                </WindowedActionRow>
+              </WindowedPageStack>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Recent activity" meta={`${status.logs.length} retained`}>
+              <WindowedPageStack>
+                <WindowedActionRow>
+                  <WindowedPageButton
+                    tone="danger"
+                    disabled={busy === 'clearLogs' || status.logs.length === 0}
+                    onClick={() => void clearLogs()}
+                  >
+                    Clear logs
+                  </WindowedPageButton>
+                </WindowedActionRow>
+                {status.logs.length === 0 ? (
+                  <WindowedEmptyState>No gateway activity yet.</WindowedEmptyState>
+                ) : (
+                  <WindowedDataTable
+                    columns={[{ label: 'Route' }, { label: 'Status' }, { label: 'Duration', align: 'right' }]}
+                    columnTemplate="minmax(16rem, 1fr) minmax(6.5rem, 0.38fr) minmax(6rem, 0.32fr)"
+                  >
+                    {status.logs.slice(0, 12).map((entry) => (
+                      <WindowedDataRow
+                        key={entry.id}
+                        name={`${entry.method} ${entry.path}`}
+                        meta={`${formatTime(entry.at)} · ${entry.model || 'auto'}`}
+                        status={
+                          <WindowedBadge tone={entry.error ? 'danger' : entry.status >= 400 ? 'warning' : 'positive'}>
+                            {entry.error ? `${entry.status} error` : entry.status}
+                          </WindowedBadge>
+                        }
+                        action={`${entry.durationMs}ms`}
+                      />
+                    ))}
+                  </WindowedDataTable>
+                )}
+              </WindowedPageStack>
+            </WindowedPageSection>
+          </>
+        ) : null}
+      </WindowedPageStack>
+    );
+
+    if (settingsContext.sectionId) {
+      return <div className="model-gateway-page-windowed">{content}</div>;
+    }
+
     return (
       <WindowedPageShell layout="standard" className="model-gateway-page-windowed">
-        <WindowedPageMain title="AI Gateway">
-          <WindowedPageStack>
-            {loading ? <WindowedLoadingState label="Loading AI Gateway settings" /> : null}
-
-            {!loading ? (
-              <>
-                <WindowedPageSection title="Loopback endpoint" meta={status.running ? 'Running' : 'Unavailable'}>
-                  <WindowedKeyValueGrid
-                    columns={3}
-                    items={[
-                      {
-                        label: 'Status',
-                        value: (
-                          <WindowedBadge tone={status.running ? 'positive' : 'danger'}>
-                            {status.running ? 'Running' : 'Unavailable'}
-                          </WindowedBadge>
-                        ),
-                      },
-                      { label: 'Endpoint', value: status.baseUrl },
-                      { label: 'Models', value: String(status.models) },
-                      { label: 'Default model', value: status.defaultModel },
-                      { label: 'Port', value: String(status.port) },
-                      { label: 'Host', value: status.host },
-                    ]}
-                  />
-                </WindowedPageSection>
-
-                {status.lastError ? (
-                  <WindowedPageSection>
-                    <WindowedStateBlock tone="danger">{status.lastError}</WindowedStateBlock>
-                  </WindowedPageSection>
-                ) : null}
-                {error ? (
-                  <WindowedPageSection>
-                    <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
-                  </WindowedPageSection>
-                ) : null}
-                {message ? (
-                  <WindowedPageSection>
-                    <WindowedStateBlock tone="positive">{message}</WindowedStateBlock>
-                  </WindowedPageSection>
-                ) : null}
-
-                <WindowedPageSection title="Listener" meta="Local port">
-                  <WindowedFormGrid columns={2}>
-                    <WindowedField label="Port" hint="Changing the port restarts the local listener.">
-                      <WindowedTextInput
-                        id="settings-model-gateway-port"
-                        value={port}
-                        inputMode="numeric"
-                        onChange={(event) => setPort(event.currentTarget.value)}
-                        onBlur={() => {
-                          if (port !== String(status.port)) void savePort();
-                        }}
-                      />
-                    </WindowedField>
-                    <WindowedActionRow>
-                      <WindowedPageButton disabled={busy !== null} onClick={() => void load()}>
-                        Refresh
-                      </WindowedPageButton>
-                      <WindowedPageButton tone="accent" disabled={busy === 'save'} onClick={() => void savePort()}>
-                        {busy === 'save' ? 'Saving' : 'Save port'}
-                      </WindowedPageButton>
-                    </WindowedActionRow>
-                  </WindowedFormGrid>
-                </WindowedPageSection>
-
-                <WindowedPageSection title="Codex client setup" meta={copied ? 'Copied' : 'Responses compatible'}>
-                  <WindowedPageStack>
-                    <WindowedKeyValueList
-                      items={gatewayConfigRows.map((row) => ({
-                        label: row.label,
-                        value: row.secret && row.value ? '••••••••••••••••' : row.value || 'not set',
-                      }))}
-                    />
-                    <WindowedActionRow>
-                      <WindowedPageButton onClick={() => void copyConfig()}>{copied ? 'Copied' : 'Copy config'}</WindowedPageButton>
-                    </WindowedActionRow>
-                  </WindowedPageStack>
-                </WindowedPageSection>
-
-                <WindowedPageSection title="Recent activity" meta={`${status.logs.length} retained`}>
-                  <WindowedPageStack>
-                    <WindowedActionRow>
-                      <WindowedPageButton
-                        tone="danger"
-                        disabled={busy === 'clearLogs' || status.logs.length === 0}
-                        onClick={() => void clearLogs()}
-                      >
-                        Clear logs
-                      </WindowedPageButton>
-                    </WindowedActionRow>
-                    {status.logs.length === 0 ? (
-                      <WindowedEmptyState>No gateway activity yet.</WindowedEmptyState>
-                    ) : (
-                      <WindowedDataTable
-                        columns={[{ label: 'Route' }, { label: 'Status' }, { label: 'Duration', align: 'right' }]}
-                        columnTemplate="minmax(16rem, 1fr) minmax(6.5rem, 0.38fr) minmax(6rem, 0.32fr)"
-                      >
-                        {status.logs.slice(0, 12).map((entry) => (
-                          <WindowedDataRow
-                            key={entry.id}
-                            name={`${entry.method} ${entry.path}`}
-                            meta={`${formatTime(entry.at)} · ${entry.model || 'auto'}`}
-                            status={
-                              <WindowedBadge tone={entry.error ? 'danger' : entry.status >= 400 ? 'warning' : 'positive'}>
-                                {entry.error ? `${entry.status} error` : entry.status}
-                              </WindowedBadge>
-                            }
-                            action={`${entry.durationMs}ms`}
-                          />
-                        ))}
-                      </WindowedDataTable>
-                    )}
-                  </WindowedPageStack>
-                </WindowedPageSection>
-              </>
-            ) : null}
-          </WindowedPageStack>
-        </WindowedPageMain>
+        <WindowedPageMain title="AI Gateway">{content}</WindowedPageMain>
       </WindowedPageShell>
     );
   }

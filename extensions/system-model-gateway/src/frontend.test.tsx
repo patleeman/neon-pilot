@@ -105,11 +105,17 @@ describe('ModelGatewaySettingsPanel', () => {
       ui: { notify: vi.fn() },
     };
 
-    const { container } = render(<ModelGatewaySettingsPanel pa={pa as never} settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(
+      <ModelGatewaySettingsPanel
+        pa={pa as never}
+        settingsContext={{ sectionId: 'settings-model-gateway', shellPresentation: 'windowed' }}
+      />,
+    );
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Loopback endpoint' })).toBeTruthy());
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
-    expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'AI Gateway' })).toBeNull();
+    expect(container.querySelector('.model-gateway-page-windowed')).toBeTruthy();
     expect(container.querySelector('.wos-page-stack')).toBeTruthy();
     expect(container.querySelector('.wos-form-grid')).toBeTruthy();
     expect(container.querySelectorAll('.wos-action-row').length).toBeGreaterThanOrEqual(2);
@@ -129,7 +135,7 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(screen.getByText('183ms')).toBeTruthy();
   });
 
-  it('keeps windowed loading state inside the canonical page shell', () => {
+  it('keeps windowed loading state inside the embedded settings panel', () => {
     const status = deferred<never>();
     const pa = {
       extension: {
@@ -138,10 +144,15 @@ describe('ModelGatewaySettingsPanel', () => {
       ui: { notify: vi.fn() },
     };
 
-    const { container } = render(<ModelGatewaySettingsPanel pa={pa as never} settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(
+      <ModelGatewaySettingsPanel
+        pa={pa as never}
+        settingsContext={{ sectionId: 'settings-model-gateway', shellPresentation: 'windowed' }}
+      />,
+    );
 
-    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
-    expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
+    expect(container.querySelector('.wos-page-shell')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'AI Gateway' })).toBeNull();
     expect(screen.getByText('Loading AI Gateway settings').closest('.wos-loading-state')).toBeTruthy();
     expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
   });

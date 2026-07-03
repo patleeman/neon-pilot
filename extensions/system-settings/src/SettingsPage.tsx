@@ -2422,6 +2422,21 @@ function ExtensionSettingsComponentPanels({
     ? registrations.filter((registration) => includedExtensionIds.has(registration.extensionId))
     : registrations;
   if (visibleRegistrations.length === 0) return null;
+  if (shellPresentation === 'windowed') {
+    return (
+      <div className="space-y-3 pt-4">
+        {visibleRegistrations.map((registration) => (
+          <div
+            key={`${registration.extensionId}:${registration.id}`}
+            id={settingsExtensionAnchorId(registration.extensionId)}
+            className="settings-page-extension-component-body settings-page-extension-component-body-windowed"
+          >
+            <SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="space-y-3 pt-4">
       {visibleRegistrations.map((registration) => (

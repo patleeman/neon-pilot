@@ -442,6 +442,14 @@ describe('SettingsPage', () => {
     expect(source).toContain('.settings-page-windowed .settings-page-control-row.wos-settings-row');
   });
 
+  it('keeps windowed extension settings panels out of nested settings groups', () => {
+    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/SettingsPage.tsx'), 'utf8');
+
+    expect(source).toContain("if (shellPresentation === 'windowed') {");
+    expect(source).toContain('settings-page-extension-component-body-windowed');
+    expect(source).toContain('<SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />');
+  });
+
   it('right-aligns appearance accent choices within the settings action column', () => {
     const html = renderPage('/settings', ['settings-appearance']);
 
