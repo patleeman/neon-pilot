@@ -471,7 +471,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('font-family: var(--wos-font-body);');
   });
 
-  it('contains iframe paint inside window bodies and hides iframes during shell interaction', () => {
+  it('contains iframe paint inside window bodies and scopes native browser blocking to the browser host', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
@@ -526,11 +526,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] webview");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-composited-frame");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] webview");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-composited-frame");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] webview");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) .wos-composited-frame');
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-badge) .wos-composited-frame');
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-popover) .wos-composited-frame');
@@ -552,9 +552,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-notification-toaster) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame');
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .wos-composited-frame");
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] iframe");
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] webview");
+    expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] .wos-composited-frame");
+    expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] iframe");
+    expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] webview");
     expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-taskbar) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-composited-frame');
