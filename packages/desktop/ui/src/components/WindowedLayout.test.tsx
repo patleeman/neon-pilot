@@ -486,6 +486,13 @@ describe('WindowedLayout route windows', () => {
         },
       },
       {
+        id: 'system-model-gateway',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'ai-gateway', label: 'AI Gateway', route: '/ai-gateway' }],
+        },
+      },
+      {
         id: 'system-model-arena',
         enabled: true,
         contributes: {

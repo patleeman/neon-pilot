@@ -42,6 +42,7 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'automations', title: 'Automations', accent: 'automations', meta: 'Scheduled work', detail: 'Runs and reminders' },
   { id: 'workflows', title: 'Workflows', accent: 'workflows', meta: 'Dynamic flows', detail: 'Saved multi-agent work' },
   { id: 'gateways', title: 'Gateways', accent: 'gateways', meta: 'Ingress', detail: 'Telegram ready' },
+  { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways', meta: 'Loopback', detail: 'Local model bridge' },
   { id: 'model-arena', title: 'Model Arena', accent: 'model-arena', meta: 'Duels', detail: 'Model comparisons' },
   { id: 'routines', title: 'Routines', accent: 'routines', meta: 'Hooks', detail: 'Before and after' },
   { id: 'extensions', title: 'Extensions', accent: 'extensions', meta: 'Installed', detail: 'Extension manager' },

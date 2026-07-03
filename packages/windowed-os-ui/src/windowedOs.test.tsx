@@ -1016,6 +1016,7 @@ describe('Windowed OS Storybook examples', () => {
       'Automations',
       'Workflows',
       'Gateways',
+      'AI Gateway',
       'Model Arena',
       'Routines',
       'Extensions',
@@ -1026,6 +1027,8 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Workflows')?.accent).toBe('workflows');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Chat')?.meta).toBe('Conversation');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'AI Gateway')?.accent).toBe('gateways');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'AI Gateway')?.meta).toBe('Loopback');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Model Arena')?.accent).toBe('model-arena');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Skills')?.accent).toBe('skills');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
