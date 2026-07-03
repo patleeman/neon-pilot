@@ -980,6 +980,34 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
 
+  it('keeps native browser views suppressed when a higher window overlaps a background chat', () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:background',
+        kind: 'chat',
+        title: 'Background conversation',
+        route: '/conversations/background',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'chat:active',
+        kind: 'chat',
+        title: 'Active conversation',
+        route: '/conversations/active',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+    const { container } = renderWindowedLayout();
+    const shell = container.querySelector('.windowed-os-shell');
+
+    expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
+    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
+  });
+
   it('marks lower overlapping windows so embedded iframes cannot paint over the foreground stack', async () => {
     seedWindowedWindows([
       {

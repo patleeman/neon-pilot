@@ -88,6 +88,11 @@ function isInsideUnfocusedWindow(host: HTMLElement | null): boolean {
   return windowElement?.dataset.focused === 'false';
 }
 
+function isInsideIframeBlockedWindow(host: HTMLElement | null): boolean {
+  const windowElement = host?.closest<HTMLElement>('.wos-window');
+  return windowElement?.dataset.iframeBlocked === 'true';
+}
+
 function isOutsideFocusedWindowedShellWindow(host: HTMLElement | null): boolean {
   const ownWindow = host?.closest<HTMLElement>('.wos-window');
   const shell = ownWindow?.closest<HTMLElement>('.windowed-os-shell');
@@ -651,6 +656,7 @@ export function WorkbenchBrowserTab({
       hasBlockingRendererOverlay(host) ||
       hasWindowedShellOverlay() ||
       isInsideUnfocusedWindow(host) ||
+      isInsideIframeBlockedWindow(host) ||
       isOutsideFocusedWindowedShellWindow(host) ||
       isInsideBackgroundWindowedWindow(host) ||
       isBelowTopWindowedShellWindow(host) ||

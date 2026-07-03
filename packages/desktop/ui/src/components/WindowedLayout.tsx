@@ -306,19 +306,6 @@ function boundsOverlap(first: WindowBounds, second: WindowBounds): boolean {
   );
 }
 
-function hasWindowAboveFocusedChat(focusedWindow: DesktopWindowModel | null, visibleWindows: DesktopWindowModel[]): boolean {
-  if (!focusedWindow || focusedWindow.kind !== 'chat') {
-    return false;
-  }
-
-  const focusedIndex = visibleWindows.findIndex((windowModel) => windowModel.id === focusedWindow.id);
-  if (focusedIndex < 0) {
-    return false;
-  }
-
-  return visibleWindows.slice(focusedIndex + 1).some((windowModel) => boundsOverlap(focusedWindow.bounds, windowModel.bounds));
-}
-
 function isWindowCoveredByHigherWindow(windowModel: DesktopWindowModel, visibleWindows: DesktopWindowModel[]): boolean {
   const index = visibleWindows.findIndex((candidate) => candidate.id === windowModel.id);
   if (index < 0) {
@@ -326,6 +313,10 @@ function isWindowCoveredByHigherWindow(windowModel: DesktopWindowModel, visibleW
   }
 
   return visibleWindows.slice(index + 1).some((candidate) => boundsOverlap(windowModel.bounds, candidate.bounds));
+}
+
+function hasCoveredChatWindow(visibleWindows: DesktopWindowModel[]): boolean {
+  return visibleWindows.some((windowModel) => windowModel.kind === 'chat' && isWindowCoveredByHigherWindow(windowModel, visibleWindows));
 }
 
 function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
@@ -1160,7 +1151,7 @@ export function WindowedLayout() {
     suspendWindowedBrowserViews();
   }, [drag, launcherOpen, resize, snapTarget]);
 
-  const browserBlockedByWindowStack = hasWindowAboveFocusedChat(focusedWindow, visibleWindows);
+  const browserBlockedByWindowStack = hasCoveredChatWindow(visibleWindows);
 
   const nativeBrowserBlocked = Boolean(
     launcherOpen || drag || resize || snapTarget || browserLayerSettling || browserBlockedByWindowStack || focusedWindow?.kind === 'route',
