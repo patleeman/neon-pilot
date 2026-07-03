@@ -62,6 +62,81 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   TextLink: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a>,
   TextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   ToolbarButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  WindowedBadge: ({ children }: { children: React.ReactNode }) => <span className="wos-badge">{children}</span>,
+  WindowedDataRow: ({
+    name,
+    meta,
+    cells,
+    action,
+    enabled,
+    onToggle,
+  }: {
+    name: React.ReactNode;
+    meta?: React.ReactNode;
+    cells?: React.ReactNode[];
+    action?: React.ReactNode;
+    enabled?: boolean;
+    onToggle?: (checked: boolean) => void;
+  }) => (
+    <div className="wos-data-row">
+      <div>{name}</div>
+      {meta ? <div>{meta}</div> : null}
+      {cells?.map((cell, index) => (
+        <div key={index}>{cell}</div>
+      ))}
+      {onToggle ? (
+        <button type="button" role="switch" aria-checked={enabled} onClick={() => onToggle(!enabled)}>
+          {enabled ? 'On' : 'Off'}
+        </button>
+      ) : null}
+      {action}
+    </div>
+  ),
+  WindowedDataTable: ({ children }: { children: React.ReactNode }) => <div className="wos-data-table">{children}</div>,
+  WindowedDialog: ({
+    title,
+    actions,
+    children,
+    onClose,
+  }: {
+    title: React.ReactNode;
+    actions?: React.ReactNode;
+    children: React.ReactNode;
+    onClose: () => void;
+  }) => (
+    <section className="wos-dialog" role="dialog" aria-label={String(title)}>
+      <h3>{title}</h3>
+      <button type="button" aria-label={`Close ${String(title)}`} onClick={onClose} />
+      {actions}
+      {children}
+    </section>
+  ),
+  WindowedDialogCopy: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  WindowedDialogStack: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  WindowedField: ({ label, children }: { label?: React.ReactNode; children: React.ReactNode }) => (
+    <label>
+      {label}
+      {children}
+    </label>
+  ),
+  WindowedKeyValueGrid: ({ items }: { items: Array<{ label: string; value: React.ReactNode }> }) => (
+    <div className="wos-key-value-grid">
+      {items.map((item) => (
+        <div key={item.label}>
+          {item.label}: {item.value}
+        </div>
+      ))}
+    </div>
+  ),
+  WindowedPageButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  WindowedPageSection: ({ title, children }: { title?: React.ReactNode; children: React.ReactNode }) => (
+    <section className="wos-page-section">
+      {title ? <h3>{title}</h3> : null}
+      {children}
+    </section>
+  ),
+  WindowedSelect: ({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props}>{children}</select>,
+  WindowedTextInput: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
 }));
 
 import { AgentPluginsSettingsPanel } from './frontend';
@@ -180,5 +255,24 @@ describe('AgentPluginsSettingsPanel', () => {
         autoUpdate: true,
       }),
     );
+  });
+
+  it('renders windowed plugin details in a dialog instead of a selected settings pane', () => {
+    mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [plugin] }));
+
+    render(<AgentPluginsSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    expect(screen.getByRole('heading', { name: 'Install agent plugin' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Installed agent plugins' })).toBeTruthy();
+    expect(document.querySelector('.wos-data-table')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open details for Review Pack' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Plugin is on' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open details for Review Pack' }));
+
+    expect(screen.getByRole('dialog', { name: 'Review Pack' })).toBeTruthy();
+    expect(screen.getByText('Plugin is on')).toBeTruthy();
+    expect(screen.getByText('Auto update')).toBeTruthy();
+    expect(screen.getByText('Skills (1)')).toBeTruthy();
   });
 });

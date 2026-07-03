@@ -11,6 +11,18 @@ import {
   TextInput,
   TextLink,
   ToolbarButton,
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedDialog,
+  WindowedDialogCopy,
+  WindowedDialogStack,
+  WindowedField,
+  WindowedKeyValueGrid,
+  WindowedPageButton,
+  WindowedPageSection,
+  WindowedSelect,
+  WindowedTextInput,
 } from '@neon-pilot/extensions/ui';
 import React, { type FormEvent, useMemo, useState } from 'react';
 
@@ -65,6 +77,10 @@ type OperationState = {
   error: string | null;
 };
 
+type AgentPluginsSettingsContext = {
+  shellPresentation?: 'stable' | 'windowed';
+};
+
 const emptyDraft: AddDraft = { sourceKind: 'git', source: '' };
 
 async function listPlugins(): Promise<PluginsState> {
@@ -97,6 +113,13 @@ function statusLabel(plugin: AgentPlugin): string {
   if (plugin.status === 'update-blocked') return 'Update blocked';
   if (plugin.status === 'error') return 'Error';
   return 'On';
+}
+
+function windowedStatusTone(plugin: AgentPlugin): 'neutral' | 'positive' | 'warning' | 'danger' {
+  if (!plugin.enabled) return 'neutral';
+  if (plugin.status === 'update-available') return 'warning';
+  if (plugin.status === 'update-blocked' || plugin.status === 'error') return 'danger';
+  return 'positive';
 }
 
 function pluginSourceLabel(plugin: AgentPlugin): string {
@@ -142,14 +165,18 @@ function CapabilityList({ title, empty, items }: { title: string; empty: string;
   );
 }
 
-export function AgentPluginsSettingsPanel() {
+export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext?: AgentPluginsSettingsContext } = {}) {
   const { data, loading, error, refetch } = useApi(listPlugins, 'system-agent-plugins');
   const [draft, setDraft] = useState<AddDraft>(emptyDraft);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [operation, setOperation] = useState<OperationState>({ busy: false, message: null, error: null });
 
+  const isWindowed = settingsContext?.shellPresentation === 'windowed';
   const plugins = data?.plugins ?? [];
-  const selectedPlugin = useMemo(() => plugins.find((plugin) => plugin.id === selectedId) ?? plugins[0] ?? null, [plugins, selectedId]);
+  const selectedPlugin = useMemo(
+    () => plugins.find((plugin) => plugin.id === selectedId) ?? (isWindowed ? null : (plugins[0] ?? null)),
+    [isWindowed, plugins, selectedId],
+  );
 
   async function runOperation<T>(message: string, action: () => Promise<T>) {
     setOperation({ busy: true, message: null, error: null });
@@ -234,185 +261,363 @@ export function AgentPluginsSettingsPanel() {
           {operation.error ? <Notice tone="danger">{operation.error}</Notice> : null}
           {operation.message ? <Notice tone="success">{operation.message}</Notice> : null}
 
-          <RailSubsection title="Install an agent plugin">
-            <form className="space-y-3" onSubmit={handleAddPlugin}>
-              <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]">
-                <Field label="Source">
-                  <Select
-                    value={draft.sourceKind}
-                    onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
-                  >
-                    <option value="git">Git URL</option>
-                    <option value="local">Local folder</option>
-                  </Select>
-                </Field>
-                <Field label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}>
-                  <TextInput
-                    value={draft.source}
-                    onChange={(event) => setDraft({ ...draft, source: event.target.value })}
-                    placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                </Field>
-                <div className="flex items-end gap-2">
-                  {draft.sourceKind === 'local' ? (
-                    <ToolbarButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
-                      Pick folder
-                    </ToolbarButton>
-                  ) : null}
-                  <ToolbarButton type="submit" disabled={operation.busy || !draft.source.trim()}>
-                    {operation.busy ? 'Installing...' : 'Install'}
-                  </ToolbarButton>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <SupportingText>
-                  Install Codex or Claude Code marketplace plugins with skills, instructions, docs, and MCP server definitions. Agent
-                  plugins are turned on immediately after install.
-                </SupportingText>
-                <SupportingText>
-                  Read the{' '}
-                  <TextLink href="https://developers.openai.com/codex/plugins/build" target="_blank" rel="noreferrer">
-                    Codex plugin guide
-                  </TextLink>{' '}
-                  or{' '}
-                  <TextLink href="https://docs.anthropic.com/en/docs/claude-code/plugins" target="_blank" rel="noreferrer">
-                    Claude Code plugin guide
-                  </TextLink>
-                  .
-                </SupportingText>
-              </div>
-            </form>
-          </RailSubsection>
-
-          <RailSubsection title="Installed agent plugins">
-            {plugins.length > 0 ? (
-              <div className="space-y-2">
-                {plugins.map((plugin) => {
-                  const selected = selectedPlugin?.id === plugin.id;
-                  return (
-                    <RowButton
-                      key={plugin.id}
-                      type="button"
-                      aria-pressed={selected}
-                      selected={selected}
-                      className="block px-3 py-2"
-                      onClick={() => setSelectedId(plugin.id)}
+          {isWindowed ? (
+            <>
+              <WindowedPageSection title="Install agent plugin" meta="Codex or Claude Code marketplace package">
+                <form className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto]" onSubmit={handleAddPlugin}>
+                  <WindowedField label="Source">
+                    <WindowedSelect
+                      value={draft.sourceKind}
+                      onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
                     >
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-[13px] font-medium text-primary">{plugin.displayName}</span>
-                        <Pill tone={plugin.ecosystem === 'claude' ? 'accent' : plugin.ecosystem === 'codex' ? 'teal' : 'muted'}>
-                          {ecosystemLabel(plugin.ecosystem)}
-                        </Pill>
-                        <Pill tone={statusTone(plugin.status)}>{statusLabel(plugin)}</Pill>
-                        {plugin.autoUpdate ? <Pill tone="warning">auto update</Pill> : null}
-                        <span className="text-[12px] text-secondary">{capabilitySummary(plugin)}</span>
-                      </span>
-                      <span className="ui-supporting-text mt-1 block break-all">{pluginSourceLabel(plugin)}</span>
-                    </RowButton>
-                  );
-                })}
-              </div>
-            ) : (
-              <SupportingText>
-                No agent plugins installed. Install a Codex or Claude Code marketplace plugin to give agents its skills, instructions, docs,
-                and MCP server definitions.
-              </SupportingText>
-            )}
-          </RailSubsection>
-
-          <RailSubsection title={selectedPlugin ? selectedPlugin.displayName : 'Agent plugin details'}>
-            {selectedPlugin ? (
-              <div className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <SettingToggleRow
-                    title={selectedPlugin.enabled ? 'Plugin is on' : 'Plugin is off'}
-                    description={
-                      selectedPlugin.enabled
-                        ? 'Agents can use the supported skills, instructions, docs, and MCP definitions from this plugin.'
-                        : 'The plugin is installed, but its capabilities are not available to agents.'
-                    }
-                    checked={selectedPlugin.enabled}
-                    onCheckedChange={() => void togglePlugin(selectedPlugin)}
-                  />
-                  <SettingToggleRow
-                    title="Auto update"
-                    description="Download and apply Git updates automatically after validation."
-                    checked={selectedPlugin.autoUpdate}
-                    onCheckedChange={() => void toggleAutoUpdate(selectedPlugin)}
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <ToolbarButton type="button" disabled={operation.busy} onClick={() => void checkUpdates(selectedPlugin)}>
-                    Check for updates
-                  </ToolbarButton>
-                  <ToolbarButton
-                    type="button"
-                    disabled={operation.busy || selectedPlugin.source.kind !== 'git' || !selectedPlugin.availableUpdate}
-                    onClick={() => void updateSelectedPlugin(selectedPlugin)}
+                      <option value="git">Git URL</option>
+                      <option value="local">Local folder</option>
+                    </WindowedSelect>
+                  </WindowedField>
+                  <WindowedField
+                    label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}
+                    hint="Plugin skills, docs, and MCP definitions are enabled after install."
                   >
-                    Update
-                  </ToolbarButton>
-                  <ToolbarButton
-                    type="button"
-                    className="text-danger hover:text-danger"
-                    disabled={operation.busy}
-                    onClick={() => void removeSelectedPlugin(selectedPlugin)}
+                    <WindowedTextInput
+                      value={draft.source}
+                      onChange={(event) => setDraft({ ...draft, source: event.target.value })}
+                      placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </WindowedField>
+                  <div className="flex items-end gap-2">
+                    {draft.sourceKind === 'local' ? (
+                      <WindowedPageButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
+                        Pick folder
+                      </WindowedPageButton>
+                    ) : null}
+                    <WindowedPageButton type="submit" tone="accent" disabled={operation.busy || !draft.source.trim()}>
+                      {operation.busy ? 'Installing...' : 'Install'}
+                    </WindowedPageButton>
+                  </div>
+                </form>
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Installed agent plugins" meta={`${plugins.length} installed`}>
+                {plugins.length > 0 ? (
+                  <WindowedDataTable
+                    columns={[
+                      { label: 'Plugin' },
+                      { label: 'Ecosystem' },
+                      { label: 'Status' },
+                      { label: 'Capabilities' },
+                      { label: 'Updates' },
+                      { label: 'Actions', align: 'right' },
+                    ]}
                   >
-                    <span aria-hidden="true">-</span>
-                    Remove
-                  </ToolbarButton>
-                </div>
+                    {plugins.map((plugin) => (
+                      <WindowedDataRow
+                        key={plugin.id}
+                        name={plugin.displayName}
+                        meta={pluginSourceLabel(plugin)}
+                        cells={[
+                          <WindowedBadge key="ecosystem" tone="neutral">
+                            {ecosystemLabel(plugin.ecosystem)}
+                          </WindowedBadge>,
+                          <WindowedBadge key="status" tone={windowedStatusTone(plugin)}>
+                            {statusLabel(plugin)}
+                          </WindowedBadge>,
+                          capabilitySummary(plugin),
+                          plugin.autoUpdate ? (
+                            <WindowedBadge key="auto-update" tone="warning">
+                              Auto update
+                            </WindowedBadge>
+                          ) : (
+                            'Manual'
+                          ),
+                        ]}
+                        action={
+                          <WindowedPageButton
+                            aria-label={`Open details for ${plugin.displayName}`}
+                            onClick={() => setSelectedId(plugin.id)}
+                          >
+                            Details
+                          </WindowedPageButton>
+                        }
+                      />
+                    ))}
+                  </WindowedDataTable>
+                ) : (
+                  <SupportingText>
+                    No agent plugins installed. Install a Codex or Claude Code marketplace plugin to give agents its skills, instructions,
+                    docs, and MCP server definitions.
+                  </SupportingText>
+                )}
+              </WindowedPageSection>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <CapabilityList
-                    title={`Skills (${selectedPlugin.capabilities.skills.length})`}
-                    empty="No skills found."
-                    items={selectedPlugin.capabilities.skills.map((skill) => ({ label: skill.id, detail: skill.path }))}
-                  />
-                  <CapabilityList
-                    title={`Instructions and docs (${selectedPlugin.capabilities.docs.length})`}
-                    empty="No instruction or doc files found."
-                    items={selectedPlugin.capabilities.docs.map((doc) => ({ label: basename(doc.path), detail: doc.path }))}
-                  />
-                  <CapabilityList
-                    title={`MCP servers (${selectedPlugin.capabilities.mcp.length})`}
-                    empty="No MCP server definitions found."
-                    items={selectedPlugin.capabilities.mcp.map((mcp) => ({ label: basename(mcp.path), detail: mcp.path }))}
-                  />
-                  <CapabilityList
-                    title={`Ignored hooks (${selectedPlugin.capabilities.hooks.length})`}
-                    empty="No unsupported hook files found."
-                    items={selectedPlugin.capabilities.hooks.map((hook) => ({ label: hook.kind, detail: hook.path }))}
-                  />
-                </div>
+              {selectedPlugin ? (
+                <WindowedDialog
+                  title={selectedPlugin.displayName}
+                  meta={`${ecosystemLabel(selectedPlugin.ecosystem)} · ${statusLabel(selectedPlugin)}`}
+                  accent="extensions"
+                  onClose={() => setSelectedId(null)}
+                  actions={
+                    <>
+                      <WindowedPageButton disabled={operation.busy} onClick={() => void checkUpdates(selectedPlugin)}>
+                        Check updates
+                      </WindowedPageButton>
+                      <WindowedPageButton
+                        disabled={operation.busy || selectedPlugin.source.kind !== 'git' || !selectedPlugin.availableUpdate}
+                        onClick={() => void updateSelectedPlugin(selectedPlugin)}
+                      >
+                        Update
+                      </WindowedPageButton>
+                      <WindowedPageButton disabled={operation.busy} onClick={() => void removeSelectedPlugin(selectedPlugin)}>
+                        Remove
+                      </WindowedPageButton>
+                    </>
+                  }
+                >
+                  <WindowedDialogStack>
+                    <WindowedDataRow
+                      name={selectedPlugin.enabled ? 'Plugin is on' : 'Plugin is off'}
+                      meta={
+                        selectedPlugin.enabled
+                          ? 'Agents can use the supported skills, instructions, docs, and MCP definitions from this plugin.'
+                          : 'The plugin is installed, but its capabilities are not available to agents.'
+                      }
+                      enabled={selectedPlugin.enabled}
+                      onToggle={() => void togglePlugin(selectedPlugin)}
+                    />
+                    <WindowedDataRow
+                      name="Auto update"
+                      meta="Download and apply Git updates automatically after validation."
+                      enabled={selectedPlugin.autoUpdate}
+                      onToggle={() => void toggleAutoUpdate(selectedPlugin)}
+                    />
+                    <WindowedKeyValueGrid
+                      columns={3}
+                      items={[
+                        { label: 'Source', value: pluginSourceLabel(selectedPlugin) },
+                        { label: 'Skills', value: String(selectedPlugin.capabilities.skills.length) },
+                        { label: 'Docs', value: String(selectedPlugin.capabilities.docs.length) },
+                        { label: 'MCP servers', value: String(selectedPlugin.capabilities.mcp.length) },
+                        { label: 'Ignored hooks', value: String(selectedPlugin.capabilities.hooks.length) },
+                        { label: 'Commit', value: selectedPlugin.source.resolvedCommit?.slice(0, 10) ?? 'Not pinned' },
+                      ]}
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <CapabilityList
+                        title={`Skills (${selectedPlugin.capabilities.skills.length})`}
+                        empty="No skills found."
+                        items={selectedPlugin.capabilities.skills.map((skill) => ({ label: skill.id, detail: skill.path }))}
+                      />
+                      <CapabilityList
+                        title={`Instructions and docs (${selectedPlugin.capabilities.docs.length})`}
+                        empty="No instruction or doc files found."
+                        items={selectedPlugin.capabilities.docs.map((doc) => ({ label: basename(doc.path), detail: doc.path }))}
+                      />
+                      <CapabilityList
+                        title={`MCP servers (${selectedPlugin.capabilities.mcp.length})`}
+                        empty="No MCP server definitions found."
+                        items={selectedPlugin.capabilities.mcp.map((mcp) => ({ label: basename(mcp.path), detail: mcp.path }))}
+                      />
+                      <CapabilityList
+                        title={`Ignored hooks (${selectedPlugin.capabilities.hooks.length})`}
+                        empty="No unsupported hook files found."
+                        items={selectedPlugin.capabilities.hooks.map((hook) => ({ label: hook.kind, detail: hook.path }))}
+                      />
+                    </div>
+                    {selectedPlugin.compatibility.warnings.length > 0 ? (
+                      <WindowedDialogCopy>{selectedPlugin.compatibility.warnings.join(' ')}</WindowedDialogCopy>
+                    ) : null}
+                    {selectedPlugin.compatibility.blockers.length > 0 ? (
+                      <WindowedDialogCopy>{selectedPlugin.compatibility.blockers.join(' ')}</WindowedDialogCopy>
+                    ) : null}
+                    {selectedPlugin.lastError ? <WindowedDialogCopy>{selectedPlugin.lastError}</WindowedDialogCopy> : null}
+                  </WindowedDialogStack>
+                </WindowedDialog>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <RailSubsection title="Install an agent plugin">
+                <form className="space-y-3" onSubmit={handleAddPlugin}>
+                  <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]">
+                    <Field label="Source">
+                      <Select
+                        value={draft.sourceKind}
+                        onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
+                      >
+                        <option value="git">Git URL</option>
+                        <option value="local">Local folder</option>
+                      </Select>
+                    </Field>
+                    <Field label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}>
+                      <TextInput
+                        value={draft.source}
+                        onChange={(event) => setDraft({ ...draft, source: event.target.value })}
+                        placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                    </Field>
+                    <div className="flex items-end gap-2">
+                      {draft.sourceKind === 'local' ? (
+                        <ToolbarButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
+                          Pick folder
+                        </ToolbarButton>
+                      ) : null}
+                      <ToolbarButton type="submit" disabled={operation.busy || !draft.source.trim()}>
+                        {operation.busy ? 'Installing...' : 'Install'}
+                      </ToolbarButton>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <SupportingText>
+                      Install Codex or Claude Code marketplace plugins with skills, instructions, docs, and MCP server definitions. Agent
+                      plugins are turned on immediately after install.
+                    </SupportingText>
+                    <SupportingText>
+                      Read the{' '}
+                      <TextLink href="https://developers.openai.com/codex/plugins/build" target="_blank" rel="noreferrer">
+                        Codex plugin guide
+                      </TextLink>{' '}
+                      or{' '}
+                      <TextLink href="https://docs.anthropic.com/en/docs/claude-code/plugins" target="_blank" rel="noreferrer">
+                        Claude Code plugin guide
+                      </TextLink>
+                      .
+                    </SupportingText>
+                  </div>
+                </form>
+              </RailSubsection>
 
-                <div className="text-[12px] text-secondary">
-                  <span className="break-all">{pluginSourceLabel(selectedPlugin)}</span>
-                  {selectedPlugin.source.resolvedCommit ? (
-                    <span className="ml-2 font-mono text-[11px] text-muted">@{selectedPlugin.source.resolvedCommit.slice(0, 10)}</span>
-                  ) : null}
-                  {selectedPlugin.availableUpdate ? (
-                    <span className="ml-2 font-mono text-[11px] text-warning">
-                      {' -> '}@{selectedPlugin.availableUpdate.commit.slice(0, 10)}
-                    </span>
-                  ) : null}
-                </div>
+              <RailSubsection title="Installed agent plugins">
+                {plugins.length > 0 ? (
+                  <div className="space-y-2">
+                    {plugins.map((plugin) => {
+                      const selected = selectedPlugin?.id === plugin.id;
+                      return (
+                        <RowButton
+                          key={plugin.id}
+                          type="button"
+                          aria-pressed={selected}
+                          selected={selected}
+                          className="block px-3 py-2"
+                          onClick={() => setSelectedId(plugin.id)}
+                        >
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13px] font-medium text-primary">{plugin.displayName}</span>
+                            <Pill tone={plugin.ecosystem === 'claude' ? 'accent' : plugin.ecosystem === 'codex' ? 'teal' : 'muted'}>
+                              {ecosystemLabel(plugin.ecosystem)}
+                            </Pill>
+                            <Pill tone={statusTone(plugin.status)}>{statusLabel(plugin)}</Pill>
+                            {plugin.autoUpdate ? <Pill tone="warning">auto update</Pill> : null}
+                            <span className="text-[12px] text-secondary">{capabilitySummary(plugin)}</span>
+                          </span>
+                          <span className="ui-supporting-text mt-1 block break-all">{pluginSourceLabel(plugin)}</span>
+                        </RowButton>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <SupportingText>
+                    No agent plugins installed. Install a Codex or Claude Code marketplace plugin to give agents its skills, instructions,
+                    docs, and MCP server definitions.
+                  </SupportingText>
+                )}
+              </RailSubsection>
 
-                {selectedPlugin.compatibility.warnings.length > 0 ? (
-                  <Notice tone="warning">{selectedPlugin.compatibility.warnings.join(' ')}</Notice>
-                ) : null}
-                {selectedPlugin.compatibility.blockers.length > 0 ? (
-                  <Notice tone="danger">{selectedPlugin.compatibility.blockers.join(' ')}</Notice>
-                ) : null}
-                {selectedPlugin.lastError ? <Notice tone="danger">{selectedPlugin.lastError}</Notice> : null}
-              </div>
-            ) : (
-              <SupportingText>Select an agent plugin to inspect its capabilities, status, and settings.</SupportingText>
-            )}
-          </RailSubsection>
+              <RailSubsection title={selectedPlugin ? selectedPlugin.displayName : 'Agent plugin details'}>
+                {selectedPlugin ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <SettingToggleRow
+                        title={selectedPlugin.enabled ? 'Plugin is on' : 'Plugin is off'}
+                        description={
+                          selectedPlugin.enabled
+                            ? 'Agents can use the supported skills, instructions, docs, and MCP definitions from this plugin.'
+                            : 'The plugin is installed, but its capabilities are not available to agents.'
+                        }
+                        checked={selectedPlugin.enabled}
+                        onCheckedChange={() => void togglePlugin(selectedPlugin)}
+                      />
+                      <SettingToggleRow
+                        title="Auto update"
+                        description="Download and apply Git updates automatically after validation."
+                        checked={selectedPlugin.autoUpdate}
+                        onCheckedChange={() => void toggleAutoUpdate(selectedPlugin)}
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <ToolbarButton type="button" disabled={operation.busy} onClick={() => void checkUpdates(selectedPlugin)}>
+                        Check for updates
+                      </ToolbarButton>
+                      <ToolbarButton
+                        type="button"
+                        disabled={operation.busy || selectedPlugin.source.kind !== 'git' || !selectedPlugin.availableUpdate}
+                        onClick={() => void updateSelectedPlugin(selectedPlugin)}
+                      >
+                        Update
+                      </ToolbarButton>
+                      <ToolbarButton
+                        type="button"
+                        className="text-danger hover:text-danger"
+                        disabled={operation.busy}
+                        onClick={() => void removeSelectedPlugin(selectedPlugin)}
+                      >
+                        <span aria-hidden="true">-</span>
+                        Remove
+                      </ToolbarButton>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <CapabilityList
+                        title={`Skills (${selectedPlugin.capabilities.skills.length})`}
+                        empty="No skills found."
+                        items={selectedPlugin.capabilities.skills.map((skill) => ({ label: skill.id, detail: skill.path }))}
+                      />
+                      <CapabilityList
+                        title={`Instructions and docs (${selectedPlugin.capabilities.docs.length})`}
+                        empty="No instruction or doc files found."
+                        items={selectedPlugin.capabilities.docs.map((doc) => ({ label: basename(doc.path), detail: doc.path }))}
+                      />
+                      <CapabilityList
+                        title={`MCP servers (${selectedPlugin.capabilities.mcp.length})`}
+                        empty="No MCP server definitions found."
+                        items={selectedPlugin.capabilities.mcp.map((mcp) => ({ label: basename(mcp.path), detail: mcp.path }))}
+                      />
+                      <CapabilityList
+                        title={`Ignored hooks (${selectedPlugin.capabilities.hooks.length})`}
+                        empty="No unsupported hook files found."
+                        items={selectedPlugin.capabilities.hooks.map((hook) => ({ label: hook.kind, detail: hook.path }))}
+                      />
+                    </div>
+
+                    <div className="text-[12px] text-secondary">
+                      <span className="break-all">{pluginSourceLabel(selectedPlugin)}</span>
+                      {selectedPlugin.source.resolvedCommit ? (
+                        <span className="ml-2 font-mono text-[11px] text-muted">@{selectedPlugin.source.resolvedCommit.slice(0, 10)}</span>
+                      ) : null}
+                      {selectedPlugin.availableUpdate ? (
+                        <span className="ml-2 font-mono text-[11px] text-warning">
+                          {' -> '}@{selectedPlugin.availableUpdate.commit.slice(0, 10)}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {selectedPlugin.compatibility.warnings.length > 0 ? (
+                      <Notice tone="warning">{selectedPlugin.compatibility.warnings.join(' ')}</Notice>
+                    ) : null}
+                    {selectedPlugin.compatibility.blockers.length > 0 ? (
+                      <Notice tone="danger">{selectedPlugin.compatibility.blockers.join(' ')}</Notice>
+                    ) : null}
+                    {selectedPlugin.lastError ? <Notice tone="danger">{selectedPlugin.lastError}</Notice> : null}
+                  </div>
+                ) : (
+                  <SupportingText>Select an agent plugin to inspect its capabilities, status, and settings.</SupportingText>
+                )}
+              </RailSubsection>
+            </>
+          )}
         </>
       ) : null}
     </div>
