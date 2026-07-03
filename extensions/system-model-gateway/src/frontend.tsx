@@ -303,7 +303,11 @@ export function ModelGatewaySettingsPanel({
             <WindowedPageSection title="Recent activity" meta={`${status.logs.length} retained`}>
               <div className="grid gap-3">
                 <div className="flex flex-wrap justify-end gap-2">
-                  <WindowedPageButton disabled={busy === 'clearLogs' || status.logs.length === 0} onClick={() => void clearLogs()}>
+                  <WindowedPageButton
+                    tone="danger"
+                    disabled={busy === 'clearLogs' || status.logs.length === 0}
+                    onClick={() => void clearLogs()}
+                  >
                     Clear logs
                   </WindowedPageButton>
                 </div>

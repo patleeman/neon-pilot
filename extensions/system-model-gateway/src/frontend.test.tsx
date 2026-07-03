@@ -116,6 +116,7 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(screen.getByRole('heading', { name: 'Codex client setup' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Copy config' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Clear logs' }).getAttribute('data-tone')).toBe('danger');
     expect(screen.getByText('POST /v1/responses')).toBeTruthy();
     expect(screen.getByText('183ms')).toBeTruthy();
   });
