@@ -1055,6 +1055,7 @@ export function WindowedLayout() {
   }, [visibleWindowSignature]);
 
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, desktopRect(desktopRef.current)) : null;
+  const browserBlockingShellInteraction = Boolean(launcherOpen || drag || resize || snapPreview);
   const startMenuItems = launcherItems.map(
     (item): StartMenuItem => ({
       id: item.id,
@@ -1117,7 +1118,7 @@ export function WindowedLayout() {
     <div
       className="windowed-os-shell h-screen overflow-hidden"
       data-focused-window-id={focusedWindowId ?? undefined}
-      data-window-interaction={drag || resize ? 'true' : undefined}
+      data-window-interaction={browserBlockingShellInteraction ? 'true' : undefined}
     >
       <StartMenu open={launcherOpen} items={startMenuItems} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">

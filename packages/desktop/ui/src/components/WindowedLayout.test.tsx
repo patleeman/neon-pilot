@@ -770,6 +770,16 @@ describe('WindowedLayout route windows', () => {
     });
   });
 
+  it('marks start menu chrome as a browser-blocking shell interaction', () => {
+    const { container } = renderWindowedLayout();
+    const shell = container.querySelector('.windowed-os-shell');
+
+    expect(shell?.hasAttribute('data-window-interaction')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    expect(shell?.getAttribute('data-window-interaction')).toBe('true');
+  });
+
   it('does not auto-create taskbar windows for every known chat session', () => {
     mocks.tabs = [
       { id: 'session-1', title: 'Planning thread', messageCount: 4 },
