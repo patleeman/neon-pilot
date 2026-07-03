@@ -189,6 +189,24 @@ describe('SkillsPage', () => {
     expect(container.querySelector('.ui-empty-state')).toBeNull();
   });
 
+  it('uses windowed fatal-state chrome when skills and marketplace fail', async () => {
+    const pa = createPa({
+      invoke: vi.fn(async () => {
+        throw new Error('Installed skills unavailable');
+      }),
+      callAction: vi.fn(async () => {
+        throw new Error('Marketplace unavailable');
+      }),
+    });
+
+    const { container } = render(<SkillsPage pa={pa as never} context={{ shellPresentation: 'windowed' } as never} />);
+
+    expect(await screen.findByText('Installed skills unavailable Marketplace unavailable')).toBeTruthy();
+    expect(container.querySelector('.wos-state-block[data-tone="danger"]')).toBeTruthy();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+  });
+
   it('renders unified marketplace search results from Skill Search', async () => {
     const pa = createPa();
 

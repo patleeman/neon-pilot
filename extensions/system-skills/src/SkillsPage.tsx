@@ -322,6 +322,20 @@ function windowedNoticeTone(tone: 'success' | 'warning' | 'danger' | 'info'): 'n
   return tone;
 }
 
+function WindowedSkillsFatalState({ message }: { message: React.ReactNode }) {
+  return (
+    <WindowedPageShell layout="standard" className="skills-page-windowed">
+      <WindowedPageMain title="Skills">
+        <WindowedPageSection title="Action needed">
+          <WindowedStateBlock tone="danger" title="Skills unavailable">
+            {message}
+          </WindowedStateBlock>
+        </WindowedPageSection>
+      </WindowedPageMain>
+    </WindowedPageShell>
+  );
+}
+
 function compareText(left: string, right: string): number {
   return left.localeCompare(right, undefined, { sensitivity: 'base' });
 }
@@ -641,7 +655,14 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
     [pa],
   );
 
-  if (skillsError && marketplaceError) return <ErrorState title="Skills unavailable" message={`${skillsError} ${marketplaceError}`} />;
+  if (skillsError && marketplaceError) {
+    const message = `${skillsError} ${marketplaceError}`;
+    return context.shellPresentation === 'windowed' ? (
+      <WindowedSkillsFatalState message={message} />
+    ) : (
+      <ErrorState title="Skills unavailable" message={message} />
+    );
+  }
 
   if (context.shellPresentation === 'windowed') {
     const sourceSummary = `${sources.length} sources`;
