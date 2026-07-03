@@ -10,7 +10,7 @@ import {
   WindowedMenuPanel,
   WindowFrame,
 } from '@neon-pilot/windowed-os-ui';
-import { type CSSProperties, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   createPath,
   type NavigateOptions,
@@ -289,7 +289,7 @@ function suspendWindowedBrowserViews(durationMs = 1500): void {
 }
 
 function useWindowedBrowserSuppression(active: boolean): void {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!active) return;
 
     suspendWindowedBrowserViews();

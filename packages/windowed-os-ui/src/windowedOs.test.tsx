@@ -332,6 +332,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-window__body iframe');
     expect(stylesSource).toContain('body:has(.ui-notification-toaster) .windowed-os-shell .wos-window__body iframe');
     expect(stylesSource).toContain('body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe');
