@@ -316,6 +316,9 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByRole('radio', { name: /Installed/ })).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Platform/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
+    expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(16rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.72fr)',
+    );
     expect(screen.queryByText('Selected extension')).toBeNull();
     expect(screen.queryByText('Selection')).toBeNull();
     expect(container.querySelector('.wos-page-eyebrow')).toBeNull();
@@ -473,6 +476,14 @@ describe('ExtensionManagerPage', () => {
     expect(container.querySelector('.ui-resource-list')).toBeNull();
     expect(within(dialog).getByText('Repositories')).toBeTruthy();
     expect(within(dialog).getByText('Available Only')).toBeTruthy();
+    expect(
+      Array.from(dialog.querySelectorAll<HTMLElement>('.wos-data-table')).map((table) =>
+        table.style.getPropertyValue('--wos-data-column-template'),
+      ),
+    ).toEqual([
+      'minmax(15rem, 1fr) minmax(6.5rem, 0.38fr) minmax(6rem, 0.34fr)',
+      'minmax(16rem, 1fr) minmax(7rem, 0.38fr) minmax(6rem, 0.34fr)',
+    ]);
     expect(within(dialog).getByRole('button', { name: 'Add' })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: 'Install' })).toBeTruthy();
     expect(within(dialog).queryByRole('switch')).toBeNull();

@@ -1821,7 +1821,10 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
               ) : visibleExtensions.length === 0 ? (
                 <WindowedEmptyState>{emptyVisibleExtensionsTitle}</WindowedEmptyState>
               ) : (
-                <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
+                <WindowedDataTable
+                  columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}
+                  columnTemplate="minmax(16rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.72fr)"
+                >
                   {visibleExtensions.map((extension) => {
                     const route = firstRoute(extension);
                     const busy = busyId === extension.id;
@@ -2299,7 +2302,10 @@ function WindowedInstallExtensionDialog({
             </WindowedPageButton>
           </WindowedToolbar>
           {catalogSources.length > 0 ? (
-            <WindowedDataTable columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+            <WindowedDataTable
+              columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}
+              columnTemplate="minmax(15rem, 1fr) minmax(6.5rem, 0.38fr) minmax(6rem, 0.34fr)"
+            >
               {catalogSources.map((source) => (
                 <WindowedDataRow
                   key={source.id}
@@ -2345,7 +2351,10 @@ function WindowedInstallExtensionDialog({
             aria-label="Search available extensions"
           />
           {catalogItems.length ? (
-            <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+            <WindowedDataTable
+              columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}
+              columnTemplate="minmax(16rem, 1fr) minmax(7rem, 0.38fr) minmax(6rem, 0.34fr)"
+            >
               {visibleCatalogItems.map((item) => {
                 const itemBusy = catalogBusyId === item.id;
                 const plannedPackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
