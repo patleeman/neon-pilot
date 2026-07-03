@@ -820,6 +820,11 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                         const busy = installingId === candidate.candidateId;
                         const selected = selectedSkillResourceId === skillResourceId('marketplace', candidate.candidateId);
                         const selectionData: SkillSelectionData = { kind: 'marketplace', candidate, installed, capability, state };
+                        const installLabel = busy
+                          ? `Installing ${candidate.title}`
+                          : installed
+                            ? `${candidate.title} installed`
+                            : `Install ${candidate.title}`;
                         return (
                           <WindowedDataRow
                             key={candidate.candidateId}
@@ -831,11 +836,19 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                                 <WindowedPageButton
                                   disabled={busy || installed}
                                   tone={installed ? 'neutral' : 'accent'}
+                                  aria-label={installLabel}
+                                  title={installLabel}
                                   onClick={() => void installCandidate(candidate)}
                                 >
                                   {busy ? 'Installing' : installed ? 'Installed' : 'Install'}
                                 </WindowedPageButton>
-                                <WindowedPageButton onClick={() => selectSkill(selectionData)}>Details</WindowedPageButton>
+                                <WindowedPageButton
+                                  aria-label={`Details for ${candidate.title}`}
+                                  title={`Details for ${candidate.title}`}
+                                  onClick={() => selectSkill(selectionData)}
+                                >
+                                  Details
+                                </WindowedPageButton>
                               </span>
                             }
                             className={selected ? 'is-selected' : undefined}
@@ -907,7 +920,13 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                                 accent="extensions"
                                 onChange={() => void toggleSkill(skill)}
                               />
-                              <WindowedPageButton onClick={() => selectSkill(selectionData)}>Details</WindowedPageButton>
+                              <WindowedPageButton
+                                aria-label={`Details for ${skill.name}`}
+                                title={`Details for ${skill.name}`}
+                                onClick={() => selectSkill(selectionData)}
+                              >
+                                Details
+                              </WindowedPageButton>
                             </span>
                           }
                           className={selected ? 'is-selected' : undefined}

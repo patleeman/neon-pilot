@@ -148,11 +148,14 @@ describe('SkillsPage', () => {
     expect(screen.getByRole('radiogroup', { name: 'Skills view' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Search marketplace skills' })).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: 'Details' }).length).toBeGreaterThan(1);
+    expect(screen.getByRole('button', { name: 'Install PDF' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for PDF' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for Release QA' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Details' })).toBeNull();
     expect(document.body.textContent).not.toContain('Skill context');
     expect(screen.queryByRole('dialog', { name: 'PDF' })).toBeNull();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Details for PDF' }));
 
     expect(await screen.findByRole('dialog', { name: 'PDF' })).toBeTruthy();
     expect(screen.getByText('Read and verify PDF files.')).toBeTruthy();
@@ -162,6 +165,7 @@ describe('SkillsPage', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Installed/ }));
     expect(await screen.findByText('Build iOS Apps')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Enable Build iOS Apps' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for Build iOS Apps' })).toBeTruthy();
   });
 
   it('uses windowed empty and status primitives for empty desktop skill views', async () => {
