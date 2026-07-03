@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { WindowedPageMain, WindowedPageShell } from './windowedOs';
+import { WindowedEmptyState, WindowedPageMain, WindowedPageShell } from './windowedOs';
 
 describe('WindowedPageShell', () => {
   it('defaults to the canonical single-pane page layout', () => {
@@ -25,6 +25,26 @@ describe('WindowedPageShell', () => {
     );
 
     expect(html).toContain('data-layout="two-column"');
+  });
+});
+
+describe('WindowedEmptyState', () => {
+  it('renders compact empty content with an optional action', () => {
+    const html = renderToStaticMarkup(
+      <WindowedEmptyState action={<button type="button">Create</button>}>No workflow runs yet.</WindowedEmptyState>,
+    );
+
+    expect(html).toContain('class="wos-empty-state"');
+    expect(html).toContain('No workflow runs yet.');
+    expect(html).toContain('wos-empty-state__action');
+    expect(html).toContain('Create');
+  });
+
+  it('supports danger tone for inline recoverable errors', () => {
+    const html = renderToStaticMarkup(<WindowedEmptyState tone="danger">Could not load workflows.</WindowedEmptyState>);
+
+    expect(html).toContain('data-tone="danger"');
+    expect(html).toContain('Could not load workflows.');
   });
 });
 

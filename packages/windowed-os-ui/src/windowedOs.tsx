@@ -366,6 +366,22 @@ export function WindowedStateBlock({ title, children, tone = 'neutral', action, 
   );
 }
 
+export interface WindowedEmptyStateProps {
+  children: ReactNode;
+  tone?: 'neutral' | 'danger';
+  action?: ReactNode;
+  className?: string;
+}
+
+export function WindowedEmptyState({ children, tone = 'neutral', action, className }: WindowedEmptyStateProps) {
+  return (
+    <div className={cx('wos-empty-state', className)} data-tone={tone}>
+      <div className="wos-empty-state__body">{children}</div>
+      {action ? <div className="wos-empty-state__action">{action}</div> : null}
+    </div>
+  );
+}
+
 export interface WindowedToggleProps {
   checked?: boolean;
   accent?: AppAccent;
@@ -730,11 +746,19 @@ export interface TaskbarProps {
   groups?: TaskbarGroup[];
   items: TaskbarItem[];
   defaultOpenGroupId?: string | null;
+  onOpenGroupMenu?: () => void;
 }
 
 const EMPTY_TASKBAR_GROUPS: TaskbarGroup[] = [];
 
-export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUPS, items, defaultOpenGroupId = null }: TaskbarProps) {
+export function Taskbar({
+  startOpen,
+  onToggleStart,
+  groups = EMPTY_TASKBAR_GROUPS,
+  items,
+  defaultOpenGroupId = null,
+  onOpenGroupMenu,
+}: TaskbarProps) {
   const groupRefs = useRef(new Map<string, HTMLDivElement>());
   const [openGroupId, setOpenGroupId] = useState<string | null>(defaultOpenGroupId);
   const [menuAnchors, setMenuAnchors] = useState<Record<string, { left: number; bottom: number }>>({});
@@ -821,7 +845,13 @@ export function Taskbar({ startOpen, onToggleStart, groups = EMPTY_TASKBAR_GROUP
                     group.onSelect();
                     return;
                   }
-                  setOpenGroupId((current) => (current === group.id ? null : group.id));
+                  setOpenGroupId((current) => {
+                    const next = current === group.id ? null : group.id;
+                    if (next) {
+                      onOpenGroupMenu?.();
+                    }
+                    return next;
+                  });
                 }}
               >
                 <WindowedAppTile label={group.title} accent={group.accent} count={group.count} variant="taskbar" />

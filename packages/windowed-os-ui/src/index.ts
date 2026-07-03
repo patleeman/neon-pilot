@@ -27,6 +27,8 @@ export {
   type WindowedDataTableProps,
   WindowedDialog,
   type WindowedDialogProps,
+  WindowedEmptyState,
+  type WindowedEmptyStateProps,
   WindowedField,
   type WindowedFieldProps,
   WindowedKeyValueGrid,

@@ -1132,6 +1132,7 @@ export function WindowedLayout() {
           suspendWindowedBrowserViews();
           setLauncherOpen((open) => !open);
         }}
+        onOpenGroupMenu={() => suspendWindowedBrowserViews()}
         groups={chatTaskGroups}
         items={taskbarItems}
       />

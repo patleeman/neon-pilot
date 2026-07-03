@@ -732,11 +732,20 @@ describe('WindowedLayout route windows', () => {
     const chatGroupButton = within(taskbar).getByRole('button', { name: /chat 2/i });
     expect(chatGroupButton.getAttribute('data-focused')).toBe('true');
 
-    fireEvent.click(chatGroupButton);
+    const suspendListener = vi.fn();
+    window.addEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, suspendListener);
+    try {
+      fireEvent.click(chatGroupButton);
 
-    const chatMenu = screen.getByRole('menu', { name: /open chat windows/i });
-    expect(within(chatMenu).getByRole('menuitem', { name: /planning thread/i })).toBeTruthy();
-    expect(within(chatMenu).getByRole('menuitem', { name: /new conversation/i })).toBeTruthy();
+      const chatMenu = screen.getByRole('menu', { name: /open chat windows/i });
+      expect(within(chatMenu).getByRole('menuitem', { name: /planning thread/i })).toBeTruthy();
+      expect(within(chatMenu).getByRole('menuitem', { name: /new conversation/i })).toBeTruthy();
+      expect(suspendListener).toHaveBeenCalled();
+      const event = suspendListener.mock.calls.at(-1)?.[0] as CustomEvent<{ durationMs?: number }> | undefined;
+      expect(event?.detail?.durationMs).toBeGreaterThanOrEqual(1500);
+    } finally {
+      window.removeEventListener(WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, suspendListener);
+    }
   });
 
   it('keeps embedded chat navigation scoped to the window route', async () => {

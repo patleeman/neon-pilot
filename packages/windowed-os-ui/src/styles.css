@@ -489,9 +489,18 @@
 }
 
 .wos-window__body {
+  position: relative;
   min-height: 0;
   overflow: hidden;
   background: var(--wos-surface-1);
+}
+
+.wos-window__body iframe {
+  position: relative;
+  z-index: 0;
+  display: block;
+  max-width: 100%;
+  isolation: isolate;
 }
 
 .wos-dialog-layer {
@@ -1458,6 +1467,29 @@
 
 .wos-windowed-error {
   color: var(--wos-telemetry);
+}
+
+.wos-empty-state {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wos-space-4);
+  padding: var(--wos-space-4);
+  color: var(--wos-ink-500);
+  font: var(--wos-text-body);
+}
+
+.wos-empty-state[data-tone='danger'] {
+  color: var(--wos-telemetry);
+}
+
+.wos-empty-state__body {
+  min-width: 0;
+}
+
+.wos-empty-state__action {
+  flex: 0 0 auto;
 }
 
 .wos-workflows-tool-grid,
