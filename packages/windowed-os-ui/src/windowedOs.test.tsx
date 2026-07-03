@@ -12,6 +12,8 @@ import {
   WindowedDialogCopy,
   WindowedDialogStack,
   WindowedEmptyState,
+  WindowedFormActions,
+  WindowedFormGrid,
   WindowedListItem,
   WindowedPageButton,
   WindowedPageMain,
@@ -134,6 +136,30 @@ describe('WindowedToolbar', () => {
 
     expect(html).toContain('<form');
     expect(html).toContain('class="wos-toolbar"');
+  });
+});
+
+describe('WindowedFormGrid', () => {
+  it('renders canonical windowed form grid and action regions', () => {
+    const html = renderToStaticMarkup(
+      <form>
+        <WindowedFormGrid columns={3}>
+          <label>Name</label>
+          <label>Source</label>
+          <label>Status</label>
+        </WindowedFormGrid>
+        <WindowedFormActions>
+          <WindowedPageButton>Cancel</WindowedPageButton>
+          <WindowedPageButton tone="accent" type="submit">
+            Save
+          </WindowedPageButton>
+        </WindowedFormActions>
+      </form>,
+    );
+
+    expect(html).toContain('class="wos-form-grid" data-columns="3"');
+    expect(html).toContain('class="wos-form-actions"');
+    expect(html).toContain('Save');
   });
 });
 
@@ -335,7 +361,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-window[data-focused='false'] > .wos-window__iframe-shield");
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window > .wos-window__iframe-shield");
+    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window > .wos-window__iframe-shield");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window > .wos-window__iframe-shield");
     expect(stylesSource).toContain(
       ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe",
     );
@@ -346,8 +373,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
-    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) iframe');
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-badge) iframe');
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-popover) iframe');
@@ -369,7 +398,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-window__body iframe');
     expect(stylesSource).toContain('body:has(.ui-notification-toaster) .windowed-os-shell .wos-window__body iframe');
     expect(stylesSource).toContain('body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar) .wos-window__body iframe');
+    expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-taskbar) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe');
@@ -465,6 +494,15 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('<WindowedToolbar>');
     expect(source).toContain('aria-label="Search available extensions"');
+  });
+
+  it('documents shared form grid primitives for windowed forms', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('<WindowedFormGrid');
+    expect(source).toContain('<WindowedFormActions>');
+    expect(source).not.toContain('className="wos-form-grid"');
   });
 
   it('keeps WindowedPageMain title-only without an eyebrow API', () => {

@@ -119,6 +119,12 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
       {children}
     </label>
   ),
+  WindowedFormActions: ({ children }: { children: React.ReactNode }) => <div className="wos-form-actions">{children}</div>,
+  WindowedFormGrid: ({ children, columns, className }: { children: React.ReactNode; columns?: number; className?: string }) => (
+    <div className={['wos-form-grid', className].filter(Boolean).join(' ')} data-columns={columns}>
+      {children}
+    </div>
+  ),
   WindowedKeyValueGrid: ({ items }: { items: Array<{ label: string; value: React.ReactNode }> }) => (
     <div className="wos-key-value-grid">
       {items.map((item) => (
@@ -282,6 +288,8 @@ describe('AgentPluginsSettingsPanel', () => {
     expect(screen.getByRole('heading', { name: 'Agent Plugins' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Install agent plugin' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Installed agent plugins' })).toBeTruthy();
+    expect(container.querySelector('.wos-form-grid[data-columns="2"]')).toBeTruthy();
+    expect(container.querySelector('.wos-form-actions')).toBeTruthy();
     expect(document.querySelector('.wos-data-table')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open details for Review Pack' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Plugin is on' })).toBeNull();
@@ -291,6 +299,7 @@ describe('AgentPluginsSettingsPanel', () => {
     expect(screen.getByRole('dialog', { name: 'Review Pack' })).toBeTruthy();
     expect(screen.getByText('Plugin is on')).toBeTruthy();
     expect(screen.getByText('Auto update')).toBeTruthy();
+    expect(container.querySelector('.wos-agent-plugin-capabilities')).toBeTruthy();
     expect(screen.getByText('Skills (1)')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove' }).getAttribute('data-tone')).toBe('danger');
   });

@@ -832,6 +832,7 @@ export function WorkbenchBrowserTab({
         'class',
         'data-focused',
         'data-focused-window-id',
+        'data-frame-paint-blocked',
         'data-iframe-blocked',
         'data-native-browser-blocked',
         'data-window-interaction',

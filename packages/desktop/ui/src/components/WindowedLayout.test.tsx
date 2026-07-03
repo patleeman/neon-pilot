@@ -154,6 +154,7 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     await waitFor(() => {
+      expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-a', deactivate: true });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: '@global:tab-tab-b', deactivate: true });
@@ -181,11 +182,13 @@ describe('WindowedLayout route windows', () => {
     await screen.findByRole('region', { name: /new conversation/i });
 
     await act(async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 700));
+      await new Promise((resolve) => window.setTimeout(resolve, 1300));
     });
 
     expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
-    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBe('true');
+    expect(shell?.getAttribute('data-frame-paint-blocked')).toBeNull();
+    expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBeNull();
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, deactivate: true });
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({ visible: false, sessionKey: null, deactivate: true });
   });
 

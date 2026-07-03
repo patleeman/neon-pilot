@@ -247,6 +247,31 @@ export function WindowedToolbar({ children, end, as = 'div', className, formProp
   );
 }
 
+export interface WindowedFormGridProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  columns?: 1 | 2 | 3;
+}
+
+export function WindowedFormGrid({ children, columns = 2, className, ...props }: WindowedFormGridProps) {
+  return (
+    <div className={cx('wos-form-grid', className)} data-columns={columns} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export interface WindowedFormActionsProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+}
+
+export function WindowedFormActions({ children, className, ...props }: WindowedFormActionsProps) {
+  return (
+    <div className={cx('wos-form-actions', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export interface WindowedPageButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
   children: ReactNode;
   tone?: 'neutral' | 'accent' | 'danger';

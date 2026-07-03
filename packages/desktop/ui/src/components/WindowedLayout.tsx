@@ -303,6 +303,7 @@ function suspendWindowedBrowserViews(durationMs = 1500): void {
     // The renderer-side browser component still receives the suspend event above.
   }
 
+  void bridge.setWorkbenchBrowserBounds({ visible: false, deactivate: true }).catch(() => undefined);
   for (const sessionKey of sessionKeys) {
     void bridge.setWorkbenchBrowserBounds({ visible: false, sessionKey, deactivate: true }).catch(() => undefined);
   }
@@ -1212,6 +1213,7 @@ export function WindowedLayout() {
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );
+  const rendererFramePaintBlocked = browserBlockingShellInteraction;
   const startMenuItems = launcherItems.map(
     (item): StartMenuItem => ({
       id: item.id,
@@ -1276,6 +1278,7 @@ export function WindowedLayout() {
       data-focused-window-id={focusedWindowId ?? undefined}
       data-window-interaction={browserBlockingShellInteraction ? 'true' : undefined}
       data-native-browser-blocked={nativeBrowserBlocked ? 'true' : undefined}
+      data-frame-paint-blocked={rendererFramePaintBlocked ? 'true' : undefined}
     >
       <StartMenu open={launcherOpen} items={startMenuItems} onClose={() => setLauncherOpen(false)} />
       <main ref={desktopRef} className="wos-desktop" aria-label="Windowed Neon Pilot desktop">
@@ -1288,7 +1291,7 @@ export function WindowedLayout() {
             accent={accentForWindow(windowModel)}
             focused={windowModel.focused}
             style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
-            iframeBlocked={nativeBrowserBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows)}
+            iframeBlocked={rendererFramePaintBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows)}
             onPointerDown={() => focusWindow(windowModel.id)}
             onMinimize={() => minimizeWindow(windowModel.id)}
             onMaximize={() => toggleMaximize(windowModel)}

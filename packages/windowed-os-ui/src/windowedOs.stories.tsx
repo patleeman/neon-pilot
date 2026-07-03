@@ -16,6 +16,8 @@ import {
   WindowedDialogStack,
   WindowedEmptyState,
   WindowedField,
+  WindowedFormActions,
+  WindowedFormGrid,
   WindowedKeyValueGrid,
   WindowedKeyValueList,
   WindowedList,
@@ -531,7 +533,7 @@ export const CanonicalDensity: Story = {
               </WindowedList>
             </WindowedPageSection>
             <WindowedPageSection title="Canonical controls" meta="8px grid">
-              <div className="wos-form-grid" data-columns="3">
+              <WindowedFormGrid columns={3}>
                 <WindowedField label="Name">
                   <WindowedTextInput defaultValue="Telegram gateway" aria-label="Name" />
                 </WindowedField>
@@ -558,11 +560,11 @@ export const CanonicalDensity: Story = {
                     defaultValue="Keep labels crisp, controls compact, and metadata legible without adding stable-shell page padding."
                   />
                 </WindowedField>
-              </div>
-              <div className="wos-form-actions">
+              </WindowedFormGrid>
+              <WindowedFormActions>
                 <WindowedPageButton>Cancel</WindowedPageButton>
                 <WindowedPageButton tone="accent">Save</WindowedPageButton>
-              </div>
+              </WindowedFormActions>
             </WindowedPageSection>
 
             <WindowedPageSection title="Scale">
@@ -630,7 +632,7 @@ export const AutomationFormPrimitives: Story = {
               </WindowedDataTable>
             </WindowedPageSection>
             <WindowedPageSection title="Schedule" meta="Enabled">
-              <div className="wos-form-grid" data-columns="2">
+              <WindowedFormGrid columns={2}>
                 <WindowedField label="Mode">
                   <WindowedSegmentedControl
                     accent="automations"
@@ -662,11 +664,11 @@ export const AutomationFormPrimitives: Story = {
                     aria-label="Automation instruction"
                   />
                 </WindowedField>
-              </div>
-              <div className="wos-form-actions">
+              </WindowedFormGrid>
+              <WindowedFormActions>
                 <WindowedPageButton>Reset</WindowedPageButton>
                 <WindowedPageButton tone="accent">Apply changes</WindowedPageButton>
-              </div>
+              </WindowedFormActions>
             </WindowedPageSection>
             <WindowedPageSection title="State">
               <WindowedKeyValueList
@@ -1027,7 +1029,7 @@ export const RoutinesPage: Story = {
           }
         >
           <div className="wos-routine-editor-bridge">
-            <div className="wos-form-grid" data-columns="2">
+            <WindowedFormGrid columns={2}>
               <WindowedField label="Type">
                 <WindowedSelect defaultValue="instruction" aria-label="Routine type">
                   <option value="instruction">Run prompt</option>
@@ -1044,7 +1046,7 @@ export const RoutinesPage: Story = {
                   defaultValue="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
                 />
               </WindowedField>
-            </div>
+            </WindowedFormGrid>
           </div>
         </WindowedDialog>
         <WindowedDialog title="Routine runs" meta="12 total" accent="routines" onClose={() => undefined}>
@@ -1731,7 +1733,7 @@ export const SkillsPage: Story = {
             </WindowedPageSection>
 
             <WindowedPageSection>
-              <div className="wos-form-grid" data-columns="3">
+              <WindowedFormGrid columns={3}>
                 <WindowedField label="Capability">
                   <WindowedSelect aria-label="Filter by capability" defaultValue="all">
                     <option value="all">All</option>
@@ -1756,7 +1758,7 @@ export const SkillsPage: Story = {
                     <option value="installed">Installed</option>
                   </WindowedSelect>
                 </WindowedField>
-              </div>
+              </WindowedFormGrid>
             </WindowedPageSection>
 
             <WindowedPageSection title="Marketplace" meta="27 skills">
@@ -1906,18 +1908,18 @@ export const EmbeddedExtensionPage: Story = {
             </WindowedPageSection>
 
             <WindowedPageSection title="Bot token">
-              <div className="wos-form-grid" data-columns="2">
+              <WindowedFormGrid columns={2}>
                 <WindowedField label="Token">
                   <WindowedTextInput aria-label="Telegram bot token" placeholder="Token is already saved" />
                 </WindowedField>
                 <WindowedField label="Gateway">
                   <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />
                 </WindowedField>
-              </div>
-              <div className="wos-form-actions">
+              </WindowedFormGrid>
+              <WindowedFormActions>
                 <WindowedPageButton>Remove token</WindowedPageButton>
                 <WindowedPageButton tone="accent">Save token</WindowedPageButton>
-              </div>
+              </WindowedFormActions>
             </WindowedPageSection>
 
             <WindowedPageSection title="Telegram access" meta="Allowlist">

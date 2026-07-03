@@ -18,6 +18,8 @@ import {
   WindowedDialogCopy,
   WindowedDialogStack,
   WindowedField,
+  WindowedFormActions,
+  WindowedFormGrid,
   WindowedKeyValueGrid,
   WindowedPageButton,
   WindowedPageMain,
@@ -267,29 +269,31 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
             <WindowedPageShell layout="standard" className="agent-plugins-page-windowed">
               <WindowedPageMain title="Agent Plugins">
                 <WindowedPageSection title="Install agent plugin" meta="Codex or Claude Code marketplace package">
-                  <form className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto]" onSubmit={handleAddPlugin}>
-                    <WindowedField label="Source">
-                      <WindowedSelect
-                        value={draft.sourceKind}
-                        onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
+                  <form onSubmit={handleAddPlugin}>
+                    <WindowedFormGrid columns={2}>
+                      <WindowedField label="Source">
+                        <WindowedSelect
+                          value={draft.sourceKind}
+                          onChange={(event) => setDraft({ ...draft, sourceKind: event.target.value as SourceKind })}
+                        >
+                          <option value="git">Git URL</option>
+                          <option value="local">Local folder</option>
+                        </WindowedSelect>
+                      </WindowedField>
+                      <WindowedField
+                        label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}
+                        hint="Plugin skills, docs, and MCP definitions are enabled after install."
                       >
-                        <option value="git">Git URL</option>
-                        <option value="local">Local folder</option>
-                      </WindowedSelect>
-                    </WindowedField>
-                    <WindowedField
-                      label={draft.sourceKind === 'git' ? 'URL' : 'Folder'}
-                      hint="Plugin skills, docs, and MCP definitions are enabled after install."
-                    >
-                      <WindowedTextInput
-                        value={draft.source}
-                        onChange={(event) => setDraft({ ...draft, source: event.target.value })}
-                        placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                    </WindowedField>
-                    <div className="flex items-end gap-2">
+                        <WindowedTextInput
+                          value={draft.source}
+                          onChange={(event) => setDraft({ ...draft, source: event.target.value })}
+                          placeholder={draft.sourceKind === 'git' ? 'https://github.com/owner/agent-plugin' : '/path/to/plugin'}
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </WindowedField>
+                    </WindowedFormGrid>
+                    <WindowedFormActions>
                       {draft.sourceKind === 'local' ? (
                         <WindowedPageButton type="button" disabled={operation.busy} onClick={() => void chooseLocalDirectory()}>
                           Pick folder
@@ -298,7 +302,7 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
                       <WindowedPageButton type="submit" tone="accent" disabled={operation.busy || !draft.source.trim()}>
                         {operation.busy ? 'Installing...' : 'Install'}
                       </WindowedPageButton>
-                    </div>
+                    </WindowedFormActions>
                   </form>
                 </WindowedPageSection>
 
@@ -409,7 +413,7 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
                           { label: 'Commit', value: selectedPlugin.source.resolvedCommit?.slice(0, 10) ?? 'Not pinned' },
                         ]}
                       />
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <WindowedFormGrid columns={2} className="wos-agent-plugin-capabilities">
                         <CapabilityList
                           title={`Skills (${selectedPlugin.capabilities.skills.length})`}
                           empty="No skills found."
@@ -430,7 +434,7 @@ export function AgentPluginsSettingsPanel({ settingsContext }: { settingsContext
                           empty="No unsupported hook files found."
                           items={selectedPlugin.capabilities.hooks.map((hook) => ({ label: hook.kind, detail: hook.path }))}
                         />
-                      </div>
+                      </WindowedFormGrid>
                       {selectedPlugin.compatibility.warnings.length > 0 ? (
                         <WindowedDialogCopy>{selectedPlugin.compatibility.warnings.join(' ')}</WindowedDialogCopy>
                       ) : null}
