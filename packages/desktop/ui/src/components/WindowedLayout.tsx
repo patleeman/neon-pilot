@@ -816,11 +816,10 @@ export function WindowedLayout() {
       const detail = (event as CustomEvent<{ route?: unknown; to?: unknown }>).detail;
       const route = typeof detail?.route === 'string' ? detail.route : typeof detail?.to === 'string' ? detail.to : '';
       if (!route) return;
-      if (openChatWindow(route) || openRouteWindow(route)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        event.stopPropagation();
-      }
+      openChatWindow(route) || openRouteWindow(route);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
     };
     window.addEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate, true);
     return () => window.removeEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate, true);

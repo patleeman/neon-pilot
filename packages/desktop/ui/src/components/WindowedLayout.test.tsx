@@ -935,6 +935,28 @@ describe('WindowedLayout route windows', () => {
     window.removeEventListener('neon-pilot-desktop-navigate', laterBubbleListener);
   });
 
+  it('consumes unknown desktop navigation events before the embedded stable layout can move the outer route', () => {
+    window.history.replaceState(null, '', '/settings/providers');
+    const laterBubbleListener = vi.fn();
+
+    renderWindowedLayout();
+    window.addEventListener('neon-pilot-desktop-navigate', laterBubbleListener);
+
+    const event = new CustomEvent('neon-pilot-desktop-navigate', {
+      cancelable: true,
+      detail: { route: '/unknown-windowed-route' },
+    });
+
+    fireEvent(window, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(window.location.pathname).toBe('/settings/providers');
+    expect(laterBubbleListener).not.toHaveBeenCalled();
+    expect(screen.queryByText('/unknown-windowed-route:windowed')).toBeNull();
+
+    window.removeEventListener('neon-pilot-desktop-navigate', laterBubbleListener);
+  });
+
   it('marks draft chat navigation events as handled', () => {
     renderWindowedLayout();
 
