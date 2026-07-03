@@ -238,6 +238,8 @@ describe('McpSettingsPanel', () => {
 
     render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
 
+    expect(document.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(screen.getByRole('heading', { name: 'MCP Servers' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Explicit config' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Explicit servers' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Skill-bundled servers' })).toBeTruthy();
@@ -249,5 +251,23 @@ describe('McpSettingsPanel', () => {
     expect(screen.getByRole('dialog', { name: 'Server details: github' })).toBeTruthy();
     expect(screen.getByDisplayValue('npx')).toBeTruthy();
     expect(screen.getByDisplayValue('@mcp/github')).toBeTruthy();
+    const actionRemoveButton = document.querySelector('.wos-dialog__actions button[data-tone="danger"]');
+    expect(actionRemoveButton?.textContent).toBe('Remove');
+  });
+
+  it('keeps loading and error states inside the canonical windowed shell', () => {
+    mocks.useApi.mockReturnValueOnce({ data: null, loading: true, error: null, refetch: vi.fn() });
+
+    const { container, rerender } = render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(screen.getByText('Loading MCP servers.').closest('.wos-state-block')).toBeTruthy();
+
+    mocks.useApi.mockReturnValueOnce({ data: null, loading: false, error: 'load failed', refetch: vi.fn() });
+    rerender(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+    expect(screen.getByText('MCP servers unavailable')).toBeTruthy();
+    expect(screen.getByText('load failed').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
   });
 });
