@@ -419,6 +419,11 @@ describe('Windowed OS tokens', () => {
       expect(tokensSource).toContain(token);
     }
 
+    expect(tokensSource).toContain(".windowed-os-shell[data-wos-theme='light']");
+    expect(tokensSource).toContain(".windowed-os-shell[data-wos-theme='dark']");
+    expect(tokensSource).toContain('color-scheme: dark;');
+    expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
+    expect(tokensSource).toContain('--wos-shadow-window: 0 26px 56px rgba(0, 0, 0, 0.42);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-2xl);');
     expect(stylesSource).toContain('width: var(--wos-window-control-size);');
     expect(stylesSource).toContain('background: var(--wos-danger-hover);');
@@ -442,6 +447,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource.startsWith("@import './tokens.css';")).toBe(true);
     expect(tokensSource).toContain('.windowed-os-shell');
     expect(tokensSource).toContain('--wos-surface-0: oklch(95% 0.022 75);');
+    expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-extensions: oklch(70% 0.15 60);');
     expect(tokensSource).toContain('--wos-workflows:');
     expect(tokensSource).toContain('--wos-model-arena:');
@@ -449,6 +455,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-diagnostics:');
     expect(tokensSource).toContain('--wos-titlebar-h: 42px;');
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
+  });
+
+  it('documents light and dark token variants in isolated Storybook examples', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const ThemeVariants');
+    expect(source).toContain('data-wos-theme={theme}');
+    expect(source).toContain("(['light', 'dark'] as const)");
+    expect(source).toContain('Theme tokens');
   });
 
   it('styles canonical app-specific accents across shared windowed primitives', () => {

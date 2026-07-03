@@ -1,4 +1,5 @@
 .windowed-os-shell {
+  color-scheme: light;
   --wos-ink-900: oklch(20% 0.01 60);
   --wos-ink-700: oklch(35% 0.02 60);
   --wos-ink-600: oklch(40% 0.02 60);
@@ -63,4 +64,41 @@
   --wos-page-rail-width: 150px;
   --wos-duration-fast: 100ms;
   --wos-easing-standard: ease-out;
+}
+
+.windowed-os-shell[data-wos-theme='light'] {
+  color-scheme: light;
+}
+
+.windowed-os-shell[data-wos-theme='dark'] {
+  color-scheme: dark;
+  --wos-ink-900: oklch(93% 0.012 75);
+  --wos-ink-700: oklch(83% 0.018 75);
+  --wos-ink-600: oklch(76% 0.02 75);
+  --wos-ink-500: oklch(68% 0.022 75);
+  --wos-ink-400: oklch(58% 0.024 75);
+  --wos-ink-300: oklch(47% 0.026 75);
+  --wos-surface-0: oklch(18% 0.025 260);
+  --wos-surface-1: oklch(23% 0.022 260);
+  --wos-surface-2: oklch(27% 0.025 260);
+  --wos-surface-3: oklch(34% 0.028 260);
+  --wos-surface-disabled: oklch(30% 0.018 260);
+  --wos-chat: oklch(68% 0.15 250);
+  --wos-routines: oklch(66% 0.14 150);
+  --wos-workflows: oklch(68% 0.13 175);
+  --wos-automations: oklch(68% 0.14 300);
+  --wos-gateways: oklch(70% 0.14 200);
+  --wos-model-arena: oklch(70% 0.15 285);
+  --wos-extensions: oklch(76% 0.15 70);
+  --wos-skills: oklch(80% 0.14 85);
+  --wos-telemetry: oklch(72% 0.16 35);
+  --wos-diagnostics: oklch(70% 0.16 35);
+  --wos-settings: oklch(38% 0.025 260);
+  --wos-success: oklch(70% 0.14 150);
+  --wos-warning: oklch(80% 0.15 78);
+  --wos-danger: oklch(70% 0.17 25);
+  --wos-danger-hover: oklch(70% 0.17 25 / 0.28);
+  --wos-shadow-window: 0 26px 56px rgba(0, 0, 0, 0.42);
+  --wos-shadow-desktop: 0 40px 90px rgba(0, 0, 0, 0.5);
+  --wos-shadow-menu: 0 24px 54px rgba(0, 0, 0, 0.46);
 }

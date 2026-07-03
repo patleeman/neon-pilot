@@ -13,6 +13,12 @@ CSS entry points:
 - `@neon-pilot/windowed-os-ui/tokens.css` contains the scoped `.windowed-os-shell` design tokens extracted from the canonical design package.
 - `@neon-pilot/windowed-os-ui/styles.css` imports the tokens and adds the full shell/component/page styling used by Storybook and the desktop app.
 
+Theme modes:
+
+- Light mode is the default. It can be made explicit with `data-wos-theme="light"` on `.windowed-os-shell`.
+- Dark mode is opt-in with `data-wos-theme="dark"` on `.windowed-os-shell`.
+- Theme tokens stay inside this package; do not couple windowed OS colors to the stable Neon Pilot theme variables.
+
 Principles:
 
 - Warm parchment surfaces, near-black ink borders, and one accent hue per app.
