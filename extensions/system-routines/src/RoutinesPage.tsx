@@ -25,6 +25,7 @@ import {
   ToolbarButton,
   WindowedBadge,
   WindowedDialog,
+  WindowedDialogStack,
   WindowedEmptyState,
   WindowedKeyValueList,
   WindowedList,
@@ -1334,9 +1335,136 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
     );
   }
 
-  const renderEditor = (routine: Routine) => {
+  const renderEditor = (routine: Routine, options?: { windowed?: boolean }) => {
     if (!draft || draft.id !== routine.id) return null;
     const draftHook = data?.hooks.find((hook) => hook.id === draft.hookId) ?? selectedHook;
+    const primaryFields = (
+      <>
+        <label className="grid gap-1">
+          <span className="text-[11px] uppercase tracking-wider text-secondary">Event</span>
+          <Select
+            name="routine-hook"
+            className="w-full"
+            value={draft.hookId}
+            onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setDraft({ ...draft, hookId: event.target.value })}
+          >
+            {groupedHooks(data?.hooks ?? []).map(([group, hooks]) => (
+              <optgroup key={group} label={group}>
+                {hooks.map((hook) => (
+                  <option key={hook.id} value={hook.id}>
+                    {hook.title}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </Select>
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1">
+            <span className="text-[11px] uppercase tracking-wider text-secondary">Routine type</span>
+            <Select
+              name="routine-type"
+              className="w-full"
+              value={draft.type}
+              onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                setDraft({
+                  ...draft,
+                  type: event.target.value as RoutineType,
+                  outcomes: event.target.value === 'decision' && draft.outcomes.length === 0 ? DEFAULT_OUTCOMES : draft.outcomes,
+                })
+              }
+            >
+              <option value="instruction">Run prompt</option>
+              <option value="decision">Choose path</option>
+              <option value="stop">Stop event</option>
+            </Select>
+          </label>
+          <label className="grid gap-1">
+            <span className="text-[11px] uppercase tracking-wider text-secondary">Position</span>
+            <Select
+              name="routine-position"
+              className="w-full"
+              value={draft.position}
+              onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                setDraft({ ...draft, position: event.target.value as RoutinePosition })
+              }
+            >
+              <option value="before">Before</option>
+              <option value="after">After</option>
+            </Select>
+          </label>
+        </div>
+        {draft.type === 'stop' ? (
+          <div className="ui-callout-warning">
+            Stop event never calls a model. It always blocks this event and uses the instruction below as the explanation.
+          </div>
+        ) : null}
+        <label className="grid gap-1">
+          <span className="text-[11px] uppercase tracking-wider text-secondary">Name</span>
+          <TextInput
+            className="w-full"
+            value={draft.name}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, name: event.target.value })}
+          />
+        </label>
+        {draft.type === 'instruction' ? (
+          <label className="grid gap-1">
+            <span className="text-[11px] uppercase tracking-wider text-secondary">Pass / fail behavior</span>
+            <Select
+              name="routine-failure-behavior"
+              className="w-full"
+              value={draft.failureBehavior}
+              onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
+                setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })
+              }
+            >
+              <option value="continue">Continue if this routine fails</option>
+              <option value="warn">Warn and continue if this routine fails</option>
+              <option value="block">Stop this event if the routine fails</option>
+            </Select>
+            <span className="text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</span>
+          </label>
+        ) : null}
+        <label className="grid gap-1">
+          <span className="text-[11px] uppercase tracking-wider text-secondary">Instruction</span>
+          <div className="relative">
+            <Textarea
+              className="min-h-32 w-full resize-y text-[13px]"
+              value={draft.instruction}
+              onFocus={(event) => onInstructionChange(event.currentTarget.value)}
+              onBlur={() => window.setTimeout(() => setSkillQuery(null), 100)}
+              onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                if (event.key === 'Escape') setSkillQuery(null);
+              }}
+              onKeyUp={(event) => onInstructionChange(event.currentTarget.value)}
+              onInput={(event) => onInstructionChange(event.currentTarget.value)}
+              onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
+            />
+            {skillMatches.length ? (
+              <MenuShell role="listbox" data-routines-skill-menu="true" className="static mt-1 w-full">
+                {skillMatches.map((skill) => (
+                  <MenuItem
+                    key={skill.id}
+                    type="button"
+                    role="option"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => applySkill(skill)}
+                  >
+                    <span className="min-w-0">
+                      <b>/skill:{skill.id}</b>
+                      <span className="block truncate text-[11px] text-secondary">{skill.description ?? skill.name}</span>
+                    </span>
+                  </MenuItem>
+                ))}
+              </MenuShell>
+            ) : null}
+          </div>
+          <span className="text-[12px] text-secondary">
+            Type <span className="text-accent">/skill:</span> to reference a skill.
+          </span>
+        </label>
+      </>
+    );
     return (
       <div className="border-t border-border-subtle bg-app/35 px-4 py-4" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4">
@@ -1347,131 +1475,11 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
         </div>
         {actionError ? <div className="ui-callout-danger mb-4">{actionError}</div> : null}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-          <div className="grid gap-3">
-            <label className="grid gap-1">
-              <span className="text-[11px] uppercase tracking-wider text-secondary">Event</span>
-              <Select
-                name="routine-hook"
-                className="w-full"
-                value={draft.hookId}
-                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setDraft({ ...draft, hookId: event.target.value })}
-              >
-                {groupedHooks(data?.hooks ?? []).map(([group, hooks]) => (
-                  <optgroup key={group} label={group}>
-                    {hooks.map((hook) => (
-                      <option key={hook.id} value={hook.id}>
-                        {hook.title}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1">
-                <span className="text-[11px] uppercase tracking-wider text-secondary">Routine type</span>
-                <Select
-                  name="routine-type"
-                  className="w-full"
-                  value={draft.type}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                    setDraft({
-                      ...draft,
-                      type: event.target.value as RoutineType,
-                      outcomes: event.target.value === 'decision' && draft.outcomes.length === 0 ? DEFAULT_OUTCOMES : draft.outcomes,
-                    })
-                  }
-                >
-                  <option value="instruction">Run prompt</option>
-                  <option value="decision">Choose path</option>
-                  <option value="stop">Stop event</option>
-                </Select>
-              </label>
-              <label className="grid gap-1">
-                <span className="text-[11px] uppercase tracking-wider text-secondary">Position</span>
-                <Select
-                  name="routine-position"
-                  className="w-full"
-                  value={draft.position}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                    setDraft({ ...draft, position: event.target.value as RoutinePosition })
-                  }
-                >
-                  <option value="before">Before</option>
-                  <option value="after">After</option>
-                </Select>
-              </label>
-            </div>
-            {draft.type === 'stop' ? (
-              <div className="ui-callout-warning">
-                Stop event never calls a model. It always blocks this event and uses the instruction below as the explanation.
-              </div>
-            ) : null}
-            <label className="grid gap-1">
-              <span className="text-[11px] uppercase tracking-wider text-secondary">Name</span>
-              <TextInput
-                className="w-full"
-                value={draft.name}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, name: event.target.value })}
-              />
-            </label>
-            {draft.type === 'instruction' ? (
-              <label className="grid gap-1">
-                <span className="text-[11px] uppercase tracking-wider text-secondary">Pass / fail behavior</span>
-                <Select
-                  name="routine-failure-behavior"
-                  className="w-full"
-                  value={draft.failureBehavior}
-                  onChange={(event: React.ChangeEvent<HTMLSelectElement>) =>
-                    setDraft({ ...draft, failureBehavior: event.target.value as Routine['failureBehavior'] })
-                  }
-                >
-                  <option value="continue">Continue if this routine fails</option>
-                  <option value="warn">Warn and continue if this routine fails</option>
-                  <option value="block">Stop this event if the routine fails</option>
-                </Select>
-                <span className="text-[12px] text-secondary">{failureBehaviorDescription(draft.failureBehavior)}</span>
-              </label>
-            ) : null}
-            <label className="grid gap-1">
-              <span className="text-[11px] uppercase tracking-wider text-secondary">Instruction</span>
-              <div className="relative">
-                <Textarea
-                  className="min-h-32 w-full resize-y text-[13px]"
-                  value={draft.instruction}
-                  onFocus={(event) => onInstructionChange(event.currentTarget.value)}
-                  onBlur={() => window.setTimeout(() => setSkillQuery(null), 100)}
-                  onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-                    if (event.key === 'Escape') setSkillQuery(null);
-                  }}
-                  onKeyUp={(event) => onInstructionChange(event.currentTarget.value)}
-                  onInput={(event) => onInstructionChange(event.currentTarget.value)}
-                  onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onInstructionChange(event.target.value)}
-                />
-                {skillMatches.length ? (
-                  <MenuShell role="listbox" data-routines-skill-menu="true" className="static mt-1 w-full">
-                    {skillMatches.map((skill) => (
-                      <MenuItem
-                        key={skill.id}
-                        type="button"
-                        role="option"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => applySkill(skill)}
-                      >
-                        <span className="min-w-0">
-                          <b>/skill:{skill.id}</b>
-                          <span className="block truncate text-[11px] text-secondary">{skill.description ?? skill.name}</span>
-                        </span>
-                      </MenuItem>
-                    ))}
-                  </MenuShell>
-                ) : null}
-              </div>
-              <span className="text-[12px] text-secondary">
-                Type <span className="text-accent">/skill:</span> to reference a skill.
-              </span>
-            </label>
-          </div>
+          {options?.windowed ? (
+            <WindowedDialogStack>{primaryFields}</WindowedDialogStack>
+          ) : (
+            <div className="grid gap-3">{primaryFields}</div>
+          )}
           <div className="grid content-start gap-3">
             {draft.type !== 'stop' ? (
               <div className="ui-flat-panel">
@@ -2075,7 +2083,7 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               </>
             }
           >
-            <div className="wos-routine-editor-bridge">{renderEditor(draft)}</div>
+            <div className="wos-routine-editor-bridge">{renderEditor(draft, { windowed: true })}</div>
           </WindowedDialog>
         ) : null}
 

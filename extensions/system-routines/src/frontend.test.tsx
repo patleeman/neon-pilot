@@ -232,6 +232,7 @@ describe('RoutinesPage', () => {
     expect(screen.queryByRole('dialog', { name: 'Review code changes' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(screen.getByRole('dialog', { name: 'Review code changes' })).toBeTruthy();
+    expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Close Review code changes'));
     fireEvent.click(screen.getByRole('button', { name: 'Runs' }));
