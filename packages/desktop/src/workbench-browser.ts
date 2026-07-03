@@ -355,7 +355,7 @@ export class WorkbenchBrowserViewController {
         this.suppressOwnerViews(owner.id);
       }
       if (sessionKey === null || sessionKey === undefined) {
-        this.hideAllOwnerViews(owner.id, deactivate === true);
+        this.hideAllOwnerViews(owner.id, deactivate === true, ownerWindow);
         return this.getState(owner.id, sessionKey);
       }
       this.hide(this.viewKey(owner.id, sessionKey), deactivate === true);
@@ -363,11 +363,12 @@ export class WorkbenchBrowserViewController {
     }
 
     if (this.isOwnerSuppressed(owner.id)) {
-      this.hideAllOwnerViews(owner.id, true);
+      this.hideAllOwnerViews(owner.id, true, ownerWindow);
       return this.getState(owner.id, sessionKey);
     }
 
     const viewKey = this.viewKey(owner.id, sessionKey);
+    this.hideAttachedStaleOwnerWindowViews(ownerWindow, owner.id, viewKey);
     this.hideActiveOwnerView(owner.id, viewKey);
     const view = this.ensureView(ownerWindow, owner.id, sessionKey);
     const entry = this.views.get(viewKey);
@@ -633,11 +634,20 @@ export class WorkbenchBrowserViewController {
     }
   }
 
-  private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean): void {
+  private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean, ownerWindow?: BrowserWindow): void {
     for (const [viewKey, entry] of this.views) {
-      if (entry.owner.id === ownerWebContentsId) {
+      if (entry.owner.id === ownerWebContentsId || (ownerWindow && entry.ownerWindow === ownerWindow)) {
         this.hide(viewKey, deactivate);
       }
+    }
+  }
+
+  private hideAttachedStaleOwnerWindowViews(ownerWindow: BrowserWindow, ownerWebContentsId: number, exceptViewKey: string): void {
+    for (const [viewKey, entry] of this.views) {
+      if (viewKey === exceptViewKey || entry.ownerWindow !== ownerWindow || entry.owner.id === ownerWebContentsId || !entry.attached) {
+        continue;
+      }
+      this.hide(viewKey, true);
     }
   }
 

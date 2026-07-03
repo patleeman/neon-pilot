@@ -67,9 +67,25 @@ describe('workbench browser validation', () => {
   it('treats owner-level hide requests as a global native browser suppression', () => {
     const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
 
-    expect(source).toContain('this.hideAllOwnerViews(owner.id, deactivate === true);');
-    expect(source).toContain('private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean): void');
+    expect(source).toContain('this.hideAllOwnerViews(owner.id, deactivate === true, ownerWindow);');
+    expect(source).toContain(
+      'private hideAllOwnerViews(ownerWebContentsId: number, deactivate: boolean, ownerWindow?: BrowserWindow): void',
+    );
     expect(source).toContain('entry.owner.id === ownerWebContentsId');
+    expect(source).toContain('ownerWindow && entry.ownerWindow === ownerWindow');
+  });
+
+  it('detaches stale attached native browser views from previous renderer owners', () => {
+    const source = readFileSync(fileURLToPath(new URL('./workbench-browser.ts', import.meta.url)), 'utf-8');
+
+    expect(source).toContain('this.hideAttachedStaleOwnerWindowViews(ownerWindow, owner.id, viewKey);');
+    expect(source).toContain(
+      'private hideAttachedStaleOwnerWindowViews(ownerWindow: BrowserWindow, ownerWebContentsId: number, exceptViewKey: string): void',
+    );
+    expect(source).toContain('entry.ownerWindow !== ownerWindow');
+    expect(source).toContain('entry.owner.id === ownerWebContentsId');
+    expect(source).toContain('!entry.attached');
+    expect(source).toContain('this.hide(viewKey, true);');
   });
 
   it('rejects late native browser show requests during forced shell suppression', () => {
@@ -79,7 +95,7 @@ describe('workbench browser validation', () => {
     expect(source).toContain('const WORKBENCH_BROWSER_NATIVE_SUPPRESSION_MS = 30_000;');
     expect(source).toContain('this.suppressOwnerViews(owner.id);');
     expect(source).toContain('if (this.isOwnerSuppressed(owner.id))');
-    expect(source).toContain('this.hideAllOwnerViews(owner.id, true);');
+    expect(source).toContain('this.hideAllOwnerViews(owner.id, true, ownerWindow);');
   });
 
   it('forwards command palette shortcuts out of the embedded browser', () => {
