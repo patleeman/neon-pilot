@@ -79,8 +79,9 @@ function SkillsToolbarIcon({ name }: { name: 'clear' | 'refresh' | 'search' }) {
   );
 }
 
-function SkillDetailIcon({ name }: { name: 'open' }) {
+function SkillDetailIcon({ name }: { name: 'details' | 'open' }) {
   const paths = {
+    details: ['M4 7h16', 'M4 12h16', 'M4 17h10'],
     open: ['M14 5h5v5', 'M10 14 19 5', 'M19 14v5H5V5h5'],
   } satisfies Record<string, string[]>;
   return (
@@ -835,7 +836,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                             meta={`${capability} · ${candidate.sourceLabel} · ${candidate.trustLevel === 'community' ? 'Community' : 'Trusted'}`}
                             status={<WindowedBadge tone={candidateStateTone(stateValue)}>{state.label}</WindowedBadge>}
                             action={
-                              <span className="flex items-center justify-end gap-2">
+                              <span className="wos-inline-actions">
                                 <WindowedPageButton
                                   disabled={busy || installed}
                                   tone={installed ? 'neutral' : 'accent'}
@@ -848,9 +849,10 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                                 <WindowedPageButton
                                   aria-label={`Details for ${candidate.title}`}
                                   title={`Details for ${candidate.title}`}
+                                  density="icon"
                                   onClick={() => selectSkill(selectionData)}
                                 >
-                                  Details
+                                  <SkillDetailIcon name="details" />
                                 </WindowedPageButton>
                               </span>
                             }
@@ -920,7 +922,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                             </WindowedBadge>
                           }
                           action={
-                            <span className="flex items-center justify-end gap-2">
+                            <span className="wos-inline-actions">
                               <WindowedToggle
                                 checked={skill.enabled}
                                 disabled={busySkillId === skill.id}
@@ -931,9 +933,10 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                               <WindowedPageButton
                                 aria-label={`Details for ${skill.name}`}
                                 title={`Details for ${skill.name}`}
+                                density="icon"
                                 onClick={() => selectSkill(selectionData)}
                               >
-                                Details
+                                <SkillDetailIcon name="details" />
                               </WindowedPageButton>
                             </span>
                           }

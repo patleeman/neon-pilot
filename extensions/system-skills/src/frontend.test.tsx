@@ -150,8 +150,9 @@ describe('SkillsPage', () => {
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Search marketplace skills' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Install PDF' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Details for PDF' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Details for Release QA' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for PDF' }).getAttribute('data-density')).toBe('icon');
+    expect(screen.getByRole('button', { name: 'Details for Release QA' }).getAttribute('data-density')).toBe('icon');
+    expect(container.querySelector('.wos-inline-actions')).toBeTruthy();
     expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
       'minmax(15rem, 1fr) minmax(7rem, 0.38fr) minmax(14rem, 0.74fr)',
     );
@@ -174,7 +175,7 @@ describe('SkillsPage', () => {
     expect(await screen.findByText('Build iOS Apps')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Enable Build iOS Apps' })).toBeTruthy();
     expect(container.querySelector('.wos-toggle[data-accent="skills"]')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Details for Build iOS Apps' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for Build iOS Apps' }).getAttribute('data-density')).toBe('icon');
     expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
       'minmax(15rem, 1fr) minmax(7rem, 0.38fr) minmax(14rem, 0.74fr)',
     );
