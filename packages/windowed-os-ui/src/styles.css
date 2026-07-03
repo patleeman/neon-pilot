@@ -499,6 +499,8 @@
 .windowed-os-shell[data-window-interaction='true'] iframe,
 .windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe,
 .windowed-os-shell[data-frame-paint-blocked='true'] iframe,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe,
+.windowed-os-shell[data-native-browser-blocked='true'] iframe,
 .wos-window__body:has(.wos-dialog-layer) iframe,
 .wos-window__body:has(.ui-workbench-drop-badge) iframe,
 .wos-window__body:has(.ui-workbench-drop-popover) iframe,

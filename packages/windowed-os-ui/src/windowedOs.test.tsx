@@ -375,8 +375,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-frame-paint-blocked='true'] iframe");
-    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
-    expect(stylesSource).not.toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
+    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) iframe');
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-badge) iframe');
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-popover) iframe');
