@@ -491,6 +491,21 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
   });
 
+  it('restyles stable conversation controls with scoped windowed chrome', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .conversation-composer-region');
+    expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell {');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell:focus-within');
+    expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-action-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-row-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-conversation-setup-empty');
+  });
+
   it('styles nested list rows through scoped depth selectors', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
