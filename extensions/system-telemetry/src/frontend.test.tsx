@@ -80,6 +80,7 @@ describe('TelemetryPage', () => {
     expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.ui-app-page-shell')).toBeNull();
+    expect(container.querySelector('.wos-page-eyebrow')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeTruthy();
     expect(screen.queryByText('Diagnostics context')).toBeNull();
     expect(screen.queryByText('Telemetry range')).toBeNull();
@@ -110,6 +111,7 @@ describe('TelemetryPage', () => {
 
     expect(screen.getByText('trace load failed').closest('.wos-empty-state')?.getAttribute('data-tone')).toBe('danger');
     expect(container.querySelector('.ui-error-state')).toBeNull();
+    expect(container.querySelector('.wos-page-eyebrow')).toBeNull();
     expect(refetch).toHaveBeenCalled();
   });
 

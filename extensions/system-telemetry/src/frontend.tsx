@@ -92,7 +92,6 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
       return (
         <WindowedPageShell layout="standard" className="telemetry-page-windowed">
           <WindowedPageMain
-            eyebrow="Diagnostics"
             title="Diagnostics unavailable"
             actions={
               <>
@@ -152,7 +151,6 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
     return (
       <WindowedPageShell layout="standard" className="telemetry-page-windowed">
         <WindowedPageMain
-          eyebrow="Local observability"
           title="Diagnostics"
           actions={
             <>
