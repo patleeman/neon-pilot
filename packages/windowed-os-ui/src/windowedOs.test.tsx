@@ -158,6 +158,16 @@ describe('WindowedSettingsGroup', () => {
     expect(html).toContain('Theme');
     expect(html).toContain('System');
   });
+
+  it('keeps short settings labels from wrapping letter-by-letter', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+    const copyRule = stylesSource.match(/\.wos-settings-row__copy \{[^}]+}/)?.[0] ?? '';
+
+    expect(copyRule).toContain('overflow-wrap: break-word;');
+    expect(copyRule).toContain('word-break: normal;');
+    expect(copyRule).not.toContain('overflow-wrap: anywhere;');
+  });
 });
 
 describe('WindowedPageMain', () => {

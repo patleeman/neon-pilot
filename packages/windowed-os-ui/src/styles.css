@@ -2494,7 +2494,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   display: grid;
   min-width: 0;
   gap: 2px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .wos-settings-row__title {
