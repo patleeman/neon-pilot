@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({
@@ -77,6 +80,19 @@ describe('isWindowedDesktopShellUrl', () => {
     expect(isWindowedDesktopShellUrl('neon-pilot://app/?desktop-shell=1')).toBe(false);
     expect(isWindowedDesktopShellUrl('neon-pilot://app/settings?shell=stable&desktop-shell=1')).toBe(false);
     expect(isWindowedDesktopShellUrl('not a url')).toBe(false);
+  });
+});
+
+describe('windowed shell native browser suppression', () => {
+  it('suppresses native workbench browser views when a window navigates into the windowed shell', () => {
+    const source = readFileSync(fileURLToPath(new URL('./window.ts', import.meta.url)), 'utf-8');
+
+    expect(source).toContain('const suppressNativeBrowserViewsIfWindowed =');
+    expect(source).toContain('isWindowedDesktopShellUrl(url)');
+    expect(source).toContain('this.workbenchBrowser.setBounds(window.webContents, false, null, null, true, true);');
+    expect(source).toContain("window.webContents.on('did-navigate'");
+    expect(source).toContain("window.webContents.on('did-navigate-in-page'");
+    expect(source).toContain("window.webContents.on('did-finish-load'");
   });
 });
 

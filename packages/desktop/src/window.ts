@@ -961,6 +961,23 @@ export class DesktopWindowController {
   private registerWindow(window: BrowserWindow, hostId: string, role: ManagedWindowRole, metadata?: { conversationId?: string }): void {
     const webContentsId = window.webContents.id;
     this.trackedWindows.set(webContentsId, { hostId, role, window });
+    const suppressNativeBrowserViewsIfWindowed = (url = window.webContents.getURL()) => {
+      if (!isWindowedDesktopShellUrl(url)) {
+        return;
+      }
+      this.workbenchBrowser.setBounds(window.webContents, false, null, null, true, true);
+    };
+
+    window.webContents.on('did-navigate', (_event, url) => {
+      suppressNativeBrowserViewsIfWindowed(url);
+    });
+    window.webContents.on('did-navigate-in-page', (_event, url) => {
+      suppressNativeBrowserViewsIfWindowed(url);
+    });
+    window.webContents.on('did-finish-load', () => {
+      suppressNativeBrowserViewsIfWindowed();
+    });
+
     const popoutConversationId = role === 'popout' ? metadata?.conversationId?.trim() : '';
     if (popoutConversationId) {
       window.webContents.once('did-finish-load', () => {
