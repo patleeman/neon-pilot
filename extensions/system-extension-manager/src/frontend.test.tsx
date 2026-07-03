@@ -336,6 +336,26 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('switch', { name: /Disable Settings panels/ })).toBeNull();
   });
 
+  it('uses windowed empty-state chrome when no extensions are installed', async () => {
+    mocks.extensionInstallations.mockResolvedValue([]);
+    const { container } = renderWindowedPage();
+
+    expect(await screen.findByText('Add capabilities to Neon Pilot.')).toBeTruthy();
+    expect(container.querySelector('.wos-empty-state')).toBeTruthy();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+  });
+
+  it('uses windowed error-state chrome when extensions fail to load', async () => {
+    mocks.extensionInstallations.mockRejectedValue(new Error('Installations unavailable'));
+    const { container } = renderWindowedPage();
+
+    expect(await screen.findByText('Installations unavailable')).toBeTruthy();
+    expect(container.querySelector('.wos-state-block[data-tone="danger"]')).toBeTruthy();
+    expect(container.querySelector('.ui-empty-state')).toBeNull();
+    expect(container.querySelector('.ui-error-state')).toBeNull();
+  });
+
   it('opens the install flow as a native windowed child dialog', async () => {
     const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
       if (action === 'listInstallableExtensions') {

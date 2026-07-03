@@ -50,12 +50,14 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
+  WindowedEmptyState,
   WindowedKeyValueList,
   WindowedPageButton,
   WindowedPageMain,
   WindowedPageSection,
   WindowedPageShell,
   WindowedSegmentedControl,
+  WindowedStateBlock,
   WindowedTextInput,
   WindowedToggle,
   WindowedToolbar,
@@ -181,6 +183,15 @@ function ExtensionNoticeBox({ notice }: { notice: ExtensionManagerNotice }) {
     <Notice tone={notice.type === 'error' ? 'danger' : notice.type} title={notice.message}>
       {notice.details}
     </Notice>
+  );
+}
+
+function WindowedExtensionNoticeBox({ notice }: { notice: ExtensionManagerNotice }) {
+  const tone = notice.type === 'error' ? 'danger' : notice.type === 'success' ? 'positive' : 'neutral';
+  return (
+    <WindowedStateBlock tone={tone} title={notice.message}>
+      {notice.details}
+    </WindowedStateBlock>
   );
 }
 
@@ -1700,7 +1711,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     window.setTimeout(() => draftComposerTextWhenReady(BUILD_EXTENSION_PROMPT), 0);
   }, [navigate]);
 
-  if (error) {
+  if (error && context.shellPresentation !== 'windowed') {
     return <ErrorState message={error} />;
   }
 
@@ -1776,23 +1787,33 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
             {notice ? (
               <WindowedPageSection>
-                <ExtensionNoticeBox notice={notice} />
+                <WindowedExtensionNoticeBox notice={notice} />
               </WindowedPageSection>
             ) : null}
 
-            {catalogError ? <ErrorState title="Could not load installable extensions" message={catalogError} /> : null}
+            {error ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
+
+            {catalogError ? (
+              <WindowedPageSection>
+                <WindowedStateBlock tone="danger" title="Could not load installable extensions">
+                  {catalogError}
+                </WindowedStateBlock>
+              </WindowedPageSection>
+            ) : null}
 
             <WindowedPageSection title="Installed" meta={sectionSummary}>
               {loading ? (
-                <QuietLoadingState label="Loading extensions" className="min-h-24" />
+                <WindowedStateBlock>
+                  <QuietLoadingState label="Loading extensions" className="min-h-24" />
+                </WindowedStateBlock>
               ) : extensions.length === 0 ? (
-                <EmptyState
-                  title="Add capabilities to Neon Pilot"
-                  body="Extensions add native pages, tools, settings, skills, and workflow surfaces without changing the core app."
-                  align="start"
-                />
+                <WindowedEmptyState>Add capabilities to Neon Pilot.</WindowedEmptyState>
               ) : visibleExtensions.length === 0 ? (
-                <EmptyState title={emptyVisibleExtensionsTitle} body={emptyVisibleExtensionsBody} />
+                <WindowedEmptyState>{emptyVisibleExtensionsTitle}</WindowedEmptyState>
               ) : (
                 <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
                   {visibleExtensions.map((extension) => {
