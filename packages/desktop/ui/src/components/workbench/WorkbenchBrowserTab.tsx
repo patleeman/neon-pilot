@@ -31,6 +31,7 @@ const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '.ui-positioned-menu',
   '.ui-command-palette-shell',
   '.ui-setup-readiness-popover',
+  '.ui-workbench-drop-badge',
   '.ui-workbench-drop-popover',
   '.ui-composer-drop-overlay',
   '.ui-notification-toaster',
@@ -60,7 +61,7 @@ function hasBlockingRendererOverlay(host: HTMLElement | null): boolean {
     if (!isConnectedVisibleElement(element)) {
       return false;
     }
-    if (host && (host.contains(element) || element.contains(host))) {
+    if (host && element.contains(host)) {
       return false;
     }
     return true;
@@ -396,6 +397,7 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
         '.ui-context-menu-shell',
         '.ui-positioned-menu',
         '.ui-setup-readiness-popover',
+        '.ui-workbench-drop-badge',
         '.ui-workbench-drop-popover',
         '.ui-composer-drop-overlay',
         '[aria-modal="true"]',
@@ -441,6 +443,7 @@ function shouldSuspendForWindowedShellEvent(host: HTMLElement | null, event: Eve
         '.ui-context-menu-shell',
         '.ui-positioned-menu',
         '.ui-setup-readiness-popover',
+        '.ui-workbench-drop-badge',
         '.ui-workbench-drop-popover',
         '.ui-composer-drop-overlay',
         '[role="dialog"]',

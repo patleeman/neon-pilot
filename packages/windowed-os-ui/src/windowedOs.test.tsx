@@ -292,12 +292,25 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe");
     expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe");
     expect(stylesSource).toContain('.wos-window__body:has(.wos-dialog-layer) iframe');
+    expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-badge) iframe');
+    expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-popover) iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe');
     expect(stylesSource).toContain('opacity: 0;');
     expect(stylesSource).toContain('visibility: hidden;');
     expect(stylesSource).toContain('pointer-events: none;');
+  });
+
+  it('styles attached terminal panels with scoped windowed tokens', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-terminal-panel');
+    expect(stylesSource).toContain('background: var(--wos-surface-1);');
+    expect(stylesSource).toContain('color: var(--wos-ink-900);');
+    expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).toContain('.wos-terminal-panel :where(.xterm, .xterm-screen, .xterm-viewport)');
   });
 
   it('keeps isolated Storybook examples on scoped windowed classes instead of app utility CSS', () => {

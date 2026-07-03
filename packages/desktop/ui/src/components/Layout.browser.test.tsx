@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
+import { DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT } from '../desktop/desktopBridge';
 import { type BrowserTabItem, type BrowserTabsState, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
 import { formatWorkbenchBrowserError, WORKBENCH_BROWSER_COMMAND_EVENT, WorkbenchBrowserTab } from './workbench/WorkbenchBrowserTab';
@@ -692,6 +693,67 @@ describe('WorkbenchBrowserTab', () => {
           onReopenTab={vi.fn()}
           onCloseCurrentTab={vi.fn()}
         />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+  });
+
+  it('hides the native browser view while browser-host overlays are open', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.classList.contains('ui-workbench-drop-popover')) {
+          return { left: 120, top: 120, width: 300, height: 220, right: 420, bottom: 340, x: 120, y: 120, toJSON: () => ({}) };
+        }
+        if (this.closest('#browser-root')) {
+          return { left: 36, top: 92, width: 728, height: 470, right: 764, bottom: 562, x: 36, y: 92, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<div class="windowed-os-shell"><section class="wos-window" data-window-id="browser" data-focused="true" style="z-index: 10"><div id="browser-root"></div></section></div>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+    setWorkbenchBrowserBounds.mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(DESKTOP_WORKBENCH_BROWSER_COMMENT_EVENT, {
+          detail: {
+            url: 'https://example.com/',
+            role: 'button',
+            accessibleName: 'Example action',
+            viewportRect: { x: 128, y: 96, width: 120, height: 32 },
+          },
+        }),
       );
     });
     await flushAsyncWork();

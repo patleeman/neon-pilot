@@ -9,6 +9,7 @@ vi.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
 const terminalHarness = vi.hoisted(() => {
   class FakeTerminal {
     static instances: FakeTerminal[] = [];
+    static options: unknown[] = [];
     element: HTMLDivElement | null = null;
     parser = {
       registerCsiHandler: vi.fn(() => ({ dispose: vi.fn() })),
@@ -25,8 +26,9 @@ const terminalHarness = vi.hoisted(() => {
     });
     private onDataHandler: ((data: string) => void) | null = null;
 
-    constructor() {
+    constructor(options?: unknown) {
       FakeTerminal.instances.push(this);
+      FakeTerminal.options.push(options);
     }
 
     onData(handler: (data: string) => void) {
@@ -152,6 +154,7 @@ describe('TerminalPanel', () => {
     vi.resetModules();
     vi.clearAllMocks();
     terminalHarness.FakeTerminal.instances.length = 0;
+    terminalHarness.FakeTerminal.options.length = 0;
     FakeWebSocket.instances.length = 0;
     FakeResizeObserver.instances.length = 0;
     vi.stubGlobal('WebSocket', FakeWebSocket);
@@ -248,6 +251,59 @@ describe('TerminalPanel', () => {
 
     expect(terminal?.write.mock.calls.map(([value]) => value)).toEqual(['prompt> ', 'fallback-output']);
     expect(closeTab).not.toHaveBeenCalled();
+  });
+
+  it('uses scoped windowed OS colors when hosted by the windowed shell', async () => {
+    const invoke = vi.fn(async (action: string) => {
+      if (action === 'terminalCreate') {
+        return { id: 'term-1', pid: 123, usingPty: true, realtimeUrl: 'ws://127.0.0.1:4321/api/realtime' };
+      }
+      return { ok: true };
+    });
+    const originalGetComputedStyle = window.getComputedStyle.bind(window);
+    const getComputedStyleSpy = vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudoElement) => {
+      const style = originalGetComputedStyle(element, pseudoElement);
+      if (element instanceof HTMLElement && element.classList.contains('wos-terminal-panel')) {
+        return {
+          ...style,
+          getPropertyValue(name: string) {
+            if (name === '--wos-surface-1') return 'oklch(99% 0.01 75)';
+            if (name === '--wos-ink-900') return 'oklch(20% 0.01 60)';
+            if (name === '--wos-extensions') return 'oklch(70% 0.15 60)';
+            return style.getPropertyValue(name);
+          },
+        };
+      }
+      return style;
+    });
+
+    const { TerminalPanel } = await import('./frontend.js');
+
+    await act(async () => {
+      root?.render(
+        <div>
+          <TerminalPanel
+            pa={
+              {
+                extension: { invoke },
+                workbench: { closeTab: vi.fn() },
+              } as never
+            }
+            context={{ cwd: '/repo', instanceId: 'tab-1', shellPresentation: 'windowed' } as never}
+          />
+        </div>,
+      );
+      await Promise.resolve();
+    });
+
+    const options = terminalHarness.FakeTerminal.options[0] as { theme?: Record<string, string> };
+    expect(options.theme?.background).toBe('oklch(99% 0.01 75)');
+    expect(options.theme?.foreground).toBe('oklch(20% 0.01 60)');
+    expect(options.theme?.cursor).toBe('oklch(70% 0.15 60)');
+    expect(options.theme?.selectionBackground).toBe('rgba(43, 36, 29, 0.18)');
+    expect(container?.querySelector('.wos-terminal-panel')).toBeTruthy();
+    expect(container?.querySelector('[data-shell-presentation="windowed"]')).toBeTruthy();
+    getComputedStyleSpy.mockRestore();
   });
 
   it('does not render internal startup errors when the workspace is unavailable', async () => {

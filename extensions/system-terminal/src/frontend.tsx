@@ -21,6 +21,47 @@ function readRgbVar(element: HTMLElement, name: string): string {
   return value ? `rgb(${value})` : '';
 }
 
+function readCssVar(element: HTMLElement, name: string): string {
+  return getComputedStyle(element).getPropertyValue(name).trim();
+}
+
+function terminalThemeForSurface(element: HTMLElement, shellPresentation?: 'stable' | 'windowed') {
+  if (shellPresentation === 'windowed') {
+    return {
+      background: readCssVar(element, '--wos-surface-1') || '#fbf7ea',
+      foreground: readCssVar(element, '--wos-ink-900') || '#2b241d',
+      cursor: readCssVar(element, '--wos-extensions') || '#e78a3c',
+      selectionBackground: 'rgba(43, 36, 29, 0.18)',
+      black: '#2b241d',
+      red: '#b84a35',
+      green: '#317a54',
+      yellow: '#9a6a12',
+      blue: '#326d86',
+      magenta: '#8755a5',
+      cyan: '#2d7f75',
+      white: '#fbf7ea',
+    };
+  }
+
+  const baseColor = readRgbVar(element, '--color-base') || '#080c10';
+  const primaryColor = readRgbVar(element, '--color-primary') || '#f6f4ec';
+  const accentColor = readRgbVar(element, '--color-accent') || '#7aa2f7';
+  return {
+    background: baseColor,
+    foreground: primaryColor,
+    cursor: accentColor,
+    selectionBackground: accentColor.replace(/^rgb\((.*)\)$/, 'rgba($1, 0.3)'),
+    black: '#1d2021',
+    red: '#ea6962',
+    green: '#a9b665',
+    yellow: '#d8a657',
+    blue: '#7daea3',
+    magenta: '#d3869b',
+    cyan: '#89b482',
+    white: '#d4be98',
+  };
+}
+
 type TerminalRealtimeMessage = { type: 'output'; data: string } | { type: 'exit'; code: number | null };
 
 type TerminalSocketMessage =
@@ -77,28 +118,12 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     const state = stateRef.current;
 
     // Create xterm.js terminal
-    const baseColor = readRgbVar(container, '--color-base') || '#080c10';
-    const primaryColor = readRgbVar(container, '--color-primary') || '#f6f4ec';
-    const accentColor = readRgbVar(container, '--color-accent') || '#7aa2f7';
     const xterm = new Terminal({
       cursorBlink: true,
       cursorStyle: 'block',
       fontSize: 13,
       fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-      theme: {
-        background: baseColor,
-        foreground: primaryColor,
-        cursor: accentColor,
-        selectionBackground: accentColor.replace(/^rgb\((.*)\)$/, 'rgba($1, 0.3)'),
-        black: '#1d2021',
-        red: '#ea6962',
-        green: '#a9b665',
-        yellow: '#d8a657',
-        blue: '#7daea3',
-        magenta: '#d3869b',
-        cyan: '#89b482',
-        white: '#d4be98',
-      },
+      theme: terminalThemeForSurface(container, context.shellPresentation),
       allowProposedApi: true,
     });
 
@@ -460,13 +485,18 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       state.fitAddon = null;
       state.usingPty = false;
     };
-  }, [pa, context.cwd]);
+  }, [pa, context.cwd, context.shellPresentation]);
 
   return (
     <div
       ref={containerRef}
-      className="h-full w-full overflow-hidden bg-base [&_.xterm-screen]:bg-base [&_.xterm-viewport]:bg-base [&_.xterm]:bg-base"
+      className={
+        context.shellPresentation === 'windowed'
+          ? 'wos-terminal-panel'
+          : 'h-full w-full overflow-hidden bg-base [&_.xterm-screen]:bg-base [&_.xterm-viewport]:bg-base [&_.xterm]:bg-base'
+      }
       style={{ padding: '4px' }}
+      data-shell-presentation={context.shellPresentation}
       tabIndex={0}
       aria-label="Interactive terminal"
       onFocus={() => {

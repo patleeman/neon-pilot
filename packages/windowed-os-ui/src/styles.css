@@ -495,6 +495,8 @@
 .windowed-os-shell[data-window-interaction='true'] .wos-window__body iframe,
 .windowed-os-shell[data-native-browser-blocked='true'] .wos-window__body iframe,
 .wos-window__body:has(.wos-dialog-layer) iframe,
+.wos-window__body:has(.ui-workbench-drop-badge) iframe,
+.wos-window__body:has(.ui-workbench-drop-popover) iframe,
 .windowed-os-shell:has(.wos-start-menu) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-window__body iframe,
 .windowed-os-shell:has(.wos-snap-preview) .wos-window__body iframe,
@@ -2602,6 +2604,19 @@
 .wos-chat-workbench__tabs button[aria-selected='true'] {
   background: var(--wos-chat);
   box-shadow: inset 0 -3px 0 var(--wos-ink-900);
+}
+
+.wos-terminal-panel {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-mono);
+}
+
+.wos-terminal-panel :where(.xterm, .xterm-screen, .xterm-viewport) {
+  background: var(--wos-surface-1) !important;
 }
 
 .wos-embedded-sidebar {
