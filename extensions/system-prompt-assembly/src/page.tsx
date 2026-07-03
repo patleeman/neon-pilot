@@ -319,7 +319,6 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
       return (
         <WindowedPageShell layout="standard" className="prompt-assembly-page-windowed">
           <WindowedPageMain
-            eyebrow="Settings"
             title="Prompt Assembly"
             actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
           >
@@ -336,7 +335,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
     if (windowed) {
       return (
         <WindowedPageShell layout="standard" className="prompt-assembly-page-windowed">
-          <WindowedPageMain eyebrow="Settings" title="Prompt Assembly">
+          <WindowedPageMain title="Prompt Assembly">
             <WindowedPageSection title="Status" meta="Loading">
               <WindowedStateBlock>Loading prompt assembly.</WindowedStateBlock>
             </WindowedPageSection>
@@ -350,11 +349,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
   if (windowed) {
     return (
       <WindowedPageShell layout="standard" className="prompt-assembly-page-windowed">
-        <WindowedPageMain
-          eyebrow="Settings"
-          title="Prompt Assembly"
-          actions={<WindowedPageButton onClick={() => void load()}>Refresh</WindowedPageButton>}
-        >
+        <WindowedPageMain title="Prompt Assembly" actions={<WindowedPageButton onClick={() => void load()}>Refresh</WindowedPageButton>}>
           <WindowedPageSection
             title="Template"
             meta={savingSystemPromptTemplate ? 'Saving' : systemPromptTemplateDirty ? 'Pending' : 'Saved'}

@@ -274,11 +274,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
     if (windowed) {
       return (
         <WindowedPageShell layout="standard" className="gateways-page-windowed">
-          <WindowedPageMain
-            eyebrow="Gateway provider"
-            title="Telegram"
-            actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
-          >
+          <WindowedPageMain title="Telegram" actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}>
             <WindowedPageSection title="Status" meta="Unavailable">
               <WindowedStateBlock tone="danger">{error ?? 'Gateway settings could not be loaded.'}</WindowedStateBlock>
             </WindowedPageSection>
@@ -332,7 +328,6 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
       <div className="h-full overflow-hidden">
         <WindowedPageShell layout="standard" className="gateways-page-windowed">
           <WindowedPageMain
-            eyebrow="Gateway provider"
             title={telegramProvider?.label ?? 'Telegram'}
             actions={
               <>
@@ -748,7 +743,7 @@ function GatewaysLoadingPage() {
 function WindowedGatewaysLoading() {
   return (
     <WindowedPageShell layout="standard" className="gateways-page-windowed">
-      <WindowedPageMain eyebrow="Gateway provider" title="Telegram">
+      <WindowedPageMain title="Telegram">
         <WindowedPageSection title="Status" meta="Loading">
           <WindowedStateBlock>
             <QuietLoadingState label="Loading gateway settings" className="min-h-24" />

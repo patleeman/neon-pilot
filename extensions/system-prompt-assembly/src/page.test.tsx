@@ -144,6 +144,7 @@ describe('PromptAssemblyPage', () => {
     expect(container.querySelector('.ui-app-page-shell')).toBeNull();
     expect(container.querySelector('.ui-app-page-toc')).toBeNull();
     expect(screen.queryByText('Review the instructions, tools, MCP servers, templates, and context available to the agent.')).toBeNull();
+    expect(screen.queryByText('Settings')).toBeNull();
     expect(screen.getByDisplayValue('Template')).toBeTruthy();
     expect(screen.getByText('Repo instructions')).toBeTruthy();
     expect(screen.getByText('Tool A')).toBeTruthy();
