@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   pinnedSessions: [] as Array<{ id: string; title?: string; messageCount?: number }>,
   tabs: [] as Array<{ id: string; title?: string; messageCount?: number }>,
   conversationsLoading: false,
+  topBarElements: [] as Array<{ extensionId: string; id: string; component: string; label?: string; frontendEntry?: string }>,
   extensions: [
     {
       id: 'system-routines',
@@ -64,12 +65,19 @@ vi.mock('../extensions/ExtensionRouteHost', async () => {
   };
 });
 
+vi.mock('../extensions/TopBarElementHost', () => ({
+  TopBarElementHost: ({ registration }: { registration: { label?: string; id: string } }) => (
+    <button type="button">{registration.label ?? registration.id}</button>
+  ),
+}));
+
 vi.mock('../extensions/useExtensionRegistry', () => ({
   useExtensionRegistry: () => ({
     loading: mocks.registryLoading,
     error: null,
     extensions: mocks.extensions,
     surfaces: [],
+    topBarElements: mocks.topBarElements,
   }),
 }));
 
@@ -124,6 +132,7 @@ describe('WindowedLayout route windows', () => {
     mocks.pinnedSessions = [];
     mocks.tabs = [];
     mocks.conversationsLoading = false;
+    mocks.topBarElements = [];
     mocks.extensions = [
       {
         id: 'system-routines',
@@ -265,6 +274,25 @@ describe('WindowedLayout route windows', () => {
     expect(within(startMenu).queryByText('APPS')).toBeNull();
     expect(within(startMenu).queryByText('Stable shell')).toBeNull();
     expect(startMenu.querySelector('.wos-app-monogram')).toBeNull();
+  });
+
+  it('renders extension top-bar elements in the right side of the windowed taskbar', () => {
+    mocks.topBarElements = [
+      {
+        extensionId: 'system-caffeinate',
+        id: 'caffeinate-toggle',
+        component: 'CaffeinateToggle',
+        label: 'Caffeinate toggle',
+      },
+    ];
+
+    renderWindowedLayout();
+
+    const openWindows = screen.getByRole('navigation', { name: 'Open windows' });
+    const desktopControls = screen.getByLabelText('Desktop controls');
+
+    expect(within(openWindows).queryByRole('button', { name: 'Caffeinate toggle' })).toBeNull();
+    expect(within(desktopControls).getByRole('button', { name: 'Caffeinate toggle' })).toBeTruthy();
   });
 
   it('focuses Start menu search on open and closes it with Escape', () => {

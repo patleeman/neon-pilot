@@ -93,6 +93,31 @@
   overflow: hidden;
 }
 
+.wos-taskbar__trailing {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.wos-taskbar__trailing:empty {
+  display: none;
+}
+
+.wos-taskbar__trailing :where(button, a) {
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 9px;
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-900);
+}
+
+.wos-taskbar__trailing :where(button, a):hover {
+  background: var(--wos-surface-3);
+}
+
 .wos-taskbar__group {
   position: relative;
   flex-shrink: 0;

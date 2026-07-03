@@ -23,6 +23,7 @@ import {
 
 import { getDesktopBridge } from '../desktop/desktopBridge';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
+import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { getTabSessionKey, readBrowserTabsState } from '../local/workbenchBrowserTabs';
@@ -1316,6 +1317,14 @@ export function WindowedLayout() {
       ]
     : [];
   const taskbarItems = shouldGroupChatTaskItems ? routeTaskItems : [...chatTaskItems, ...routeTaskItems];
+  const taskbarTrailing =
+    extensionRegistry.topBarElements.length > 0 ? (
+      <>
+        {extensionRegistry.topBarElements.map((element) => (
+          <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
+        ))}
+      </>
+    ) : null;
 
   return (
     <div
@@ -1359,6 +1368,7 @@ export function WindowedLayout() {
         onOpenGroupMenu={() => suspendWindowedBrowserViews()}
         groups={chatTaskGroups}
         items={taskbarItems}
+        trailing={taskbarTrailing}
       />
     </div>
   );

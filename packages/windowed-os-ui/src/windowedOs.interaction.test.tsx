@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Taskbar, WindowedDataRow, WindowedDialog, WindowedListItem, WindowedMenuPanel, WindowedNumberStepper } from './windowedOs';
@@ -260,5 +260,22 @@ describe('Taskbar interactions', () => {
 
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('menu', { name: 'Open chat windows' })).toBeTruthy();
+  });
+
+  it('renders trailing desktop controls outside the open-window nav', () => {
+    render(
+      <Taskbar
+        startOpen={false}
+        onToggleStart={() => undefined}
+        items={[{ id: 'chat', title: 'New conversation', accent: 'chat', onSelect: () => undefined }]}
+        trailing={<button type="button">Caffeinate</button>}
+      />,
+    );
+
+    const openWindows = screen.getByRole('navigation', { name: 'Open windows' });
+    const controls = screen.getByLabelText('Desktop controls');
+
+    expect(within(openWindows).queryByRole('button', { name: 'Caffeinate' })).toBeNull();
+    expect(within(controls).getByRole('button', { name: 'Caffeinate' })).toBeTruthy();
   });
 });

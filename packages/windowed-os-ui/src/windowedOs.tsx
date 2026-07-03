@@ -1301,6 +1301,7 @@ export interface TaskbarProps {
   onToggleStart: () => void;
   groups?: TaskbarGroup[];
   items: TaskbarItem[];
+  trailing?: ReactNode;
   defaultOpenGroupId?: string | null;
   onOpenGroupMenu?: () => void;
 }
@@ -1312,6 +1313,7 @@ export function Taskbar({
   onToggleStart,
   groups = EMPTY_TASKBAR_GROUPS,
   items,
+  trailing,
   defaultOpenGroupId = null,
   onOpenGroupMenu,
 }: TaskbarProps) {
@@ -1429,6 +1431,11 @@ export function Taskbar({
             </button>
           ))}
         </nav>
+        {trailing ? (
+          <div className="wos-taskbar__trailing" aria-label="Desktop controls">
+            {trailing}
+          </div>
+        ) : null}
       </footer>
       {groups.map((group) =>
         group.menu && openGroupId === group.id && menuAnchors[group.id] ? (

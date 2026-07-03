@@ -97,6 +97,16 @@ export const DesktopComposition: Story = {
       <Taskbar
         startOpen
         onToggleStart={() => undefined}
+        trailing={
+          <>
+            <button type="button" className="wos-page-button" data-tone="neutral">
+              Caffeinate
+            </button>
+            <button type="button" className="wos-page-button" data-tone="neutral">
+              Readiness
+            </button>
+          </>
+        }
         items={[
           { id: 'chat-release-notes', title: 'Release notes', accent: 'chat', focused: true, onSelect: () => undefined },
           { id: 'chat-bug-triage', title: 'Bug triage', accent: 'chat', onSelect: () => undefined },
