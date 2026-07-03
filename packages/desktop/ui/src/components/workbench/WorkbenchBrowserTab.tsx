@@ -270,6 +270,47 @@ function isCoveredByPositionedRendererLayer(host: HTMLElement | null): boolean {
   });
 }
 
+function isCoveredByWindowDescendantLayer(host: HTMLElement | null): boolean {
+  if (!host || !host.isConnected) {
+    return false;
+  }
+
+  const ownWindow = host.closest<HTMLElement>('.wos-window');
+  if (!ownWindow) {
+    return false;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  if (hostRect.width < 1 || hostRect.height < 1) {
+    return false;
+  }
+
+  return Array.from(ownWindow.querySelectorAll<HTMLElement>('*')).some((element) => {
+    if (element === host || host.contains(element) || element.contains(host)) {
+      return false;
+    }
+    if (!isConnectedVisibleElement(element)) {
+      return false;
+    }
+
+    const style = window.getComputedStyle(element);
+    if (style.pointerEvents === 'none') {
+      return false;
+    }
+
+    const zIndex = Number.parseInt(style.zIndex, 10);
+    const isLayeredElement =
+      ['absolute', 'fixed', 'sticky'].includes(style.position) ||
+      Number.isFinite(zIndex) ||
+      element.matches('[aria-modal="true"], [role="dialog"]');
+    if (!isLayeredElement) {
+      return false;
+    }
+
+    return rectsOverlap(hostRect, element.getBoundingClientRect());
+  });
+}
+
 function elementAtPoint(x: number, y: number): Element | null {
   if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) {
     return null;
@@ -676,6 +717,7 @@ export function WorkbenchBrowserTab({
       isCoveredByWindowedChrome(host) ||
       isCoveredByWindowedShellLayer(host) ||
       isCoveredByPositionedRendererLayer(host) ||
+      isCoveredByWindowDescendantLayer(host) ||
       isCoveredByRendererLayer(host);
 
     if (blocked) {
