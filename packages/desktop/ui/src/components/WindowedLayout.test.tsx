@@ -1690,7 +1690,7 @@ describe('WindowedLayout route windows', () => {
 
     expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-native-browser-blocked')).toBe('true');
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBe('true');
-    expect(screen.getByRole('region', { name: /routines/i }).getAttribute('data-iframe-blocked')).toBe('true');
+    expect(screen.getByRole('region', { name: /routines/i }).getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('keeps overlapped window contents mounted while browser-frame paint is blocked', async () => {
@@ -1905,7 +1905,7 @@ describe('WindowedLayout route windows', () => {
     expect(chatWindow).toBeTruthy();
     expect(routinesWindow).toBeTruthy();
     expect(chatWindow!.getAttribute('data-iframe-blocked')).toBe('true');
-    expect(routinesWindow!.getAttribute('data-iframe-blocked')).toBe('true');
+    expect(routinesWindow!.getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('keeps window stacks browser-blocking while multiple windows are visible', async () => {
@@ -1966,7 +1966,7 @@ describe('WindowedLayout route windows', () => {
 
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
-    expect(routinesWindow.getAttribute('data-iframe-blocked')).toBe('true');
+    expect(routinesWindow.getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('does not auto-create taskbar windows for every known chat session', () => {

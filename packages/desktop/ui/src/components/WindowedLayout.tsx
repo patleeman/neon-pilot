@@ -366,6 +366,10 @@ function hasOverlappingWindowedSurface(visibleWindows: DesktopWindowModel[]): bo
   return visibleWindows.some((windowModel) => isWindowCoveredByHigherWindow(windowModel, visibleWindows));
 }
 
+function canHostBrowserFrame(windowModel: DesktopWindowModel): boolean {
+  return windowModel.kind === 'chat';
+}
+
 function isWindowClippedByDesktop(windowModel: DesktopWindowModel, desktop: DesktopRect): boolean {
   const { bounds } = windowModel;
   return bounds.x < 0 || bounds.y < 0 || bounds.x + bounds.width > desktop.width || bounds.y + bounds.height > desktop.height;
@@ -1450,7 +1454,9 @@ export function WindowedLayout() {
             accent={accentForWindow(windowModel)}
             focused={windowModel.focused}
             style={{ ...boundsStyle(windowModel.bounds), zIndex: 10 + index }}
-            iframeBlocked={rendererFramePaintBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows)}
+            iframeBlocked={
+              canHostBrowserFrame(windowModel) && (rendererFramePaintBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows))
+            }
             onPointerDown={() => focusWindow(windowModel.id)}
             onMinimize={() => minimizeWindow(windowModel.id)}
             onMaximize={() => toggleMaximize(windowModel)}

@@ -255,6 +255,17 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('inset 0 -4px 0 var(--wos-ink-900)');
     expect(stylesSource).toContain('transform: translateY(-1px);');
   });
+
+  it('keeps overflowing desktop windows reachable in the taskbar', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-taskbar__items {\n  display: flex;');
+    expect(stylesSource).toContain('overflow-x: auto;');
+    expect(stylesSource).toContain('overscroll-behavior-x: contain;');
+    expect(stylesSource).toContain('.wos-taskbar__items::-webkit-scrollbar');
+    expect(stylesSource).toContain('scrollbar-width: thin;');
+  });
 });
 
 describe('WindowedFormGrid', () => {

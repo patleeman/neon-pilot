@@ -1425,6 +1425,8 @@ export function Taskbar({
                 data-accent={group.accent}
                 aria-haspopup={group.menu ? 'menu' : undefined}
                 aria-expanded={group.menu ? openGroupId === group.id : undefined}
+                aria-current={group.focused ? 'page' : undefined}
+                aria-pressed={group.focused ? true : undefined}
                 aria-label={group.count ? `${group.title} (${group.count} windows)` : group.title}
                 onClick={() => {
                   if (!group.menu) {
@@ -1453,6 +1455,8 @@ export function Taskbar({
               data-focused={item.focused}
               data-minimized={item.minimized}
               data-accent={item.accent}
+              aria-current={item.focused ? 'page' : undefined}
+              aria-pressed={item.focused ? true : undefined}
               onClick={item.onSelect}
             >
               <WindowedAppTile label={item.title} accent={item.accent} count={item.count} variant="taskbar" />

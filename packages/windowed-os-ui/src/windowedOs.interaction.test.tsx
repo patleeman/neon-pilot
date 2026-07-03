@@ -230,10 +230,16 @@ describe('Taskbar interactions', () => {
 
     expect(screen.getByRole('button', { name: 'Chat (2 windows)' }).getAttribute('data-focused')).toBe('true');
     expect(screen.getByRole('button', { name: 'Chat (2 windows)' }).getAttribute('data-accent')).toBe('chat');
+    expect(screen.getByRole('button', { name: 'Chat (2 windows)' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('button', { name: 'Chat (2 windows)' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('data-focused')).toBe('false');
     expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('data-accent')).toBe('settings');
+    expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-current')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-pressed')).toBeNull();
     expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('data-focused')).toBe('true');
     expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('data-accent')).toBe('gateways');
+    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('renders menu item status chips for window state', () => {

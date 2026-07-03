@@ -90,7 +90,27 @@
   flex: 1;
   align-items: center;
   gap: 6px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  overscroll-behavior-x: contain;
+  scrollbar-color: var(--wos-ink-500) transparent;
+  scrollbar-width: thin;
+  scroll-padding-inline: 4px;
+}
+
+.wos-taskbar__items::-webkit-scrollbar {
+  height: 6px;
+}
+
+.wos-taskbar__items::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wos-taskbar__items::-webkit-scrollbar-thumb {
+  border: 1px solid var(--wos-surface-1);
+  border-radius: 999px;
+  background: var(--wos-ink-500);
 }
 
 .wos-taskbar__trailing {
