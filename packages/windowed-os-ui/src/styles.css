@@ -531,6 +531,22 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-window__body iframe,
   pointer-events: none;
 }
 
+.wos-window__iframe-shield {
+  position: absolute;
+  inset: var(--wos-titlebar-h) 0 0;
+  z-index: 55;
+  display: none;
+  background: var(--wos-surface-1);
+  pointer-events: none;
+}
+
+.wos-window[data-focused='false'] > .wos-window__iframe-shield,
+.wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield,
+.windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield,
+.windowed-os-shell[data-native-browser-blocked='true'] .wos-window > .wos-window__iframe-shield {
+  display: block;
+}
+
 .wos-dialog-layer {
   position: absolute;
   inset: 0;

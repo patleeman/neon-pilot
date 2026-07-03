@@ -18,6 +18,7 @@ import {
   WindowedPageSection,
   WindowedPageShell,
   WindowedToolbar,
+  WindowFrame,
 } from './windowedOs';
 
 describe('WindowedDataTable', () => {
@@ -169,6 +170,21 @@ describe('WindowedPageButton', () => {
   });
 });
 
+describe('WindowFrame', () => {
+  it('renders an iframe shield above window body content for blocked composited surfaces', () => {
+    const html = renderToStaticMarkup(
+      <WindowFrame title="Chat" focused iframeBlocked onMinimize={() => undefined} onMaximize={() => undefined} onClose={() => undefined}>
+        <iframe title="Browser" src="about:blank" />
+      </WindowFrame>,
+    );
+
+    expect(html).toContain('data-iframe-blocked="true"');
+    expect(html).toContain('class="wos-window__body"');
+    expect(html).toContain('class="wos-window__iframe-shield"');
+    expect(html.indexOf('class="wos-window__body"')).toBeLessThan(html.indexOf('class="wos-window__iframe-shield"'));
+  });
+});
+
 describe('WindowedListItem', () => {
   it('marks nested rows with a scoped depth attribute', () => {
     const html = renderToStaticMarkup(<WindowedListItem title="Provider settings" depth={1} />);
@@ -314,6 +330,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('isolation: isolate;');
     expect(stylesSource).toContain('contain: paint;');
     expect(stylesSource).toContain('display: none !important;');
+    expect(stylesSource).toContain('.wos-window__iframe-shield');
+    expect(stylesSource).toContain('z-index: 55;');
+    expect(stylesSource).toContain(".wos-window[data-focused='false'] > .wos-window__iframe-shield");
+    expect(stylesSource).toContain(".wos-window[data-iframe-blocked='true'] > .wos-window__iframe-shield");
+    expect(stylesSource).toContain(".windowed-os-shell[data-window-interaction='true'] .wos-window > .wos-window__iframe-shield");
+    expect(stylesSource).toContain(".windowed-os-shell[data-native-browser-blocked='true'] .wos-window > .wos-window__iframe-shield");
     expect(stylesSource).toContain(
       ".windowed-os-shell:has(.wos-window[data-focused='true']) .wos-window:not([data-focused='true']) .wos-window__body iframe",
     );

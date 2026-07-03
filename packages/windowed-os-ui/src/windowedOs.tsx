@@ -1094,6 +1094,7 @@ export function WindowFrame({
         />
       </header>
       <div className="wos-window__body">{children}</div>
+      <div className="wos-window__iframe-shield" aria-hidden="true" />
       {resizeHandles}
     </section>
   );
