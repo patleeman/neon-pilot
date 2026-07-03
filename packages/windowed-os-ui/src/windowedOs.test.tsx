@@ -192,10 +192,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Model Arena"');
     expect(source).not.toContain('eyebrow="Model duels"');
     expect(source).toContain('title="Overview"');
-    expect(source).toContain('title="Active duel"');
-    expect(source).toContain('title="Rankings"');
+    expect(source).toContain('title="Status"');
     expect(source).toContain('title="Challengers"');
-    expect(source).toContain('Toggle automatic duels');
+    expect(source).toContain('title="Sampling"');
+    expect(source).toContain('title="Leader"');
+    expect(source).toContain('title="Rankings"');
+    expect(source).toContain('aria-label="Task type"');
+    expect(source).toContain('Disable Model Arena');
+    expect(source).not.toContain('title="Active duel"');
   });
 
   it('documents the canonical Diagnostics desktop page', () => {

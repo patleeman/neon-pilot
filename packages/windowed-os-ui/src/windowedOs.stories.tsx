@@ -1193,70 +1193,125 @@ export const ModelArenaPage: Story = {
             title="Model Arena"
             actions={
               <>
+                <WindowedSelect aria-label="Task type" defaultValue="all">
+                  <option value="all">All task types</option>
+                  <option value="coding">coding</option>
+                  <option value="review">review</option>
+                </WindowedSelect>
+                <WindowedBadge tone="positive">Running</WindowedBadge>
                 <WindowedPageButton>Refresh</WindowedPageButton>
-                <WindowedPageButton tone="accent">Start duel</WindowedPageButton>
               </>
             }
           >
-            <WindowedPageSection title="Overview" meta="automatic">
+            <WindowedPageSection title="Overview" meta="All task types">
               <WindowedKeyValueGrid
                 columns={4}
                 items={[
-                  { label: 'Status', value: <WindowedBadge tone="positive">enabled</WindowedBadge> },
-                  { label: 'Active duel', value: 'release-notes-41' },
+                  { label: 'Recent duels', value: 42 },
                   { label: 'Votes', value: 128 },
-                  { label: 'Challengers', value: '3 selected' },
+                  { label: 'Sample rate', value: '20%' },
+                  { label: 'Challengers', value: 3 },
                 ]}
               />
             </WindowedPageSection>
 
-            <WindowedPageSection title="Active duel" meta="awaiting vote">
-              <WindowedList>
-                <WindowedListItem
-                  title="Primary response"
-                  meta="hidden until vote"
-                  accent="gateways"
-                  status={<WindowedBadge tone="warning">A</WindowedBadge>}
-                />
-                <WindowedListItem
-                  title="Challenger response"
-                  meta="hidden until vote"
-                  accent="gateways"
-                  status={<WindowedBadge tone="warning">B</WindowedBadge>}
-                />
-              </WindowedList>
+            <WindowedPageSection title="Status" meta="Automatic duels on">
+              <div className="wos-arena-status-row">
+                <span>Comparing challenger runs against conversation models.</span>
+                <WindowedToggle checked accent="gateways" label="Disable Model Arena" />
+              </div>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Challengers" meta="3 selected">
+              <div className="wos-arena-add-row">
+                <WindowedField label="Model" span="full">
+                  <WindowedSelect aria-label="Challenger model" defaultValue="openai:gpt-5.4-mini">
+                    <optgroup label="OpenAI">
+                      <option value="openai:gpt-5.4-mini">gpt-5.4-mini</option>
+                      <option value="openai:gpt-5.4">gpt-5.4</option>
+                    </optgroup>
+                    <optgroup label="Anthropic">
+                      <option value="anthropic:claude-sonnet-4.5">claude-sonnet-4.5</option>
+                    </optgroup>
+                  </WindowedSelect>
+                </WindowedField>
+                <WindowedPageButton tone="accent">Add</WindowedPageButton>
+              </div>
+              <div className="wos-arena-challenger-list">
+                <div className="wos-arena-challenger">
+                  <div>
+                    <strong>gpt-5.4-mini</strong>
+                    <span>openai:gpt-5.4-mini</span>
+                  </div>
+                  <WindowedPageButton>Remove</WindowedPageButton>
+                </div>
+                <div className="wos-arena-challenger">
+                  <div>
+                    <strong>claude-sonnet-4.5</strong>
+                    <span>anthropic:claude-sonnet-4.5</span>
+                  </div>
+                  <WindowedPageButton>Remove</WindowedPageButton>
+                </div>
+              </div>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Sampling">
+              <div className="wos-arena-settings-grid">
+                <WindowedField label="Initial rate">
+                  <WindowedTextInput aria-label="Initial rate" type="number" defaultValue="20" min={0} max={100} />
+                </WindowedField>
+                <WindowedField label="Later rate">
+                  <WindowedTextInput aria-label="Later rate" type="number" defaultValue="5" min={0} max={100} />
+                </WindowedField>
+                <WindowedField label="Ramp after">
+                  <WindowedTextInput aria-label="Ramp after" type="number" defaultValue="120" min={0} max={5000} />
+                </WindowedField>
+                <WindowedField label="Minimum prompt">
+                  <WindowedTextInput aria-label="Minimum prompt" type="number" defaultValue="280" min={0} max={2000} />
+                </WindowedField>
+              </div>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Leader">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Model', value: 'openai:gpt-5.4' },
+                  { label: 'Rating', value: 1684 },
+                  { label: 'Record', value: '42W/19L/0T' },
+                  { label: 'Confidence', value: 'High' },
+                ]}
+              />
             </WindowedPageSection>
 
             <WindowedPageSection title="Rankings" meta="4 models">
-              <WindowedDataTable columns={[{ label: 'Model' }, { label: 'Win rate' }, { label: 'Votes', align: 'right' }]}>
-                <WindowedDataRow
-                  name="gpt-5.4"
-                  meta="42 wins / 61 votes"
-                  status={<WindowedBadge tone="positive">68.9%</WindowedBadge>}
-                  action="61"
-                />
-                <WindowedDataRow
-                  name="claude-sonnet-4.5"
-                  meta="31 wins / 52 votes"
-                  status={<WindowedBadge tone="neutral">59.6%</WindowedBadge>}
-                  action="52"
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Challengers" meta="sampling">
-              <WindowedKeyValueGrid
-                columns={4}
-                items={[
-                  {
-                    label: 'Automatic duels',
-                    value: <WindowedToggle checked accent="gateways" label="Toggle automatic duels" />,
-                  },
-                  { label: 'Sample rate', value: '20%' },
-                  { label: 'Prompt windows', value: 'parallel only' },
-                  { label: 'Excluded', value: 'image prompts' },
+              <WindowedDataTable
+                className="wos-arena-ranking-table"
+                columns={[
+                  { label: 'Model' },
+                  { label: 'Rating', align: 'right' },
+                  { label: 'Votes', align: 'right' },
+                  { label: 'Confidence', align: 'right' },
                 ]}
-              />
+              >
+                <div className="wos-arena-ranking-row">
+                  <div className="wos-arena-ranking-row__model">
+                    <span>openai:gpt-5.4</span>
+                    <small>42 wins / 61 votes</small>
+                  </div>
+                  <span className="wos-arena-ranking-row__metric">1684</span>
+                  <span className="wos-arena-ranking-row__metric">61</span>
+                  <span className="wos-arena-ranking-row__confidence">High</span>
+                </div>
+                <div className="wos-arena-ranking-row">
+                  <div className="wos-arena-ranking-row__model">
+                    <span>anthropic:claude-sonnet-4.5</span>
+                    <small>31 wins / 52 votes</small>
+                  </div>
+                  <span className="wos-arena-ranking-row__metric">1612</span>
+                  <span className="wos-arena-ranking-row__metric">52</span>
+                  <span className="wos-arena-ranking-row__confidence">Medium</span>
+                </div>
+              </WindowedDataTable>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
