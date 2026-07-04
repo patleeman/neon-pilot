@@ -633,11 +633,11 @@ export const ErrorBlock = memo(function ErrorBlock({
   const message = presentTraceErrorMessage(block.message);
 
   return (
-    <Notice tone="danger" className="text-[12px] font-mono">
-      <div className="min-w-0 space-y-2">
-        <div {...replySelectionScopeProps}>
-          {block.tool && <span className="text-danger/70 font-semibold">{block.tool} ·</span>}
-          <span className="text-danger/85 leading-relaxed">{message}</span>
+    <Notice tone="danger" className="ui-error-block text-[12px] font-mono">
+      <div className="ui-error-block__body min-w-0 space-y-2">
+        <div className="ui-error-block__message" {...replySelectionScopeProps}>
+          {block.tool && <span className="ui-error-block__tool text-danger/70 font-semibold">{block.tool} ·</span>}
+          <span className="ui-error-block__text text-danger/85 leading-relaxed">{message}</span>
         </div>
       </div>
     </Notice>

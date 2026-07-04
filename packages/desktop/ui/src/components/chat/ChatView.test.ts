@@ -780,6 +780,10 @@ describe('chat view streaming disclosure', () => {
     );
 
     expect(html).toContain('Stopped before finishing. The agent run was interrupted or cancelled.');
+    expect(html).toContain('ui-error-block');
+    expect(html).toContain('ui-error-block__body');
+    expect(html).toContain('ui-error-block__message');
+    expect(html).toContain('ui-error-block__text');
     expect(html).not.toContain('>terminated<');
   });
 
@@ -798,6 +802,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).toContain(
       'Extension &quot;system-ds4&quot; action &quot;ds4StartServer&quot; could not start because a required app module was unavailable.',
     );
+    expect(html).toContain('ui-error-block__text');
     expect(html).toContain('Rebuild or restart Neon Pilot and try again.');
     expect(html).not.toContain('/Users/patrick');
     expect(html).not.toContain('server/dist/app/localApi.js');

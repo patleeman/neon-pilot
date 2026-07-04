@@ -482,6 +482,16 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                   <pre className="ui-tool-block__pre">114 tests passed</pre>
                 </div>
               </div>
+              <div className="ui-notice ui-notice-danger ui-error-block">
+                <div className="ui-error-block__body">
+                  <div className="ui-error-block__message">
+                    <span className="ui-error-block__tool">browser_snapshot ·</span>
+                    <span className="ui-error-block__text">
+                      Could not capture the browser surface because the native view was covered by another desktop window.
+                    </span>
+                  </div>
+                </div>
+              </div>
               <div className="ui-image-preview" data-loaded="true">
                 <button
                   type="button"

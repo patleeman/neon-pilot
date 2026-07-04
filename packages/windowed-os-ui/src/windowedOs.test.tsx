@@ -1014,6 +1014,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure-summary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure[open] .ui-disclosure-summary::after');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__body');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__message');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__tool');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__text');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__media');
@@ -1512,6 +1517,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="ui-disclosure"');
     expect(source).toContain('className="ui-disclosure-summary"');
     expect(source).toContain('className="ui-inline-run-card__metadata-row"');
+    expect(source).toContain('className="ui-notice ui-notice-danger ui-error-block"');
+    expect(source).toContain('className="ui-error-block__message"');
+    expect(source).toContain('className="ui-error-block__tool"');
+    expect(source).toContain('className="ui-error-block__text"');
     expect(source).toContain('storyImagePreviewSrc');
     expect(source).toContain('className="ui-image-preview" data-loaded="true"');
     expect(source).toContain('className="ui-media-preview-button ui-image-preview__button"');
