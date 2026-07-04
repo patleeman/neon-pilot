@@ -1887,11 +1887,11 @@ export const DarkModelArenaPage: Story = {
   render: () => <ModelArenaPageStory theme="dark" />,
 };
 
-export const DiagnosticsPage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+function DiagnosticsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title="Diagnostics"
+        title={theme === 'dark' ? 'Diagnostics - dark' : 'Diagnostics'}
         accent="telemetry"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -2007,7 +2007,15 @@ export const DiagnosticsPage: Story = {
         </WindowedPageShell>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const DiagnosticsPage: Story = {
+  render: () => <DiagnosticsPageStory />,
+};
+
+export const DarkDiagnosticsPage: Story = {
+  render: () => <DiagnosticsPageStory theme="dark" />,
 };
 
 export const ExtensionsPage: Story = {

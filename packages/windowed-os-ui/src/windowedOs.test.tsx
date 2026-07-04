@@ -1665,8 +1665,12 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
+    expect(source).toContain('function DiagnosticsPageStory');
     expect(source).toContain('export const DiagnosticsPage');
-    expect(source).toContain('title="Diagnostics"');
+    expect(source).toContain('export const DarkDiagnosticsPage');
+    expect(source).toContain('<DiagnosticsPageStory theme="dark" />');
+    expect(source).toContain("title={theme === 'dark' ? 'Diagnostics - dark' : 'Diagnostics'}");
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Telemetry"');
     expect(source).toContain('ariaLabel="Diagnostics range"');
     expect(source).toContain('title="Data"');
