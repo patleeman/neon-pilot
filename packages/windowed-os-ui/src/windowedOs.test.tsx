@@ -461,6 +461,8 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('background: var(--wos-chat);');
     expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='gateways']");
     expect(stylesSource).toContain('background: var(--wos-gateways);');
+    expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='drawing']");
+    expect(stylesSource).toContain('background: var(--wos-drawing);');
     expect(stylesSource).toContain('inset 0 -4px 0 var(--wos-ink-900)');
     expect(stylesSource).toContain('transform: translateY(-1px);');
   });
@@ -1149,6 +1151,7 @@ describe('Windowed OS Storybook examples', () => {
     ]) {
       expect(tokensSource).toContain(selector);
     }
+    expect(tokensSource).toContain('--wos-drawing: oklch(');
     expect(tokensSource).toContain('@media (prefers-reduced-motion: reduce)');
     expect(tokensSource).toContain('transition: none;');
   });
@@ -1276,11 +1279,12 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    for (const accent of ['workflows', 'model-arena', 'skills', 'diagnostics']) {
+    for (const accent of ['workflows', 'drawing', 'model-arena', 'skills', 'diagnostics']) {
       expect(stylesSource).toContain(`.wos-window__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-dialog__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-segmented-control[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-toggle[data-checked='true'][data-accent='${accent}']`);
+      expect(stylesSource).toContain(`.wos-data-row[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-list-item[data-accent='${accent}']`);
     }
     expect(stylesSource).toContain('.wos-toggle {\n  position: relative;');
@@ -1995,7 +1999,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('max-width: none !important;');
-    expect(stylesSource).toContain('--wos-drawing-accent: var(--wos-gateways);');
+    expect(stylesSource).toContain('--wos-drawing-accent: var(--wos-drawing);');
+    expect(stylesSource).not.toContain('--wos-drawing-accent: var(--wos-gateways);');
     expect(stylesSource).toContain('--wos-drawing-canvas: color-mix(in srgb, var(--wos-surface-1) 76%, var(--wos-surface-0));');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-dialog-header[data-parent-window-title]::after');
     expect(stylesSource).toContain('max-width: min(34ch, 42%);');

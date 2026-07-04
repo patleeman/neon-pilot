@@ -510,6 +510,7 @@
 .wos-taskbar__button[data-focused='true'][data-accent='workflows'],
 .wos-taskbar__button[data-focused='true'][data-accent='automations'],
 .wos-taskbar__button[data-focused='true'][data-accent='gateways'],
+.wos-taskbar__button[data-focused='true'][data-accent='drawing'],
 .wos-taskbar__button[data-focused='true'][data-accent='model-arena'],
 .wos-taskbar__button[data-focused='true'][data-accent='extensions'],
 .wos-taskbar__button[data-focused='true'][data-accent='skills'],
@@ -532,6 +533,10 @@
 
 .wos-taskbar__button[data-focused='true'][data-accent='gateways'] {
   background: var(--wos-gateways);
+}
+
+.wos-taskbar__button[data-focused='true'][data-accent='drawing'] {
+  background: var(--wos-drawing);
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='model-arena'] {
@@ -603,6 +608,11 @@
   background: var(--wos-gateways);
 }
 
+.wos-app-monogram[data-accent='drawing'],
+.wos-window__titlebar[data-accent='drawing'] {
+  background: var(--wos-drawing);
+}
+
 .wos-app-monogram[data-accent='model-arena'],
 .wos-window__titlebar[data-accent='model-arena'] {
   background: var(--wos-model-arena);
@@ -638,6 +648,7 @@
 .wos-app-monogram[data-accent='workflows'],
 .wos-app-monogram[data-accent='automations'],
 .wos-app-monogram[data-accent='gateways'],
+.wos-app-monogram[data-accent='drawing'],
 .wos-app-monogram[data-accent='model-arena'],
 .wos-app-monogram[data-accent='extensions'],
 .wos-app-monogram[data-accent='skills'],
@@ -648,6 +659,7 @@
 .wos-window__titlebar[data-accent='workflows'],
 .wos-window__titlebar[data-accent='automations'],
 .wos-window__titlebar[data-accent='gateways'],
+.wos-window__titlebar[data-accent='drawing'],
 .wos-window__titlebar[data-accent='model-arena'],
 .wos-window__titlebar[data-accent='extensions'],
 .wos-window__titlebar[data-accent='skills'],
@@ -909,6 +921,7 @@
 .wos-window__titlebar[data-accent='workflows'] .wos-window__meta,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta,
+.wos-window__titlebar[data-accent='drawing'] .wos-window__meta,
 .wos-window__titlebar[data-accent='model-arena'] .wos-window__meta,
 .wos-window__titlebar[data-accent='extensions'] .wos-window__meta,
 .wos-window__titlebar[data-accent='skills'] .wos-window__meta,
@@ -922,6 +935,7 @@
 .wos-window__titlebar[data-accent='workflows'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='drawing'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='model-arena'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='extensions'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='skills'] .wos-window__meta::before,
@@ -1258,6 +1272,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='workflows'],
 .wos-dialog__titlebar[data-accent='automations'],
 .wos-dialog__titlebar[data-accent='gateways'],
+.wos-dialog__titlebar[data-accent='drawing'],
 .wos-dialog__titlebar[data-accent='model-arena'],
 .wos-dialog__titlebar[data-accent='extensions'],
 .wos-dialog__titlebar[data-accent='skills'],
@@ -1280,6 +1295,10 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__titlebar[data-accent='gateways'] {
   background: var(--wos-gateways);
+}
+
+.wos-dialog__titlebar[data-accent='drawing'] {
+  background: var(--wos-drawing);
 }
 
 .wos-dialog__titlebar[data-accent='model-arena'] {
@@ -1336,6 +1355,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta,
+.wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='model-arena'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='extensions'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='skills'] .wos-dialog__meta,
@@ -1349,6 +1369,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta::before,
+.wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='model-arena'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='extensions'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='skills'] .wos-dialog__meta::before,
@@ -1798,7 +1819,7 @@ body[data-neon-pilot-windowed-shell-active='true']
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
-  --wos-drawing-accent: var(--wos-gateways);
+  --wos-drawing-accent: var(--wos-drawing);
   --wos-drawing-canvas: color-mix(in srgb, var(--wos-surface-1) 76%, var(--wos-surface-0));
 
   overflow: hidden;
@@ -3579,6 +3600,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   --wos-segmented-active-ink: var(--wos-accent-ink);
 }
 
+.wos-segmented-control[data-accent='drawing'] {
+  --wos-segmented-active: var(--wos-drawing);
+  --wos-segmented-active-ink: var(--wos-accent-ink);
+}
+
 .wos-segmented-control[data-accent='model-arena'] {
   --wos-segmented-active: var(--wos-model-arena);
   --wos-segmented-active-ink: var(--wos-accent-ink);
@@ -4620,6 +4646,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   background: var(--wos-gateways);
 }
 
+.wos-toggle[data-checked='true'][data-accent='drawing'] {
+  background: var(--wos-drawing);
+}
+
 .wos-toggle[data-checked='true'][data-accent='model-arena'] {
   background: var(--wos-model-arena);
 }
@@ -4766,6 +4796,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-data-row[data-accent='gateways'] {
   --wos-data-row-active: var(--wos-gateways);
   --wos-data-row-active-ink: var(--wos-ink-900);
+}
+
+.wos-data-row[data-accent='drawing'] {
+  --wos-data-row-active: var(--wos-drawing);
+  --wos-data-row-active-ink: var(--wos-accent-ink);
 }
 
 .wos-data-row[data-accent='model-arena'] {
@@ -5055,6 +5090,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-list-item[data-accent='gateways'] {
   --wos-list-active: var(--wos-gateways);
+  --wos-list-active-ink: var(--wos-accent-ink);
+}
+
+.wos-list-item[data-accent='drawing'] {
+  --wos-list-active: var(--wos-drawing);
   --wos-list-active-ink: var(--wos-accent-ink);
 }
 

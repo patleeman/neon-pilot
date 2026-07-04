@@ -17,6 +17,7 @@
   --wos-workflows: oklch(64% 0.13 175);
   --wos-automations: oklch(62% 0.14 300);
   --wos-gateways: oklch(62% 0.14 200);
+  --wos-drawing: oklch(68% 0.16 42);
   --wos-model-arena: oklch(64% 0.15 285);
   --wos-extensions: oklch(70% 0.15 60);
   --wos-skills: oklch(74% 0.14 85);
@@ -95,6 +96,7 @@
   --wos-workflows: oklch(68% 0.13 175);
   --wos-automations: oklch(68% 0.14 300);
   --wos-gateways: oklch(70% 0.14 200);
+  --wos-drawing: oklch(74% 0.16 48);
   --wos-model-arena: oklch(70% 0.15 285);
   --wos-extensions: oklch(76% 0.15 70);
   --wos-skills: oklch(80% 0.14 85);

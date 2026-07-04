@@ -365,6 +365,7 @@ function accentForTitle(title: string): AppAccent {
   if (normalized.includes('automation')) return 'automations';
   if (normalized.includes('model arena')) return 'model-arena';
   if (normalized.includes('gateway')) return 'gateways';
+  if (normalized.includes('drawing') || normalized.includes('excalidraw') || normalized.includes('sketch')) return 'drawing';
   if (normalized.includes('skill')) return 'skills';
   if (normalized.includes('extension')) return 'extensions';
   if (normalized.includes('diagnostic')) return 'diagnostics';

@@ -963,6 +963,49 @@ describe('WindowedLayout route windows', () => {
     ).toBe('workflows');
   });
 
+  it('uses the drawing accent for drawing and sketch app windows', async () => {
+    mocks.extensions = [
+      {
+        id: 'system-drawing-workbench',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'drawing-nav', label: 'Drawing Board', route: '/drawing-board' }],
+          views: [{ id: 'drawing-page', title: 'Drawing Board', location: 'main', route: '/drawing-board' }],
+        },
+      },
+      {
+        id: 'system-sketches',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'sketch-nav', label: 'Sketches', route: '/sketches' }],
+          views: [{ id: 'sketch-page', title: 'Sketches', location: 'main', route: '/sketches' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^drawing board$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^sketches$/i }));
+
+    await screen.findByRole('region', { name: /sketches/i });
+
+    expect(
+      screen
+        .getByRole('region', { name: /drawing board/i })
+        .querySelector('.wos-window__titlebar')
+        ?.getAttribute('data-accent'),
+    ).toBe('drawing');
+    expect(
+      screen
+        .getByRole('region', { name: /sketches/i })
+        .querySelector('.wos-window__titlebar')
+        ?.getAttribute('data-accent'),
+    ).toBe('drawing');
+  });
+
   it('deduplicates start menu routes when an extension contributes both nav and a main view', () => {
     mocks.extensions = [
       {
