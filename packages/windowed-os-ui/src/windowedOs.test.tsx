@@ -1291,7 +1291,11 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
+    expect(source).toContain('function AttachedWorkbenchStory');
     expect(source).toContain('export const ChatWithAttachedWorkbench');
+    expect(source).toContain('export const DarkChatWithAttachedWorkbench');
+    expect(source).toContain('<AttachedWorkbenchStory theme="dark" />');
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('className="wos-chat-window-toolbar"');
     expect(source).toContain('aria-label="Hide workbench"');
     expect(source).toContain('aria-label="Open Browser window"');

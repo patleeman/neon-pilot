@@ -199,11 +199,11 @@ export const TaskbarMenuPlacement: Story = {
   ),
 };
 
-export const ChatWithAttachedWorkbench: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 700, padding: 24 }}>
+function AttachedWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 700, padding: 24 }}>
       <WindowFrame
-        title="Release notes"
+        title={theme === 'dark' ? 'Release notes — dark' : 'Release notes'}
         accent="chat"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1180px, 100%)', height: 640 }}
@@ -287,7 +287,15 @@ export const ChatWithAttachedWorkbench: Story = {
         </div>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const ChatWithAttachedWorkbench: Story = {
+  render: () => <AttachedWorkbenchStory />,
+};
+
+export const DarkChatWithAttachedWorkbench: Story = {
+  render: () => <AttachedWorkbenchStory theme="dark" />,
 };
 
 export const NavigationPrimitives: Story = {
