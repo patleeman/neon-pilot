@@ -715,6 +715,17 @@ describe('WindowedDialog content primitives', () => {
     expect(stylesSource).toContain('.wos-dialog:focus-visible {');
     expect(stylesSource).toContain('0 0 0 4px var(--wos-ink-900)');
   });
+
+  it('keeps compact subwindow actions and body chrome inside narrow desktop windows', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-dialog__actions {\n  display: flex;\n  min-width: 0;');
+    expect(stylesSource).toContain('.wos-dialog__actions .wos-page-button {\n  min-width: 0;');
+    expect(stylesSource).toContain('@media (max-width: 560px) {\n  .wos-dialog-layer {');
+    expect(stylesSource).toContain('.wos-dialog__actions {\n    justify-content: flex-start;');
+    expect(stylesSource).toContain('.wos-dialog__body {\n    padding: 8px;');
+  });
 });
 
 describe('WindowedTerminalFrame', () => {
@@ -787,6 +798,8 @@ describe('Windowed OS tokens', () => {
     expect(stylesSource).toContain('color: var(--wos-accent-ink);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
     expect(stylesSource).toContain('.wos-extension-dialog-busy');
+    expect(stylesSource).toContain('.wos-extension-detail-grid .wos-key-value-list');
+    expect(stylesSource).toContain('.wos-extension-detail-description {\n  grid-column: 1 / -1;\n  margin: 0;\n  border: 1.5px solid');
     expect(stylesSource).toContain(".wos-dialog-layer[data-modal='true']");
     expect(stylesSource).toContain('pointer-events: none;');
     expect(stylesSource).toContain('pointer-events: auto;');
@@ -2109,6 +2122,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(extensionsSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
     expect(extensionsSource).toContain('<WindowedDialog');
     expect(extensionsSource).toContain('title="system-browser"');
+    expect(extensionsSource).toContain('parentWindowTitle="Extensions"');
+    expect(extensionsSource).toContain('className="wos-extension-detail-grid"');
+    expect(extensionsSource).toContain('className="wos-extension-detail-description"');
     expect(extensionsSource.indexOf('</WindowFrame>')).toBeLessThan(extensionsSource.indexOf('<WindowedDialog'));
     expect(extensionsSource).not.toContain('title="Inventory"');
     expect(extensionsSource).not.toContain('title="Installed extensions"');

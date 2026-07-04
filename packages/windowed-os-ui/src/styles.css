@@ -1135,12 +1135,17 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__actions {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
   border-bottom: 1.5px solid var(--wos-ink-900);
   background: var(--wos-surface-2);
   padding: 8px 10px;
+}
+
+.wos-dialog__actions .wos-page-button {
+  min-width: 0;
 }
 
 .wos-dialog__body {
@@ -4545,8 +4550,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-extension-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(150px, auto);
-  gap: var(--wos-space-4);
+  gap: 8px;
   align-items: start;
+}
+
+.wos-extension-detail-grid .wos-key-value-list {
+  border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 48%, transparent);
 }
 
 .wos-extension-detail-actions {
@@ -4565,7 +4574,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-extension-detail-description {
   grid-column: 1 / -1;
   margin: 0;
+  border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 48%, transparent);
+  background: var(--wos-surface-2);
   color: var(--wos-ink-700);
+  padding: 8px 9px;
   font-family: system-ui, sans-serif;
   font-size: 12px;
   line-height: 1.45;
@@ -4605,6 +4617,26 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
   .wos-automation-actions {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .wos-dialog-layer {
+    padding: 16px 10px;
+  }
+
+  .wos-dialog {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .wos-dialog__actions {
+    justify-content: flex-start;
+    padding: 7px 8px;
+  }
+
+  .wos-dialog__body {
+    padding: 8px;
   }
 }
 
