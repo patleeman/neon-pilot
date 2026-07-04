@@ -1613,9 +1613,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('justify-content: flex-start;');
     expect(stylesSource).toContain('.wos-start-menu__item > .wos-app-tile {\n  width: 100%;\n  flex: 1 1 auto;');
     expect(stylesSource).toContain('pointer-events: none;');
-    expect(stylesSource).toContain(".wos-start-menu__item[data-open='true']::before");
-    expect(stylesSource).toContain(".wos-start-menu__item[data-focused='true']::before");
-    expect(stylesSource).toContain('flex: 0 0 auto;');
+    expect(stylesSource).toContain(".wos-start-menu__item[data-open='true'] {\n  border-color: var(--wos-ink-900);");
+    expect(stylesSource).toContain(".wos-start-menu__item[data-focused='true'] {\n  border-color: var(--wos-ink-900);");
+    expect(stylesSource).toContain('box-shadow: inset 0 0 0 1px var(--wos-ink-900);');
+    expect(stylesSource).not.toContain('.wos-start-menu__item::before');
     expect(stylesSource).not.toContain('.wos-start-menu__item::after');
   });
 

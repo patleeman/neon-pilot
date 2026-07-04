@@ -178,7 +178,15 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 720 }}>
       <main className="wos-desktop" style={{ height: 678 }}>
-        <StartMenu open items={canonicalDesktopApps.map((app) => ({ ...app, onSelect: () => undefined }))} />
+        <StartMenu
+          open
+          items={canonicalDesktopApps.map((app) => ({
+            ...app,
+            open: app.id === 'chat' || app.id === 'gateways',
+            focused: app.id === 'chat',
+            onSelect: () => undefined,
+          }))}
+        />
         <WindowFrame
           title="Chat"
           accent="chat"
