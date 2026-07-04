@@ -801,7 +801,16 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
               <WindowedPageSection title="Task queue">
                 {loading && visibleTasks.length === 0 ? <WindowedLoadingState label="Loading automations" /> : null}
                 {!error && !loading && visibleTasks.length === 0 ? (
-                  <WindowedEmptyState>Schedule prompts into owner threads for recurring reports, checks, and reminders.</WindowedEmptyState>
+                  <WindowedEmptyState
+                    title="No automations scheduled"
+                    action={
+                      <WindowedPageButton tone="accent" onClick={openCreate}>
+                        New automation
+                      </WindowedPageButton>
+                    }
+                  >
+                    Schedule prompts into owner threads for recurring reports, checks, and reminders.
+                  </WindowedEmptyState>
                 ) : null}
                 {visibleTasks.length > 0 ? (
                   <WindowedDataTable

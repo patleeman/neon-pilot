@@ -244,11 +244,16 @@ describe('WindowedEmptyState', () => {
 
   it('renders compact empty content with an optional action', () => {
     const html = renderToStaticMarkup(
-      <WindowedEmptyState action={<button type="button">Create</button>}>No workflow runs yet.</WindowedEmptyState>,
+      <WindowedEmptyState title="No workflow runs" action={<button type="button">Create</button>}>
+        Run history appears after workflows execute.
+      </WindowedEmptyState>,
     );
 
     expect(html).toContain('class="wos-empty-state"');
-    expect(html).toContain('No workflow runs yet.');
+    expect(html).toContain('wos-empty-state__title');
+    expect(html).toContain('No workflow runs');
+    expect(html).toContain('wos-empty-state__copy');
+    expect(html).toContain('Run history appears after workflows execute.');
     expect(html).toContain('wos-empty-state__action');
     expect(html).toContain('Create');
   });

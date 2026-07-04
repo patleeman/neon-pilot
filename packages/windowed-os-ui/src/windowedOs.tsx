@@ -815,12 +815,16 @@ export interface WindowedEmptyStateProps {
   children: ReactNode;
   action?: ReactNode;
   className?: string;
+  title?: ReactNode;
 }
 
-export function WindowedEmptyState({ children, action, className }: WindowedEmptyStateProps) {
+export function WindowedEmptyState({ children, action, className, title }: WindowedEmptyStateProps) {
   return (
     <div className={cx('wos-empty-state', className)} data-tone="neutral">
-      <div className="wos-empty-state__body">{children}</div>
+      <div className="wos-empty-state__body">
+        {title ? <div className="wos-empty-state__title">{title}</div> : null}
+        <div className="wos-empty-state__copy">{children}</div>
+      </div>
       {action ? <div className="wos-empty-state__action">{action}</div> : null}
     </div>
   );

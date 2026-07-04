@@ -206,7 +206,11 @@ describe('AutomationsPage windowed surface', () => {
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy());
 
+    expect(screen.getByText('No automations scheduled')).toBeTruthy();
     expect(screen.getByText('Schedule prompts into owner threads for recurring reports, checks, and reminders.')).toBeTruthy();
+    const emptyAction = container.querySelector('.wos-empty-state__action');
+    expect(emptyAction).toBeTruthy();
+    expect(within(emptyAction as HTMLElement).getByRole('button', { name: 'New automation' })).toBeTruthy();
     expect(container.querySelectorAll('.wos-empty-state')).toHaveLength(1);
     expect(container.querySelector('.wos-automation-empty')).toBeNull();
     expect(container.querySelector('.wos-automation-error')).toBeNull();

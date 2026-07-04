@@ -2719,6 +2719,16 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 0;
 }
 
+.wos-empty-state__title {
+  margin-bottom: 2px;
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
+}
+
+.wos-empty-state__copy {
+  min-width: 0;
+}
+
 .wos-empty-state__action {
   flex: 0 0 auto;
 }
