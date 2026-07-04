@@ -965,6 +965,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__empty-output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__muted');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-panel-muted');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card .ui-action-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__output');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure-summary');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure[open] .ui-disclosure-summary::after');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).not.toContain(".windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1']");
     expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-user');
@@ -1430,6 +1437,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="ui-terminal-block__command"');
     expect(source).toContain('className="ui-terminal-block__output"');
     expect(source).toContain('className="ui-terminal-block__empty-output"');
+    expect(source).toContain('className="ui-panel-muted ui-inline-run-card"');
+    expect(source).toContain('className="ui-inline-run-card__summary"');
+    expect(source).toContain('className="ui-action-button"');
+    expect(source).toContain('className="ui-disclosure"');
+    expect(source).toContain('className="ui-disclosure-summary"');
+    expect(source).toContain('className="ui-inline-run-card__metadata-row"');
     expect(source).toContain('className="conversation-composer-region"');
     expect(source).toContain('className="ui-input-shell"');
     expect(source).toContain('className="ui-composer-input-controls"');

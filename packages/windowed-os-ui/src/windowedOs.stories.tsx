@@ -336,12 +336,12 @@ export const DarkChatWithCollapsedWorkbench: Story = {
 
 function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 820, padding: 24 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 1040, padding: 24 }}>
       <WindowFrame
         title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
         accent="chat"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 760 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 980 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
@@ -419,6 +419,40 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 <div className="ui-terminal-block__chrome ui-terminal-block__muted">
                   <span>exit 0</span>
                   <span>2.4s</span>
+                </div>
+              </div>
+              <div className="ui-panel-muted ui-inline-run-card">
+                <div className="ui-inline-run-card__summary">
+                  <button type="button" className="ui-row-button">
+                    <span className="ui-pill ui-pill-accent">shell</span>
+                    <span className="ui-pill ui-pill-success">complete</span>
+                    <span className="ui-inline-run-card__title">Background task: desktop-mode QA</span>
+                  </button>
+                  <a href="https://example.com" className="ui-action-button">
+                    Open conversation
+                  </a>
+                </div>
+                <div className="ui-inline-run-card__details">
+                  <div className="ui-panel-muted ui-inline-run-card__output">
+                    <div className="ui-inline-run-card__output-header">
+                      <span className="ui-status-dot ui-status-dot-sm ui-status-dot-muted" />
+                      <span className="ui-section-label">Output</span>
+                      <span className="ui-inline-run-card__path">output.log</span>
+                    </div>
+                    <pre>Windowed Storybook visual check passed.</pre>
+                  </div>
+                  <details className="ui-disclosure" open>
+                    <summary className="ui-disclosure-summary">
+                      <span>Details</span>
+                      <span className="ui-disclosure-meta">Command details</span>
+                    </summary>
+                    <div className="ui-disclosure-body">
+                      <div className="ui-inline-run-card__metadata-row">
+                        <span className="ui-section-label">Command</span>
+                        <span>pnpm --dir packages/windowed-os-ui run build:storybook</span>
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
             </article>
