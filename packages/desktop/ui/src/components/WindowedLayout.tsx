@@ -100,6 +100,7 @@ const MIN_WINDOW_WIDTH = 360;
 const MIN_WINDOW_HEIGHT = 260;
 const WINDOWED_BROWSER_SETTLE_MS = 1200;
 const FALLBACK_TASKBAR_HEIGHT = 44;
+const DEFAULT_WINDOW_BOTTOM_GUTTER = 56;
 const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 
 const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
@@ -129,7 +130,7 @@ function defaultBoundsForDesktop(index: number, kind: LauncherWindowKind, deskto
   const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
   const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
   const maxX = Math.max(0, desktop.width - width - 24);
-  const maxY = Math.max(0, desktop.height - height - 24);
+  const maxY = Math.max(0, desktop.height - height - DEFAULT_WINDOW_BOTTOM_GUTTER);
   const cascadeStep = 34;
   const rowStep = 42;
   const rowDrift = 46;

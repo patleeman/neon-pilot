@@ -1019,6 +1019,34 @@ describe('WindowedLayout route windows', () => {
     expect(new Set(origins).size).toBe(origins.length);
   });
 
+  it('keeps densely cascaded app launches above the taskbar-safe gutter', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 960 });
+    mocks.extensions = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta'].map((label) => ({
+      id: `system-${label.toLowerCase()}`,
+      enabled: true,
+      contributes: {
+        nav: [{ id: 'page', label, route: `/${label.toLowerCase()}` }],
+      },
+    }));
+
+    const { container } = renderWindowedLayout();
+
+    for (const label of ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta']) {
+      fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}$`, 'i') }));
+      await screen.findByRole('region', { name: new RegExp(`^${label}$`, 'i') });
+    }
+
+    const routeWindows = Array.from(container.querySelectorAll<HTMLElement>('.wos-window[data-window-id^="route:"]'));
+    expect(routeWindows.length).toBeGreaterThanOrEqual(6);
+    for (const windowElement of routeWindows) {
+      expect(windowElement.style.width).toBe('1040px');
+      expect(windowElement.style.height).toBe('650px');
+      expect(Number.parseInt(windowElement.style.top, 10) + 650).toBeLessThanOrEqual(860);
+    }
+  });
+
   it('marks already-open desktop apps in the Start menu from the current window stack', async () => {
     mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
     seedWindowedWindows([
