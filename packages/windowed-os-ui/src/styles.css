@@ -1402,13 +1402,22 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-workbench-file-bar__path {
   min-width: min(180px, 100%);
+  max-width: 100%;
   flex: 1 1 14rem;
 }
 
 .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input {
   height: 28px;
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--wos-font-mono);
   font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input:focus {
+  text-overflow: clip;
 }
 
 @container (max-width: 420px) {

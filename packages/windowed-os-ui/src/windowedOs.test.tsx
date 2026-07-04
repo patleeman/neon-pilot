@@ -1803,7 +1803,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input',
     );
+    expect(stylesSource).toContain('min-width: min(180px, 100%);\n  max-width: 100%;\n  flex: 1 1 14rem;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input {\n  height: 28px;\n  min-width: 0;\n  overflow: hidden;',
+    );
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).toContain('text-overflow: ellipsis;\n  white-space: nowrap;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input:focus {\n  text-overflow: clip;',
+    );
     expect(stylesSource).toContain('@container (max-width: 420px)');
     expect(stylesSource).toContain(
       '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button {\n    order: 1;',
