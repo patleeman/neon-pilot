@@ -655,8 +655,8 @@
   position: absolute;
   isolation: isolate;
   display: grid;
-  min-width: 360px;
-  min-height: 260px;
+  min-width: min(360px, calc(100vw - 32px));
+  min-height: min(260px, calc(100vh - 32px));
   grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);
   overflow: hidden;
   border: 2px solid var(--wos-ink-900);
@@ -1241,6 +1241,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-window-route-body--chat > * {
+  min-width: 0;
   min-height: 0;
 }
 
@@ -1256,6 +1257,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-inherited-chat-preview {
   display: grid;
+  min-width: 0;
   min-height: 0;
   height: 100%;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -1263,12 +1265,16 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-inherited-chat-preview > [data-chat-transcript-panel='1'] {
+  min-width: 0;
   min-height: 0;
+  width: 100%;
   overflow: auto;
 }
 
 .wos-inherited-chat-preview > .conversation-composer-region {
+  min-width: 0;
   min-height: 0;
+  width: 100%;
   height: auto;
 }
 
@@ -5574,11 +5580,15 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-markdown pre code {
+  display: block;
+  min-width: 0;
   background: transparent;
   color: var(--wos-ink-900);
   font-family: var(--wos-font-mono);
   font-size: 11px;
   line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-markdown table {

@@ -557,6 +557,15 @@ describe('WindowedPageButton', () => {
 });
 
 describe('WindowFrame', () => {
+  it('keeps the desktop minimum responsive to narrow preview viewports', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('min-width: min(360px, calc(100vw - 32px));');
+    expect(stylesSource).toContain('min-height: min(260px, calc(100vh - 32px));');
+    expect(stylesSource).not.toContain('min-width: 360px;\n  min-height: 260px;');
+  });
+
   it('renders an iframe shield above window body content for blocked composited surfaces', () => {
     const html = renderToStaticMarkup(
       <WindowFrame title="Chat" focused iframeBlocked onMinimize={() => undefined} onMaximize={() => undefined} onClose={() => undefined}>
@@ -951,9 +960,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain('.wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('z-index: 30;');
+    expect(stylesSource).toContain('.wos-window-route-body--chat > * {\n  min-width: 0;\n  min-height: 0;');
     expect(stylesSource).toContain('.wos-inherited-chat-preview');
+    expect(stylesSource).toContain('.wos-inherited-chat-preview {\n  display: grid;\n  min-width: 0;');
     expect(stylesSource).toContain('grid-template-rows: minmax(0, 1fr) auto;');
     expect(stylesSource).toContain(".wos-inherited-chat-preview > [data-chat-transcript-panel='1']");
+    expect(stylesSource).toContain(".wos-inherited-chat-preview > [data-chat-transcript-panel='1'] {\n  min-width: 0;\n  min-height: 0;\n  width: 100%;");
     expect(stylesSource).toContain('.wos-inherited-chat-preview > .conversation-composer-region');
     expect(stylesSource).toContain('.wos-window-route-body--chat .ui-input-shell');
     expect(stylesSource).toContain('overflow: visible;');
@@ -1057,6 +1069,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown :not(pre) > code');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre code {\n  display: block;\n  min-width: 0;');
+    expect(stylesSource).toContain('white-space: pre-wrap;\n  overflow-wrap: anywhere;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown table');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation {');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation summary');
