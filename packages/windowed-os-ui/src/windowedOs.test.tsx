@@ -1929,24 +1929,32 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('min-height: 42px;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain(
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__button',
+    );
+    expect(stylesSource).toContain(
       '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button',
     );
+    expect(stylesSource).toContain('.wos-browser-toolbar__button:hover:not(:disabled),');
     expect(stylesSource).toContain('flex: 0 0 28px;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__address',
+    );
     expect(stylesSource).toContain(
       '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input',
     );
     expect(stylesSource).toContain('min-width: min(180px, 100%);\n  max-width: 100%;\n  flex: 1 1 14rem;');
     expect(stylesSource).toContain(
-      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input {\n  height: 28px;\n  min-width: 0;\n  overflow: hidden;',
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__address,',
     );
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('background: var(--wos-surface-0);');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).toContain('text-overflow: ellipsis;\n  white-space: nowrap;');
-    expect(stylesSource).toContain(
-      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input:focus {\n  text-overflow: clip;',
-    );
+    expect(stylesSource).toContain('.wos-browser-toolbar__address:focus,');
+    expect(stylesSource).toContain('text-overflow: clip;');
     expect(stylesSource).toContain('@container (max-width: 420px)');
     expect(stylesSource).toContain(
-      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button {\n    order: 1;',
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__button,',
     );
     expect(stylesSource).toContain('order: 2;\n    flex-basis: 100%;');
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-windowed-browser-host');
@@ -2259,8 +2267,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-windowed-subwindow="browser"');
     expect(source).toContain('className="wos-browser-toolbar"');
     expect(source).toContain('aria-label="Browser controls"');
-    expect(source).toContain('className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go back" disabled');
-    expect(source).toContain('className="ui-text-input"');
+    expect(source).toContain('className="wos-browser-toolbar__button" aria-label="Go back" disabled');
+    expect(source).toContain('className="wos-browser-toolbar__address"');
+    expect(source).not.toContain('className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go back" disabled');
+    expect(source).not.toContain('className="ui-text-input"');
     expect(source).toContain('aria-label="Browser child window preview"');
   });
 

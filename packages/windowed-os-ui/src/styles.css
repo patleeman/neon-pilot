@@ -1489,6 +1489,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   padding: 6px 8px;
 }
 
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__button,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-workbench-file-bar__button {
   width: 28px;
@@ -1504,12 +1505,39 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   box-shadow: none;
 }
 
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font: var(--wos-text-meta);
+  font-family: var(--wos-font-mono);
+  font-weight: 750;
+}
+
+.wos-window-route-body--browser
+  .wos-chat-browser-dialog__body
+  :where(.wos-browser-toolbar, form:first-child)
+  .wos-browser-toolbar__button:hover:not(:disabled),
+.wos-window-route-body--browser
+  .wos-chat-browser-dialog__body
+  :where(.wos-browser-toolbar, form:first-child)
+  .wos-browser-toolbar__button:focus-visible {
+  background: var(--wos-chat);
+  color: var(--wos-accent-ink);
+}
+
+.wos-window-route-body--browser
+  .wos-chat-browser-dialog__body
+  :where(.wos-browser-toolbar, form:first-child)
+  .wos-browser-toolbar__button:disabled,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button:disabled {
   background: var(--wos-surface-disabled);
   color: var(--wos-ink-500);
   opacity: 1;
 }
 
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__address,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-workbench-file-bar__path {
   min-width: min(180px, 100%);
@@ -1517,25 +1545,43 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   flex: 1 1 14rem;
 }
 
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .wos-browser-toolbar__address,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input {
   height: 28px;
   min-width: 0;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: var(--wos-surface-0);
+  color: var(--wos-ink-900);
   overflow: hidden;
   font-family: var(--wos-font-mono);
   font-size: 11px;
+  padding: 0 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.wos-window-route-body--browser
+  .wos-chat-browser-dialog__body
+  :where(.wos-browser-toolbar, form:first-child)
+  .wos-browser-toolbar__address:focus,
 .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input:focus {
   text-overflow: clip;
 }
 
 @container (max-width: 420px) {
+  .wos-window-route-body--browser
+    .wos-chat-browser-dialog__body
+    :where(.wos-browser-toolbar, form:first-child)
+    .wos-browser-toolbar__button,
   .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button {
     order: 1;
   }
 
+  .wos-window-route-body--browser
+    .wos-chat-browser-dialog__body
+    :where(.wos-browser-toolbar, form:first-child)
+    .wos-browser-toolbar__address,
   .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input {
     order: 2;
     flex-basis: 100%;

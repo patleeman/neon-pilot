@@ -3335,21 +3335,21 @@ function BrowserWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
         >
           <div className="wos-chat-browser-dialog__body">
             <form className="wos-browser-toolbar" aria-label="Browser controls" onSubmit={(event) => event.preventDefault()}>
-              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go back" disabled>
+              <button type="button" className="wos-browser-toolbar__button" aria-label="Go back" disabled>
                 ←
               </button>
-              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go forward" disabled>
+              <button type="button" className="wos-browser-toolbar__button" aria-label="Go forward" disabled>
                 →
               </button>
-              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Reload browser preview">
+              <button type="button" className="wos-browser-toolbar__button" aria-label="Reload browser preview">
                 ↻
               </button>
               <input
-                className="ui-text-input"
+                className="wos-browser-toolbar__address"
                 aria-label="Browser URL"
                 defaultValue="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"
               />
-              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Close browser tab">
+              <button type="button" className="wos-browser-toolbar__button" aria-label="Close browser tab">
                 ×
               </button>
             </form>
