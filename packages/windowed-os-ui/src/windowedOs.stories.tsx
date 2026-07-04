@@ -336,12 +336,12 @@ export const DarkChatWithCollapsedWorkbench: Story = {
 
 function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 1040, padding: 24 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 1280, padding: 24 }}>
       <WindowFrame
         title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
         accent="chat"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 980 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 1220 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
@@ -463,6 +463,34 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 <span className="ui-pill ui-pill-warning ui-composer-notice__pill">No workspace attached</span>
               </div>
               <div className="ui-input-shell">
+                <div className="ui-composer-attachment-shelf">
+                  <div className="ui-composer-attachment-shelf__row">
+                    <div className="ui-attachment-chip">
+                      <button type="button" className="ui-attachment-chip-button" aria-label="Preview windowed-os-notes.png">
+                        <span aria-hidden="true">img</span>
+                        <span className="ui-attachment-chip__name">windowed-os-notes.png</span>
+                        <span className="ui-attachment-chip__meta">412 KB</span>
+                      </button>
+                      <button type="button" className="ui-icon-button" aria-label="Remove windowed-os-notes.png">
+                        x
+                      </button>
+                    </div>
+                    <div className="ui-attachment-chip">
+                      <button type="button" className="ui-attachment-chip-button" aria-label="Preview desktop sketch">
+                        <span className="ui-attachment-chip__preview" aria-hidden="true" />
+                        <span className="ui-attachment-chip__name">Desktop sketch</span>
+                        <span className="ui-attachment-chip__meta">new drawing</span>
+                      </button>
+                      <button type="button" className="ui-text-button">
+                        edit
+                      </button>
+                      <button type="button" className="ui-icon-button" aria-label="Remove desktop sketch">
+                        x
+                      </button>
+                    </div>
+                  </div>
+                  <div className="ui-composer-attachment-shelf__status">Syncing drawings...</div>
+                </div>
                 <div className="ui-composer-input-controls">
                   <div className="ui-composer-input-controls__editor">
                     <textarea aria-label="Message" placeholder="Message Neon Pilot" />

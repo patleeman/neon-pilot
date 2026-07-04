@@ -888,6 +888,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip)',
     );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip-button)',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip__name)',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip__preview)',
+    );
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-icon-button)');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-text-button)');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status');
     expect(stylesSource).toContain('.wos-window-route-body .bg-base');
     expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
@@ -1445,6 +1456,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="ui-inline-run-card__metadata-row"');
     expect(source).toContain('className="conversation-composer-region"');
     expect(source).toContain('className="ui-input-shell"');
+    expect(source).toContain('className="ui-composer-attachment-shelf"');
+    expect(source).toContain('className="ui-attachment-chip"');
+    expect(source).toContain('className="ui-attachment-chip-button"');
+    expect(source).toContain('className="ui-attachment-chip__name"');
+    expect(source).toContain('className="ui-attachment-chip__preview"');
     expect(source).toContain('className="ui-composer-input-controls"');
     expect(source).toContain('className="ui-composer-tool-button"');
     expect(source).toContain('className="ui-composer-model-fallback"');
