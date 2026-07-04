@@ -7011,6 +7011,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   max-width: 128px;
   min-height: 28px;
   align-items: center;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-surface-1);
+  padding: 0 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7197,18 +7201,52 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   }
 
   .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row {
+    display: grid;
     min-height: 34px;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
     gap: 5px;
     padding: 6px 2px 0;
   }
 
-  .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__leading,
-  .windowed-os-shell .wos-window-route-body--chat .ui-composer-actions {
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__leading {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 28px minmax(0, 1fr) minmax(112px, auto);
+    align-items: center;
     gap: 5px;
   }
 
-  .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row {
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: stretch;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
     gap: 5px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback {
+    width: 100%;
+    max-width: none;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row {
+    min-width: 0;
+    gap: 5px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline {
+    max-width: 100%;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-label {
+    width: 100%;
+    min-width: 0;
   }
 }
 

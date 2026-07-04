@@ -161,6 +161,19 @@ describe('WindowedDataTable', () => {
       ".windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,\n  .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {\n    min-height: 34px;",
     );
     expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row {\n    display: grid;\n    min-height: 34px;',
+    );
+    expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__leading {\n    display: grid;\n    width: 100%;\n    grid-template-columns: 28px minmax(0, 1fr) minmax(112px, auto);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions {\n    display: grid;\n    width: 100%;\n    grid-template-columns: 32px minmax(0, 1fr) 32px;',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback {\n    width: 100%;\n    max-width: none;',
+    );
+    expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item {\n    min-height: 26px;',
     );
   });
@@ -1330,6 +1343,7 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline');
+    expect(stylesSource).toContain('border-radius: 7px;\n  background: var(--wos-surface-1);\n  padding: 0 8px;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static');
     expect(stylesSource).toContain('width: fit-content;');
     expect(stylesSource).toContain('max-width: min(100%, 380px);');
