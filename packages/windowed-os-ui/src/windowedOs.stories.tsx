@@ -336,12 +336,12 @@ export const DarkChatWithCollapsedWorkbench: Story = {
 
 function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 720, padding: 24 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 820, padding: 24 }}>
       <WindowFrame
         title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
         accent="chat"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 660 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 760 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
@@ -404,6 +404,21 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 </div>
                 <div className="ui-tool-block__output">
                   <pre className="ui-tool-block__pre">114 tests passed</pre>
+                </div>
+              </div>
+              <div className="ui-terminal-block">
+                <div className="ui-terminal-block__chrome">
+                  <span className="ui-terminal-block__command">pnpm --dir packages/windowed-os-ui run test</span>
+                  <span className="ui-pill ui-pill-accent">shell</span>
+                </div>
+                <div className="ui-terminal-block__body">
+                  <pre className="ui-terminal-block__output">PASS src/windowedOs.test.tsx{'\n'}116 tests passed</pre>
+                  <p className="ui-terminal-block__muted">Waiting for output...</p>
+                  <pre aria-label="No terminal output" className="ui-terminal-block__empty-output" />
+                </div>
+                <div className="ui-terminal-block__chrome ui-terminal-block__muted">
+                  <span>exit 0</span>
+                  <span>2.4s</span>
                 </div>
               </div>
             </article>

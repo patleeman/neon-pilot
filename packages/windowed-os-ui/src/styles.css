@@ -5737,6 +5737,69 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   line-height: 1.45;
 }
 
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block {
+  overflow: hidden;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wos-ink-900) 8%, var(--wos-surface-1));
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  margin-block: 8px;
+  box-shadow: none;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 8px;
+  border-color: var(--wos-ink-900) !important;
+  background: color-mix(in srgb, var(--wos-chat) 10%, var(--wos-surface-2));
+  padding: 5px 8px;
+  color: var(--wos-ink-800);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome:first-child {
+  border-bottom: 2px solid var(--wos-ink-900) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome:last-child {
+  border-top: 2px solid var(--wos-ink-900) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__command {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--wos-ink-900);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__body {
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__output,
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__empty-output {
+  margin: 0;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__muted {
+  color: var(--wos-ink-600);
+  font-size: 10.5px;
+  font-style: italic;
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-conversation-setup-empty {
   padding: var(--wos-space-5) !important;
 }

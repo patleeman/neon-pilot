@@ -959,6 +959,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__pre');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__command');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__output');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__empty-output');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__muted');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).not.toContain(".windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1']");
     expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-user');
@@ -1419,6 +1425,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="ui-skill-invocation-summary"');
     expect(source).toContain('agent-plugin:local-qa');
     expect(source).toContain('className="ui-tool-block"');
+    expect(source).toContain('className="ui-terminal-block"');
+    expect(source).toContain('className="ui-terminal-block__chrome"');
+    expect(source).toContain('className="ui-terminal-block__command"');
+    expect(source).toContain('className="ui-terminal-block__output"');
+    expect(source).toContain('className="ui-terminal-block__empty-output"');
     expect(source).toContain('className="conversation-composer-region"');
     expect(source).toContain('className="ui-input-shell"');
     expect(source).toContain('className="ui-composer-input-controls"');
