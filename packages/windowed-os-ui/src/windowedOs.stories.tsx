@@ -9,6 +9,8 @@ import {
   WindowedActionRow,
   WindowedAppTile,
   WindowedBadge,
+  WindowedBrowserToolbar,
+  type WindowedBrowserToolbarAction,
   WindowedChartPanel,
   WindowedChatComposer,
   WindowedChatMain,
@@ -3283,6 +3285,13 @@ export const DarkWorkspaceWindow: Story = {
 };
 
 function BrowserWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  const browserActions: WindowedBrowserToolbarAction[] = [
+    { id: 'back', label: 'Go back', icon: '←', disabled: true },
+    { id: 'forward', label: 'Go forward', icon: '→', disabled: true },
+    { id: 'reload', label: 'Reload browser preview', icon: '↻' },
+    { id: 'close', label: 'Close browser tab', icon: '×', placement: 'trailing' },
+  ];
+
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
@@ -3301,25 +3310,11 @@ function BrowserWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
           data-parent-window-title="New conversation"
         >
           <div className="wos-chat-browser-dialog__body">
-            <form className="wos-browser-toolbar" aria-label="Browser controls" onSubmit={(event) => event.preventDefault()}>
-              <button type="button" className="wos-browser-toolbar__button" aria-label="Go back" disabled>
-                ←
-              </button>
-              <button type="button" className="wos-browser-toolbar__button" aria-label="Go forward" disabled>
-                →
-              </button>
-              <button type="button" className="wos-browser-toolbar__button" aria-label="Reload browser preview">
-                ↻
-              </button>
-              <input
-                className="wos-browser-toolbar__address"
-                aria-label="Browser URL"
-                defaultValue="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"
-              />
-              <button type="button" className="wos-browser-toolbar__button" aria-label="Close browser tab">
-                ×
-              </button>
-            </form>
+            <WindowedBrowserToolbar
+              address="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"
+              actions={browserActions}
+              readOnly
+            />
             <div className="ui-windowed-browser-host" data-windowed-browser-host="true" aria-label="Browser child window preview">
               <div className="ui-windowed-browser-host__blocker">
                 <div className="ui-windowed-browser-host__state">

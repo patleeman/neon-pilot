@@ -181,6 +181,73 @@ export function WindowedChatToolLauncher({
   );
 }
 
+export interface WindowedBrowserToolbarAction {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  disabled?: boolean;
+  placement?: 'leading' | 'trailing';
+  onSelect?: () => void;
+}
+
+export interface WindowedBrowserToolbarProps {
+  address: string;
+  actions: ReadonlyArray<WindowedBrowserToolbarAction>;
+  ariaLabel?: string;
+  addressLabel?: string;
+  readOnly?: boolean;
+  className?: string;
+  onAddressChange?: (value: string) => void;
+  onSubmit?: FormHTMLAttributes<HTMLFormElement>['onSubmit'];
+}
+
+export function WindowedBrowserToolbar({
+  address,
+  actions,
+  ariaLabel = 'Browser controls',
+  addressLabel = 'Browser URL',
+  readOnly = false,
+  className,
+  onAddressChange,
+  onSubmit,
+}: WindowedBrowserToolbarProps) {
+  const leadingActions = actions.filter((action) => action.placement !== 'trailing');
+  const trailingActions = actions.filter((action) => action.placement === 'trailing');
+  const renderAction = (action: WindowedBrowserToolbarAction) => (
+    <button
+      key={action.id}
+      type="button"
+      className="wos-browser-toolbar__button"
+      aria-label={action.label}
+      disabled={action.disabled}
+      onClick={action.onSelect}
+    >
+      {action.icon}
+    </button>
+  );
+
+  return (
+    <form
+      className={cx('wos-browser-toolbar', className)}
+      aria-label={ariaLabel}
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit?.(event);
+      }}
+    >
+      {leadingActions.map(renderAction)}
+      <input
+        className="wos-browser-toolbar__address"
+        aria-label={addressLabel}
+        value={address}
+        readOnly={readOnly}
+        onChange={(event) => onAddressChange?.(event.currentTarget.value)}
+      />
+      {trailingActions.map(renderAction)}
+    </form>
+  );
+}
+
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;

@@ -8,6 +8,7 @@ import {
   CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
   WindowedActionRow,
+  WindowedBrowserToolbar,
   WindowedChartPanel,
   WindowedChatToolLauncher,
   WindowedDataRow,
@@ -987,6 +988,29 @@ describe('Windowed OS Storybook examples', () => {
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('disabled=""');
     expect(html).toContain('Enable the Files extension to open a Workspace window.');
+  });
+
+  it('renders browser toolbars through a reusable windowed primitive', () => {
+    const html = renderToStaticMarkup(
+      <WindowedBrowserToolbar
+        address="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"
+        actions={[
+          { id: 'back', label: 'Go back', icon: '←', disabled: true },
+          { id: 'forward', label: 'Go forward', icon: '→', disabled: true },
+          { id: 'reload', label: 'Reload browser preview', icon: '↻' },
+          { id: 'close', label: 'Close browser tab', icon: '×', placement: 'trailing' },
+        ]}
+        readOnly
+      />,
+    );
+
+    expect(html).toContain('class="wos-browser-toolbar"');
+    expect(html).toContain('aria-label="Browser controls"');
+    expect(html).toContain('class="wos-browser-toolbar__button" aria-label="Go back" disabled=""');
+    expect(html).toContain('class="wos-browser-toolbar__address" aria-label="Browser URL"');
+    expect(html).toContain('readonly=""');
+    expect(html).toContain('value="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"');
+    expect(html.indexOf('aria-label="Close browser tab"')).toBeGreaterThan(html.indexOf('wos-browser-toolbar__address'));
   });
 
   it('keeps canonical design tokens in the scoped token stylesheet', () => {
@@ -2382,10 +2406,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<BrowserWindowStory theme="dark" />');
     expect(source).toContain("style={{ minHeight: '100vh', padding: 24 }}");
     expect(source).toContain('data-windowed-subwindow="browser"');
-    expect(source).toContain('className="wos-browser-toolbar"');
-    expect(source).toContain('aria-label="Browser controls"');
-    expect(source).toContain('className="wos-browser-toolbar__button" aria-label="Go back" disabled');
-    expect(source).toContain('className="wos-browser-toolbar__address"');
+    expect(source).toContain('type WindowedBrowserToolbarAction');
+    expect(source).toContain('<WindowedBrowserToolbar');
+    expect(source).toContain('actions={browserActions}');
+    expect(source).toContain("placement: 'trailing'");
+    expect(source).not.toContain('className="wos-browser-toolbar"');
+    expect(source).not.toContain('className="wos-browser-toolbar__button" aria-label="Go back" disabled');
+    expect(source).not.toContain('className="wos-browser-toolbar__address"');
     expect(source).not.toContain('className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go back" disabled');
     expect(source).not.toContain('className="ui-text-input"');
     expect(source).toContain('aria-label="Browser child window preview"');
