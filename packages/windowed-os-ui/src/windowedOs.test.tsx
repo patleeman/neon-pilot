@@ -955,6 +955,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-taskbar__trailing {\n    max-width: min(34vw, 180px);');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions {\n    max-width: min(18vw, 96px);');
     expect(stylesSource).toContain('.wos-taskbar__trailing :where(button, a) {\n    max-width: 120px;');
+    expect(stylesSource).toContain('@media (max-width: 420px) {\n  .wos-taskbar {');
+    expect(stylesSource).toContain('.wos-taskbar__trailing {\n    max-width: min(31vw, 116px);');
+    expect(stylesSource).toContain('.wos-taskbar__trailing :where(button, a) {\n    width: 54px;');
+    expect(stylesSource).toContain('justify-content: flex-start;');
     expect(stylesSource).toContain('overflow-x: auto;');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions::-webkit-scrollbar');
     expect(stylesSource).toContain(
@@ -963,6 +967,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('width: 30px !important;');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('filter: none !important;');
+    expect(stylesSource).toContain('.wos-taskbar__trailing :where(button, a) > :where(span:not(.ui-tooltip), div) {\n  min-width: 0;');
+    expect(stylesSource).toContain('text-overflow: ellipsis;');
     expect(stylesSource).toContain('.wos-taskbar__trailing .ui-notification-badge');
     expect(stylesSource).toContain('.wos-taskbar__trailing .ui-tooltip');
     expect(stylesSource).toContain('z-index: 1100;');
