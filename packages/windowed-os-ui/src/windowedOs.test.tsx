@@ -1003,6 +1003,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-left-color: transparent !important;\n  box-shadow: none !important;');
   });
 
+  it('bans positive left-edge border treatments from the windowed OS stylesheet', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+    const positiveLeftBorders = (stylesSource.match(/border-left(?:-width|-color)?:\s*[^;]+;/g) ?? []).filter((declaration) => {
+      const value = declaration.slice(declaration.indexOf(':') + 1, -1).trim();
+      return !value.startsWith('0') && !value.startsWith('transparent');
+    });
+
+    expect(positiveLeftBorders).toEqual([]);
+  });
+
   it('styles canonical app-specific accents across shared windowed primitives', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
