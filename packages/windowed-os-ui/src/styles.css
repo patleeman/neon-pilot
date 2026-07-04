@@ -4566,11 +4566,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   display: grid;
   min-width: 0;
   gap: 3px;
-  padding: 7px 9px;
+  padding: 6px 8px;
 }
 
 .wos-key-value-grid__item {
-  border-right: 1.5px solid var(--wos-ink-900);
+  border-right: 1.5px solid var(--wos-surface-3);
 }
 
 .wos-key-value-grid[data-columns='1'] .wos-key-value-grid__item,
@@ -4584,11 +4584,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-key-value-list {
   min-width: 0;
   overflow: hidden;
-  background: var(--wos-surface-2);
+  background: transparent;
 }
 
 .wos-key-value-list__item + .wos-key-value-list__item {
-  border-top: 1.5px solid var(--wos-ink-900);
+  border-top: 1.5px solid var(--wos-surface-3);
 }
 
 .wos-key-value__label {

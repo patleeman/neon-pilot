@@ -125,6 +125,22 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('color: var(--wos-data-row-active-ink, var(--wos-ink-900));');
   });
 
+  it('keeps key-value inspectors flat instead of over-framing nested detail content', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    const gridItemRule = stylesSource.match(/\.wos-key-value-grid__item \{[\s\S]*?\n\}/)?.[0] ?? '';
+    const listRule = stylesSource.match(/\.wos-key-value-list \{[\s\S]*?\n\}/)?.[0] ?? '';
+    const listItemRule = stylesSource.match(/\.wos-key-value-list__item \+ \.wos-key-value-list__item \{[\s\S]*?\n\}/)?.[0] ?? '';
+
+    expect(gridItemRule).toContain('border-right: 1.5px solid var(--wos-surface-3);');
+    expect(gridItemRule).not.toContain('border-right: 1.5px solid var(--wos-ink-900);');
+    expect(listRule).toContain('background: transparent;');
+    expect(listRule).not.toContain('background: var(--wos-surface-2);');
+    expect(listItemRule).toContain('border-top: 1.5px solid var(--wos-surface-3);');
+    expect(listItemRule).not.toContain('border-top: 1.5px solid var(--wos-ink-900);');
+  });
+
   it('keeps chat composer controls usable in compact window containers', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
