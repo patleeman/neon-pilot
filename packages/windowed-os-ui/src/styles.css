@@ -1566,6 +1566,80 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   background: var(--wos-chat);
 }
 
+.wos-window-route-body .ui-workbench-file-bar {
+  min-height: 38px;
+  border-bottom: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-1);
+  padding: 5px 8px;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+}
+
+.wos-window-route-body .ui-workbench-file-bar__path {
+  display: flex;
+  min-height: 26px;
+  min-width: 0;
+  align-items: center;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-surface-2);
+  padding: 0 8px;
+}
+
+.wos-window-route-body .ui-workbench-file-bar__path-label {
+  color: var(--wos-ink-700);
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.wos-window-route-body .ui-workbench-file-bar__button {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  border: 1.5px solid var(--wos-ink-900) !important;
+  border-radius: 7px;
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-900);
+  box-shadow: none;
+}
+
+.wos-window-route-body .ui-workbench-file-bar__button:hover,
+.wos-window-route-body .ui-workbench-file-bar__button[aria-pressed='true'] {
+  background: var(--wos-chat) !important;
+}
+
+.wos-window-route-body .ui-workbench-file-bar__button.text-accent {
+  background: var(--wos-chat) !important;
+  color: var(--wos-ink-900) !important;
+}
+
+.wos-window-route-body .ui-resize-handle {
+  width: 8px;
+  background: var(--wos-surface-2);
+}
+
+.wos-window-route-body .ui-resize-handle__line {
+  left: 3px !important;
+  width: 2px !important;
+  background: color-mix(in srgb, var(--wos-ink-900) 36%, transparent) !important;
+}
+
+.wos-window-route-body .ui-resize-handle:hover .ui-resize-handle__line {
+  background: var(--wos-chat) !important;
+}
+
+.wos-window-route-body .ui-workbench-rail {
+  border-left: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+}
+
+.wos-window-route-body .ui-workbench-rail > [data-extension-id] {
+  background: transparent !important;
+}
+
 .wos-window-route-body .ui-workbench-header {
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-2);

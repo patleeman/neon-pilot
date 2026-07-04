@@ -783,6 +783,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-close-button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-action-button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip__new');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__button');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-resize-handle__line');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-rail');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__inner');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__title');

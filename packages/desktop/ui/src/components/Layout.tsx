@@ -541,14 +541,20 @@ function FileDocumentBar({
   const diffLabel = diffEnabled ? 'Hide diff overlay' : 'Show diff overlay';
 
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary">
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-mono text-[12px] text-secondary" title={filePath}>
+    <div className="ui-workbench-file-bar flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2 text-secondary">
+      <div className="ui-workbench-file-bar__path min-w-0 flex-1">
+        <div className="ui-workbench-file-bar__path-label truncate font-mono text-[12px] text-secondary" title={filePath}>
           {filePath}
         </div>
       </div>
       {canToggleRail ? (
-        <IconButton compact className="shrink-0" title={railLabel} aria-label={railLabel} onClick={() => onRailOpenChange(!railOpen)}>
+        <IconButton
+          compact
+          className="ui-workbench-file-bar__button shrink-0"
+          title={railLabel}
+          aria-label={railLabel}
+          onClick={() => onRailOpenChange(!railOpen)}
+        >
           <svg
             width="12"
             height="12"
@@ -569,7 +575,7 @@ function FileDocumentBar({
       {canToggleDiff ? (
         <IconButton
           compact
-          className={cx('shrink-0', diffEnabled && 'text-accent')}
+          className={cx('ui-workbench-file-bar__button shrink-0', diffEnabled && 'text-accent')}
           title={diffLabel}
           aria-label={diffLabel}
           aria-pressed={diffEnabled}
@@ -580,7 +586,7 @@ function FileDocumentBar({
       ) : null}
       <IconButton
         compact
-        className="shrink-0"
+        className="ui-workbench-file-bar__button shrink-0"
         title="Refresh file and tree"
         aria-label="Refresh file and tree"
         onClick={() => window.dispatchEvent(new CustomEvent(WORKBENCH_REFRESH_ACTIVE_FILE_EVENT))}
@@ -937,17 +943,17 @@ function ResizeHandle({ onMouseDown, onDoubleClick }: { onMouseDown: (e: React.M
   const [hovered, setHovered] = useState(false);
   return (
     <div
-      className="relative flex-shrink-0 w-[5px] cursor-col-resize select-none z-10 group"
+      className="ui-resize-handle relative z-10 w-[5px] flex-shrink-0 cursor-col-resize select-none group"
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {/* Wider invisible hit area */}
-      <div className="absolute inset-y-0 -left-0.5 -right-0.5" />
+      <div className="ui-resize-handle__hit-area absolute inset-y-0 -left-0.5 -right-0.5" />
       {/* Visual line — thickens on hover */}
       <div
-        className="absolute inset-y-0 left-[2px] w-[1px] transition-all duration-100"
+        className="ui-resize-handle__line absolute inset-y-0 left-[2px] w-[1px] transition-all duration-100"
         style={{
           background: hovered ? 'rgb(var(--color-accent) / 0.5)' : 'rgb(var(--color-border-subtle))',
           width: hovered ? '2px' : '1px',
@@ -1242,7 +1248,7 @@ function WorkbenchDocumentPane({
             <ResizeHandle onMouseDown={onRailResizeMouseDown} onDoubleClick={onRailResizeReset} />
             <aside
               style={{ width: railWidth }}
-              className="relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
+              className="ui-workbench-rail relative z-10 flex-shrink-0 overflow-hidden border-l border-border-subtle bg-panel select-text [&>[data-extension-id]]:bg-panel"
               aria-label={`${extensionRailSurface.title ?? 'Workbench'} sidebar`}
             >
               <NativeExtensionSurfaceHost

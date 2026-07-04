@@ -1104,6 +1104,9 @@ describe('Layout workbench toggle', () => {
 
     const toggle = await screen.findByRole('button', { name: 'Hide diff overlay' });
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.className).toContain('ui-workbench-file-bar__button');
+    expect(document.querySelector('.ui-workbench-file-bar')).not.toBeNull();
+    expect(document.querySelector('.ui-workbench-file-bar__path-label')?.textContent).toBe('README.md');
 
     fireEvent.click(toggle);
 
