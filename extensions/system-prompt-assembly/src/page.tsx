@@ -323,7 +323,9 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}
           >
             <WindowedPageSection title="Status" meta="Unavailable">
-              <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+              <WindowedStateBlock tone="danger" title="Prompt Assembly unavailable">
+                {error}
+              </WindowedStateBlock>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
@@ -337,7 +339,7 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
         <WindowedPageShell layout="standard" className="prompt-assembly-page-windowed">
           <WindowedPageMain title="Prompt Assembly">
             <WindowedPageSection title="Status" meta="Loading">
-              <WindowedStateBlock>Loading prompt assembly.</WindowedStateBlock>
+              <WindowedStateBlock title="Loading Prompt Assembly">Reading agent runtime capabilities.</WindowedStateBlock>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
@@ -355,9 +357,9 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
             meta={savingSystemPromptTemplate ? 'Saving' : systemPromptTemplateDirty ? 'Pending' : 'Saved'}
           >
             {systemPromptTemplateLoading && !systemPromptTemplateState ? (
-              <WindowedStateBlock>Loading template.</WindowedStateBlock>
+              <WindowedStateBlock title="Loading template">Reading the configured instruction template.</WindowedStateBlock>
             ) : systemPromptTemplateError && !systemPromptTemplateState ? (
-              <WindowedStateBlock tone="danger">
+              <WindowedStateBlock tone="danger" title="Template unavailable">
                 {formatPromptAssemblyError(
                   systemPromptTemplateError,
                   'Could not load the instruction template. Refresh Prompt Assembly or reopen Settings.',
@@ -397,7 +399,11 @@ export function PromptAssemblyPage({ pa, context }: ExtensionSurfaceProps) {
                 </div>
               </div>
             ) : null}
-            {systemPromptTemplateSaveError ? <WindowedStateBlock tone="danger">{systemPromptTemplateSaveError}</WindowedStateBlock> : null}
+            {systemPromptTemplateSaveError ? (
+              <WindowedStateBlock tone="danger" title="Template save failed">
+                {systemPromptTemplateSaveError}
+              </WindowedStateBlock>
+            ) : null}
           </WindowedPageSection>
 
           <WindowedPageSection title="Agent context" meta={formatCount(visibleAgentCapabilities.length, 'capability')}>

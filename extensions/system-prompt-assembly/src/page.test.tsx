@@ -157,6 +157,39 @@ describe('PromptAssemblyPage', () => {
     expect(container.querySelector('.wos-windowed-empty')).toBeNull();
   });
 
+  it('renders structured windowed runtime loading and failure states', async () => {
+    const pendingRuntime = deferred<ReturnType<typeof runtimeResult>>();
+    const pendingCallAction = vi.fn().mockReturnValue(pendingRuntime.promise);
+
+    const { unmount } = render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction: pendingCallAction, shellPresentation: 'windowed' }));
+
+    expect(screen.getByText('Loading Prompt Assembly').closest('.wos-state-block__title')).toBeTruthy();
+    expect(screen.getByText('Reading agent runtime capabilities.').closest('.wos-state-block__body')).toBeTruthy();
+
+    unmount();
+
+    const failingCallAction = vi.fn().mockRejectedValue(new Error('Local API route did not complete for POST /api/extensions/action'));
+    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction: failingCallAction, shellPresentation: 'windowed' }));
+
+    expect(await screen.findByText('Prompt Assembly unavailable')).toBeTruthy();
+    expect(screen.getByText('Could not load Prompt Assembly. Refresh this page or reopen Settings.')).toBeTruthy();
+    expect(screen.queryByText(/\/api\/extensions\/action/)).toBeNull();
+  });
+
+  it('renders structured windowed instruction template loading state', async () => {
+    settingsMocks.useApiState = {
+      data: null,
+      loading: true,
+      error: null,
+    };
+    const callAction = vi.fn().mockResolvedValue(runtimeResult('/repo'));
+
+    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction, shellPresentation: 'windowed' }));
+
+    expect(await screen.findByText('Loading template')).toBeTruthy();
+    expect(screen.getByText('Reading the configured instruction template.')).toBeTruthy();
+  });
+
   it('does not render or toggle skills from Prompt Assembly settings', async () => {
     const callAction = vi.fn().mockResolvedValue(
       runtimeResult('/repo', [
@@ -268,12 +301,13 @@ describe('PromptAssemblyPage', () => {
       new Error('Local API route did not complete for PATCH /api/system-prompt-template at Module.ep'),
     );
 
-    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction }));
+    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction, shellPresentation: 'windowed' }));
 
     const textarea = (await screen.findByDisplayValue('Template')) as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: 'Template\nQA marker' } });
 
     await waitFor(() => expect(settingsMocks.updateSystemPromptTemplate).toHaveBeenCalledWith('Template\nQA marker'), { timeout: 2000 });
+    expect(await screen.findByText('Template save failed')).toBeTruthy();
     expect(await screen.findByText('Could not save the instruction template. Revert edits or try again.')).toBeTruthy();
     expect(screen.queryByText(/\/api\/system-prompt-template/)).toBeNull();
     expect(screen.queryByText(/Module\.ep/)).toBeNull();
