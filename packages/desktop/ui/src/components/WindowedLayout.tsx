@@ -12,10 +12,22 @@ import {
   WindowedStateBlock,
   WindowFrame,
 } from '@neon-pilot/windowed-os-ui';
-import { type CSSProperties, type ReactNode, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ContextType,
+  type CSSProperties,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   createPath,
   type NavigateOptions,
+  NavigationType,
   Route,
   Routes,
   type To,
@@ -27,6 +39,7 @@ import { getDesktopBridge } from '../desktop/desktopBridge';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
+import { type ExtensionSurfaceSummary, type NativeExtensionViewSummary } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { getTabSessionKey, readBrowserTabsState } from '../local/workbenchBrowserTabs';
@@ -52,11 +65,10 @@ import {
 } from '../ui-state/windowedShell';
 import { dispatchWindowedParentWindowLifecycle } from '../windowed/windowedChildWindowEvents';
 import { Layout } from './Layout';
-import { findExtensionToolPanelBySlot } from './layout/workbenchRailModel';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
-type WindowKind = 'chat' | 'route' | 'terminal' | 'browser';
-type ChildWindowKind = 'terminal' | 'browser';
+type WindowKind = 'chat' | 'route' | 'terminal' | 'browser' | 'files';
+type ChildWindowKind = 'terminal' | 'browser' | 'files';
 type LauncherWindowKind = 'chat' | 'route';
 
 interface DesktopWindowModel {
@@ -70,6 +82,7 @@ interface DesktopWindowModel {
   singleton?: boolean;
   archivedOnClose?: boolean;
   workbenchCollapsed?: boolean;
+  workspaceCwd?: string | null;
   parentWindowId?: string;
   parentWindowTitle?: string;
 }
@@ -95,7 +108,7 @@ type ResizeState = DragState & {
 };
 
 type WindowNavigate = (to: To) => void;
-type WindowedChatToolbarIconName = 'browser' | 'terminal' | 'workbench-hidden' | 'workbench-visible';
+type WindowedChatToolbarIconName = 'browser' | 'files' | 'terminal' | 'workbench-hidden' | 'workbench-visible';
 
 const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
@@ -110,8 +123,10 @@ const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'settings', title: 'Settings', route: '/settings', kind: 'route' },
 ];
 
-const CANONICAL_WINDOWED_APP_BY_TITLE = new Map(CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]));
-const CANONICAL_LAUNCHER_ORDER = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
+const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]> = new Map(
+  CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]),
+);
+const CANONICAL_LAUNCHER_ORDER: readonly string[] = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
 const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
 function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: string): string {
@@ -153,7 +168,12 @@ function nextDefaultBounds(index: number, kind: LauncherWindowKind, desktopEleme
 }
 
 function childWindowBounds(parentBounds: WindowBounds, desktop: DesktopRect, kind: ChildWindowKind): WindowBounds {
-  const ideal = kind === 'browser' ? { width: 860, height: 580, x: 72, y: 64 } : { width: 760, height: 460, x: 54, y: 58 };
+  const ideal =
+    kind === 'browser'
+      ? { width: 860, height: 580, x: 72, y: 64 }
+      : kind === 'files'
+        ? { width: 780, height: 540, x: 64, y: 52 }
+        : { width: 760, height: 460, x: 54, y: 58 };
   const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
   const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
   return constrainWindowBounds(
@@ -213,6 +233,7 @@ function readStoredWindows(): DesktopWindowModel[] {
           singleton: record.singleton === true,
           archivedOnClose: record.archivedOnClose === true,
           workbenchCollapsed: record.workbenchCollapsed === true,
+          workspaceCwd: typeof record.workspaceCwd === 'string' ? record.workspaceCwd : null,
           parentWindowId: typeof record.parentWindowId === 'string' ? record.parentWindowId : undefined,
           parentWindowTitle: typeof record.parentWindowTitle === 'string' ? record.parentWindowTitle : undefined,
         },
@@ -244,7 +265,7 @@ function withFocusedWindow(windows: DesktopWindowModel[], windowId: string): Des
 }
 
 function isChildWindowKind(kind: WindowKind): kind is ChildWindowKind {
-  return kind === 'terminal' || kind === 'browser';
+  return kind === 'terminal' || kind === 'browser' || kind === 'files';
 }
 
 function isChildWindowForParent(windowModel: DesktopWindowModel, parentWindowId: string): boolean {
@@ -275,6 +296,10 @@ function normalizeTitle(title: string): string {
 
 function conversationWindowTitle(session: SessionMeta): string {
   return normalizeTitle(session.title ?? 'Chat');
+}
+
+function conversationWorkspaceCwd(session: SessionMeta | null): string | null {
+  return session?.workspaceCwd || session?.cwd || null;
 }
 
 function buildLauncherItems(extensionRegistry: ReturnType<typeof useExtensionRegistry>): LauncherItem[] {
@@ -676,7 +701,7 @@ function focusChatWindowIn(
     const title = session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : existing.title;
     return [
       ...windows.filter((windowModel) => windowModel.id !== id).map((windowModel) => ({ ...windowModel, focused: false })),
-      { ...existing, title, route: windowRoute, minimized: false, focused: true },
+      { ...existing, title, route: windowRoute, workspaceCwd: conversationWorkspaceCwd(session), minimized: false, focused: true },
     ];
   }
   const next: DesktopWindowModel = {
@@ -688,6 +713,7 @@ function focusChatWindowIn(
     minimized: false,
     focused: true,
     archivedOnClose: !isDraft,
+    workspaceCwd: conversationWorkspaceCwd(session),
   };
   return [...windows.map((windowModel) => ({ ...windowModel, focused: false })), next];
 }
@@ -711,6 +737,7 @@ function retargetChatWindowIn(
     route: isDraft ? '/conversations/new' : route,
     title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : existing.title,
     archivedOnClose: !isDraft,
+    workspaceCwd: conversationWorkspaceCwd(session),
   };
 
   return windows.flatMap((windowModel) => {
@@ -752,14 +779,19 @@ function reconcileChatWindows(windows: DesktopWindowModel[], chatSessions: Sessi
 
     const title = conversationWindowTitle(session);
     const route = `/conversations/${encodeURIComponent(session.id)}`;
+    const workspaceCwd = conversationWorkspaceCwd(session);
     const reconciledWindow =
-      windowModel.title === title && windowModel.route === route && windowModel.archivedOnClose === true
+      windowModel.title === title &&
+      windowModel.route === route &&
+      windowModel.archivedOnClose === true &&
+      windowModel.workspaceCwd === workspaceCwd
         ? windowModel
         : {
             ...windowModel,
             title,
             route,
             archivedOnClose: true,
+            workspaceCwd,
           };
     changed ||= reconciledWindow !== windowModel;
     return [reconciledWindow];
@@ -789,10 +821,10 @@ function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode
     }),
     [navigator],
   );
-  const locationContext = useMemo(
+  const locationContext = useMemo<ContextType<typeof LocationContext>>(
     () => ({
       location,
-      navigationType: 'POP' as const,
+      navigationType: NavigationType.Pop,
     }),
     [location],
   );
@@ -848,20 +880,90 @@ function WindowedChatTerminalWindowBody({
   );
 }
 
-type WorkbenchToolSurfaceList = Parameters<typeof findExtensionToolPanelBySlot>[0];
+type WorkbenchToolSurfaceList = readonly ExtensionSurfaceSummary[];
 
-function findTerminalSurface(surfaces: WorkbenchToolSurfaceList) {
-  return findExtensionToolPanelBySlot(surfaces, 'terminal');
+function isNativeToolSurface(surface: ExtensionSurfaceSummary): boolean {
+  const record = surface as Record<string, unknown>;
+  const component = record.component;
+  const hostComponent = component && typeof component === 'object' ? (component as { host?: unknown }).host : undefined;
+  return (
+    typeof record.extensionId === 'string' &&
+    typeof record.id === 'string' &&
+    typeof record.location === 'string' &&
+    (typeof component === 'string' || typeof hostComponent === 'string')
+  );
 }
 
-function findBrowserSurface(surfaces: WorkbenchToolSurfaceList) {
+function nativeSurfaceToolSlot(surface: ExtensionSurfaceSummary): string | undefined {
+  const record = surface as Record<string, unknown>;
+  return typeof record.toolSlot === 'string' ? record.toolSlot : undefined;
+}
+
+function findNativeToolSurfaceBySlot(surfaces: WorkbenchToolSurfaceList, slot: string): NativeExtensionViewSummary | null {
+  const surface = surfaces.find((candidate) => isNativeToolSurface(candidate) && nativeSurfaceToolSlot(candidate) === slot);
+  return surface ? (surface as unknown as NativeExtensionViewSummary) : null;
+}
+
+function findTerminalSurface(surfaces: WorkbenchToolSurfaceList): NativeExtensionViewSummary | null {
+  return findNativeToolSurfaceBySlot(surfaces, 'terminal');
+}
+
+function findFilesSurface(surfaces: WorkbenchToolSurfaceList): NativeExtensionViewSummary | null {
+  return findNativeToolSurfaceBySlot(surfaces, 'files');
+}
+
+function findBrowserSurface(surfaces: WorkbenchToolSurfaceList): NativeExtensionViewSummary | null {
+  const surface = surfaces.find((candidate) => {
+    if (!isNativeToolSurface(candidate)) return false;
+    const record = candidate as Record<string, unknown>;
+    return (
+      candidate.extensionId === 'system-browser' && (candidate.id === 'browser-workbench' || record.component === 'BrowserWorkbenchPanel')
+    );
+  });
+  return surface ? (surface as unknown as NativeExtensionViewSummary) : findNativeToolSurfaceBySlot(surfaces, 'browser');
+}
+
+function WindowedChatFilesWindowBody({
+  cwd,
+  parentWindowId,
+  parentWindowTitle,
+  route,
+}: {
+  cwd?: string | null;
+  parentWindowId: string;
+  parentWindowTitle: string;
+  route: string;
+}) {
+  const extensionRegistry = useExtensionRegistry();
+  const routeLocationValue = useMemo(() => routeLocation(route), [route]);
+  const filesSurface = useMemo(() => findFilesSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
+
   return (
-    surfaces.find((surface) => {
-      const record = surface as Record<string, unknown>;
-      return (
-        surface.extensionId === 'system-browser' && (surface.id === 'browser-workbench' || record.component === 'BrowserWorkbenchPanel')
-      );
-    }) ?? findExtensionToolPanelBySlot(surfaces, 'browser')
+    <div
+      className="wos-chat-files-dialog__body"
+      data-windowed-subwindow="files"
+      data-parent-window-attached="chat"
+      data-parent-window-id={parentWindowId}
+      data-parent-window-title={parentWindowTitle}
+    >
+      {filesSurface ? (
+        <NativeExtensionSurfaceHost
+          surface={filesSurface}
+          pathname={routeLocationValue.pathname}
+          search={routeLocationValue.search}
+          hash={routeLocationValue.hash}
+          shellPresentation="windowed"
+          cwd={cwd}
+          instanceId={`${parentWindowId}:files`}
+        />
+      ) : (
+        <div className="wos-chat-child-window-empty">
+          <WindowedStateBlock title="Workspace unavailable" tone="warning">
+            The Files extension is not registered.
+          </WindowedStateBlock>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -916,6 +1018,14 @@ function WindowedChatToolbarIcon({ name }: { name: WindowedChatToolbarIconName }
         <path d="M12 5a10 10 0 0 0 0 14" />
       </>
     ),
+    files: (
+      <>
+        <path d="M4 7h6l2 2h8v9H4z" />
+        <path d="M4 7v11" />
+        <path d="M8 13h8" />
+        <path d="M8 16h5" />
+      </>
+    ),
     terminal: (
       <>
         <path d="m6 8 4 4-4 4" />
@@ -948,6 +1058,7 @@ function WindowedChatToolbarIcon({ name }: { name: WindowedChatToolbarIconName }
 function WindowRouteBody({
   compact = false,
   onOpenBrowserWindow,
+  onOpenFilesWindow,
   onNavigate,
   onOpenTerminalWindow,
   onWorkbenchCollapsedChange,
@@ -956,6 +1067,7 @@ function WindowRouteBody({
 }: {
   compact?: boolean;
   onOpenBrowserWindow: () => void;
+  onOpenFilesWindow: () => void;
   onNavigate: WindowNavigate;
   onOpenTerminalWindow: () => void;
   onWorkbenchCollapsedChange: (collapsed: boolean) => void;
@@ -966,8 +1078,10 @@ function WindowRouteBody({
   const extensionRegistry = useExtensionRegistry();
   const effectiveChatWorkbenchOpen = !workbenchCollapsed && !compact;
   const browserSurface = useMemo(() => findBrowserSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
+  const filesSurface = useMemo(() => findFilesSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
   const terminalSurface = useMemo(() => findTerminalSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
   const browserUnavailable = extensionRegistry.loading || !browserSurface;
+  const filesUnavailable = extensionRegistry.loading || !filesSurface;
   const terminalUnavailable = extensionRegistry.loading || !terminalSurface;
 
   if (!isChatRoute) {
@@ -1029,6 +1143,24 @@ function WindowRouteBody({
             onClick={onOpenBrowserWindow}
           >
             <WindowedChatToolbarIcon name="browser" />
+          </button>
+          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
+          <button
+            type="button"
+            className="wos-chat-window-toolbar__button"
+            data-density="icon"
+            aria-label="Open Workspace window"
+            disabled={filesUnavailable}
+            title={
+              extensionRegistry.loading
+                ? 'Loading workbench tools.'
+                : filesSurface
+                  ? 'Open Workspace window'
+                  : 'Enable the Files extension to open a Workspace window.'
+            }
+            onClick={onOpenFilesWindow}
+          >
+            <WindowedChatToolbarIcon name="files" />
           </button>
           {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
           <button
@@ -1262,11 +1394,12 @@ export function WindowedLayout() {
       const next: DesktopWindowModel = {
         id,
         kind,
-        title: kind === 'browser' ? 'Browser' : 'Terminal',
+        title: kind === 'browser' ? 'Browser' : kind === 'files' ? 'Workspace' : 'Terminal',
         route: parent.route,
         bounds: childWindowBounds(parent.bounds, desktopRect(desktopRef.current), kind),
         minimized: false,
         focused: true,
+        workspaceCwd: parent.workspaceCwd ?? null,
         parentWindowId: parent.id,
         parentWindowTitle: parent.title,
       };
@@ -1275,6 +1408,8 @@ export function WindowedLayout() {
   }, []);
 
   const openBrowserWindow = useCallback((parentWindow: DesktopWindowModel) => openChildWindow(parentWindow, 'browser'), [openChildWindow]);
+
+  const openFilesWindow = useCallback((parentWindow: DesktopWindowModel) => openChildWindow(parentWindow, 'files'), [openChildWindow]);
 
   const openTerminalWindow = useCallback(
     (parentWindow: DesktopWindowModel) => {
@@ -1285,6 +1420,8 @@ export function WindowedLayout() {
 
   const openLauncherItem = useCallback((item: LauncherItem, session?: SessionMeta) => {
     const id = createId(item, session?.id);
+    const title = item.kind === 'chat' && session ? conversationWindowTitle(session) : item.title;
+    const route = item.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : item.route;
     suspendWindowedBrowserViews();
     setLauncherOpen(false);
     setWindows((current) => {
@@ -1297,13 +1434,13 @@ export function WindowedLayout() {
           current.map((windowModel) =>
             windowModel.id === existing.id && item.kind === 'route'
               ? { ...windowModel, id, title: item.title, route: item.route }
-              : windowModel,
+              : windowModel.id === existing.id && item.kind === 'chat'
+                ? { ...windowModel, title, route, workspaceCwd: conversationWorkspaceCwd(session ?? null) }
+                : windowModel,
           ),
           id,
         );
       }
-      const title = item.kind === 'chat' && session ? conversationWindowTitle(session) : item.title;
-      const route = item.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : item.route;
       const next: DesktopWindowModel = {
         id,
         kind: item.kind,
@@ -1314,6 +1451,7 @@ export function WindowedLayout() {
         focused: true,
         singleton: item.kind === 'route',
         archivedOnClose: item.kind === 'chat' && Boolean(session?.id),
+        workspaceCwd: item.kind === 'chat' ? conversationWorkspaceCwd(session ?? null) : null,
       };
       return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
     });
@@ -1649,7 +1787,8 @@ export function WindowedLayout() {
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (!target) return;
       const windowElement = target.closest<HTMLElement>('.wos-window');
-      const windowId = windowElement?.dataset.windowId;
+      if (!windowElement) return;
+      const windowId = windowElement.dataset.windowId;
       const windowModel = windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
       if (!windowModel) return;
       if (target.closest('.wos-window__controls')) return;
@@ -1848,6 +1987,7 @@ export function WindowedLayout() {
         {windows.map((windowModel) => {
           const isTerminalWindow = windowModel.kind === 'terminal';
           const isBrowserWindow = windowModel.kind === 'browser';
+          const isFilesWindow = windowModel.kind === 'files';
           const isChildWindow = isChildWindowKind(windowModel.kind);
           return (
             <WindowFrame
@@ -1878,7 +2018,16 @@ export function WindowedLayout() {
               {isTerminalWindow ? (
                 <div className="wos-window-route-body wos-window-route-body--terminal">
                   <WindowedChatTerminalWindowBody
-                    cwd={null}
+                    cwd={windowModel.workspaceCwd ?? null}
+                    parentWindowId={windowModel.parentWindowId ?? ''}
+                    parentWindowTitle={windowModel.parentWindowTitle ?? 'Chat'}
+                    route={windowModel.route}
+                  />
+                </div>
+              ) : isFilesWindow ? (
+                <div className="wos-window-route-body wos-window-route-body--files">
+                  <WindowedChatFilesWindowBody
+                    cwd={windowModel.workspaceCwd ?? null}
                     parentWindowId={windowModel.parentWindowId ?? ''}
                     parentWindowTitle={windowModel.parentWindowTitle ?? 'Chat'}
                     route={windowModel.route}
@@ -1898,6 +2047,7 @@ export function WindowedLayout() {
                   route={windowModel.route}
                   onNavigate={(to) => navigateWindow(windowModel.id, to)}
                   onOpenBrowserWindow={() => openBrowserWindow(windowModel)}
+                  onOpenFilesWindow={() => openFilesWindow(windowModel)}
                   onOpenTerminalWindow={() => openTerminalWindow(windowModel)}
                   onWorkbenchCollapsedChange={(collapsed) => setChatWorkbenchCollapsed(windowModel.id, collapsed)}
                   workbenchCollapsed={windowModel.workbenchCollapsed}

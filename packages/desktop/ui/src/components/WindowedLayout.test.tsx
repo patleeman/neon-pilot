@@ -384,12 +384,23 @@ describe('WindowedLayout route windows', () => {
     ).toContain('Enable the Browser');
     expect(
       within(chatWindow)
+        .getByRole('button', { name: /open workspace window/i })
+        .getAttribute('data-density'),
+    ).toBe('icon');
+    expect((within(chatWindow).getByRole('button', { name: /open workspace window/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      within(chatWindow)
+        .getByRole('button', { name: /open workspace window/i })
+        .getAttribute('title'),
+    ).toContain('Enable the Files');
+    expect(
+      within(chatWindow)
         .getByRole('button', { name: /open terminal window/i })
         .getAttribute('data-density'),
     ).toBe('icon');
     expect((within(chatWindow).getByRole('button', { name: /open terminal window/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')?.textContent?.trim()).toBe('Workbench');
-    expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(3);
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(4);
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
   });
 
@@ -2717,6 +2728,70 @@ describe('WindowedLayout route windows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
     expect(screen.queryByRole('region', { name: 'Terminal' })).toBeNull();
+  });
+
+  it('opens a workspace child window from chat with the parent workspace cwd', async () => {
+    mocks.surfaces = [
+      {
+        extensionId: 'system-files',
+        id: 'files-panel',
+        title: 'Files',
+        location: 'rightRail',
+        component: 'WorkspaceFilesPanel',
+        toolSlot: 'files',
+      },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: true,
+        workspaceCwd: '/Users/patrick/workingdir/neon-pilot',
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /workspace window/i }));
+
+    const chatWindow = container.querySelector<HTMLElement>('[data-window-id="chat:draft"]');
+    const workspaceWindow = screen.getByRole('region', { name: 'Workspace' });
+    expect(workspaceWindow.getAttribute('data-window-id')).toBe('chat:draft:files');
+    expect(workspaceWindow.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(workspaceWindow.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(workspaceWindow.getAttribute('data-parent-window-title')).toBe('New conversation');
+    expect(workspaceWindow.className).toContain('wos-window--files');
+    expect(workspaceWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('chat');
+    expect(chatWindow?.querySelector('.wos-window-route-body--chat')?.getAttribute('data-workbench-collapsed')).toBe('true');
+
+    const workspaceBody = workspaceWindow.querySelector('[data-windowed-subwindow="files"]');
+    expect(workspaceBody?.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(workspaceBody?.getAttribute('data-parent-window-title')).toBe('New conversation');
+    const workspaceTaskbarButton = within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', {
+      name: /^workspace$/i,
+    });
+    expect(workspaceTaskbarButton.querySelector('.wos-app-tile')?.getAttribute('data-accent')).toBe('chat');
+
+    const workspaceHost = screen.getByTestId('native-extension-surface');
+    expect(workspaceHost.getAttribute('data-extension-id')).toBe('system-files');
+    expect(workspaceHost.getAttribute('data-surface-id')).toBe('files-panel');
+    expect(workspaceHost.getAttribute('data-shell-presentation')).toBe('windowed');
+    expect(workspaceHost.getAttribute('data-instance-id')).toBe('chat:draft:files');
+    expect(workspaceHost.getAttribute('data-cwd')).toBe('/Users/patrick/workingdir/neon-pilot');
+
+    fireEvent.click(screen.getByRole('button', { name: /minimize new conversation/i }));
+    expect(workspaceWindow.getAttribute('data-minimized')).toBe('true');
+    expect((workspaceWindow as HTMLElement).style.display).toBe('none');
+
+    fireEvent.click(screen.getByRole('button', { name: /new conversation/i }));
+    expect(workspaceWindow.getAttribute('data-minimized')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
+    expect(screen.queryByRole('region', { name: 'Workspace' })).toBeNull();
   });
 
   it('opens a browser child window from chat and attaches it to the parent lifecycle', async () => {
