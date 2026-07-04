@@ -1927,6 +1927,7 @@ export function ConversationPage({
     detailTitle: visibleSessionDetail?.meta.title,
     sessionTitle: sessionSnapshot?.title,
   });
+  const parentWindowId = id ? `chat:${id}` : 'chat:draft';
   const model = visibleSessionDetail?.meta.model;
 
   useLayoutEffect(() => {
@@ -5373,6 +5374,7 @@ export function ConversationPage({
         initialAttachmentId: drawing.attachmentId,
         initialRevision: drawing.revision,
         localId,
+        parentWindowId,
         parentWindowTitle: title,
         saveLabel: 'Update attachment',
       },
@@ -8823,6 +8825,7 @@ export function ConversationPage({
           inputControls={
             <ConversationComposerInputControls
               conversationId={id}
+              parentWindowId={parentWindowId}
               parentWindowTitle={title}
               fileInputRef={fileInputRef}
               textareaRef={textareaRef}

@@ -3,6 +3,7 @@ import React, { type ComponentType, useCallback, useEffect, useRef, useState } f
 import { buildApiPath } from '../client/apiBase';
 import { addNotification } from '../components/notifications/notificationStore';
 import { ConfirmDialog, cx, Dialog, DialogBody, DialogHeader, IconButton } from '../components/ui';
+import { WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, type WindowedParentWindowLifecycleDetail } from '../windowed/windowedChildWindowEvents';
 import { setExtensionCommandContext } from './commands';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { createNativeExtensionClient } from './nativePaClient';
@@ -60,6 +61,24 @@ function isWindowedShellActive(): boolean {
 function readWindowedParentWindowTitle(props: Record<string, unknown>): string {
   const title = props.parentWindowTitle;
   return typeof title === 'string' && title.trim().length > 0 ? title.trim() : 'Chat';
+}
+
+function readWindowedParentWindowId(props: Record<string, unknown>): string | null {
+  const id = props.parentWindowId;
+  return typeof id === 'string' && id.trim().length > 0 ? id.trim() : null;
+}
+
+function isWindowedExcalidrawModal(modal: ModalState | null): modal is ModalState {
+  return Boolean(
+    modal && isWindowedShellActive() && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal',
+  );
+}
+
+function windowedParentLifecycleMatchesModal(detail: WindowedParentWindowLifecycleDetail, modal: ModalState): boolean {
+  if (detail.parentWindowKind !== 'chat') return false;
+  const parentWindowId = readWindowedParentWindowId(modal.props);
+  if (parentWindowId) return detail.parentWindowId === parentWindowId;
+  return detail.parentWindowTitle === readWindowedParentWindowTitle(modal.props);
 }
 
 interface ConfirmState {
@@ -173,6 +192,19 @@ export function ExtensionModalHost() {
     };
   }, [handleClose, modal]);
 
+  useEffect(() => {
+    if (!isWindowedExcalidrawModal(modal)) return;
+
+    const handleParentLifecycle = (event: Event) => {
+      const detail = (event as CustomEvent<WindowedParentWindowLifecycleDetail>).detail;
+      if (!detail || !windowedParentLifecycleMatchesModal(detail, modal)) return;
+      handleClose();
+    };
+
+    window.addEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
+    return () => window.removeEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
+  }, [handleClose, modal]);
+
   // Load the component when modal state changes
   useEffect(() => {
     if (!modal) {
@@ -243,10 +275,10 @@ export function ExtensionModalHost() {
 
   const pa = createNativeExtensionClient(modal.extensionId);
   const windowedShellActive = isWindowedShellActive();
-  const windowedExcalidrawModal =
-    windowedShellActive && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal';
+  const windowedExcalidrawModal = isWindowedExcalidrawModal(modal);
   const modalSizeClasses = resolveExtensionModalSizeClasses(windowedExcalidrawModal ? 'default' : modal.size);
   const parentWindowTitle = windowedExcalidrawModal ? readWindowedParentWindowTitle(modal.props) : undefined;
+  const parentWindowId = windowedExcalidrawModal ? (readWindowedParentWindowId(modal.props) ?? undefined) : undefined;
   const title = modal.title ?? (windowedExcalidrawModal ? 'Drawing' : undefined);
 
   return (
@@ -274,6 +306,7 @@ export function ExtensionModalHost() {
         data-windowed-subwindow={windowedExcalidrawModal ? 'drawing-editor' : undefined}
         data-windowed-child-window={windowedExcalidrawModal ? 'true' : undefined}
         data-parent-window-attached={windowedExcalidrawModal ? 'chat' : undefined}
+        data-parent-window-id={parentWindowId}
         data-parent-window-title={parentWindowTitle}
       >
         {title ? (

@@ -48,6 +48,7 @@ import {
   type WindowedOsThemePhase,
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
+import { dispatchWindowedParentWindowLifecycle } from '../windowed/windowedChildWindowEvents';
 import { Layout } from './Layout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
@@ -345,6 +346,16 @@ function suspendWindowedBrowserViews(durationMs = 1500): void {
   for (const sessionKey of sessionKeys) {
     void bridge.setWorkbenchBrowserBounds({ ...hiddenRequest, sessionKey }).catch(() => undefined);
   }
+}
+
+function dispatchParentLifecycleForWindow(windowModel: DesktopWindowModel, reason: 'closed' | 'minimized'): void {
+  if (windowModel.kind !== 'chat') return;
+  dispatchWindowedParentWindowLifecycle({
+    parentWindowId: windowModel.id,
+    parentWindowKind: windowModel.kind,
+    parentWindowTitle: windowModel.title,
+    reason,
+  });
 }
 
 function useWindowedBrowserSuppression(active: boolean): void {
@@ -1055,6 +1066,7 @@ export function WindowedLayout() {
   const closeWindow = useCallback(
     (windowModel: DesktopWindowModel) => {
       suspendWindowedBrowserViews();
+      dispatchParentLifecycleForWindow(windowModel, 'closed');
       if (windowModel.kind === 'chat' && windowModel.archivedOnClose) {
         const conversationId = windowModel.id.slice('chat:'.length);
         conversations.archiveSession(conversationId);
@@ -1072,6 +1084,8 @@ export function WindowedLayout() {
 
   const minimizeWindow = useCallback((windowId: string) => {
     suspendWindowedBrowserViews();
+    const windowModel = windowsRef.current.find((candidate) => candidate.id === windowId);
+    if (windowModel) dispatchParentLifecycleForWindow(windowModel, 'minimized');
     setWindows((current) =>
       ensureFocusedWindow(
         current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),

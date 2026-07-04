@@ -310,6 +310,7 @@ describe('ConversationComposerInputControls', () => {
     const view = renderInteractive(
       <ConversationComposerInputControls
         conversationId="conversation-1"
+        parentWindowId="chat:conversation-1"
         parentWindowTitle="Planning thread"
         fileInputRef={{ current: null }}
         textareaRef={{ current: null }}
@@ -363,6 +364,7 @@ describe('ConversationComposerInputControls', () => {
         component: 'ExcalidrawEditorModal',
         props: {
           conversationId: 'conversation-1',
+          parentWindowId: 'chat:conversation-1',
           parentWindowTitle: 'Planning thread',
           saveLabel: 'Attach to chat',
         },

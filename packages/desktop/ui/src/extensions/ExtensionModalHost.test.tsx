@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT } from '../windowed/windowedChildWindowEvents';
 import { setExtensionCommandContext } from './commands';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from './extensionModalCommands';
 import { ExtensionModalHost, resolveExtensionModalSizeClasses } from './ExtensionModalHost';
@@ -184,7 +185,7 @@ describe('ExtensionModalHost modal bridge', () => {
           detail: {
             extensionId: 'system-excalidraw-input',
             component: 'ExcalidrawEditorModal',
-            props: { parentWindowTitle: 'Planning thread' },
+            props: { parentWindowId: 'chat:planning', parentWindowTitle: 'Planning thread' },
             size: 'fullscreen',
             resolve: vi.fn(),
             reject: vi.fn(),
@@ -203,10 +204,53 @@ describe('ExtensionModalHost modal bridge', () => {
     expect(dialog.getAttribute('data-windowed-subwindow')).toBe('drawing-editor');
     expect(dialog.getAttribute('data-windowed-child-window')).toBe('true');
     expect(dialog.getAttribute('data-parent-window-attached')).toBe('chat');
+    expect(dialog.getAttribute('data-parent-window-id')).toBe('chat:planning');
     expect(dialog.getAttribute('data-parent-window-title')).toBe('Planning thread');
     expect(dialog.getAttribute('aria-modal')).toBe('false');
     expect(document.querySelector('.ui-windowed-excalidraw-backdrop')).toBeTruthy();
     expect(document.querySelector('.ui-windowed-excalidraw-modal-body')).toBeTruthy();
+  });
+
+  it('closes a windowed Excalidraw sub-window by parent id when its chat parent is minimized', async () => {
+    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+    systemExtensionModules.set('system-excalidraw-input', async () => ({
+      ExcalidrawEditorModal: () => <div>Drawing editor</div>,
+    }));
+    const resolve = vi.fn();
+    render(<ExtensionModalHost />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot-extension-modal', {
+          detail: {
+            extensionId: 'system-excalidraw-input',
+            component: 'ExcalidrawEditorModal',
+            props: { parentWindowId: 'chat:planning', parentWindowTitle: 'Planning thread' },
+            size: 'fullscreen',
+            resolve,
+            reject: vi.fn(),
+          },
+        }),
+      );
+    });
+
+    expect(await screen.findByText('Drawing editor')).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+          detail: {
+            parentWindowId: 'chat:planning',
+            parentWindowKind: 'chat',
+            parentWindowTitle: 'Planning thread, display copy may differ',
+            reason: 'minimized',
+          },
+        }),
+      );
+    });
+
+    await waitFor(() => expect(screen.queryByText('Drawing editor')).toBeNull());
+    expect(resolve).toHaveBeenCalledWith(null);
   });
 });
 

@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, type WindowedParentWindowLifecycleDetail } from '../windowed/windowedChildWindowEvents';
 import { WindowedLayout } from './WindowedLayout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
 
@@ -2495,6 +2496,58 @@ describe('WindowedLayout route windows', () => {
     expect(minimizedWindow?.style.display).toBe('none');
     expect(minimizedWindow?.querySelector('[data-testid="extension-route-host"]')?.textContent).toBe('/routines:windowed');
     expect(screen.getByRole('button', { name: /routines/i }).getAttribute('data-minimized')).toBe('true');
+  });
+
+  it('emits parent lifecycle events when chat windows are minimized or closed', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        singleton: true,
+      },
+    ]);
+    const lifecycleEvents: WindowedParentWindowLifecycleDetail[] = [];
+    const handleLifecycle = (event: Event) => {
+      lifecycleEvents.push((event as CustomEvent<WindowedParentWindowLifecycleDetail>).detail);
+    };
+    window.addEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleLifecycle);
+
+    try {
+      renderWindowedLayout();
+
+      fireEvent.click(screen.getByRole('button', { name: /minimize new conversation/i }));
+      expect(lifecycleEvents).toContainEqual({
+        parentWindowId: 'chat:draft',
+        parentWindowKind: 'chat',
+        parentWindowTitle: 'New conversation',
+        reason: 'minimized',
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /new conversation/i }));
+      fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
+      expect(lifecycleEvents).toContainEqual({
+        parentWindowId: 'chat:draft',
+        parentWindowKind: 'chat',
+        parentWindowTitle: 'New conversation',
+        reason: 'closed',
+      });
+    } finally {
+      window.removeEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleLifecycle);
+    }
   });
 
   it('toggles a focused route window from the taskbar between minimized and restored', async () => {
