@@ -1187,11 +1187,21 @@ function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'da
                 <WindowedToggle checked accent="settings" label="Toggle windowed desktop mode" />
               </WindowedSettingsRow>
             </WindowedSettingsGroup>
-            <WindowedSettingsGroup title="Providers" actions={<WindowedPageButton>Add provider</WindowedPageButton>}>
-              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
-                <WindowedDataRow name="OpenAI" meta="Default" enabled status={<WindowedBadge tone="positive">Connected</WindowedBadge>} />
-                <WindowedDataRow name="Local" meta="Ollama" status={<WindowedBadge tone="warning">Setup</WindowedBadge>} />
-              </WindowedDataTable>
+            <WindowedSettingsGroup title="Typography">
+              <WindowedSettingsRow title="Interface scale" description="Keeps window chrome and app content compact">
+                <WindowedSegmentedControl
+                  ariaLabel="Interface scale"
+                  value="comfortable"
+                  options={[
+                    { value: 'compact', label: 'Compact' },
+                    { value: 'comfortable', label: 'Comfortable' },
+                    { value: 'spacious', label: 'Spacious' },
+                  ]}
+                />
+              </WindowedSettingsRow>
+              <WindowedSettingsRow title="Monospace size" description="Used by terminals, tool output, and code blocks">
+                <WindowedNumberStepper aria-label="Monospace size" value={12} min={10} max={16} unit="px" onChange={() => undefined} />
+              </WindowedSettingsRow>
             </WindowedSettingsGroup>
           </WindowedPageMain>
         </WindowedPageShell>

@@ -1663,9 +1663,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(settingsSource).toContain("minHeight: '100vh'");
     expect(source).toContain('onSelect={() => undefined}');
     expect(source).toContain('<WindowedSettingsGroup title="Appearance"');
+    expect(source).toContain('<WindowedSettingsGroup title="Typography"');
     expect(source).toContain('title="Theme"');
+    expect(source).toContain('title="Interface scale"');
+    expect(source).toContain('ariaLabel="Interface scale"');
+    expect(source).toContain('title="Monospace size"');
+    expect(source).toContain('aria-label="Monospace size"');
     expect(settingsSource).toContain('<WindowedPageButton>Reset</WindowedPageButton>');
     expect(settingsSource).not.toContain('<WindowedPageButton tone="accent">Apply</WindowedPageButton>');
+    expect(settingsSource).not.toContain('<WindowedSettingsGroup title="Providers"');
+    expect(settingsSource).not.toContain('Add provider');
+    expect(settingsSource).not.toContain('WindowedDataRow name="OpenAI"');
     expect(source).not.toContain('title="Settings sections"');
   });
 
