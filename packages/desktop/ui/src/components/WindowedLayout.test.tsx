@@ -2721,6 +2721,30 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('region', { name: 'Browser' })).toBeNull();
   });
 
+  it('uses centered windowed empty chrome when a browser child surface is unavailable', () => {
+    mocks.surfaces = [];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /browser window/i }));
+
+    const browserWindow = screen.getByRole('region', { name: 'Browser' });
+    expect(browserWindow.querySelector('.wos-chat-child-window-empty .wos-state-block')).toBeTruthy();
+    expect(screen.getByText('Browser unavailable')).toBeTruthy();
+    expect(container.querySelector('[data-window-id="chat:draft:browser"] .ui-error-state')).toBeNull();
+  });
+
   it('toggles a focused route window from the taskbar between minimized and restored', async () => {
     seedWindowedWindows([
       {

@@ -1053,6 +1053,20 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   overflow: hidden;
 }
 
+.wos-chat-child-window-empty {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: var(--wos-space-6);
+}
+
+.wos-chat-child-window-empty .wos-state-block {
+  width: min(360px, 100%);
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: var(--wos-surface-2);
+}
+
 .wos-chat-terminal-dialog .wos-dialog__body {
   padding: 0;
 }

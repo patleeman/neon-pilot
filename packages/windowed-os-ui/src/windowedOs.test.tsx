@@ -936,6 +936,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button:disabled');
     expect(stylesSource).toContain('.wos-chat-browser-dialog__body');
     expect(stylesSource).toContain(".wos-chat-browser-dialog__body > [data-extension-id='system-browser']");
+    expect(stylesSource).toContain('.wos-chat-child-window-empty');
+    expect(stylesSource).toContain('.wos-chat-child-window-empty .wos-state-block');
     expect(stylesSource).toContain(
       ".windowed-os-shell[data-native-browser-blocked='true'] .ui-windowed-browser-host[data-windowed-browser-host='true']",
     );

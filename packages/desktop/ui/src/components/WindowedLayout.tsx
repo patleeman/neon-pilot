@@ -834,9 +834,11 @@ function WindowedChatTerminalWindowBody({
           instanceId={`${parentWindowId}:terminal`}
         />
       ) : (
-        <WindowedStateBlock title="Terminal unavailable" tone="warning">
-          The Terminal extension is not registered.
-        </WindowedStateBlock>
+        <div className="wos-chat-child-window-empty">
+          <WindowedStateBlock title="Terminal unavailable" tone="warning">
+            The Terminal extension is not registered.
+          </WindowedStateBlock>
+        </div>
       )}
     </div>
   );
@@ -882,9 +884,11 @@ function WindowedChatBrowserWindowBody({
           instanceId={`${parentWindowId}:browser`}
         />
       ) : (
-        <WindowedStateBlock title="Browser unavailable" tone="warning">
-          The Browser extension is not registered.
-        </WindowedStateBlock>
+        <div className="wos-chat-child-window-empty">
+          <WindowedStateBlock title="Browser unavailable" tone="warning">
+            The Browser extension is not registered.
+          </WindowedStateBlock>
+        </div>
       )}
     </div>
   );
