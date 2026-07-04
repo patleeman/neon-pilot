@@ -2625,7 +2625,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("id.startsWith('windowed-os-desktop-shell--')");
     expect(source).toContain('storyIds.length === 0');
     expect(source).not.toContain('const storyNames = [');
+    expect(source).toContain("'windowed-os-desktop-shell--theme-variants'");
+    expect(source).toContain("'windowed-os-desktop-shell--time-of-day-theme-phases'");
+    expect(source).toContain('Missing canonical Windowed OS Storybook entries:');
     expect(source).toContain("storiesAllowingOffscreenWindows = new Set([\n  'windowed-os-desktop-shell--desktop-composition'");
+    expect(source).toContain("element.closest('.wos-taskbar__items')");
+    expect(source).toContain('taskbarItems.scrollWidth > taskbarItems.clientWidth');
     expect(source).toContain('result.scrollWidth > result.clientWidth + 1');
     expect(source).toContain('Windowed OS Storybook QA passed:');
   });

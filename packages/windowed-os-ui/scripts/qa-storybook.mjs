@@ -21,6 +21,8 @@ const storiesAllowingOffscreenWindows = new Set([
   'windowed-os-desktop-shell--dark-desktop-composition',
 ]);
 
+const requiredCanonicalStoryIds = ['windowed-os-desktop-shell--theme-variants', 'windowed-os-desktop-shell--time-of-day-theme-phases'];
+
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.html', 'text/html; charset=utf-8'],
@@ -103,6 +105,7 @@ async function inspectStory(page, { allowOffscreenWindows }) {
       const overflow = [...document.querySelectorAll('*')]
         .map((element) => {
           const rect = element.getBoundingClientRect();
+          const taskbarItems = element.closest('.wos-taskbar__items');
           return {
             tag: element.tagName,
             className: String(element.className || ''),
@@ -114,6 +117,7 @@ async function inspectStory(page, { allowOffscreenWindows }) {
             width: Math.round(rect.width),
             height: Math.round(rect.height),
             insideWindow: Boolean(element.closest('.wos-window')),
+            insideScrollableTaskbarItems: Boolean(taskbarItems && taskbarItems.scrollWidth > taskbarItems.clientWidth),
           };
         })
         .filter(
@@ -123,6 +127,7 @@ async function inspectStory(page, { allowOffscreenWindows }) {
             entry.bottom >= 0 &&
             entry.top <= window.innerHeight &&
             (!canHaveOffscreenWindows || !entry.insideWindow) &&
+            !entry.insideScrollableTaskbarItems &&
             (entry.left < -1 || entry.right > window.innerWidth + 1),
         )
         .slice(0, 8);
@@ -172,6 +177,10 @@ async function main() {
     .sort();
   if (storyIds.length === 0) {
     throw new Error('No windowed OS Storybook entries found in storybook-static/index.json.');
+  }
+  const missingRequiredStoryIds = requiredCanonicalStoryIds.filter((storyId) => !storyIds.includes(storyId));
+  if (missingRequiredStoryIds.length > 0) {
+    throw new Error(`Missing canonical Windowed OS Storybook entries: ${missingRequiredStoryIds.join(', ')}`);
   }
 
   const screenshotDir = resolve(repoRoot, 'artifacts/windowed-os-storybook-qa');
