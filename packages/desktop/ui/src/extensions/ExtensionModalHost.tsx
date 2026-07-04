@@ -242,10 +242,10 @@ export function ExtensionModalHost() {
   if (!modal || !Component) return <>{confirmDialog}</>;
 
   const pa = createNativeExtensionClient(modal.extensionId);
-  const modalSizeClasses = resolveExtensionModalSizeClasses(modal.size);
   const windowedShellActive = isWindowedShellActive();
   const windowedExcalidrawModal =
     windowedShellActive && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal';
+  const modalSizeClasses = resolveExtensionModalSizeClasses(windowedExcalidrawModal ? 'default' : modal.size);
   const parentWindowTitle = windowedExcalidrawModal ? readWindowedParentWindowTitle(modal.props) : undefined;
   const title = modal.title ?? (windowedExcalidrawModal ? 'Drawing' : undefined);
 
@@ -254,8 +254,10 @@ export function ExtensionModalHost() {
       {confirmDialog}
       <Dialog
         onClose={() => handleClose()}
+        closeOnBackdrop={!windowedExcalidrawModal}
         labelledBy={title ? 'extension-modal-title' : undefined}
         aria-label={title ? undefined : 'Extension dialog'}
+        aria-modal={windowedExcalidrawModal ? false : undefined}
         backdropClassName={cx(
           modalSizeClasses.backdropClassName,
           windowedShellActive && 'ui-windowed-extension-modal-backdrop',
@@ -270,6 +272,7 @@ export function ExtensionModalHost() {
           windowedExcalidrawModal && 'ui-windowed-excalidraw-modal',
         )}
         data-windowed-subwindow={windowedExcalidrawModal ? 'drawing-editor' : undefined}
+        data-windowed-child-window={windowedExcalidrawModal ? 'true' : undefined}
         data-parent-window-attached={windowedExcalidrawModal ? 'chat' : undefined}
         data-parent-window-title={parentWindowTitle}
       >

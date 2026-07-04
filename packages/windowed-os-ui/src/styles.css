@@ -1124,6 +1124,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backd
   padding: 82px 36px 58px !important;
 }
 
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop {
+  pointer-events: none;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
   overflow: hidden;
@@ -1133,6 +1137,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   box-shadow: var(--wos-shadow-window) !important;
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);
+  pointer-events: auto;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[data-parent-window-attached],
@@ -1150,6 +1155,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   height: min(560px, calc(100vh - 156px)) !important;
   max-height: min(560px, calc(100vh - 156px)) !important;
   min-height: min(420px, calc(100vh - 156px)) !important;
+  max-width: none !important;
   transform: none !important;
 }
 
