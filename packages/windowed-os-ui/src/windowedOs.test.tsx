@@ -1474,8 +1474,12 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
+    expect(source).toContain('function WorkflowsPageStory');
     expect(source).toContain('export const WorkflowsPage');
-    expect(source).toContain('title="Workflows"');
+    expect(source).toContain('export const DarkWorkflowsPage');
+    expect(source).toContain('<WorkflowsPageStory theme="dark" />');
+    expect(source).toContain("title={theme === 'dark' ? 'Workflows - dark' : 'Workflows'}");
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Dynamic workflows"');
     expect(source).toContain('title="Inventory"');
     expect(source).toContain('title="Runs"');
@@ -1745,8 +1749,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
     expect(source).toContain('CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source).toContain('const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS');
-    expect(source.slice(source.indexOf('export const WorkflowsPage'), source.indexOf('export const ModelArenaPage'))).toContain(
-      'title="Workflows"\n        accent="workflows"',
+    expect(source.slice(source.indexOf('function WorkflowsPageStory'), source.indexOf('export const ModelArenaPage'))).toContain(
+      'accent="workflows"',
     );
     expect(source.slice(source.indexOf('export const GatewaysPage'), source.indexOf('export const ModelArenaPage'))).toContain(
       'export const AIGatewayPage',
