@@ -852,7 +852,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
-    expect(tokensSource).toContain('--wos-titlebar-h: 42px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 36px;');
+    expect(tokensSource).toContain('--wos-window-control-size: 22px;');
+    expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 38px);');
+    expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
+    expect(stylesSource).toContain('.wos-window__title {\n  min-width: 0;');
+    expect(stylesSource).toContain('font: var(--wos-text-row);');
+    expect(stylesSource).toContain('padding: 0 7px 0 8px;');
+    expect(stylesSource).toContain('padding: 5px 7px 5px 10px;');
+    expect(stylesSource).toContain('.wos-dialog__identity {\n  display: flex;');
+    expect(stylesSource).toContain('align-items: center;\n  gap: 8px;');
+    expect(stylesSource).toContain('.wos-dialog__meta::before');
+    expect(stylesSource).toContain("content: '/ ';");
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
   });
 
@@ -1446,7 +1457,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('z-index: 95;');
     expect(stylesSource).toContain('.wos-window__titlebar {\n  position: relative;\n  z-index: 70;');
     expect(stylesSource).toContain('.wos-resize-handle {\n  position: absolute;\n  z-index: 55;');
-    expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 42px);');
+    expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 38px);');
     expect(stylesSource).toContain('.wos-resize-n {\n  right: var(--wos-window-control-clearance);');
     expect(stylesSource).toContain('.wos-resize-e,\n.wos-resize-w {\n  top: var(--wos-titlebar-h);');
     expect(stylesSource.indexOf('z-index: 70;')).toBeLessThan(stylesSource.indexOf('z-index: 55;'));

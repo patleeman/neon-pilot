@@ -1,7 +1,7 @@
 @import './tokens.css';
 
 .windowed-os-shell {
-  --wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 42px);
+  --wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 38px);
   min-height: 100vh;
   overflow: hidden;
   background: var(--wos-surface-0);
@@ -754,9 +754,9 @@
   user-select: none;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   border-bottom: 2px solid var(--wos-ink-900);
-  padding: 0 8px;
+  padding: 0 7px 0 8px;
   cursor: grab;
   touch-action: none;
 }
@@ -779,14 +779,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--wos-text-subsection);
+  font: var(--wos-text-row);
 }
 
 .wos-window__controls {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .wos-window__controls button {
@@ -796,7 +796,7 @@
   height: var(--wos-window-control-size);
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: 6px;
   padding: 0;
   cursor: pointer;
 }
@@ -1066,10 +1066,10 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-settings);
-  padding: 7px 8px 7px 12px;
+  padding: 5px 7px 5px 10px;
   cursor: grab;
   user-select: none;
 }
@@ -1136,23 +1136,32 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog__identity {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  gap: 8px;
 }
 
 .wos-dialog__title {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--wos-text-section);
+  font: var(--wos-text-row);
 }
 
 .wos-dialog__meta {
-  margin-top: 1px;
+  min-width: 0;
   overflow: hidden;
   color: var(--wos-ink-700);
   text-overflow: ellipsis;
   white-space: nowrap;
   font: var(--wos-text-meta);
+}
+
+.wos-dialog__meta::before {
+  content: '/ ';
+  color: var(--wos-ink-500);
 }
 
 .wos-dialog__close {
@@ -1164,7 +1173,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   align-items: center;
   justify-content: center;
   border: 2px solid var(--wos-ink-900);
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
   padding: 0;
