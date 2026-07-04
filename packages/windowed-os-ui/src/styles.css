@@ -7112,6 +7112,67 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   }
 }
 
+@container wos-window-route (max-width: 420px) {
+  .windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {
+    padding: 8px !important;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-notice {
+    margin-bottom: 6px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill {
+    min-height: 24px;
+    padding: 3px 7px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf {
+    padding: 6px 7px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__row {
+    gap: 5px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip) {
+    min-height: 26px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status {
+    min-height: 20px;
+    margin-top: 5px;
+    padding: 1px 5px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls {
+    padding: 6px 7px 7px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__editor {
+    padding: 0 2px 5px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,
+  .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {
+    min-height: 34px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row {
+    min-height: 34px;
+    gap: 5px;
+    padding: 6px 2px 0;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__leading,
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-actions {
+    gap: 5px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row {
+    gap: 5px;
+  }
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-shell,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-positioned-menu {
@@ -7184,6 +7245,22 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static {
     width: 100%;
     max-width: 100%;
+  }
+}
+
+@container wos-window-route (max-width: 420px) {
+  .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static {
+    margin-top: 4px;
+    padding: 3px !important;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item {
+    min-height: 26px;
+    padding: 3px 7px !important;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item + .ui-context-menu-item {
+    margin-top: 3px;
   }
 }
 

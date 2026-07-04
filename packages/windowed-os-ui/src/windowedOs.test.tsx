@@ -153,6 +153,16 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('button.ui-composer-model-fallback {\n    max-width: min(100%, 168px);');
     expect(stylesSource).toContain(".wos-window-route-body--chat [data-chat-transcript-panel='1']");
     expect(stylesSource).toContain('padding: var(--wos-space-4) var(--wos-space-4) 88px !important;');
+    expect(stylesSource).toContain('@container wos-window-route (max-width: 420px)');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n    padding: 8px !important;',
+    );
+    expect(stylesSource).toContain(
+      ".windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,\n  .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {\n    min-height: 34px;",
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item {\n    min-height: 26px;',
+    );
   });
 
   it('stacks Model Arena status controls in compact window containers', () => {
