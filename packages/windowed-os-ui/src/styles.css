@@ -2342,6 +2342,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   text-align: right;
 }
 
+.wos-page-rail .wos-list {
+  border: 1.5px solid var(--wos-line-strong);
+  border-radius: var(--wos-radius-md);
+  background: var(--wos-surface-1);
+}
+
 .wos-toolbar {
   display: flex;
   min-width: 0;
@@ -3025,9 +3031,14 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   flex: 0 1 auto;
   min-width: 8rem;
   max-width: 22rem;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--wos-space-2);
+}
+
+.wos-settings-row__actions > * {
+  min-width: 0;
 }
 
 .wos-heatmap .wos-chart-panel__body {

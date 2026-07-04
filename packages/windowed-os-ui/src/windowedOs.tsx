@@ -1100,6 +1100,7 @@ export function WindowedListItem({
         data-accent={accent}
         data-depth={depth}
         data-selectable="true"
+        aria-current={active ? 'page' : undefined}
         onClick={onSelect}
       >
         {content}

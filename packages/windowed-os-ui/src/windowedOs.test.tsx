@@ -298,6 +298,7 @@ describe('WindowedListItem', () => {
     expect(html).toContain('type="button"');
     expect(html).toContain('data-selectable="true"');
     expect(html).toContain('data-active="true"');
+    expect(html).toContain('aria-current="page"');
   });
 });
 
@@ -1610,6 +1611,10 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the Settings-only two-column rail pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const settingsSource = source.slice(
+      source.indexOf('function SettingsTwoColumnPageStory'),
+      source.indexOf('export const StandardSinglePanePage'),
+    );
 
     expect(source).toContain('function SettingsTwoColumnPageStory');
     expect(source).toContain('export const SettingsTwoColumnPage');
@@ -1620,8 +1625,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<WindowedPageRail');
     expect(source).toContain('showHeader={false}');
     expect(source).toContain('title="Sections"');
+    expect(settingsSource).toContain("minHeight: '100vh'");
+    expect(source).toContain('onSelect={() => undefined}');
     expect(source).toContain('<WindowedSettingsGroup title="Appearance"');
     expect(source).toContain('title="Theme"');
+    expect(settingsSource).toContain('<WindowedPageButton>Reset</WindowedPageButton>');
+    expect(settingsSource).not.toContain('<WindowedPageButton tone="accent">Apply</WindowedPageButton>');
     expect(source).not.toContain('title="Settings sections"');
   });
 
@@ -1633,6 +1642,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-settings-group__header {');
     expect(stylesSource).toContain('.wos-settings-row {');
     expect(stylesSource).toContain('.wos-settings-row__actions {');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
+    expect(stylesSource).toContain('.wos-settings-row__actions > *');
+    expect(stylesSource).toContain('.wos-page-rail .wos-list {');
+    expect(stylesSource).toContain('border: 1.5px solid var(--wos-line-strong);');
   });
 
   it('documents the canonical Workflows desktop page and subwindow pattern', () => {

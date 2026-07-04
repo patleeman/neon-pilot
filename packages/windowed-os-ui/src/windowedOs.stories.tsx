@@ -1129,7 +1129,7 @@ export const ChartPrimitives: Story = {
 
 function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
         title={theme === 'dark' ? 'Settings - dark' : 'Settings'}
         accent="settings"
@@ -1142,11 +1142,21 @@ function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'da
         <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Sections" accent="settings" showHeader={false}>
             <WindowedList>
-              <WindowedListItem title="Appearance" active accent="settings" />
-              <WindowedListItem title="Providers" accent="settings" status={<WindowedBadge tone="positive">2</WindowedBadge>} />
-              <WindowedListItem title="Extensions" accent="settings" />
-              <WindowedListItem title="Desktop" accent="settings" status={<WindowedBadge tone="neutral">Beta</WindowedBadge>} />
-              <WindowedListItem title="Shortcuts" accent="settings" />
+              <WindowedListItem title="Appearance" active accent="settings" onSelect={() => undefined} />
+              <WindowedListItem
+                title="Providers"
+                accent="settings"
+                status={<WindowedBadge tone="positive">2</WindowedBadge>}
+                onSelect={() => undefined}
+              />
+              <WindowedListItem title="Extensions" accent="settings" onSelect={() => undefined} />
+              <WindowedListItem
+                title="Desktop"
+                accent="settings"
+                status={<WindowedBadge tone="neutral">Beta</WindowedBadge>}
+                onSelect={() => undefined}
+              />
+              <WindowedListItem title="Shortcuts" accent="settings" onSelect={() => undefined} />
             </WindowedList>
           </WindowedPageRail>
           <WindowedPageMain
@@ -1154,7 +1164,6 @@ function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'da
             actions={
               <>
                 <WindowedPageButton>Reset</WindowedPageButton>
-                <WindowedPageButton tone="accent">Apply</WindowedPageButton>
               </>
             }
           >
