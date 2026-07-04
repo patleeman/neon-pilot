@@ -1530,7 +1530,7 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-dialog-layer[data-parent-window-title],\n.wos-dialog-layer[data-parent-window-id]');
-    expect(stylesSource).toContain('padding-block-start: 56px;');
+    expect(stylesSource).toContain('padding-block-start: 68px;');
     expect(stylesSource).toContain('.wos-dialog-layer[data-parent-window-title],\n  .wos-dialog-layer[data-parent-window-id]');
     expect(stylesSource).toContain('padding-block-start: 16px;');
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true']");

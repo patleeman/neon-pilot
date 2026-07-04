@@ -1011,7 +1011,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog-layer[data-parent-window-title],
 .wos-dialog-layer[data-parent-window-id] {
-  padding-block-start: 56px;
+  padding-block-start: 68px;
 }
 
 .wos-dialog-layer[data-modal='true'] {
