@@ -1446,7 +1446,11 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
+    expect(source).toContain('function SettingsTwoColumnPageStory');
     expect(source).toContain('export const SettingsTwoColumnPage');
+    expect(source).toContain('export const DarkSettingsTwoColumnPage');
+    expect(source).toContain('<SettingsTwoColumnPageStory theme="dark" />');
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('layout="two-column"');
     expect(source).toContain('<WindowedPageRail');
     expect(source).toContain('showHeader={false}');

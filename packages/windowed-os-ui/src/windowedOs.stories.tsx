@@ -778,11 +778,11 @@ export const ChartPrimitives: Story = {
   ),
 };
 
-export const SettingsTwoColumnPage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 620, padding: 24 }}>
+function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
       <WindowFrame
-        title="Settings"
+        title={theme === 'dark' ? 'Settings - dark' : 'Settings'}
         accent="settings"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 560 }}
@@ -846,7 +846,15 @@ export const SettingsTwoColumnPage: Story = {
         </WindowedPageShell>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const SettingsTwoColumnPage: Story = {
+  render: () => <SettingsTwoColumnPageStory />,
+};
+
+export const DarkSettingsTwoColumnPage: Story = {
+  render: () => <SettingsTwoColumnPageStory theme="dark" />,
 };
 
 export const StandardSinglePanePage: Story = {
