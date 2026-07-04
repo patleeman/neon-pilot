@@ -435,9 +435,10 @@ describe('SettingsPage', () => {
     const listRule = source.match(/\.settings-page-windowed-nav \.wos-list \{[^}]+}/)?.[0] ?? '';
     const itemRule = source.match(/\.settings-page-windowed-nav \.wos-list-item \{[^}]+}/)?.[0] ?? '';
 
-    expect(listRule).toContain('border: 1.5px solid var(--wos-ink-900);');
+    expect(listRule).toContain('border: 1.5px solid var(--wos-line-strong);');
     expect(listRule).toContain('overflow: hidden;');
     expect(itemRule).not.toContain('border: 1.5px solid var(--wos-ink-900);');
+    expect(itemRule).toContain('border-top-color: var(--wos-line-muted);');
     expect(itemRule).not.toContain('border-radius: 0.5rem;');
     expect(itemRule).toContain('border-radius: 0;');
     expect(source).toContain('.settings-page-windowed .settings-page-row-group.wos-settings-group');

@@ -417,7 +417,7 @@
 
 .settings-page-windowed-nav .wos-list {
   display: block;
-  border: 1.5px solid var(--wos-ink-900);
+  border: 1.5px solid var(--wos-line-strong);
   border-radius: 0.5rem;
   overflow: hidden;
   background: var(--wos-surface-1);
@@ -425,7 +425,7 @@
 
 .settings-page-windowed-nav .wos-list-item {
   min-height: 2rem;
-  border-top-color: color-mix(in oklab, var(--wos-ink-900) 20%, transparent);
+  border-top-color: var(--wos-line-muted);
   border-radius: 0;
   padding: 0.375rem 0.5rem;
 }
@@ -479,7 +479,7 @@
 .settings-page-windowed .settings-page-row-group.ui-settings-panel,
 .settings-page-windowed .settings-page-row-group.wos-settings-group {
   border-width: 1.5px;
-  border-color: var(--wos-ink-900);
+  border-color: var(--wos-line-strong);
   border-radius: 0.5rem;
   background: var(--wos-surface-2);
 }
@@ -488,7 +488,7 @@
 .settings-page-windowed .settings-page-row-group > .wos-settings-group__header {
   min-height: 2rem;
   border-bottom-width: 1.5px;
-  border-bottom-color: var(--wos-ink-900);
+  border-bottom-color: var(--wos-line-subtle);
   padding: 0.5rem 0.625rem;
 }
 

@@ -393,14 +393,14 @@ describe('WindowedNumberStepper', () => {
 });
 
 describe('WindowedPageSection', () => {
-  it('uses strong windowed borders for repeated page panels', () => {
+  it('uses scoped inner-border tokens for repeated page panels', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain(
-      '.wos-page-section {\n  overflow: hidden;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+      '.wos-page-section {\n  overflow: hidden;\n  border: var(--wos-border-hairline) solid var(--wos-line-strong);',
     );
-    expect(stylesSource).toContain('border-bottom: var(--wos-border-strong) solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('border-bottom: var(--wos-border-hairline) solid var(--wos-line-subtle);');
   });
 
   it('omits header chrome for structural wrapper sections', () => {
@@ -647,6 +647,9 @@ describe('Windowed OS tokens', () => {
       '--wos-danger-hover',
       '--wos-border-hairline',
       '--wos-border-strong',
+      '--wos-line-strong',
+      '--wos-line-subtle',
+      '--wos-line-muted',
       '--wos-grid-line',
       '--wos-shadow-desktop',
       '--wos-shadow-offset',

@@ -28,6 +28,9 @@
   --wos-danger-hover: oklch(65% 0.18 25 / 0.25);
   --wos-border-hairline: 1.5px;
   --wos-border-strong: 2px;
+  --wos-line-strong: color-mix(in oklab, var(--wos-ink-900) 72%, transparent);
+  --wos-line-subtle: color-mix(in oklab, var(--wos-ink-900) 30%, transparent);
+  --wos-line-muted: color-mix(in oklab, var(--wos-ink-900) 18%, transparent);
   --wos-grid-line: oklch(20% 0.01 60 / 0.08);
   --wos-shadow-window: 0 26px 50px rgba(40, 30, 20, 0.22);
   --wos-shadow-desktop: 0 40px 80px rgba(60, 40, 20, 0.28);
