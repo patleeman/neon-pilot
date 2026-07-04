@@ -732,6 +732,14 @@ describe('WindowedDialog content primitives', () => {
     expect(html).toContain('aria-modal="true"');
   });
 
+  it('keeps dialog close controls large enough to hit in compact desktop windows', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-dialog__close {\n  position: relative;\n  display: inline-flex;\n  width: 24px;');
+    expect(stylesSource).toContain('height: 24px;\n  flex: 0 0 24px;');
+  });
+
   it('renders scoped dialog stack and copy classes for reusable subwindow content', () => {
     const html = renderToStaticMarkup(
       <WindowedDialogStack>
