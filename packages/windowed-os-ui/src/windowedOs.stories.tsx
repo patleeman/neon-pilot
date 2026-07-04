@@ -2762,10 +2762,41 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell layout="wide">
-          <WindowedPageRail title="Extensions" accent="extensions" showHeader={false}>
-            <WindowedPageSection title="Sources" meta="2 sources">
-              <WindowedKeyValueList
+        <WindowedPageShell layout="standard">
+          <WindowedPageMain
+            title="Extensions"
+            actions={
+              <>
+                <WindowedPageButton>Reload</WindowedPageButton>
+                <WindowedPageButton>Update all (3)</WindowedPageButton>
+                <WindowedPageButton tone="accent">Build</WindowedPageButton>
+                <WindowedPageButton>Install</WindowedPageButton>
+              </>
+            }
+          >
+            <WindowedPageSection variant="toolbar">
+              <WindowedToolbar
+                end={
+                  <WindowedSegmentedControl
+                    ariaLabel="Extension view"
+                    accent="extensions"
+                    value="all"
+                    options={[
+                      { id: 'all', label: 'Installed 16' },
+                      { id: 'platform', label: 'Platform 8' },
+                      { id: 'attention', label: 'Attention 2' },
+                    ]}
+                    onChange={() => undefined}
+                  />
+                }
+              >
+                <WindowedTextInput aria-label="Search extensions" placeholder="Search extensions" />
+              </WindowedToolbar>
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Catalog" meta="2 sources">
+              <WindowedKeyValueGrid
+                columns={3}
                 items={[
                   { label: 'Catalog', value: 'Loaded' },
                   { label: 'Available', value: '7' },
@@ -2774,35 +2805,6 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               />
             </WindowedPageSection>
 
-            <WindowedPageSection variant="toolbar">
-              <WindowedToolbar>
-                <WindowedTextInput aria-label="Search extensions" placeholder="Search extensions" />
-              </WindowedToolbar>
-            </WindowedPageSection>
-          </WindowedPageRail>
-
-          <WindowedPageMain
-            title="Extensions"
-            actions={
-              <>
-                <WindowedSegmentedControl
-                  ariaLabel="Extension view"
-                  accent="extensions"
-                  value="all"
-                  options={[
-                    { id: 'all', label: 'Installed 16' },
-                    { id: 'platform', label: 'Platform 8' },
-                    { id: 'attention', label: 'Attention 2' },
-                  ]}
-                  onChange={() => undefined}
-                />
-                <WindowedPageButton>Reload</WindowedPageButton>
-                <WindowedPageButton>Update all (3)</WindowedPageButton>
-                <WindowedPageButton tone="accent">Build</WindowedPageButton>
-                <WindowedPageButton>Install</WindowedPageButton>
-              </>
-            }
-          >
             <WindowedPageSection title="Installed" meta="16 installed · 14 enabled">
               <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
                 <WindowedDataRow

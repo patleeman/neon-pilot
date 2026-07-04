@@ -3145,15 +3145,21 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<ExtensionsPageStory theme="dark" />');
     expect(extensionsSource).toContain('title="Extensions"');
     expect(extensionsSource).toContain('data-wos-theme={theme}');
-    expect(extensionsSource).toContain('<WindowedPageShell layout="wide">');
-    expect(extensionsSource).toContain('<WindowedPageRail title="Extensions" accent="extensions" showHeader={false}>');
-    expect(extensionsSource.indexOf('<WindowedPageRail title="Extensions"')).toBeLessThan(extensionsSource.indexOf('<WindowedPageMain'));
+    expect(extensionsSource).toContain('<WindowedPageShell layout="standard">');
+    expect(extensionsSource).not.toContain('<WindowedPageRail title="Extensions"');
+    expect(extensionsSource.indexOf('<WindowedPageSection variant="toolbar">')).toBeGreaterThan(
+      extensionsSource.indexOf('<WindowedPageMain'),
+    );
     expect(extensionsSource).not.toContain('eyebrow="Extension manager"');
-    expect(extensionsSource).toContain('title="Sources"');
+    expect(extensionsSource).toContain('title="Catalog"');
+    expect(extensionsSource).toContain('<WindowedKeyValueGrid');
     expect(extensionsSource).toContain('<WindowedPageSection variant="toolbar">');
     expect(extensionsSource).toContain('Search extensions');
     expect(extensionsSource).toContain('title="Installed"');
     expect(extensionsSource).toContain('ariaLabel="Extension view"');
+    expect(extensionsSource.indexOf('ariaLabel="Extension view"')).toBeGreaterThan(
+      extensionsSource.indexOf('<WindowedPageSection variant="toolbar">'),
+    );
     expect(extensionsSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
     expect(extensionsSource).toContain('<WindowedDialog');
     expect(extensionsSource).toContain('title="system-browser"');
