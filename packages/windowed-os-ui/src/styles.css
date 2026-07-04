@@ -6640,7 +6640,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {
   width: 100%;
-  min-height: 44px;
+  min-height: 34px;
   resize: none;
   border: 0;
   background: transparent;
@@ -7597,7 +7597,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
   .windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,
   .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {
-    min-height: 34px;
+    min-height: 30px;
   }
 
   .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row {

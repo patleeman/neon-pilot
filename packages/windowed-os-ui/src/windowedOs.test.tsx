@@ -170,7 +170,7 @@ describe('WindowedDataTable', () => {
       '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n    padding: 8px !important;',
     );
     expect(stylesSource).toContain(
-      ".windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,\n  .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {\n    min-height: 34px;",
+      ".windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,\n  .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {\n    min-height: 30px;",
     );
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row {\n    display: grid;\n    min-height: 34px;',
@@ -1443,7 +1443,7 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('font-family: var(--wos-font-body) !important;');
     expect(stylesSource).toContain('width: 100%;');
-    expect(stylesSource).toContain('min-height: 44px;');
+    expect(stylesSource).toContain('min-height: 34px;');
     expect(stylesSource).toContain('font-weight: 500 !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea::placeholder');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell:focus-within');
@@ -1817,6 +1817,7 @@ describe('Windowed OS Storybook examples', () => {
       '.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__media,\n  .windowed-os-shell .wos-window-route-body--chat .ui-image-preview__placeholder {\n    min-height: 132px;',
     );
     expect(stylesSource).toContain('@container wos-window-route (max-width: 420px)');
+    expect(stylesSource).toContain('min-height: 30px;');
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-choice-row {\n    grid-template-columns: auto minmax(0, 1fr);',
     );
