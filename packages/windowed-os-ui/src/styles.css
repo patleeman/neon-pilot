@@ -29,15 +29,15 @@
 }
 
 /* Windowed mode does not use standalone left-edge rails for hierarchy or status. */
-.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-']) {
+.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-']) {
   border-left: 0 !important;
   border-left-width: 0 !important;
   border-left-color: transparent !important;
   box-shadow: none !important;
 }
 
-.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-'])::before,
-.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-'])::after {
+.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])::before,
+.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])::after {
   content: none !important;
   border-left: 0 !important;
   border-left-width: 0 !important;
@@ -1325,6 +1325,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-workspace-child-preview {
+  container-type: inline-size;
   display: grid;
   min-height: 0;
   height: 100%;
@@ -1340,6 +1341,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   display: flex;
   min-width: 0;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--wos-space-4);
   border: 2px solid var(--wos-ink-900);
   border-radius: 8px;
@@ -1349,12 +1351,33 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-workspace-child-preview__cwd {
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 1 16rem;
   overflow: hidden;
   color: var(--wos-ink-700);
   font: var(--wos-text-eyebrow);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.wos-workspace-child-preview__toolbar .wos-badge {
+  flex: 0 0 auto;
+}
+
+@container (max-width: 420px) {
+  .wos-workspace-child-preview {
+    gap: var(--wos-space-4);
+    padding: var(--wos-space-4);
+  }
+
+  .wos-workspace-child-preview__toolbar {
+    align-items: flex-start;
+    gap: var(--wos-space-3);
+    padding: var(--wos-space-3) var(--wos-space-4);
+  }
+
+  .wos-workspace-child-preview__cwd {
+    flex-basis: 100%;
+  }
 }
 
 .wos-window-route-body--browser .wos-chat-browser-dialog__body {

@@ -1061,11 +1061,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(composerStyles).toContain('.ui-input-shell {\n  border: 2px solid var(--wos-ink-900) !important;');
     expect(composerStyles).toContain('.ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;');
     expect(stylesSource).toContain(
-      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-']) {",
+      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-']) {",
     );
     expect(stylesSource).toContain('Windowed mode does not use standalone left-edge rails for hierarchy or status.');
     expect(stylesSource).toContain(
-      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-'])::before,",
+      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])::before,",
     );
     expect(stylesSource).toContain('border-left-color: transparent !important;\n  box-shadow: none !important;');
   });
@@ -1789,9 +1789,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-chat-browser-dialog__body > [data-extension-id='system-browser']");
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body');
     expect(stylesSource).toContain('.wos-window-route-body--files .wos-chat-files-dialog__body');
-    expect(stylesSource).toContain('.wos-workspace-child-preview {');
-    expect(stylesSource).toContain('.wos-workspace-child-preview__toolbar {');
+    expect(stylesSource).toContain('.wos-workspace-child-preview {\n  container-type: inline-size;');
+    expect(stylesSource).toContain('.wos-workspace-child-preview__toolbar {\n  display: flex;');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
     expect(stylesSource).toContain('.wos-workspace-child-preview__cwd {');
+    expect(stylesSource).toContain('flex: 1 1 16rem;');
+    expect(stylesSource).toContain('.wos-workspace-child-preview__toolbar .wos-badge {');
+    expect(stylesSource).toContain('@container (max-width: 420px)');
+    expect(stylesSource).toContain('.wos-workspace-child-preview__cwd {\n    flex-basis: 100%;');
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body .wos-browser-toolbar,');
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body form:first-child,');
     expect(stylesSource).toContain('min-height: 42px;');
