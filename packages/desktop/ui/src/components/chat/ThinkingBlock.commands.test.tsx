@@ -4,8 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
-import { ThinkingBlock } from './TraceBlocks';
 import { THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ThinkingBlockCommandDetail } from './thinkingBlockCommands';
+import { ThinkingBlock } from './TraceBlocks';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -38,6 +38,10 @@ describe('ThinkingBlock commands', () => {
       root?.render(<ThinkingBlock block={thinkingBlock('preview thought\nhidden thought detail')} autoOpen={false} />);
     });
 
+    expect(container.querySelector('.ui-thinking-block')).not.toBeNull();
+    expect(container.querySelector('.ui-thinking-block__header')).not.toBeNull();
+    expect(container.querySelector('.ui-thinking-block__preview')).not.toBeNull();
+    expect(container.querySelector('.ui-thinking-block__toggle')).not.toBeNull();
     expect(container.textContent).toContain('show');
     expect(container.textContent).not.toContain('hidden thought detail');
 
@@ -47,6 +51,7 @@ describe('ThinkingBlock commands', () => {
 
     expect(container.textContent).toContain('hide');
     expect(container.textContent).toContain('hidden thought detail');
+    expect(container.querySelector('.ui-thinking-block__body')).not.toBeNull();
   });
 
   it('lets only the first mounted thinking block handle one shared command event', () => {

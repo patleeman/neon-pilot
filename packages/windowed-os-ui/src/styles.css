@@ -5837,6 +5837,176 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   color: var(--wos-accent-ink) !important;
 }
 
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster {
+  margin-block: 8px;
+  color: var(--wos-ink-900);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__summary {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(24px, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--wos-ink-700);
+  font: var(--wos-text-meta);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__summary-button {
+  display: flex;
+  min-width: 0;
+  max-width: min(100%, 42rem) !important;
+  min-height: 28px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px !important;
+  font: var(--wos-text-row);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__step-count {
+  color: var(--wos-ink-900) !important;
+  font-weight: 800;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__categories {
+  display: inline-flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__toggle {
+  color: var(--wos-ink-600) !important;
+  font-family: var(--wos-font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__rule {
+  display: block;
+  min-width: 24px;
+  height: 2px;
+  background: var(--wos-ink-900) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {
+  display: grid;
+  gap: 6px;
+  margin-top: 7px;
+  margin-left: 10px !important;
+  border-left: 2px solid var(--wos-ink-900) !important;
+  padding-left: 8px !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__overflow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wos-surface-2) 72%, var(--wos-surface-3)) !important;
+  padding: 6px 8px !important;
+  color: var(--wos-ink-700) !important;
+  font: var(--wos-text-body);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__overflow > span:first-child {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block,
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block {
+  overflow: hidden;
+  border: 1.5px solid var(--wos-ink-900) !important;
+  border-radius: 8px;
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-900) !important;
+  box-shadow: none;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block[data-status='running'] {
+  background: color-mix(in srgb, var(--wos-chat) 8%, var(--wos-surface-1)) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block[data-status='complete'] {
+  background: color-mix(in srgb, var(--wos-success) 8%, var(--wos-surface-1)) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block[data-status='failed'] {
+  background: color-mix(in srgb, var(--wos-danger) 8%, var(--wos-surface-1)) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__header,
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__header {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  padding: 7px 8px !important;
+  text-align: left;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__header:hover,
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__header:hover {
+  background: color-mix(in srgb, var(--wos-chat) 12%, transparent) !important;
+  color: var(--wos-ink-900) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__preview,
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__name {
+  flex: 1 1 12rem;
+  min-width: 0;
+  color: var(--wos-ink-700) !important;
+  font: var(--wos-text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__toggle,
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__toggle {
+  color: var(--wos-ink-600) !important;
+  font-family: var(--wos-font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__body,
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__body {
+  display: grid;
+  gap: 6px;
+  border-top: 1.5px solid var(--wos-ink-900) !important;
+  background: color-mix(in srgb, var(--wos-surface-2) 72%, var(--wos-surface-1)) !important;
+  padding: 8px !important;
+  color: var(--wos-ink-800) !important;
+  font: var(--wos-text-body);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__body p,
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__text {
+  margin: 0;
+  color: var(--wos-ink-800) !important;
+  font: var(--wos-text-body);
+  overflow-wrap: anywhere;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__section {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block {
   border: 1.5px solid var(--wos-ink-900);
   border-radius: 8px;

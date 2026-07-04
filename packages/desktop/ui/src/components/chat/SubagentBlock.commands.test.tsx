@@ -4,14 +4,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
-import { SubagentBlock } from './TraceBlocks';
 import { SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type SubagentBlockCommandDetail } from './subagentBlockCommands';
+import { SubagentBlock } from './TraceBlocks';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
-function subagentBlock(
-  overrides: Partial<Extract<MessageBlock, { type: 'subagent' }>> = {},
-): Extract<MessageBlock, { type: 'subagent' }> {
+function subagentBlock(overrides: Partial<Extract<MessageBlock, { type: 'subagent' }>> = {}): Extract<MessageBlock, { type: 'subagent' }> {
   return {
     type: 'subagent',
     id: 'subagent-1',
@@ -44,6 +42,11 @@ describe('SubagentBlock commands', () => {
       root?.render(<SubagentBlock block={subagentBlock()} />);
     });
 
+    expect(container.querySelector('.ui-subagent-block')).not.toBeNull();
+    expect(container.querySelector('.ui-subagent-block')?.getAttribute('data-status')).toBe('complete');
+    expect(container.querySelector('.ui-subagent-block__header')).not.toBeNull();
+    expect(container.querySelector('.ui-subagent-block__name')).not.toBeNull();
+    expect(container.querySelector('.ui-subagent-block__toggle')).not.toBeNull();
     expect(container.textContent).toContain('show');
     expect(container.textContent).not.toContain('Inspect command coverage');
 
@@ -53,6 +56,9 @@ describe('SubagentBlock commands', () => {
 
     expect(container.textContent).toContain('hide');
     expect(container.textContent).toContain('Inspect command coverage');
+    expect(container.querySelector('.ui-subagent-block__body')).not.toBeNull();
+    expect(container.querySelector('.ui-subagent-block__section')).not.toBeNull();
+    expect(container.querySelector('.ui-subagent-block__text')).not.toBeNull();
   });
 
   it('lets only the first mounted subagent block handle one shared command event', () => {

@@ -67,6 +67,14 @@ describe('TraceClusterBlock commands', () => {
     });
 
     expect(container.textContent).toContain('1 step');
+    expect(container.querySelector('.ui-trace-cluster')).not.toBeNull();
+    expect(container.querySelector('.ui-trace-cluster')?.getAttribute('data-open')).toBeNull();
+    expect(container.querySelector('.ui-trace-cluster__summary')).not.toBeNull();
+    expect(container.querySelector('.ui-trace-cluster__summary-button')).not.toBeNull();
+    expect(container.querySelector('.ui-trace-cluster__step-count')).not.toBeNull();
+    expect(container.querySelector('.ui-trace-cluster__categories')).not.toBeNull();
+    expect(container.querySelector('.ui-trace-cluster__toggle')).not.toBeNull();
+    expect(container.querySelector('.ui-trace-cluster__rule')).not.toBeNull();
     expect(container.textContent).toContain('show');
     expect(container.textContent).not.toContain('first trace detail');
 
@@ -76,6 +84,8 @@ describe('TraceClusterBlock commands', () => {
 
     expect(container.textContent).toContain('hide');
     expect(container.textContent).toContain('first trace detail');
+    expect(container.querySelector('.ui-trace-cluster')?.getAttribute('data-open')).toBe('true');
+    expect(container.querySelector('.ui-trace-cluster__body')).not.toBeNull();
   });
 
   it('lets only the first mounted trace cluster handle one shared command event', () => {
@@ -115,6 +125,7 @@ describe('TraceClusterBlock commands', () => {
     });
 
     expect(container.textContent).toContain('1 earlier step summarized above.');
+    expect(container.querySelector('.ui-trace-cluster__overflow')).not.toBeNull();
     expect(container.textContent).not.toContain('trace detail 1');
     expect(container.textContent).toContain('trace detail 6');
 

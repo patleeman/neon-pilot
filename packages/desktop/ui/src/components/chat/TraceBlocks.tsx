@@ -68,15 +68,19 @@ export const ThinkingBlock = memo(function ThinkingBlock({
   }, [toggleThinkingBlock]);
 
   return (
-    <SurfacePanel muted className="overflow-hidden border-transparent bg-elevated/35 text-[12px]">
-      <RowButton onClick={toggleThinkingBlock} className="px-2.5 py-2">
+    <SurfacePanel muted className="ui-thinking-block overflow-hidden border-transparent bg-elevated/35 text-[12px]">
+      <RowButton onClick={toggleThinkingBlock} className="ui-thinking-block__header px-2.5 py-2">
         <Pill tone="muted">Thinking</Pill>
-        {!open && preview ? <span className="min-w-0 flex-1 truncate text-secondary italic">{preview}</span> : <span className="flex-1" />}
+        {!open && preview ? (
+          <span className="ui-thinking-block__preview min-w-0 flex-1 truncate text-secondary italic">{preview}</span>
+        ) : (
+          <span className="flex-1" />
+        )}
         {live && <MetaLabel tone="muted">live</MetaLabel>}
-        <span className="text-dim text-[10px]">{open ? 'hide' : 'show'}</span>
+        <span className="ui-thinking-block__toggle text-dim text-[10px]">{open ? 'hide' : 'show'}</span>
       </RowButton>
       {open && (
-        <div className="border-t border-border-subtle/70 px-2.5 pb-2.5 pt-1.5 text-secondary italic leading-relaxed space-y-1">
+        <div className="ui-thinking-block__body border-t border-border-subtle/70 px-2.5 pb-2.5 pt-1.5 text-secondary italic leading-relaxed space-y-1">
           {block.text.split('\n').map((l, i) => (
             <p key={i} className="text-[12px]">
               {l || <br />}
@@ -116,29 +120,29 @@ export const SubagentBlock = memo(function SubagentBlock({ block }: { block: Ext
   }, [toggleSubagentBlock]);
 
   return (
-    <SurfacePanel muted className={`overflow-hidden text-[12px] ${colorClassName}`}>
-      <RowButton onClick={toggleSubagentBlock} className="px-2.5 py-2">
+    <SurfacePanel muted className={`ui-subagent-block overflow-hidden text-[12px] ${colorClassName}`} data-status={block.status}>
+      <RowButton onClick={toggleSubagentBlock} className="ui-subagent-block__header px-2.5 py-2">
         <Pill tone={tone} mono>
           subagent
         </Pill>
-        <span className="flex-1 truncate opacity-70 font-normal">{block.name}</span>
+        <span className="ui-subagent-block__name flex-1 truncate opacity-70 font-normal">{block.name}</span>
         <Pill tone={tone}>{block.status}</Pill>
-        <span className="shrink-0 ml-1 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
+        <span className="ui-subagent-block__toggle shrink-0 ml-1 opacity-50 text-[10px]">{open ? 'hide' : 'show'}</span>
       </RowButton>
       {open && (
-        <div className="border-t border-border-subtle/70 px-2.5 py-2 space-y-2 bg-black/5">
-          <div>
+        <div className="ui-subagent-block__body border-t border-border-subtle/70 px-2.5 py-2 space-y-2 bg-black/5">
+          <div className="ui-subagent-block__section">
             <SectionLabel tone="muted" className="mb-1 block opacity-70">
               prompt
             </SectionLabel>
-            <p className="opacity-70 leading-relaxed">{block.prompt}</p>
+            <p className="ui-subagent-block__text opacity-70 leading-relaxed">{block.prompt}</p>
           </div>
           {block.summary && (
-            <div>
+            <div className="ui-subagent-block__section">
               <SectionLabel tone="muted" className="mb-1 block opacity-70">
                 result
               </SectionLabel>
-              <p className="opacity-80 leading-relaxed">{block.summary}</p>
+              <p className="ui-subagent-block__text opacity-80 leading-relaxed">{block.summary}</p>
             </div>
           )}
         </div>
@@ -445,12 +449,12 @@ export function TraceClusterBlock({
   }, [canToggleTraceClusterOverflow, toggleTraceClusterOverflow]);
   const visibleStartIndex = blocks.length - visibleBlocks.length;
   return (
-    <div className="space-y-1.5">
+    <div className="ui-trace-cluster space-y-1.5" data-compact={compact ? 'true' : undefined} data-open={open ? 'true' : undefined}>
       <div
         className={
           compact
-            ? 'flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-dim/70'
-            : 'grid w-full grid-cols-[auto_1fr] items-center gap-2 text-[11px] text-dim/70'
+            ? 'ui-trace-cluster__summary flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-dim/70'
+            : 'ui-trace-cluster__summary grid w-full grid-cols-[auto_1fr] items-center gap-2 text-[11px] text-dim/70'
         }
       >
         <RowButton
@@ -461,15 +465,15 @@ export function TraceClusterBlock({
           aria-expanded={open}
           className={
             compact
-              ? 'flex min-w-0 max-w-full flex-1 flex-wrap items-center gap-1.5 bg-transparent p-0 text-dim/70'
-              : 'flex min-w-0 max-w-[78vw] items-center gap-1.5 bg-transparent p-0 text-dim/70 sm:max-w-[42rem]'
+              ? 'ui-trace-cluster__summary-button flex min-w-0 max-w-full flex-1 flex-wrap items-center gap-1.5 bg-transparent p-0 text-dim/70'
+              : 'ui-trace-cluster__summary-button flex min-w-0 max-w-[78vw] items-center gap-1.5 bg-transparent p-0 text-dim/70 sm:max-w-[42rem]'
           }
         >
-          <span className="shrink-0 font-medium text-primary">
+          <span className="ui-trace-cluster__step-count shrink-0 font-medium text-primary">
             {summary.stepCount} step{summary.stepCount === 1 ? '' : 's'}
           </span>
           {summary.categories.length > 0 && (
-            <span className="flex min-w-0 flex-wrap items-center gap-1">
+            <span className="ui-trace-cluster__categories flex min-w-0 flex-wrap items-center gap-1">
               {expandedCategories.map((category) => (
                 <Pill key={category.key} tone={traceSummaryTone(category)} mono={category.kind === 'tool'}>
                   {category.label}
@@ -490,9 +494,14 @@ export function TraceClusterBlock({
             </span>
           )}
           {durationLabel && !isActive && <span className="text-dim">{durationLabel}</span>}
-          <span className="text-dim">{open ? 'hide' : 'show'}</span>
+          <span className="ui-trace-cluster__toggle text-dim">{open ? 'hide' : 'show'}</span>
         </RowButton>
-        <span className={compact ? 'h-px min-w-8 flex-1 bg-border-subtle' : 'h-px bg-border-subtle'} aria-hidden="true" />
+        <span
+          className={
+            compact ? 'ui-trace-cluster__rule h-px min-w-8 flex-1 bg-border-subtle' : 'ui-trace-cluster__rule h-px bg-border-subtle'
+          }
+          aria-hidden="true"
+        />
       </div>
 
       {!open && (
@@ -511,9 +520,9 @@ export function TraceClusterBlock({
       )}
 
       {open && (
-        <div className="ml-2.5 space-y-1.5 border-l border-border-subtle pl-2.5">
+        <div className="ui-trace-cluster__body ml-2.5 space-y-1.5 border-l border-border-subtle pl-2.5">
           {overflowBlockCount > 0 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-md bg-elevated/35 px-2.5 py-1.5 text-[11px] text-secondary">
+            <div className="ui-trace-cluster__overflow flex flex-wrap items-center gap-2 rounded-md bg-elevated/35 px-2.5 py-1.5 text-[11px] text-secondary">
               <span>
                 {showAllBlocks
                   ? `Showing all ${blocks.length} steps.`

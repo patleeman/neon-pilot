@@ -336,12 +336,12 @@ export const DarkChatWithCollapsedWorkbench: Story = {
 
 function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 1280, padding: 24 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 1840, padding: 24 }}>
       <WindowFrame
         title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
         accent="chat"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 1220 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 1780 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
@@ -417,6 +417,57 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 </details>
               </div>
               <span className="ui-pill ui-pill-accent">Windowed</span>
+              <div className="ui-trace-cluster" data-open="true">
+                <div className="ui-trace-cluster__summary">
+                  <button type="button" className="ui-row-button ui-trace-cluster__summary-button" aria-expanded="true">
+                    <span className="ui-trace-cluster__step-count">4 steps</span>
+                    <span className="ui-trace-cluster__categories">
+                      <span className="ui-pill">thinking</span>
+                      <span className="ui-pill ui-pill-accent">subagent</span>
+                      <span className="ui-pill">shell</span>
+                    </span>
+                    <span className="ui-trace-cluster__toggle">hide</span>
+                  </button>
+                  <span className="ui-trace-cluster__rule" aria-hidden="true" />
+                </div>
+                <div className="ui-trace-cluster__body">
+                  <div className="ui-trace-cluster__overflow">
+                    <span>2 earlier steps summarized above.</span>
+                    <button type="button" className="ui-action-button">
+                      Show all
+                    </button>
+                  </div>
+                  <div className="ui-thinking-block">
+                    <button type="button" className="ui-row-button ui-thinking-block__header" aria-expanded="true">
+                      <span className="ui-pill">Thinking</span>
+                      <span className="ui-thinking-block__preview">Checking inherited transcript surfaces.</span>
+                      <span className="ui-thinking-block__toggle">hide</span>
+                    </button>
+                    <div className="ui-thinking-block__body">
+                      <p>Style only the windowed shell, keep normal chat untouched.</p>
+                      <p>Verify light and dark before checkpointing.</p>
+                    </div>
+                  </div>
+                  <div className="ui-subagent-block" data-status="complete">
+                    <button type="button" className="ui-row-button ui-subagent-block__header" aria-expanded="true">
+                      <span className="ui-pill ui-pill-accent">subagent</span>
+                      <span className="ui-subagent-block__name">visual-qa</span>
+                      <span className="ui-pill ui-pill-success">complete</span>
+                      <span className="ui-subagent-block__toggle">hide</span>
+                    </button>
+                    <div className="ui-subagent-block__body">
+                      <div className="ui-subagent-block__section">
+                        <span className="ui-section-label">Prompt</span>
+                        <p className="ui-subagent-block__text">Inspect the windowed trace chrome for imported web styling.</p>
+                      </div>
+                      <div className="ui-subagent-block__section">
+                        <span className="ui-section-label">Result</span>
+                        <p className="ui-subagent-block__text">Trace panels now follow the desktop border, type, and disclosure rhythm.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="ui-tool-block">
                 <div className="ui-tool-block__body">Ran package checks</div>
                 <div className="ui-tool-block__linked-runs">
