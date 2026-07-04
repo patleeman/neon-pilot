@@ -1307,6 +1307,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('className="wos-chat-window-toolbar"');
     expect(source).toContain('aria-label="Hide workbench"');
+    expect(source).toContain('aria-pressed="true"');
     expect(source).toContain('aria-label="Open Browser window"');
     expect(source).toContain('aria-label="Open Terminal window"');
     expect(source).toContain('data-density="icon"');

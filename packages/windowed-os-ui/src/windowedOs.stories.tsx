@@ -221,7 +221,7 @@ function AttachedWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 'dark' 
                 data-density="icon"
                 aria-label="Hide workbench"
                 title="Hide workbench"
-                aria-pressed="false"
+                aria-pressed="true"
               >
                 <StoryToolbarIcon name="workbench-visible" />
               </button>
