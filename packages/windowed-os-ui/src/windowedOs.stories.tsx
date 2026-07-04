@@ -353,18 +353,20 @@ function AttachedWorkbenchStory({
                     Terminal
                   </button>
                 </div>
-                <WindowedPageSection title="Workspace" meta="3 open">
-                  <WindowedList>
-                    <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
-                    <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
-                    <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
-                  </WindowedList>
-                </WindowedPageSection>
-                <WindowedPageSection title="Terminal" meta="Last command">
-                  <WindowedStateBlock tone="positive" title="Validation passed">
-                    pnpm --dir packages/windowed-os-ui run build
-                  </WindowedStateBlock>
-                </WindowedPageSection>
+                <div className="wos-chat-workbench__body ui-workbench-panel__body">
+                  <WindowedPageSection title="Workspace" meta="3 open">
+                    <WindowedList>
+                      <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
+                      <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
+                      <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
+                    </WindowedList>
+                  </WindowedPageSection>
+                  <WindowedPageSection title="Terminal" meta="Last command">
+                    <WindowedStateBlock tone="positive" title="Validation passed">
+                      pnpm --dir packages/windowed-os-ui run build
+                    </WindowedStateBlock>
+                  </WindowedPageSection>
+                </div>
               </aside>
             ) : null}
           </div>

@@ -1164,6 +1164,7 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('container: wos-attached-workbench / inline-size;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel__body');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel__body {\n  min-height: 0;\n  overflow: auto;');
     expect(stylesSource).toContain(".wos-window-route-body .ui-workbench-panel[data-has-open-file='true'] .ui-workbench-panel__body");
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab {');
@@ -1597,6 +1598,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-windowed-attached-workbench="true"');
     expect(source).toContain('className="wos-chat-workbench__panel ui-workbench-panel"');
     expect(source).toContain('className="wos-chat-workbench__tabs ui-workbench-tab-strip"');
+    expect(source).toContain('className="wos-chat-workbench__body ui-workbench-panel__body"');
     expect(source).toContain('className="ui-workbench-tab ui-workbench-tab-active"');
   });
 
@@ -1604,6 +1606,10 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
+    expect(stylesSource).toContain('@container wos-window-route (max-width: 860px)');
+    expect(stylesSource).not.toContain('@media (max-width: 860px) {\n  .wos-chat-workbench');
+    expect(stylesSource).toContain('grid-template-rows: minmax(320px, 1fr) minmax(220px, 42%);');
+    expect(stylesSource).toContain('.wos-chat-workbench__panel {\n    border-top: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain(".wos-window-route-body--chat[data-workbench-collapsed='true'] .wos-chat-workbench");
     expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
     expect(stylesSource).toContain('grid-template-rows: minmax(0, 1fr);');

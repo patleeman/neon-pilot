@@ -1844,6 +1844,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-window-route-body .ui-workbench-panel__body {
+  min-height: 0;
+  overflow: auto;
   background: var(--wos-surface-1);
 }
 
@@ -4591,9 +4593,19 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  overflow: auto;
+  overflow: hidden;
   border-left: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-2);
+}
+
+.wos-chat-workbench__body {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 8px;
+  overflow: auto;
+  padding: 8px 10px 10px;
+  scrollbar-width: thin;
 }
 
 .wos-chat-workbench__tabs {
@@ -4783,7 +4795,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   color: var(--wos-ink-900);
 }
 
-@media (max-width: 860px) {
+@container wos-window-route (max-width: 860px) {
   .wos-chat-workbench {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(320px, 1fr) minmax(220px, 42%);
