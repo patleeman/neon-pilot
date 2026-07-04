@@ -80,6 +80,7 @@ import {
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageShell,
+  WindowedSegmentedControl,
   WindowedSettingsGroup,
   WindowedSettingsRow,
 } from '@neon-pilot/extensions/ui';
@@ -3903,16 +3904,30 @@ export function SettingsPage({
               title="Mode"
               description={availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
             >
-              <SegmentedControl
-                ariaLabel="Theme mode selection"
-                value={themePreference}
-                onChange={setThemePreference}
-                options={[
-                  { value: 'system', label: 'Auto' },
-                  { value: 'light', label: 'Light' },
-                  { value: 'dark', label: 'Dark' },
-                ]}
-              />
+              {isWindowedSettingsSurface ? (
+                <WindowedSegmentedControl
+                  ariaLabel="Theme mode selection"
+                  accent="settings"
+                  value={themePreference}
+                  onChange={setThemePreference}
+                  options={[
+                    { id: 'system', label: 'Auto' },
+                    { id: 'light', label: 'Light' },
+                    { id: 'dark', label: 'Dark' },
+                  ]}
+                />
+              ) : (
+                <SegmentedControl
+                  ariaLabel="Theme mode selection"
+                  value={themePreference}
+                  onChange={setThemePreference}
+                  options={[
+                    { value: 'system', label: 'Auto' },
+                    { value: 'light', label: 'Light' },
+                    { value: 'dark', label: 'Dark' },
+                  ]}
+                />
+              )}
             </SettingsControlRow>
             <SettingsControlRow title="Light default">
               <Select
@@ -3972,8 +3987,9 @@ export function SettingsPage({
             </SettingsControlRow>
             {isWindowedSettingsSurface ? (
               <SettingsControlRow title="Windowed OS" description="Desktop window chrome">
-                <SegmentedControl
+                <WindowedSegmentedControl
                   ariaLabel="Windowed OS theme"
+                  accent="settings"
                   value={windowedOsTheme}
                   onChange={(value) => {
                     const nextTheme: WindowedOsTheme = value === 'dark' || value === 'auto' ? value : 'light';
@@ -3981,9 +3997,9 @@ export function SettingsPage({
                     writeWindowedOsTheme(nextTheme);
                   }}
                   options={[
-                    { value: 'light', label: 'Light' },
-                    { value: 'auto', label: 'Auto' },
-                    { value: 'dark', label: 'Dark' },
+                    { id: 'light', label: 'Light' },
+                    { id: 'auto', label: 'Auto' },
+                    { id: 'dark', label: 'Dark' },
                   ]}
                 />
               </SettingsControlRow>

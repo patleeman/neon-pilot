@@ -198,7 +198,7 @@ describe('windowed settings navigation', () => {
     expect(source).toContain('grid-template-rows: auto minmax(0, 1fr);');
     expect(source).toContain('.settings-page-windowed-nav');
     expect(source).toContain('border-bottom: 2px solid var(--wos-ink-900);');
-    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-control');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .wos-segmented-control');
     expect(source).toContain('width: 100%;');
   });
 
@@ -210,7 +210,8 @@ describe('windowed settings navigation', () => {
     expect(settingsPageSource).toContain('readWindowedOsTheme');
     expect(settingsPageSource).toContain('writeWindowedOsTheme');
     expect(hostSettingsApiSource).toContain("from '../ui-state/windowedShell'");
-    expect(settingsPageSource).toContain("{ value: 'auto', label: 'Auto' }");
+    expect(settingsPageSource).toContain('WindowedSegmentedControl');
+    expect(settingsPageSource).toContain("{ id: 'auto', label: 'Auto' }");
     expect(extensionSettingsTypesSource).toContain("export type WindowedOsTheme = 'light' | 'dark' | 'auto';");
     expect(extensionSettingsTypesSource).toContain('export declare function readWindowedOsTheme(): WindowedOsTheme;');
     expect(extensionSettingsTypesSource).toContain('export declare function writeWindowedOsTheme(theme: WindowedOsTheme): void;');

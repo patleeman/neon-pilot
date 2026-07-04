@@ -383,6 +383,8 @@ describe('SettingsPage', () => {
     expect(html).toContain('>Providers</span>');
     expect(html).toContain('Windowed OS');
     expect(html).toContain('aria-label="Windowed OS theme"');
+    expect(html).toContain('class="wos-segmented-control"');
+    expect(html).toContain('data-accent="settings"');
     expect(html).toContain('>Auto</button>');
     expect(html).not.toContain('Theme, accent, and visual defaults.');
     expect(html).not.toContain('Model and transcript defaults for new conversations.');
@@ -440,6 +442,8 @@ describe('SettingsPage', () => {
     expect(itemRule).toContain('border-radius: 0;');
     expect(source).toContain('.settings-page-windowed .settings-page-row-group.wos-settings-group');
     expect(source).toContain('.settings-page-windowed .settings-page-control-row.wos-settings-row');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .wos-segmented-control');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .wos-segmented-control__item');
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-control');
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-button-active');
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-swatch-option');

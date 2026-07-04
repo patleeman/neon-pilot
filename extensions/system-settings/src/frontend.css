@@ -526,6 +526,14 @@
   min-width: 8rem;
 }
 
+.settings-page-windowed .settings-page-control-actions .wos-segmented-control {
+  width: 100%;
+}
+
+.settings-page-windowed .settings-page-control-actions .wos-segmented-control__item {
+  flex: 1 1 0;
+}
+
 .settings-page-windowed .settings-page-control-actions .ui-select,
 .settings-page-windowed .settings-page-control-actions .ui-input,
 .settings-page-windowed .settings-page-panel-compact .ui-select,
@@ -626,6 +634,10 @@
   }
 
   .settings-page-windowed .settings-page-control-actions .ui-segmented-control {
+    width: 100%;
+  }
+
+  .settings-page-windowed .settings-page-control-actions .wos-segmented-control {
     width: 100%;
   }
 
