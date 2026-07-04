@@ -1713,6 +1713,7 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical Workflows desktop page and subwindow pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const workflowsSource = source.slice(source.indexOf('function WorkflowsPageStory'), source.indexOf('export const WorkflowsPage'));
 
     expect(source).toContain('function WorkflowsPageStory');
     expect(source).toContain('export const WorkflowsPage');
@@ -1726,6 +1727,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Library"');
     expect(source).toContain('<WindowedDialog');
     expect(source).toContain('title="Repo audit"');
+    expect(source).toContain('parentWindowTitle="Workflows"');
+    expect(workflowsSource.indexOf('</WindowFrame>')).toBeLessThan(workflowsSource.indexOf('<WindowedDialog'));
   });
 
   it('documents shared neutral empty states and error state blocks for windowed pages', () => {

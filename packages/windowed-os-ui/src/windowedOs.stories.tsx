@@ -2049,43 +2049,43 @@ function WorkflowsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
-        <WindowedDialog
-          title="Repo audit"
-          meta="running"
-          accent="workflows"
-          parentWindowTitle="Workflows"
-          onClose={() => undefined}
-          actions={<WindowedPageButton>Cancel</WindowedPageButton>}
-        >
-          <WindowedKeyValueGrid
-            columns={3}
-            items={[
-              { label: 'Created', value: 'Today, 10:12 AM' },
-              { label: 'Updated', value: 'Today, 10:17 AM' },
-              { label: 'Active phase', value: 'review' },
-              { label: 'Models', value: 'gpt-5.4-mini' },
-              { label: 'Agents', value: '3/8 complete, 2 running' },
-              { label: 'Completed', value: 'not completed' },
-            ]}
-          />
-          <WindowedList>
-            <WindowedListItem
-              title="reviewer"
-              meta="review · gpt-5.4-mini"
-              detail="Inspect changed desktop shell files."
-              accent="workflows"
-              status={<WindowedBadge tone="warning">running</WindowedBadge>}
-            />
-            <WindowedListItem
-              title="visual-check"
-              meta="verification · gpt-5.4-mini"
-              detail="No horizontal overflow found in the Storybook target."
-              accent="workflows"
-              status={<WindowedBadge tone="positive">completed</WindowedBadge>}
-            />
-          </WindowedList>
-        </WindowedDialog>
       </WindowFrame>
+      <WindowedDialog
+        title="Repo audit"
+        meta="running"
+        accent="workflows"
+        parentWindowTitle="Workflows"
+        onClose={() => undefined}
+        actions={<WindowedPageButton>Cancel</WindowedPageButton>}
+      >
+        <WindowedKeyValueGrid
+          columns={3}
+          items={[
+            { label: 'Created', value: 'Today, 10:12 AM' },
+            { label: 'Updated', value: 'Today, 10:17 AM' },
+            { label: 'Active phase', value: 'review' },
+            { label: 'Models', value: 'gpt-5.4-mini' },
+            { label: 'Agents', value: '3/8 complete, 2 running' },
+            { label: 'Completed', value: 'not completed' },
+          ]}
+        />
+        <WindowedList>
+          <WindowedListItem
+            title="reviewer"
+            meta="review · gpt-5.4-mini"
+            detail="Inspect changed desktop shell files."
+            accent="workflows"
+            status={<WindowedBadge tone="warning">running</WindowedBadge>}
+          />
+          <WindowedListItem
+            title="visual-check"
+            meta="verification · gpt-5.4-mini"
+            detail="No horizontal overflow found in the Storybook target."
+            accent="workflows"
+            status={<WindowedBadge tone="positive">completed</WindowedBadge>}
+          />
+        </WindowedList>
+      </WindowedDialog>
     </div>
   );
 }
