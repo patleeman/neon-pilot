@@ -458,7 +458,7 @@ function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 
                     </span>
                   </div>
                   <button type="button" className="ui-workbench-file-bar__button" aria-label="Reload browser preview">
-                    R
+                    ↻
                   </button>
                 </div>
                 <div className="ui-windowed-browser-host" data-windowed-browser-host="true" aria-label="Browser preview">
@@ -3095,7 +3095,7 @@ export const BrowserWindow: Story = {
                 </span>
               </div>
               <button type="button" className="ui-workbench-file-bar__button" aria-label="Reload browser preview">
-                R
+                ↻
               </button>
             </div>
             <div className="ui-windowed-browser-host" data-windowed-browser-host="true" aria-label="Browser child window preview">
