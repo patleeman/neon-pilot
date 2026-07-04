@@ -376,6 +376,102 @@ function AttachedWorkbenchStory({
   );
 }
 
+function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div
+      className="windowed-os-shell"
+      data-wos-theme={theme}
+      data-wos-theme-mode={theme}
+      data-native-browser-blocked="true"
+      style={{ minHeight: 700, padding: 24 }}
+    >
+      <WindowFrame
+        title={theme === 'dark' ? 'Browser workbench - dark' : 'Browser workbench'}
+        accent="chat"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 640 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <div className="wos-window-route-body wos-window-route-body--chat">
+          <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
+            <div className="wos-chat-window-toolbar__label">Workbench</div>
+            <div className="wos-chat-window-toolbar__actions">
+              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Hide workbench">
+                <StoryToolbarIcon name="workbench-visible" />
+              </button>
+              <button
+                type="button"
+                className="wos-chat-window-toolbar__button"
+                data-density="icon"
+                aria-label="Open Browser window"
+                aria-pressed={true}
+              >
+                <StoryToolbarIcon name="browser" />
+              </button>
+              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Open Terminal window">
+                <StoryToolbarIcon name="terminal" />
+              </button>
+            </div>
+          </div>
+          <div className="wos-chat-workbench">
+            <WindowedChatSurface>
+              <WindowedChatMain title="Browser QA" composer={<WindowedChatComposer actionLabel="Send" />}>
+                <WindowedMessageBubble from="user">Open the browser workbench and inspect the release notes preview.</WindowedMessageBubble>
+                <WindowedMessageBubble>
+                  The attached browser is visible, but the native BrowserView is paused while another window or overlay owns focus.
+                </WindowedMessageBubble>
+              </WindowedChatMain>
+            </WindowedChatSurface>
+            <aside
+              className="wos-chat-workbench__panel ui-workbench-panel"
+              aria-label="Attached browser workbench"
+              data-windowed-attached-workbench="true"
+            >
+              <div className="wos-chat-workbench__tabs ui-workbench-tab-strip" role="tablist" aria-label="Workbench tabs">
+                <button type="button" className="ui-workbench-tab" role="tab" aria-selected="false">
+                  Files
+                </button>
+                <button type="button" className="ui-workbench-tab ui-workbench-tab-active" role="tab" aria-selected="true">
+                  Browser
+                </button>
+                <button type="button" className="ui-workbench-tab" role="tab" aria-selected="false">
+                  Terminal
+                </button>
+              </div>
+              <div className="wos-chat-workbench__body ui-workbench-panel__body">
+                <div className="ui-workbench-file-bar" aria-label="Browser controls">
+                  <div className="ui-workbench-file-bar__path">
+                    <span className="ui-workbench-file-bar__path-label">
+                      https://docs.neonpilot.local/releases/v0.11.39/windowed-desktop/browser-preview?panel=attached&amp;state=blocked
+                    </span>
+                  </div>
+                  <button type="button" className="ui-workbench-file-bar__button" aria-label="Reload browser preview">
+                    R
+                  </button>
+                </div>
+                <div className="ui-windowed-browser-host" data-windowed-browser-host="true" aria-label="Browser preview">
+                  <div className="ui-windowed-browser-host__blocker">
+                    <div className="ui-windowed-browser-host__state">
+                      <WindowedStateBlock title="Browser paused" tone="warning">
+                        <span>Native browser content is hidden while desktop chrome is above the active chat window.</span>
+                        <span className="ui-windowed-browser-host__url">
+                          https://docs.neonpilot.local/releases/v0.11.39/windowed-desktop/browser-preview?panel=attached&amp;state=blocked
+                        </span>
+                      </WindowedStateBlock>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </WindowFrame>
+    </div>
+  );
+}
+
 export const ChatWithAttachedWorkbench: Story = {
   render: () => <AttachedWorkbenchStory />,
 };
@@ -390,6 +486,14 @@ export const ChatWithCollapsedWorkbench: Story = {
 
 export const DarkChatWithCollapsedWorkbench: Story = {
   render: () => <AttachedWorkbenchStory theme="dark" workbenchCollapsed />,
+};
+
+export const ChatWithAttachedBrowserWorkbench: Story = {
+  render: () => <AttachedBrowserWorkbenchStory />,
+};
+
+export const DarkChatWithAttachedBrowserWorkbench: Story = {
+  render: () => <AttachedBrowserWorkbenchStory theme="dark" />,
 };
 
 function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {

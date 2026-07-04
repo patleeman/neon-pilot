@@ -830,11 +830,18 @@
 .windowed-os-shell .ui-windowed-browser-host {
   position: relative;
   z-index: 0 !important;
+  min-height: 0;
   max-width: 100%;
   overflow: hidden;
   isolation: isolate;
   contain: paint;
   background: var(--wos-surface-2);
+}
+
+.wos-window-route-body--chat .wos-chat-workbench__body .ui-windowed-browser-host {
+  min-height: 172px;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
 }
 
 .windowed-os-shell .ui-windowed-browser-host__blocker {
@@ -858,6 +865,7 @@
 
 .windowed-os-shell .ui-windowed-browser-host__state {
   width: min(420px, 100%);
+  min-width: 0;
 }
 
 .windowed-os-shell .ui-windowed-browser-host__state .wos-state-block__body {
@@ -1818,7 +1826,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-window-route-body .ui-workbench-file-bar {
+  display: flex;
   min-height: 38px;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-2);
   padding: 5px 8px;
@@ -1830,6 +1842,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   display: flex;
   min-height: 26px;
   min-width: 0;
+  flex: 1 1 auto;
   align-items: center;
   border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
@@ -1838,11 +1851,15 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-window-route-body .ui-workbench-file-bar__path-label {
+  min-width: 0;
+  overflow: hidden;
   color: var(--wos-ink-700);
   font-family: var(--wos-font-mono);
   font-size: 11px;
   font-weight: 650;
   line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wos-window-route-body .ui-workbench-file-bar__button {
@@ -4631,6 +4648,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   overflow: auto;
   padding: 8px 10px 10px;
   scrollbar-width: thin;
+}
+
+.wos-chat-workbench__body > * {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .wos-chat-workbench__tabs {
