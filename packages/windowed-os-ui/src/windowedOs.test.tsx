@@ -1019,6 +1019,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-window__titlebar[data-accent='chat'],");
     expect(stylesSource).toContain(".wos-dialog__titlebar[data-accent='chat'],");
     expect(stylesSource).toContain('color: var(--wos-accent-ink);');
+    expect(stylesSource).toContain(".wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta,");
+    expect(stylesSource).toContain('color: color-mix(in oklab, var(--wos-accent-ink) 88%, var(--wos-surface-0));');
+    expect(stylesSource).toContain('color: color-mix(in oklab, var(--wos-list-active-ink) 88%, var(--wos-list-active));');
+    expect(stylesSource).toContain('--wos-segmented-active-ink: var(--wos-accent-ink);');
+    expect(stylesSource).toContain('--wos-list-active-ink: var(--wos-accent-ink);');
+    expect(stylesSource).not.toContain('--wos-segmented-active-ink: white;');
+    expect(stylesSource).not.toContain('--wos-list-active-ink: white;');
   });
 
   it('styles keyboard-highlighted Start menu results inside the scoped desktop chrome', () => {
@@ -1274,6 +1281,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant');
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-meta');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-meta {\n  color: var(--wos-ink-600);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown {');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote');
     expect(stylesSource).toContain('border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-chat) 64%, var(--wos-ink-900));');
@@ -2110,6 +2118,9 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain(".wos-page-button[data-tone='danger']");
     expect(stylesSource).toContain('background: var(--wos-danger);');
+    expect(stylesSource).toContain(
+      ".wos-page-button[data-tone='danger'] {\n  background: var(--wos-danger);\n  color: var(--wos-accent-ink);",
+    );
   });
 
   it('keeps isolated Storybook examples on scoped windowed classes instead of app utility CSS', () => {
