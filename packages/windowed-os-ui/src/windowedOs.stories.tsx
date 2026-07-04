@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 
 import {
   CANONICAL_WINDOWED_DESKTOP_APPS,
@@ -61,6 +63,17 @@ export default meta;
 type Story = StoryObj;
 
 const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS;
+
+function WindowedShellBodyAttribute({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+    return () => {
+      document.body.removeAttribute('data-neon-pilot-windowed-shell-active');
+    };
+  }, []);
+
+  return <>{children}</>;
+}
 
 const storyImagePreviewSrc =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDcyMCA0MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNmNGVkZTIiLz48cmVjdCB4PSI0MCIgeT0iNDQiIHdpZHRoPSI2NDAiIGhlaWdodD0iMzEyIiByeD0iMjQiIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzE3MTMwZiIgc3Ryb2tlLXdpZHRoPSI4Ii8+PHBhdGggZD0iTTkyIDMwMGwxMTItMTA4IDkyIDY4IDEyOC0xMzIgMjA0IDE3MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDk5ZGRmIiBzdHJva2Utd2lkdGg9IjE4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyMDIiIGN5PSIxMjQiIHI9IjM4IiBmaWxsPSIjZmM4YjI3IiBzdHJva2U9IiMxNzEzMGYiIHN0cm9rZS13aWR0aD0iNiIvPjx0ZXh0IHg9IjgwIiB5PSI4NiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI2IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMTcxMzBmIj5XaW5kb3dlZCBPUyBwcmV2aWV3PC90ZXh0Pjwvc3ZnPg==';
@@ -3114,6 +3127,97 @@ export const BrowserWindow: Story = {
         </div>
       </WindowFrame>
     </div>
+  ),
+};
+
+export const DrawingsPickerSubwindow: Story = {
+  render: () => (
+    <WindowedShellBodyAttribute>
+      <div className="windowed-os-shell" data-wos-theme="dark" data-wos-theme-mode="dark" style={{ minHeight: 640, padding: 24 }}>
+        <div className="ui-overlay-backdrop" role="presentation">
+          <section
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="drawings-picker-title"
+            className="ui-dialog-shell ui-windowed-drawings-picker"
+            data-windowed-subwindow="drawing-picker"
+            data-parent-window-attached="chat"
+            data-parent-window-id="chat:release-plan"
+            data-parent-window-title="Release planning"
+          >
+            <header className="ui-dialog-header">
+              <div className="ui-dialog-header-copy">
+                <h2 id="drawings-picker-title" className="ui-dialog-title">
+                  Conversation drawings
+                </h2>
+                <p className="ui-dialog-description">Attach a saved drawing to the next prompt.</p>
+              </div>
+              <div className="ui-dialog-actions">
+                <button type="button" className="ui-icon-button" aria-label="Close drawings picker" title="Close drawings picker">
+                  x
+                </button>
+              </div>
+            </header>
+            <div className="ui-windowed-drawings-picker-body">
+              <div className="ui-resource-picker-toolbar">
+                <input className="ui-input bg-elevated" aria-label="Filter drawings" value="windowed" readOnly />
+                <span className="ui-pill ui-pill-muted tabular-nums">2</span>
+              </div>
+              <div className="ui-resource-picker-list">
+                <article className="ui-panel">
+                  <div className="ui-windowed-drawing-card__row">
+                    <div className="ui-windowed-drawing-card__main">
+                      <h3 className="ui-card-title">Windowed OS sketch</h3>
+                      <p className="ui-card-meta">drawing-1842 · rev 6 · updated 3m ago</p>
+                    </div>
+                    <div className="ui-windowed-drawing-card__actions">
+                      <button type="button" className="ui-toolbar-button">
+                        Attach latest
+                      </button>
+                      <button type="button" className="ui-toolbar-button" data-active="true">
+                        Hide history
+                      </button>
+                    </div>
+                  </div>
+                  <div className="ui-panel-muted">
+                    <div className="ui-windowed-drawing-revision">
+                      <span>rev 6</span>
+                      <span>Desktop browser overlay notes</span>
+                      <button type="button" className="ui-toolbar-button">
+                        Attach
+                      </button>
+                    </div>
+                    <div className="ui-windowed-drawing-revision">
+                      <span>rev 5</span>
+                      <span>Taskbar grouping pass</span>
+                      <button type="button" className="ui-toolbar-button">
+                        Attach
+                      </button>
+                    </div>
+                  </div>
+                </article>
+                <article className="ui-panel">
+                  <div className="ui-windowed-drawing-card__row">
+                    <div className="ui-windowed-drawing-card__main">
+                      <h3 className="ui-card-title">Gateway flow</h3>
+                      <p className="ui-card-meta">drawing-1120 · rev 2 · updated yesterday</p>
+                    </div>
+                    <div className="ui-windowed-drawing-card__actions">
+                      <button type="button" className="ui-toolbar-button">
+                        Attach latest
+                      </button>
+                      <button type="button" className="ui-toolbar-button">
+                        History
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </WindowedShellBodyAttribute>
   ),
 };
 
