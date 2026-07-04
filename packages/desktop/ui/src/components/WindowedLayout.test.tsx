@@ -1423,6 +1423,34 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow.getAttribute('style')).toBe(initialStyle);
   });
 
+  it('does not start drag or resize gestures from the titlebar control cluster gap', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    const controls = routinesWindow.querySelector<HTMLElement>('.wos-window__controls');
+    expect(controls).toBeTruthy();
+    const initialStyle = routinesWindow.getAttribute('style');
+
+    fireEvent.mouseDown(controls!, { button: 0, clientX: 706, clientY: 36 });
+    fireEvent.mouseMove(window, { clientX: 790, clientY: -40 });
+    fireEvent.mouseUp(window);
+
+    expect(routinesWindow.getAttribute('style')).toBe(initialStyle);
+  });
+
   it('resizes windows from the bottom-right corner using visible resize handles', async () => {
     seedWindowedWindows([
       {

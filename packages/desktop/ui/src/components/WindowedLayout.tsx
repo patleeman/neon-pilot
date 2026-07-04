@@ -1293,7 +1293,7 @@ export function WindowedLayout() {
       const windowId = windowElement?.dataset.windowId;
       const windowModel = windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
       if (!windowModel) return;
-      if (target.closest('.wos-window__controls button')) return;
+      if (target.closest('.wos-window__controls')) return;
 
       const resizeHandle = target.closest<HTMLElement>('.wos-resize-handle');
       const explicitResizeEdge = resizeHandle?.dataset.resizeEdge as ResizeEdge | undefined;
