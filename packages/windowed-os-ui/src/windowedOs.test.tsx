@@ -1010,8 +1010,17 @@ describe('Windowed OS Storybook examples', () => {
       const value = declaration.slice(declaration.indexOf(':') + 1, -1).trim();
       return !value.startsWith('0') && !value.startsWith('transparent');
     });
+    const positiveLeftInsetShadows = (stylesSource.match(/box-shadow:\s*[^;]+;/g) ?? []).filter((declaration) => {
+      const value = declaration
+        .slice(declaration.indexOf(':') + 1, -1)
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      return /(?:^|,)\s*inset\s+(?:\+)?(?:[1-9]\d*|\d*\.[1-9]\d*)(?:px|rem|em|%)?\s/.test(value);
+    });
 
     expect(positiveLeftBorders).toEqual([]);
+    expect(positiveLeftInsetShadows).toEqual([]);
   });
 
   it('styles canonical app-specific accents across shared windowed primitives', () => {
