@@ -1478,24 +1478,31 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-header {
   display: flex;
-  min-height: var(--wos-titlebar-h);
+  min-height: 28px;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-chat);
-  padding: 0 8px 0 10px;
+  padding: 3px 6px 3px 8px;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header-copy,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-header-copy {
+  display: flex;
   min-width: 0;
   flex: 0 1 auto;
+  align-items: center;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-title,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-title {
+  min-width: 0;
+  margin: 0;
   color: var(--wos-accent-ink);
-  font: var(--wos-text-subsection);
+  font: var(--wos-text-row);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[data-parent-window-title] .ui-dialog-header::after,
@@ -1518,13 +1525,18 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions .ui-icon-button,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-actions .ui-icon-button {
-  width: var(--wos-window-control-size);
-  height: var(--wos-window-control-size);
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
   border: 2px solid var(--wos-ink-900);
   border-radius: 7px;
   background: var(--wos-surface-1);
+  padding: 0;
   color: var(--wos-ink-900);
   box-shadow: none;
+  font: var(--wos-text-meta);
+  line-height: 1;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions,

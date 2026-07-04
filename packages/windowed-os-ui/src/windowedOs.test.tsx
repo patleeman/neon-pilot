@@ -1417,6 +1417,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('max-width: none !important;');
     expect(stylesSource).toContain("content: 'Attached';");
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-header-copy');
+    expect(stylesSource).toContain('min-height: 28px;');
+    expect(stylesSource).toContain('padding: 3px 6px 3px 8px;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-title');
+    expect(stylesSource).toContain('margin: 0;');
+    expect(stylesSource).toContain('font: var(--wos-text-row);');
     expect(stylesSource).toContain('flex: 0 1 auto;');
     expect(stylesSource).toContain('order: 2;');
     expect(stylesSource).toContain('margin-right: var(--wos-space-3);');
@@ -1438,6 +1443,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-actions');
     expect(stylesSource).toContain('order: 3;');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('width: 18px;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {\n  min-height: 0;');
