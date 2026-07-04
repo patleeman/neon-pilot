@@ -776,7 +776,7 @@
   justify-content: space-between;
   gap: 8px;
   border-bottom: 2px solid var(--wos-ink-900);
-  padding: 0 7px 0 8px;
+  padding: 0 6px 0 8px;
   cursor: grab;
   touch-action: none;
 }
@@ -1108,7 +1108,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   gap: 6px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-settings);
-  padding: 1px 6px 1px 8px;
+  padding: 0 6px 0 8px;
   cursor: grab;
   user-select: none;
 }

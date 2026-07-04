@@ -914,15 +914,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
-    expect(tokensSource).toContain('--wos-titlebar-h: 28px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 26px;');
     expect(tokensSource).toContain('--wos-window-control-size: 22px;');
     expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 32px);');
     expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-window__title {\n  min-width: 0;');
     expect(stylesSource).toContain('font: var(--wos-text-row);');
-    expect(stylesSource).toContain('padding: 0 7px 0 8px;');
+    expect(stylesSource).toContain('padding: 0 6px 0 8px;');
     expect(stylesSource).toContain('min-height: var(--wos-titlebar-h);');
-    expect(stylesSource).toContain('padding: 1px 6px 1px 8px;');
+    expect(stylesSource).toContain('padding: 0 6px 0 8px;');
     expect(stylesSource).toContain('.wos-dialog__identity {\n  display: flex;');
     expect(stylesSource).toContain('align-items: center;\n  gap: 6px;');
     expect(stylesSource).toContain('flex: 1 1 180px;');
@@ -938,7 +938,7 @@ describe('Windowed OS Storybook examples', () => {
     const tokensSource = readFileSync(tokensPath, 'utf8');
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(tokensSource).toContain('--wos-titlebar-h: 28px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 26px;');
     expect(tokensSource).toContain('--wos-window-control-size: 22px;');
     expect(tokensSource).not.toContain('--wos-window-control-size: 18px;');
     expect(stylesSource).toContain('width: var(--wos-window-control-size);');
