@@ -1255,6 +1255,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain("[class*='after:border-l']");
     expect(stylesSource).toContain("[class*='before:border-s']");
     expect(stylesSource).toContain("[class*='after:border-s']");
+    expect(stylesSource).toContain("[class~='divide-x']");
+    expect(stylesSource).toContain("[class*=':divide-x']");
     expect(stylesSource).toContain("[class*='before:left-0']");
     expect(stylesSource).toContain("[class*='before:start-0']");
     expect(stylesSource).toContain("[class*='after:left-0']");
@@ -1266,6 +1268,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[2px]']");
     expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[3px]']");
     expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[4px]']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='left-0'][class*='h-full'][class*='w-']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='bg-border']");
     expect(stylesSource).toContain('border-inline-start: 0 !important;');
     expect(stylesSource).toContain(')::before,\n.windowed-os-shell');
     expect(stylesSource).toContain(

@@ -48,6 +48,12 @@
     [class*='after:border-l'],
     [class*='before:border-s'],
     [class*='after:border-s'],
+    [class~='divide-x'],
+    [class*=' divide-x-'],
+    [class*='divide-x-'],
+    [class^='divide-x-'],
+    [class*=':divide-x'],
+    [class*=':divide-x-'],
     [class*='before:left-0'],
     [class*='before:start-0'],
     [class*='after:left-0'],
@@ -61,6 +67,21 @@
   margin-left: 0 !important;
   padding-left: 0 !important;
   box-shadow: none !important;
+}
+
+.windowed-os-shell
+  :where(
+    .divide-x,
+    [class~='divide-x'],
+    [class*=' divide-x-'],
+    [class*='divide-x-'],
+    [class^='divide-x-'],
+    [class*=':divide-x'],
+    [class*=':divide-x-']
+  )
+  > :where(:not([hidden]) ~ :not([hidden])) {
+  border-left-width: 0 !important;
+  border-inline-start-width: 0 !important;
 }
 
 .windowed-os-shell
@@ -82,6 +103,12 @@
     [class*='after:border-l'],
     [class*='before:border-s'],
     [class*='after:border-s'],
+    [class~='divide-x'],
+    [class*=' divide-x-'],
+    [class*='divide-x-'],
+    [class^='divide-x-'],
+    [class*=':divide-x'],
+    [class*=':divide-x-'],
     [class*='before:left-0'],
     [class*='before:start-0'],
     [class*='after:left-0'],
@@ -143,7 +170,15 @@
     [class*='absolute'][class*='start-0'][class*='w-[3px]'],
     [class*='absolute'][class*='left-0'][class*='w-[4px]'],
     [class*='absolute'][class*='inset-y-0'][class*='w-[4px]'],
-    [class*='absolute'][class*='start-0'][class*='w-[4px]']
+    [class*='absolute'][class*='start-0'][class*='w-[4px]'],
+    [class*='absolute'][class*='left-0'][class*='h-full'][class*='w-'],
+    [class*='absolute'][class*='start-0'][class*='h-full'][class*='w-'],
+    [class*='absolute'][class*='inset-y-0'][class*='bg-border'],
+    [class*='absolute'][class*='left-0'][class*='bg-border'],
+    [class*='absolute'][class*='start-0'][class*='bg-border'],
+    [class*='absolute'][class*='inset-y-0'][class*='bg-current'],
+    [class*='absolute'][class*='left-0'][class*='bg-current'],
+    [class*='absolute'][class*='start-0'][class*='bg-current']
   ) {
   display: none !important;
   border-left: 0 !important;
