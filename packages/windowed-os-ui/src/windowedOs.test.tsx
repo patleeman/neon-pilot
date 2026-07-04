@@ -597,6 +597,7 @@ describe('Windowed OS tokens', () => {
       '--wos-border-hairline',
       '--wos-border-strong',
       '--wos-shadow-desktop',
+      '--wos-shadow-offset',
       '--wos-radius-2xl',
       '--wos-radius-pill',
       '--wos-window-control-size',
@@ -618,6 +619,7 @@ describe('Windowed OS tokens', () => {
     expect(tokensSource).toContain('color-scheme: dark;');
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-shadow-window: 0 26px 56px rgba(0, 0, 0, 0.42);');
+    expect(tokensSource).toContain('--wos-shadow-offset: 6px 6px 0 oklch(93% 0.012 75 / 0.14);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-2xl);');
     expect(stylesSource).toContain('width: var(--wos-window-control-size);');
     expect(stylesSource).toContain('background: var(--wos-danger-hover);');
@@ -860,7 +862,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__inner');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__title');
-    expect(stylesSource).toContain('box-shadow: 6px 6px 0 oklch(20% 0.01 60 / 0.16);');
+    expect(stylesSource).toContain('box-shadow: var(--wos-shadow-offset);');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
