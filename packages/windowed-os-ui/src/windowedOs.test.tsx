@@ -1725,6 +1725,8 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-timeline-item {\n  --wos-timeline-marker: var(--wos-ink-500);');
     expect(stylesSource).toContain('align-items: start;');
+    expect(stylesSource).toContain('border: 1.5px solid var(--wos-surface-3);');
+    expect(stylesSource).not.toContain('.wos-timeline-item::before');
     expect(stylesSource).toContain('.wos-timeline-item__body {\n  min-width: 0;\n  overflow: visible;');
     expect(stylesSource).toContain('.wos-timeline-item__content {\n  margin-top: 4px;');
     expect(stylesSource).toContain('overflow-wrap: anywhere;');
