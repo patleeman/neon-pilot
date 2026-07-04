@@ -1386,6 +1386,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button:disabled');
     expect(stylesSource).toContain('.wos-chat-browser-dialog__body');
     expect(stylesSource).toContain(".wos-chat-browser-dialog__body > [data-extension-id='system-browser']");
+    expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body');
+    expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-windowed-browser-host');
     expect(stylesSource).toContain('.wos-chat-child-window-empty');
     expect(stylesSource).toContain('.wos-chat-child-window-empty .wos-state-block');
     expect(stylesSource).toContain(
@@ -1650,13 +1652,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-context-pointers-bar span {');
   });
 
-  it('documents the canonical terminal frame in isolated Storybook examples', () => {
+  it('documents the canonical terminal and browser child windows in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
     expect(source).toContain('export const TerminalWindow');
     expect(source).toContain('<WindowedTerminalFrame cwd="/Users/patrick/workingdir/neon-pilot" status="PTY shell">');
     expect(source).toContain('PASS terminal frame tokens');
+    expect(source).toContain('export const BrowserWindow');
+    expect(source).toContain('data-windowed-subwindow="browser"');
+    expect(source).toContain('aria-label="Browser child window preview"');
   });
 
   it('documents the chat workbench toggle in the attached-workbench Storybook example', () => {

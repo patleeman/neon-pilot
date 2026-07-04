@@ -63,6 +63,8 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
   - Fixed app launch on primary press before click dispatch; verified unit/layout coverage and live `/?shell=windowed` QA on 2026-07-03: pressing Automations opened/focused the Automations window and closed the Start menu.
 - Terminal child windows should render in the desktop window layer, not clipped inside chat.
   - Verified in `WindowedLayout` focused coverage on 2026-07-04: the Terminal child opens as a sibling desktop `WindowFrame`, carries chat parent metadata/lifecycle, hosts `system-terminal` with windowed presentation, and closes/minimizes/restores with the parent chat window.
+- Browser child windows need a canonical isolated design target.
+  - Added a `BrowserWindow` Storybook example on 2026-07-04 using the chat-owned child-window frame, browser controls, and paused native-browser state; verified the built story visually at `windowed-os-desktop-shell--browser-window`.
 
 ## Theme Work
 

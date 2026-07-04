@@ -3069,6 +3069,54 @@ export const TerminalWindow: Story = {
   ),
 };
 
+export const BrowserWindow: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+      <WindowFrame
+        title="Browser"
+        accent="chat"
+        focused
+        parentWindowTitle="New conversation"
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(860px, 100%)', height: 500 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <div
+          className="wos-window-route-body wos-window-route-body--browser"
+          data-windowed-subwindow="browser"
+          data-parent-window-title="New conversation"
+        >
+          <div className="wos-chat-browser-dialog__body">
+            <div className="ui-workbench-file-bar" aria-label="Browser controls">
+              <div className="ui-workbench-file-bar__path">
+                <span className="ui-workbench-file-bar__path-label">
+                  https://docs.neonpilot.local/releases/windowed-desktop/browser-preview
+                </span>
+              </div>
+              <button type="button" className="ui-workbench-file-bar__button" aria-label="Reload browser preview">
+                R
+              </button>
+            </div>
+            <div className="ui-windowed-browser-host" data-windowed-browser-host="true" aria-label="Browser child window preview">
+              <div className="ui-windowed-browser-host__blocker">
+                <div className="ui-windowed-browser-host__state">
+                  <WindowedStateBlock title="Browser paused" tone="warning">
+                    <span>Native browser content is hidden while another desktop window or overlay is above it.</span>
+                    <span className="ui-windowed-browser-host__url">
+                      https://docs.neonpilot.local/releases/windowed-desktop/browser-preview
+                    </span>
+                  </WindowedStateBlock>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </WindowFrame>
+    </div>
+  ),
+};
+
 function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>

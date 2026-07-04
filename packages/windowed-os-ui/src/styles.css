@@ -1237,6 +1237,15 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   overflow: hidden;
 }
 
+.wos-window-route-body--browser .wos-chat-browser-dialog__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-windowed-browser-host {
+  flex: 1 1 auto;
+}
+
 .wos-chat-child-window-empty {
   display: grid;
   min-height: 100%;
