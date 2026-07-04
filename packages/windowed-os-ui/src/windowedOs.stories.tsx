@@ -2620,7 +2620,25 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageShell layout="standard">
+        <WindowedPageShell layout="wide">
+          <WindowedPageRail title="Extensions" accent="extensions" showHeader={false}>
+            <WindowedPageSection title="Sources" meta="2 sources">
+              <WindowedKeyValueList
+                items={[
+                  { label: 'Catalog', value: 'Loaded' },
+                  { label: 'Available', value: '7' },
+                  { label: 'Visible', value: '16 installed · 14 enabled' },
+                ]}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection>
+              <WindowedToolbar>
+                <WindowedTextInput aria-label="Search extensions" placeholder="Search extensions" />
+              </WindowedToolbar>
+            </WindowedPageSection>
+          </WindowedPageRail>
+
           <WindowedPageMain
             title="Extensions"
             actions={
@@ -2643,22 +2661,6 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               </>
             }
           >
-            <WindowedPageSection title="Sources" meta="2 sources">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Catalog', value: 'Loaded' },
-                  { label: 'Available', value: '7' },
-                  { label: 'Visible', value: '16 installed · 14 enabled' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection>
-              <WindowedToolbar>
-                <WindowedTextInput aria-label="Search extensions" placeholder="Search extensions" />
-              </WindowedToolbar>
-            </WindowedPageSection>
-
             <WindowedPageSection title="Installed" meta="16 installed · 14 enabled">
               <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
                 <WindowedDataRow

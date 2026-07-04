@@ -2211,6 +2211,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<ExtensionsPageStory theme="dark" />');
     expect(extensionsSource).toContain('title="Extensions"');
     expect(extensionsSource).toContain('data-wos-theme={theme}');
+    expect(extensionsSource).toContain('<WindowedPageShell layout="wide">');
+    expect(extensionsSource).toContain('<WindowedPageRail title="Extensions" accent="extensions" showHeader={false}>');
+    expect(extensionsSource.indexOf('<WindowedPageRail title="Extensions"')).toBeLessThan(extensionsSource.indexOf('<WindowedPageMain'));
     expect(extensionsSource).not.toContain('eyebrow="Extension manager"');
     expect(extensionsSource).toContain('title="Sources"');
     expect(extensionsSource).toContain('Search extensions');
