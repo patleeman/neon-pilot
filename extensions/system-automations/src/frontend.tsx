@@ -134,8 +134,9 @@ type AutomationSelectionData =
       kind: 'new';
     };
 
-function AutomationRowIcon({ name }: { name: 'details' | 'edit' | 'owner' | 'pause' | 'resume' | 'run' }) {
+function AutomationRowIcon({ name }: { name: 'delete' | 'details' | 'edit' | 'owner' | 'pause' | 'resume' | 'run' }) {
   const paths = {
+    delete: ['M5 7h14', 'M9 7V5h6v2', 'M8 10v8', 'M16 10v8', 'M7 7l1 13h8l1-13'],
     details: ['M4 7h16', 'M4 12h16', 'M4 17h10'],
     edit: ['M4 20h4l11-11-4-4L4 16v4Z', 'M13 6l4 4'],
     owner: ['M5 6h14v9H8l-3 3V6Z'],
@@ -889,12 +890,13 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
                                 disabled={task.running || busy === `delete:${task.id}`}
                                 aria-label={`Delete ${title}`}
                                 title={`Delete ${title}`}
+                                density="icon"
                                 onClick={(event) => {
                                   stopRowAction(event);
                                   void deleteTask(task);
                                 }}
                               >
-                                Delete
+                                <AutomationRowIcon name="delete" />
                               </WindowedPageButton>
                             </span>
                           }

@@ -114,7 +114,7 @@ describe('AutomationsPage windowed surface', () => {
     expect(screen.getByRole('button', { name: 'Pause Quarter-hour chime' }).getAttribute('data-density')).toBe('icon');
     expect(screen.getByRole('button', { name: 'Resume Release watch' }).getAttribute('data-density')).toBe('icon');
     expect(screen.getByRole('button', { name: 'Edit Release watch' }).getAttribute('data-density')).toBe('icon');
-    expect(screen.getByRole('button', { name: 'Delete Release watch' }).getAttribute('data-density')).toBe('normal');
+    expect(screen.getByRole('button', { name: 'Delete Release watch' }).getAttribute('data-density')).toBe('icon');
     expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Details' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull();
