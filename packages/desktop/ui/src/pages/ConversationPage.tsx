@@ -8932,6 +8932,7 @@ export function ConversationPage({
         <Suspense fallback={null}>
           <ConversationDrawingsPickerModal
             attachments={conversationAttachments}
+            parentWindowId={parentWindowId}
             parentWindowTitle={title}
             onLoadAttachment={async (attachmentId) => {
               const detail = await api.conversationAttachment(id, attachmentId);

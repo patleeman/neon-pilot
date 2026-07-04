@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { setExtensionCommandContext } from '../extensions/commands';
 import type { ConversationAttachmentRecord, ConversationAttachmentSummary } from '../shared/types';
 import { timeAgo } from '../shared/utils';
+import { WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, type WindowedParentWindowLifecycleDetail } from '../windowed/windowedChildWindowEvents';
 import {
   DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
   DRAWING_PICKER_CLOSE_COMMAND_EVENT,
@@ -34,14 +35,33 @@ interface Props {
   onLoadAttachment: (attachmentId: string) => Promise<ConversationAttachmentRecord>;
   onAttach: (selection: AttachSelection) => void;
   onClose: () => void;
+  parentWindowId?: string;
   parentWindowTitle?: string;
 }
 
-export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment, onAttach, onClose, parentWindowTitle = 'Chat' }: Props) {
+function parentLifecycleMatchesPicker(
+  detail: WindowedParentWindowLifecycleDetail,
+  parentWindowId: string | undefined,
+  parentWindowTitle: string,
+): boolean {
+  if (detail.parentWindowKind !== 'chat') return false;
+  if (parentWindowId) return detail.parentWindowId === parentWindowId;
+  return detail.parentWindowTitle === parentWindowTitle;
+}
+
+export function ConversationDrawingsPickerModal({
+  attachments,
+  onLoadAttachment,
+  onAttach,
+  onClose,
+  parentWindowId,
+  parentWindowTitle = 'Chat',
+}: Props) {
   const [query, setQuery] = useState('');
   const [expandedAttachmentId, setExpandedAttachmentId] = useState<string | null>(null);
   const [recordsById, setRecordsById] = useState<Record<string, ConversationAttachmentRecord>>({});
   const [loadingAttachmentId, setLoadingAttachmentId] = useState<string | null>(null);
+  const [parentMinimized, setParentMinimized] = useState(false);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -116,6 +136,25 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
     };
   }, [firstVisibleAttachment, onAttach, onClose, toggleHistory]);
 
+  useEffect(() => {
+    function handleParentLifecycle(event: Event) {
+      const detail = (event as CustomEvent<WindowedParentWindowLifecycleDetail>).detail;
+      if (!detail || !parentLifecycleMatchesPicker(detail, parentWindowId, parentWindowTitle)) return;
+      if (detail.reason === 'minimized') {
+        setParentMinimized(true);
+        return;
+      }
+      if (detail.reason === 'restored') {
+        setParentMinimized(false);
+        return;
+      }
+      onClose();
+    }
+
+    window.addEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
+    return () => window.removeEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
+  }, [onClose, parentWindowId, parentWindowTitle]);
+
   return (
     <ResourcePickerDialog
       title="Conversation drawings"
@@ -130,6 +169,8 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
       bodyClassName="ui-windowed-drawings-picker-body"
       data-windowed-subwindow="drawing-picker"
       data-parent-window-attached="chat"
+      data-parent-window-id={parentWindowId}
+      data-parent-window-minimized={parentMinimized ? 'true' : undefined}
       data-parent-window-title={parentWindowTitle}
       backdropStyle={{ background: 'rgb(0 0 0 / 0.55)', backdropFilter: 'blur(2px)' }}
       style={{ maxWidth: '840px', maxHeight: 'calc(100vh - 5rem)' }}

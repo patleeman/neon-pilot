@@ -1133,6 +1133,11 @@ body[data-neon-pilot-windowed-shell-active='true']
   display: none !important;
 }
 
+body[data-neon-pilot-windowed-shell-active='true']
+  .ui-overlay-backdrop:has(.ui-windowed-drawings-picker[data-parent-window-minimized='true']) {
+  display: none !important;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
   overflow: hidden;
@@ -1165,6 +1170,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal[data-parent-window-minimized='true'] {
+  display: none !important;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[data-parent-window-minimized='true'] {
   display: none !important;
 }
 

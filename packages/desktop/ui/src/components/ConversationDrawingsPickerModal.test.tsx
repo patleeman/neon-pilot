@@ -4,6 +4,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConversationAttachmentRecord, ConversationAttachmentSummary } from '../shared/types';
+import { WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT } from '../windowed/windowedChildWindowEvents';
 import {
   DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
   DRAWING_PICKER_CLOSE_COMMAND_EVENT,
@@ -89,6 +90,7 @@ describe('ConversationDrawingsPickerModal', () => {
     render(
       <ConversationDrawingsPickerModal
         attachments={[firstDrawing]}
+        parentWindowId="chat:planning"
         parentWindowTitle="Planning thread"
         onLoadAttachment={vi.fn(async () => drawingRecord(firstDrawing))}
         onAttach={vi.fn()}
@@ -100,8 +102,69 @@ describe('ConversationDrawingsPickerModal', () => {
     expect(dialog.className).toContain('ui-windowed-drawings-picker');
     expect(dialog.getAttribute('data-windowed-subwindow')).toBe('drawing-picker');
     expect(dialog.getAttribute('data-parent-window-attached')).toBe('chat');
+    expect(dialog.getAttribute('data-parent-window-id')).toBe('chat:planning');
     expect(dialog.getAttribute('data-parent-window-title')).toBe('Planning thread');
     expect(document.querySelector('.ui-windowed-drawings-picker-body')).toBeTruthy();
+  });
+
+  it('hides, restores, and closes with its parent chat window lifecycle', () => {
+    const onClose = vi.fn();
+    render(
+      <ConversationDrawingsPickerModal
+        attachments={[firstDrawing]}
+        parentWindowId="chat:planning"
+        parentWindowTitle="Planning thread"
+        onLoadAttachment={vi.fn(async () => drawingRecord(firstDrawing))}
+        onAttach={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Conversation drawings' });
+
+    fireEvent(
+      window,
+      new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+        detail: {
+          parentWindowId: 'chat:planning',
+          parentWindowKind: 'chat',
+          parentWindowTitle: 'Planning thread display text may differ',
+          reason: 'minimized',
+        },
+      }),
+    );
+
+    expect(dialog.getAttribute('data-parent-window-minimized')).toBe('true');
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent(
+      window,
+      new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+        detail: {
+          parentWindowId: 'chat:planning',
+          parentWindowKind: 'chat',
+          parentWindowTitle: 'Planning thread display text may differ',
+          reason: 'restored',
+        },
+      }),
+    );
+
+    expect(dialog.getAttribute('data-parent-window-minimized')).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent(
+      window,
+      new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+        detail: {
+          parentWindowId: 'chat:planning',
+          parentWindowKind: 'chat',
+          parentWindowTitle: 'Planning thread display text may differ',
+          reason: 'closed',
+        },
+      }),
+    );
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('attaches the first filtered drawing from the shared command', () => {

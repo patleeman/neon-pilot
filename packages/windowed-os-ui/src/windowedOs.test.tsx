@@ -852,6 +852,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('height: min(560px, calc(100vh - 156px)) !important;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-backdrop {\n  pointer-events: none;');
     expect(stylesSource).toContain(".ui-windowed-excalidraw-modal[data-parent-window-minimized='true']");
+    expect(stylesSource).toContain(".ui-windowed-drawings-picker[data-parent-window-minimized='true']");
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('max-width: none !important;');
