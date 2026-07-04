@@ -206,6 +206,25 @@
   display: none;
 }
 
+@media (max-width: 640px) {
+  .wos-taskbar__items {
+    flex: 1 1 max(140px, 42vw);
+  }
+
+  .wos-taskbar__trailing {
+    max-width: min(34vw, 180px);
+    gap: 4px;
+  }
+
+  .wos-taskbar__extension-actions {
+    max-width: min(18vw, 96px);
+  }
+
+  .wos-taskbar__trailing :where(button, a) {
+    max-width: 120px;
+  }
+}
+
 .wos-taskbar__trailing :where(button, a) {
   display: inline-flex !important;
   min-width: 0;

@@ -375,6 +375,8 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('overscroll-behavior-x: contain;');
     expect(stylesSource).toContain('.wos-taskbar__items::-webkit-scrollbar');
     expect(stylesSource).toContain('scrollbar-width: thin;');
+    expect(stylesSource).toContain('@media (max-width: 640px)');
+    expect(stylesSource).toContain('flex: 1 1 max(140px, 42vw);');
   });
 });
 
@@ -922,6 +924,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-taskbar__system-controls,\n.wos-taskbar__extension-actions {');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions {\n  flex: 1 1 auto;');
     expect(stylesSource).toContain('max-width: min(30vw, 260px);');
+    expect(stylesSource).toContain('.wos-taskbar__trailing {\n    max-width: min(34vw, 180px);');
+    expect(stylesSource).toContain('.wos-taskbar__extension-actions {\n    max-width: min(18vw, 96px);');
+    expect(stylesSource).toContain('.wos-taskbar__trailing :where(button, a) {\n    max-width: 120px;');
     expect(stylesSource).toContain('overflow-x: auto;');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions::-webkit-scrollbar');
     expect(stylesSource).toContain(
@@ -965,7 +970,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-inherited-chat-preview {\n  display: grid;\n  min-width: 0;');
     expect(stylesSource).toContain('grid-template-rows: minmax(0, 1fr) auto;');
     expect(stylesSource).toContain(".wos-inherited-chat-preview > [data-chat-transcript-panel='1']");
-    expect(stylesSource).toContain(".wos-inherited-chat-preview > [data-chat-transcript-panel='1'] {\n  min-width: 0;\n  min-height: 0;\n  width: 100%;");
+    expect(stylesSource).toContain(
+      ".wos-inherited-chat-preview > [data-chat-transcript-panel='1'] {\n  min-width: 0;\n  min-height: 0;\n  width: 100%;",
+    );
     expect(stylesSource).toContain('.wos-inherited-chat-preview > .conversation-composer-region');
     expect(stylesSource).toContain('.wos-window-route-body--chat .ui-input-shell');
     expect(stylesSource).toContain('overflow: visible;');
@@ -1069,7 +1076,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown :not(pre) > code');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre code {\n  display: block;\n  min-width: 0;');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre code {\n  display: block;\n  min-width: 0;',
+    );
     expect(stylesSource).toContain('white-space: pre-wrap;\n  overflow-wrap: anywhere;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown table');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation {');
