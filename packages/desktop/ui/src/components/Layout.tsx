@@ -1365,7 +1365,7 @@ function WorkbenchPanel({
         onCheckpointSelect={() => undefined}
         onWorkspaceFileClear={onWorkspaceFileClear}
       />
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="ui-workbench-panel__body min-h-0 flex-1 overflow-hidden">
         <WorkbenchDocumentPane
           conversationId={conversationId}
           artifactId={artifactId}

@@ -1266,6 +1266,7 @@ describe('Layout workbench toggle', () => {
     expect(newTabButton.className).toContain('ui-workbench-tab-strip__new');
     expect(newTabButton.closest('.overflow-x-auto')).toBeNull();
     expect(document.querySelector('[data-workbench-document-pane="true"]')?.className).toContain('ui-workbench-panel');
+    expect(document.querySelector('.ui-workbench-panel__body')).not.toBeNull();
     expect(document.querySelector('.ui-workbench-tab')?.parentElement?.className).toContain('overflow-x-auto');
     expect(document.querySelector('.ui-workbench-tab')?.parentElement?.className).toContain('ui-workbench-tab-strip__scroller');
   });
