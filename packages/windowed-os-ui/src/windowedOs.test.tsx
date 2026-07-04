@@ -1609,8 +1609,12 @@ describe('Windowed OS Storybook examples', () => {
     const source = readFileSync(storiesPath, 'utf8');
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
+    expect(source).toContain('function RoutinesPageStory');
     expect(source).toContain('export const RoutinesPage');
-    expect(source).toContain('title="Routines"');
+    expect(source).toContain('export const DarkRoutinesPage');
+    expect(source).toContain('<RoutinesPageStory theme="dark" />');
+    expect(source).toContain("title={theme === 'dark' ? 'Routines - dark' : 'Routines'}");
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Agent hooks"');
     expect(source).toContain('title="Events"');
     expect(source).toContain('title="Before"');

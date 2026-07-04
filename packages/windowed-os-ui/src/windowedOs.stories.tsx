@@ -1430,11 +1430,11 @@ export const DarkAIGatewayPage: Story = {
   render: () => <AIGatewayPageStory theme="dark" />,
 };
 
-export const RoutinesPage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+function RoutinesPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title="Routines"
+        title={theme === 'dark' ? 'Routines - dark' : 'Routines'}
         accent="routines"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -1594,7 +1594,15 @@ export const RoutinesPage: Story = {
         </WindowedDialog>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const RoutinesPage: Story = {
+  render: () => <RoutinesPageStory />,
+};
+
+export const DarkRoutinesPage: Story = {
+  render: () => <RoutinesPageStory theme="dark" />,
 };
 
 export const WorkflowsPage: Story = {
