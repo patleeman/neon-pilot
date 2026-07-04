@@ -1647,6 +1647,11 @@ export function WindowFrame({
           <div className="wos-window__title" title={title}>
             {title}
           </div>
+          {parentWindowTitle ? (
+            <div className="wos-window__meta" title={`Attached to ${parentWindowTitle}`}>
+              {parentWindowTitle}
+            </div>
+          ) : null}
         </div>
         <WindowedTitleBarControls
           title={title}

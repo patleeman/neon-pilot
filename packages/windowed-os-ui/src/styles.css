@@ -838,15 +838,56 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.wos-window__title {
+.wos-window__title,
+.wos-window__meta {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.wos-window__title {
   font: var(--wos-text-row);
+}
+
+.wos-window__meta {
+  max-width: min(32vw, 190px);
+  color: var(--wos-ink-700);
+  font: var(--wos-text-meta);
+}
+
+.wos-window__meta::before {
+  content: '/ ';
+  color: var(--wos-ink-500);
+}
+
+.wos-window__titlebar[data-accent='chat'] .wos-window__meta,
+.wos-window__titlebar[data-accent='routines'] .wos-window__meta,
+.wos-window__titlebar[data-accent='workflows'] .wos-window__meta,
+.wos-window__titlebar[data-accent='automations'] .wos-window__meta,
+.wos-window__titlebar[data-accent='gateways'] .wos-window__meta,
+.wos-window__titlebar[data-accent='model-arena'] .wos-window__meta,
+.wos-window__titlebar[data-accent='extensions'] .wos-window__meta,
+.wos-window__titlebar[data-accent='skills'] .wos-window__meta,
+.wos-window__titlebar[data-accent='telemetry'] .wos-window__meta,
+.wos-window__titlebar[data-accent='diagnostics'] .wos-window__meta {
+  color: color-mix(in oklab, var(--wos-accent-ink) 88%, var(--wos-surface-0));
+}
+
+.wos-window__titlebar[data-accent='chat'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='routines'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='workflows'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='automations'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='gateways'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='model-arena'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='extensions'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='skills'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='telemetry'] .wos-window__meta::before,
+.wos-window__titlebar[data-accent='diagnostics'] .wos-window__meta::before {
+  color: color-mix(in oklab, var(--wos-accent-ink) 74%, var(--wos-surface-0));
 }
 
 .wos-window__controls {

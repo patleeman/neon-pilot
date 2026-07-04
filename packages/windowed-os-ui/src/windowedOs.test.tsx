@@ -722,6 +722,8 @@ describe('WindowFrame', () => {
     expect(html).toContain('data-parent-window-attached="true"');
     expect(html).toContain('data-parent-window-id="chat:draft"');
     expect(html).toContain('data-parent-window-title="New conversation"');
+    expect(html).toContain('class="wos-window__meta" title="Attached to New conversation"');
+    expect(html).toContain('New conversation');
   });
 });
 
@@ -901,6 +903,8 @@ describe('Windowed OS tokens', () => {
     expect(tokensSource).toContain("[data-wos-theme-phase='dusk']");
     expect(tokensSource).toContain('@media (prefers-reduced-motion: reduce)');
     expect(tokensSource).toContain('.wos-window__titlebar');
+    expect(stylesSource).toContain('.wos-window__meta');
+    expect(stylesSource).toContain(".wos-window__meta::before {\n  content: '/ ';");
     expect(tokensSource).toContain('.wos-chat-window-toolbar');
     expect(tokensSource).toContain('.wos-terminal-frame__status');
     expect(tokensSource).toContain('.wos-window-route-body .ui-workbench-panel');
@@ -963,7 +967,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-window-control-size: 22px;');
     expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 32px);');
     expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
-    expect(stylesSource).toContain('.wos-window__title {\n  min-width: 0;');
+    expect(stylesSource).toContain('.wos-window__title,\n.wos-window__meta {\n  min-width: 0;');
     expect(stylesSource).toContain('font: var(--wos-text-row);');
     expect(stylesSource).toContain('padding: 0 6px 0 8px;');
     expect(stylesSource).toContain('min-height: var(--wos-titlebar-h);');
@@ -1150,6 +1154,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-dialog__titlebar[data-accent='chat'],");
     expect(stylesSource).toContain('color: var(--wos-accent-ink);');
     expect(stylesSource).toContain(".wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta,");
+    expect(stylesSource).toContain(".wos-window__titlebar[data-accent='chat'] .wos-window__meta,");
     expect(stylesSource).toContain('color: color-mix(in oklab, var(--wos-accent-ink) 88%, var(--wos-surface-0));');
     expect(stylesSource).toContain('color: color-mix(in oklab, var(--wos-list-active-ink) 88%, var(--wos-list-active));');
     expect(stylesSource).toContain('--wos-segmented-active-ink: var(--wos-accent-ink);');
