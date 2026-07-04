@@ -1654,12 +1654,12 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-dialog-layer[data-parent-window-title],\n.wos-dialog-layer[data-parent-window-id]');
-    expect(stylesSource).toContain('padding-block-start: 68px;');
+    expect(stylesSource).toContain('padding-block-start: 136px;');
     expect(stylesSource).toContain('.wos-dialog-layer[data-parent-window-title],\n  .wos-dialog-layer[data-parent-window-id]');
     expect(stylesSource).toContain('padding-block-start: 16px;');
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true']");
-    expect(stylesSource).toContain('width: min(560px, calc(100% - 72px));');
-    expect(stylesSource).toContain('max-height: min(560px, calc(100% - 48px));');
+    expect(stylesSource).toContain('width: min(500px, calc(100% - 112px));');
+    expect(stylesSource).toContain('max-height: min(460px, calc(100% - 120px));');
     expect(stylesSource).toContain('8px 8px 0 color-mix(in srgb, var(--wos-ink-900) 13%, transparent)');
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true'] {\n    width: 100%;");
   });

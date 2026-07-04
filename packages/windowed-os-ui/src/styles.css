@@ -1028,7 +1028,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog-layer[data-parent-window-title],
 .wos-dialog-layer[data-parent-window-id] {
-  padding-block-start: 68px;
+  padding-block-start: 136px;
 }
 
 .wos-dialog-layer[data-modal='true'] {
@@ -1061,8 +1061,8 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog[data-parent-window-attached='true'] {
-  width: min(560px, calc(100% - 72px));
-  max-height: min(560px, calc(100% - 48px));
+  width: min(500px, calc(100% - 112px));
+  max-height: min(460px, calc(100% - 120px));
   box-shadow:
     8px 8px 0 color-mix(in srgb, var(--wos-ink-900) 13%, transparent),
     var(--wos-shadow-window);
