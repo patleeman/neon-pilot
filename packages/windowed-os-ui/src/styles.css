@@ -139,6 +139,7 @@
 .wos-taskbar__trailing {
   display: flex;
   min-width: 0;
+  max-width: min(52vw, 620px);
   flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
@@ -147,6 +148,31 @@
 }
 
 .wos-taskbar__trailing:empty {
+  display: none;
+}
+
+.wos-taskbar__system-controls,
+.wos-taskbar__extension-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.wos-taskbar__system-controls {
+  flex: 0 0 auto;
+}
+
+.wos-taskbar__extension-actions {
+  flex: 1 1 auto;
+  max-width: min(30vw, 260px);
+  justify-content: flex-end;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.wos-taskbar__extension-actions::-webkit-scrollbar {
   display: none;
 }
 

@@ -1454,10 +1454,16 @@ export function WindowedLayout() {
   );
   const taskbarTrailing = (
     <>
-      {themeControl}
-      {taskbarTopBarElements.map((element) => (
-        <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
-      ))}
+      <div className="wos-taskbar__system-controls" aria-label="Taskbar system controls">
+        {themeControl}
+      </div>
+      {taskbarTopBarElements.length > 0 ? (
+        <div className="wos-taskbar__extension-actions" aria-label="Taskbar extension actions">
+          {taskbarTopBarElements.map((element) => (
+            <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
+          ))}
+        </div>
+      ) : null}
     </>
   );
 

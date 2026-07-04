@@ -701,6 +701,11 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
+    expect(stylesSource).toContain('.wos-taskbar__system-controls,\n.wos-taskbar__extension-actions {');
+    expect(stylesSource).toContain('.wos-taskbar__extension-actions {\n  flex: 1 1 auto;');
+    expect(stylesSource).toContain('max-width: min(30vw, 260px);');
+    expect(stylesSource).toContain('overflow-x: auto;');
+    expect(stylesSource).toContain('.wos-taskbar__extension-actions::-webkit-scrollbar');
     expect(stylesSource).toContain(
       '.wos-taskbar__trailing :where(.ui-toolbar-button.ui-desktop-top-bar__icon-button, .ui-icon-button.ui-desktop-top-bar__icon-button)',
     );

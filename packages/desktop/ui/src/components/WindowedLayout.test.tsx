@@ -477,9 +477,11 @@ describe('WindowedLayout route windows', () => {
 
     const openWindows = screen.getByRole('navigation', { name: 'Open windows' });
     const desktopControls = screen.getByLabelText('Desktop controls');
+    const extensionActions = within(desktopControls).getByLabelText('Taskbar extension actions');
 
     expect(within(openWindows).queryByRole('button', { name: 'Caffeinate toggle' })).toBeNull();
-    expect(within(desktopControls).getByRole('button', { name: 'Caffeinate toggle' })).toBeTruthy();
+    expect(within(extensionActions).getByRole('button', { name: 'Caffeinate toggle' })).toBeTruthy();
+    expect(within(desktopControls).getByLabelText('Taskbar system controls')).toBeTruthy();
   });
 
   it('does not render stable-shell-only top-bar bootstraps in the windowed taskbar', () => {
@@ -501,8 +503,9 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     const desktopControls = screen.getByLabelText('Desktop controls');
+    const extensionActions = within(desktopControls).getByLabelText('Taskbar extension actions');
     expect(within(desktopControls).queryByRole('button', { name: 'Setup tour' })).toBeNull();
-    expect(within(desktopControls).getByRole('button', { name: 'Caffeinate toggle' })).toBeTruthy();
+    expect(within(extensionActions).getByRole('button', { name: 'Caffeinate toggle' })).toBeTruthy();
   });
 
   it('focuses Start menu search on open and closes it with Escape', () => {
