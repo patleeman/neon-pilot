@@ -1006,6 +1006,11 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   pointer-events: none;
 }
 
+.wos-dialog-layer[data-parent-window-title],
+.wos-dialog-layer[data-parent-window-id] {
+  padding-block-start: 56px;
+}
+
 .wos-dialog-layer[data-modal='true'] {
   justify-content: center;
   padding: 30px 18px;
