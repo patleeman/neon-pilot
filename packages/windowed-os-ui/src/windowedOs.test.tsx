@@ -860,9 +860,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window__title {\n  min-width: 0;');
     expect(stylesSource).toContain('font: var(--wos-text-row);');
     expect(stylesSource).toContain('padding: 0 7px 0 8px;');
-    expect(stylesSource).toContain('padding: 5px 7px 5px 10px;');
+    expect(stylesSource).toContain('min-height: 28px;');
+    expect(stylesSource).toContain('padding: 3px 6px 3px 8px;');
     expect(stylesSource).toContain('.wos-dialog__identity {\n  display: flex;');
-    expect(stylesSource).toContain('align-items: center;\n  gap: 8px;');
+    expect(stylesSource).toContain('align-items: center;\n  gap: 6px;');
     expect(stylesSource).toContain('.wos-dialog__meta::before');
     expect(stylesSource).toContain("content: '/ ';");
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
