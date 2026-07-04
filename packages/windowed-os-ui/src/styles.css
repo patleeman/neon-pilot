@@ -1,7 +1,7 @@
 @import './tokens.css';
 
 .windowed-os-shell {
-  --wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 38px);
+  --wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 34px);
   min-height: 100vh;
   overflow: hidden;
   background: var(--wos-surface-0);
