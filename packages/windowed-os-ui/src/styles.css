@@ -6248,7 +6248,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {
-  border-top: 2px solid var(--wos-ink-900);
+  border-top: var(--wos-border-strong) solid var(--wos-ink-900);
   border-left: 0 !important;
   background: var(--wos-surface-1) !important;
   padding: var(--wos-space-4) var(--wos-space-5) !important;
@@ -6273,7 +6273,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-height: 28px;
   align-items: center;
   justify-content: flex-start;
-  border: 2px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 8px;
   background: var(--wos-surface-2);
   padding: 4px 9px;
@@ -6297,7 +6297,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   box-shadow: none;
@@ -6330,7 +6330,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 0;
   flex-wrap: nowrap;
   align-items: center;
-  border-top: 2px solid var(--wos-ink-900) !important;
+  border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   padding: 7px 4px 0;
   gap: 6px;
 }
@@ -6361,7 +6361,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf {
   border-top: 0 !important;
   border-right: 0 !important;
-  border-bottom: 2px solid var(--wos-ink-900) !important;
+  border-bottom: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   background: var(--wos-surface-2) !important;
   padding: 8px 10px;
 }
@@ -6422,7 +6422,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   .ui-composer-attachment-shelf
   :where(.ui-attachment-chip-button > span:first-child:not([class])) {
   flex: 0 0 auto;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 5px;
   background: color-mix(in srgb, var(--wos-chat) 16%, var(--wos-surface-1));
   padding: 1px 4px;
@@ -6453,7 +6453,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   width: 32px;
   height: 22px;
   flex-shrink: 0;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 5px;
   background:
     linear-gradient(135deg, transparent 48%, var(--wos-chat) 49% 55%, transparent 56%),
@@ -6465,7 +6465,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 26px;
   height: 26px;
   min-height: 26px;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 6px;
   background: var(--wos-surface-1);
   padding: 0;
@@ -6479,7 +6479,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-text-button) {
   min-height: 26px;
   flex-shrink: 0;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 6px;
   background: var(--wos-surface-1);
   padding: 2px 6px;
@@ -6880,7 +6880,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   gap: 7px;
   margin-block: 6px;
-  border: 2px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 999px;
   background: color-mix(in srgb, var(--wos-chat) 9%, var(--wos-surface-1));
   padding: 3px 9px;
@@ -6920,7 +6920,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item {
   overflow: hidden !important;
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px !important;
   background: color-mix(in srgb, var(--wos-chat) 5%, var(--wos-surface-1)) !important;
   color: var(--wos-ink-900) !important;
@@ -6979,7 +6979,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item[open] .ui-context-shelf__summary {
-  border-bottom: 2px solid var(--wos-ink-900);
+  border-bottom: var(--wos-border-strong) solid var(--wos-ink-900);
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item[open] .ui-context-shelf__chevron {
@@ -7054,7 +7054,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   z-index: 50;
   width: max-content;
   max-width: min(240px, calc(100vw - 32px));
-  border: 2px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 7px;
   background: var(--wos-surface-1);
   padding: 4px 7px;
@@ -7135,7 +7135,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill {
-  border: 2px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 8px;
   font: var(--wos-text-row);
 }
@@ -7154,7 +7154,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
   background: var(--wos-surface-1) !important;
   padding: 0 8px;
@@ -7207,7 +7207,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 28px;
   height: 28px;
   min-height: 28px;
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900);
@@ -7240,7 +7240,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   max-width: 128px;
   min-height: 28px;
   align-items: center;
-  border: 2px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 7px;
   background: var(--wos-surface-1);
   padding: 0 8px;
