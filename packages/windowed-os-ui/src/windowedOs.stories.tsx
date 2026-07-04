@@ -658,14 +658,22 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                   </div>
                 </div>
                 <div className="ui-tool-block">
-                  <div className="ui-tool-block__body">Ran package checks</div>
+                  <div className="ui-tool-block__body">
+                    Ran package checks for packages/windowed-os-ui/src/windowedOs.stories.tsx with compact transcript wrapping
+                  </div>
                   <div className="ui-tool-block__linked-runs">
+                    <div className="ui-tool-block__linked-runs-summary">
+                      linked run: windowed-os-storybook-qa-compact-dark-transcript-long-output
+                    </div>
                     <button type="button" className="ui-tool-block__linked-run">
-                      windowed-os-ui tests
+                      windowed-os-ui tests / compact-chat-transcript / dark / terminal-and-tool-output-wrapping
                     </button>
                   </div>
                   <div className="ui-tool-block__output">
-                    <pre className="ui-tool-block__pre">114 tests passed</pre>
+                    <pre className="ui-tool-block__pre">
+                      114 tests passed{'\n'}
+                      packages/windowed-os-ui/src/windowedOs.stories.tsx:checked-long-output-without-horizontal-window-growth
+                    </pre>
                   </div>
                 </div>
                 <div className="ui-notice ui-notice-danger ui-error-block">
@@ -774,13 +782,20 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 </div>
                 <div className="ui-terminal-block">
                   <div className="ui-terminal-block__chrome">
-                    <span className="ui-terminal-block__command">pnpm --dir packages/windowed-os-ui run test</span>
+                    <span className="ui-terminal-block__command">
+                      pnpm --dir packages/windowed-os-ui run qa:storybook -- --story windowed-os-desktop-shell--dark-inherited-chat-chrome
+                    </span>
                     <span className="ui-pill ui-pill-accent">shell</span>
                   </div>
                   <div className="ui-terminal-block__body">
-                    <pre className="ui-terminal-block__output">PASS src/windowedOs.test.tsx{'\n'}116 tests passed</pre>
-                    <p className="ui-terminal-block__muted">Waiting for output...</p>
-                    <pre aria-label="No terminal output" className="ui-terminal-block__empty-output" />
+                    <pre className="ui-terminal-block__output">
+                      PASS src/windowedOs.test.tsx{'\n'}116 tests passed{'\n'}
+                      /Users/patrick/workingdir/neon-pilot/packages/windowed-os-ui/storybook-static/iframe.html?id=windowed-os-desktop-shell--dark-inherited-chat-chrome
+                    </pre>
+                    <p className="ui-terminal-block__muted">Waiting for output from compact dark transcript QA...</p>
+                    <pre aria-label="No terminal output" className="ui-terminal-block__empty-output">
+                      no-output-yet-but-this-placeholder-still-wraps-inside-the-terminal-block
+                    </pre>
                   </div>
                   <div className="ui-terminal-block__chrome ui-terminal-block__muted">
                     <span>exit 0</span>

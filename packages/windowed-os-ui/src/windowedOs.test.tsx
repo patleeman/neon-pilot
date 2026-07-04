@@ -1499,6 +1499,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__body');
     expect(stylesSource).toContain('overflow: hidden;\n  border: 1.5px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('min-width: 0;\n  max-width: 100%;\n  border-color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('padding: 7px 9px;');
     expect(stylesSource).toContain('font-weight: 700;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine');
@@ -1506,9 +1507,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-top: 1.5px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs-summary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-run');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-run {\n  display: flex;\n  min-width: 0;\n  max-width: 100%;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__pre');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__pre {\n  max-width: 100%;\n  margin: 0;',
+    );
+    expect(stylesSource).toContain('overflow-wrap: anywhere;\n  white-space: pre-wrap;\n  word-break: normal;');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat [data-transcript-event='ask-user-question']");
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__header');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__tabs');
@@ -1523,6 +1531,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__empty-output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__muted');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__body {\n  min-width: 0;\n  max-height: 280px;',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__empty-output {\n  max-width: 100%;\n  margin: 0;',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__muted {\n  margin: 0;\n  color: var(--wos-ink-600);',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-panel-muted');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary');
