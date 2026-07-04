@@ -1427,13 +1427,23 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-lifecycle-marker');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-context-lifecycle-marker');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-context-lifecycle-marker {\n  display: inline-flex;\n  max-width: min(78%, 620px);\n  min-height: 26px;\n  align-items: center;\n  gap: 7px;\n  margin-block: 6px;\n  border: 2px solid var(--wos-ink-900);\n  border-left: 0 !important;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-context-lifecycle-marker {\n  display: inline-flex;\n  max-width: min(78%, 620px);\n  min-height: 26px;\n  align-items: center;\n  gap: 7px;\n  margin-block: 6px;\n  border: 2px solid var(--wos-ink-900);',
     );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item {\n  overflow: hidden !important;\n  border: 2px solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item {\n  overflow: hidden !important;\n  border: 2px solid var(--wos-ink-900) !important;\n  border-radius: 8px !important;',
     );
+    const lifecycleMarkerRule = stylesSource.slice(
+      stylesSource.indexOf('.windowed-os-shell .wos-window-route-body--chat .ui-context-lifecycle-marker {'),
+      stylesSource.indexOf('.windowed-os-shell .wos-window-route-body--chat button.ui-context-lifecycle-marker'),
+    );
+    const contextShelfItemRule = stylesSource.slice(
+      stylesSource.indexOf('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item {'),
+      stylesSource.indexOf('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary'),
+    );
+    expect(lifecycleMarkerRule).not.toContain('border-left');
+    expect(contextShelfItemRule).not.toContain('border-left');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary');
     expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr) minmax(24px, 0.25fr);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary-main');
