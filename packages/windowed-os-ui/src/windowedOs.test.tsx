@@ -1738,6 +1738,26 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Repositories"');
   });
 
+  it('documents the canonical embedded extension desktop page', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+    const embeddedSource = source.slice(source.indexOf('function EmbeddedExtensionPageStory'));
+
+    expect(source).toContain('function EmbeddedExtensionPageStory');
+    expect(source).toContain('export const EmbeddedExtensionPage');
+    expect(source).toContain('export const DarkEmbeddedExtensionPage');
+    expect(source).toContain('<EmbeddedExtensionPageStory theme="dark" />');
+    expect(embeddedSource).toContain("title={theme === 'dark' ? 'Gateways - embedded dark' : 'Gateways'}");
+    expect(embeddedSource).toContain('data-wos-theme={theme}');
+    expect(embeddedSource).toContain('title="Telegram"');
+    expect(embeddedSource).toContain('title="Status"');
+    expect(embeddedSource).toContain('title="Bot token"');
+    expect(embeddedSource).toContain('title="Telegram access"');
+    expect(embeddedSource).toContain('title="Recent activity"');
+    expect(embeddedSource).toContain('aria-label="Telegram bot token"');
+    expect(embeddedSource).toContain('label="Toggle Telegram gateway"');
+  });
+
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');

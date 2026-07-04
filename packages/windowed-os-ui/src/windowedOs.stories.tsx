@@ -2493,11 +2493,11 @@ export const TerminalWindow: Story = {
   ),
 };
 
-export const EmbeddedExtensionPage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 680, padding: 24 }}>
+function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title="Gateways"
+        title={theme === 'dark' ? 'Gateways - embedded dark' : 'Gateways'}
         accent="gateways"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 620 }}
@@ -2564,5 +2564,13 @@ export const EmbeddedExtensionPage: Story = {
         </WindowedPageShell>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const EmbeddedExtensionPage: Story = {
+  render: () => <EmbeddedExtensionPageStory />,
+};
+
+export const DarkEmbeddedExtensionPage: Story = {
+  render: () => <EmbeddedExtensionPageStory theme="dark" />,
 };
