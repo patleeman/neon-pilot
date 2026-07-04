@@ -210,7 +210,15 @@
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   -webkit-app-region: no-drag;
+}
+
+.wos-taskbar__trailing::-webkit-scrollbar {
+  display: none;
 }
 
 .wos-taskbar__trailing:empty {
@@ -268,16 +276,14 @@
 
   .wos-taskbar__trailing {
     max-width: min(31vw, 116px);
+    justify-content: flex-start;
   }
 
   .wos-taskbar__trailing :where(button, a) {
-    width: 54px;
-    max-width: 54px;
-    justify-content: flex-start !important;
-    overflow: hidden;
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
     padding-inline: 6px !important;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
 

@@ -1048,12 +1048,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-taskbar__system-controls,\n.wos-taskbar__extension-actions {');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions {\n  flex: 1 1 auto;');
     expect(stylesSource).toContain('max-width: min(30vw, 260px);');
+    expect(stylesSource).toContain('.wos-taskbar__trailing::-webkit-scrollbar');
+    expect(stylesSource).toContain('overscroll-behavior-x: contain;');
     expect(stylesSource).toContain('.wos-taskbar__trailing {\n    max-width: min(34vw, 180px);');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions {\n    max-width: min(18vw, 96px);');
     expect(stylesSource).toContain('.wos-taskbar__trailing :where(button, a) {\n    max-width: 120px;');
     expect(stylesSource).toContain('@media (max-width: 420px) {\n  .wos-taskbar {');
     expect(stylesSource).toContain('.wos-taskbar__trailing {\n    max-width: min(31vw, 116px);');
-    expect(stylesSource).toContain('.wos-taskbar__trailing :where(button, a) {\n    width: 54px;');
+    expect(stylesSource).toContain('.wos-taskbar__trailing {\n    max-width: min(31vw, 116px);\n    justify-content: flex-start;');
+    expect(stylesSource).toContain('.wos-taskbar__trailing :where(button, a) {\n    width: auto;');
+    expect(stylesSource).toContain('flex: 0 0 auto;');
+    expect(stylesSource).not.toContain('max-width: 54px;');
     expect(stylesSource).toContain('justify-content: flex-start;');
     expect(stylesSource).toContain('overflow-x: auto;');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions::-webkit-scrollbar');
