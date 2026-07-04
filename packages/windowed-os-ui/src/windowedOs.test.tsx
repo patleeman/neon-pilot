@@ -935,6 +935,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant');
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-meta');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown {');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown :not(pre) > code');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown table');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button-icon');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill');
@@ -1401,6 +1406,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<InheritedChatChromeStory theme="dark" />');
     expect(source).toContain('className="ui-message-card-user"');
     expect(source).toContain('className="ui-message-card-assistant"');
+    expect(source).toContain('className="ui-markdown"');
+    expect(source).toContain('<blockquote>Markdown blocks should feel like part of the desktop, not imported web content.</blockquote>');
+    expect(source).toContain('className="ui-markdown-code-block"');
+    expect(source).toContain('<table>');
     expect(source).toContain('className="ui-tool-block"');
     expect(source).toContain('className="conversation-composer-region"');
     expect(source).toContain('className="ui-input-shell"');

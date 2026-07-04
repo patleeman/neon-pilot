@@ -5231,6 +5231,107 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   font-size: 10px;
 }
 
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown {
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-body);
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown > *:first-child {
+  margin-top: 0;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown > *:last-child {
+  margin-bottom: 0;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown :where(h1, h2, h3, h4, h5, h6) {
+  margin: 10px 0 6px;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown :where(p, ul, ol, blockquote, table, .ui-markdown-code-block) {
+  margin-block: 8px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown :where(ul, ol) {
+  padding-inline-start: 20px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote {
+  border-left: 3px solid var(--wos-chat);
+  background: color-mix(in srgb, var(--wos-chat) 10%, var(--wos-surface-1));
+  margin-inline: 0;
+  padding: 6px 10px;
+  color: var(--wos-ink-700);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown a {
+  color: var(--wos-ink-900);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--wos-chat);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown a:hover {
+  color: var(--wos-chat);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown :not(pre) > code {
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-radius: 5px;
+  background: var(--wos-surface-2);
+  padding: 1px 4px;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-mono);
+  font-size: 0.88em;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre {
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--wos-ink-900) 8%, var(--wos-surface-1));
+  margin: 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre code {
+  background: transparent;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
+  background: var(--wos-surface-1);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown :where(th, td) {
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
+  padding: 5px 7px;
+  text-align: left;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown th {
+  background: var(--wos-surface-2);
+  color: var(--wos-ink-700);
+  font: var(--wos-text-meta);
+  text-transform: uppercase;
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-message-action-button {
   min-height: 24px;
   border: var(--wos-border-strong) solid var(--wos-ink-900);

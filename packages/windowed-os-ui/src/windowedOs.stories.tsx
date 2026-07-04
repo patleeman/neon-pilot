@@ -357,7 +357,33 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
             </article>
             <article className="ui-message-card-assistant">
               <div className="ui-message-meta">Neon Pilot</div>
-              <p>The inherited transcript chrome now uses the windowed border, type, and action treatment.</p>
+              <div className="ui-markdown">
+                <h3>Windowed audit</h3>
+                <p>
+                  The inherited transcript chrome now uses the windowed border, type, and action treatment. Review{' '}
+                  <a href="https://example.com">the visual notes</a> and keep <code>composer</code> controls compact.
+                </p>
+                <blockquote>Markdown blocks should feel like part of the desktop, not imported web content.</blockquote>
+                <div className="ui-markdown-code-block">
+                  <pre>
+                    <code>pnpm --dir packages/windowed-os-ui run test</code>
+                  </pre>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Surface</th>
+                      <th>State</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Composer</td>
+                      <td>Compact</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
               <span className="ui-pill ui-pill-accent">Windowed</span>
               <div className="ui-tool-block">
                 <div className="ui-tool-block__body">Ran package checks</div>
