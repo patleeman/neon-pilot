@@ -420,6 +420,24 @@ describe('WindowedPageSection', () => {
   });
 });
 
+describe('Windowed workbench styling', () => {
+  it('uses strong windowed borders for embedded workbench controls', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(
+      '.wos-window-route-body .ui-workbench-tab {\n  min-width: 0;\n  max-width: 220px;\n  overflow: hidden;\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
+    expect(stylesSource).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body .ui-action-tile {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
+    expect(stylesSource).toContain(
+      '.wos-window-route-body .ui-action-tile-icon {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
+  });
+});
+
 describe('WindowedPageButton', () => {
   it('passes native button attributes through for accessible compact actions', () => {
     const html = renderToStaticMarkup(

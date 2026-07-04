@@ -1581,7 +1581,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 0;
   max-width: 220px;
   overflow: hidden;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px;
   background: var(--wos-surface-1);
   color: var(--wos-ink-700);
@@ -1628,7 +1628,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   flex: 0 0 22px;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 6px;
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
@@ -1662,7 +1662,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-height: 26px;
   min-width: 0;
   align-items: center;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
   background: var(--wos-surface-2);
   padding: 0 8px;
@@ -1681,7 +1681,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 26px;
   height: 26px;
   min-height: 26px;
-  border: 1.5px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900);
@@ -1783,7 +1783,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-window-route-body .ui-action-tile {
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px;
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
@@ -1800,7 +1800,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-window-route-body .ui-action-tile-icon {
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 6px;
   background: var(--wos-surface-2);
   color: var(--wos-ink-900);
