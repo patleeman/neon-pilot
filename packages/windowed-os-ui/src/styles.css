@@ -49,7 +49,9 @@
     [class*='before:border-s'],
     [class*='after:border-s'],
     [class*='before:left-0'],
+    [class*='before:start-0'],
     [class*='after:left-0'],
+    [class*='after:start-0'],
     [class*='before:inset-y-0'],
     [class*='after:inset-y-0']
   ) {
@@ -81,7 +83,9 @@
     [class*='before:border-s'],
     [class*='after:border-s'],
     [class*='before:left-0'],
+    [class*='before:start-0'],
     [class*='after:left-0'],
+    [class*='after:start-0'],
     [class*='before:inset-y-0'],
     [class*='after:inset-y-0']
   )::before,
@@ -105,7 +109,9 @@
     [class*='before:border-s'],
     [class*='after:border-s'],
     [class*='before:left-0'],
+    [class*='before:start-0'],
     [class*='after:left-0'],
+    [class*='after:start-0'],
     [class*='before:inset-y-0'],
     [class*='after:inset-y-0']
   )::after {
@@ -120,9 +126,24 @@
     [class*='absolute'][class*='left-0'][class*='w-px'],
     [class*='absolute'][class*='inset-y-0'][class*='w-px'],
     [class*='absolute'][class*='start-0'][class*='w-px'],
+    [class*='absolute'][class*='left-0'][class*='w-0.5'],
+    [class*='absolute'][class*='inset-y-0'][class*='w-0.5'],
+    [class*='absolute'][class*='start-0'][class*='w-0.5'],
+    [class*='absolute'][class*='left-0'][class*='w-1'],
+    [class*='absolute'][class*='inset-y-0'][class*='w-1'],
+    [class*='absolute'][class*='start-0'][class*='w-1'],
     [class*='absolute'][class*='left-0'][class*='w-[1px]'],
     [class*='absolute'][class*='inset-y-0'][class*='w-[1px]'],
-    [class*='absolute'][class*='start-0'][class*='w-[1px]']
+    [class*='absolute'][class*='start-0'][class*='w-[1px]'],
+    [class*='absolute'][class*='left-0'][class*='w-[2px]'],
+    [class*='absolute'][class*='inset-y-0'][class*='w-[2px]'],
+    [class*='absolute'][class*='start-0'][class*='w-[2px]'],
+    [class*='absolute'][class*='left-0'][class*='w-[3px]'],
+    [class*='absolute'][class*='inset-y-0'][class*='w-[3px]'],
+    [class*='absolute'][class*='start-0'][class*='w-[3px]'],
+    [class*='absolute'][class*='left-0'][class*='w-[4px]'],
+    [class*='absolute'][class*='inset-y-0'][class*='w-[4px]'],
+    [class*='absolute'][class*='start-0'][class*='w-[4px]']
   ) {
   display: none !important;
   border-left: 0 !important;
@@ -6404,6 +6425,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   justify-content: flex-start;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
   border-radius: 8px;
   background: var(--wos-surface-2);
   padding: 4px 9px;
@@ -6428,6 +6452,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
   border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   box-shadow: none;
@@ -6624,6 +6651,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   margin-top: 6px;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
   border-radius: 6px;
   background: color-mix(in srgb, var(--wos-chat) 8%, var(--wos-surface-1));
   padding: 2px 6px;
@@ -6733,6 +6763,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class^='border-s-'],
     [class*=':border-s'],
     [class*=':border-s-'],
+    [class*='before:left-0'],
+    [class*='before:start-0'],
+    [class*='after:left-0'],
+    [class*='after:start-0'],
+    [class*='before:inset-y-0'],
+    [class*='after:inset-y-0'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6760,6 +6796,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class^='border-s-'],
     [class*=':border-s'],
     [class*=':border-s-'],
+    [class*='before:left-0'],
+    [class*='before:start-0'],
+    [class*='after:left-0'],
+    [class*='after:start-0'],
+    [class*='before:inset-y-0'],
+    [class*='after:inset-y-0'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6799,7 +6841,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat [class~='border-s'],
 .windowed-os-shell .wos-window-route-body--chat [class*='border-s-'],
 .windowed-os-shell .wos-window-route-body--chat [class*=':border-s'],
-.windowed-os-shell .wos-window-route-body--chat [class*=':border-s-'] {
+.windowed-os-shell .wos-window-route-body--chat [class*=':border-s-'],
+.windowed-os-shell .wos-window-route-body--chat [class*='before:left-0'],
+.windowed-os-shell .wos-window-route-body--chat [class*='before:start-0'],
+.windowed-os-shell .wos-window-route-body--chat [class*='after:left-0'],
+.windowed-os-shell .wos-window-route-body--chat [class*='after:start-0'],
+.windowed-os-shell .wos-window-route-body--chat [class*='before:inset-y-0'],
+.windowed-os-shell .wos-window-route-body--chat [class*='after:inset-y-0'] {
   border-left: 0 !important;
   border-inline-start: 0 !important;
   border-left-width: 0 !important;
@@ -6823,7 +6871,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class*='border-s-'],
     [class^='border-s-'],
     [class*=':border-s'],
-    [class*=':border-s-']
+    [class*=':border-s-'],
+    [class*='before:left-0'],
+    [class*='before:start-0'],
+    [class*='after:left-0'],
+    [class*='after:start-0'],
+    [class*='before:inset-y-0'],
+    [class*='after:inset-y-0']
   ) {
   box-shadow: none !important;
 }

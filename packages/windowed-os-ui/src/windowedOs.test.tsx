@@ -1236,8 +1236,10 @@ describe('Windowed OS Storybook examples', () => {
     const inputShellRule =
       composerStyles.match(/\.windowed-os-shell \.wos-window-route-body--chat \.ui-input-shell \{[\s\S]*?\n\}/)?.[0] ?? '';
     expect(inputShellRule).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
+    expect(inputShellRule).toContain('border-left: 0 !important;');
+    expect(inputShellRule).toContain('border-left-width: 0 !important;');
+    expect(inputShellRule).toContain('border-left-color: transparent !important;');
     expect(inputShellRule).toContain('border-radius: 8px;');
-    expect(inputShellRule).not.toContain('border-left: 0 !important;');
     expect(inputShellRule).not.toContain('border-top-left-radius: 0;');
     expect(inputShellRule).not.toContain('border-bottom-left-radius: 0;');
     expect(composerStyles).toContain('.ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;');
@@ -1253,9 +1255,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain("[class*='before:border-s']");
     expect(stylesSource).toContain("[class*='after:border-s']");
     expect(stylesSource).toContain("[class*='before:left-0']");
+    expect(stylesSource).toContain("[class*='before:start-0']");
     expect(stylesSource).toContain("[class*='after:left-0']");
+    expect(stylesSource).toContain("[class*='after:start-0']");
     expect(stylesSource).toContain("[class*='absolute'][class*='left-0'][class*='w-px']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='left-0'][class*='w-0.5']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='left-0'][class*='w-1']");
     expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[1px]']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[2px]']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[3px]']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[4px]']");
     expect(stylesSource).toContain('border-inline-start: 0 !important;');
     expect(stylesSource).toContain(')::before,\n.windowed-os-shell');
     expect(stylesSource).toContain(
@@ -1434,7 +1443,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('overflow: visible;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;\n  border-radius: 8px;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
     );
     expect(stylesSource).toContain('.windowed-os-shell\n  .wos-window-route-body--chat\n  .conversation-composer-inner');
     expect(stylesSource).toContain(":where(input, textarea, button, select, [contenteditable='true'])");
@@ -1452,8 +1461,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill');
     expect(stylesSource).toContain('display: inline-flex;\n  width: auto;\n  max-width: 100%;');
     expect(stylesSource).toContain(
-      'justify-content: flex-start;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-radius: 8px;',
+      'justify-content: flex-start;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
     );
+    expect(stylesSource).toContain('border-radius: 8px;\n  background: var(--wos-surface-2);');
     expect(stylesSource).not.toContain('display: flex;\n  width: 100%;\n  min-height: 28px;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
@@ -1502,9 +1512,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('min-height: 26px;\n  flex-shrink: 0;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status {\n  display: inline-flex;\n  max-width: 100%;\n  min-height: 22px;\n  align-items: center;\n  margin-top: 6px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-radius: 6px;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status {\n  display: inline-flex;\n  max-width: 100%;\n  min-height: 22px;\n  align-items: center;\n  margin-top: 6px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
     );
-    expect(stylesSource).toContain('margin-top: 6px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-radius: 6px;');
+    expect(stylesSource).toContain('border-radius: 6px;\n  background: color-mix(in srgb, var(--wos-chat) 8%, var(--wos-surface-1));');
     expect(stylesSource).toContain('.wos-window-route-body .bg-base');
     expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
     expect(stylesSource).toContain('.wos-window-route-body .text-primary');
@@ -2720,6 +2730,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(inheritedRailRule).toContain("[class^='border-s-']");
     expect(inheritedRailRule).toContain("[class*=':border-s']");
     expect(inheritedRailRule).toContain("[class*=':border-s-']");
+    expect(inheritedRailRule).toContain("[class*='before:left-0']");
+    expect(inheritedRailRule).toContain("[class*='before:start-0']");
+    expect(inheritedRailRule).toContain("[class*='after:left-0']");
+    expect(inheritedRailRule).toContain("[class*='after:start-0']");
+    expect(inheritedRailRule).toContain("[class*='before:inset-y-0']");
+    expect(inheritedRailRule).toContain("[class*='after:inset-y-0']");
     expect(inheritedRailRule).toContain('.conversation-composer-region');
     expect(inheritedRailRule).toContain('.conversation-composer-inner');
     expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf');
