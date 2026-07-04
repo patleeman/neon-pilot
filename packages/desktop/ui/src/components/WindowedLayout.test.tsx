@@ -2643,6 +2643,9 @@ describe('WindowedLayout route windows', () => {
     const chatWindow = container.querySelector<HTMLElement>('[data-window-id="chat:draft"]');
     const terminalWindow = screen.getByRole('region', { name: 'Terminal' });
     expect(terminalWindow.getAttribute('data-window-id')).toBe('chat:draft:terminal');
+    expect(terminalWindow.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(terminalWindow.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(terminalWindow.getAttribute('data-parent-window-title')).toBe('New conversation');
     expect(terminalWindow.className).toContain('wos-window--terminal');
     expect(terminalWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('chat');
     expect(terminalWindow.closest('[data-window-id="chat:draft"]')).toBeNull();
@@ -2710,6 +2713,9 @@ describe('WindowedLayout route windows', () => {
     const browserWindow = screen.getByRole('region', { name: 'Browser' });
     const shell = container.querySelector('.windowed-os-shell');
     expect(browserWindow.getAttribute('data-window-id')).toBe('chat:draft:browser');
+    expect(browserWindow.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(browserWindow.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(browserWindow.getAttribute('data-parent-window-title')).toBe('New conversation');
     expect(browserWindow.className).toContain('wos-window--browser');
     expect(browserWindow.getAttribute('data-focused')).toBe('true');
     expect(chatWindow?.getAttribute('data-focused')).toBe('false');

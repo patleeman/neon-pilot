@@ -1566,6 +1566,8 @@ export interface WindowFrameProps {
   windowId?: string;
   title: string;
   accent?: AppAccent;
+  parentWindowId?: string;
+  parentWindowTitle?: string;
   focused?: boolean;
   minimized?: boolean;
   iframeBlocked?: boolean;
@@ -1584,6 +1586,8 @@ export function WindowFrame({
   windowId,
   title,
   accent = 'settings',
+  parentWindowId,
+  parentWindowTitle,
   focused = false,
   minimized = false,
   iframeBlocked = false,
@@ -1602,6 +1606,9 @@ export function WindowFrame({
       aria-label={title}
       className={cx('wos-window', className)}
       data-window-id={windowId}
+      data-parent-window-attached={parentWindowId || parentWindowTitle ? 'true' : undefined}
+      data-parent-window-id={parentWindowId}
+      data-parent-window-title={parentWindowTitle}
       data-focused={focused}
       data-minimized={minimized ? 'true' : undefined}
       data-iframe-blocked={iframeBlocked ? 'true' : undefined}

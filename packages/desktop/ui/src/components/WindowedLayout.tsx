@@ -1812,6 +1812,8 @@ export function WindowedLayout() {
               windowId={windowModel.id}
               title={windowModel.title}
               accent={accentForWindow(windowModel)}
+              parentWindowId={windowModel.parentWindowId}
+              parentWindowTitle={windowModel.parentWindowTitle}
               focused={windowModel.focused}
               minimized={windowModel.minimized}
               className={isChildWindow ? `wos-window--child wos-window--${windowModel.kind}` : undefined}

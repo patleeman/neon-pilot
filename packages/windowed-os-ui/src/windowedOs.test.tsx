@@ -465,6 +465,25 @@ describe('WindowFrame', () => {
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('attached-subwindow-state');
   });
+
+  it('exposes parent metadata for attached child desktop windows', () => {
+    const html = renderToStaticMarkup(
+      <WindowFrame
+        title="Terminal"
+        parentWindowId="chat:draft"
+        parentWindowTitle="New conversation"
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <div>Terminal surface</div>
+      </WindowFrame>,
+    );
+
+    expect(html).toContain('data-parent-window-attached="true"');
+    expect(html).toContain('data-parent-window-id="chat:draft"');
+    expect(html).toContain('data-parent-window-title="New conversation"');
+  });
 });
 
 describe('WindowedListItem', () => {
