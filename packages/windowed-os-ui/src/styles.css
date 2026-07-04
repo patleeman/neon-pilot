@@ -1691,6 +1691,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   font-family: var(--wos-font-display);
 }
 
+.wos-window-route-body--chat .ui-workbench-panel[data-windowed-attached-workbench='true'] {
+  min-width: 0;
+  border-left: 2px solid var(--wos-ink-900);
+  background: var(--wos-surface-2);
+  container: wos-attached-workbench / inline-size;
+}
+
 .wos-window-route-body .ui-workbench-tab-strip {
   height: 38px;
   gap: 6px;

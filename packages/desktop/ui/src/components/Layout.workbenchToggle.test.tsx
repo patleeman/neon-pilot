@@ -263,7 +263,10 @@ describe('Layout workbench toggle', () => {
     expect(screen.queryByText('Second thread')).toBeNull();
     expect(document.querySelector('[data-windowed-chat-thread-rail="true"]')).toBeNull();
     expect(document.querySelector('.ui-sidebar-nav-item')).toBeNull();
-    expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
+    const attachedWorkbench = document.querySelector('[data-workbench-document-pane="true"]');
+    expect(attachedWorkbench).not.toBeNull();
+    expect(attachedWorkbench?.getAttribute('aria-label')).toBe('Attached workbench');
+    expect(attachedWorkbench?.getAttribute('data-windowed-attached-workbench')).toBe('true');
   });
 
   it('lets embedded chat windows suppress the forced workbench pane', async () => {

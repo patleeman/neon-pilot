@@ -1112,6 +1112,8 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel');
+    expect(stylesSource).toContain(".wos-window-route-body--chat .ui-workbench-panel[data-windowed-attached-workbench='true']");
+    expect(stylesSource).toContain('container: wos-attached-workbench / inline-size;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel__body');
     expect(stylesSource).toContain(".wos-window-route-body .ui-workbench-panel[data-has-open-file='true'] .ui-workbench-panel__body");
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip');

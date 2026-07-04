@@ -1269,6 +1269,7 @@ function WorkbenchDocumentPane({
 }
 
 function WorkbenchPanel({
+  embeddedWindowChrome = false,
   width,
   conversationId,
   artifactId,
@@ -1298,6 +1299,7 @@ function WorkbenchPanel({
   onWorkspaceFileClear,
   onStartSideChat,
 }: {
+  embeddedWindowChrome?: boolean;
   width: number;
   conversationId: string | null;
   artifactId: string | null;
@@ -1334,8 +1336,9 @@ function WorkbenchPanel({
     <section
       style={{ width }}
       className="ui-workbench-panel flex flex-shrink-0 flex-col overflow-hidden border-l border-r border-border-subtle bg-base select-text"
-      aria-label="Workbench note"
+      aria-label={embeddedWindowChrome ? 'Attached workbench' : 'Workbench'}
       data-workbench-document-pane="true"
+      data-windowed-attached-workbench={embeddedWindowChrome ? 'true' : undefined}
       data-has-open-file={
         knowledgeFileId ||
         workspaceFileId ||
@@ -3677,6 +3680,7 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false, s
                     </main>
                     <ResizeHandle onMouseDown={workbenchDocument.onMouseDown} onDoubleClick={workbenchDocument.reset} />
                     <WorkbenchPanel
+                      embeddedWindowChrome={embeddedWindowChrome}
                       width={workbenchDocument.width + (effectiveWorkbenchExplorerOpen ? workbenchExplorer.width : 0)}
                       conversationId={activeConversationId}
                       artifactId={activeWorkbenchArtifactId}
