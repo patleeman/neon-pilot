@@ -735,9 +735,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell {');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain(
+      ".windowed-os-shell .wos-window-route-body .conversation-composer-inner :where(input, textarea, button, select, [contenteditable='true'])",
+    );
+    expect(stylesSource).toContain(
+      ".windowed-os-shell .wos-window-route-body .ui-input-shell textarea,\n.windowed-os-shell .wos-window-route-body .ui-input-shell [contenteditable='true']",
+    );
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell textarea::placeholder');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell:focus-within');
     expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-action-button');
+    expect(stylesSource).toContain('font: var(--wos-text-row);');
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated");
@@ -860,8 +868,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-composited-frame {\n  position: relative;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__blocker {');
+    expect(stylesSource).toContain(
+      ".windowed-os-shell .ui-windowed-browser-host__blocker :where(h1, h2, h3, p, button, input, textarea, select, [role='status'])",
+    );
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__state {');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__url {');
+    expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).toContain('font-size: 10px;');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button:disabled');
     expect(stylesSource).toContain(
       ".windowed-os-shell[data-native-browser-blocked='true'] .ui-windowed-browser-host[data-windowed-browser-host='true']",

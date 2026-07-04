@@ -767,6 +767,10 @@
   pointer-events: auto;
 }
 
+.windowed-os-shell .ui-windowed-browser-host__blocker :where(h1, h2, h3, p, button, input, textarea, select, [role='status']) {
+  font-family: var(--wos-font-body);
+}
+
 .windowed-os-shell .ui-windowed-browser-host__state {
   width: min(420px, 100%);
 }
@@ -785,7 +789,10 @@
   padding: 5px 7px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: var(--wos-text-caption);
+  font-family: var(--wos-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .windowed-os-shell[data-native-browser-blocked='true'] .ui-windowed-browser-host[data-windowed-browser-host='true'] {
@@ -4649,6 +4656,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   line-height: 1.45;
 }
 
+.windowed-os-shell .wos-window-route-body .conversation-composer-inner :where(input, textarea, button, select, [contenteditable='true']),
+.windowed-os-shell .wos-window-route-body .ui-input-shell :where(input, textarea, button, select, [contenteditable='true']) {
+  font-family: inherit;
+}
+
 .windowed-os-shell .wos-window-route-body .conversation-composer-region {
   border-top: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-1) !important;
@@ -4679,6 +4691,17 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body .ui-input-shell .border-t {
   border-color: var(--wos-ink-900) !important;
   padding-top: var(--wos-space-3);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-input-shell textarea,
+.windowed-os-shell .wos-window-route-body .ui-input-shell [contenteditable='true'] {
+  color: var(--wos-ink-900);
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-input-shell textarea::placeholder {
+  color: var(--wos-ink-500);
 }
 
 .windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1'] {
@@ -4798,6 +4821,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
   box-shadow: none;
+  font: var(--wos-text-row);
 }
 
 .windowed-os-shell .wos-window-route-body button.ui-composer-action-button:hover:not(:disabled) {
