@@ -83,7 +83,7 @@ describe('ModelArenaPage', () => {
       'Comparing challenger runs against conversation models.',
     );
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add selected challenger model' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add opencode-go/zeta' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove DeepSeek V4 Flash · opencode-go' })).toBeTruthy();
     expect(container.querySelector('.wos-arena-challenger-table .wos-data-row')).toBeTruthy();
     expect(container.querySelector<HTMLElement>('.wos-arena-challenger-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
@@ -113,9 +113,11 @@ describe('ModelArenaPage', () => {
       <ModelArenaPage pa={{ extension: { invoke } } as never} context={{ shellPresentation: 'windowed' } as never} />,
     );
 
-    await waitFor(() => expect(screen.getByText('No challenger models selected.')).toBeTruthy());
-    expect(screen.getByText('No challenger models selected.').closest('.wos-empty-state')).toBeTruthy();
-    expect(screen.getByText('Add challenger models and vote on duels to build rankings.').closest('.wos-empty-state')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('No challenger models selected')).toBeTruthy());
+    expect(screen.getByText('No challenger models selected').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(screen.getByText('Add one from the model picker above.').closest('.wos-empty-state__copy')).toBeTruthy();
+    expect(screen.getByText('No rankings yet').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(screen.getByText('Add challenger models and vote on duels to build rankings.').closest('.wos-empty-state__copy')).toBeTruthy();
     expect(container.querySelector('.wos-arena-empty')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add opencode-go/zeta' }));

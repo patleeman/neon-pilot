@@ -602,7 +602,7 @@ function ModelArenaWindowedPage({
                   </WindowedPageButton>
                 </div>
                 {selectedModels.length === 0 ? (
-                  <WindowedEmptyState>No challenger models selected.</WindowedEmptyState>
+                  <WindowedEmptyState title="No challenger models selected">Add one from the model picker above.</WindowedEmptyState>
                 ) : (
                   <WindowedDataTable
                     className="wos-arena-challenger-table"
@@ -704,7 +704,7 @@ function ModelArenaWindowedPage({
           <WindowedPageSection title="Rankings" meta={state ? `${ranked.length} models` : 'Loading'}>
             {!state ? <WindowedStateBlock>Loading Model Arena rankings.</WindowedStateBlock> : null}
             {state && ranked.length === 0 ? (
-              <WindowedEmptyState>Add challenger models and vote on duels to build rankings.</WindowedEmptyState>
+              <WindowedEmptyState title="No rankings yet">Add challenger models and vote on duels to build rankings.</WindowedEmptyState>
             ) : null}
             {ranked.length > 0 ? (
               <WindowedDataTable
