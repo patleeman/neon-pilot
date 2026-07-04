@@ -4701,6 +4701,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     padding: 16px 10px;
   }
 
+  .wos-dialog-layer[data-parent-window-title],
+  .wos-dialog-layer[data-parent-window-id] {
+    padding-block-start: 16px;
+  }
+
   .wos-dialog {
     width: 100%;
     border-radius: 10px;
