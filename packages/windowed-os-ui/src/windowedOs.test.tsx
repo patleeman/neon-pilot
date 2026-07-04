@@ -988,7 +988,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('Theme tokens');
   });
 
-  it('keeps the chat composer chrome fully boxed instead of using a left-rail treatment', () => {
+  it('keeps the chat composer chrome free of standalone left-rail treatments', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
     const composerStart = stylesSource.indexOf('.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region');
@@ -997,9 +997,10 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(composerStart).toBeGreaterThan(-1);
     expect(composerEnd).toBeGreaterThan(composerStart);
+    expect(composerStyles).toContain('border-left: 0 !important;');
+    expect(composerStyles).toContain('box-shadow: none !important;');
     expect(composerStyles).toContain('.ui-input-shell {\n  border: 2px solid var(--wos-ink-900) !important;');
     expect(composerStyles).toContain('.ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;');
-    expect(composerStyles).not.toContain('border-left: 0');
     expect(stylesSource).toContain(
       ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-']) {",
     );
@@ -1155,7 +1156,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: 2px solid var(--wos-ink-900);\n  background: var(--wos-surface-1) !important;',
+      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: 2px solid var(--wos-ink-900);\n  border-left: 0 !important;\n  background: var(--wos-surface-1) !important;',
     );
     expect(stylesSource).toContain('.wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('z-index: 30;');
@@ -1195,8 +1196,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-warning) 14%, var(--wos-surface-2));');
-    expect(stylesSource).not.toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice,\n.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill,\n.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border-left-width',
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: 2px solid var(--wos-ink-900);\n  border-left: 0 !important;',
     );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .border-l,');
     expect(stylesSource).not.toContain('box-shadow: inset 5px 0 0 var(--wos-warning);');
@@ -1334,8 +1335,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-body');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-lifecycle-marker');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-context-lifecycle-marker');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-context-lifecycle-marker {\n  display: inline-flex;\n  max-width: min(78%, 620px);\n  min-height: 26px;\n  align-items: center;\n  gap: 7px;\n  margin-block: 6px;\n  border: 2px solid var(--wos-ink-900);\n  border-left: 0 !important;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item {\n  overflow: hidden !important;\n  border: 2px solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary');
     expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr) minmax(24px, 0.25fr);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary-main');
@@ -1366,8 +1373,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body');
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('border-right: 0 !important;\n  border-bottom: 0 !important;');
-    expect(stylesSource).not.toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 0 !important;\n  border-top: 2px solid var(--wos-ink-900) !important;\n  border-left',
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 0 !important;\n  border-top: 2px solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
     );
     expect(stylesSource).not.toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 10px !important;\n  border-left',
@@ -2230,10 +2237,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(contextRailRule).not.toContain('border-left: 2px');
     expect(inheritedRailRule).toContain('.ui-composer-notice');
     expect(inheritedRailRule).toContain("[class*='border-l-']");
+    expect(inheritedRailRule).toContain('.conversation-composer-region');
+    expect(inheritedRailRule).toContain('.conversation-composer-inner');
     expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf');
+    expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf__status');
     expect(inheritedRailRule).toContain('.ui-context-lifecycle-marker');
     expect(inheritedRailRule).toContain('.ui-context-shelf__item');
-    expect(inheritedRailRule).not.toContain('.ui-trace-cluster__body');
+    expect(inheritedRailRule).toContain('.ui-trace-cluster__body');
     expect(inheritedRailRule).toContain('content: none !important;');
     expect(inheritedRailRule).toContain('border-left: 0 !important;');
     expect(inheritedRailRule).toContain('box-shadow: none !important;');

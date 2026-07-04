@@ -5919,8 +5919,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {
   border-top: 2px solid var(--wos-ink-900);
+  border-left: 0 !important;
   background: var(--wos-surface-1) !important;
   padding: var(--wos-space-4) var(--wos-space-5) !important;
+  box-shadow: none !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .conversation-composer-inner {
@@ -6242,10 +6244,15 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   :where(
     .border-l,
     [class*='border-l-'],
+    .conversation-composer-region,
+    .conversation-composer-inner,
     .ui-composer-notice,
+    .ui-composer-input-controls,
     .ui-composer-attachment-shelf,
+    .ui-composer-attachment-shelf__status,
     .ui-context-lifecycle-marker,
     .ui-context-shelf__item,
+    .ui-trace-cluster__body,
     [data-context-shelf]
   )::before,
 .windowed-os-shell
@@ -6253,10 +6260,15 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   :where(
     .border-l,
     [class*='border-l-'],
+    .conversation-composer-region,
+    .conversation-composer-inner,
     .ui-composer-notice,
+    .ui-composer-input-controls,
     .ui-composer-attachment-shelf,
+    .ui-composer-attachment-shelf__status,
     .ui-context-lifecycle-marker,
     .ui-context-shelf__item,
+    .ui-trace-cluster__body,
     [data-context-shelf]
   )::after {
   content: none !important;
@@ -6515,6 +6527,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   gap: 7px;
   margin-block: 6px;
   border: 2px solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 999px;
   background: color-mix(in srgb, var(--wos-chat) 9%, var(--wos-surface-1));
   padding: 3px 9px;
@@ -6555,6 +6568,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item {
   overflow: hidden !important;
   border: 2px solid var(--wos-ink-900) !important;
+  border-left: 0 !important;
   border-radius: 8px !important;
   background: color-mix(in srgb, var(--wos-chat) 5%, var(--wos-surface-1)) !important;
   color: var(--wos-ink-900) !important;
@@ -7169,6 +7183,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   margin-top: 7px;
   margin-left: 0 !important;
   border-top: 2px solid var(--wos-ink-900) !important;
+  border-left: 0 !important;
   border-right: 0 !important;
   border-bottom: 0 !important;
   padding-top: 8px !important;
