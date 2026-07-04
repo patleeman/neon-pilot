@@ -117,15 +117,21 @@ function defaultBounds(index: number, kind: WindowKind): WindowBounds {
 }
 
 function defaultBoundsForDesktop(index: number, kind: WindowKind, desktop: DesktopRect): WindowBounds {
-  const offset = (index % 7) * 34;
   const ideal = kind === 'chat' ? { width: 1180, height: 760, x: 42, y: 34 } : { width: 1040, height: 650, x: 112, y: 72 };
   const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
   const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
   const maxX = Math.max(0, desktop.width - width - 24);
   const maxY = Math.max(0, desktop.height - height - 24);
+  const cascadeStep = 34;
+  const rowStep = 42;
+  const rowDrift = 46;
+  const availableCascadeSlots = Math.floor(Math.max(0, Math.min(maxX - ideal.x, maxY - ideal.y)) / cascadeStep) + 1;
+  const slotsPerRow = Math.max(1, Math.min(6, availableCascadeSlots));
+  const column = index % slotsPerRow;
+  const row = Math.floor(index / slotsPerRow);
   return {
-    x: Math.min(maxX, ideal.x + offset),
-    y: Math.min(maxY, ideal.y + offset),
+    x: Math.min(maxX, ideal.x + column * cascadeStep + row * rowDrift),
+    y: Math.min(maxY, ideal.y + column * cascadeStep + row * rowStep),
     width,
     height,
   };

@@ -927,6 +927,33 @@ describe('WindowedLayout route windows', () => {
     expect(within(betaWindow).getByText('/beta:windowed')).toBeTruthy();
   });
 
+  it('cascades dense app launches without reusing window origins', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1680 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
+    mocks.extensions = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta'].map((label) => ({
+      id: `system-${label.toLowerCase()}`,
+      enabled: true,
+      contributes: {
+        nav: [{ id: 'page', label, route: `/${label.toLowerCase()}` }],
+      },
+    }));
+
+    const { container } = renderWindowedLayout();
+
+    for (const label of ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta']) {
+      fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}$`, 'i') }));
+      await screen.findByRole('region', { name: new RegExp(`^${label}$`, 'i') });
+    }
+
+    const origins = Array.from(container.querySelectorAll<HTMLElement>('.wos-window')).map(
+      (windowElement) => `${windowElement.style.left}:${windowElement.style.top}`,
+    );
+
+    expect(origins).toHaveLength(9);
+    expect(new Set(origins).size).toBe(origins.length);
+  });
+
   it('marks already-open desktop apps in the Start menu from the current window stack', async () => {
     mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
     seedWindowedWindows([
