@@ -139,16 +139,14 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
       loading && !summary ? (
         <WindowedStateBlock>Loading diagnostics.</WindowedStateBlock>
       ) : !summary ? (
-        <WindowedEmptyState>
-          <strong>No diagnostics yet.</strong>{' '}
+        <WindowedEmptyState title="No diagnostics yet">
           {loading
             ? 'Diagnostics will fill in after retained usage, tool, and context data loads.'
             : 'Diagnostics fill in after conversations produce retained usage, tool, and context data.'}
         </WindowedEmptyState>
       ) : !hasDiagnosticActivity ? (
-        <WindowedEmptyState>
-          <strong>No diagnostic activity in this range.</strong> Diagnostics populate after conversations, tools, and model runs produce
-          retained usage data.
+        <WindowedEmptyState title="No diagnostic activity in this range">
+          Diagnostics populate after conversations, tools, and model runs produce retained usage data.
         </WindowedEmptyState>
       ) : null;
 

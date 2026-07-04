@@ -370,9 +370,44 @@ describe('TelemetryPage', () => {
 
     const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
 
-    expect(screen.getByText('No diagnostics yet.').closest('.wos-empty-state')).toBeTruthy();
+    expect(screen.getByText('No diagnostics yet').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(
+      screen
+        .getByText('Diagnostics fill in after conversations produce retained usage, tool, and context data.')
+        .closest('.wos-empty-state__copy'),
+    ).toBeTruthy();
     expect(container.querySelector('.ui-empty-state')).toBeNull();
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
+  });
+
+  it('uses structured windowed empty state copy when the selected range has no activity', () => {
+    vi.mocked(useTracesData).mockReturnValue(
+      telemetryState({
+        summary: {
+          activeSessions: 0,
+          runsToday: 0,
+          toolCalls: 0,
+          totalCost: 0,
+          tokensTotal: 0,
+          tokensInput: 0,
+          tokensOutput: 0,
+          tokensCached: 0,
+          tokensCachedWrite: 0,
+          cacheHitRate: 0,
+          toolErrors: 0,
+        },
+      }),
+    );
+
+    const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
+
+    expect(screen.getByText('No diagnostic activity in this range').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(
+      screen
+        .getByText('Diagnostics populate after conversations, tools, and model runs produce retained usage data.')
+        .closest('.wos-empty-state__copy'),
+    ).toBeTruthy();
+    expect(container.querySelector('.wos-empty-state strong')).toBeNull();
   });
 
   it('uses the shared windowed state block for diagnostics load failures', () => {
