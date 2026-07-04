@@ -3442,7 +3442,7 @@ export const DarkDrawingsPickerSubwindow: Story = {
 function ExcalidrawEditorSubwindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <WindowedShellBodyAttribute>
-      <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 680, padding: 24 }}>
+      <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
         <div className="ui-overlay-backdrop ui-windowed-excalidraw-backdrop" role="presentation">
           <section
             role="dialog"

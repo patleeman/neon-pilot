@@ -1987,8 +1987,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 72px)) !important;');
     expect(stylesSource).toContain('@media (max-width: 560px) {\n  body[data-neon-pilot-windowed-shell-active=');
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 20px)) !important;');
-    expect(stylesSource).toContain('width: min(860px, calc(100vw - 96px)) !important;');
-    expect(stylesSource).toContain('height: min(560px, calc(100vh - 156px)) !important;');
+    expect(stylesSource).toContain('width: min(760px, calc(100vw - 112px)) !important;');
+    expect(stylesSource).toContain('height: min(500px, calc(100vh - 168px)) !important;');
+    expect(stylesSource).toContain('min-height: min(360px, calc(100vh - 168px)) !important;');
     expect(stylesSource).toContain('display: grid !important;');
     expect(stylesSource).toContain('min-width: 0 !important;');
     expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
@@ -2051,7 +2052,8 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar {\n  display: flex;\n  min-width: 0;');
-    expect(stylesSource).toContain('flex-wrap: wrap;\n  gap: 6px;');
+    expect(stylesSource).toContain('flex-wrap: wrap;\n  gap: 5px;');
+    expect(stylesSource).toContain('min-height: 34px;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar::before');
     expect(stylesSource).toContain("content: 'DRAWING';");
     expect(stylesSource).toContain(":where(.ui-toolbar-button, .ui-action-button)[data-active='true']");
@@ -2062,9 +2064,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {\n  min-width: 0;\n  min-height: 0;');
     expect(stylesSource).toContain('linear-gradient(var(--wos-grid-line) 1px, transparent 1px)');
-    expect(stylesSource).toContain('padding: 18px;');
+    expect(stylesSource).toContain('padding: 12px;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite {\n  display: grid;\n  min-width: 0;');
     expect(stylesSource).toContain('border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 32%, transparent);');
+    expect(stylesSource).toContain('box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wos-surface-0) 60%, transparent);');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {\n  display: grid;\n  min-width: 0;');
     expect(stylesSource).toContain('--color-primary: var(--wos-drawing-accent);');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite img');
@@ -2073,8 +2076,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       "body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker),\n  body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop",
     );
-    expect(stylesSource).toContain('width: min(860px, calc(100vw - 20px)) !important;');
-    expect(stylesSource).toContain('height: min(560px, calc(100vh - 104px)) !important;');
+    expect(stylesSource).toContain('width: min(760px, calc(100vw - 20px)) !important;');
+    expect(stylesSource).toContain('height: min(500px, calc(100vh - 104px)) !important;');
+    expect(stylesSource).toContain('min-height: min(340px, calc(100vh - 104px)) !important;');
+    expect(storiesSource).toContain('style={{ minHeight: 620, padding: 24 }}');
   });
 
   it('contains iframe paint inside window bodies without blanketing window content with the shield', () => {
