@@ -940,6 +940,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown :not(pre) > code');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown table');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation {');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation summary');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-summary::before');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-label');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-body');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button-icon');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill');
@@ -1410,6 +1415,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<blockquote>Markdown blocks should feel like part of the desktop, not imported web content.</blockquote>');
     expect(source).toContain('className="ui-markdown-code-block"');
     expect(source).toContain('<table>');
+    expect(source).toContain('className="ui-skill-invocation"');
+    expect(source).toContain('className="ui-skill-invocation-summary"');
+    expect(source).toContain('agent-plugin:local-qa');
     expect(source).toContain('className="ui-tool-block"');
     expect(source).toContain('className="conversation-composer-region"');
     expect(source).toContain('className="ui-input-shell"');

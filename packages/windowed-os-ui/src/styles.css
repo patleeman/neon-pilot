@@ -5332,6 +5332,89 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   text-transform: uppercase;
 }
 
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation {
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wos-chat) 8%, var(--wos-surface-1));
+  margin-block: 8px;
+  padding: 0;
+  color: var(--wos-ink-900);
+  box-shadow: none;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation summary {
+  display: flex;
+  min-height: 32px;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  gap: 7px;
+  border-bottom: var(--wos-border-strong) solid var(--wos-ink-900);
+  padding: 5px 8px;
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation:not([open]) summary {
+  border-bottom: 0;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation summary::-webkit-details-marker {
+  display: none;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-summary::before {
+  content: '>';
+  color: var(--wos-chat);
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation[open] .ui-skill-invocation-summary::before {
+  content: 'v';
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-label {
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-radius: 5px;
+  background: var(--wos-chat);
+  padding: 1px 5px;
+  color: var(--wos-accent-ink);
+  font: var(--wos-text-meta);
+  text-transform: uppercase;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-name {
+  min-width: 0;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-body {
+  margin: 0;
+  border-top: 0;
+  padding: 8px;
+  color: var(--wos-ink-800);
+  font-size: 12px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-body > * {
+  margin-block: 0 6px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-meta {
+  color: var(--wos-ink-600);
+  font: var(--wos-text-meta);
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-message-action-button {
   min-height: 24px;
   border: var(--wos-border-strong) solid var(--wos-ink-900);

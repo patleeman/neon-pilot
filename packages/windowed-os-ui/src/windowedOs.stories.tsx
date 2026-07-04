@@ -383,6 +383,16 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                     </tr>
                   </tbody>
                 </table>
+                <details className="ui-skill-invocation" open>
+                  <summary className="ui-skill-invocation-summary">
+                    <span className="ui-skill-invocation-label">skill</span>
+                    <span className="ui-skill-invocation-name">agent-plugin:local-qa</span>
+                  </summary>
+                  <div className="ui-skill-invocation-body">
+                    <p className="ui-skill-invocation-meta">References resolve relative to the active workspace.</p>
+                    <p>Use local browser QA before calling the chat surface ready.</p>
+                  </div>
+                </details>
               </div>
               <span className="ui-pill ui-pill-accent">Windowed</span>
               <div className="ui-tool-block">
