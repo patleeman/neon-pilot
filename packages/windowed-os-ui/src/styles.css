@@ -2245,7 +2245,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   display: flex;
   min-height: 38px;
   min-width: 0;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-2);
@@ -2259,23 +2259,24 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-height: 26px;
   min-width: 0;
   flex: 1 1 auto;
-  align-items: center;
+  align-items: flex-start;
   border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
   background: var(--wos-surface-2);
-  padding: 0 8px;
+  padding: 4px 8px;
 }
 
 .wos-window-route-body .ui-workbench-file-bar__path-label {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   color: var(--wos-ink-700);
   font-family: var(--wos-font-mono);
   font-size: 11px;
   font-weight: 650;
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .wos-window-route-body .ui-workbench-file-bar__button {

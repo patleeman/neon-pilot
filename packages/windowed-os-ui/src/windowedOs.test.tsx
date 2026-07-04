@@ -1424,11 +1424,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       '.wos-window-route-body .ui-workbench-file-bar {\n  display: flex;\n  min-height: 38px;\n  min-width: 0;',
     );
+    expect(stylesSource).toContain('align-items: flex-start;\n  gap: 8px;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label');
     expect(stylesSource).toContain(
       '.wos-window-route-body .ui-workbench-file-bar__path {\n  display: flex;\n  min-height: 26px;\n  min-width: 0;\n  flex: 1 1 auto;',
     );
-    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label {\n  min-width: 0;\n  overflow: hidden;');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label {\n  min-width: 0;\n  overflow: visible;');
+    expect(stylesSource).toContain('text-overflow: clip;\n  white-space: normal;\n  overflow-wrap: anywhere;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-resize-handle__line');
     expect(stylesSource).toContain('.wos-window-route-body--chat .ui-resize-handle {\n  background: transparent !important;');
