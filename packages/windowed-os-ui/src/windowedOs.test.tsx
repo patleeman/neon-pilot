@@ -438,6 +438,29 @@ describe('Windowed workbench styling', () => {
   });
 });
 
+describe('Windowed chat styling', () => {
+  it('uses strong tokenized borders for chat transcript and composer surfaces', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(
+      '.wos-message-bubble {\n  max-width: min(72ch, 76%);\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
+    expect(stylesSource).toContain(
+      '.wos-chat-composer__input {\n  min-height: 32px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta {\n  min-height: 24px;\n  margin-top: 5px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user,\n.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant {\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button {\n  min-height: 24px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
+  });
+});
+
 describe('WindowedPageButton', () => {
   it('passes native button attributes through for accessible compact actions', () => {
     const html = renderToStaticMarkup(
