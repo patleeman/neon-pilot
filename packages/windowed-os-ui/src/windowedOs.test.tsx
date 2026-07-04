@@ -970,6 +970,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__pre');
+    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat [data-transcript-event='ask-user-question']");
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__header');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__tabs');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__panel');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-choice-row');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-choice-row-checked');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-choice-row-indicator-checked');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-choice-row-details');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__command');
@@ -1443,6 +1451,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="ui-skill-invocation-summary"');
     expect(source).toContain('agent-plugin:local-qa');
     expect(source).toContain('className="ui-tool-block"');
+    expect(source).toContain('data-transcript-event="ask-user-question"');
+    expect(source).toContain('className="ui-ask-user-question__header"');
+    expect(source).toContain('className="ui-ask-user-question__tabs"');
+    expect(source).toContain('className="ui-choice-row ui-choice-row-checked"');
+    expect(source).toContain('className="ui-choice-row-indicator ui-choice-row-indicator-checked"');
+    expect(source).toContain('className="ui-choice-row-details"');
     expect(source).toContain('className="ui-terminal-block"');
     expect(source).toContain('className="ui-terminal-block__chrome"');
     expect(source).toContain('className="ui-terminal-block__command"');

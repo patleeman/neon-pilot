@@ -406,6 +406,60 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                   <pre className="ui-tool-block__pre">114 tests passed</pre>
                 </div>
               </div>
+              <div data-transcript-event="ask-user-question">
+                <div className="ui-ask-user-question__header">
+                  <span className="ui-ask-user-question__glyph" aria-hidden="true">
+                    ?
+                  </span>
+                  <span className="ui-ask-user-question__title">Question for you</span>
+                  <span className="ui-pill ui-pill-warning">pending</span>
+                  <span className="ui-ask-user-question__progress">1/2 answered</span>
+                </div>
+                <p className="ui-ask-user-question__details">
+                  Choose how aggressively the next windowed pass should modify inherited chat chrome.
+                </p>
+                <div className="ui-ask-user-question__tabs" role="tablist" aria-label="Question navigation">
+                  <button type="button" className="ui-action-button" role="tab" aria-selected="true">
+                    <span aria-hidden="true">•</span>
+                    Styling scope
+                  </button>
+                  <button type="button" className="ui-action-button" role="tab" aria-selected="false">
+                    <span aria-hidden="true">○</span>
+                    QA depth
+                  </button>
+                </div>
+                <div className="ui-ask-user-question__panel" role="tabpanel">
+                  <span className="ui-section-label">Question 1 of 2</span>
+                  <p className="ui-ask-user-question__prompt">Which surface should be styled next?</p>
+                  <div className="ui-ask-user-question__choices" role="radiogroup" aria-label="Which surface should be styled next?">
+                    <button type="button" className="ui-choice-row ui-choice-row-checked" role="radio" aria-checked="true">
+                      <span className="ui-choice-row-prefix" aria-hidden="true">
+                        1.
+                      </span>
+                      <span className="ui-choice-row-indicator ui-choice-row-indicator-checked" aria-hidden="true">
+                        ◉
+                      </span>
+                      <span className="ui-choice-row-main">
+                        <span className="ui-choice-row-label">Composer attachments</span>
+                        <span className="ui-choice-row-details">Keep tightening the conversation window controls.</span>
+                      </span>
+                    </button>
+                    <button type="button" className="ui-choice-row" role="radio" aria-checked="false">
+                      <span className="ui-choice-row-prefix" aria-hidden="true">
+                        2.
+                      </span>
+                      <span className="ui-choice-row-indicator" aria-hidden="true">
+                        ◯
+                      </span>
+                      <span className="ui-choice-row-main">
+                        <span className="ui-choice-row-label">Workbench tabs</span>
+                        <span className="ui-choice-row-details">Audit the attached browser and file surface again.</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                <p className="ui-ask-user-question__hint">1-9 selects - n/p switches questions - Esc exits</p>
+              </div>
               <div className="ui-terminal-block">
                 <div className="ui-terminal-block__chrome">
                   <span className="ui-terminal-block__command">pnpm --dir packages/windowed-os-ui run test</span>
