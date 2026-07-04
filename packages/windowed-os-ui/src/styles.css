@@ -1213,6 +1213,24 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   position: relative;
 }
 
+.wos-inherited-chat-preview {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.wos-inherited-chat-preview > [data-chat-transcript-panel='1'] {
+  min-height: 0;
+  overflow: auto;
+}
+
+.wos-inherited-chat-preview > .conversation-composer-region {
+  min-height: 0;
+  height: auto;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker),
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop {
   align-items: flex-start !important;
@@ -5100,17 +5118,31 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row {
+  display: flex;
   min-height: 38px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  align-items: center;
   border-top: 2px solid var(--wos-ink-900) !important;
   padding: 7px 4px 0;
   gap: 6px;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__leading {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 6px;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
   align-self: flex-end;
 }
 
@@ -5234,11 +5266,18 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {
+  width: 100%;
+  min-height: 44px;
+  resize: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
   color: var(--wos-ink-900);
   font-family: var(--wos-font-body) !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   line-height: 1.45 !important;
+  outline: none;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea::placeholder {
@@ -5762,16 +5801,53 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button {
-  width: 28px;
+  display: inline-flex;
+  width: auto;
   min-width: 28px;
   height: 28px;
   min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 2px solid var(--wos-ink-900);
   border-radius: 7px;
   background: var(--wos-surface-1);
+  padding: 0 8px;
   color: var(--wos-ink-900);
   box-shadow: none;
   font: var(--wos-text-row);
+  white-space: nowrap;
+}
+
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-icon {
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+}
+
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-label {
+  min-width: 68px;
+  padding-inline: 10px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-compact-label {
+  min-width: 54px;
+  padding-inline: 8px;
+}
+
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-accent {
+  background: var(--wos-chat);
+  color: var(--wos-accent-ink);
+}
+
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-warning {
+  background: color-mix(in srgb, var(--wos-warning) 28%, var(--wos-surface-1));
+  color: var(--wos-ink-900);
+}
+
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-danger {
+  background: color-mix(in srgb, var(--wos-danger) 24%, var(--wos-surface-1));
+  color: var(--wos-ink-900);
 }
 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button,

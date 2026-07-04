@@ -350,391 +350,426 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
         onClose={() => undefined}
       >
         <div className="wos-window-route-body wos-window-route-body--chat">
-          <section data-chat-transcript-panel="1" aria-label="Transcript preview">
-            <article className="ui-message-card-user">
-              <div className="ui-message-meta">Patrick</div>
-              <p>Audit the windowed chat surface and keep the composer compact.</p>
-              <div className="ui-message-actions-preview" aria-label="Message actions">
-                <span className="ui-tooltip-host relative inline-flex">
-                  <button type="button" className="ui-message-action-button ui-message-action-button-icon" aria-label="Copy this prompt">
-                    ⎘
-                  </button>
-                  <span className="ui-tooltip ui-tooltip-top-right">Copy this prompt</span>
-                </span>
-                <span className="ui-tooltip-host relative inline-flex">
-                  <button type="button" className="ui-message-action-button ui-message-action-button-icon" aria-label="Edit and rerun">
-                    ✎
-                  </button>
-                  <span className="ui-tooltip ui-tooltip-top-right">Edit and rerun</span>
-                </span>
-                <span className="ui-tooltip-host relative inline-flex">
-                  <button
-                    type="button"
-                    className="ui-message-action-button ui-message-action-button-icon"
-                    aria-label="Fork from here"
-                    disabled
-                  >
-                    …
-                  </button>
-                  <span className="ui-tooltip ui-tooltip-top-right">Forking from here</span>
-                </span>
-              </div>
-            </article>
-            <article className="ui-message-card-assistant">
-              <div className="ui-message-meta">Neon Pilot</div>
-              <div className="ui-markdown">
-                <h3>Windowed audit</h3>
-                <p>
-                  The inherited transcript chrome now uses the windowed border, type, and action treatment. Review{' '}
-                  <a href="https://example.com">the visual notes</a> and keep <code>composer</code> controls compact.
-                </p>
-                <blockquote>Markdown blocks should feel like part of the desktop, not imported web content.</blockquote>
-                <div className="ui-markdown-code-block">
-                  <pre>
-                    <code>pnpm --dir packages/windowed-os-ui run test</code>
-                  </pre>
-                </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Surface</th>
-                      <th>State</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Composer</td>
-                      <td>Compact</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <details className="ui-skill-invocation" open>
-                  <summary className="ui-skill-invocation-summary">
-                    <span className="ui-skill-invocation-label">skill</span>
-                    <span className="ui-skill-invocation-name">agent-plugin:local-qa</span>
-                  </summary>
-                  <div className="ui-skill-invocation-body">
-                    <p className="ui-skill-invocation-meta">References resolve relative to the active workspace.</p>
-                    <p>Use local browser QA before calling the chat surface ready.</p>
-                  </div>
-                </details>
-              </div>
-              <div className="ui-context-lifecycle-marker" data-context-shelf="1" data-lifecycle-marker="auto-resume">
-                <span aria-hidden="true">↻</span>
-                <span>Goal resumed automatically</span>
-                <span className="ui-message-meta">2m ago</span>
-              </div>
-              <div className="ui-context-shelf" data-context-shelf="1">
-                <details className="ui-context-shelf__item" data-context-type="referenced_context" open>
-                  <summary className="ui-context-shelf__summary">
-                    <span className="ui-context-shelf__summary-main">
-                      <span className="ui-context-shelf__chevron" aria-hidden="true">
-                        ›
-                      </span>
-                      <span className="ui-context-shelf__label">Context added</span>
-                      <span className="ui-context-shelf__preview">Workspace notes and open window state were attached.</span>
-                      <span className="ui-message-meta">now</span>
-                    </span>
-                    <span className="ui-context-shelf__rule" aria-hidden="true" />
-                  </summary>
-                  <div className="ui-context-shelf__body">Workspace notes and open window state were attached for this turn.</div>
-                </details>
-              </div>
-              <span className="ui-pill ui-pill-accent">Windowed</span>
-              <div className="ui-trace-cluster" data-open="true">
-                <div className="ui-trace-cluster__summary">
-                  <button type="button" className="ui-row-button ui-trace-cluster__summary-button" aria-expanded="true">
-                    <span className="ui-trace-cluster__step-count">4 steps</span>
-                    <span className="ui-trace-cluster__categories">
-                      <span className="ui-pill">thinking</span>
-                      <span className="ui-pill ui-pill-accent">subagent</span>
-                      <span className="ui-pill">shell</span>
-                    </span>
-                    <span className="ui-trace-cluster__toggle">hide</span>
-                  </button>
-                  <span className="ui-trace-cluster__rule" aria-hidden="true" />
-                </div>
-                <div className="ui-trace-cluster__body">
-                  <div className="ui-trace-cluster__overflow">
-                    <span>2 earlier steps summarized above.</span>
-                    <button type="button" className="ui-action-button">
-                      Show all
+          <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
+            <div className="wos-chat-window-toolbar__label">Workbench</div>
+            <div className="wos-chat-window-toolbar__actions">
+              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Hide workbench">
+                <StoryToolbarIcon name="workbench-visible" />
+              </button>
+              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Open Browser window">
+                <StoryToolbarIcon name="browser" />
+              </button>
+              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Open Terminal window">
+                <StoryToolbarIcon name="terminal" />
+              </button>
+            </div>
+          </div>
+          <div className="wos-inherited-chat-preview">
+            <section data-chat-transcript-panel="1" aria-label="Transcript preview">
+              <article className="ui-message-card-user">
+                <div className="ui-message-meta">Patrick</div>
+                <p>Audit the windowed chat surface and keep the composer compact.</p>
+                <div className="ui-message-actions-preview" aria-label="Message actions">
+                  <span className="ui-tooltip-host relative inline-flex">
+                    <button type="button" className="ui-message-action-button ui-message-action-button-icon" aria-label="Copy this prompt">
+                      ⎘
                     </button>
-                  </div>
-                  <div className="ui-thinking-block">
-                    <button type="button" className="ui-row-button ui-thinking-block__header" aria-expanded="true">
-                      <span className="ui-pill">Thinking</span>
-                      <span className="ui-thinking-block__preview">Checking inherited transcript surfaces.</span>
-                      <span className="ui-thinking-block__toggle">hide</span>
-                    </button>
-                    <div className="ui-thinking-block__body">
-                      <p>Style only the windowed shell, keep normal chat untouched.</p>
-                      <p>Verify light and dark before checkpointing.</p>
-                    </div>
-                  </div>
-                  <div className="ui-subagent-block" data-status="complete">
-                    <button type="button" className="ui-row-button ui-subagent-block__header" aria-expanded="true">
-                      <span className="ui-pill ui-pill-accent">subagent</span>
-                      <span className="ui-subagent-block__name">visual-qa</span>
-                      <span className="ui-pill ui-pill-success">complete</span>
-                      <span className="ui-subagent-block__toggle">hide</span>
-                    </button>
-                    <div className="ui-subagent-block__body">
-                      <div className="ui-subagent-block__section">
-                        <span className="ui-section-label">Prompt</span>
-                        <p className="ui-subagent-block__text">Inspect the windowed trace chrome for imported web styling.</p>
-                      </div>
-                      <div className="ui-subagent-block__section">
-                        <span className="ui-section-label">Result</span>
-                        <p className="ui-subagent-block__text">Trace panels now follow the desktop border, type, and disclosure rhythm.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="ui-tool-block">
-                <div className="ui-tool-block__body">Ran package checks</div>
-                <div className="ui-tool-block__linked-runs">
-                  <button type="button" className="ui-tool-block__linked-run">
-                    windowed-os-ui tests
-                  </button>
-                </div>
-                <div className="ui-tool-block__output">
-                  <pre className="ui-tool-block__pre">114 tests passed</pre>
-                </div>
-              </div>
-              <div className="ui-notice ui-notice-danger ui-error-block">
-                <div className="ui-error-block__body">
-                  <div className="ui-error-block__message">
-                    <span className="ui-error-block__tool">browser_snapshot ·</span>
-                    <span className="ui-error-block__text">
-                      Could not capture the browser surface because the native view was covered by another desktop window.
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="ui-image-preview" data-loaded="true">
-                <button
-                  type="button"
-                  className="ui-media-preview-button ui-image-preview__button"
-                  aria-label="Inspect image: Windowed OS sketch"
-                >
-                  <img src={storyImagePreviewSrc} alt="Windowed OS sketch" className="ui-image-preview__media" />
-                </button>
-                <div className="ui-image-preview__caption">
-                  <p className="ui-image-preview__caption-text">Windowed OS sketch</p>
-                </div>
-              </div>
-              <div className="ui-image-preview">
-                <div className="ui-image-preview__placeholder">
-                  <svg
-                    width="28"
-                    height="28"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="ui-image-preview__placeholder-icon"
-                    aria-hidden="true"
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <path d="m21 15-5-5L5 21" />
-                  </svg>
-                  <span className="ui-image-preview__placeholder-label">deferred-preview.png</span>
-                  <span className="ui-image-preview__placeholder-meta">1280×720</span>
-                  <button type="button" className="ui-action-button">
-                    Load image
-                  </button>
-                </div>
-                <div className="ui-image-preview__caption">
-                  <p className="ui-image-preview__caption-text">Deferred preview</p>
-                </div>
-              </div>
-              <div data-transcript-event="ask-user-question">
-                <div className="ui-ask-user-question__header">
-                  <span className="ui-ask-user-question__glyph" aria-hidden="true">
-                    ?
+                    <span className="ui-tooltip ui-tooltip-top-right">Copy this prompt</span>
                   </span>
-                  <span className="ui-ask-user-question__title">Question for you</span>
-                  <span className="ui-pill ui-pill-warning">pending</span>
-                  <span className="ui-ask-user-question__progress">1/2 answered</span>
-                </div>
-                <p className="ui-ask-user-question__details">
-                  Choose how aggressively the next windowed pass should modify inherited chat chrome.
-                </p>
-                <div className="ui-ask-user-question__tabs" role="tablist" aria-label="Question navigation">
-                  <button type="button" className="ui-action-button" role="tab" aria-selected="true">
-                    <span aria-hidden="true">•</span>
-                    Styling scope
-                  </button>
-                  <button type="button" className="ui-action-button" role="tab" aria-selected="false">
-                    <span aria-hidden="true">○</span>
-                    QA depth
-                  </button>
-                </div>
-                <div className="ui-ask-user-question__panel" role="tabpanel">
-                  <span className="ui-section-label">Question 1 of 2</span>
-                  <p className="ui-ask-user-question__prompt">Which surface should be styled next?</p>
-                  <div className="ui-ask-user-question__choices" role="radiogroup" aria-label="Which surface should be styled next?">
-                    <button type="button" className="ui-choice-row ui-choice-row-checked" role="radio" aria-checked="true">
-                      <span className="ui-choice-row-prefix" aria-hidden="true">
-                        1.
-                      </span>
-                      <span className="ui-choice-row-indicator ui-choice-row-indicator-checked" aria-hidden="true">
-                        ◉
-                      </span>
-                      <span className="ui-choice-row-main">
-                        <span className="ui-choice-row-label">Composer attachments</span>
-                        <span className="ui-choice-row-details">Keep tightening the conversation window controls.</span>
-                      </span>
+                  <span className="ui-tooltip-host relative inline-flex">
+                    <button type="button" className="ui-message-action-button ui-message-action-button-icon" aria-label="Edit and rerun">
+                      ✎
                     </button>
-                    <button type="button" className="ui-choice-row" role="radio" aria-checked="false">
-                      <span className="ui-choice-row-prefix" aria-hidden="true">
-                        2.
-                      </span>
-                      <span className="ui-choice-row-indicator" aria-hidden="true">
-                        ◯
-                      </span>
-                      <span className="ui-choice-row-main">
-                        <span className="ui-choice-row-label">Workbench tabs</span>
-                        <span className="ui-choice-row-details">Audit the attached browser and file surface again.</span>
-                      </span>
+                    <span className="ui-tooltip ui-tooltip-top-right">Edit and rerun</span>
+                  </span>
+                  <span className="ui-tooltip-host relative inline-flex">
+                    <button
+                      type="button"
+                      className="ui-message-action-button ui-message-action-button-icon"
+                      aria-label="Fork from here"
+                      disabled
+                    >
+                      …
                     </button>
+                    <span className="ui-tooltip ui-tooltip-top-right">Forking from here</span>
+                  </span>
+                </div>
+              </article>
+              <article className="ui-message-card-assistant">
+                <div className="ui-message-meta">Neon Pilot</div>
+                <div className="ui-markdown">
+                  <h3>Windowed audit</h3>
+                  <p>
+                    The inherited transcript chrome now uses the windowed border, type, and action treatment. Review{' '}
+                    <a href="https://example.com">the visual notes</a> and keep <code>composer</code> controls compact.
+                  </p>
+                  <blockquote>Markdown blocks should feel like part of the desktop, not imported web content.</blockquote>
+                  <div className="ui-markdown-code-block">
+                    <pre>
+                      <code>pnpm --dir packages/windowed-os-ui run test</code>
+                    </pre>
                   </div>
-                </div>
-                <p className="ui-ask-user-question__hint">1-9 selects - n/p switches questions - Esc exits</p>
-              </div>
-              <div className="ui-terminal-block">
-                <div className="ui-terminal-block__chrome">
-                  <span className="ui-terminal-block__command">pnpm --dir packages/windowed-os-ui run test</span>
-                  <span className="ui-pill ui-pill-accent">shell</span>
-                </div>
-                <div className="ui-terminal-block__body">
-                  <pre className="ui-terminal-block__output">PASS src/windowedOs.test.tsx{'\n'}116 tests passed</pre>
-                  <p className="ui-terminal-block__muted">Waiting for output...</p>
-                  <pre aria-label="No terminal output" className="ui-terminal-block__empty-output" />
-                </div>
-                <div className="ui-terminal-block__chrome ui-terminal-block__muted">
-                  <span>exit 0</span>
-                  <span>2.4s</span>
-                </div>
-              </div>
-              <div className="ui-panel-muted ui-inline-run-card">
-                <div className="ui-inline-run-card__summary">
-                  <button type="button" className="ui-row-button">
-                    <span className="ui-pill ui-pill-accent">shell</span>
-                    <span className="ui-pill ui-pill-success">complete</span>
-                    <span className="ui-inline-run-card__title">Background task: desktop-mode QA</span>
-                  </button>
-                  <a href="https://example.com" className="ui-action-button">
-                    Open conversation
-                  </a>
-                </div>
-                <div className="ui-inline-run-card__details">
-                  <div className="ui-panel-muted ui-inline-run-card__output">
-                    <div className="ui-inline-run-card__output-header">
-                      <span className="ui-status-dot ui-status-dot-sm ui-status-dot-muted" />
-                      <span className="ui-section-label">Output</span>
-                      <span className="ui-inline-run-card__path">output.log</span>
-                    </div>
-                    <pre>Windowed Storybook visual check passed.</pre>
-                  </div>
-                  <details className="ui-disclosure" open>
-                    <summary className="ui-disclosure-summary">
-                      <span>Details</span>
-                      <span className="ui-disclosure-meta">Command details</span>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Surface</th>
+                        <th>State</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Composer</td>
+                        <td>Compact</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <details className="ui-skill-invocation" open>
+                    <summary className="ui-skill-invocation-summary">
+                      <span className="ui-skill-invocation-label">skill</span>
+                      <span className="ui-skill-invocation-name">agent-plugin:local-qa</span>
                     </summary>
-                    <div className="ui-disclosure-body">
-                      <div className="ui-inline-run-card__metadata-row">
-                        <span className="ui-section-label">Command</span>
-                        <span>pnpm --dir packages/windowed-os-ui run build:storybook</span>
-                      </div>
+                    <div className="ui-skill-invocation-body">
+                      <p className="ui-skill-invocation-meta">References resolve relative to the active workspace.</p>
+                      <p>Use local browser QA before calling the chat surface ready.</p>
                     </div>
                   </details>
                 </div>
-              </div>
-            </article>
-          </section>
-          <section className="conversation-composer-region" aria-label="Composer preview">
-            <div className="conversation-composer-inner">
-              <div className="ui-composer-notice" data-tone="warning">
-                <span className="ui-pill ui-pill-warning ui-composer-notice__pill">No workspace attached</span>
-              </div>
-              <div className="ui-input-shell">
-                <div className="ui-composer-attachment-shelf">
-                  <div className="ui-composer-attachment-shelf__row">
-                    <div className="ui-attachment-chip">
-                      <button type="button" className="ui-attachment-chip-button" aria-label="Preview windowed-os-notes.png">
-                        <span aria-hidden="true">img</span>
-                        <span className="ui-attachment-chip__name">windowed-os-notes.png</span>
-                        <span className="ui-attachment-chip__meta">412 KB</span>
-                      </button>
-                      <button type="button" className="ui-icon-button" aria-label="Remove windowed-os-notes.png">
-                        x
-                      </button>
-                    </div>
-                    <div className="ui-attachment-chip">
-                      <button type="button" className="ui-attachment-chip-button" aria-label="Preview desktop sketch">
-                        <span className="ui-attachment-chip__preview" aria-hidden="true" />
-                        <span className="ui-attachment-chip__name">Desktop sketch</span>
-                        <span className="ui-attachment-chip__meta">new drawing</span>
-                      </button>
-                      <button type="button" className="ui-text-button">
-                        edit
-                      </button>
-                      <button type="button" className="ui-icon-button" aria-label="Remove desktop sketch">
-                        x
-                      </button>
-                    </div>
-                  </div>
-                  <div className="ui-composer-attachment-shelf__status">Syncing drawings...</div>
+                <div className="ui-context-lifecycle-marker" data-context-shelf="1" data-lifecycle-marker="auto-resume">
+                  <span aria-hidden="true">↻</span>
+                  <span>Goal resumed automatically</span>
+                  <span className="ui-message-meta">2m ago</span>
                 </div>
-                <div className="ui-composer-input-controls">
-                  <div className="ui-composer-input-controls__editor">
-                    <textarea aria-label="Message" placeholder="Message Neon Pilot" />
+                <div className="ui-context-shelf" data-context-shelf="1">
+                  <details className="ui-context-shelf__item" data-context-type="referenced_context" open>
+                    <summary className="ui-context-shelf__summary">
+                      <span className="ui-context-shelf__summary-main">
+                        <span className="ui-context-shelf__chevron" aria-hidden="true">
+                          ›
+                        </span>
+                        <span className="ui-context-shelf__label">Context added</span>
+                        <span className="ui-context-shelf__preview">Workspace notes and open window state were attached.</span>
+                        <span className="ui-message-meta">now</span>
+                      </span>
+                      <span className="ui-context-shelf__rule" aria-hidden="true" />
+                    </summary>
+                    <div className="ui-context-shelf__body">Workspace notes and open window state were attached for this turn.</div>
+                  </details>
+                </div>
+                <span className="ui-pill ui-pill-accent">Windowed</span>
+                <div className="ui-trace-cluster" data-open="true">
+                  <div className="ui-trace-cluster__summary">
+                    <button type="button" className="ui-row-button ui-trace-cluster__summary-button" aria-expanded="true">
+                      <span className="ui-trace-cluster__step-count">4 steps</span>
+                      <span className="ui-trace-cluster__categories">
+                        <span className="ui-pill">thinking</span>
+                        <span className="ui-pill ui-pill-accent">subagent</span>
+                        <span className="ui-pill">shell</span>
+                      </span>
+                      <span className="ui-trace-cluster__toggle">hide</span>
+                    </button>
+                    <span className="ui-trace-cluster__rule" aria-hidden="true" />
                   </div>
-                  <div className="ui-composer-input-controls__control-row">
-                    <div className="ui-composer-input-controls__leading">
-                      <button type="button" className="ui-composer-tool-button" aria-label="Attach file">
-                        +
+                  <div className="ui-trace-cluster__body">
+                    <div className="ui-trace-cluster__overflow">
+                      <span>2 earlier steps summarized above.</span>
+                      <button type="button" className="ui-action-button">
+                        Show all
                       </button>
-                      <button type="button" className="ui-composer-model-fallback">
-                        GPT-5.3
+                    </div>
+                    <div className="ui-thinking-block">
+                      <button type="button" className="ui-row-button ui-thinking-block__header" aria-expanded="true">
+                        <span className="ui-pill">Thinking</span>
+                        <span className="ui-thinking-block__preview">Checking inherited transcript surfaces.</span>
+                        <span className="ui-thinking-block__toggle">hide</span>
                       </button>
-                      <div className="ui-composer-preferences-row">
-                        <button type="button" className="ui-composer-preferences-row__menu-button" aria-label="Thinking">
-                          T
-                        </button>
-                        <span className="ui-menu-trigger-inline">Default</span>
+                      <div className="ui-thinking-block__body">
+                        <p>Style only the windowed shell, keep normal chat untouched.</p>
+                        <p>Verify light and dark before checkpointing.</p>
                       </div>
                     </div>
-                    <div className="ui-composer-input-controls__actions">
-                      <div className="ui-composer-actions">
-                        <button type="button" className="ui-composer-action-button" aria-label="Send">
-                          Send
-                        </button>
+                    <div className="ui-subagent-block" data-status="complete">
+                      <button type="button" className="ui-row-button ui-subagent-block__header" aria-expanded="true">
+                        <span className="ui-pill ui-pill-accent">subagent</span>
+                        <span className="ui-subagent-block__name">visual-qa</span>
+                        <span className="ui-pill ui-pill-success">complete</span>
+                        <span className="ui-subagent-block__toggle">hide</span>
+                      </button>
+                      <div className="ui-subagent-block__body">
+                        <div className="ui-subagent-block__section">
+                          <span className="ui-section-label">Prompt</span>
+                          <p className="ui-subagent-block__text">Inspect the windowed trace chrome for imported web styling.</p>
+                        </div>
+                        <div className="ui-subagent-block__section">
+                          <span className="ui-section-label">Result</span>
+                          <p className="ui-subagent-block__text">
+                            Trace panels now follow the desktop border, type, and disclosure rhythm.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+                <div className="ui-tool-block">
+                  <div className="ui-tool-block__body">Ran package checks</div>
+                  <div className="ui-tool-block__linked-runs">
+                    <button type="button" className="ui-tool-block__linked-run">
+                      windowed-os-ui tests
+                    </button>
+                  </div>
+                  <div className="ui-tool-block__output">
+                    <pre className="ui-tool-block__pre">114 tests passed</pre>
+                  </div>
+                </div>
+                <div className="ui-notice ui-notice-danger ui-error-block">
+                  <div className="ui-error-block__body">
+                    <div className="ui-error-block__message">
+                      <span className="ui-error-block__tool">browser_snapshot ·</span>
+                      <span className="ui-error-block__text">
+                        Could not capture the browser surface because the native view was covered by another desktop window.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="ui-image-preview" data-loaded="true">
+                  <button
+                    type="button"
+                    className="ui-media-preview-button ui-image-preview__button"
+                    aria-label="Inspect image: Windowed OS sketch"
+                  >
+                    <img src={storyImagePreviewSrc} alt="Windowed OS sketch" className="ui-image-preview__media" />
+                  </button>
+                  <div className="ui-image-preview__caption">
+                    <p className="ui-image-preview__caption-text">Windowed OS sketch</p>
+                  </div>
+                </div>
+                <div className="ui-image-preview">
+                  <div className="ui-image-preview__placeholder">
+                    <svg
+                      width="28"
+                      height="28"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="ui-image-preview__placeholder-icon"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <path d="m21 15-5-5L5 21" />
+                    </svg>
+                    <span className="ui-image-preview__placeholder-label">deferred-preview.png</span>
+                    <span className="ui-image-preview__placeholder-meta">1280×720</span>
+                    <button type="button" className="ui-action-button">
+                      Load image
+                    </button>
+                  </div>
+                  <div className="ui-image-preview__caption">
+                    <p className="ui-image-preview__caption-text">Deferred preview</p>
+                  </div>
+                </div>
+                <div data-transcript-event="ask-user-question">
+                  <div className="ui-ask-user-question__header">
+                    <span className="ui-ask-user-question__glyph" aria-hidden="true">
+                      ?
+                    </span>
+                    <span className="ui-ask-user-question__title">Question for you</span>
+                    <span className="ui-pill ui-pill-warning">pending</span>
+                    <span className="ui-ask-user-question__progress">1/2 answered</span>
+                  </div>
+                  <p className="ui-ask-user-question__details">
+                    Choose how aggressively the next windowed pass should modify inherited chat chrome.
+                  </p>
+                  <div className="ui-ask-user-question__tabs" role="tablist" aria-label="Question navigation">
+                    <button type="button" className="ui-action-button" role="tab" aria-selected="true">
+                      <span aria-hidden="true">•</span>
+                      Styling scope
+                    </button>
+                    <button type="button" className="ui-action-button" role="tab" aria-selected="false">
+                      <span aria-hidden="true">○</span>
+                      QA depth
+                    </button>
+                  </div>
+                  <div className="ui-ask-user-question__panel" role="tabpanel">
+                    <span className="ui-section-label">Question 1 of 2</span>
+                    <p className="ui-ask-user-question__prompt">Which surface should be styled next?</p>
+                    <div className="ui-ask-user-question__choices" role="radiogroup" aria-label="Which surface should be styled next?">
+                      <button type="button" className="ui-choice-row ui-choice-row-checked" role="radio" aria-checked="true">
+                        <span className="ui-choice-row-prefix" aria-hidden="true">
+                          1.
+                        </span>
+                        <span className="ui-choice-row-indicator ui-choice-row-indicator-checked" aria-hidden="true">
+                          ◉
+                        </span>
+                        <span className="ui-choice-row-main">
+                          <span className="ui-choice-row-label">Composer attachments</span>
+                          <span className="ui-choice-row-details">Keep tightening the conversation window controls.</span>
+                        </span>
+                      </button>
+                      <button type="button" className="ui-choice-row" role="radio" aria-checked="false">
+                        <span className="ui-choice-row-prefix" aria-hidden="true">
+                          2.
+                        </span>
+                        <span className="ui-choice-row-indicator" aria-hidden="true">
+                          ◯
+                        </span>
+                        <span className="ui-choice-row-main">
+                          <span className="ui-choice-row-label">Workbench tabs</span>
+                          <span className="ui-choice-row-details">Audit the attached browser and file surface again.</span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                  <p className="ui-ask-user-question__hint">1-9 selects - n/p switches questions - Esc exits</p>
+                </div>
+                <div className="ui-terminal-block">
+                  <div className="ui-terminal-block__chrome">
+                    <span className="ui-terminal-block__command">pnpm --dir packages/windowed-os-ui run test</span>
+                    <span className="ui-pill ui-pill-accent">shell</span>
+                  </div>
+                  <div className="ui-terminal-block__body">
+                    <pre className="ui-terminal-block__output">PASS src/windowedOs.test.tsx{'\n'}116 tests passed</pre>
+                    <p className="ui-terminal-block__muted">Waiting for output...</p>
+                    <pre aria-label="No terminal output" className="ui-terminal-block__empty-output" />
+                  </div>
+                  <div className="ui-terminal-block__chrome ui-terminal-block__muted">
+                    <span>exit 0</span>
+                    <span>2.4s</span>
+                  </div>
+                </div>
+                <div className="ui-panel-muted ui-inline-run-card">
+                  <div className="ui-inline-run-card__summary">
+                    <button type="button" className="ui-row-button">
+                      <span className="ui-pill ui-pill-accent">shell</span>
+                      <span className="ui-pill ui-pill-success">complete</span>
+                      <span className="ui-inline-run-card__title">Background task: desktop-mode QA</span>
+                    </button>
+                    <a href="https://example.com" className="ui-action-button">
+                      Open conversation
+                    </a>
+                  </div>
+                  <div className="ui-inline-run-card__details">
+                    <div className="ui-panel-muted ui-inline-run-card__output">
+                      <div className="ui-inline-run-card__output-header">
+                        <span className="ui-status-dot ui-status-dot-sm ui-status-dot-muted" />
+                        <span className="ui-section-label">Output</span>
+                        <span className="ui-inline-run-card__path">output.log</span>
+                      </div>
+                      <pre>Windowed Storybook visual check passed.</pre>
+                    </div>
+                    <details className="ui-disclosure" open>
+                      <summary className="ui-disclosure-summary">
+                        <span>Details</span>
+                        <span className="ui-disclosure-meta">Command details</span>
+                      </summary>
+                      <div className="ui-disclosure-body">
+                        <div className="ui-inline-run-card__metadata-row">
+                          <span className="ui-section-label">Command</span>
+                          <span>pnpm --dir packages/windowed-os-ui run build:storybook</span>
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              </article>
+            </section>
+            <section className="conversation-composer-region" aria-label="Composer preview">
+              <div className="conversation-composer-inner">
+                <div className="ui-composer-notice" data-tone="warning">
+                  <span className="ui-pill ui-pill-warning ui-composer-notice__pill">No workspace attached</span>
+                </div>
+                <div className="ui-input-shell">
+                  <div className="ui-composer-attachment-shelf">
+                    <div className="ui-composer-attachment-shelf__row">
+                      <div className="ui-attachment-chip">
+                        <button type="button" className="ui-attachment-chip-button" aria-label="Preview windowed-os-notes.png">
+                          <span aria-hidden="true">img</span>
+                          <span className="ui-attachment-chip__name">windowed-os-notes.png</span>
+                          <span className="ui-attachment-chip__meta">412 KB</span>
+                        </button>
+                        <button type="button" className="ui-icon-button" aria-label="Remove windowed-os-notes.png">
+                          x
+                        </button>
+                      </div>
+                      <div className="ui-attachment-chip">
+                        <button type="button" className="ui-attachment-chip-button" aria-label="Preview desktop sketch">
+                          <span className="ui-attachment-chip__preview" aria-hidden="true" />
+                          <span className="ui-attachment-chip__name">Desktop sketch</span>
+                          <span className="ui-attachment-chip__meta">new drawing</span>
+                        </button>
+                        <button type="button" className="ui-text-button">
+                          edit
+                        </button>
+                        <button type="button" className="ui-icon-button" aria-label="Remove desktop sketch">
+                          x
+                        </button>
+                      </div>
+                    </div>
+                    <div className="ui-composer-attachment-shelf__status">Syncing drawings...</div>
+                  </div>
+                  <div className="ui-composer-input-controls">
+                    <div className="ui-composer-input-controls__editor">
+                      <textarea aria-label="Message" placeholder="Message Neon Pilot" />
+                    </div>
+                    <div className="ui-composer-input-controls__control-row">
+                      <div className="ui-composer-input-controls__leading">
+                        <button type="button" className="ui-composer-tool-button" aria-label="Attach file">
+                          +
+                        </button>
+                        <button type="button" className="ui-composer-model-fallback">
+                          GPT-5.3
+                        </button>
+                        <div className="ui-composer-preferences-row">
+                          <button type="button" className="ui-composer-preferences-row__menu-button" aria-label="Thinking">
+                            T
+                          </button>
+                          <span className="ui-menu-trigger-inline">Default</span>
+                        </div>
+                      </div>
+                      <div className="ui-composer-input-controls__actions">
+                        <div className="ui-composer-actions">
+                          <button
+                            type="button"
+                            className="ui-composer-action-button ui-composer-action-button-accent ui-composer-action-button-icon"
+                            aria-label="Send"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="ui-composer-action-button ui-composer-action-button-warning ui-composer-action-button-label"
+                          >
+                            Steer
+                          </button>
+                          <button
+                            type="button"
+                            className="ui-composer-action-button ui-composer-action-button-danger ui-composer-action-button-icon"
+                            aria-label="Stop"
+                          >
+                            ■
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="ui-composer-meta">
+                  <span className="ui-composer-meta__primary">GPT-5.3 Codex Spark</span>
+                  <span className="ui-composer-meta__workspace">Chat - no workspace</span>
+                </div>
+                <div className="ui-positioned-menu-static" role="menu" aria-label="Model menu preview">
+                  <button type="button" className="ui-context-menu-item" role="menuitem">
+                    Model GPT-5.3 Codex Spark
+                  </button>
+                  <button type="button" className="ui-context-menu-item bg-elevated" role="menuitem">
+                    Thinking Default
+                  </button>
+                </div>
               </div>
-              <div className="ui-composer-meta">
-                <span className="ui-composer-meta__primary">GPT-5.3 Codex Spark</span>
-                <span className="ui-composer-meta__workspace">Chat - no workspace</span>
-              </div>
-              <div className="ui-positioned-menu-static" role="menu" aria-label="Model menu preview">
-                <button type="button" className="ui-context-menu-item" role="menuitem">
-                  Model GPT-5.3 Codex Spark
-                </button>
-                <button type="button" className="ui-context-menu-item bg-elevated" role="menuitem">
-                  Thinking Default
-                </button>
-              </div>
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
       </WindowFrame>
     </div>
