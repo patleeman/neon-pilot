@@ -1747,7 +1747,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: stretch;
   justify-content: stretch;
   background:
-    linear-gradient(oklch(20% 0.01 60 / 0.08) 1px, transparent 1px), linear-gradient(90deg, oklch(20% 0.01 60 / 0.08) 1px, transparent 1px),
+    linear-gradient(var(--wos-grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--wos-grid-line) 1px, transparent 1px),
     var(--wos-surface-1);
   background-size: 20px 20px;
   padding: var(--wos-space-5);

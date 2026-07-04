@@ -596,6 +596,7 @@ describe('Windowed OS tokens', () => {
       '--wos-danger-hover',
       '--wos-border-hairline',
       '--wos-border-strong',
+      '--wos-grid-line',
       '--wos-shadow-desktop',
       '--wos-shadow-offset',
       '--wos-radius-2xl',
@@ -618,6 +619,7 @@ describe('Windowed OS tokens', () => {
     expect(tokensSource).toContain('.wos-window-route-body .ui-workbench-panel');
     expect(tokensSource).toContain('color-scheme: dark;');
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
+    expect(tokensSource).toContain('--wos-grid-line: oklch(93% 0.012 75 / 0.075);');
     expect(tokensSource).toContain('--wos-shadow-window: 0 26px 56px rgba(0, 0, 0, 0.42);');
     expect(tokensSource).toContain('--wos-shadow-offset: 6px 6px 0 oklch(93% 0.012 75 / 0.14);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-2xl);');
@@ -860,6 +862,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-resize-handle__line');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-rail');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page');
+    expect(stylesSource).toContain('linear-gradient(var(--wos-grid-line) 1px, transparent 1px)');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__inner');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__title');
     expect(stylesSource).toContain('box-shadow: var(--wos-shadow-offset);');
