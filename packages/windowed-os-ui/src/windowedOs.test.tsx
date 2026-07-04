@@ -1425,7 +1425,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal");
     expect(stylesSource).toContain('.ui-overlay-backdrop:has(.ui-windowed-drawings-picker)');
-    expect(stylesSource).toContain('background: oklch(96% 0.02 80 / 0.14) !important;');
+    expect(stylesSource).toContain('background: transparent !important;');
+    expect(stylesSource).toContain(
+      "body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker) {\n  pointer-events: none;",
+    );
     expect(stylesSource).toContain('.ui-windowed-drawings-picker[data-parent-window-attached]');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal[data-parent-window-attached]');
     expect(stylesSource).toContain('display: flex !important;');
@@ -1443,7 +1446,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('max-width: none !important;');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-dialog-header[data-parent-window-title]::after');
-    expect(stylesSource).toContain("content: 'Attached to ' attr(data-parent-window-title);");
+    expect(stylesSource).toContain('max-width: min(34ch, 42%);');
+    expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
+    expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).toContain('font-size: 10px;');
+    expect(stylesSource).toContain('content: attr(data-parent-window-title);');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-header-copy');
     expect(stylesSource).toContain('min-height: 26px;');
     expect(stylesSource).toContain('padding: 2px 6px 2px 8px;');

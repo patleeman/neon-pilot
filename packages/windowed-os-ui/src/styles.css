@@ -1477,9 +1477,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backd
   min-height: 100% !important;
   align-items: flex-start !important;
   justify-content: flex-end !important;
-  background: oklch(96% 0.02 80 / 0.14) !important;
+  background: transparent !important;
   backdrop-filter: none !important;
   padding: 82px 36px 58px !important;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker) {
+  pointer-events: none;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop {
@@ -1573,11 +1577,19 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   order: 2;
   margin-left: auto;
   margin-right: var(--wos-space-3);
+  max-width: min(34ch, 42%);
   min-width: 0;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: var(--wos-radius-pill);
+  background: color-mix(in srgb, var(--wos-surface-1) 82%, var(--wos-chat));
+  padding: 1px 6px;
   overflow: hidden;
-  color: var(--wos-ink-700);
-  content: 'Attached to ' attr(data-parent-window-title);
-  font: var(--wos-text-caption);
+  color: var(--wos-ink-900);
+  content: attr(data-parent-window-title);
+  font-family: var(--wos-font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
