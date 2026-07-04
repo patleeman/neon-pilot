@@ -1706,12 +1706,16 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
     const extensionsSource = source.slice(
-      source.indexOf('export const ExtensionsPage'),
+      source.indexOf('function ExtensionsPageStory'),
       source.indexOf('export const ExtensionsInstallDialog'),
     );
 
+    expect(source).toContain('function ExtensionsPageStory');
     expect(source).toContain('export const ExtensionsPage');
-    expect(extensionsSource).toContain('title="Extensions"');
+    expect(source).toContain('export const DarkExtensionsPage');
+    expect(source).toContain('<ExtensionsPageStory theme="dark" />');
+    expect(extensionsSource).toContain("title={theme === 'dark' ? 'Extensions - dark' : 'Extensions'}");
+    expect(extensionsSource).toContain('data-wos-theme={theme}');
     expect(extensionsSource).not.toContain('eyebrow="Extension manager"');
     expect(extensionsSource).toContain('title="Sources"');
     expect(extensionsSource).toContain('Search extensions');
