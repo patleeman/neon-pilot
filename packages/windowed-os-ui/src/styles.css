@@ -901,9 +901,16 @@
 }
 
 .wos-window-route-body--chat .wos-chat-workbench__body .ui-windowed-browser-host {
-  min-height: 172px;
+  min-height: 180px;
   border: 2px solid var(--wos-ink-900);
   border-radius: 8px;
+}
+
+.wos-window-route-body--chat .wos-chat-workbench__body:has(.ui-windowed-browser-host) {
+  align-content: stretch;
+  gap: 6px;
+  grid-template-rows: auto minmax(180px, 1fr);
+  padding: 8px;
 }
 
 .windowed-os-shell .ui-windowed-browser-host__blocker {
@@ -5187,6 +5194,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   .wos-chat-workbench {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(320px, 1fr) minmax(220px, 42%);
+  }
+
+  .wos-chat-workbench:has(.ui-windowed-browser-host) {
+    grid-template-rows: minmax(280px, 1fr) minmax(280px, 1fr);
   }
 
   .wos-window-route-body--chat[data-workbench-collapsed='true'] .wos-chat-workbench {

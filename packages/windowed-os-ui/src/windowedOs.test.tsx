@@ -1463,7 +1463,11 @@ describe('Windowed OS Storybook examples', () => {
       '.windowed-os-shell .ui-windowed-browser-host {\n  position: relative;\n  z-index: 0 !important;\n  min-height: 0;',
     );
     expect(stylesSource).toContain('.wos-window-route-body--chat .wos-chat-workbench__body .ui-windowed-browser-host');
-    expect(stylesSource).toContain('min-height: 172px;');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .wos-chat-workbench__body:has(.ui-windowed-browser-host)');
+    expect(stylesSource).toContain('gap: 6px;');
+    expect(stylesSource).toContain('grid-template-rows: auto minmax(180px, 1fr);');
+    expect(stylesSource).toContain('padding: 8px;');
+    expect(stylesSource).toContain('min-height: 180px;');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__blocker {');
     expect(stylesSource).toContain(
@@ -1802,6 +1806,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('@container wos-window-route (max-width: 860px)');
     expect(stylesSource).not.toContain('@media (max-width: 860px) {\n  .wos-chat-workbench');
     expect(stylesSource).toContain('grid-template-rows: minmax(320px, 1fr) minmax(220px, 42%);');
+    expect(stylesSource).toContain('.wos-chat-workbench:has(.ui-windowed-browser-host)');
+    expect(stylesSource).toContain('grid-template-rows: minmax(280px, 1fr) minmax(280px, 1fr);');
     expect(stylesSource).toContain('.wos-chat-workbench__panel {\n    border-top: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain(".wos-window-route-body--chat[data-workbench-collapsed='true'] .wos-chat-workbench");
     expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
