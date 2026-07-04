@@ -103,6 +103,20 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('color: var(--wos-data-row-active-ink, var(--wos-ink-900));');
   });
 
+  it('keeps chat composer controls usable in compact window containers', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('container-name: wos-window-route;');
+    expect(stylesSource).toContain('@container wos-window-route (max-width: 680px)');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .conversation-composer-region');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .ui-composer-input-controls__control-row');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
+    expect(stylesSource).toContain('button.ui-composer-model-fallback {\n    max-width: min(100%, 168px);');
+    expect(stylesSource).toContain(".wos-window-route-body--chat [data-chat-transcript-panel='1']");
+    expect(stylesSource).toContain('padding: var(--wos-space-4) var(--wos-space-4) 88px !important;');
+  });
+
   it('stacks Model Arena status controls in compact window containers', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
