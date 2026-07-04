@@ -1310,10 +1310,50 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-chat-browser-dialog__body,
-.wos-chat-browser-dialog__body > [data-extension-id='system-browser'] {
+.wos-chat-browser-dialog__body > [data-extension-id='system-browser'],
+.wos-chat-files-dialog__body,
+.wos-chat-files-dialog__body > [data-extension-id='system-files'] {
   min-height: 0;
   height: 100%;
   overflow: hidden;
+}
+
+.wos-window-route-body--files .wos-chat-files-dialog__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.wos-workspace-child-preview {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--wos-space-5);
+  overflow: auto;
+  background: var(--wos-surface-0);
+  color: var(--wos-ink-900);
+  padding: var(--wos-space-5);
+}
+
+.wos-workspace-child-preview__toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--wos-space-4);
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: var(--wos-surface-1);
+  padding: var(--wos-space-4) var(--wos-space-5);
+}
+
+.wos-workspace-child-preview__cwd {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--wos-ink-700);
+  font: var(--wos-text-eyebrow);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wos-window-route-body--browser .wos-chat-browser-dialog__body {

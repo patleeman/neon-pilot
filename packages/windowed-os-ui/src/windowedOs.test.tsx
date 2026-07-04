@@ -1698,6 +1698,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-chat-browser-dialog__body');
     expect(stylesSource).toContain(".wos-chat-browser-dialog__body > [data-extension-id='system-browser']");
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body');
+    expect(stylesSource).toContain('.wos-window-route-body--files .wos-chat-files-dialog__body');
+    expect(stylesSource).toContain('.wos-workspace-child-preview {');
+    expect(stylesSource).toContain('.wos-workspace-child-preview__toolbar {');
+    expect(stylesSource).toContain('.wos-workspace-child-preview__cwd {');
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body .wos-browser-toolbar,');
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body form:first-child,');
     expect(stylesSource).toContain('min-height: 42px;');
@@ -1996,7 +2000,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-context-pointers-bar span {');
   });
 
-  it('documents the canonical terminal and browser child windows in isolated Storybook examples', () => {
+  it('documents the canonical terminal, workspace, and browser child windows in isolated Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
@@ -2007,6 +2011,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('<WindowedTerminalFrame cwd="/Users/patrick/workingdir/neon-pilot" status="PTY shell">');
     expect(source).toContain('PASS terminal frame tokens');
+    expect(source).toContain('function WorkspaceWindowStory');
+    expect(source).toContain('export const WorkspaceWindow');
+    expect(source).toContain('export const DarkWorkspaceWindow');
+    expect(source).toContain('<WorkspaceWindowStory theme="dark" />');
+    expect(source).toContain('data-windowed-subwindow="files"');
+    expect(source).toContain('className="wos-chat-files-dialog__body"');
+    expect(source).toContain('className="wos-workspace-child-preview"');
+    expect(source).toContain('aria-label="Workspace files preview"');
+    expect(source).toContain('/Users/patrick/workingdir/neon-pilot');
+    expect(source).toContain('Chat-attached child window');
     expect(source).toContain('function BrowserWindowStory');
     expect(source).toContain('export const BrowserWindow');
     expect(source).toContain('export const DarkBrowserWindow');
@@ -2039,12 +2053,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain("data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}");
     expect(source).toContain('className="wos-chat-window-toolbar"');
+    expect(source).toContain('function StoryChatWindowToolbar');
     expect(source).toContain("const workbenchToggleLabel = workbenchCollapsed ? 'Show workbench' : 'Hide workbench';");
     expect(source).toContain('aria-label={workbenchToggleLabel}');
     expect(source).toContain('aria-pressed={!workbenchCollapsed}');
     expect(source).toContain("name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'}");
     expect(source).toContain('aria-label="Open Browser window"');
+    expect(source).toContain('aria-label="Open Workspace window"');
     expect(source).toContain('aria-label="Open Terminal window"');
+    expect(source).toContain('<StoryToolbarIcon name="files" />');
     expect(source).toContain('data-density="icon"');
     expect(source).toContain('data-windowed-attached-workbench="true"');
     expect(source).toContain('className="wos-chat-workbench__panel ui-workbench-panel"');

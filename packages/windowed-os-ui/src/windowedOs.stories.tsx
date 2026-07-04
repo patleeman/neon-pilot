@@ -135,7 +135,7 @@ function StoryTimeSeriesChart() {
   );
 }
 
-function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-visible' | 'workbench-hidden' }) {
+function StoryToolbarIcon({ name }: { name: 'browser' | 'files' | 'terminal' | 'workbench-visible' | 'workbench-hidden' }) {
   const paths = {
     browser: (
       <>
@@ -143,6 +143,14 @@ function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-
         <path d="M5 12h14" />
         <path d="M12 5a10 10 0 0 1 0 14" />
         <path d="M12 5a10 10 0 0 0 0 14" />
+      </>
+    ),
+    files: (
+      <>
+        <path d="M4 7h6l2 2h8v9H4z" />
+        <path d="M4 7v11" />
+        <path d="M8 13h8" />
+        <path d="M8 16h5" />
       </>
     ),
     terminal: (
@@ -171,6 +179,64 @@ function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
       {paths[name]}
     </svg>
+  );
+}
+
+function StoryChatWindowToolbar({
+  activeTool,
+  workbenchCollapsed = false,
+}: {
+  activeTool?: 'browser' | 'files' | 'terminal';
+  workbenchCollapsed?: boolean;
+}) {
+  const workbenchToggleLabel = workbenchCollapsed ? 'Show workbench' : 'Hide workbench';
+
+  return (
+    <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
+      <div className="wos-chat-window-toolbar__label">Workbench</div>
+      <div className="wos-chat-window-toolbar__actions">
+        <button
+          type="button"
+          className="wos-chat-window-toolbar__button"
+          data-density="icon"
+          aria-label={workbenchToggleLabel}
+          title={workbenchToggleLabel}
+          aria-pressed={!workbenchCollapsed}
+        >
+          <StoryToolbarIcon name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'} />
+        </button>
+        <button
+          type="button"
+          className="wos-chat-window-toolbar__button"
+          data-density="icon"
+          aria-label="Open Browser window"
+          title="Open Browser window"
+          aria-pressed={activeTool === 'browser' ? true : undefined}
+        >
+          <StoryToolbarIcon name="browser" />
+        </button>
+        <button
+          type="button"
+          className="wos-chat-window-toolbar__button"
+          data-density="icon"
+          aria-label="Open Workspace window"
+          title="Open Workspace window"
+          aria-pressed={activeTool === 'files' ? true : undefined}
+        >
+          <StoryToolbarIcon name="files" />
+        </button>
+        <button
+          type="button"
+          className="wos-chat-window-toolbar__button"
+          data-density="icon"
+          aria-label="Open Terminal window"
+          title="Open Terminal window"
+          aria-pressed={activeTool === 'terminal' ? true : undefined}
+        >
+          <StoryToolbarIcon name="terminal" />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -304,8 +370,6 @@ function AttachedWorkbenchStory({
   theme?: 'light' | 'dark';
   workbenchCollapsed?: boolean;
 }) {
-  const workbenchToggleLabel = workbenchCollapsed ? 'Show workbench' : 'Hide workbench';
-
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 700, padding: 24 }}>
       <WindowFrame
@@ -321,39 +385,7 @@ function AttachedWorkbenchStory({
           className="wos-window-route-body wos-window-route-body--chat"
           data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}
         >
-          <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-            <div className="wos-chat-window-toolbar__label">Workbench</div>
-            <div className="wos-chat-window-toolbar__actions">
-              <button
-                type="button"
-                className="wos-chat-window-toolbar__button"
-                data-density="icon"
-                aria-label={workbenchToggleLabel}
-                title={workbenchToggleLabel}
-                aria-pressed={!workbenchCollapsed}
-              >
-                <StoryToolbarIcon name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'} />
-              </button>
-              <button
-                type="button"
-                className="wos-chat-window-toolbar__button"
-                data-density="icon"
-                aria-label="Open Browser window"
-                title="Open Browser window"
-              >
-                <StoryToolbarIcon name="browser" />
-              </button>
-              <button
-                type="button"
-                className="wos-chat-window-toolbar__button"
-                data-density="icon"
-                aria-label="Open Terminal window"
-                title="Open Terminal window"
-              >
-                <StoryToolbarIcon name="terminal" />
-              </button>
-            </div>
-          </div>
+          <StoryChatWindowToolbar activeTool={workbenchCollapsed ? undefined : 'files'} workbenchCollapsed={workbenchCollapsed} />
           <div className="wos-chat-workbench">
             <WindowedChatSurface>
               <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
@@ -426,26 +458,7 @@ function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 
         onClose={() => undefined}
       >
         <div className="wos-window-route-body wos-window-route-body--chat">
-          <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-            <div className="wos-chat-window-toolbar__label">Workbench</div>
-            <div className="wos-chat-window-toolbar__actions">
-              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Hide workbench">
-                <StoryToolbarIcon name="workbench-visible" />
-              </button>
-              <button
-                type="button"
-                className="wos-chat-window-toolbar__button"
-                data-density="icon"
-                aria-label="Open Browser window"
-                aria-pressed={true}
-              >
-                <StoryToolbarIcon name="browser" />
-              </button>
-              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Open Terminal window">
-                <StoryToolbarIcon name="terminal" />
-              </button>
-            </div>
-          </div>
+          <StoryChatWindowToolbar activeTool="browser" />
           <div className="wos-chat-workbench">
             <WindowedChatSurface>
               <WindowedChatMain title="Browser QA" composer={<WindowedChatComposer actionLabel="Send" />}>
@@ -540,20 +553,7 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
         onClose={() => undefined}
       >
         <div className="wos-window-route-body wos-window-route-body--chat">
-          <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-            <div className="wos-chat-window-toolbar__label">Workbench</div>
-            <div className="wos-chat-window-toolbar__actions">
-              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Hide workbench">
-                <StoryToolbarIcon name="workbench-visible" />
-              </button>
-              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Open Browser window">
-                <StoryToolbarIcon name="browser" />
-              </button>
-              <button type="button" className="wos-chat-window-toolbar__button" data-density="icon" aria-label="Open Terminal window">
-                <StoryToolbarIcon name="terminal" />
-              </button>
-            </div>
-          </div>
+          <StoryChatWindowToolbar />
           <div className="wos-inherited-chat-preview">
             <section data-chat-transcript-panel="1" aria-label="Transcript preview">
               <article className="ui-message-card-user">
@@ -3265,6 +3265,80 @@ export const TerminalWindow: Story = {
 
 export const DarkTerminalWindow: Story = {
   render: () => <TerminalWindowStory theme="dark" />,
+};
+
+function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
+      <WindowFrame
+        title="Workspace"
+        accent="chat"
+        focused
+        parentWindowTitle="New conversation"
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(780px, 100%)', height: 540 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <div
+          className="wos-window-route-body wos-window-route-body--files"
+          data-windowed-subwindow="files"
+          data-parent-window-title="New conversation"
+        >
+          <div className="wos-chat-files-dialog__body" data-windowed-subwindow="files">
+            <div className="wos-workspace-child-preview" aria-label="Workspace files preview">
+              <div className="wos-workspace-child-preview__toolbar" aria-label="Workspace location">
+                <div className="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</div>
+                <WindowedBadge tone="positive">Synced</WindowedBadge>
+              </div>
+              <WindowedPageSection title="Open workspace" meta="5 items">
+                <WindowedList>
+                  <WindowedListItem
+                    title="packages/desktop/ui/src/components"
+                    meta="Directory"
+                    detail="Windowed shell source"
+                    active
+                    accent="chat"
+                  />
+                  <WindowedListItem
+                    title="packages/windowed-os-ui/src"
+                    meta="Directory"
+                    detail="Canonical desktop design system"
+                    accent="extensions"
+                  />
+                  <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="Desktop mode backlog" accent="skills" />
+                  <WindowedListItem title="extensions/system-browser" meta="Extension" detail="Browser child surface" accent="gateways" />
+                  <WindowedListItem
+                    title="extensions/system-terminal"
+                    meta="Extension"
+                    detail="Terminal child surface"
+                    accent="automations"
+                  />
+                </WindowedList>
+              </WindowedPageSection>
+              <WindowedPageSection title="Selection" meta="Directory">
+                <WindowedKeyValueList
+                  items={[
+                    { label: 'Parent', value: 'New conversation' },
+                    { label: 'Mode', value: 'Chat-attached child window' },
+                    { label: 'Scope', value: 'Workspace cwd inherited from chat' },
+                  ]}
+                />
+              </WindowedPageSection>
+            </div>
+          </div>
+        </div>
+      </WindowFrame>
+    </div>
+  );
+}
+
+export const WorkspaceWindow: Story = {
+  render: () => <WorkspaceWindowStory />,
+};
+
+export const DarkWorkspaceWindow: Story = {
+  render: () => <WorkspaceWindowStory theme="dark" />,
 };
 
 function BrowserWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
