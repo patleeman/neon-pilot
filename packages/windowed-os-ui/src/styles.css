@@ -1046,6 +1046,13 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   overflow: hidden;
 }
 
+.wos-chat-browser-dialog__body,
+.wos-chat-browser-dialog__body > [data-extension-id='system-browser'] {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 .wos-chat-terminal-dialog .wos-dialog__body {
   padding: 0;
 }

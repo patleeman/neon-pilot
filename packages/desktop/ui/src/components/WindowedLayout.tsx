@@ -54,7 +54,8 @@ import { Layout } from './Layout';
 import { findExtensionToolPanelBySlot } from './layout/workbenchRailModel';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
-type WindowKind = 'chat' | 'route' | 'terminal';
+type WindowKind = 'chat' | 'route' | 'terminal' | 'browser';
+type ChildWindowKind = 'terminal' | 'browser';
 type LauncherWindowKind = 'chat' | 'route';
 
 interface DesktopWindowModel {
@@ -147,13 +148,14 @@ function nextDefaultBounds(index: number, kind: LauncherWindowKind, desktopEleme
   return defaultBoundsForDesktop(index, kind, desktopRect(desktopElement));
 }
 
-function terminalChildBounds(parentBounds: WindowBounds, desktop: DesktopRect): WindowBounds {
-  const width = Math.min(760, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
-  const height = Math.min(460, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
+function childWindowBounds(parentBounds: WindowBounds, desktop: DesktopRect, kind: ChildWindowKind): WindowBounds {
+  const ideal = kind === 'browser' ? { width: 860, height: 580, x: 72, y: 64 } : { width: 760, height: 460, x: 54, y: 58 };
+  const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
+  const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
   return constrainWindowBounds(
     {
-      x: parentBounds.x + 54,
-      y: parentBounds.y + 58,
+      x: parentBounds.x + ideal.x,
+      y: parentBounds.y + ideal.y,
       width,
       height,
     },
@@ -236,27 +238,30 @@ function withFocusedWindow(windows: DesktopWindowModel[], windowId: string): Des
   ];
 }
 
-function restoreTerminalChildrenForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
-  const children = windows
-    .filter((windowModel) => windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId)
-    .map((windowModel) => ({ ...windowModel, minimized: false, focused: false }));
-  if (children.length === 0) return windows;
-  return [
-    ...windows.filter((windowModel) => !(windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId)),
-    ...children,
-  ];
+function isChildWindowKind(kind: WindowKind): kind is ChildWindowKind {
+  return kind === 'terminal' || kind === 'browser';
 }
 
-function minimizeTerminalChildrenForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
+function isChildWindowForParent(windowModel: DesktopWindowModel, parentWindowId: string): boolean {
+  return isChildWindowKind(windowModel.kind) && windowModel.parentWindowId === parentWindowId;
+}
+
+function restoreChildWindowsForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
+  const children = windows
+    .filter((windowModel) => isChildWindowForParent(windowModel, parentWindowId))
+    .map((windowModel) => ({ ...windowModel, minimized: false, focused: false }));
+  if (children.length === 0) return windows;
+  return [...windows.filter((windowModel) => !isChildWindowForParent(windowModel, parentWindowId)), ...children];
+}
+
+function minimizeChildWindowsForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
   return windows.map((windowModel) =>
-    windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId
-      ? { ...windowModel, minimized: true, focused: false }
-      : windowModel,
+    isChildWindowForParent(windowModel, parentWindowId) ? { ...windowModel, minimized: true, focused: false } : windowModel,
   );
 }
 
-function removeTerminalChildrenForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
-  return windows.filter((windowModel) => !(windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId));
+function removeChildWindowsForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
+  return windows.filter((windowModel) => !isChildWindowForParent(windowModel, parentWindowId));
 }
 
 function normalizeTitle(title: string): string {
@@ -446,7 +451,16 @@ function hasOverlappingWindowedSurface(visibleWindows: DesktopWindowModel[]): bo
 }
 
 function canHostBrowserFrame(windowModel: DesktopWindowModel): boolean {
-  return windowModel.kind === 'chat';
+  return windowModel.kind === 'chat' || windowModel.kind === 'browser';
+}
+
+function canFocusedBrowserChildHostNativeFrame(
+  focusedWindow: DesktopWindowModel | null | undefined,
+  visibleWindows: DesktopWindowModel[],
+  desktop: DesktopRect,
+): boolean {
+  if (!focusedWindow || focusedWindow.kind !== 'browser') return false;
+  return !isWindowCoveredByHigherWindow(focusedWindow, visibleWindows) && !isWindowClippedByDesktop(focusedWindow, desktop);
 }
 
 function isWindowClippedByDesktop(windowModel: DesktopWindowModel, desktop: DesktopRect): boolean {
@@ -826,13 +840,63 @@ function WindowedChatTerminalWindowBody({
   );
 }
 
+function WindowedChatBrowserWindowBody({
+  parentWindowId,
+  parentWindowTitle,
+  route,
+}: {
+  parentWindowId: string;
+  parentWindowTitle: string;
+  route: string;
+}) {
+  const extensionRegistry = useExtensionRegistry();
+  const routeLocationValue = useMemo(() => routeLocation(route), [route]);
+  const browserSurface = useMemo(
+    () =>
+      extensionRegistry.surfaces.find((surface) => {
+        const record = surface as Record<string, unknown>;
+        return (
+          surface.extensionId === 'system-browser' && (surface.id === 'browser-workbench' || record.component === 'BrowserWorkbenchPanel')
+        );
+      }) ?? findExtensionToolPanelBySlot(extensionRegistry.surfaces, 'browser'),
+    [extensionRegistry.surfaces],
+  );
+
+  return (
+    <div
+      className="wos-chat-browser-dialog__body"
+      data-windowed-subwindow="browser"
+      data-parent-window-attached="chat"
+      data-parent-window-id={parentWindowId}
+      data-parent-window-title={parentWindowTitle}
+    >
+      {browserSurface ? (
+        <NativeExtensionSurfaceHost
+          surface={browserSurface}
+          pathname={routeLocationValue.pathname}
+          search={routeLocationValue.search}
+          hash={routeLocationValue.hash}
+          shellPresentation="windowed"
+          instanceId={`${parentWindowId}:browser`}
+        />
+      ) : (
+        <WindowedStateBlock title="Browser unavailable" tone="warning">
+          The Browser extension is not registered.
+        </WindowedStateBlock>
+      )}
+    </div>
+  );
+}
+
 function WindowRouteBody({
   compact = false,
+  onOpenBrowserWindow,
   onNavigate,
   onOpenTerminalWindow,
   route,
 }: {
   compact?: boolean;
+  onOpenBrowserWindow: () => void;
   onNavigate: WindowNavigate;
   onOpenTerminalWindow: () => void;
   route: string;
@@ -870,6 +934,10 @@ function WindowRouteBody({
           onClick={() => setChatWorkbenchOpen((open) => !open)}
         >
           {effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
+        </button>
+        {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
+        <button type="button" className="wos-chat-window-toolbar__button" onClick={onOpenBrowserWindow}>
+          Browser window
         </button>
         {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
         <button type="button" className="wos-chat-window-toolbar__button" onClick={onOpenTerminalWindow}>
@@ -1067,27 +1135,27 @@ export function WindowedLayout() {
     }
     setWindows((current) => {
       const focused = withFocusedWindow(current, windowId);
-      return targetWindow?.kind === 'chat' ? restoreTerminalChildrenForParent(focused, targetWindow.id) : focused;
+      return targetWindow?.kind === 'chat' ? restoreChildWindowsForParent(focused, targetWindow.id) : focused;
     });
   }, []);
 
-  const openTerminalWindow = useCallback((parentWindow: DesktopWindowModel) => {
+  const openChildWindow = useCallback((parentWindow: DesktopWindowModel, kind: ChildWindowKind) => {
     if (parentWindow.kind !== 'chat') return;
     suspendWindowedBrowserViews();
     setLauncherOpen(false);
     setWindows((current) => {
       const parent = current.find((candidate) => candidate.id === parentWindow.id && candidate.kind === 'chat') ?? parentWindow;
-      const id = `${parent.id}:terminal`;
+      const id = `${parent.id}:${kind}`;
       const existing = current.find((candidate) => candidate.id === id);
       if (existing) {
         return withFocusedWindow(current, id);
       }
       const next: DesktopWindowModel = {
         id,
-        kind: 'terminal',
-        title: 'Terminal',
+        kind,
+        title: kind === 'browser' ? 'Browser' : 'Terminal',
         route: parent.route,
-        bounds: terminalChildBounds(parent.bounds, desktopRect(desktopRef.current)),
+        bounds: childWindowBounds(parent.bounds, desktopRect(desktopRef.current), kind),
         minimized: false,
         focused: true,
         parentWindowId: parent.id,
@@ -1096,6 +1164,15 @@ export function WindowedLayout() {
       return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
     });
   }, []);
+
+  const openBrowserWindow = useCallback((parentWindow: DesktopWindowModel) => openChildWindow(parentWindow, 'browser'), [openChildWindow]);
+
+  const openTerminalWindow = useCallback(
+    (parentWindow: DesktopWindowModel) => {
+      openChildWindow(parentWindow, 'terminal');
+    },
+    [openChildWindow],
+  );
 
   const openLauncherItem = useCallback((item: LauncherItem, session?: SessionMeta) => {
     const id = createId(item, session?.id);
@@ -1215,8 +1292,7 @@ export function WindowedLayout() {
       });
       setWindows((current) => {
         const withoutClosed = current.filter((candidate) => candidate.id !== windowModel.id);
-        const withoutChildren =
-          windowModel.kind === 'chat' ? removeTerminalChildrenForParent(withoutClosed, windowModel.id) : withoutClosed;
+        const withoutChildren = windowModel.kind === 'chat' ? removeChildWindowsForParent(withoutClosed, windowModel.id) : withoutClosed;
         return ensureFocusedWindow(withoutChildren);
       });
     },
@@ -1229,7 +1305,7 @@ export function WindowedLayout() {
     if (windowModel) dispatchParentLifecycleForWindow(windowModel, 'minimized');
     setWindows((current) =>
       ensureFocusedWindow(
-        minimizeTerminalChildrenForParent(
+        minimizeChildWindowsForParent(
           current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
           windowModel?.kind === 'chat' ? windowModel.id : '',
         ),
@@ -1394,9 +1470,7 @@ export function WindowedLayout() {
       setRestoreBounds((current) => {
         const childWindowIds =
           windowModel.kind === 'chat'
-            ? windowsRef.current
-                .filter((candidate) => candidate.kind === 'terminal' && candidate.parentWindowId === windowModel.id)
-                .map((candidate) => candidate.id)
+            ? windowsRef.current.filter((candidate) => isChildWindowForParent(candidate, windowModel.id)).map((candidate) => candidate.id)
             : [];
         if (!current[windowModel.id] && !childWindowIds.some((childWindowId) => current[childWindowId])) return current;
         const next = { ...current };
@@ -1519,10 +1593,12 @@ export function WindowedLayout() {
 
   const activeDesktopRect = desktopRect(desktopRef.current);
   const snapPreview = snapTarget ? boundsForSnapTarget(snapTarget, activeDesktopRect) : null;
+  const focusedBrowserChildCanHostNativeFrame = canFocusedBrowserChildHostNativeFrame(focusedWindow, visibleWindows, activeDesktopRect);
   const browserBlockedByWindowStack =
-    hasCoveredChatWindow(visibleWindows) ||
-    hasOverlappingWindowedSurface(visibleWindows) ||
-    hasClippedWindow(visibleWindows, activeDesktopRect);
+    !focusedBrowserChildCanHostNativeFrame &&
+    (hasCoveredChatWindow(visibleWindows) ||
+      hasOverlappingWindowedSurface(visibleWindows) ||
+      hasClippedWindow(visibleWindows, activeDesktopRect));
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );
@@ -1657,6 +1733,8 @@ export function WindowedLayout() {
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
         {windows.map((windowModel) => {
           const isTerminalWindow = windowModel.kind === 'terminal';
+          const isBrowserWindow = windowModel.kind === 'browser';
+          const isChildWindow = isChildWindowKind(windowModel.kind);
           return (
             <WindowFrame
               key={windowModel.id}
@@ -1665,7 +1743,7 @@ export function WindowedLayout() {
               accent={accentForWindow(windowModel)}
               focused={windowModel.focused}
               minimized={windowModel.minimized}
-              className={isTerminalWindow ? 'wos-window--child wos-window--terminal' : undefined}
+              className={isChildWindow ? `wos-window--child wos-window--${windowModel.kind}` : undefined}
               style={windowFrameStyle(windowModel, visibleWindows)}
               iframeBlocked={
                 !windowModel.minimized &&
@@ -1690,11 +1768,20 @@ export function WindowedLayout() {
                     route={windowModel.route}
                   />
                 </div>
+              ) : isBrowserWindow ? (
+                <div className="wos-window-route-body wos-window-route-body--browser">
+                  <WindowedChatBrowserWindowBody
+                    parentWindowId={windowModel.parentWindowId ?? ''}
+                    parentWindowTitle={windowModel.parentWindowTitle ?? 'Chat'}
+                    route={windowModel.route}
+                  />
+                </div>
               ) : (
                 <WindowRouteBody
                   compact={windowModel.kind === 'chat' && windowModel.bounds.width < 720}
                   route={windowModel.route}
                   onNavigate={(to) => navigateWindow(windowModel.id, to)}
+                  onOpenBrowserWindow={() => openBrowserWindow(windowModel)}
                   onOpenTerminalWindow={() => openTerminalWindow(windowModel)}
                 />
               )}

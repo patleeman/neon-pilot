@@ -2627,6 +2627,84 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('region', { name: 'Terminal' })).toBeNull();
   });
 
+  it('opens a browser child window from chat and attaches it to the parent lifecycle', async () => {
+    mocks.surfaces = [
+      {
+        extensionId: 'system-browser',
+        id: 'browser-tabs',
+        title: 'Browser',
+        location: 'rightRail',
+        component: 'BrowserTabsPanel',
+        toolSlot: 'browser',
+      },
+      {
+        extensionId: 'system-browser',
+        id: 'browser-workbench',
+        title: 'Browser',
+        location: 'workbench',
+        component: 'BrowserWorkbenchPanel',
+      },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /browser window/i }));
+
+    const chatWindow = container.querySelector<HTMLElement>('[data-window-id="chat:draft"]');
+    const browserWindow = screen.getByRole('region', { name: 'Browser' });
+    const shell = container.querySelector('.windowed-os-shell');
+    expect(browserWindow.getAttribute('data-window-id')).toBe('chat:draft:browser');
+    expect(browserWindow.className).toContain('wos-window--browser');
+    expect(browserWindow.getAttribute('data-focused')).toBe('true');
+    expect(chatWindow?.getAttribute('data-focused')).toBe('false');
+    expect(shell?.getAttribute('data-focused-window-id')).toBe('chat:draft:browser');
+    expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
+    expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 1250));
+    });
+
+    expect(shell?.getAttribute('data-native-browser-blocked')).toBeNull();
+    expect(shell?.getAttribute('data-frame-paint-blocked')).toBeNull();
+    expect(browserWindow.closest('[data-window-id="chat:draft"]')).toBeNull();
+    expect(chatWindow?.compareDocumentPosition(browserWindow) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    const browserBody = browserWindow.querySelector('[data-windowed-subwindow="browser"]');
+    expect(browserBody?.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(browserBody?.getAttribute('data-parent-window-title')).toBe('New conversation');
+    expect(screen.getByRole('button', { name: /^browser$/i })).toBeTruthy();
+
+    const browserHost = screen.getByTestId('native-extension-surface');
+    expect(browserHost.getAttribute('data-extension-id')).toBe('system-browser');
+    expect(browserHost.getAttribute('data-surface-id')).toBe('browser-workbench');
+    expect(browserHost.getAttribute('data-shell-presentation')).toBe('windowed');
+    expect(browserHost.getAttribute('data-instance-id')).toBe('chat:draft:browser');
+
+    fireEvent.click(screen.getByRole('button', { name: /minimize new conversation/i }));
+    expect(chatWindow?.getAttribute('data-minimized')).toBe('true');
+    expect(browserWindow.getAttribute('data-minimized')).toBe('true');
+    expect((browserWindow as HTMLElement).style.display).toBe('none');
+
+    fireEvent.click(screen.getByRole('button', { name: /new conversation/i }));
+    expect(chatWindow?.getAttribute('data-minimized')).toBeNull();
+    expect(browserWindow.getAttribute('data-minimized')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
+    expect(screen.queryByRole('region', { name: 'Browser' })).toBeNull();
+  });
+
   it('toggles a focused route window from the taskbar between minimized and restored', async () => {
     seedWindowedWindows([
       {

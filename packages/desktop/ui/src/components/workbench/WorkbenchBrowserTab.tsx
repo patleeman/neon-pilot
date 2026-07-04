@@ -196,6 +196,7 @@ function isCoveredByWindowedWindow(host: HTMLElement | null): boolean {
   return windows.some((candidate) => {
     if (!isVisibleStyle(candidate)) return false;
     if (candidate === ownWindow) return false;
+    if (windowLayer(candidate) < windowLayer(ownWindow)) return false;
     return rectsOverlap(hostRect, candidate.getBoundingClientRect());
   });
 }
@@ -210,9 +211,17 @@ function isCoveredByWindowedChrome(host: HTMLElement | null): boolean {
     return false;
   }
 
+  const ownWindow = host.closest<HTMLElement>('.wos-window');
   const chrome = Array.from(document.querySelectorAll(RENDERER_CHROME_BLOCKER_SELECTOR)).filter(isConnectedVisibleElement);
 
   return chrome.some((element) => {
+    if (isIgnoredWindowedBrowserBlocker(element)) {
+      return false;
+    }
+    const elementWindow = element.closest<HTMLElement>('.wos-window');
+    if (ownWindow && elementWindow && elementWindow !== ownWindow && windowLayer(elementWindow) < windowLayer(ownWindow)) {
+      return false;
+    }
     if (host.contains(element) || element.contains(host)) {
       return false;
     }
@@ -273,6 +282,13 @@ function isCoveredByPositionedRendererLayer(host: HTMLElement | null): boolean {
 
   return candidates.some((element) => {
     if (element === host || host.contains(element) || element.contains(host)) {
+      return false;
+    }
+    if (isIgnoredWindowedBrowserBlocker(element)) {
+      return false;
+    }
+    const elementWindow = element.closest<HTMLElement>('.wos-window');
+    if (ownWindow && elementWindow && elementWindow !== ownWindow && windowLayer(elementWindow) < windowLayer(ownWindow)) {
       return false;
     }
     if (ownWindow && ownWindow.contains(element)) {
@@ -360,6 +376,10 @@ function isCoveredByWindowedIframeShield(host: HTMLElement | null): boolean {
 
   return Array.from(document.querySelectorAll<HTMLElement>('.windowed-os-shell .wos-window__iframe-shield')).some((shield) => {
     if (!isConnectedVisibleElement(shield)) {
+      return false;
+    }
+    const shieldWindow = shield.closest<HTMLElement>('.wos-window');
+    if (shieldWindow && shieldWindow !== ownWindow && windowLayer(shieldWindow) < windowLayer(ownWindow)) {
       return false;
     }
     if (ownWindow.contains(shield) && !ownWindow.dataset.iframeBlocked) {
