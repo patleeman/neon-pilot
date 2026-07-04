@@ -90,6 +90,12 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('.wos-settings-row {\n    display: grid;');
     expect(stylesSource).toContain('.wos-settings-row__actions {\n    min-width: 0;');
     expect(stylesSource).toContain('.wos-key-value__label');
+    expect(stylesSource).toContain('.wos-key-value__value');
+    expect(stylesSource).toContain('container: wos-page-shell / inline-size;');
+    expect(stylesSource).toContain('@container wos-page-shell (max-width: 680px)');
+    expect(stylesSource).toContain(".wos-key-value-grid[data-columns='4']");
+    expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(even)');
+    expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(n + 3)');
     expect(stylesSource).toContain('.wos-automation-queue .wos-data-row');
   });
 
@@ -407,10 +413,25 @@ describe('WindowedNumberStepper', () => {
     );
 
     expect(html).toContain('class="wos-number-stepper"');
+    expect(html).toContain('data-has-unit="true"');
     expect(html).toContain('aria-label="Decrease Sample rate"');
     expect(html).toContain('aria-label="Increase Sample rate"');
     expect(html).toContain('type="number"');
     expect(html).toContain('aria-hidden="true">%</span>');
+  });
+
+  it('keeps unitless steppers on stable button tracks', () => {
+    const html = renderToStaticMarkup(
+      <WindowedNumberStepper aria-label="Gateway port" value={8766} onChange={() => undefined} min={1024} max={65535} />,
+    );
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(html).toContain('class="wos-number-stepper"');
+    expect(html).not.toContain('data-has-unit="true"');
+    expect(stylesSource).toContain('grid-template-columns: 26px minmax(0, 1fr) 26px;');
+    expect(stylesSource).toContain(".wos-number-stepper[data-has-unit='true']");
+    expect(stylesSource).toContain('grid-template-columns: 26px minmax(0, 1fr) auto 26px;');
   });
 });
 

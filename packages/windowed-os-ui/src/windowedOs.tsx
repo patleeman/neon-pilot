@@ -684,7 +684,11 @@ export function WindowedNumberStepper({
   };
 
   return (
-    <div className={cx('wos-number-stepper', className)} data-disabled={disabled ? 'true' : undefined}>
+    <div
+      className={cx('wos-number-stepper', className)}
+      data-disabled={disabled ? 'true' : undefined}
+      data-has-unit={unit ? 'true' : undefined}
+    >
       <button
         type="button"
         className="wos-number-stepper__button"
