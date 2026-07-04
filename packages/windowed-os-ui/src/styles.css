@@ -4691,7 +4691,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-resize-ne {
-  top: var(--wos-titlebar-h);
+  top: 0;
   right: var(--wos-window-control-clearance);
   cursor: nesw-resize;
 }

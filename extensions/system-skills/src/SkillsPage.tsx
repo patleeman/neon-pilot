@@ -669,6 +669,13 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
     const sourceSummary = `${sources.length} sources`;
     const trustedSourceCount = sources.filter((source) => source.trustLevel !== 'community').length;
     const communitySourceCount = sources.filter((source) => source.trustLevel === 'community').length;
+    const toolbarStatus = (
+      <span className="flex min-w-0 flex-wrap items-center justify-end gap-1" aria-label={sourceSummary}>
+        <WindowedBadge tone="positive">{trustedSourceCount} trusted</WindowedBadge>
+        {communitySourceCount > 0 ? <WindowedBadge tone="warning">{communitySourceCount} community</WindowedBadge> : null}
+        <WindowedBadge tone={refreshingMarketplace ? 'warning' : 'neutral'}>{refreshingMarketplace ? 'Refreshing' : 'Ready'}</WindowedBadge>
+      </span>
+    );
     const viewItems: Array<{ id: SkillView; label: string; meta: string }> = [
       { id: 'marketplace', label: 'Browse', meta: marketplaceFilterSummary },
       { id: 'installed', label: 'Installed', meta: `${skillCounts.installed} skills` },
@@ -700,18 +707,11 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
               </>
             }
           >
-            <WindowedPageSection title="Sources" meta={sourceSummary}>
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Trusted', value: `${trustedSourceCount}` },
-                  { label: 'Community', value: `${communitySourceCount}` },
-                  { label: 'Refresh', value: refreshingMarketplace ? 'Running' : 'Ready' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection>
-              <WindowedToolbar as="form" formProps={{ onSubmit: submitSearch }}>
+            <WindowedPageSection
+              title={view === 'marketplace' ? 'Controls' : 'Search'}
+              meta={view === 'marketplace' ? sourceSummary : undefined}
+            >
+              <WindowedToolbar as="form" formProps={{ onSubmit: submitSearch }} end={view === 'marketplace' ? toolbarStatus : undefined}>
                 <WindowedTextInput
                   value={view === 'marketplace' ? marketplaceQueryDraft : installedQueryDraft}
                   onChange={(event) => {
@@ -732,6 +732,53 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                   Search
                 </WindowedPageButton>
               </WindowedToolbar>
+              {view === 'marketplace' ? (
+                <div className="mt-2 grid min-w-0 gap-2 md:grid-cols-3">
+                  <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
+                    Capability
+                    <WindowedSelect
+                      aria-label="Filter by capability"
+                      value={capabilityFilter}
+                      onChange={(event) => setCapabilityFilter(event.target.value)}
+                    >
+                      <option value="all">All</option>
+                      {capabilityOptions.map((capability) => (
+                        <option key={capability} value={capability}>
+                          {capability}
+                        </option>
+                      ))}
+                    </WindowedSelect>
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
+                    Source
+                    <WindowedSelect
+                      aria-label="Filter by source"
+                      value={sourceFilter}
+                      onChange={(event) => setSourceFilter(event.target.value)}
+                    >
+                      <option value="all">All</option>
+                      {sourceOptions.map((source) => (
+                        <option key={source} value={source}>
+                          {source}
+                        </option>
+                      ))}
+                    </WindowedSelect>
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
+                    State
+                    <WindowedSelect
+                      aria-label="Filter by state"
+                      value={stateFilter}
+                      onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
+                    >
+                      <option value="all">All</option>
+                      <option value="available">Available</option>
+                      <option value="approval-required">Approval required</option>
+                      <option value="installed">Installed</option>
+                    </WindowedSelect>
+                  </label>
+                </div>
+              ) : null}
             </WindowedPageSection>
 
             {notice ? (
@@ -747,54 +794,6 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
 
             {view === 'marketplace' ? (
               <>
-                <WindowedPageSection>
-                  <div className="grid min-w-0 gap-2 md:grid-cols-3">
-                    <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
-                      Capability
-                      <WindowedSelect
-                        aria-label="Filter by capability"
-                        value={capabilityFilter}
-                        onChange={(event) => setCapabilityFilter(event.target.value)}
-                      >
-                        <option value="all">All</option>
-                        {capabilityOptions.map((capability) => (
-                          <option key={capability} value={capability}>
-                            {capability}
-                          </option>
-                        ))}
-                      </WindowedSelect>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
-                      Source
-                      <WindowedSelect
-                        aria-label="Filter by source"
-                        value={sourceFilter}
-                        onChange={(event) => setSourceFilter(event.target.value)}
-                      >
-                        <option value="all">All</option>
-                        {sourceOptions.map((source) => (
-                          <option key={source} value={source}>
-                            {source}
-                          </option>
-                        ))}
-                      </WindowedSelect>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-[11px] text-secondary">
-                      State
-                      <WindowedSelect
-                        aria-label="Filter by state"
-                        value={stateFilter}
-                        onChange={(event) => setStateFilter(event.target.value as MarketplaceStateFilter)}
-                      >
-                        <option value="all">All</option>
-                        <option value="available">Available</option>
-                        <option value="approval-required">Approval required</option>
-                        <option value="installed">Installed</option>
-                      </WindowedSelect>
-                    </label>
-                  </div>
-                </WindowedPageSection>
-
                 {marketplaceError ? (
                   <WindowedPageSection>
                     <WindowedStateBlock title="Marketplace unavailable" tone="danger">

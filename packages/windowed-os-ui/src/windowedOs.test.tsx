@@ -1156,13 +1156,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).not.toContain('.wos-start-menu__item::after');
   });
 
-  it('keeps the north-east resize handle below titlebar controls', () => {
+  it('keeps the north-east resize handle in the titlebar clearance area', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
     const northEastRule = stylesSource.match(/\.wos-resize-ne \{[^}]+}/)?.[0] ?? '';
 
-    expect(northEastRule).toContain('top: var(--wos-titlebar-h);');
+    expect(northEastRule).toContain('top: 0;');
     expect(northEastRule).toContain('right: var(--wos-window-control-clearance);');
+    expect(northEastRule).not.toContain('top: var(--wos-titlebar-h);');
     expect(northEastRule).not.toContain('right: 0;');
   });
 

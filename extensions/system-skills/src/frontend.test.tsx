@@ -144,7 +144,11 @@ describe('SkillsPage', () => {
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-page-main__header .wos-page-eyebrow')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
-    expect(screen.getByText('Sources')).toBeTruthy();
+    expect(screen.getByText('Controls')).toBeTruthy();
+    expect(screen.getByText('2 sources')).toBeTruthy();
+    expect(screen.getByText('1 trusted')).toBeTruthy();
+    expect(screen.getByText('1 community')).toBeTruthy();
+    expect(screen.getByText('Ready')).toBeTruthy();
     expect(screen.getByRole('radiogroup', { name: 'Skills view' })).toBeTruthy();
     expect(container.querySelector('.wos-segmented-control[data-accent="skills"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
