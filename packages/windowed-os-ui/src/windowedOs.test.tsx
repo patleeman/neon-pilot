@@ -3025,7 +3025,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Routines"');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Agent hooks"');
+    expect(routinesSource).not.toContain('wos-page-eyebrow');
     expect(source).toContain('title="Events"');
+    expect(routinesSource).toContain('meta="4 available"');
+    expect(routinesSource).toContain('meta="Agent lifecycle"');
+    expect(routinesSource).toContain('meta="Tool calls"');
+    expect(routinesSource).toContain('title="After tool call"');
     expect(source).toContain('title="Before"');
     expect(source).toContain('title="After"');
     expect(source).toContain('title="Status"');

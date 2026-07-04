@@ -2143,17 +2143,21 @@ function RoutinesPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
           >
             <WindowedPageSection title="Events" meta="4 available">
               <WindowedList>
-                <div className="wos-page-eyebrow">Agent lifecycle</div>
                 <WindowedListItem
                   title="Before agent start"
-                  meta="system"
+                  meta="Agent lifecycle"
                   detail="Prepare instructions and context"
                   active
                   accent="routines"
                 />
-                <WindowedListItem title="After agent turn" meta="system" detail="Record status and follow-ups" accent="routines" />
-                <div className="wos-page-eyebrow">Tool calls</div>
-                <WindowedListItem title="Before tool call" meta="system" detail="Validate risky commands" accent="routines" />
+                <WindowedListItem title="After agent turn" meta="Agent lifecycle" detail="Record status and follow-ups" accent="routines" />
+                <WindowedListItem title="Before tool call" meta="Tool calls" detail="Validate risky commands" accent="routines" />
+                <WindowedListItem
+                  title="After tool call"
+                  meta="Tool calls"
+                  detail="Capture tool output and follow-up state"
+                  accent="routines"
+                />
               </WindowedList>
             </WindowedPageSection>
 
