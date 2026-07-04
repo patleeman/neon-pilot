@@ -1564,6 +1564,12 @@ describe('Windowed OS Storybook examples', () => {
       '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) auto;',
     );
     expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome.ui-terminal-block__muted {\n    justify-self: end;',
+    );
+    expect(stylesSource).not.toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome .ui-terminal-block__muted',
+    );
+    expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card .ui-action-button {\n    width: 100%;',
     );
     expect(stylesSource).toContain(
@@ -1579,6 +1585,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-choice-row-prefix {\n    display: none;');
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {\n    grid-template-columns: minmax(0, 1fr);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome.ui-terminal-block__muted {\n    justify-self: start;',
     );
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary .ui-row-button {\n    width: 100%;',

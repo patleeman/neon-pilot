@@ -8280,7 +8280,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
     gap: 5px 8px;
   }
 
-  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome .ui-terminal-block__muted {
+  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome.ui-terminal-block__muted {
     justify-self: end;
     text-align: right;
   }
@@ -8324,7 +8324,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome .ui-terminal-block__muted {
+  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome.ui-terminal-block__muted {
     justify-self: start;
     text-align: left;
   }
