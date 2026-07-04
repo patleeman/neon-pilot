@@ -69,6 +69,7 @@ interface DesktopWindowModel {
   focused: boolean;
   singleton?: boolean;
   archivedOnClose?: boolean;
+  workbenchCollapsed?: boolean;
   parentWindowId?: string;
   parentWindowTitle?: string;
 }
@@ -211,6 +212,7 @@ function readStoredWindows(): DesktopWindowModel[] {
           focused: record.focused === true,
           singleton: record.singleton === true,
           archivedOnClose: record.archivedOnClose === true,
+          workbenchCollapsed: record.workbenchCollapsed === true,
           parentWindowId: typeof record.parentWindowId === 'string' ? record.parentWindowId : undefined,
           parentWindowTitle: typeof record.parentWindowTitle === 'string' ? record.parentWindowTitle : undefined,
         },
@@ -948,18 +950,21 @@ function WindowRouteBody({
   onOpenBrowserWindow,
   onNavigate,
   onOpenTerminalWindow,
+  onWorkbenchCollapsedChange,
   route,
+  workbenchCollapsed = false,
 }: {
   compact?: boolean;
   onOpenBrowserWindow: () => void;
   onNavigate: WindowNavigate;
   onOpenTerminalWindow: () => void;
+  onWorkbenchCollapsedChange: (collapsed: boolean) => void;
   route: string;
+  workbenchCollapsed?: boolean;
 }) {
   const isChatRoute = route.startsWith('/conversations');
   const extensionRegistry = useExtensionRegistry();
-  const [chatWorkbenchOpen, setChatWorkbenchOpen] = useState(true);
-  const effectiveChatWorkbenchOpen = chatWorkbenchOpen && !compact;
+  const effectiveChatWorkbenchOpen = !workbenchCollapsed && !compact;
   const browserSurface = useMemo(() => findBrowserSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
   const terminalSurface = useMemo(() => findTerminalSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
   const browserUnavailable = extensionRegistry.loading || !browserSurface;
@@ -1001,7 +1006,9 @@ function WindowRouteBody({
                   ? 'Hide workbench'
                   : 'Show workbench'
             }
-            onClick={() => setChatWorkbenchOpen((open) => !open)}
+            onClick={() => {
+              onWorkbenchCollapsedChange(effectiveChatWorkbenchOpen);
+            }}
           >
             <WindowedChatToolbarIcon name={effectiveChatWorkbenchOpen ? 'workbench-visible' : 'workbench-hidden'} />
           </button>
@@ -1360,6 +1367,15 @@ export function WindowedLayout() {
     },
     [chatSessions, launcherItems],
   );
+
+  const setChatWorkbenchCollapsed = useCallback((windowId: string, collapsed: boolean) => {
+    suspendWindowedBrowserViews();
+    setWindows((current) =>
+      current.map((windowModel) =>
+        windowModel.id === windowId && windowModel.kind === 'chat' ? { ...windowModel, workbenchCollapsed: collapsed } : windowModel,
+      ),
+    );
+  }, []);
 
   useEffect(() => {
     const handleDesktopNavigate = (event: Event) => {
@@ -1880,6 +1896,8 @@ export function WindowedLayout() {
                   onNavigate={(to) => navigateWindow(windowModel.id, to)}
                   onOpenBrowserWindow={() => openBrowserWindow(windowModel)}
                   onOpenTerminalWindow={() => openTerminalWindow(windowModel)}
+                  onWorkbenchCollapsedChange={(collapsed) => setChatWorkbenchCollapsed(windowModel.id, collapsed)}
+                  workbenchCollapsed={windowModel.workbenchCollapsed}
                 />
               )}
             </WindowFrame>
