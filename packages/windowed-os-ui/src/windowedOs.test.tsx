@@ -1717,12 +1717,14 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel');
-    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel {\n  border-right: 0;\n  border-left: 0;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body .ui-workbench-panel {\n  border-right: 0;\n  border-left: 0 !important;\n  border-left-width: 0 !important;\n  border-left-color: transparent !important;',
+    );
     expect(stylesSource).toContain(
       ".wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true']",
     );
     expect(stylesSource).toContain(
-      ".wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true'] {\n  min-width: 0;\n  border-left: 0;",
+      ".wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true'] {\n  min-width: 0;\n  border-left: 0 !important;\n  border-left-width: 0 !important;\n  border-left-color: transparent !important;",
     );
     expect(stylesSource).toContain('container: wos-attached-workbench / inline-size;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel__body');
@@ -2572,6 +2574,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       ".wos-window-route-body--chat\n  :where(\n    .border-l,\n    [class~='border-l'],\n    [class*=' border-l-'],\n    [class*='border-l-'],\n    [class^='border-l-'],\n    [class*=':border-l'],\n    [class*=':border-l-']",
     );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell\n  .wos-window-route-body--chat\n  :where(\n    .conversation-composer-region,\n    .conversation-composer-inner,\n    .ui-composer-notice,',
+    );
+    expect(stylesSource).toContain(
+      ".wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true']",
+    );
+    expect(stylesSource).toContain('.wos-chat-workbench__panel {\n  display: flex;');
     expect(stylesSource).toContain('border-left-color: transparent !important;');
   });
 
@@ -3023,12 +3032,11 @@ describe('Windowed OS Storybook examples', () => {
     ]);
 
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Workflows')?.accent).toBe('workflows');
-    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Chat')?.meta).toBe('Conversation');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'AI Gateway')?.accent).toBe('gateways');
-    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'AI Gateway')?.meta).toBe('Loopback');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Model Arena')?.accent).toBe('model-arena');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Skills')?.accent).toBe('skills');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.every((app) => !('meta' in app) && !('detail' in app))).toBe(true);
     expect(source).toContain('CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source).toContain('const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source.slice(source.indexOf('function WorkflowsPageStory'), source.indexOf('export const ModelArenaPage'))).toContain(

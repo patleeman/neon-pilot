@@ -2484,7 +2484,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body .ui-workbench-panel {
   border-right: 0;
-  border-left: 0;
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
   background: var(--wos-surface-2);
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);
@@ -2492,7 +2494,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true'] {
   min-width: 0;
-  border-left: 0;
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
   background: var(--wos-surface-2);
   container: wos-attached-workbench / inline-size;
 }
@@ -5639,7 +5643,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  border-left: 0;
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
   background: var(--wos-surface-2);
 }
 
@@ -6607,6 +6613,25 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace::before {
   content: none;
+}
+
+.windowed-os-shell
+  .wos-window-route-body--chat
+  :where(
+    .conversation-composer-region,
+    .conversation-composer-inner,
+    .ui-composer-notice,
+    .ui-composer-input-controls,
+    .ui-composer-attachment-shelf,
+    .ui-composer-attachment-shelf__status,
+    .ui-context-lifecycle-marker,
+    .ui-context-shelf__item,
+    .ui-trace-cluster__body,
+    [data-context-shelf]
+  ) {
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
 }
 
 .windowed-os-shell

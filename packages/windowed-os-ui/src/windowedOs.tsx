@@ -35,22 +35,20 @@ export interface WindowedDesktopAppDefinition {
   id: string;
   title: string;
   accent: AppAccent;
-  meta: string;
-  detail: string;
 }
 
 export const CANONICAL_WINDOWED_DESKTOP_APPS = [
-  { id: 'chat', title: 'Chat', accent: 'chat', meta: 'Conversation', detail: 'Child tool windows' },
-  { id: 'automations', title: 'Automations', accent: 'automations', meta: 'Scheduled work', detail: 'Runs and reminders' },
-  { id: 'workflows', title: 'Workflows', accent: 'workflows', meta: 'Dynamic flows', detail: 'Saved multi-agent work' },
-  { id: 'gateways', title: 'Gateways', accent: 'gateways', meta: 'Ingress', detail: 'Telegram ready' },
-  { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways', meta: 'Loopback', detail: 'Local model bridge' },
-  { id: 'model-arena', title: 'Model Arena', accent: 'model-arena', meta: 'Duels', detail: 'Model comparisons' },
-  { id: 'routines', title: 'Routines', accent: 'routines', meta: 'Hooks', detail: 'Before and after' },
-  { id: 'extensions', title: 'Extensions', accent: 'extensions', meta: 'Installed', detail: 'Extension manager' },
-  { id: 'skills', title: 'Skills', accent: 'skills', meta: 'Library', detail: 'Installed and marketplace' },
-  { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics', meta: 'Telemetry', detail: 'Traces and health' },
-  { id: 'settings', title: 'Settings', accent: 'settings', meta: 'Preferences', detail: 'Providers and desktop' },
+  { id: 'chat', title: 'Chat', accent: 'chat' },
+  { id: 'automations', title: 'Automations', accent: 'automations' },
+  { id: 'workflows', title: 'Workflows', accent: 'workflows' },
+  { id: 'gateways', title: 'Gateways', accent: 'gateways' },
+  { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways' },
+  { id: 'model-arena', title: 'Model Arena', accent: 'model-arena' },
+  { id: 'routines', title: 'Routines', accent: 'routines' },
+  { id: 'extensions', title: 'Extensions', accent: 'extensions' },
+  { id: 'skills', title: 'Skills', accent: 'skills' },
+  { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics' },
+  { id: 'settings', title: 'Settings', accent: 'settings' },
 ] as const satisfies readonly WindowedDesktopAppDefinition[];
 
 export function cx(...classes: Array<string | false | null | undefined>): string {
