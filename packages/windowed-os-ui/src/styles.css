@@ -7482,7 +7482,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-shell,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-positioned-menu {
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 9px !important;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900);
@@ -7515,7 +7515,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   min-width: min(100%, 280px);
   max-width: min(100%, 380px);
   margin: 6px 0 0 auto;
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px !important;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900) !important;
@@ -7572,7 +7572,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 
 .windowed-os-shell .wos-window-route-body .ui-row-button,
 .windowed-os-shell .wos-window-route-body button.ui-icon-button {
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900);
@@ -7580,7 +7580,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf button.ui-icon-button {
-  border: 1.5px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 6px;
 }
 
@@ -7649,7 +7649,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   gap: 6px;
   margin-top: 7px;
   margin-left: 0 !important;
-  border-top: 2px solid var(--wos-ink-900) !important;
+  border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-left: 0 !important;
   border-right: 0 !important;
   border-bottom: 0 !important;
@@ -7679,7 +7679,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 .windowed-os-shell .wos-window-route-body--chat .ui-thinking-block,
 .windowed-os-shell .wos-window-route-body--chat .ui-subagent-block {
   overflow: hidden;
-  border: 1.5px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900) !important;
@@ -7742,7 +7742,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 .windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__body {
   display: grid;
   gap: 6px;
-  border-top: 1.5px solid var(--wos-ink-900) !important;
+  border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   background: color-mix(in srgb, var(--wos-surface-2) 72%, var(--wos-surface-1)) !important;
   padding: 8px !important;
   color: var(--wos-ink-800) !important;
@@ -8476,7 +8476,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   max-height: calc(100vh - 48px);
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 10px;
   background: var(--wos-surface-0) !important;
   box-shadow: var(--wos-shadow-window);
@@ -8501,7 +8501,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   justify-self: start;
   max-width: min(520px, calc(100% - 20px));
   margin: 10px;
-  border: 2px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   padding: 7px 9px;
@@ -8530,7 +8530,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   min-width: 32px;
   height: 32px;
   min-height: 32px;
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 8px !important;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900) !important;
@@ -8584,7 +8584,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 
 .windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile {
   min-height: 42px;
-  border: 2px solid var(--wos-ink-900) !important;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900) !important;
   box-shadow: none;
@@ -8609,7 +8609,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   width: 20px;
   height: 20px;
   place-items: center;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 6px;
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);

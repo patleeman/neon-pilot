@@ -1501,10 +1501,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__summary-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__rule');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body');
-    expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('border-right: 0 !important;\n  border-bottom: 0 !important;');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 0 !important;\n  border-top: 2px solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 0 !important;\n  border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
     );
     expect(stylesSource).not.toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 10px !important;\n  border-left',
@@ -1517,7 +1517,13 @@ describe('Windowed OS Storybook examples', () => {
       'color: var(--wos-ink-700) !important;\n  font: var(--wos-text-body);\n  overflow-wrap: anywhere;\n  white-space: normal;',
     );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__body');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__body,\n.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__body {\n  display: grid;\n  gap: 6px;\n  border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block,\n.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block {\n  overflow: hidden;\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-subagent-block[data-status='complete']");
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__header');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block__body');
@@ -1667,6 +1673,9 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-backdrop');
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-dialog');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .ui-image-inspect-dialog {\n  position: relative;\n  display: grid;\n  width: min(760px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  grid-template-rows: minmax(0, 1fr) auto;\n  overflow: hidden;\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
     expect(stylesSource).toContain('width: min(760px, calc(100vw - 32px));');
     expect(stylesSource).toContain('max-height: calc(100vh - 48px);');
     expect(stylesSource).toContain('grid-template-rows: minmax(0, 1fr) auto;');
@@ -1674,8 +1683,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('min-height: 260px;');
     expect(stylesSource).toContain('overflow: auto;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-caption');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .ui-image-inspect-caption {\n  justify-self: start;\n  max-width: min(520px, calc(100% - 20px));\n  margin: 10px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
     expect(stylesSource).toContain('max-width: min(520px, calc(100% - 20px));');
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-dialog .ui-icon-button');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .ui-image-inspect-dialog .ui-icon-button {\n  position: absolute;\n  top: 10px;\n  right: 10px;\n  z-index: 1;\n  width: 32px;\n  min-width: 32px;\n  height: 32px;\n  min-height: 32px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
     expect(stylesSource).toContain('top: 10px;\n  right: 10px;');
     expect(stylesSource).toContain('max-height: min(62vh, 480px);');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
@@ -1739,7 +1754,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('flex-wrap: wrap;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab {\n    flex: 1 1 132px;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile');
-    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:hover');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile-icon');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile-main');
