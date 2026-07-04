@@ -32,6 +32,7 @@ import {
   WindowedSettingsRow,
   WindowedTerminalFrame,
   WindowedToolbar,
+  WindowedWorkspaceLocationBar,
   WindowFrame,
 } from './windowedOs';
 
@@ -1011,6 +1012,21 @@ describe('Windowed OS Storybook examples', () => {
     expect(html).toContain('readonly=""');
     expect(html).toContain('value="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"');
     expect(html.indexOf('aria-label="Close browser tab"')).toBeGreaterThan(html.indexOf('wos-browser-toolbar__address'));
+  });
+
+  it('renders workspace location bars through a reusable windowed primitive', () => {
+    const html = renderToStaticMarkup(
+      <WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">
+        <span className="wos-badge">Synced</span>
+        <span className="wos-badge">5 items</span>
+      </WindowedWorkspaceLocationBar>,
+    );
+
+    expect(html).toContain('class="wos-workspace-child-preview__toolbar"');
+    expect(html).toContain('aria-label="Workspace location"');
+    expect(html).toContain('class="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</div>');
+    expect(html).toContain('class="wos-badge">Synced</span>');
+    expect(html).toContain('class="wos-badge">5 items</span>');
   });
 
   it('keeps canonical design tokens in the scoped token stylesheet', () => {
@@ -2392,6 +2408,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-windowed-subwindow="files"');
     expect(source).toContain('className="wos-chat-files-dialog__body"');
     expect(source).toContain('className="wos-workspace-child-preview"');
+    expect(source).toContain('<WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">');
     expect(source).toContain('aria-label="Workspace files preview"');
     expect(source).not.toContain('meta="Attached child window"');
     expect(source).toContain('/Users/patrick/workingdir/neon-pilot');
@@ -2435,6 +2452,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<AttachedBrowserWorkbenchStory theme="dark" />');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('data-workbench-collapsed="true"');
+    expect(source).toContain('<WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">');
     expect(source).toContain('function StoryChatWindowToolbar');
     expect(source).toContain('<WindowedChatToolLauncher items={items} />');
     expect(source).toContain('type WindowedChatToolLauncherItem');

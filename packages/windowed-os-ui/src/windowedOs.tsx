@@ -248,6 +248,27 @@ export function WindowedBrowserToolbar({
   );
 }
 
+export interface WindowedWorkspaceLocationBarProps {
+  location: ReactNode;
+  children?: ReactNode;
+  ariaLabel?: string;
+  className?: string;
+}
+
+export function WindowedWorkspaceLocationBar({
+  location,
+  children,
+  ariaLabel = 'Workspace location',
+  className,
+}: WindowedWorkspaceLocationBarProps) {
+  return (
+    <div className={cx('wos-workspace-child-preview__toolbar', className)} aria-label={ariaLabel}>
+      <div className="wos-workspace-child-preview__cwd">{location}</div>
+      {children}
+    </div>
+  );
+}
+
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;

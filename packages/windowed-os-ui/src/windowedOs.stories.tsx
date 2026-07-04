@@ -52,6 +52,7 @@ import {
   WindowedTitleBarControls,
   WindowedToggle,
   WindowedToolbar,
+  WindowedWorkspaceLocationBar,
   WindowFrame,
 } from './windowedOs';
 
@@ -375,10 +376,9 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
         <div className="wos-window-route-body wos-window-route-body--files" data-windowed-subwindow="files">
           <div className="wos-chat-files-dialog__body">
             <div className="wos-workspace-child-preview" aria-label="Workspace files preview">
-              <div className="wos-workspace-child-preview__toolbar">
-                <span className="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</span>
+              <WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">
                 <WindowedBadge tone="neutral">3 open</WindowedBadge>
-              </div>
+              </WindowedWorkspaceLocationBar>
               <WindowedPageSection title="Workspace" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
@@ -3253,12 +3253,11 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
         >
           <div className="wos-chat-files-dialog__body" data-windowed-subwindow="files">
             <div className="wos-workspace-child-preview" aria-label="Workspace files preview">
-              <div className="wos-workspace-child-preview__toolbar" aria-label="Workspace location">
-                <div className="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</div>
+              <WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">
                 <WindowedBadge tone="positive">Synced</WindowedBadge>
                 <WindowedBadge>5 items</WindowedBadge>
                 <WindowedBadge>Directory</WindowedBadge>
-              </div>
+              </WindowedWorkspaceLocationBar>
               <WindowedPageSection title="Workspace" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="packages/desktop/ui/src/components" meta="Directory" detail="source" active accent="chat" />

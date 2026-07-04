@@ -112,6 +112,8 @@ export {
   type WindowedToggleProps,
   WindowedToolbar,
   type WindowedToolbarProps,
+  WindowedWorkspaceLocationBar,
+  type WindowedWorkspaceLocationBarProps,
   WindowFrame,
   type WindowFrameProps,
 } from './windowedOs';
