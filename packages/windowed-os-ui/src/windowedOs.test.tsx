@@ -147,11 +147,16 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('.wos-arena-status-row__copy {\n  min-width: 0;');
     expect(stylesSource).toContain('overflow-wrap: anywhere;');
     expect(stylesSource).toContain('.wos-arena-settings-dialog {');
+    expect(stylesSource).toContain('container: wos-arena-settings / inline-size;');
     expect(stylesSource).toContain('width: min(540px, calc(100% - 8px));');
     expect(stylesSource).toContain('.wos-arena-challenger-table {');
     expect(stylesSource).toContain('--wos-data-column-template: minmax(112px, 0.9fr) minmax(180px, 1.35fr) auto;');
     expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-row__cell');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).toContain('@container wos-arena-settings (max-width: 420px)');
+    expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-table__header {\n    display: none;');
+    expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-row {\n    grid-template-columns: minmax(0, 1fr);');
+    expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-row__action {\n    justify-content: flex-start;');
     expect(stylesSource).toContain('@container (max-width: 640px)');
     expect(stylesSource).toContain('.wos-arena-status-row,\n  .wos-arena-settings-dialog .wos-arena-settings-grid {');
     expect(stylesSource).toContain('justify-items: start;');

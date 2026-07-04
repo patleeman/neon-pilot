@@ -5441,6 +5441,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-arena-settings-dialog {
+  container: wos-arena-settings / inline-size;
   width: min(540px, calc(100% - 8px));
   max-height: min(540px, calc(100% - 12px));
 }
@@ -5462,6 +5463,28 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-arena-challenger-table .wos-data-row__cell {
   font-family: var(--wos-font-mono);
   font-size: 11px;
+}
+
+@container wos-arena-settings (max-width: 420px) {
+  .wos-arena-challenger-table .wos-data-table__header {
+    display: none;
+  }
+
+  .wos-arena-challenger-table .wos-data-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    align-items: stretch;
+  }
+
+  .wos-arena-challenger-table .wos-data-row__name,
+  .wos-arena-challenger-table .wos-data-row__cell {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .wos-arena-challenger-table .wos-data-row__action {
+    justify-content: flex-start;
+  }
 }
 
 .windowed-os-shell :where(.wos-page-main__heading h1, .wos-window-route-body .ui-app-page-title) {
