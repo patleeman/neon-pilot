@@ -1967,6 +1967,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Status"');
     expect(source).toContain('title="Gateway tools"');
     expect(source).toContain('title="Telegram configuration"');
+    expect(source).toContain('<WindowedTextInput aria-label="Telegram token" type="password"');
+    expect(source).not.toContain('<WindowedTextarea aria-label="Telegram token"');
     expect(source).not.toContain('title="Selected gateway"');
     expect(source).not.toContain('ariaLabel="Gateway filter"');
   });

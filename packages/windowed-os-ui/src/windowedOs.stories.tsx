@@ -1850,7 +1850,7 @@ function GatewaysPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
           ]}
         />
         <WindowedPageSection title="Token">
-          <WindowedTextarea aria-label="Telegram token" defaultValue="••••••••••••••••••••••••••••••••" />
+          <WindowedTextInput aria-label="Telegram token" type="password" defaultValue="bot-token-redacted" />
         </WindowedPageSection>
       </WindowedDialog>
     </div>
