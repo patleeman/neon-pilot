@@ -1378,6 +1378,7 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__state {');
     expect(stylesSource).toContain('width: min(420px, 100%);\n  min-width: 0;');
+    expect(stylesSource).toContain('max-height: 100%;\n  overflow: auto;\n  scrollbar-gutter: stable both-edges;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__url {');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).toContain('font-size: 10px;');

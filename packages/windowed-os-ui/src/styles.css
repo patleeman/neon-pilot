@@ -921,6 +921,9 @@
 .windowed-os-shell .ui-windowed-browser-host__state {
   width: min(420px, 100%);
   min-width: 0;
+  max-height: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable both-edges;
 }
 
 .windowed-os-shell .ui-windowed-browser-host__state .wos-state-block__body {
