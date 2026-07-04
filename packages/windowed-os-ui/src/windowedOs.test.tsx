@@ -192,6 +192,14 @@ describe('WindowedPageShell', () => {
     expect(stylesSource).toContain('grid-template-columns: minmax(118px, min(32%, 168px)) minmax(0, 1fr);');
     expect(stylesSource).not.toContain('grid-template-columns: 190px minmax(0, 1fr);');
   });
+
+  it('keeps compact page windows scroll-contained with a stable gutter', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-page-main {\n  min-width: 0;\n  min-height: 0;\n  overflow: auto;\n  scrollbar-gutter: stable;');
+    expect(stylesSource).toContain('padding: var(--wos-space-4) var(--wos-space-5) var(--wos-space-6);');
+  });
 });
 
 describe('WindowedChartPanel', () => {
@@ -2097,6 +2105,21 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-settings-row__actions > *');
     expect(stylesSource).toContain('.wos-page-rail .wos-list {');
     expect(stylesSource).toContain('border: 1.5px solid var(--wos-line-strong);');
+  });
+
+  it('documents dark variants for baseline windowed page templates', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('function DenseAppPageStory');
+    expect(source).toContain('export const DenseAppPage');
+    expect(source).toContain('export const DarkDenseAppPage');
+    expect(source).toContain('<DenseAppPageStory theme="dark" />');
+    expect(source).toContain('function StandardSinglePanePageStory');
+    expect(source).toContain('export const StandardSinglePanePage');
+    expect(source).toContain('export const DarkStandardSinglePanePage');
+    expect(source).toContain('<StandardSinglePanePageStory theme="dark" />');
+    expect(source).toContain('data-wos-theme={theme}');
   });
 
   it('documents the canonical Workflows desktop page and subwindow pattern', () => {

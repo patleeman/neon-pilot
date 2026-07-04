@@ -1185,9 +1185,9 @@ export const TimeOfDayThemePhases: Story = {
   ),
 };
 
-export const DenseAppPage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 620, padding: 24 }}>
+function DenseAppPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
       <WindowFrame
         title="Gateways"
         accent="gateways"
@@ -1233,7 +1233,15 @@ export const DenseAppPage: Story = {
         </WindowedPageShell>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const DenseAppPage: Story = {
+  render: () => <DenseAppPageStory />,
+};
+
+export const DarkDenseAppPage: Story = {
+  render: () => <DenseAppPageStory theme="dark" />,
 };
 
 export const StatePrimitives: Story = {
@@ -1421,9 +1429,9 @@ export const DarkSettingsPage: Story = {
   render: () => <SettingsTwoColumnPageStory theme="dark" />,
 };
 
-export const StandardSinglePanePage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+function StandardSinglePanePageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 520, padding: 24 }}>
       <WindowFrame
         title="Automations"
         accent="automations"
@@ -1467,7 +1475,15 @@ export const StandardSinglePanePage: Story = {
         </WindowedPageShell>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const StandardSinglePanePage: Story = {
+  render: () => <StandardSinglePanePageStory />,
+};
+
+export const DarkStandardSinglePanePage: Story = {
+  render: () => <StandardSinglePanePageStory theme="dark" />,
 };
 
 export const CanonicalDensity: Story = {
