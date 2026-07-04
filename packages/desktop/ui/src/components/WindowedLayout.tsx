@@ -1747,7 +1747,7 @@ export function WindowedLayout() {
         title: windowModel.title,
         focused: windowModel.focused,
         minimized: windowModel.minimized,
-        accent: accentForTitle(windowModel.title),
+        accent: accentForWindow(windowModel),
         onSelect: () => selectTaskbarWindow(windowModel),
       }),
     );

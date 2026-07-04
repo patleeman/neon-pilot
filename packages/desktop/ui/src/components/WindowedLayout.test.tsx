@@ -2695,7 +2695,10 @@ describe('WindowedLayout route windows', () => {
     const terminalBody = terminalWindow.querySelector('[data-windowed-subwindow="terminal"]');
     expect(terminalBody?.getAttribute('data-parent-window-id')).toBe('chat:draft');
     expect(terminalBody?.getAttribute('data-parent-window-title')).toBe('New conversation');
-    expect(screen.getByRole('button', { name: /^terminal$/i })).toBeTruthy();
+    const terminalTaskbarButton = within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', {
+      name: /^terminal$/i,
+    });
+    expect(terminalTaskbarButton.querySelector('.wos-app-tile')?.getAttribute('data-accent')).toBe('chat');
 
     const terminalHost = screen.getByTestId('native-extension-surface');
     expect(terminalHost.getAttribute('data-extension-id')).toBe('system-terminal');
@@ -2777,7 +2780,10 @@ describe('WindowedLayout route windows', () => {
     const browserBody = browserWindow.querySelector('[data-windowed-subwindow="browser"]');
     expect(browserBody?.getAttribute('data-parent-window-id')).toBe('chat:draft');
     expect(browserBody?.getAttribute('data-parent-window-title')).toBe('New conversation');
-    expect(screen.getByRole('button', { name: /^browser$/i })).toBeTruthy();
+    const browserTaskbarButton = within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', {
+      name: /^browser$/i,
+    });
+    expect(browserTaskbarButton.querySelector('.wos-app-tile')?.getAttribute('data-accent')).toBe('chat');
 
     const browserHost = screen.getByTestId('native-extension-surface');
     expect(browserHost.getAttribute('data-extension-id')).toBe('system-browser');
