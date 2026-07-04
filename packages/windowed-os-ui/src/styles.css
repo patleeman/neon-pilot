@@ -1649,10 +1649,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
   display: grid !important;
+  min-width: 0 !important;
   width: min(860px, calc(100vw - 96px)) !important;
   height: min(560px, calc(100vh - 156px)) !important;
   max-height: min(560px, calc(100vh - 156px)) !important;
   min-height: min(420px, calc(100vh - 156px)) !important;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   max-width: none !important;
   transform: none !important;
@@ -1770,14 +1772,18 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker-
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {
   display: grid;
+  min-width: 0;
   min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {
   display: grid;
+  min-width: 0;
   min-height: 0;
   height: 100%;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
@@ -1785,8 +1791,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar {
+  display: flex;
+  min-width: 0;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   min-height: 38px;
+  overflow: hidden;
   border-bottom: 2px solid var(--wos-ink-900) !important;
   background: var(--wos-surface-2);
   padding: 5px 8px;
@@ -1811,6 +1822,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
   border-top: 0;
@@ -1819,12 +1831,14 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite {
   display: grid;
+  min-width: 0;
   min-height: 100%;
   background: var(--wos-surface-1);
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {
   display: grid;
+  min-width: 0;
   min-height: 100%;
   place-items: center;
   --color-primary: var(--wos-chat);

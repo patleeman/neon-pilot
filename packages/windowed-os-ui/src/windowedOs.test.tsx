@@ -1679,6 +1679,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('width: min(860px, calc(100vw - 96px)) !important;');
     expect(stylesSource).toContain('height: min(560px, calc(100vh - 156px)) !important;');
     expect(stylesSource).toContain('display: grid !important;');
+    expect(stylesSource).toContain('min-width: 0 !important;');
+    expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
     expect(stylesSource).toContain('grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-backdrop {\n  pointer-events: none;');
     expect(stylesSource).toContain(".ui-windowed-excalidraw-modal[data-parent-window-minimized='true']");
@@ -1722,16 +1724,18 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('width: 18px;');
     expect(stylesSource).toContain(
-      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {\n  display: grid;\n  min-height: 0;",
+      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {\n  display: grid;\n  min-width: 0;\n  min-height: 0;\n  grid-template-columns: minmax(0, 1fr);",
     );
     expect(stylesSource).toContain(
-      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {\n  display: grid;\n  min-height: 0;\n  height: 100%;\n  grid-template-rows: auto minmax(0, 1fr);",
+      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {\n  display: grid;\n  min-width: 0;\n  min-height: 0;\n  height: 100%;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: auto minmax(0, 1fr);",
     );
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar {\n  display: flex;\n  min-width: 0;');
+    expect(stylesSource).toContain('flex-wrap: wrap;\n  gap: 6px;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');
-    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {\n  min-height: 0;');
-    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite {\n  display: grid;');
-    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {\n  display: grid;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {\n  min-width: 0;\n  min-height: 0;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite {\n  display: grid;\n  min-width: 0;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {\n  display: grid;\n  min-width: 0;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite img');
     expect(stylesSource).toContain('object-fit: contain;');
     expect(stylesSource).toContain(
