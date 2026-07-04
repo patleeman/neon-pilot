@@ -2871,9 +2871,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Workflows"');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Dynamic workflows"');
-    expect(source).toContain('title="Inventory"');
-    expect(source).toContain('title="Runs"');
-    expect(source).toContain('title="Library"');
+    expect(workflowsSource).not.toContain('title="Inventory"');
+    expect(workflowsSource).toContain('title="Overview"');
+    expect(workflowsSource).toContain('meta="4 runs · 3 saved"');
+    expect(workflowsSource).toContain('<WindowedKeyValueGrid');
+    expect(workflowsSource).toContain('columns={4}');
+    expect(workflowsSource).toContain("value: 'Repo audit'");
+    expect(workflowsSource).toContain('title="Runs"');
+    expect(workflowsSource).toContain('title="Library"');
     expect(source).toContain('<WindowedDialog');
     expect(source).toContain('title="Repo audit"');
     expect(source).toContain('parentWindowTitle="Workflows"');

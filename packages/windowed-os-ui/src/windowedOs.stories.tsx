@@ -2324,13 +2324,14 @@ function WorkflowsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
               </>
             }
           >
-            <WindowedPageSection title="Inventory" meta="running">
-              <WindowedKeyValueList
+            <WindowedPageSection title="Overview" meta="4 runs · 3 saved">
+              <WindowedKeyValueGrid
+                columns={4}
                 items={[
                   { label: 'Runs', value: 4 },
                   { label: 'Saved', value: 3 },
                   { label: 'Templates', value: 5 },
-                  { label: 'Active', value: 'repo-audit' },
+                  { label: 'Active', value: 'Repo audit' },
                 ]}
               />
             </WindowedPageSection>
