@@ -383,7 +383,9 @@
 }
 
 .wos-taskbar__button {
+  min-width: 132px;
   max-width: 220px;
+  flex: 0 0 auto;
   background: var(--wos-surface-2);
   font: var(--wos-text-row);
 }

@@ -401,6 +401,8 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('overscroll-behavior-x: contain;');
     expect(stylesSource).toContain('.wos-taskbar__items::-webkit-scrollbar');
     expect(stylesSource).toContain('scrollbar-width: thin;');
+    expect(stylesSource).toContain('.wos-taskbar__button {\n  min-width: 132px;');
+    expect(stylesSource).toContain('max-width: 220px;\n  flex: 0 0 auto;');
     expect(stylesSource).toContain('@media (max-width: 640px)');
     expect(stylesSource).toContain('flex: 1 1 max(140px, 42vw);');
   });
