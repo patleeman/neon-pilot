@@ -62,6 +62,7 @@ describe('ToolBlock commands', () => {
     });
 
     expect(container.querySelector('.ui-tool-block')).not.toBeNull();
+    expect(container.querySelector('.ui-tool-block__output')).toBeNull();
     expect(container.textContent).toContain('show');
     expect(container.textContent).not.toContain('result-output');
 
@@ -71,6 +72,8 @@ describe('ToolBlock commands', () => {
 
     expect(container.textContent).toContain('hide');
     expect(container.textContent).toContain('result-output');
+    expect(container.querySelector('.ui-tool-block__output--bash')).not.toBeNull();
+    expect(container.querySelector('.ui-tool-block__pre')).not.toBeNull();
   });
 
   it('lets only the first mounted tool block handle one shared command event', () => {
@@ -107,6 +110,9 @@ describe('ToolBlock commands', () => {
     expect(container.textContent).toContain('Showing 5 of 6 executions returned by the tool.');
     expect(container.textContent).toContain('Epsilon check');
     expect(container.textContent).not.toContain('Zeta check');
+    expect(container.querySelector('.ui-tool-block__linked-runs')).not.toBeNull();
+    expect(container.querySelector('.ui-tool-block__linked-runs-summary')).not.toBeNull();
+    expect(container.querySelectorAll('.ui-tool-block__linked-run')).toHaveLength(5);
 
     act(() => {
       window.dispatchEvent(new CustomEvent<ToolBlockCommandDetail>(TOOL_BLOCK_TOGGLE_FIRST_LINKED_RUNS_COMMAND_EVENT, { detail: {} }));
@@ -114,6 +120,7 @@ describe('ToolBlock commands', () => {
 
     expect(container.textContent).toContain('Showing all 6 executions returned by the tool.');
     expect(container.textContent).toContain('Zeta check');
+    expect(container.querySelectorAll('.ui-tool-block__linked-run')).toHaveLength(6);
   });
 
   it('renders routine activity as attached tool context instead of a separate tool call', () => {
@@ -152,6 +159,7 @@ describe('ToolBlock commands', () => {
     expect(container.textContent).toContain('Before background command');
     expect(container.textContent).toContain('Review command');
     expect(container.textContent).toContain('Check permissions');
+    expect(container.querySelector('.ui-tool-block__routine')).not.toBeNull();
     expect(container.textContent).not.toContain('routines');
   });
 });

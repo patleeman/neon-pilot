@@ -5371,11 +5371,34 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   box-shadow: none;
 }
 
-.windowed-os-shell .wos-window-route-body--chat .ui-tool-block .border-t {
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__body,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output {
   border-color: var(--wos-ink-900) !important;
 }
 
-.windowed-os-shell .wos-window-route-body--chat .ui-tool-block pre {
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs {
+  background: color-mix(in srgb, var(--wos-surface-2) 70%, var(--wos-surface-3)) !important;
+  color: var(--wos-ink-900);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs-summary,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-run {
+  border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);
+  border-radius: 7px;
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-700);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output {
+  background: color-mix(in srgb, var(--wos-ink-900) 8%, var(--wos-surface-1)) !important;
+  color: var(--wos-ink-900);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__pre {
   color: var(--wos-ink-900);
   font-family: var(--wos-font-mono);
   font-size: 11px;

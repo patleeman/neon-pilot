@@ -905,6 +905,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-accent');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-danger');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__body');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs-summary');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-run');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__pre');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).not.toContain(".windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1']");
     expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-user');
