@@ -1864,7 +1864,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const WorkflowsPage');
     expect(source).toContain('export const DarkWorkflowsPage');
     expect(source).toContain('<WorkflowsPageStory theme="dark" />');
-    expect(source).toContain("title={theme === 'dark' ? 'Workflows - dark' : 'Workflows'}");
+    expect(source).toContain('title="Workflows"');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Dynamic workflows"');
     expect(source).toContain('title="Inventory"');
@@ -1982,7 +1982,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const AIGatewayPage');
     expect(source).toContain('export const DarkAIGatewayPage');
     expect(source).toContain('<AIGatewayPageStory theme="dark" />');
-    expect(aiGatewaySource).toContain("title={theme === 'dark' ? 'AI Gateway - dark' : 'AI Gateway'}");
+    expect(aiGatewaySource).toContain('title="AI Gateway"');
     expect(aiGatewaySource).toContain('data-wos-theme={theme}');
     expect(aiGatewaySource).toContain('title="Loopback endpoint"');
     expect(aiGatewaySource).toContain('title="Listener"');
@@ -2008,7 +2008,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const RoutinesPage');
     expect(source).toContain('export const DarkRoutinesPage');
     expect(source).toContain('<RoutinesPageStory theme="dark" />');
-    expect(source).toContain("title={theme === 'dark' ? 'Routines - dark' : 'Routines'}");
+    expect(source).toContain('title="Routines"');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Agent hooks"');
     expect(source).toContain('title="Events"');
@@ -2035,7 +2035,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const ModelArenaPage');
     expect(source).toContain('export const DarkModelArenaPage');
     expect(source).toContain('<ModelArenaPageStory theme="dark" />');
-    expect(source).toContain("title={theme === 'dark' ? 'Model Arena - dark' : 'Model Arena'}");
+    expect(source).toContain('title="Model Arena"');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Model duels"');
     expect(source).toContain('title="Overview"');
@@ -2074,7 +2074,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const DiagnosticsPage');
     expect(source).toContain('export const DarkDiagnosticsPage');
     expect(source).toContain('<DiagnosticsPageStory theme="dark" />');
-    expect(source).toContain("title={theme === 'dark' ? 'Diagnostics - dark' : 'Diagnostics'}");
+    expect(source).toContain('title="Diagnostics"');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Telemetry"');
     expect(source).toContain('ariaLabel="Diagnostics range"');
@@ -2102,7 +2102,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const SkillsPage');
     expect(source).toContain('export const DarkSkillsPage');
     expect(source).toContain('<SkillsPageStory theme="dark" />');
-    expect(skillsSource).toContain("title={theme === 'dark' ? 'Skills - dark' : 'Skills'}");
+    expect(skillsSource).toContain('title="Skills"');
     expect(skillsSource).toContain('data-wos-theme={theme}');
     expect(skillsSource).toContain('title="Browse skills"');
     expect(skillsSource).not.toContain('eyebrow="Skill library"');
@@ -2129,7 +2129,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const ExtensionsPage');
     expect(source).toContain('export const DarkExtensionsPage');
     expect(source).toContain('<ExtensionsPageStory theme="dark" />');
-    expect(extensionsSource).toContain("title={theme === 'dark' ? 'Extensions - dark' : 'Extensions'}");
+    expect(extensionsSource).toContain('title="Extensions"');
     expect(extensionsSource).toContain('data-wos-theme={theme}');
     expect(extensionsSource).not.toContain('eyebrow="Extension manager"');
     expect(extensionsSource).toContain('title="Sources"');
@@ -2161,7 +2161,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const EmbeddedExtensionPage');
     expect(source).toContain('export const DarkEmbeddedExtensionPage');
     expect(source).toContain('<EmbeddedExtensionPageStory theme="dark" />');
-    expect(embeddedSource).toContain("title={theme === 'dark' ? 'Gateways - embedded dark' : 'Gateways'}");
+    expect(embeddedSource).toContain('title="Gateways"');
     expect(embeddedSource).toContain('data-wos-theme={theme}');
     expect(embeddedSource).toContain('title="Telegram"');
     expect(embeddedSource).toContain('title="Status"');
@@ -2210,7 +2210,7 @@ describe('Windowed OS Storybook examples', () => {
       'accent="model-arena"',
     );
     expect(source.slice(source.indexOf('function SkillsPageStory'), source.indexOf('export const CoreDataPrimitives'))).toContain(
-      "title={theme === 'dark' ? 'Skills - dark' : 'Skills'}\n        accent=\"skills\"",
+      'title="Skills"\n        accent="skills"',
     );
     expect(source).not.toContain("title: 'Prompt Assembly'");
   });

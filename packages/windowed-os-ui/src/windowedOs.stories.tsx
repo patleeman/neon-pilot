@@ -288,7 +288,7 @@ function AttachedWorkbenchStory({
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 700, padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Release notes — dark' : 'Release notes'}
+        title="Release notes"
         accent="chat"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1180px, 100%)', height: 640 }}
@@ -396,7 +396,7 @@ function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 
       style={{ minHeight: 700, padding: 24 }}
     >
       <WindowFrame
-        title={theme === 'dark' ? 'Browser workbench - dark' : 'Browser workbench'}
+        title="Browser workbench"
         accent="chat"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 640 }}
@@ -510,7 +510,7 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
+        title="Inherited chat chrome"
         accent="chat"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 2020 }}
@@ -1298,7 +1298,7 @@ function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'da
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Settings - dark' : 'Settings'}
+        title="Settings"
         accent="settings"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 560 }}
@@ -1647,7 +1647,7 @@ function AutomationsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Automations - dark' : 'Automations'}
+        title="Automations"
         accent="automations"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -1757,7 +1757,7 @@ function GatewaysPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Gateways - dark' : 'Gateways'}
+        title="Gateways"
         accent="gateways"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -1869,7 +1869,7 @@ function AIGatewayPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'AI Gateway - dark' : 'AI Gateway'}
+        title="AI Gateway"
         accent="gateways"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -1969,7 +1969,7 @@ function RoutinesPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Routines - dark' : 'Routines'}
+        title="Routines"
         accent="routines"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -2151,7 +2151,7 @@ function WorkflowsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Workflows - dark' : 'Workflows'}
+        title="Workflows"
         accent="workflows"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 612 }}
@@ -2274,7 +2274,7 @@ function ModelArenaPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Model Arena - dark' : 'Model Arena'}
+        title="Model Arena"
         accent="model-arena"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -2474,7 +2474,7 @@ function DiagnosticsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Diagnostics - dark' : 'Diagnostics'}
+        title="Diagnostics"
         accent="telemetry"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -2599,7 +2599,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Extensions - dark' : 'Extensions'}
+        title="Extensions"
         accent="extensions"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -2845,7 +2845,7 @@ function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Skills - dark' : 'Skills'}
+        title="Skills"
         accent="skills"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -3073,7 +3073,7 @@ function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'da
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title={theme === 'dark' ? 'Gateways - embedded dark' : 'Gateways'}
+        title="Gateways"
         accent="gateways"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 620 }}
