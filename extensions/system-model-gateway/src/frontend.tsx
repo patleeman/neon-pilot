@@ -319,7 +319,9 @@ export function ModelGatewaySettingsPanel({
                   </WindowedPageButton>
                 </WindowedActionRow>
                 {status.logs.length === 0 ? (
-                  <WindowedEmptyState>No gateway activity yet.</WindowedEmptyState>
+                  <WindowedEmptyState title="No gateway activity yet">
+                    Requests appear after the loopback gateway handles traffic.
+                  </WindowedEmptyState>
                 ) : (
                   <WindowedDataTable
                     columns={[{ label: 'Route' }, { label: 'Status' }, { label: 'Duration', align: 'right' }]}

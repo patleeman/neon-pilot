@@ -181,6 +181,8 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByRole('heading', { name: 'AI Gateway' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Copy config' })).toBeTruthy();
+    expect(screen.getByText('No gateway activity yet').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(screen.getByText('Requests appear after the loopback gateway handles traffic.').closest('.wos-empty-state__copy')).toBeTruthy();
     expect(container.querySelector('.ui-data-table')).toBeNull();
   });
 
