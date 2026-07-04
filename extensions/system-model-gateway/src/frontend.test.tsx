@@ -186,6 +186,66 @@ describe('ModelGatewaySettingsPanel', () => {
     expect(container.querySelector('.ui-data-table')).toBeNull();
   });
 
+  it('renders structured windowed gateway status and action states', async () => {
+    const writeText = vi.fn(async () => {
+      throw new DOMException("Failed to execute 'writeText' on 'Clipboard': Write permission denied.", 'NotAllowedError');
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const pa = {
+      extension: {
+        invoke: vi.fn(async (action: string) => {
+          if (action === 'status') {
+            return {
+              running: false,
+              host: '127.0.0.1',
+              port: 8766,
+              baseUrl: 'http://127.0.0.1:8766/v1',
+              authToken: 'secret-token',
+              models: 0,
+              defaultModel: 'auto',
+              catalogPath: '/tmp/catalog.json',
+              lastError: 'Listener failed to bind.',
+              logs: [],
+            };
+          }
+          if (action === 'updateSettings') {
+            return {
+              running: true,
+              host: '127.0.0.1',
+              port: 8767,
+              baseUrl: 'http://127.0.0.1:8767/v1',
+              authToken: 'secret-token',
+              models: 2,
+              defaultModel: 'auto',
+              catalogPath: '/tmp/catalog.json',
+              logs: [],
+            };
+          }
+          throw new Error(`Unexpected action ${action}`);
+        }),
+      },
+      ui: { notify: vi.fn() },
+    };
+
+    render(<ModelGatewayPage pa={pa as never} context={{ shellPresentation: 'windowed' }} />);
+
+    await waitFor(() => expect(screen.getByText('Gateway listener error')).toBeTruthy());
+    expect(screen.getByText('Listener failed to bind.')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy config' }));
+    await waitFor(() => expect(screen.getByText('Gateway action failed')).toBeTruthy());
+    expect(screen.getByText('Could not copy the config. Copy the setup values manually from the rows below.')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Port'), { target: { value: '8767' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save port' }));
+
+    await waitFor(() => expect(screen.getByText('Gateway action complete')).toBeTruthy());
+    expect(screen.getByText('AI Gateway port saved.')).toBeTruthy();
+  });
+
   it('shows a user-facing message when clipboard copy is blocked', async () => {
     const writeText = vi.fn(async () => {
       throw new DOMException("Failed to execute 'writeText' on 'Clipboard': Write permission denied.", 'NotAllowedError');

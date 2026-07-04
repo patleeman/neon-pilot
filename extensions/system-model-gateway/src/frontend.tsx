@@ -255,17 +255,23 @@ export function ModelGatewaySettingsPanel({
 
             {status.lastError ? (
               <WindowedPageSection>
-                <WindowedStateBlock tone="danger">{status.lastError}</WindowedStateBlock>
+                <WindowedStateBlock tone="danger" title="Gateway listener error">
+                  {status.lastError}
+                </WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
             {error ? (
               <WindowedPageSection>
-                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+                <WindowedStateBlock tone="danger" title="Gateway action failed">
+                  {error}
+                </WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
             {message ? (
               <WindowedPageSection>
-                <WindowedStateBlock tone="positive">{message}</WindowedStateBlock>
+                <WindowedStateBlock tone="positive" title="Gateway action complete">
+                  {message}
+                </WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
 

@@ -1,9 +1,11 @@
 import {
   type ButtonHTMLAttributes,
+  Children,
   type CSSProperties,
   type FormHTMLAttributes,
   type HTMLAttributes,
   type InputHTMLAttributes,
+  isValidElement,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -620,9 +622,21 @@ export interface WindowedFieldProps {
 }
 
 export function WindowedField({ label, children, hint, error, span, className }: WindowedFieldProps) {
+  const childArray = Children.toArray(children);
+  const labelledControlId =
+    childArray.length === 1 && isValidElement<{ id?: unknown }>(childArray[0]) && typeof childArray[0].props.id === 'string'
+      ? childArray[0].props.id
+      : undefined;
+
   return (
     <div className={cx('wos-field', className)} data-invalid={Boolean(error)} data-span={span}>
-      <span className="wos-field__label">{label}</span>
+      {labelledControlId ? (
+        <label className="wos-field__label" htmlFor={labelledControlId}>
+          {label}
+        </label>
+      ) : (
+        <span className="wos-field__label">{label}</span>
+      )}
       {children}
       {error ? <span className="wos-field__error">{error}</span> : null}
       {hint && !error ? <span className="wos-field__hint">{hint}</span> : null}
