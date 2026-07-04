@@ -924,7 +924,18 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
             title={activeAutomationTitle}
             meta={activeAutomationMeta}
             accent="automations"
+            className={cx(
+              'wos-automation-dialog',
+              activeAutomation.kind === 'automation' ? 'wos-automation-dialog--details' : 'wos-automation-dialog--editor',
+            )}
             parentWindowTitle="Automations"
+            subwindowId={
+              activeAutomation.kind === 'new'
+                ? 'automation-create'
+                : activeAutomation.kind === 'edit'
+                  ? 'automation-edit'
+                  : 'automation-details'
+            }
             onClose={() => setActiveAutomation(null)}
           >
             <AutomationDialogPanel

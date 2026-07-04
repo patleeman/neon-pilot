@@ -1867,8 +1867,15 @@ function AutomationsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
-      <WindowedDialog title="Automation details" accent="automations" parentWindowTitle="Automations" onClose={() => undefined}>
-        <WindowedPageSection title="Automation context">
+      <WindowedDialog
+        title="Automation details"
+        accent="automations"
+        className="wos-automation-dialog wos-automation-dialog--details"
+        parentWindowTitle="Automations"
+        subwindowId="automation-details"
+        onClose={() => undefined}
+      >
+        <WindowedPageSection title="Details">
           <WindowedKeyValueList
             items={[
               { label: 'Owner', value: 'Release notes' },

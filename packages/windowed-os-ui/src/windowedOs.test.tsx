@@ -794,6 +794,7 @@ describe('WindowedDialog content primitives', () => {
         accent="automations"
         parentWindowId="route:system-automations:nav"
         parentWindowTitle="Automations"
+        subwindowId="automation-details"
         onClose={() => undefined}
       >
         Details
@@ -803,6 +804,7 @@ describe('WindowedDialog content primitives', () => {
     expect(html).toContain('data-parent-window-attached="true"');
     expect(html).toContain('data-parent-window-id="route:system-automations:nav"');
     expect(html).toContain('data-parent-window-title="Automations"');
+    expect(html).toContain('data-windowed-subwindow="automation-details"');
     expect(html).toContain('Attached to Automations');
   });
 
@@ -879,6 +881,11 @@ describe('WindowedDialog content primitives', () => {
 
     expect(stylesSource).toContain('.wos-dialog__actions {\n  display: flex;\n  min-width: 0;');
     expect(stylesSource).toContain('.wos-dialog__actions .wos-page-button {\n  min-width: 0;');
+    expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='automation-details']");
+    expect(stylesSource).toContain('width: min(520px, calc(100% - 112px));');
+    expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='automation-edit'],");
+    expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='automation-create']");
+    expect(stylesSource).toContain('width: min(660px, calc(100% - 88px));');
     expect(stylesSource).toContain('@media (max-width: 560px) {\n  .wos-dialog-layer {');
     expect(stylesSource).toContain('.wos-dialog__actions {\n    justify-content: flex-start;');
     expect(stylesSource).toContain('.wos-dialog__body {\n    padding: 8px;');
@@ -2917,8 +2924,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('wos-automation-row');
     expect(source).toContain('title="Automation details"');
     expect(source).toContain('parentWindowTitle="Automations"');
+    expect(source).toContain('subwindowId="automation-details"');
+    expect(source).toContain('className="wos-automation-dialog wos-automation-dialog--details"');
     expect(source).not.toContain('meta="Running · 0 9 * * 1-5"');
-    expect(source).toContain('title="Automation context"');
+    expect(source).toContain('title="Details"');
+    expect(source).not.toContain('title="Automation context"');
     expect(source).not.toContain('title="Selected automation"');
     expect(source).not.toContain('ariaLabel="Automation filter"');
   });

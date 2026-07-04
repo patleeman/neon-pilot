@@ -596,6 +596,7 @@ export interface WindowedDialogProps {
   modal?: boolean;
   parentWindowId?: string;
   parentWindowTitle?: string;
+  subwindowId?: string;
   initialOffset?: { x: number; y: number };
 }
 
@@ -637,6 +638,7 @@ export function WindowedDialog({
   modal = false,
   parentWindowId,
   parentWindowTitle,
+  subwindowId,
   initialOffset = { x: 0, y: 0 },
 }: WindowedDialogProps) {
   const [offset, setOffset] = useState(initialOffset);
@@ -716,6 +718,7 @@ export function WindowedDialog({
       data-modal={modal ? 'true' : undefined}
       data-parent-window-id={parentWindowId}
       data-parent-window-title={parentWindowTitle}
+      data-windowed-subwindow={subwindowId}
     >
       <section
         ref={dialogRef}
@@ -727,6 +730,7 @@ export function WindowedDialog({
         data-parent-window-attached={parentWindowTitle || parentWindowId ? 'true' : undefined}
         data-parent-window-id={parentWindowId}
         data-parent-window-title={parentWindowTitle}
+        data-windowed-subwindow={subwindowId}
         style={dialogStyle}
         tabIndex={-1}
         onKeyDown={handleDialogKeyDown}

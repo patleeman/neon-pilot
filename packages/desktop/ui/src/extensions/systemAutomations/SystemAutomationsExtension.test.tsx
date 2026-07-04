@@ -252,6 +252,10 @@ describe('AutomationsPage', () => {
 
     expect(container.querySelector('.wos-dialog')).not.toBeNull();
     expect(container.querySelector('.wos-dialog__title')?.textContent).toBe('Automation details');
+    expect(container.querySelector('.wos-dialog')?.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(container.querySelector('.wos-dialog')?.getAttribute('data-parent-window-title')).toBe('Automations');
+    expect(container.querySelector('.wos-dialog')?.getAttribute('data-windowed-subwindow')).toBe('automation-details');
+    expect(container.querySelector('.wos-dialog')?.classList.contains('wos-automation-dialog--details')).toBe(true);
     expect(container.textContent).not.toContain('Automation context');
     expect(container.textContent).toContain('Actions');
     expect(container.textContent).toContain('Run');
@@ -263,6 +267,35 @@ describe('AutomationsPage', () => {
     );
 
     expect(pa.automations.run).toHaveBeenCalledWith('release-watch');
+  });
+
+  it('opens automation create and edit as typed windowed subwindows', async () => {
+    const pa = createPa();
+    const { container } = await renderPage(pa, { shellPresentation: 'windowed' });
+
+    await act(async () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'New automation')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(container.querySelector('.wos-dialog')?.getAttribute('data-windowed-subwindow')).toBe('automation-create');
+    expect(container.querySelector('.wos-dialog')?.classList.contains('wos-automation-dialog--editor')).toBe(true);
+
+    await act(async () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.getAttribute('aria-label') === 'Close New automation')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    await act(async () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.getAttribute('aria-label') === 'Edit Release watch')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true })),
+    );
+
+    expect(container.querySelector('.wos-dialog')?.getAttribute('data-windowed-subwindow')).toBe('automation-edit');
+    expect(container.querySelector('.wos-dialog')?.classList.contains('wos-automation-dialog--editor')).toBe(true);
   });
 
   it('renders selected automation details in the automation dialog panel', async () => {

@@ -1234,6 +1234,17 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
     var(--wos-shadow-window);
 }
 
+.wos-dialog[data-windowed-subwindow='automation-details'] {
+  width: min(520px, calc(100% - 112px));
+  max-height: min(500px, calc(100% - 120px));
+}
+
+.wos-dialog[data-windowed-subwindow='automation-edit'],
+.wos-dialog[data-windowed-subwindow='automation-create'] {
+  width: min(660px, calc(100% - 88px));
+  max-height: min(590px, calc(100% - 104px));
+}
+
 .wos-dialog:focus-visible {
   box-shadow:
     0 0 0 2px var(--wos-surface-0),
