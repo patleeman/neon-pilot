@@ -398,17 +398,29 @@ describe('WindowedLayout route windows', () => {
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
     const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
+    const hideToggle = within(chatWindow).getByRole('button', { name: /hide workbench/i });
 
-    fireEvent.click(within(chatWindow).getByRole('button', { name: /hide workbench/i }));
+    expect(hideToggle.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(hideToggle);
     expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBe('true');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
-    expect(within(chatWindow).getByRole('button', { name: /show workbench/i })).toBeTruthy();
+    expect(
+      within(chatWindow)
+        .getByRole('button', { name: /show workbench/i })
+        .getAttribute('aria-pressed'),
+    ).toBe('false');
 
     fireEvent.click(within(chatWindow).getByRole('button', { name: /show workbench/i }));
     expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBeNull();
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('true');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('false');
+    expect(
+      within(chatWindow)
+        .getByRole('button', { name: /hide workbench/i })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
   });
 
   it('auto-collapses the attached workbench when a chat window is too narrow', () => {
@@ -433,6 +445,7 @@ describe('WindowedLayout route windows', () => {
     expect(chatSurface?.getAttribute('data-compact')).toBe('true');
     expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBe('true');
     expect((toggle as HTMLButtonElement).disabled).toBe(true);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
     expect(toggle.getAttribute('title')).toContain('Resize');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');

@@ -991,7 +991,7 @@ function WindowRouteBody({
             type="button"
             className="wos-chat-window-toolbar__button"
             data-density="icon"
-            aria-pressed={!effectiveChatWorkbenchOpen && !compact}
+            aria-pressed={effectiveChatWorkbenchOpen && !compact}
             aria-label={effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
             disabled={compact}
             title={
