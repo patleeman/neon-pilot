@@ -54,6 +54,7 @@ import {
   resolveSnapTarget,
   resolveWindowedOsTheme,
   resolveWindowedOsThemePhase,
+  resolveWindowedOsThemePhaseInfo,
   type SnapTarget,
   type WindowBounds,
   WINDOWED_OS_THEME_CHANGED_EVENT,
@@ -1248,10 +1249,23 @@ export function WindowedLayout() {
       return undefined;
     }
 
-    const refreshThemePhase = () => setWindowedThemePhase(resolveWindowedOsThemePhase());
+    let boundaryTimer: number | undefined;
+    const refreshThemePhase = () => {
+      const phaseInfo = resolveWindowedOsThemePhaseInfo();
+      setWindowedThemePhase(phaseInfo.phase);
+      if (boundaryTimer !== undefined) {
+        window.clearTimeout(boundaryTimer);
+      }
+      boundaryTimer = window.setTimeout(refreshThemePhase, Math.min(phaseInfo.msUntilNextPhase + 250, 60 * 60 * 1000));
+    };
     refreshThemePhase();
-    const phaseTimer = window.setInterval(refreshThemePhase, 60_000);
-    return () => window.clearInterval(phaseTimer);
+    const fallbackTimer = window.setInterval(refreshThemePhase, 5 * 60_000);
+    return () => {
+      if (boundaryTimer !== undefined) {
+        window.clearTimeout(boundaryTimer);
+      }
+      window.clearInterval(fallbackTimer);
+    };
   }, [windowedTheme]);
 
   useEffect(() => {

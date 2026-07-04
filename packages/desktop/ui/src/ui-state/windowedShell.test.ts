@@ -12,6 +12,7 @@ import {
   resolveSnapTarget,
   resolveWindowedOsTheme,
   resolveWindowedOsThemePhase,
+  resolveWindowedOsThemePhaseInfo,
   WINDOWED_OS_THEME_CHANGED_EVENT,
   WINDOWED_OS_THEME_STORAGE_KEY,
   writeWindowedOsTheme,
@@ -116,5 +117,28 @@ describe('windowedShell', () => {
     expect(resolveWindowedOsTheme('dark', new Date(2026, 6, 3, 12))).toBe('dark');
     expect(resolveWindowedOsTheme('auto', new Date(2026, 6, 3, 12))).toBe('light');
     expect(resolveWindowedOsTheme('auto', new Date(2026, 6, 3, 22))).toBe('dark');
+  });
+
+  it('reports automatic theme phase progress and the next phase boundary', () => {
+    expect(resolveWindowedOsThemePhaseInfo(new Date(2026, 6, 3, 4, 59, 30))).toMatchObject({
+      phase: 'deep-night',
+      resolvedTheme: 'dark',
+      nextPhase: 'dawn',
+      msUntilNextPhase: 30_000,
+    });
+    expect(resolveWindowedOsThemePhaseInfo(new Date(2026, 6, 3, 5))).toMatchObject({
+      phase: 'dawn',
+      resolvedTheme: 'light',
+      nextPhase: 'morning',
+      progress: 0,
+      msUntilNextPhase: 7_200_000,
+    });
+    expect(resolveWindowedOsThemePhaseInfo(new Date(2026, 6, 3, 6)).progress).toBeCloseTo(0.5);
+    expect(resolveWindowedOsThemePhaseInfo(new Date(2026, 6, 3, 23, 30))).toMatchObject({
+      phase: 'night',
+      resolvedTheme: 'dark',
+      nextPhase: 'deep-night',
+      msUntilNextPhase: 1_800_000,
+    });
   });
 });

@@ -8,6 +8,14 @@ export type WindowedOsResolvedTheme = 'light' | 'dark';
 export type WindowedOsTheme = WindowedOsResolvedTheme | 'auto';
 export type WindowedOsThemePhase = 'deep-night' | 'night' | 'dawn' | 'morning' | 'bright-noon' | 'afternoon' | 'dusk';
 
+export interface WindowedOsThemePhaseInfo {
+  phase: WindowedOsThemePhase;
+  resolvedTheme: WindowedOsResolvedTheme;
+  nextPhase: WindowedOsThemePhase;
+  progress: number;
+  msUntilNextPhase: number;
+}
+
 export const WINDOWED_OS_THEME_OPTIONS: ReadonlyArray<{ id: WindowedOsTheme; label: string }> = [
   { id: 'light', label: 'Light' },
   { id: 'auto', label: 'Time' },
@@ -32,6 +40,22 @@ const MIN_VISIBLE_X = 96;
 const MIN_VISIBLE_Y = 34;
 const SNAP_THRESHOLD = 24;
 const TITLEBAR_RESTORE_DRAG_Y = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+const WINDOWED_OS_THEME_PHASE_SCHEDULE: ReadonlyArray<{
+  phase: WindowedOsThemePhase;
+  resolvedTheme: WindowedOsResolvedTheme;
+  startMinute: number;
+}> = [
+  { phase: 'deep-night', resolvedTheme: 'dark', startMinute: 0 },
+  { phase: 'dawn', resolvedTheme: 'light', startMinute: 5 * 60 },
+  { phase: 'morning', resolvedTheme: 'light', startMinute: 7 * 60 },
+  { phase: 'bright-noon', resolvedTheme: 'light', startMinute: 11 * 60 },
+  { phase: 'afternoon', resolvedTheme: 'light', startMinute: 15 * 60 },
+  { phase: 'dusk', resolvedTheme: 'dark', startMinute: 18 * 60 },
+  { phase: 'night', resolvedTheme: 'dark', startMinute: 21 * 60 },
+];
 
 export function isWindowedShellChild(search = typeof window === 'undefined' ? '' : window.location.search): boolean {
   return new URLSearchParams(search).get(WINDOWED_SHELL_CHILD_PARAM) === '1';
@@ -95,21 +119,50 @@ export function writeWindowedOsTheme(theme: WindowedOsTheme): void {
   window.dispatchEvent(new CustomEvent(WINDOWED_OS_THEME_CHANGED_EVENT, { detail: { theme } }));
 }
 
+function resolveMinuteOfDay(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60 + date.getMilliseconds() / MINUTE_MS;
+}
+
+function resolveThemePhaseScheduleIndex(date: Date): number {
+  const minuteOfDay = resolveMinuteOfDay(date);
+  let activeIndex = WINDOWED_OS_THEME_PHASE_SCHEDULE.length - 1;
+  for (let index = 0; index < WINDOWED_OS_THEME_PHASE_SCHEDULE.length; index += 1) {
+    if (minuteOfDay >= WINDOWED_OS_THEME_PHASE_SCHEDULE[index].startMinute) {
+      activeIndex = index;
+    }
+  }
+  return activeIndex;
+}
+
+export function resolveWindowedOsThemePhaseInfo(date = new Date()): WindowedOsThemePhaseInfo {
+  const activeIndex = resolveThemePhaseScheduleIndex(date);
+  const active = WINDOWED_OS_THEME_PHASE_SCHEDULE[activeIndex];
+  const next = WINDOWED_OS_THEME_PHASE_SCHEDULE[(activeIndex + 1) % WINDOWED_OS_THEME_PHASE_SCHEDULE.length];
+  const minuteOfDay = resolveMinuteOfDay(date);
+  const activeStartMs = active.startMinute * MINUTE_MS;
+  const nextStartMs = next.startMinute > active.startMinute ? next.startMinute * MINUTE_MS : DAY_MS + next.startMinute * MINUTE_MS;
+  const currentMs = minuteOfDay * MINUTE_MS;
+  const normalizedCurrentMs = currentMs >= activeStartMs ? currentMs : currentMs + DAY_MS;
+  const durationMs = nextStartMs - activeStartMs;
+  const elapsedMs = normalizedCurrentMs - activeStartMs;
+  const msUntilNextPhase = Math.max(0, Math.ceil(nextStartMs - normalizedCurrentMs));
+
+  return {
+    phase: active.phase,
+    resolvedTheme: active.resolvedTheme,
+    nextPhase: next.phase,
+    progress: clamp(elapsedMs / durationMs, 0, 1),
+    msUntilNextPhase,
+  };
+}
+
 export function resolveWindowedOsThemePhase(date = new Date()): WindowedOsThemePhase {
-  const hour = date.getHours();
-  if (hour < 5) return 'deep-night';
-  if (hour < 7) return 'dawn';
-  if (hour < 11) return 'morning';
-  if (hour < 15) return 'bright-noon';
-  if (hour < 18) return 'afternoon';
-  if (hour < 21) return 'dusk';
-  return 'night';
+  return resolveWindowedOsThemePhaseInfo(date).phase;
 }
 
 export function resolveWindowedOsTheme(theme: WindowedOsTheme, date = new Date()): WindowedOsResolvedTheme {
   if (theme !== 'auto') return theme;
-  const phase = resolveWindowedOsThemePhase(date);
-  return phase === 'deep-night' || phase === 'night' || phase === 'dusk' ? 'dark' : 'light';
+  return resolveWindowedOsThemePhaseInfo(date).resolvedTheme;
 }
 
 export function constrainWindowBounds(bounds: WindowBounds, desktop: DesktopRect): WindowBounds {
