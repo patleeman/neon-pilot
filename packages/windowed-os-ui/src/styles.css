@@ -5181,13 +5181,19 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__row {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 6px;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip) {
   display: inline-flex;
   min-height: 28px;
-  max-width: min(100%, 280px);
+  min-width: min(100%, 260px);
+  max-width: min(100%, 360px);
+  flex: 1 1 260px;
   align-items: center;
   gap: 4px;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
@@ -5225,7 +5231,24 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   text-align: left;
 }
 
+.windowed-os-shell
+  .wos-window-route-body--chat
+  .ui-composer-attachment-shelf
+  :where(.ui-attachment-chip-button > span:first-child:not([class])) {
+  flex: 0 0 auto;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--wos-chat) 16%, var(--wos-surface-1));
+  padding: 1px 4px;
+  font-family: var(--wos-font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip__name) {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   color: var(--wos-ink-900);

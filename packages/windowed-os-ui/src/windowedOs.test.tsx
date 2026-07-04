@@ -917,12 +917,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__row');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
+    expect(stylesSource).toContain('flex: 1 1 260px;');
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip)',
     );
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip-button)',
     );
+    expect(stylesSource).toContain(':where(.ui-attachment-chip-button > span:first-child:not([class]))');
+    expect(stylesSource).toContain('text-transform: uppercase;');
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip__name)',
     );
