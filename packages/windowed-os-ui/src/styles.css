@@ -6015,12 +6015,26 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
   gap: 6px;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline,
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline :where(span) {
   color: var(--wos-ink-700) !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 128px;
+  min-height: 28px;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-actions {

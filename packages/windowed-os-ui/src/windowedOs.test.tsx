@@ -501,6 +501,12 @@ describe('Windowed chat styling', () => {
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button {\n  min-height: 24px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
     );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row {\n  display: inline-flex;\n  min-width: 0;\n  align-items: center;\n  gap: 6px;',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline {\n  display: inline-flex;\n  min-width: 0;\n  max-width: 128px;',
+    );
   });
 });
 
