@@ -247,7 +247,7 @@ export const TaskbarMenuPlacement: Story = {
           title="Chat"
           accent="chat"
           focused
-          style={{ left: 52, top: 32, width: 640, height: 230 }}
+          style={{ left: 52, top: 32, width: 'min(640px, calc(100% - 104px))', height: 230 }}
           onMinimize={() => undefined}
           onMaximize={() => undefined}
           onClose={() => undefined}

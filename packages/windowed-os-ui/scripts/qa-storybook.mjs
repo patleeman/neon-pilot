@@ -11,44 +11,6 @@ const storybookRoot = resolve(packageRoot, 'storybook-static');
 const rootRequire = createRequire(join(repoRoot, 'package.json'));
 const { chromium } = rootRequire('@playwright/test');
 
-const storyNames = [
-  'desktop-composition',
-  'dark-desktop-composition',
-  'chat-with-attached-workbench',
-  'dark-chat-with-attached-workbench',
-  'chat-with-collapsed-workbench',
-  'dark-chat-with-collapsed-workbench',
-  'chat-with-attached-browser-workbench',
-  'dark-chat-with-attached-browser-workbench',
-  'inherited-chat-chrome',
-  'dark-inherited-chat-chrome',
-  'settings-page',
-  'dark-settings-page',
-  'automations-page',
-  'dark-automations-page',
-  'gateways-page',
-  'dark-gateways-page',
-  'ai-gateway-page',
-  'dark-ai-gateway-page',
-  'routines-page',
-  'dark-routines-page',
-  'workflows-page',
-  'dark-workflows-page',
-  'model-arena-page',
-  'dark-model-arena-page',
-  'diagnostics-page',
-  'dark-diagnostics-page',
-  'extensions-page',
-  'dark-extensions-page',
-  'skills-page',
-  'dark-skills-page',
-  'embedded-extension-page',
-  'dark-embedded-extension-page',
-  'terminal-window',
-  'browser-window',
-  'drawings-picker-subwindow',
-];
-
 const viewports = [
   { name: 'wide', width: 900, height: 720 },
   { name: 'compact', width: 430, height: 720 },
@@ -205,10 +167,11 @@ async function main() {
   }
 
   const index = JSON.parse(readFileSync(join(storybookRoot, 'index.json'), 'utf8'));
-  const storyIds = storyNames.map((name) => `windowed-os-desktop-shell--${name}`);
-  const missingIndexStories = storyIds.filter((id) => !index.entries[id]);
-  if (missingIndexStories.length > 0) {
-    throw new Error(`Missing canonical Storybook entries:\n${missingIndexStories.map((id) => `- ${id}`).join('\n')}`);
+  const storyIds = Object.keys(index.entries)
+    .filter((id) => id.startsWith('windowed-os-desktop-shell--'))
+    .sort();
+  if (storyIds.length === 0) {
+    throw new Error('No windowed OS Storybook entries found in storybook-static/index.json.');
   }
 
   const screenshotDir = resolve(repoRoot, 'artifacts/windowed-os-storybook-qa');

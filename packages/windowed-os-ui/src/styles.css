@@ -89,6 +89,10 @@
   padding: 12px;
 }
 
+.wos-theme-phase-card .wos-window {
+  min-width: 0;
+}
+
 .wos-desktop {
   position: relative;
   z-index: 0;

@@ -104,6 +104,7 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('.wos-theme-variant-grid > .windowed-os-shell {\n  box-sizing: border-box;\n  width: 100%;');
     expect(stylesSource).toContain('.wos-theme-phase-grid {\n  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));');
     expect(stylesSource).toContain('.wos-theme-phase-card {\n  min-height: 320px;');
+    expect(stylesSource).toContain('.wos-theme-phase-card .wos-window {\n  min-width: 0;');
     expect(stylesSource).toContain(".wos-key-value-grid[data-columns='4']");
     expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(even)');
     expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(n + 3)');
@@ -911,6 +912,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-wos-theme-mode={theme.mode}');
     expect(source).toContain('data-wos-theme-phase={theme.phase}');
     expect(source).toContain("mode: 'auto'");
+    expect(source).toContain("width: 'min(640px, calc(100% - 104px))'");
     for (const phase of ['deep-night', 'night', 'dawn', 'morning', 'bright-noon', 'afternoon', 'dusk']) {
       expect(source).toContain(`phase: '${phase}'`);
     }
@@ -2312,5 +2314,17 @@ describe('Windowed OS Storybook examples', () => {
       'title="Skills"\n        accent="skills"',
     );
     expect(source).not.toContain("title: 'Prompt Assembly'");
+  });
+
+  it('runs Storybook QA against every canonical windowed OS story', () => {
+    const qaScriptPath = fileURLToPath(new URL('../scripts/qa-storybook.mjs', import.meta.url));
+    const source = readFileSync(qaScriptPath, 'utf8');
+
+    expect(source).toContain("id.startsWith('windowed-os-desktop-shell--')");
+    expect(source).toContain('storyIds.length === 0');
+    expect(source).not.toContain('const storyNames = [');
+    expect(source).toContain("storiesAllowingOffscreenWindows = new Set([\n  'windowed-os-desktop-shell--desktop-composition'");
+    expect(source).toContain('result.scrollWidth > result.clientWidth + 1');
+    expect(source).toContain('Windowed OS Storybook QA passed:');
   });
 });
