@@ -7845,6 +7845,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .ui-image-inspect-dialog {
+  position: relative;
+  display: grid;
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
   border: 2px solid var(--wos-ink-900) !important;
   border-radius: 10px;
@@ -7853,18 +7858,28 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .ui-image-inspect-stage {
+  display: flex;
+  min-height: 260px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--wos-ink-900) 10%, transparent) 1px, transparent 1px),
     linear-gradient(color-mix(in srgb, var(--wos-ink-900) 10%, transparent) 1px, transparent 1px),
     color-mix(in srgb, var(--wos-chat) 7%, var(--wos-surface-0)) !important;
   background-size: 28px 28px;
+  padding: 14px;
 }
 
 .windowed-os-shell .ui-image-inspect-caption {
-  max-width: min(520px, calc(100% - 52px));
+  justify-self: start;
+  max-width: min(520px, calc(100% - 20px));
+  margin: 10px;
   border: 2px solid var(--wos-ink-900);
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
+  padding: 7px 9px;
   color: var(--wos-ink-900);
   box-shadow: var(--wos-shadow-button);
 }
@@ -7882,6 +7897,14 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .ui-image-inspect-dialog .ui-icon-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
   border: 2px solid var(--wos-ink-900) !important;
   border-radius: 8px !important;
   background: var(--wos-surface-1) !important;
@@ -7896,7 +7919,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .ui-image-inspect-media {
+  display: block;
+  max-width: 100%;
+  max-height: min(62vh, 480px);
   background: transparent;
+  object-fit: contain;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-conversation-setup-empty {

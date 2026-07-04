@@ -974,6 +974,43 @@ export const DarkInheritedChatChrome: Story = {
   render: () => <InheritedChatChromeStory theme="dark" />,
 };
 
+function ImageInspectDialogStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 640 }}>
+      <div
+        className="ui-image-inspect-backdrop"
+        style={{
+          minHeight: 640,
+          display: 'grid',
+          placeItems: 'center',
+          padding: 24,
+        }}
+      >
+        <div className="ui-image-inspect-dialog" role="dialog" aria-modal="true" aria-label="Inspect image: Windowed OS sketch">
+          <button type="button" className="ui-icon-button" aria-label="Close image inspector">
+            x
+          </button>
+          <div className="ui-image-inspect-stage">
+            <img src={storyImagePreviewSrc} alt="Windowed OS sketch preview" className="ui-image-inspect-media" />
+          </div>
+          <div className="ui-image-inspect-caption">
+            <p className="ui-image-inspect-caption__label">Windowed OS sketch preview</p>
+            <p className="ui-image-inspect-caption__meta">PNG · 1280x720 · Generated from chat attachment</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const ImageInspectDialog: Story = {
+  render: () => <ImageInspectDialogStory />,
+};
+
+export const DarkImageInspectDialog: Story = {
+  render: () => <ImageInspectDialogStory theme="dark" />,
+};
+
 export const NavigationPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 680, padding: 24 }}>
