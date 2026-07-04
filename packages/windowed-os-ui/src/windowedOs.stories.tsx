@@ -1906,51 +1906,58 @@ function RoutinesPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
-        <WindowedDialog
-          title="Repo context loader"
-          meta="enabled"
-          accent="routines"
-          parentWindowTitle="Routines"
-          onClose={() => undefined}
-          actions={
-            <>
-              <WindowedPageButton tone="accent">Save</WindowedPageButton>
-              <WindowedPageButton>Delete</WindowedPageButton>
-            </>
-          }
-        >
-          <div className="wos-routine-editor-bridge">
-            <WindowedFormGrid columns={2}>
-              <WindowedField label="Type">
-                <WindowedSelect defaultValue="instruction" aria-label="Routine type">
-                  <option value="instruction">Run prompt</option>
-                  <option value="decision">Choose path</option>
-                  <option value="stop">Stop event</option>
-                </WindowedSelect>
-              </WindowedField>
-              <WindowedField label="State">
-                <WindowedToggle checked accent="routines" label="Toggle Repo context loader" />
-              </WindowedField>
-              <WindowedField label="Instruction" span="full">
-                <WindowedTextarea
-                  aria-label="Routine instruction"
-                  defaultValue="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
-                />
-              </WindowedField>
-            </WindowedFormGrid>
-          </div>
-        </WindowedDialog>
-        <WindowedDialog title="Routine runs" meta="12 total" accent="routines" parentWindowTitle="Routines" onClose={() => undefined}>
-          <WindowedTimeline>
-            <WindowedTimelineItem title="completed" meta="Today, 09:58" tone="positive">
-              Loaded repo context and appended active windowed-mode notes.
-            </WindowedTimelineItem>
-            <WindowedTimelineItem title="skipped" meta="Today, 09:22" tone="neutral">
-              No frontend files changed.
-            </WindowedTimelineItem>
-          </WindowedTimeline>
-        </WindowedDialog>
       </WindowFrame>
+      <WindowedDialog
+        title="Repo context loader"
+        meta="enabled"
+        accent="routines"
+        parentWindowTitle="Routines"
+        onClose={() => undefined}
+        actions={
+          <>
+            <WindowedPageButton tone="accent">Save</WindowedPageButton>
+            <WindowedPageButton>Delete</WindowedPageButton>
+          </>
+        }
+      >
+        <div className="wos-routine-editor-bridge">
+          <WindowedFormGrid columns={2}>
+            <WindowedField label="Type">
+              <WindowedSelect defaultValue="instruction" aria-label="Routine type">
+                <option value="instruction">Run prompt</option>
+                <option value="decision">Choose path</option>
+                <option value="stop">Stop event</option>
+              </WindowedSelect>
+            </WindowedField>
+            <WindowedField label="State">
+              <WindowedToggle checked accent="routines" label="Toggle Repo context loader" />
+            </WindowedField>
+            <WindowedField label="Instruction" span="full">
+              <WindowedTextarea
+                aria-label="Routine instruction"
+                defaultValue="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
+              />
+            </WindowedField>
+          </WindowedFormGrid>
+        </div>
+      </WindowedDialog>
+      <WindowedDialog
+        title="Routine runs"
+        meta="12 total"
+        accent="routines"
+        parentWindowTitle="Routines"
+        initialOffset={{ x: 0, y: 390 }}
+        onClose={() => undefined}
+      >
+        <WindowedTimeline>
+          <WindowedTimelineItem title="completed" meta="Today, 09:58" tone="positive">
+            Loaded repo context and appended active windowed-mode notes.
+          </WindowedTimelineItem>
+          <WindowedTimelineItem title="skipped" meta="Today, 09:22" tone="neutral">
+            No frontend files changed.
+          </WindowedTimelineItem>
+        </WindowedTimeline>
+      </WindowedDialog>
     </div>
   );
 }

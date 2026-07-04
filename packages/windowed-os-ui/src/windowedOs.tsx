@@ -435,6 +435,7 @@ export interface WindowedDialogProps {
   modal?: boolean;
   parentWindowId?: string;
   parentWindowTitle?: string;
+  initialOffset?: { x: number; y: number };
 }
 
 const DIALOG_MIN_VISIBLE_X = 96;
@@ -475,8 +476,9 @@ export function WindowedDialog({
   modal = false,
   parentWindowId,
   parentWindowTitle,
+  initialOffset = { x: 0, y: 0 },
 }: WindowedDialogProps) {
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [offset, setOffset] = useState(initialOffset);
   const [dragging, setDragging] = useState(false);
   const cleanupDragRef = useRef<(() => void) | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);

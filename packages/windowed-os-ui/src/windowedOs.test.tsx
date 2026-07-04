@@ -612,6 +612,22 @@ describe('WindowedDialog content primitives', () => {
     expect(html).not.toContain('Attached to Gateways');
   });
 
+  it('supports initial modeless subwindow offsets for multiple desktop detail windows', () => {
+    const html = renderToStaticMarkup(
+      <WindowedDialog
+        title="Routine runs"
+        accent="routines"
+        parentWindowTitle="Routines"
+        initialOffset={{ x: 0, y: 390 }}
+        onClose={() => undefined}
+      >
+        Runs
+      </WindowedDialog>,
+    );
+
+    expect(html).toContain('style="transform:translate(0px, 390px)"');
+  });
+
   it('supports explicit modal subwindows for blocking flows', () => {
     const html = renderToStaticMarkup(
       <WindowedDialog title="Confirm install" accent="extensions" modal onClose={() => undefined}>
@@ -1804,6 +1820,7 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
     const stylesSource = readFileSync(stylesPath, 'utf8');
+    const routinesSource = source.slice(source.indexOf('function RoutinesPageStory'), source.indexOf('export const RoutinesPage'));
 
     expect(source).toContain('function RoutinesPageStory');
     expect(source).toContain('export const RoutinesPage');
@@ -1818,6 +1835,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Status"');
     expect(source).toContain('<WindowedDialog');
     expect(source).toContain('title="Routine runs"');
+    expect(routinesSource.indexOf('</WindowFrame>')).toBeLessThan(routinesSource.indexOf('<WindowedDialog'));
+    expect(routinesSource).toContain('initialOffset={{ x: 0, y: 390 }}');
     expect(source).not.toContain('title="Selected routine"');
     expect(source).not.toContain('ariaLabel="Routine scope"');
     expect(stylesSource).toContain('.wos-routine-summary-row .wos-data-row__meta');
