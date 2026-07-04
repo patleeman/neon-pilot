@@ -213,34 +213,37 @@ export const ChatWithAttachedWorkbench: Story = {
       >
         <div className="wos-window-route-body wos-window-route-body--chat">
           <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-            <button
-              type="button"
-              className="wos-chat-window-toolbar__button"
-              data-density="icon"
-              aria-label="Hide workbench"
-              title="Hide workbench"
-              aria-pressed="false"
-            >
-              <StoryToolbarIcon name="workbench-visible" />
-            </button>
-            <button
-              type="button"
-              className="wos-chat-window-toolbar__button"
-              data-density="icon"
-              aria-label="Open Browser window"
-              title="Open Browser window"
-            >
-              <StoryToolbarIcon name="browser" />
-            </button>
-            <button
-              type="button"
-              className="wos-chat-window-toolbar__button"
-              data-density="icon"
-              aria-label="Open Terminal window"
-              title="Open Terminal window"
-            >
-              <StoryToolbarIcon name="terminal" />
-            </button>
+            <div className="wos-chat-window-toolbar__label">Workbench</div>
+            <div className="wos-chat-window-toolbar__actions">
+              <button
+                type="button"
+                className="wos-chat-window-toolbar__button"
+                data-density="icon"
+                aria-label="Hide workbench"
+                title="Hide workbench"
+                aria-pressed="false"
+              >
+                <StoryToolbarIcon name="workbench-visible" />
+              </button>
+              <button
+                type="button"
+                className="wos-chat-window-toolbar__button"
+                data-density="icon"
+                aria-label="Open Browser window"
+                title="Open Browser window"
+              >
+                <StoryToolbarIcon name="browser" />
+              </button>
+              <button
+                type="button"
+                className="wos-chat-window-toolbar__button"
+                data-density="icon"
+                aria-label="Open Terminal window"
+                title="Open Terminal window"
+              >
+                <StoryToolbarIcon name="terminal" />
+              </button>
+            </div>
           </div>
           <div className="wos-chat-workbench">
             <WindowedChatSurface>

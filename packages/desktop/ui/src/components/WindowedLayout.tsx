@@ -970,47 +970,50 @@ function WindowRouteBody({
       data-workbench-collapsed={effectiveChatWorkbenchOpen ? undefined : 'true'}
     >
       <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-        {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-        <button
-          type="button"
-          className="wos-chat-window-toolbar__button"
-          data-density="icon"
-          aria-pressed={!effectiveChatWorkbenchOpen && !compact}
-          aria-label={effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
-          disabled={compact}
-          title={
-            compact
-              ? 'Resize the chat window wider to show the workbench.'
-              : effectiveChatWorkbenchOpen
-                ? 'Hide workbench'
-                : 'Show workbench'
-          }
-          onClick={() => setChatWorkbenchOpen((open) => !open)}
-        >
-          <WindowedChatToolbarIcon name={effectiveChatWorkbenchOpen ? 'workbench-visible' : 'workbench-hidden'} />
-        </button>
-        {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-        <button
-          type="button"
-          className="wos-chat-window-toolbar__button"
-          data-density="icon"
-          aria-label="Open Browser window"
-          title="Open Browser window"
-          onClick={onOpenBrowserWindow}
-        >
-          <WindowedChatToolbarIcon name="browser" />
-        </button>
-        {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-        <button
-          type="button"
-          className="wos-chat-window-toolbar__button"
-          data-density="icon"
-          aria-label="Open Terminal window"
-          title="Open Terminal window"
-          onClick={onOpenTerminalWindow}
-        >
-          <WindowedChatToolbarIcon name="terminal" />
-        </button>
+        <div className="wos-chat-window-toolbar__label">Workbench</div>
+        <div className="wos-chat-window-toolbar__actions">
+          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
+          <button
+            type="button"
+            className="wos-chat-window-toolbar__button"
+            data-density="icon"
+            aria-pressed={!effectiveChatWorkbenchOpen && !compact}
+            aria-label={effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
+            disabled={compact}
+            title={
+              compact
+                ? 'Resize the chat window wider to show the workbench.'
+                : effectiveChatWorkbenchOpen
+                  ? 'Hide workbench'
+                  : 'Show workbench'
+            }
+            onClick={() => setChatWorkbenchOpen((open) => !open)}
+          >
+            <WindowedChatToolbarIcon name={effectiveChatWorkbenchOpen ? 'workbench-visible' : 'workbench-hidden'} />
+          </button>
+          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
+          <button
+            type="button"
+            className="wos-chat-window-toolbar__button"
+            data-density="icon"
+            aria-label="Open Browser window"
+            title="Open Browser window"
+            onClick={onOpenBrowserWindow}
+          >
+            <WindowedChatToolbarIcon name="browser" />
+          </button>
+          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
+          <button
+            type="button"
+            className="wos-chat-window-toolbar__button"
+            data-density="icon"
+            aria-label="Open Terminal window"
+            title="Open Terminal window"
+            onClick={onOpenTerminalWindow}
+          >
+            <WindowedChatToolbarIcon name="terminal" />
+          </button>
+        </div>
       </div>
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>

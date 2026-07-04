@@ -381,7 +381,8 @@ describe('WindowedLayout route windows', () => {
         .getByRole('button', { name: /open terminal window/i })
         .getAttribute('data-density'),
     ).toBe('icon');
-    expect(chatWindow.querySelector('.wos-chat-window-toolbar')?.textContent?.trim()).toBe('');
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')?.textContent?.trim()).toBe('Workbench');
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(3);
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
   });
 

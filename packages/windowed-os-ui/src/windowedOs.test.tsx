@@ -733,8 +733,11 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-window-route-body--chat {\n  display: grid;\n  grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar {\n  display: flex;');
+    expect(stylesSource).toContain('justify-content: space-between;');
     expect(stylesSource).toContain('gap: 6px;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('.wos-chat-window-toolbar__label');
+    expect(stylesSource).toContain('.wos-chat-window-toolbar__actions');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[data-density='icon']");
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button svg');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
