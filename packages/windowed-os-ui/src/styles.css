@@ -955,14 +955,14 @@
   display: block;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 32%, transparent);
   border-radius: 7px;
   background: var(--wos-surface-1);
   color: var(--wos-ink-700);
   padding: 5px 7px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
   font-family: var(--wos-font-mono);
   font-size: 10px;
   font-weight: 600;

@@ -1608,6 +1608,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('box-shadow: var(--wos-shadow-button);');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__url {');
     expect(stylesSource).toContain('display: block;\n  width: 100%;\n  min-width: 0;');
+    expect(stylesSource).toContain('overflow-wrap: anywhere;\n  white-space: normal;');
+    expect(stylesSource).not.toContain('text-overflow: ellipsis;\n  white-space: nowrap;\n  font-family: var(--wos-font-mono);');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).toContain('font-size: 10px;');
     expect(stylesSource).toContain(".windowed-os-shell[data-wos-theme='dark'] .wos-state-block[data-tone='warning']");
