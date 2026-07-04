@@ -3589,10 +3589,82 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   }
 
   .wos-page-shell:not([data-layout='standard']) .wos-page-rail {
-    max-height: 168px;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
     border-right: 0;
     border-bottom: 2px solid var(--wos-ink-900);
     padding: 8px;
+    scrollbar-width: none;
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    gap: 6px;
+    border: 0;
+    background: transparent;
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list-item {
+    width: auto;
+    min-width: max-content;
+    flex: 0 0 auto;
+    border: 1.5px solid var(--wos-ink-900);
+    border-radius: var(--wos-radius-sm);
+    background: var(--wos-surface-1);
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list-item + .wos-list-item {
+    border-top: 1.5px solid var(--wos-ink-900);
+  }
+}
+
+@container wos-window-route (max-width: 560px) {
+  .wos-page-shell:not([data-layout='standard']) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 2px solid var(--wos-ink-900);
+    padding: 8px;
+    scrollbar-width: none;
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    gap: 6px;
+    border: 0;
+    background: transparent;
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list-item {
+    width: auto;
+    min-width: max-content;
+    flex: 0 0 auto;
+    border: 1.5px solid var(--wos-ink-900);
+    border-radius: var(--wos-radius-sm);
+    background: var(--wos-surface-1);
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list-item + .wos-list-item {
+    border-top: 1.5px solid var(--wos-ink-900);
   }
 }
 

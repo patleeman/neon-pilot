@@ -97,7 +97,13 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain("@media (max-width: 560px) {\n  .wos-page-shell:not([data-layout='standard']) {");
     expect(stylesSource).toContain('grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain(".wos-page-shell:not([data-layout='standard']) .wos-page-rail {");
+    expect(stylesSource).toContain('overflow-x: auto;\n    overflow-y: hidden;');
     expect(stylesSource).toContain('border-right: 0;\n    border-bottom: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain("@container wos-window-route (max-width: 560px) {\n  .wos-page-shell:not([data-layout='standard']) {");
+    expect(stylesSource).toContain(".wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list {\n    display: flex;");
+    expect(stylesSource).toContain(
+      ".wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list-item {\n    width: auto;\n    min-width: max-content;",
+    );
     expect(stylesSource).toContain(
       '.wos-settings-row__actions {\n    min-width: 0;\n    max-width: none;\n    justify-content: flex-start;',
     );
@@ -2468,6 +2474,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-settings-row__actions > *');
     expect(stylesSource).toContain('.wos-page-rail .wos-list {');
     expect(stylesSource).toContain('border: 1.5px solid var(--wos-line-strong);');
+    expect(stylesSource).toContain('scrollbar-width: none;');
+    expect(stylesSource).toContain('.wos-page-rail::-webkit-scrollbar {\n    display: none;');
+    expect(stylesSource).toContain('.wos-page-rail .wos-list {\n    display: flex;\n    width: max-content;');
+    expect(stylesSource).toContain('.wos-page-rail .wos-list-item + .wos-list-item {\n    border-top: 1.5px solid var(--wos-ink-900);');
   });
 
   it('documents dark variants for baseline windowed page templates', () => {
