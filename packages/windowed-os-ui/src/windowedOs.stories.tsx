@@ -2714,7 +2714,7 @@ function DiagnosticsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
                 />
                 <WindowedDataRow
                   name="browser_snapshot"
-                  meta="workbench browser"
+                  meta="Browser app"
                   status={<WindowedBadge tone="warning">18</WindowedBadge>}
                   action="2"
                 />

@@ -2840,6 +2840,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Health"');
     expect(source).toContain('title="Usage"');
     expect(source).toContain('title="Tools"');
+    expect(source).toContain('meta="Browser app"');
+    expect(source).not.toContain('meta="workbench browser"');
     expect(source).toContain('title="App activity"');
     expect(source).not.toContain('title="Traces"');
     expect(source).not.toContain('Export trace');
