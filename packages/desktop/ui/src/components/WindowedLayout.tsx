@@ -1253,8 +1253,11 @@ export function WindowedLayout() {
       const parent = current.find((candidate) => candidate.id === parentWindow.id && candidate.kind === 'chat') ?? parentWindow;
       const id = `${parent.id}:${kind}`;
       const existing = current.find((candidate) => candidate.id === id);
+      const withCollapsedParent = current.map((windowModel) =>
+        windowModel.id === parent.id && windowModel.kind === 'chat' ? { ...windowModel, workbenchCollapsed: true } : windowModel,
+      );
       if (existing) {
-        return withFocusedWindow(current, id);
+        return withFocusedWindow(withCollapsedParent, id);
       }
       const next: DesktopWindowModel = {
         id,
@@ -1267,7 +1270,7 @@ export function WindowedLayout() {
         parentWindowId: parent.id,
         parentWindowTitle: parent.title,
       };
-      return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
+      return [...withCollapsedParent.map((windowModel) => ({ ...windowModel, focused: false })), next];
     });
   }, []);
 

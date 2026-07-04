@@ -2690,6 +2690,7 @@ describe('WindowedLayout route windows', () => {
     expect(terminalWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('chat');
     expect(terminalWindow.closest('[data-window-id="chat:draft"]')).toBeNull();
     expect(chatWindow?.compareDocumentPosition(terminalWindow) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(chatWindow?.querySelector('.wos-window-route-body--chat')?.getAttribute('data-workbench-collapsed')).toBe('true');
 
     const terminalBody = terminalWindow.querySelector('[data-windowed-subwindow="terminal"]');
     expect(terminalBody?.getAttribute('data-parent-window-id')).toBe('chat:draft');
@@ -2762,6 +2763,7 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-focused-window-id')).toBe('chat:draft:browser');
     expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
+    expect(chatWindow?.querySelector('.wos-window-route-body--chat')?.getAttribute('data-workbench-collapsed')).toBe('true');
 
     await act(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 1250));
