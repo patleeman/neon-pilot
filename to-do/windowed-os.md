@@ -11,27 +11,21 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
    - Some chat buttons use the dark bordered style while others still look like stable Neon Pilot controls.
    - Run a broader pass on chat transcript rows, tool blocks, composer, workbench tabs, empty workbench state, borders, spacing, typography, and button treatment so the whole conversation window matches the windowed OS design.
 
-2. Start menu items can become unclickable with pointer input.
-   - At least once, Start menu items were not clickable at all.
-   - Typing an app name such as `chat` into search and pressing Enter can still open the app.
-   - This may be intermittent or state-dependent.
-   - Investigate pointer hit testing, overlays, focus capture, and whether the Start menu button rows lose their click handlers after shell/window interactions.
-
-3. Drawing/Scally mode needs windowed styling and sizing fixes.
+2. Drawing/Scally mode needs windowed styling and sizing fixes.
    - Drawing mode colors do not match the windowed OS palette.
    - The current drawing modal is too large and visually heavy.
    - Modal chrome/actions should match the dark-bordered windowed button and surface treatment.
    - This likely should stop being a giant modal and become a child/sub-window.
    - 2026-07-03 progress: Excalidraw editor opens as a non-modal windowed child surface in desktop mode instead of inheriting the fullscreen extension modal class; verified live with `aria-modal=false`, `data-windowed-child-window=true`, click-through backdrop, and 860x560 sizing.
 
-4. Add parent-attached sub-windows.
+3. Add parent-attached sub-windows.
    - Need a sub-window concept for windows attached to a parent window.
    - Closing a parent window should close its sub-windows.
    - Minimizing a parent window should minimize its sub-windows.
    - Parent and sub-windows should share the same toolbar/titlebar color for simpler grouping.
    - Candidate first uses: drawing/Scally, terminal, browser, chat workbench tabs, and details/popovers that are currently oversized modals or right-side panels.
 
-5. Extract workbench tools into sub-windows.
+4. Extract workbench tools into sub-windows.
    - Once sub-windows exist, explore pulling Chat, Terminal, Browser, and Drawing out of the attached two-pane workbench.
    - Chat can then become a cleaner primary conversation window, with workbench tools as parent-attached child windows.
    - After proving this in Chat, sweep other apps for modal/right-panel surfaces that should become sub-windows.
@@ -48,6 +42,8 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
   - Verified in live `/?shell=windowed` QA on 2026-07-03: the close button receives center and right-half pointer hits.
 - Start menu does not close when clicking the empty desktop background.
   - Verified in live `/?shell=windowed` QA on 2026-07-03: empty desktop clicks dismiss the Start menu.
+- Start menu items can become unclickable with pointer input.
+  - Fixed app launch on primary press before click dispatch; verified unit/layout coverage and live `/?shell=windowed` QA on 2026-07-03: pressing Automations opened/focused the Automations window and closed the Start menu.
 
 ## Theme Work
 

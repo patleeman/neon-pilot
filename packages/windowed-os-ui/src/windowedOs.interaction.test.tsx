@@ -3,7 +3,15 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Taskbar, WindowedDataRow, WindowedDialog, WindowedListItem, WindowedMenuPanel, WindowedNumberStepper } from './windowedOs';
+import {
+  StartMenu,
+  Taskbar,
+  WindowedDataRow,
+  WindowedDialog,
+  WindowedListItem,
+  WindowedMenuPanel,
+  WindowedNumberStepper,
+} from './windowedOs';
 
 function rect(input: { left: number; top: number; width: number; height: number }): DOMRect {
   return {
@@ -211,6 +219,22 @@ describe('WindowedListItem interactions', () => {
 
     expect(screen.queryByRole('button', { name: /changelog/i })).toBeNull();
     expect(screen.getByText('CHANGELOG.md').closest('.wos-list-item')?.tagName).toBe('DIV');
+  });
+});
+
+describe('StartMenu interactions', () => {
+  it('launches apps on primary press without double-selecting on click', () => {
+    const onSelect = vi.fn();
+
+    render(<StartMenu open items={[{ id: 'routines', title: 'Routines', accent: 'routines', onSelect }]} onClose={() => undefined} />);
+
+    const routines = screen.getByRole('button', { name: 'Routines' });
+    fireEvent.mouseDown(routines, { button: 0 });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(routines);
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
   });
 });
 

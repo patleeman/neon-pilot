@@ -724,8 +724,7 @@ describe('WindowedLayout route windows', () => {
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
     const automations = within(startMenu).getByRole('button', { name: /^automations$/i });
-    fireEvent.mouseDown(automations, { clientX: 2, clientY: 8 });
-    fireEvent.click(automations, { clientX: 2, clientY: 8 });
+    fireEvent.mouseDown(automations, { button: 0, clientX: 2, clientY: 8 });
 
     const automationsWindow = await screen.findByRole('region', { name: /^automations$/i });
     expect(within(automationsWindow).getByTestId('extension-route-host').textContent).toBe('/automations:windowed');

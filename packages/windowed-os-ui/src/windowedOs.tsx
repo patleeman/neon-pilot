@@ -1264,6 +1264,7 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const pressSelectedRef = useRef(false);
   useEffect(() => {
     if (!open) {
       setQuery('');
@@ -1317,6 +1318,18 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
       activeItem.onSelect();
     }
   };
+  const selectItemFromPress = (event: ReactMouseEvent<HTMLButtonElement>, item: StartMenuItem) => {
+    if (event.button !== 0) return;
+    pressSelectedRef.current = true;
+    item.onSelect();
+  };
+  const selectItemFromClick = (item: StartMenuItem) => {
+    if (pressSelectedRef.current) {
+      pressSelectedRef.current = false;
+      return;
+    }
+    item.onSelect();
+  };
 
   if (!open) return null;
   return (
@@ -1347,8 +1360,9 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
               data-focused={item.focused ? 'true' : undefined}
               aria-label={item.title}
               onPointerMove={() => setActiveIndex(index)}
+              onMouseDown={(event) => selectItemFromPress(event, item)}
               onFocus={() => setActiveIndex(index)}
-              onClick={item.onSelect}
+              onClick={() => selectItemFromClick(item)}
             >
               <WindowedAppTile label={item.title} accent={item.accent} count={item.count} />
             </button>
