@@ -105,7 +105,9 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
             }
           >
             <WindowedPageSection>
-              <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+              <WindowedStateBlock tone="danger" title="Diagnostics failed to load">
+                {error}
+              </WindowedStateBlock>
             </WindowedPageSection>
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
@@ -137,7 +139,7 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
   if (context?.shellPresentation === 'windowed') {
     const usageSection =
       loading && !summary ? (
-        <WindowedStateBlock>Loading diagnostics.</WindowedStateBlock>
+        <WindowedStateBlock title="Loading diagnostics">Reading retained usage, tool, and context data.</WindowedStateBlock>
       ) : !summary ? (
         <WindowedEmptyState title="No diagnostics yet">
           {loading

@@ -417,6 +417,7 @@ describe('TelemetryPage', () => {
     const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
+    expect(screen.getByText('Diagnostics failed to load').closest('.wos-state-block__title')).toBeTruthy();
     expect(screen.getByText('trace load failed').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
     expect(container.querySelector('.ui-error-state')).toBeNull();
     expect(container.querySelector('.wos-empty-state')).toBeNull();
@@ -429,7 +430,8 @@ describe('TelemetryPage', () => {
 
     const { container } = render(<TelemetryPage pa={{} as never} context={{ shellPresentation: 'windowed' } as never} />);
 
-    expect(screen.getByText('Loading diagnostics.').closest('.wos-state-block')).toBeTruthy();
+    expect(screen.getByText('Loading diagnostics').closest('.wos-state-block__title')).toBeTruthy();
+    expect(screen.getByText('Reading retained usage, tool, and context data.').closest('.wos-state-block__body')).toBeTruthy();
     expect(container.querySelector('.ui-empty-state')).toBeNull();
     expect(container.querySelector('.ui-error-state')).toBeNull();
     expect(container.querySelector('.wos-empty-state')).toBeNull();
