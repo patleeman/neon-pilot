@@ -2037,24 +2037,23 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('aria-label="Browser child window preview"');
   });
 
-  it('documents child tool launchers in the attached-workbench Storybook example', () => {
+  it('documents child tool launchers and child workspace windows in the Chat Storybook example', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
-    expect(source).toContain('function AttachedWorkbenchStory');
-    expect(source).toContain('export const ChatWithAttachedWorkbench');
-    expect(source).toContain('export const DarkChatWithAttachedWorkbench');
-    expect(source).toContain('export const ChatWithCollapsedWorkbench');
-    expect(source).toContain('export const DarkChatWithCollapsedWorkbench');
-    expect(source).toContain('<AttachedWorkbenchStory theme="dark" />');
-    expect(source).toContain('<AttachedWorkbenchStory workbenchCollapsed />');
-    expect(source).toContain('<AttachedWorkbenchStory theme="dark" workbenchCollapsed />');
+    expect(source).toContain('function ChatWithToolWindowsStory');
+    expect(source).toContain('export const ChatWithToolWindows');
+    expect(source).toContain('export const DarkChatWithToolWindows');
+    expect(source).toContain('<ChatWithToolWindowsStory theme="dark" />');
+    expect(source).not.toContain('function AttachedWorkbenchStory');
+    expect(source).not.toContain('export const ChatWithAttachedWorkbench');
+    expect(source).not.toContain('export const ChatWithCollapsedWorkbench');
     expect(source).toContain('function AttachedBrowserWorkbenchStory');
     expect(source).toContain('export const ChatWithAttachedBrowserWorkbench');
     expect(source).toContain('export const DarkChatWithAttachedBrowserWorkbench');
     expect(source).toContain('<AttachedBrowserWorkbenchStory theme="dark" />');
     expect(source).toContain('data-wos-theme={theme}');
-    expect(source).toContain("data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}");
+    expect(source).toContain('data-workbench-collapsed="true"');
     expect(source).toContain('className="wos-chat-window-toolbar"');
     expect(source).toContain('function StoryChatWindowToolbar');
     expect(source).toContain('<div className="wos-chat-window-toolbar__label">Tools</div>');
@@ -2068,11 +2067,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('aria-label="Open Terminal window"');
     expect(source).toContain('<StoryToolbarIcon name="files" />');
     expect(source).toContain('data-density="icon"');
-    expect(source).toContain('data-windowed-attached-workbench="true"');
-    expect(source).toContain('className="wos-chat-workbench__panel ui-workbench-panel"');
-    expect(source).toContain('className="wos-chat-workbench__tabs ui-workbench-tab-strip"');
-    expect(source).toContain('className="wos-chat-workbench__body ui-workbench-panel__body"');
-    expect(source).toContain('className="ui-workbench-tab ui-workbench-tab-active"');
+    expect(source).toContain('parentWindowId="chat:release-notes"');
+    expect(source).toContain('parentWindowTitle="Release notes"');
+    expect(source).toContain('data-windowed-subwindow="files"');
+    expect(source).toContain('className="wos-chat-files-dialog__body"');
+    expect(source).toContain('className="wos-workspace-child-preview"');
+    expect(source).toContain('aria-label="Workspace files preview"');
     expect(source).toContain('className="ui-windowed-browser-host"');
     expect(source).toContain('data-windowed-browser-host="true"');
     expect(source).toContain('className="ui-windowed-browser-host__blocker"');

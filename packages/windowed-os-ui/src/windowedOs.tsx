@@ -40,7 +40,7 @@ export interface WindowedDesktopAppDefinition {
 }
 
 export const CANONICAL_WINDOWED_DESKTOP_APPS = [
-  { id: 'chat', title: 'Chat', accent: 'chat', meta: 'Conversation', detail: 'Tools attached' },
+  { id: 'chat', title: 'Chat', accent: 'chat', meta: 'Conversation', detail: 'Child tool windows' },
   { id: 'automations', title: 'Automations', accent: 'automations', meta: 'Scheduled work', detail: 'Runs and reminders' },
   { id: 'workflows', title: 'Workflows', accent: 'workflows', meta: 'Dynamic flows', detail: 'Saved multi-agent work' },
   { id: 'gateways', title: 'Gateways', accent: 'gateways', meta: 'Ingress', detail: 'Telegram ready' },

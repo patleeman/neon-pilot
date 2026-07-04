@@ -331,75 +331,73 @@ export const TaskbarMenuPlacement: Story = {
   ),
 };
 
-function AttachedWorkbenchStory({
-  theme = 'light',
-  workbenchCollapsed = false,
-}: {
-  theme?: 'light' | 'dark';
-  workbenchCollapsed?: boolean;
-}) {
+function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 700, padding: 24 }}>
+    <div
+      className="windowed-os-shell"
+      data-wos-theme={theme}
+      data-wos-theme-mode={theme}
+      style={{ boxSizing: 'border-box', minHeight: 720, height: '100vh', overflow: 'hidden', padding: 24 }}
+    >
       <WindowFrame
+        windowId="chat:release-notes"
         title="Release notes"
         accent="chat"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(1180px, 100%)', height: 640 }}
+        style={{ position: 'absolute', left: 32, top: 34, width: 'min(820px, calc(100% - 96px))', height: 620 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <div
-          className="wos-window-route-body wos-window-route-body--chat"
-          data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}
-        >
-          <StoryChatWindowToolbar activeTool={workbenchCollapsed ? undefined : 'files'} />
-          <div className="wos-chat-workbench">
-            <WindowedChatSurface>
-              <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
-                <WindowedMessageBubble from="user">Draft the changelog for v0.11.39.</WindowedMessageBubble>
-                <WindowedMessageBubble>Reading the current branch and grouping changes by extension.</WindowedMessageBubble>
-                <WindowedMessageBubble from="user">
-                  Keep it compact and include blockers only when action is required.
-                </WindowedMessageBubble>
-                <WindowedMessageBubble>
-                  Ready. I found three UI changes, one extension rebuild, and no release blockers.
-                </WindowedMessageBubble>
-              </WindowedChatMain>
-            </WindowedChatSurface>
-            {!workbenchCollapsed ? (
-              <aside
-                className="wos-chat-workbench__panel ui-workbench-panel"
-                aria-label="Attached tools"
-                data-windowed-attached-workbench="true"
-              >
-                <div className="wos-chat-workbench__tabs ui-workbench-tab-strip" role="tablist" aria-label="Tool tabs">
-                  <button type="button" className="ui-workbench-tab ui-workbench-tab-active" role="tab" aria-selected="true">
-                    Files
-                  </button>
-                  <button type="button" className="ui-workbench-tab" role="tab" aria-selected="false">
-                    Browser
-                  </button>
-                  <button type="button" className="ui-workbench-tab" role="tab" aria-selected="false">
-                    Terminal
-                  </button>
-                </div>
-                <div className="wos-chat-workbench__body ui-workbench-panel__body">
-                  <WindowedPageSection title="Workspace" meta="3 open">
-                    <WindowedList>
-                      <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
-                      <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
-                      <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
-                    </WindowedList>
-                  </WindowedPageSection>
-                  <WindowedPageSection title="Terminal" meta="Last command">
-                    <WindowedStateBlock tone="positive" title="Validation passed">
-                      pnpm --dir packages/windowed-os-ui run build
-                    </WindowedStateBlock>
-                  </WindowedPageSection>
-                </div>
-              </aside>
-            ) : null}
+        <div className="wos-window-route-body wos-window-route-body--chat" data-workbench-collapsed="true">
+          <StoryChatWindowToolbar activeTool="files" />
+          <WindowedChatSurface>
+            <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
+              <WindowedMessageBubble from="user">Draft the changelog for v0.11.39.</WindowedMessageBubble>
+              <WindowedMessageBubble>Reading the current branch and grouping changes by extension.</WindowedMessageBubble>
+              <WindowedMessageBubble from="user">Keep it compact and include blockers only when action is required.</WindowedMessageBubble>
+              <WindowedMessageBubble>
+                Ready. I found three UI changes, one extension rebuild, and no release blockers.
+              </WindowedMessageBubble>
+            </WindowedChatMain>
+          </WindowedChatSurface>
+        </div>
+      </WindowFrame>
+      <WindowFrame
+        windowId="workspace:release-notes"
+        title="Workspace"
+        accent="chat"
+        parentWindowId="chat:release-notes"
+        parentWindowTitle="Release notes"
+        style={{
+          position: 'absolute',
+          left: 'min(860px, calc(100% - 400px))',
+          top: 112,
+          width: 'min(360px, calc(100% - 80px))',
+          height: 410,
+        }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <div className="wos-window-route-body wos-window-route-body--files" data-windowed-subwindow="files">
+          <div className="wos-chat-files-dialog__body">
+            <div className="wos-workspace-child-preview" aria-label="Workspace files preview">
+              <div className="wos-workspace-child-preview__toolbar">
+                <span className="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</span>
+                <WindowedBadge tone="neutral">3 open</WindowedBadge>
+              </div>
+              <WindowedPageSection title="Workspace" meta="Attached child window">
+                <WindowedList>
+                  <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
+                  <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
+                  <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
+                </WindowedList>
+              </WindowedPageSection>
+              <WindowedStateBlock tone="positive" title="Validation passed">
+                pnpm --dir packages/windowed-os-ui run build
+              </WindowedStateBlock>
+            </div>
           </div>
         </div>
       </WindowFrame>
@@ -484,20 +482,12 @@ function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 
   );
 }
 
-export const ChatWithAttachedWorkbench: Story = {
-  render: () => <AttachedWorkbenchStory />,
+export const ChatWithToolWindows: Story = {
+  render: () => <ChatWithToolWindowsStory />,
 };
 
-export const DarkChatWithAttachedWorkbench: Story = {
-  render: () => <AttachedWorkbenchStory theme="dark" />,
-};
-
-export const ChatWithCollapsedWorkbench: Story = {
-  render: () => <AttachedWorkbenchStory workbenchCollapsed />,
-};
-
-export const DarkChatWithCollapsedWorkbench: Story = {
-  render: () => <AttachedWorkbenchStory theme="dark" workbenchCollapsed />,
+export const DarkChatWithToolWindows: Story = {
+  render: () => <ChatWithToolWindowsStory theme="dark" />,
 };
 
 export const ChatWithAttachedBrowserWorkbench: Story = {
@@ -1394,7 +1384,7 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
           <WindowedSettingsRow title="New conversation" description="Open a new Chat window">
             <WindowedBadge tone="neutral">⌘ N</WindowedBadge>
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Toggle tools" description="Show or collapse attached Chat tools">
+          <WindowedSettingsRow title="Open workspace" description="Open the focused Chat workspace child window">
             <WindowedBadge tone="neutral">⌘ ⇧ B</WindowedBadge>
           </WindowedSettingsRow>
           <WindowedSettingsRow title="Command palette" description="Find apps, commands, and recent work">
