@@ -337,7 +337,8 @@ function accentForTitle(title: string): AppAccent {
   return 'settings';
 }
 
-function accentForWindow(windowModel: Pick<DesktopWindowModel, 'kind' | 'title'>): AppAccent {
+function accentForWindow(windowModel: Pick<DesktopWindowModel, 'kind' | 'title' | 'parentWindowId'>): AppAccent {
+  if (isChildWindowKind(windowModel.kind) && windowModel.parentWindowId?.startsWith('chat:')) return 'chat';
   return windowModel.kind === 'chat' ? 'chat' : accentForTitle(windowModel.title);
 }
 

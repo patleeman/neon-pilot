@@ -2615,6 +2615,7 @@ describe('WindowedLayout route windows', () => {
     const terminalWindow = screen.getByRole('region', { name: 'Terminal' });
     expect(terminalWindow.getAttribute('data-window-id')).toBe('chat:draft:terminal');
     expect(terminalWindow.className).toContain('wos-window--terminal');
+    expect(terminalWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('chat');
     expect(terminalWindow.closest('[data-window-id="chat:draft"]')).toBeNull();
     expect(chatWindow?.compareDocumentPosition(terminalWindow) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
