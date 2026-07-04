@@ -1139,6 +1139,16 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   min-height: 0;
 }
 
+.wos-window-route-body--chat .conversation-composer-region {
+  position: relative;
+  z-index: 30;
+  overflow: visible;
+}
+
+.wos-window-route-body--chat .ui-input-shell {
+  position: relative;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker),
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop {
   align-items: flex-start !important;
@@ -4920,6 +4930,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   box-shadow: none;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
+  overflow: visible;
 }
 
 .windowed-os-shell .wos-window-route-body .ui-input-shell:focus-within {

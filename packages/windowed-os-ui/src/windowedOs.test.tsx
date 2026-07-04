@@ -746,6 +746,10 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .conversation-composer-region');
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .conversation-composer-region');
+    expect(stylesSource).toContain('z-index: 30;');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .ui-input-shell');
+    expect(stylesSource).toContain('overflow: visible;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell {');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain(
