@@ -366,7 +366,22 @@ describe('WindowedLayout route windows', () => {
     expect(chatSurface?.classList.contains('wos-chat-surface')).toBe(true);
     expect(within(chatWindow).getByTestId('embedded-layout')).toBeTruthy();
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('true');
-    expect(within(chatWindow).getByRole('button', { name: /hide workbench/i })).toBeTruthy();
+    expect(
+      within(chatWindow)
+        .getByRole('button', { name: /hide workbench/i })
+        .getAttribute('data-density'),
+    ).toBe('icon');
+    expect(
+      within(chatWindow)
+        .getByRole('button', { name: /open browser window/i })
+        .getAttribute('data-density'),
+    ).toBe('icon');
+    expect(
+      within(chatWindow)
+        .getByRole('button', { name: /open terminal window/i })
+        .getAttribute('data-density'),
+    ).toBe('icon');
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar')?.textContent?.trim()).toBe('');
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
   });
 

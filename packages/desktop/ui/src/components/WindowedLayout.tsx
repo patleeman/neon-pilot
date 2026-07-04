@@ -93,6 +93,7 @@ type ResizeState = DragState & {
 };
 
 type WindowNavigate = (to: To) => void;
+type WindowedChatToolbarIconName = 'browser' | 'terminal' | 'workbench-hidden' | 'workbench-visible';
 
 const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
@@ -888,6 +889,45 @@ function WindowedChatBrowserWindowBody({
   );
 }
 
+function WindowedChatToolbarIcon({ name }: { name: WindowedChatToolbarIconName }) {
+  const paths: Record<WindowedChatToolbarIconName, ReactNode> = {
+    browser: (
+      <>
+        <circle cx="12" cy="12" r="7" />
+        <path d="M5 12h14" />
+        <path d="M12 5a10 10 0 0 1 0 14" />
+        <path d="M12 5a10 10 0 0 0 0 14" />
+      </>
+    ),
+    terminal: (
+      <>
+        <path d="m6 8 4 4-4 4" />
+        <path d="M12 16h6" />
+      </>
+    ),
+    'workbench-hidden': (
+      <>
+        <rect x="4" y="5" width="16" height="14" rx="1.5" />
+        <path d="M13 5v14" />
+        <path d="m8 9 4 3-4 3" />
+      </>
+    ),
+    'workbench-visible': (
+      <>
+        <rect x="4" y="5" width="16" height="14" rx="1.5" />
+        <path d="M13 5v14" />
+        <path d="m10 9-4 3 4 3" />
+      </>
+    ),
+  };
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name]}
+    </svg>
+  );
+}
+
 function WindowRouteBody({
   compact = false,
   onOpenBrowserWindow,
@@ -928,20 +968,42 @@ function WindowRouteBody({
         <button
           type="button"
           className="wos-chat-window-toolbar__button"
+          data-density="icon"
           aria-pressed={!effectiveChatWorkbenchOpen && !compact}
+          aria-label={effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
           disabled={compact}
-          title={compact ? 'Resize the chat window wider to show the workbench.' : undefined}
+          title={
+            compact
+              ? 'Resize the chat window wider to show the workbench.'
+              : effectiveChatWorkbenchOpen
+                ? 'Hide workbench'
+                : 'Show workbench'
+          }
           onClick={() => setChatWorkbenchOpen((open) => !open)}
         >
-          {effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
+          <WindowedChatToolbarIcon name={effectiveChatWorkbenchOpen ? 'workbench-visible' : 'workbench-hidden'} />
         </button>
         {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-        <button type="button" className="wos-chat-window-toolbar__button" onClick={onOpenBrowserWindow}>
-          Browser window
+        <button
+          type="button"
+          className="wos-chat-window-toolbar__button"
+          data-density="icon"
+          aria-label="Open Browser window"
+          title="Open Browser window"
+          onClick={onOpenBrowserWindow}
+        >
+          <WindowedChatToolbarIcon name="browser" />
         </button>
         {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-        <button type="button" className="wos-chat-window-toolbar__button" onClick={onOpenTerminalWindow}>
-          Terminal window
+        <button
+          type="button"
+          className="wos-chat-window-toolbar__button"
+          data-density="icon"
+          aria-label="Open Terminal window"
+          title="Open Terminal window"
+          onClick={onOpenTerminalWindow}
+        >
+          <WindowedChatToolbarIcon name="terminal" />
         </button>
       </div>
       <WindowRouteScope route={route} onNavigate={onNavigate}>

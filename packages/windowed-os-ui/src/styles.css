@@ -1332,13 +1332,18 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-width: 0;
   align-items: center;
   justify-content: flex-end;
+  gap: 6px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-2);
   padding: 6px 8px;
 }
 
 .wos-chat-window-toolbar__button {
+  display: inline-flex;
   height: 28px;
+  min-width: 28px;
+  align-items: center;
+  justify-content: center;
   border: 2px solid var(--wos-ink-900);
   border-radius: 7px;
   background: var(--wos-surface-1);
@@ -1346,6 +1351,17 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   color: var(--wos-ink-900);
   cursor: pointer;
   font: var(--wos-text-row);
+}
+
+.wos-chat-window-toolbar__button[data-density='icon'] {
+  width: 30px;
+  padding: 0;
+}
+
+.wos-chat-window-toolbar__button svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
 }
 
 .wos-chat-window-toolbar__button:hover,

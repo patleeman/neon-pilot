@@ -60,6 +60,38 @@ type Story = StoryObj;
 
 const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS;
 
+function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-visible' }) {
+  const paths = {
+    browser: (
+      <>
+        <circle cx="12" cy="12" r="7" />
+        <path d="M5 12h14" />
+        <path d="M12 5a10 10 0 0 1 0 14" />
+        <path d="M12 5a10 10 0 0 0 0 14" />
+      </>
+    ),
+    terminal: (
+      <>
+        <path d="m6 8 4 4-4 4" />
+        <path d="M12 16h6" />
+      </>
+    ),
+    'workbench-visible': (
+      <>
+        <rect x="4" y="5" width="16" height="14" rx="1.5" />
+        <path d="M13 5v14" />
+        <path d="m10 9-4 3 4 3" />
+      </>
+    ),
+  };
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name]}
+    </svg>
+  );
+}
+
 export const DesktopComposition: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 720 }}>
@@ -181,8 +213,33 @@ export const ChatWithAttachedWorkbench: Story = {
       >
         <div className="wos-window-route-body wos-window-route-body--chat">
           <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-            <button type="button" className="wos-chat-window-toolbar__button" aria-pressed="false">
-              Hide workbench
+            <button
+              type="button"
+              className="wos-chat-window-toolbar__button"
+              data-density="icon"
+              aria-label="Hide workbench"
+              title="Hide workbench"
+              aria-pressed="false"
+            >
+              <StoryToolbarIcon name="workbench-visible" />
+            </button>
+            <button
+              type="button"
+              className="wos-chat-window-toolbar__button"
+              data-density="icon"
+              aria-label="Open Browser window"
+              title="Open Browser window"
+            >
+              <StoryToolbarIcon name="browser" />
+            </button>
+            <button
+              type="button"
+              className="wos-chat-window-toolbar__button"
+              data-density="icon"
+              aria-label="Open Terminal window"
+              title="Open Terminal window"
+            >
+              <StoryToolbarIcon name="terminal" />
             </button>
           </div>
           <div className="wos-chat-workbench">

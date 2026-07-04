@@ -723,7 +723,10 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-window-route-body--chat {\n  display: grid;\n  grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar {\n  display: flex;');
+    expect(stylesSource).toContain('gap: 6px;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain(".wos-chat-window-toolbar__button[data-density='icon']");
+    expect(stylesSource).toContain('.wos-chat-window-toolbar__button svg');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
   });
 
@@ -1169,7 +1172,10 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const ChatWithAttachedWorkbench');
     expect(source).toContain('className="wos-chat-window-toolbar"');
-    expect(source).toContain('Hide workbench');
+    expect(source).toContain('aria-label="Hide workbench"');
+    expect(source).toContain('aria-label="Open Browser window"');
+    expect(source).toContain('aria-label="Open Terminal window"');
+    expect(source).toContain('data-density="icon"');
   });
 
   it('defines a reusable danger tone for windowed page buttons', () => {
