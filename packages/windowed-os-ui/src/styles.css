@@ -2938,6 +2938,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   background: var(--wos-surface-2);
 }
 
+.wos-dialog .wos-page-section {
+  border-color: var(--wos-line-subtle);
+  background: transparent;
+}
+
 .wos-page-section__header {
   display: flex;
   align-items: center;
@@ -2945,6 +2950,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   gap: var(--wos-space-4);
   border-bottom: var(--wos-border-hairline) solid var(--wos-line-subtle);
   padding: 5px var(--wos-space-4);
+}
+
+.wos-dialog .wos-page-section__header {
+  background: color-mix(in oklab, var(--wos-surface-2) 76%, transparent);
+  padding: 4px var(--wos-space-4);
 }
 
 .wos-page-section__header h3 {

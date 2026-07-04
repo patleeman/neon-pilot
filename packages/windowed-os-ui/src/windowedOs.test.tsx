@@ -508,6 +508,20 @@ describe('WindowedPageSection', () => {
     expect(stylesSource).toContain('border-bottom: var(--wos-border-hairline) solid var(--wos-line-subtle);');
   });
 
+  it('softens page sections inside child dialogs so detail windows avoid nested frame chrome', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    const dialogSectionRule = stylesSource.match(/\.wos-dialog \.wos-page-section \{[\s\S]*?\n\}/)?.[0] ?? '';
+    const dialogSectionHeaderRule = stylesSource.match(/\.wos-dialog \.wos-page-section__header \{[\s\S]*?\n\}/)?.[0] ?? '';
+
+    expect(dialogSectionRule).toContain('border-color: var(--wos-line-subtle);');
+    expect(dialogSectionRule).toContain('background: transparent;');
+    expect(dialogSectionRule).not.toContain('border-color: var(--wos-line-strong);');
+    expect(dialogSectionHeaderRule).toContain('background: color-mix(in oklab, var(--wos-surface-2) 76%, transparent);');
+    expect(dialogSectionHeaderRule).toContain('padding: 4px var(--wos-space-4);');
+  });
+
   it('omits header chrome for structural wrapper sections', () => {
     const html = renderToStaticMarkup(<WindowedPageSection>Filters</WindowedPageSection>);
 
