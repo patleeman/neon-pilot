@@ -28,6 +28,36 @@
   cursor: default;
 }
 
+.windowed-os-shell
+  :where(
+    a[href],
+    summary,
+    select,
+    input[type='checkbox'],
+    input[type='radio'],
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    [role='radio']
+  ) {
+  cursor: pointer;
+}
+
+.windowed-os-shell
+  :where(
+    button:disabled,
+    select:disabled,
+    input:disabled,
+    [aria-disabled='true'],
+    [data-disabled='true'],
+    [role='button'][aria-disabled='true'],
+    [role='tab'][aria-disabled='true'],
+    [role='menuitem'][aria-disabled='true'],
+    [role='radio'][aria-disabled='true']
+  ) {
+  cursor: default;
+}
+
 .wos-desktop {
   position: relative;
   z-index: 0;

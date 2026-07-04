@@ -735,6 +735,23 @@ describe('Windowed OS tokens', () => {
     expect(stylesSource).toContain('pointer-events: none;');
     expect(stylesSource).toContain('pointer-events: auto;');
   });
+
+  it('sets pointer cursors for interactive windowed shell affordances only', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.windowed-os-shell\n  :where(');
+    expect(stylesSource).toContain('a[href],');
+    expect(stylesSource).toContain('summary,');
+    expect(stylesSource).toContain('select,');
+    expect(stylesSource).toContain("input[type='checkbox']");
+    expect(stylesSource).toContain("[role='tab']");
+    expect(stylesSource).toContain("[role='menuitem']");
+    expect(stylesSource).toContain("[role='radio']");
+    expect(stylesSource).toContain("[aria-disabled='true']");
+    expect(stylesSource).toContain("[data-disabled='true']");
+    expect(stylesSource).toContain('cursor: default;');
+  });
 });
 
 describe('Windowed OS Storybook examples', () => {
