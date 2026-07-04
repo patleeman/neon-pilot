@@ -833,7 +833,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 72px)) !important;');
     expect(stylesSource).toContain('width: min(860px, calc(100vw - 96px)) !important;');
     expect(stylesSource).toContain('height: min(560px, calc(100vh - 156px)) !important;');
-    expect(stylesSource).toContain("content: 'Attached to Chat';");
+    expect(stylesSource).toContain("content: 'Attached to ' attr(data-parent-window-title);");
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');

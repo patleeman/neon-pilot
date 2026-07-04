@@ -1118,7 +1118,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal[data-parent-window-title] .ui-dialog-header::after {
   margin-left: auto;
   color: var(--wos-ink-700);
-  content: 'Attached to Chat';
+  content: 'Attached to ' attr(data-parent-window-title);
   font: var(--wos-text-caption);
 }
 
