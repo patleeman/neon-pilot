@@ -139,7 +139,7 @@ export function ConversationPreferencesRow({
   }, [menuOpen, respondToSettingsCommands]);
 
   return (
-    <div className="flex min-w-0 flex-nowrap items-center gap-2">
+    <div className="ui-composer-preferences-row flex min-w-0 flex-nowrap items-center gap-2">
       {inlineControls.map((control) => (
         <ComposerButtonHost
           key={`${control.extensionId}:${control.id}`}
@@ -161,7 +161,7 @@ export function ConversationPreferencesRow({
               openMenu();
             }}
             className={cx(
-              'h-8 w-8 rounded-md border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
+              'ui-composer-preferences-row__menu-button h-8 w-8 rounded-md border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-base',
               menuOpen && 'bg-surface/55 text-primary',
             )}
             aria-label="More composer settings"

@@ -1362,7 +1362,25 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-window-route-body .bg-panel,
 .wos-window-route-body .bg-surface,
 .wos-window-route-body .bg-elevated {
-  color: rgb(var(--color-primary));
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-900) !important;
+}
+
+.wos-window-route-body .bg-panel,
+.wos-window-route-body .bg-elevated {
+  background: var(--wos-surface-2) !important;
+}
+
+.wos-window-route-body .text-primary {
+  color: var(--wos-ink-900) !important;
+}
+
+.wos-window-route-body .text-secondary {
+  color: var(--wos-ink-700) !important;
+}
+
+.wos-window-route-body .text-dim {
+  color: var(--wos-ink-500) !important;
 }
 
 .wos-window-route-body .border-border-subtle,
@@ -4838,6 +4856,29 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   padding: 8px var(--wos-space-5);
 }
 
+.windowed-os-shell .wos-window-route-body .ui-composer-input-controls {
+  padding: 8px 10px 10px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-input-controls__editor {
+  padding: 2px 4px 6px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-input-controls__control-row {
+  min-height: 38px;
+  border-top: 2px solid var(--wos-ink-900) !important;
+  padding: 7px 4px 0;
+  gap: 6px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-input-controls__leading {
+  gap: 6px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-input-controls__actions {
+  align-self: flex-end;
+}
+
 .windowed-os-shell .wos-window-route-body .ui-input-shell .border-t {
   border-color: var(--wos-ink-900) !important;
   padding-top: var(--wos-space-3);
@@ -4852,6 +4893,34 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body .ui-input-shell textarea::placeholder {
   color: var(--wos-ink-500);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-meta {
+  min-height: 24px;
+  margin-top: 5px;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-surface-2);
+  padding: 3px 8px;
+  color: var(--wos-ink-600);
+  font-family: var(--wos-font-mono);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-meta__primary,
+.windowed-os-shell .wos-window-route-body .ui-composer-meta__workspace {
+  min-width: 0;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-meta :where(svg) {
+  color: var(--wos-ink-600);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-meta :where(select, button) {
+  color: var(--wos-ink-900);
+  font: var(--wos-text-row);
 }
 
 .windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1'] {
@@ -4974,12 +5043,57 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   font: var(--wos-text-row);
 }
 
+.windowed-os-shell .wos-window-route-body button.ui-composer-tool-button,
+.windowed-os-shell .wos-window-route-body button.ui-composer-model-fallback,
+.windowed-os-shell .wos-window-route-body button.ui-composer-preferences-row__menu-button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border: 2px solid var(--wos-ink-900) !important;
+  border-radius: 7px;
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-900);
+  box-shadow: none;
+  font: var(--wos-text-row);
+}
+
+.windowed-os-shell .wos-window-route-body button.ui-composer-model-fallback {
+  width: auto;
+  min-width: 64px;
+  padding-inline: 8px;
+  font-family: var(--wos-font-mono);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-preferences-row {
+  gap: 6px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-actions {
+  gap: 6px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-actions__toolbar {
+  margin-right: 2px;
+  gap: 3px;
+}
+
 .windowed-os-shell .wos-window-route-body button.ui-composer-action-button:hover:not(:disabled) {
   background: var(--wos-chat);
 }
 
+.windowed-os-shell .wos-window-route-body button.ui-composer-tool-button:hover:not(:disabled),
+.windowed-os-shell .wos-window-route-body button.ui-composer-model-fallback:hover:not(:disabled),
+.windowed-os-shell .wos-window-route-body button.ui-composer-preferences-row__menu-button:hover:not(:disabled),
+.windowed-os-shell .wos-window-route-body button.ui-composer-preferences-row__menu-button.bg-surface\/55 {
+  background: var(--wos-chat) !important;
+}
+
 .windowed-os-shell .wos-window-route-body button.ui-composer-action-button:disabled,
-.windowed-os-shell .wos-window-route-body button.ui-composer-action-button[aria-disabled='true'] {
+.windowed-os-shell .wos-window-route-body button.ui-composer-action-button[aria-disabled='true'],
+.windowed-os-shell .wos-window-route-body button.ui-composer-tool-button:disabled,
+.windowed-os-shell .wos-window-route-body button.ui-composer-model-fallback:disabled,
+.windowed-os-shell .wos-window-route-body button.ui-composer-preferences-row__menu-button:disabled {
   background: var(--wos-surface-2);
   color: var(--wos-ink-500);
   opacity: 1;

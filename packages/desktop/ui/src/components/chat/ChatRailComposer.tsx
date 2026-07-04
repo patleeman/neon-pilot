@@ -382,8 +382,8 @@ export function ChatRailComposer({
   const workspaceLabel = _workspaceCwd?.trim() || 'Chat';
   const neutralChatCwd = workspaceLabel === 'Chat';
   const composerMetaFallback = (
-    <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+    <div className="conversation-composer-meta ui-composer-meta mt-1.5 flex min-h-4 flex-row items-center justify-between gap-2 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
+      <div className="ui-composer-meta__primary flex min-w-0 flex-1 items-center gap-1.5">
         {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
         <span className="ui-truncate-start min-w-0">{workspaceLabel}</span>
       </div>

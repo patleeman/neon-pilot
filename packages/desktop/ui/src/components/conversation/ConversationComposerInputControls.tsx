@@ -92,6 +92,7 @@ function CoreComposerIcon({ path }: { path: string }) {
 function CoreAttachControl({ disabled, onOpenFilePicker }: { disabled: boolean; onOpenFilePicker: () => void }) {
   return (
     <IconButton
+      className="ui-composer-tool-button"
       shape="circle"
       type="button"
       onPointerDown={(event) => {
@@ -158,6 +159,7 @@ function CoreDrawingControl({
 
   return (
     <IconButton
+      className="ui-composer-tool-button"
       shape="circle"
       type="button"
       onPointerDown={(event) => {
@@ -203,7 +205,7 @@ function CoreModelPreferenceFallback({ disabled, onInsertCommand }: { disabled: 
   return (
     <ToolbarButton
       type="button"
-      className="h-8 min-w-0 px-2 font-mono text-xs text-secondary"
+      className="ui-composer-model-fallback h-8 min-w-0 px-2 font-mono text-xs text-secondary"
       title="Use /model, /thinking_level, or /service_tier"
       aria-label="Use model preference slash commands"
       disabled={disabled}
@@ -508,7 +510,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   const shouldRenderCoreModelPreferences = !hasExtensionModelPreferencesControl;
 
   return (
-    <div className="px-3 pt-2.5 pb-2.5">
+    <div className="ui-composer-input-controls px-3 pt-2.5 pb-2.5">
       {/* ui-pattern-ok raw-control reason="Hidden native file input is required to open the browser file picker and is triggered by shared composer controls." */}
       <input
         ref={fileInputRef}
@@ -525,8 +527,8 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
         }}
       />
 
-      <div className="flex flex-col gap-0">
-        <div className="px-1 pt-1">
+      <div className="ui-composer-input-controls__body flex flex-col gap-0">
+        <div className="ui-composer-input-controls__editor px-1 pt-1">
           <Textarea
             ref={textareaRef}
             value={localInput}
@@ -579,11 +581,16 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
 
         <div
           className={cx(
-            'flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0',
+            'ui-composer-input-controls__control-row flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0',
             shouldKeepControlRowInline && 'flex-nowrap',
           )}
         >
-          <div className={cx('flex min-w-0 flex-1 flex-wrap items-center gap-1.5', shouldKeepControlRowInline && 'flex-nowrap')}>
+          <div
+            className={cx(
+              'ui-composer-input-controls__leading flex min-w-0 flex-1 flex-wrap items-center gap-1.5',
+              shouldKeepControlRowInline && 'flex-nowrap',
+            )}
+          >
             <CoreAttachControl disabled={composerDisabled} onOpenFilePicker={onOpenFilePicker} />
             {visibleLeadingControls.map((control) => (
               <ComposerButtonHost
@@ -624,7 +631,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             />
           </div>
 
-          <div className="ml-auto shrink-0">
+          <div className="ui-composer-input-controls__actions ml-auto shrink-0">
             <ConversationComposerActions
               composerDisabled={composerDisabled}
               streamIsStreaming={streamIsStreaming}

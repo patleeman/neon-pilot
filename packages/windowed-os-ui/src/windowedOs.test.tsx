@@ -744,6 +744,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell textarea::placeholder');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell:focus-within');
     expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
+    expect(stylesSource).toContain('.wos-window-route-body .bg-base');
+    expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
+    expect(stylesSource).toContain('.wos-window-route-body .text-primary');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-input-controls');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-input-controls__control-row');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-meta');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-tool-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-model-fallback');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-preferences-row__menu-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-actions');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-action-button');
     expect(stylesSource).toContain('font: var(--wos-text-row);');
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell");

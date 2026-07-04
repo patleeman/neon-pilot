@@ -75,10 +75,10 @@ export function ConversationComposerMeta({
   };
   const neutralChatCwd = currentCwdLabel === 'Chat';
   return (
-    <div className="conversation-composer-meta mt-1.5 flex min-h-4 flex-row flex-wrap items-center justify-between gap-x-2 gap-y-1 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
-      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
+    <div className="conversation-composer-meta ui-composer-meta mt-1.5 flex min-h-4 flex-row flex-wrap items-center justify-between gap-x-2 gap-y-1 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
+      <div className="ui-composer-meta__primary flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
         {draft ? (
-          <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 xl:max-w-[26rem] xl:flex-none">
+          <div className="ui-composer-meta__workspace flex min-w-0 max-w-full flex-1 items-center gap-1.5 xl:max-w-[26rem] xl:flex-none">
             {hasDraftCwd ? <FolderIcon className="shrink-0 text-dim/70" /> : <ChatBubbleIcon className="shrink-0 text-dim/70" />}
             <label className="sr-only" htmlFor="draft-composer-cwd">
               Workspace folder

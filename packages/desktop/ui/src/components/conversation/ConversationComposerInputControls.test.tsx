@@ -217,6 +217,10 @@ describe('ConversationComposerInputControls', () => {
     expect(html).not.toContain('<select');
     expect(html).toContain('Create drawing');
     expect(html).toContain('aria-label="Send"');
+    expect(html).toContain('ui-composer-input-controls');
+    expect(html).toContain('ui-composer-input-controls__control-row');
+    expect(html).toContain('ui-composer-tool-button');
+    expect(html).toContain('ui-composer-preferences-row');
   });
 
   it('accepts multimedia probe file types from the hidden composer input', () => {

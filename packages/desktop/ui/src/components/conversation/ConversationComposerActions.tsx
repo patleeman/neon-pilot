@@ -94,9 +94,9 @@ export function ConversationComposerActions({
   }
 
   return (
-    <div className="ml-auto flex shrink-0 items-center gap-2">
+    <div className="ui-composer-actions ml-auto flex shrink-0 items-center gap-2">
       {visibleToolbarActions.length > 0 && (
-        <div className="flex items-center gap-0.5 mr-1">
+        <div className="ui-composer-actions__toolbar mr-1 flex items-center gap-0.5">
           {visibleToolbarActions.map((action) => (
             <IconButton
               key={action.id}
