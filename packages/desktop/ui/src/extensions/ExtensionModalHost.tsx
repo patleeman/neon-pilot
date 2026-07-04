@@ -325,6 +325,7 @@ export function ExtensionModalHost() {
           <DialogHeader
             title={title}
             titleId="extension-modal-title"
+            data-parent-window-title={parentWindowTitle}
             actions={
               <IconButton onClick={() => handleClose()} aria-label="Close extension modal" title="Close extension modal">
                 <svg

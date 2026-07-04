@@ -522,7 +522,7 @@ describe('Windowed chat styling', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__primary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace');
     expect(stylesSource).toContain(
-      ".windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace::before {\n  content: '|';",
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace::before {\n  content: none;',
     );
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user,\n.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant {\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
@@ -1394,6 +1394,8 @@ describe('Windowed OS Storybook examples', () => {
   it('scopes drawing modal chrome to the windowed shell', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const storiesSource = readFileSync(storiesPath, 'utf8');
 
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal");
@@ -1415,10 +1417,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('max-width: none !important;');
-    expect(stylesSource).toContain("content: 'Attached';");
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-dialog-header[data-parent-window-title]::after');
+    expect(stylesSource).toContain("content: 'Attached to ' attr(data-parent-window-title);");
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-header-copy');
     expect(stylesSource).toContain('min-height: 28px;');
     expect(stylesSource).toContain('padding: 3px 6px 3px 8px;');
+    expect(storiesSource).toContain('<header className="ui-dialog-header" data-parent-window-title="Release planning">');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-title');
     expect(stylesSource).toContain('margin: 0;');
     expect(stylesSource).toContain('font: var(--wos-text-row);');

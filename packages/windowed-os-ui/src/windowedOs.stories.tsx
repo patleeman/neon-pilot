@@ -3155,7 +3155,7 @@ export const DrawingsPickerSubwindow: Story = {
             data-parent-window-id="chat:release-plan"
             data-parent-window-title="Release planning"
           >
-            <header className="ui-dialog-header">
+            <header className="ui-dialog-header" data-parent-window-title="Release planning">
               <div className="ui-dialog-header-copy">
                 <h2 id="drawings-picker-title" className="ui-dialog-title">
                   Conversation drawings
@@ -3247,7 +3247,7 @@ export const ExcalidrawEditorSubwindow: Story = {
             data-parent-window-id="chat:release-plan"
             data-parent-window-title="Release planning"
           >
-            <header className="ui-dialog-header">
+            <header className="ui-dialog-header" data-parent-window-title="Release planning">
               <div className="ui-dialog-header-copy">
                 <h2 id="excalidraw-editor-title" className="ui-dialog-title">
                   Drawing editor

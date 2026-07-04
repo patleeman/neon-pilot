@@ -309,7 +309,7 @@ export function SidebarSection({
   headerClassName?: string;
   bodyClassName?: string;
   titleClassName?: string;
-} & Omit<HTMLAttributes<HTMLDivElement>, 'title'>) {
+} & HTMLAttributes<HTMLDivElement>) {
   return (
     <section className={cx('ui-sidebar-section', className)} {...props}>
       {actionItems ? (
@@ -735,7 +735,7 @@ export function TaskListItem({
   actions?: ReactNode;
   className?: string;
   children?: ReactNode;
-} & HTMLAttributes<HTMLDivElement>) {
+} & Omit<HTMLAttributes<HTMLDivElement>, 'title'>) {
   return (
     <div className={cx('ui-task-list-item', checked && 'ui-task-list-item-checked', className)} {...props}>
       {control ? <div className="ui-task-list-item-control">{control}</div> : null}
@@ -1415,6 +1415,7 @@ export function ResourcePickerDialog({
   onClose,
   className,
   bodyClassName,
+  headerProps,
   backdropStyle,
   style,
   ...props
@@ -1427,6 +1428,7 @@ export function ResourcePickerDialog({
   onClose?: () => void;
   className?: string;
   bodyClassName?: string;
+  headerProps?: HTMLAttributes<HTMLDivElement>;
   backdropStyle?: CSSProperties;
   style?: CSSProperties;
 } & HTMLAttributes<HTMLDivElement>) {
@@ -1443,7 +1445,7 @@ export function ResourcePickerDialog({
       }}
       {...props}
     >
-      <DialogHeader title={title} description={description} actions={actions} />
+      <DialogHeader title={title} description={description} actions={actions} {...headerProps} />
       <DialogBody className={cx('ui-resource-picker-body', bodyClassName)}>{children}</DialogBody>
       {footer ? <div className="ui-resource-picker-footer">{footer}</div> : null}
     </Dialog>
@@ -2612,15 +2614,16 @@ export function DialogHeader({
   actions,
   titleId,
   className,
+  ...props
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   titleId?: string;
   className?: string;
-}) {
+} & Omit<HTMLAttributes<HTMLDivElement>, 'title'>) {
   return (
-    <div className={cx('ui-dialog-header', className)}>
+    <div className={cx('ui-dialog-header', className)} {...props}>
       <div className="ui-dialog-header-copy">
         <h2 id={titleId} className="ui-dialog-title">
           {title}

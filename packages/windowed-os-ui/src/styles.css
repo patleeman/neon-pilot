@@ -1505,14 +1505,15 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   white-space: nowrap;
 }
 
-body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[data-parent-window-title] .ui-dialog-header::after,
-body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal[data-parent-window-title] .ui-dialog-header::after {
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header[data-parent-window-title]::after,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-header[data-parent-window-title]::after {
   order: 2;
   margin-left: auto;
   margin-right: var(--wos-space-3);
+  min-width: 0;
   overflow: hidden;
   color: var(--wos-ink-700);
-  content: 'Attached';
+  content: 'Attached to ' attr(data-parent-window-title);
   font: var(--wos-text-caption);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5904,9 +5905,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace::before {
-  content: '|';
-  margin-right: 8px;
-  color: var(--wos-ink-500);
+  content: none;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta :where(svg) {

@@ -167,6 +167,7 @@ export function ConversationDrawingsPickerModal({
       onClose={onClose}
       className="ui-windowed-drawings-picker"
       bodyClassName="ui-windowed-drawings-picker-body"
+      headerProps={{ 'data-parent-window-title': parentWindowTitle }}
       data-windowed-subwindow="drawing-picker"
       data-parent-window-attached="chat"
       data-parent-window-id={parentWindowId}

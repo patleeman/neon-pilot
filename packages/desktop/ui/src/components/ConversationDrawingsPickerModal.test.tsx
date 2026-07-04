@@ -104,6 +104,9 @@ describe('ConversationDrawingsPickerModal', () => {
     expect(dialog.getAttribute('data-parent-window-attached')).toBe('chat');
     expect(dialog.getAttribute('data-parent-window-id')).toBe('chat:planning');
     expect(dialog.getAttribute('data-parent-window-title')).toBe('Planning thread');
+    expect(document.querySelector('.ui-windowed-drawings-picker .ui-dialog-header')?.getAttribute('data-parent-window-title')).toBe(
+      'Planning thread',
+    );
     expect(document.querySelector('.ui-windowed-drawings-picker-body')).toBeTruthy();
   });
 
