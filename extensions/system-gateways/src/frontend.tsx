@@ -329,6 +329,15 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
           : windowedDialog === 'activity'
             ? `${telegramEvents.length} events`
             : undefined;
+    const dialogSubwindowId =
+      windowedDialog === 'configuration'
+        ? 'gateway-configuration'
+        : windowedDialog === 'access'
+          ? 'gateway-access'
+          : windowedDialog === 'activity'
+            ? 'gateway-activity'
+            : undefined;
+    const dialogClassName = windowedDialog ? `wos-gateway-dialog wos-gateway-dialog--${windowedDialog}` : undefined;
 
     return (
       <div className="h-full overflow-hidden">
@@ -514,7 +523,9 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
             title={dialogTitle}
             meta={dialogMeta}
             accent="gateways"
+            className={dialogClassName}
             parentWindowTitle="Gateways"
+            subwindowId={dialogSubwindowId}
             onClose={() => setWindowedDialog(null)}
           >
             {windowedDialog === 'configuration' ? (

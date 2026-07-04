@@ -1989,7 +1989,9 @@ function GatewaysPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
         title="Telegram configuration"
         meta="Token configured"
         accent="gateways"
+        className="wos-gateway-dialog wos-gateway-dialog--configuration"
         parentWindowTitle="Gateways"
+        subwindowId="gateway-configuration"
         onClose={() => undefined}
       >
         <WindowedKeyValueList

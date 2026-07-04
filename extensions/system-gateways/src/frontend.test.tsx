@@ -133,24 +133,30 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     meta,
     actions,
     children,
+    className,
     parentWindowId,
     parentWindowTitle,
+    subwindowId,
     onClose,
   }: {
     title: string;
     meta?: string;
     actions?: React.ReactNode;
     children: React.ReactNode;
+    className?: string;
     parentWindowId?: string;
     parentWindowTitle?: string;
+    subwindowId?: string;
     onClose: () => void;
   }) => (
     <section
       role="dialog"
       aria-label={title}
+      className={className}
       data-parent-window-attached={parentWindowTitle || parentWindowId ? 'true' : undefined}
       data-parent-window-id={parentWindowId}
       data-parent-window-title={parentWindowTitle}
+      data-windowed-subwindow={subwindowId}
     >
       <header>
         <h2>{title}</h2>
@@ -426,6 +432,8 @@ describe('GatewaysPage', () => {
     expect(configurationDialog).toBeTruthy();
     expect(configurationDialog.getAttribute('data-parent-window-attached')).toBe('true');
     expect(configurationDialog.getAttribute('data-parent-window-title')).toBe('Gateways');
+    expect(configurationDialog.getAttribute('data-windowed-subwindow')).toBe('gateway-configuration');
+    expect(configurationDialog.className).toContain('wos-gateway-dialog--configuration');
     expect(configurationRow.getAttribute('data-selected')).toBe('true');
     expect(container.querySelector('.wos-dialog-stack')).not.toBeNull();
 
@@ -433,7 +441,10 @@ describe('GatewaysPage', () => {
     const accessRow = screen.getByText('Access').closest('[data-selectable="true"]');
     if (!accessRow) throw new Error('Missing access row');
     fireEvent.keyDown(accessRow, { key: 'Enter' });
-    expect(screen.getByRole('dialog', { name: 'Telegram access' })).toBeTruthy();
+    const accessDialog = screen.getByRole('dialog', { name: 'Telegram access' });
+    expect(accessDialog).toBeTruthy();
+    expect(accessDialog.getAttribute('data-windowed-subwindow')).toBe('gateway-access');
+    expect(accessDialog.className).toContain('wos-gateway-dialog--access');
     expect(accessRow.getAttribute('data-selected')).toBe('true');
     expect(screen.getByText('Approved users')).toBeTruthy();
     expect(screen.getByText('No approved users yet').closest('.wos-empty-state__title')).toBeTruthy();
@@ -448,7 +459,10 @@ describe('GatewaysPage', () => {
     const activityRow = screen.getByText('Activity').closest('[data-selectable="true"]');
     if (!activityRow) throw new Error('Missing activity row');
     fireEvent.click(activityRow);
-    expect(screen.getByRole('dialog', { name: 'Recent activity' })).toBeTruthy();
+    const activityDialog = screen.getByRole('dialog', { name: 'Recent activity' });
+    expect(activityDialog).toBeTruthy();
+    expect(activityDialog.getAttribute('data-windowed-subwindow')).toBe('gateway-activity');
+    expect(activityDialog.className).toContain('wos-gateway-dialog--activity');
     expect(activityRow.getAttribute('data-selected')).toBe('true');
     expect(screen.getByText('No Telegram gateway events yet').closest('.wos-empty-state__title')).toBeTruthy();
     expect(
