@@ -134,6 +134,53 @@ export function WindowedTitleBarControls({
   );
 }
 
+export interface WindowedChatToolLauncherItem {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  title?: string;
+  onSelect: () => void;
+}
+
+export interface WindowedChatToolLauncherProps {
+  items: ReadonlyArray<WindowedChatToolLauncherItem>;
+  label?: string;
+  ariaLabel?: string;
+  className?: string;
+}
+
+export function WindowedChatToolLauncher({
+  items,
+  label = 'Tools',
+  ariaLabel = 'Chat window controls',
+  className,
+}: WindowedChatToolLauncherProps) {
+  return (
+    <div className={cx('wos-chat-window-toolbar', className)} aria-label={ariaLabel}>
+      <div className="wos-chat-window-toolbar__label">{label}</div>
+      <div className="wos-chat-window-toolbar__actions">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className="wos-chat-window-toolbar__button"
+            data-density="icon"
+            aria-label={item.label}
+            aria-pressed={item.active ? true : undefined}
+            disabled={item.disabled}
+            title={item.title ?? item.label}
+            onClick={item.onSelect}
+          >
+            {item.icon}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;

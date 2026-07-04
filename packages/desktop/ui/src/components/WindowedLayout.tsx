@@ -7,6 +7,8 @@ import {
   type TaskbarGroup,
   type TaskbarItem,
   WindowedChatSurface,
+  WindowedChatToolLauncher,
+  type WindowedChatToolLauncherItem,
   WindowedMenuPanel,
   WindowedSegmentedControl,
   WindowedStateBlock,
@@ -1069,6 +1071,58 @@ function WindowRouteBody({
   const browserUnavailable = extensionRegistry.loading || !browserSurface;
   const filesUnavailable = extensionRegistry.loading || !filesSurface;
   const terminalUnavailable = extensionRegistry.loading || !terminalSurface;
+  const toolLauncherItems = useMemo<WindowedChatToolLauncherItem[]>(
+    () => [
+      {
+        id: 'browser',
+        label: 'Open Browser window',
+        icon: <WindowedChatToolbarIcon name="browser" />,
+        disabled: browserUnavailable,
+        title: extensionRegistry.loading
+          ? 'Loading tools.'
+          : browserSurface
+            ? 'Open Browser window'
+            : 'Enable the Browser extension to open a Browser window.',
+        onSelect: onOpenBrowserWindow,
+      },
+      {
+        id: 'files',
+        label: 'Open Workspace window',
+        icon: <WindowedChatToolbarIcon name="files" />,
+        disabled: filesUnavailable,
+        title: extensionRegistry.loading
+          ? 'Loading tools.'
+          : filesSurface
+            ? 'Open Workspace window'
+            : 'Enable the Files extension to open a Workspace window.',
+        onSelect: onOpenFilesWindow,
+      },
+      {
+        id: 'terminal',
+        label: 'Open Terminal window',
+        icon: <WindowedChatToolbarIcon name="terminal" />,
+        disabled: terminalUnavailable,
+        title: extensionRegistry.loading
+          ? 'Loading tools.'
+          : terminalSurface
+            ? 'Open Terminal window'
+            : 'Enable the Terminal extension to open a Terminal window.',
+        onSelect: onOpenTerminalWindow,
+      },
+    ],
+    [
+      browserSurface,
+      browserUnavailable,
+      extensionRegistry.loading,
+      filesSurface,
+      filesUnavailable,
+      onOpenBrowserWindow,
+      onOpenFilesWindow,
+      onOpenTerminalWindow,
+      terminalSurface,
+      terminalUnavailable,
+    ],
+  );
 
   if (!isChatRoute) {
     return (
@@ -1088,65 +1142,7 @@ function WindowRouteBody({
       data-compact={compact ? 'true' : undefined}
       data-workbench-collapsed="true"
     >
-      <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-        <div className="wos-chat-window-toolbar__label">Tools</div>
-        <div className="wos-chat-window-toolbar__actions">
-          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-          <button
-            type="button"
-            className="wos-chat-window-toolbar__button"
-            data-density="icon"
-            aria-label="Open Browser window"
-            disabled={browserUnavailable}
-            title={
-              extensionRegistry.loading
-                ? 'Loading tools.'
-                : browserSurface
-                  ? 'Open Browser window'
-                  : 'Enable the Browser extension to open a Browser window.'
-            }
-            onClick={onOpenBrowserWindow}
-          >
-            <WindowedChatToolbarIcon name="browser" />
-          </button>
-          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-          <button
-            type="button"
-            className="wos-chat-window-toolbar__button"
-            data-density="icon"
-            aria-label="Open Workspace window"
-            disabled={filesUnavailable}
-            title={
-              extensionRegistry.loading
-                ? 'Loading tools.'
-                : filesSurface
-                  ? 'Open Workspace window'
-                  : 'Enable the Files extension to open a Workspace window.'
-            }
-            onClick={onOpenFilesWindow}
-          >
-            <WindowedChatToolbarIcon name="files" />
-          </button>
-          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-          <button
-            type="button"
-            className="wos-chat-window-toolbar__button"
-            data-density="icon"
-            aria-label="Open Terminal window"
-            disabled={terminalUnavailable}
-            title={
-              extensionRegistry.loading
-                ? 'Loading tools.'
-                : terminalSurface
-                  ? 'Open Terminal window'
-                  : 'Enable the Terminal extension to open a Terminal window.'
-            }
-            onClick={onOpenTerminalWindow}
-          >
-            <WindowedChatToolbarIcon name="terminal" />
-          </button>
-        </div>
-      </div>
+      <WindowedChatToolLauncher items={toolLauncherItems} />
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
           <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench={false} suppressWorkbench />}>

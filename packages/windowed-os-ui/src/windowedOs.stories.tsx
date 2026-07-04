@@ -13,6 +13,8 @@ import {
   WindowedChatComposer,
   WindowedChatMain,
   WindowedChatSurface,
+  WindowedChatToolLauncher,
+  type WindowedChatToolLauncherItem,
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
@@ -169,43 +171,31 @@ function StoryToolbarIcon({ name }: { name: 'browser' | 'files' | 'terminal' }) 
 }
 
 function StoryChatWindowToolbar({ activeTool }: { activeTool?: 'browser' | 'files' | 'terminal' }) {
-  return (
-    <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-      <div className="wos-chat-window-toolbar__label">Tools</div>
-      <div className="wos-chat-window-toolbar__actions">
-        <button
-          type="button"
-          className="wos-chat-window-toolbar__button"
-          data-density="icon"
-          aria-label="Open Browser window"
-          title="Open Browser window"
-          aria-pressed={activeTool === 'browser' ? true : undefined}
-        >
-          <StoryToolbarIcon name="browser" />
-        </button>
-        <button
-          type="button"
-          className="wos-chat-window-toolbar__button"
-          data-density="icon"
-          aria-label="Open Workspace window"
-          title="Open Workspace window"
-          aria-pressed={activeTool === 'files' ? true : undefined}
-        >
-          <StoryToolbarIcon name="files" />
-        </button>
-        <button
-          type="button"
-          className="wos-chat-window-toolbar__button"
-          data-density="icon"
-          aria-label="Open Terminal window"
-          title="Open Terminal window"
-          aria-pressed={activeTool === 'terminal' ? true : undefined}
-        >
-          <StoryToolbarIcon name="terminal" />
-        </button>
-      </div>
-    </div>
-  );
+  const items: WindowedChatToolLauncherItem[] = [
+    {
+      id: 'browser',
+      label: 'Open Browser window',
+      icon: <StoryToolbarIcon name="browser" />,
+      active: activeTool === 'browser',
+      onSelect: () => undefined,
+    },
+    {
+      id: 'files',
+      label: 'Open Workspace window',
+      icon: <StoryToolbarIcon name="files" />,
+      active: activeTool === 'files',
+      onSelect: () => undefined,
+    },
+    {
+      id: 'terminal',
+      label: 'Open Terminal window',
+      icon: <StoryToolbarIcon name="terminal" />,
+      active: activeTool === 'terminal',
+      onSelect: () => undefined,
+    },
+  ];
+
+  return <WindowedChatToolLauncher items={items} />;
 }
 
 function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {

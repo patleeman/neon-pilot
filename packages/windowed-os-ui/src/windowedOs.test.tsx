@@ -9,6 +9,7 @@ import {
   StartMenu,
   WindowedActionRow,
   WindowedChartPanel,
+  WindowedChatToolLauncher,
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
@@ -954,6 +955,40 @@ describe('Windowed OS tokens', () => {
 });
 
 describe('Windowed OS Storybook examples', () => {
+  it('renders chat tool launchers through a reusable windowed primitive', () => {
+    const html = renderToStaticMarkup(
+      <WindowedChatToolLauncher
+        items={[
+          {
+            id: 'browser',
+            label: 'Open Browser window',
+            icon: <span aria-hidden="true">B</span>,
+            active: true,
+            onSelect: () => undefined,
+          },
+          {
+            id: 'files',
+            label: 'Open Workspace window',
+            icon: <span aria-hidden="true">F</span>,
+            disabled: true,
+            title: 'Enable the Files extension to open a Workspace window.',
+            onSelect: () => undefined,
+          },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('class="wos-chat-window-toolbar"');
+    expect(html).toContain('aria-label="Chat window controls"');
+    expect(html).toContain('class="wos-chat-window-toolbar__label">Tools</div>');
+    expect(html).toContain('class="wos-chat-window-toolbar__actions"');
+    expect(html).toContain('class="wos-chat-window-toolbar__button"');
+    expect(html).toContain('data-density="icon"');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('disabled=""');
+    expect(html).toContain('Enable the Files extension to open a Workspace window.');
+  });
+
   it('keeps canonical design tokens in the scoped token stylesheet', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const tokensPath = fileURLToPath(new URL('./tokens.css', import.meta.url));
@@ -2373,19 +2408,19 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<AttachedBrowserWorkbenchStory theme="dark" />');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('data-workbench-collapsed="true"');
-    expect(source).toContain('className="wos-chat-window-toolbar"');
     expect(source).toContain('function StoryChatWindowToolbar');
-    expect(source).toContain('<div className="wos-chat-window-toolbar__label">Tools</div>');
+    expect(source).toContain('<WindowedChatToolLauncher items={items} />');
+    expect(source).toContain('type WindowedChatToolLauncherItem');
+    expect(source).not.toContain('<div className="wos-chat-window-toolbar__label">Tools</div>');
     expect(source).not.toContain('<div className="wos-chat-window-toolbar__label">Workbench</div>');
     expect(source).not.toContain('Show tools panel');
     expect(source).not.toContain('Hide tools panel');
     expect(source).not.toContain('workbench-hidden');
     expect(source).not.toContain('workbench-visible');
-    expect(source).toContain('aria-label="Open Browser window"');
-    expect(source).toContain('aria-label="Open Workspace window"');
-    expect(source).toContain('aria-label="Open Terminal window"');
-    expect(source).toContain('<StoryToolbarIcon name="files" />');
-    expect(source).toContain('data-density="icon"');
+    expect(source).toContain("label: 'Open Browser window'");
+    expect(source).toContain("label: 'Open Workspace window'");
+    expect(source).toContain("label: 'Open Terminal window'");
+    expect(source).toContain('icon: <StoryToolbarIcon name="files" />');
     expect(source).toContain('parentWindowId="chat:release-notes"');
     expect(source).toContain('parentWindowTitle="Release notes"');
     expect(source).toContain('data-windowed-subwindow="files"');
