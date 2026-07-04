@@ -2265,7 +2265,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-page-shell {
   container: wos-page-shell / inline-size;
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-columns: minmax(118px, min(35%, 190px)) minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   background: var(--wos-surface-1);
@@ -2278,11 +2278,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-page-shell[data-layout='wide'] {
-  grid-template-columns: 168px minmax(0, 1fr);
+  grid-template-columns: minmax(118px, min(32%, 168px)) minmax(0, 1fr);
 }
 
 .wos-page-shell[data-layout='two-column'] {
-  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-columns: minmax(118px, min(35%, 190px)) minmax(0, 1fr);
 }
 
 .wos-page-rail {
@@ -6079,6 +6079,19 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 @container wos-page-shell (max-width: 680px) {
+  .wos-settings-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .wos-settings-row__actions {
+    min-width: 0;
+    max-width: none;
+    justify-content: flex-start;
+  }
+
   .wos-key-value-grid[data-columns='3'],
   .wos-key-value-grid[data-columns='4'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6094,6 +6107,25 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
   .wos-key-value-grid__item:nth-child(n + 3) {
     border-top: 1.5px solid var(--wos-ink-900);
+  }
+}
+
+@container wos-page-shell (max-width: 420px) {
+  .wos-settings-row__actions .wos-segmented-control {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wos-settings-row__actions .wos-segmented-control__item {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1.5px solid var(--wos-ink-900);
+    text-align: left;
+  }
+
+  .wos-settings-row__actions .wos-segmented-control__item:last-child {
+    border-bottom: 0;
   }
 }
 

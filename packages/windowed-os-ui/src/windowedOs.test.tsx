@@ -93,6 +93,13 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('.wos-key-value__value');
     expect(stylesSource).toContain('container: wos-page-shell / inline-size;');
     expect(stylesSource).toContain('@container wos-page-shell (max-width: 680px)');
+    expect(stylesSource).toContain('@container wos-page-shell (max-width: 680px) {\n  .wos-settings-row {');
+    expect(stylesSource).toContain(
+      '.wos-settings-row__actions {\n    min-width: 0;\n    max-width: none;\n    justify-content: flex-start;',
+    );
+    expect(stylesSource).toContain('@container wos-page-shell (max-width: 420px)');
+    expect(stylesSource).toContain('.wos-settings-row__actions .wos-segmented-control {\n    display: grid;\n    width: 100%;');
+    expect(stylesSource).toContain('.wos-settings-row__actions .wos-segmented-control__item {\n    width: 100%;\n    border-right: 0;');
     expect(stylesSource).toContain(".wos-key-value-grid[data-columns='4']");
     expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(even)');
     expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(n + 3)');
@@ -157,6 +164,15 @@ describe('WindowedPageShell', () => {
     );
 
     expect(html).toContain('data-layout="two-column"');
+  });
+
+  it('uses fluid rail tracks so compact desktop windows keep usable content width', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('grid-template-columns: minmax(118px, min(35%, 190px)) minmax(0, 1fr);');
+    expect(stylesSource).toContain('grid-template-columns: minmax(118px, min(32%, 168px)) minmax(0, 1fr);');
+    expect(stylesSource).not.toContain('grid-template-columns: 190px minmax(0, 1fr);');
   });
 });
 
