@@ -1367,6 +1367,40 @@ describe('WindowedLayout route windows', () => {
     expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /settings/i })).toBeTruthy();
   });
 
+  it('uses canonical app-specific default bounds for launched route windows', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^settings$/i }));
+
+    const settingsWindow = await screen.findByRole('region', { name: /^settings$/i });
+    expect(settingsWindow.getAttribute('style')).toContain('width: 940px');
+    expect(settingsWindow.getAttribute('style')).toContain('height: 560px');
+  });
+
+  it('uses the canonical Workflows window target before desktop fitting clamps it', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 960 });
+    mocks.extensions = [
+      {
+        id: 'system-workflows',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'workflows', label: 'Workflows', route: '/workflows' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^workflows$/i }));
+
+    const workflowsWindow = await screen.findByRole('region', { name: /^workflows$/i });
+    expect(workflowsWindow.getAttribute('style')).toContain('width: 1040px');
+    expect(workflowsWindow.getAttribute('style')).toContain('height: 612px');
+  });
+
   it('keeps embedded extension navigation in the current window when it stays inside the same desktop app', async () => {
     renderWindowedLayout();
 

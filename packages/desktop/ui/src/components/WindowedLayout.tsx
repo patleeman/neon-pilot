@@ -128,6 +128,19 @@ const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'settings', title: 'Settings', route: '/settings', kind: 'route' },
 ];
 
+const CANONICAL_ROUTE_WINDOW_SIZES: Partial<Record<string, { width: number; height: number }>> = {
+  Automations: { width: 1040, height: 660 },
+  Gateways: { width: 1040, height: 660 },
+  'AI Gateway': { width: 1040, height: 660 },
+  'Model Arena': { width: 1040, height: 660 },
+  Routines: { width: 1040, height: 660 },
+  Settings: { width: 980, height: 560 },
+  Extensions: { width: 1040, height: 660 },
+  Skills: { width: 1040, height: 660 },
+  Workflows: { width: 1040, height: 612 },
+  Diagnostics: { width: 920, height: 540 },
+};
+
 const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]> = new Map(
   CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]),
 );
@@ -139,16 +152,24 @@ function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: s
   return `route:${input.id}`;
 }
 
-function defaultBounds(index: number, kind: LauncherWindowKind): WindowBounds {
+function idealWindowBounds(kind: LauncherWindowKind, title?: string): { width: number; height: number; x: number; y: number } {
+  if (kind === 'chat') {
+    return { width: 1180, height: 760, x: 42, y: 34 };
+  }
+  const size = title ? CANONICAL_ROUTE_WINDOW_SIZES[title] : undefined;
+  return { width: size?.width ?? 1040, height: size?.height ?? 650, x: 112, y: 72 };
+}
+
+function defaultBounds(index: number, kind: LauncherWindowKind, title?: string): WindowBounds {
   const desktop =
     typeof window === 'undefined'
       ? { width: 1280, height: 800 }
       : { width: window.innerWidth, height: Math.max(MIN_WINDOW_HEIGHT, window.innerHeight - FALLBACK_TASKBAR_HEIGHT) };
-  return defaultBoundsForDesktop(index, kind, desktop);
+  return defaultBoundsForDesktop(index, kind, desktop, title);
 }
 
-function defaultBoundsForDesktop(index: number, kind: LauncherWindowKind, desktop: DesktopRect): WindowBounds {
-  const ideal = kind === 'chat' ? { width: 1180, height: 760, x: 42, y: 34 } : { width: 1040, height: 650, x: 112, y: 72 };
+function defaultBoundsForDesktop(index: number, kind: LauncherWindowKind, desktop: DesktopRect, title?: string): WindowBounds {
+  const ideal = idealWindowBounds(kind, title);
   const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
   const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
   const maxX = Math.max(0, desktop.width - width - 24);
@@ -168,8 +189,8 @@ function defaultBoundsForDesktop(index: number, kind: LauncherWindowKind, deskto
   };
 }
 
-function nextDefaultBounds(index: number, kind: LauncherWindowKind, desktopElement: HTMLElement | null): WindowBounds {
-  return defaultBoundsForDesktop(index, kind, desktopRect(desktopElement));
+function nextDefaultBounds(index: number, kind: LauncherWindowKind, desktopElement: HTMLElement | null, title?: string): WindowBounds {
+  return defaultBoundsForDesktop(index, kind, desktopRect(desktopElement), title);
 }
 
 function childWindowBounds(parentBounds: WindowBounds, desktop: DesktopRect, kind: ChildWindowKind): WindowBounds {
@@ -683,7 +704,7 @@ function focusRouteWindowIn(
     kind: 'route',
     title: item.title,
     route,
-    bounds: nextDefaultBounds(windows.length, 'route', desktopElement),
+    bounds: nextDefaultBounds(windows.length, 'route', desktopElement, item.title),
     minimized: false,
     focused: true,
     singleton: true,
@@ -1407,7 +1428,7 @@ export function WindowedLayout() {
         kind: item.kind,
         title,
         route,
-        bounds: nextDefaultBounds(current.length, item.kind, desktopRef.current),
+        bounds: nextDefaultBounds(current.length, item.kind, desktopRef.current, title),
         minimized: false,
         focused: true,
         singleton: item.kind === 'route',
