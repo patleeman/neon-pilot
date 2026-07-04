@@ -211,7 +211,7 @@ describe('ExtensionModalHost modal bridge', () => {
     expect(document.querySelector('.ui-windowed-excalidraw-modal-body')).toBeTruthy();
   });
 
-  it('closes a windowed Excalidraw sub-window by parent id when its chat parent is minimized', async () => {
+  it('hides and restores a windowed Excalidraw sub-window with its chat parent lifecycle', async () => {
     document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
     systemExtensionModules.set('system-excalidraw-input', async () => ({
       ExcalidrawEditorModal: () => <div>Drawing editor</div>,
@@ -235,6 +235,7 @@ describe('ExtensionModalHost modal bridge', () => {
     });
 
     expect(await screen.findByText('Drawing editor')).not.toBeNull();
+    const dialog = screen.getByRole('dialog', { name: 'Drawing' });
 
     act(() => {
       window.dispatchEvent(
@@ -244,6 +245,38 @@ describe('ExtensionModalHost modal bridge', () => {
             parentWindowKind: 'chat',
             parentWindowTitle: 'Planning thread, display copy may differ',
             reason: 'minimized',
+          },
+        }),
+      );
+    });
+
+    expect(dialog.getAttribute('data-parent-window-minimized')).toBe('true');
+    expect(resolve).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+          detail: {
+            parentWindowId: 'chat:planning',
+            parentWindowKind: 'chat',
+            parentWindowTitle: 'Planning thread, display copy may differ',
+            reason: 'restored',
+          },
+        }),
+      );
+    });
+
+    expect(dialog.getAttribute('data-parent-window-minimized')).toBeNull();
+    expect(resolve).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+          detail: {
+            parentWindowId: 'chat:planning',
+            parentWindowKind: 'chat',
+            parentWindowTitle: 'Planning thread, display copy may differ',
+            reason: 'closed',
           },
         }),
       );

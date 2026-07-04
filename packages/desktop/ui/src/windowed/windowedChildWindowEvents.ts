@@ -1,6 +1,6 @@
 export const WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT = 'neon-pilot-windowed-parent-window-lifecycle';
 
-export type WindowedParentWindowLifecycleReason = 'closed' | 'minimized';
+export type WindowedParentWindowLifecycleReason = 'closed' | 'minimized' | 'restored';
 
 export interface WindowedParentWindowLifecycleDetail {
   parentWindowId: string;

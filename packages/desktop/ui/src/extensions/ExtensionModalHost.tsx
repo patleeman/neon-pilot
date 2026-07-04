@@ -92,6 +92,7 @@ interface ConfirmState {
 export function ExtensionModalHost() {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [windowedParentMinimized, setWindowedParentMinimized] = useState(false);
   const [Component, setComponent] = useState<ComponentType<{
     pa: ReturnType<typeof createNativeExtensionClient>;
     props: Record<string, unknown>;
@@ -116,6 +117,7 @@ export function ExtensionModalHost() {
       };
       resolveRef.current = resolve;
       rejectRef.current = reject;
+      setWindowedParentMinimized(false);
 
       setModal({ extensionId, title, component: componentName, props, size, resolve, reject });
     }
@@ -153,6 +155,7 @@ export function ExtensionModalHost() {
       resolveRef.current = null;
       rejectRef.current = null;
     }
+    setWindowedParentMinimized(false);
     setModal(null);
     setComponent(null);
   }, []);
@@ -198,6 +201,14 @@ export function ExtensionModalHost() {
     const handleParentLifecycle = (event: Event) => {
       const detail = (event as CustomEvent<WindowedParentWindowLifecycleDetail>).detail;
       if (!detail || !windowedParentLifecycleMatchesModal(detail, modal)) return;
+      if (detail.reason === 'minimized') {
+        setWindowedParentMinimized(true);
+        return;
+      }
+      if (detail.reason === 'restored') {
+        setWindowedParentMinimized(false);
+        return;
+      }
       handleClose();
     };
 
@@ -307,6 +318,7 @@ export function ExtensionModalHost() {
         data-windowed-child-window={windowedExcalidrawModal ? 'true' : undefined}
         data-parent-window-attached={windowedExcalidrawModal ? 'chat' : undefined}
         data-parent-window-id={parentWindowId}
+        data-parent-window-minimized={windowedExcalidrawModal && windowedParentMinimized ? 'true' : undefined}
         data-parent-window-title={parentWindowTitle}
       >
         {title ? (

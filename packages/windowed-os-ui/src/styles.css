@@ -1128,6 +1128,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backd
   pointer-events: none;
 }
 
+body[data-neon-pilot-windowed-shell-active='true']
+  .ui-windowed-excalidraw-backdrop:has(.ui-windowed-excalidraw-modal[data-parent-window-minimized='true']) {
+  display: none !important;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
   overflow: hidden;
@@ -1157,6 +1162,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   min-height: min(420px, calc(100vh - 156px)) !important;
   max-width: none !important;
   transform: none !important;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal[data-parent-window-minimized='true'] {
+  display: none !important;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header,

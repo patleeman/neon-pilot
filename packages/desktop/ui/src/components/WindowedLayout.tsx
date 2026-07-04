@@ -348,7 +348,7 @@ function suspendWindowedBrowserViews(durationMs = 1500): void {
   }
 }
 
-function dispatchParentLifecycleForWindow(windowModel: DesktopWindowModel, reason: 'closed' | 'minimized'): void {
+function dispatchParentLifecycleForWindow(windowModel: DesktopWindowModel, reason: 'closed' | 'minimized' | 'restored'): void {
   if (windowModel.kind !== 'chat') return;
   dispatchWindowedParentWindowLifecycle({
     parentWindowId: windowModel.id,
@@ -955,8 +955,12 @@ export function WindowedLayout() {
 
   const focusWindow = useCallback((windowId: string) => {
     const focusedWindow = windowsRef.current.find((windowModel) => windowModel.focused);
+    const targetWindow = windowsRef.current.find((windowModel) => windowModel.id === windowId);
     if (focusedWindow?.id !== windowId) {
       suspendWindowedBrowserViews();
+    }
+    if (targetWindow?.minimized) {
+      dispatchParentLifecycleForWindow(targetWindow, 'restored');
     }
     setWindows((current) => withFocusedWindow(current, windowId));
   }, []);

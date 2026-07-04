@@ -2538,6 +2538,13 @@ describe('WindowedLayout route windows', () => {
       });
 
       fireEvent.click(screen.getByRole('button', { name: /new conversation/i }));
+      expect(lifecycleEvents).toContainEqual({
+        parentWindowId: 'chat:draft',
+        parentWindowKind: 'chat',
+        parentWindowTitle: 'New conversation',
+        reason: 'restored',
+      });
+
       fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
       expect(lifecycleEvents).toContainEqual({
         parentWindowId: 'chat:draft',
