@@ -2527,7 +2527,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Monospace size"');
     expect(source).toContain('aria-label="Monospace size"');
     expect(settingsSource).toContain('<WindowedPageButton>Reset</WindowedPageButton>');
-    expect(settingsSource).toContain('<WindowedPageButton tone="accent">Apply</WindowedPageButton>');
+    expect(settingsSource).not.toContain('<WindowedPageButton tone="accent">Apply</WindowedPageButton>');
+    expect(settingsSource).toContain('description="System"');
+    expect(settingsSource).toContain('description="Connected"');
+    expect(settingsSource).toContain('description="1120 px"');
+    expect(settingsSource).not.toContain('description="Follows the current system appearance"');
+    expect(settingsSource).not.toContain('description="Open core apps as movable desktop windows"');
+    expect(settingsSource).not.toContain('description="Open a new Chat window"');
     expect(settingsSource).toContain("activeSection === 'providers'");
     expect(settingsSource).toContain("activeSection === 'desktop'");
     expect(settingsSource).toContain("activeSection === 'shortcuts'");

@@ -1351,18 +1351,18 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
     return (
       <WindowedPageMain title="Providers" actions={<WindowedPageButton tone="accent">Connect</WindowedPageButton>}>
         <WindowedSettingsGroup title="Configured providers">
-          <WindowedSettingsRow title="OpenAI" description="Default chat and tool model provider">
+          <WindowedSettingsRow title="OpenAI" description="Connected">
             <WindowedToggle checked accent="settings" label="Enable OpenAI provider" />
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Anthropic" description="Used for long-context review and planning">
+          <WindowedSettingsRow title="Anthropic" description="Connected">
             <WindowedToggle checked accent="settings" label="Enable Anthropic provider" />
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Local bridge" description="Routes compatible local model servers through AI Gateway">
+          <WindowedSettingsRow title="Local bridge" description="Not configured">
             <WindowedPageButton>Configure</WindowedPageButton>
           </WindowedSettingsRow>
         </WindowedSettingsGroup>
         <WindowedSettingsGroup title="Routing">
-          <WindowedSettingsRow title="Default model" description="Used when a conversation does not choose a model">
+          <WindowedSettingsRow title="Default model" description="Auto">
             <WindowedSelect aria-label="Default model">
               <option>Auto</option>
               <option>GPT-5.4</option>
@@ -1376,15 +1376,15 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
 
   if (activeSection === 'desktop') {
     return (
-      <WindowedPageMain title="Desktop" actions={<WindowedPageButton tone="accent">Apply</WindowedPageButton>}>
+      <WindowedPageMain title="Desktop">
         <WindowedSettingsGroup title="Window behavior">
-          <WindowedSettingsRow title="Windowed mode" description="Open core apps as movable desktop windows">
+          <WindowedSettingsRow title="Windowed mode" description="Enabled">
             <WindowedToggle checked accent="settings" label="Enable windowed desktop mode" />
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Snap preview" description="Show the snap target overlay above every window">
+          <WindowedSettingsRow title="Snap preview" description="Enabled">
             <WindowedToggle checked accent="settings" label="Show snap preview" />
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Default chat width" description="New conversations open with room for tools">
+          <WindowedSettingsRow title="Default chat width" description="1120 px">
             <WindowedNumberStepper aria-label="Default chat width" value={1120} min={720} max={1440} unit="px" onChange={() => undefined} />
           </WindowedSettingsRow>
         </WindowedSettingsGroup>
@@ -1396,13 +1396,13 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
     return (
       <WindowedPageMain title="Shortcuts" actions={<WindowedPageButton>Record shortcut</WindowedPageButton>}>
         <WindowedSettingsGroup title="Desktop shortcuts">
-          <WindowedSettingsRow title="New conversation" description="Open a new Chat window">
+          <WindowedSettingsRow title="New conversation">
             <WindowedBadge tone="neutral">⌘ N</WindowedBadge>
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Open workspace" description="Open the focused Chat workspace child window">
+          <WindowedSettingsRow title="Open workspace">
             <WindowedBadge tone="neutral">⌘ ⇧ B</WindowedBadge>
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Command palette" description="Find apps, commands, and recent work">
+          <WindowedSettingsRow title="Command palette">
             <WindowedBadge tone="neutral">⌘ K</WindowedBadge>
           </WindowedSettingsRow>
         </WindowedSettingsGroup>
@@ -1413,18 +1413,14 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
   return (
     <WindowedPageMain title="Appearance" actions={<WindowedPageButton>Reset</WindowedPageButton>}>
       <WindowedSettingsGroup title="Appearance">
-        <WindowedSettingsRow
-          title="Theme"
-          description="Follows the current system appearance"
-          actionsClassName="settings-page-control-actions"
-        >
+        <WindowedSettingsRow title="Theme" description="System" actionsClassName="settings-page-control-actions">
           <WindowedSelect aria-label="Theme">
             <option>System</option>
             <option>Light</option>
             <option>Dark</option>
           </WindowedSelect>
         </WindowedSettingsRow>
-        <WindowedSettingsRow title="Accent" description="Used for selection and focused controls">
+        <WindowedSettingsRow title="Accent" description="Orange">
           <WindowedSegmentedControl
             ariaLabel="Accent"
             value="orange"
@@ -1435,7 +1431,7 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
             ]}
           />
         </WindowedSettingsRow>
-        <WindowedSettingsRow title="Interface scale" description="Keeps window chrome and app content compact">
+        <WindowedSettingsRow title="Interface scale" description="Comfortable">
           <WindowedSegmentedControl
             ariaLabel="Interface scale"
             value="comfortable"
@@ -1446,7 +1442,7 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
             ]}
           />
         </WindowedSettingsRow>
-        <WindowedSettingsRow title="Monospace size" description="Used by terminals, tool output, and code blocks">
+        <WindowedSettingsRow title="Monospace size" description="12 px">
           <WindowedNumberStepper aria-label="Monospace size" value={12} min={10} max={16} unit="px" onChange={() => undefined} />
         </WindowedSettingsRow>
       </WindowedSettingsGroup>
