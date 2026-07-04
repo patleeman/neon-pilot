@@ -115,10 +115,12 @@ function CoreAttachControl({ disabled, onOpenFilePicker }: { disabled: boolean; 
 
 function CoreDrawingControl({
   conversationId,
+  parentWindowTitle,
   disabled,
   onUpsertDrawingAttachment,
 }: {
   conversationId?: string | null;
+  parentWindowTitle?: string;
   disabled: boolean;
   onUpsertDrawingAttachment: (payload: Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>) => void;
 }) {
@@ -130,7 +132,7 @@ function CoreDrawingControl({
           detail: {
             extensionId: 'system-excalidraw-input',
             component: 'ExcalidrawEditorModal',
-            props: { conversationId, saveLabel: 'Attach to chat' },
+            props: { conversationId, parentWindowTitle, saveLabel: 'Attach to chat' },
             size: 'fullscreen',
             resolve,
             reject,
@@ -141,7 +143,7 @@ function CoreDrawingControl({
     if (result && typeof result === 'object') {
       onUpsertDrawingAttachment(result as Omit<ComposerDrawingAttachment, 'localId' | 'dirty'>);
     }
-  }, [conversationId, disabled, onUpsertDrawingAttachment]);
+  }, [conversationId, disabled, onUpsertDrawingAttachment, parentWindowTitle]);
 
   useEffect(() => {
     const handleCreateDrawingCommand = () => {
@@ -258,12 +260,14 @@ function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps
     prev.onSubmitComposerQuestion === next.onSubmitComposerQuestion &&
     prev.onSubmitComposerActionForModifiers === next.onSubmitComposerActionForModifiers &&
     prev.onAbortStream === next.onAbortStream &&
-    prev.conversationId === next.conversationId
+    prev.conversationId === next.conversationId &&
+    prev.parentWindowTitle === next.parentWindowTitle
   );
 }
 
 interface ConversationComposerInputControlsProps {
   conversationId?: string | null;
+  parentWindowTitle?: string;
   fileInputRef: RefObject<HTMLInputElement>;
   textareaRef: RefObject<HTMLTextAreaElement>;
   input: string;
@@ -340,6 +344,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   onSubmitComposerActionForModifiers,
   onAbortStream,
   conversationId,
+  parentWindowTitle,
 }: ConversationComposerInputControlsProps) {
   const { composerControls = [], composerInputTools = [] } = useExtensionRegistry();
   const composerControlId = useId();
@@ -584,6 +589,7 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
             ))}
             <CoreDrawingControl
               conversationId={conversationId}
+              parentWindowTitle={parentWindowTitle}
               disabled={composerDisabled}
               onUpsertDrawingAttachment={onUpsertDrawingAttachment}
             />

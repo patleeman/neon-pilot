@@ -298,6 +298,81 @@ describe('ConversationComposerInputControls', () => {
     expect(html).not.toContain('Model, reasoning, and speed');
   });
 
+  it('passes the parent conversation title when opening the core drawing modal', () => {
+    const modalDetails: unknown[] = [];
+    const handleModal = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      modalDetails.push(detail);
+      detail.resolve?.(null);
+    };
+    window.addEventListener('neon-pilot-extension-modal', handleModal);
+
+    const view = renderInteractive(
+      <ConversationComposerInputControls
+        conversationId="conversation-1"
+        parentWindowTitle="Planning thread"
+        fileInputRef={{ current: null }}
+        textareaRef={{ current: null }}
+        input=""
+        pendingAskUserQuestion={false}
+        composerDisabled={false}
+        composerShellWidth={800}
+        streamIsStreaming={false}
+        models={models}
+        currentModel="model-a"
+        currentThinkingLevel="medium"
+        currentServiceTier=""
+        savingPreference={null}
+        conversationNeedsTakeover={false}
+        composerHasContent={false}
+        composerShowsQuestionSubmit={false}
+        composerQuestionCanSubmit={false}
+        composerQuestionRemainingCount={0}
+        composerQuestionSubmitting={false}
+        composerSubmitLabel="Send"
+        composerAltHeld={false}
+        onFilesSelected={vi.fn()}
+        onInputChange={vi.fn()}
+        onRememberComposerSelection={vi.fn()}
+        onKeyDown={vi.fn()}
+        onPaste={vi.fn()}
+        onOpenFilePicker={vi.fn()}
+        onUpsertDrawingAttachment={vi.fn()}
+        onSelectModel={vi.fn()}
+        onSelectThinkingLevel={vi.fn()}
+        onSelectServiceTier={vi.fn()}
+        onInsertComposerText={vi.fn()}
+        onAppendComposerText={vi.fn()}
+        onSubmitComposerQuestion={vi.fn()}
+        onSubmitComposerActionForModifiers={vi.fn()}
+        onAbortStream={vi.fn()}
+      />,
+    );
+
+    try {
+      const createDrawing = view.container.querySelector<HTMLButtonElement>('button[aria-label="Create drawing"]');
+      expect(createDrawing).toBeTruthy();
+
+      act(() => {
+        createDrawing!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+      });
+
+      expect(modalDetails).toHaveLength(1);
+      expect(modalDetails[0]).toMatchObject({
+        extensionId: 'system-excalidraw-input',
+        component: 'ExcalidrawEditorModal',
+        props: {
+          conversationId: 'conversation-1',
+          parentWindowTitle: 'Planning thread',
+          saveLabel: 'Attach to chat',
+        },
+      });
+    } finally {
+      window.removeEventListener('neon-pilot-extension-modal', handleModal);
+      view.unmount();
+    }
+  });
+
   it('uses slash commands as the core model preference fallback', () => {
     extensionRegistryState.composerControls = [];
     extensionRegistryState.composerInputTools = [];

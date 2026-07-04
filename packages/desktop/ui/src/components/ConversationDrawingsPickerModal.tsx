@@ -34,9 +34,10 @@ interface Props {
   onLoadAttachment: (attachmentId: string) => Promise<ConversationAttachmentRecord>;
   onAttach: (selection: AttachSelection) => void;
   onClose: () => void;
+  parentWindowTitle?: string;
 }
 
-export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment, onAttach, onClose }: Props) {
+export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment, onAttach, onClose, parentWindowTitle = 'Chat' }: Props) {
   const [query, setQuery] = useState('');
   const [expandedAttachmentId, setExpandedAttachmentId] = useState<string | null>(null);
   const [recordsById, setRecordsById] = useState<Record<string, ConversationAttachmentRecord>>({});
@@ -129,7 +130,7 @@ export function ConversationDrawingsPickerModal({ attachments, onLoadAttachment,
       bodyClassName="ui-windowed-drawings-picker-body"
       data-windowed-subwindow="drawing-picker"
       data-parent-window-attached="chat"
-      data-parent-window-title="Chat"
+      data-parent-window-title={parentWindowTitle}
       backdropStyle={{ background: 'rgb(0 0 0 / 0.55)', backdropFilter: 'blur(2px)' }}
       style={{ maxWidth: '840px', maxHeight: 'calc(100vh - 5rem)' }}
     >

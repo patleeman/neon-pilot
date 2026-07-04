@@ -184,7 +184,7 @@ describe('ExtensionModalHost modal bridge', () => {
           detail: {
             extensionId: 'system-excalidraw-input',
             component: 'ExcalidrawEditorModal',
-            props: {},
+            props: { parentWindowTitle: 'Planning thread' },
             size: 'fullscreen',
             resolve: vi.fn(),
             reject: vi.fn(),
@@ -200,7 +200,7 @@ describe('ExtensionModalHost modal bridge', () => {
     expect(dialog.className).toContain('ui-windowed-excalidraw-modal');
     expect(dialog.getAttribute('data-windowed-subwindow')).toBe('drawing-editor');
     expect(dialog.getAttribute('data-parent-window-attached')).toBe('chat');
-    expect(dialog.getAttribute('data-parent-window-title')).toBe('Chat');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('Planning thread');
     expect(document.querySelector('.ui-windowed-excalidraw-backdrop')).toBeTruthy();
     expect(document.querySelector('.ui-windowed-excalidraw-modal-body')).toBeTruthy();
   });

@@ -89,6 +89,7 @@ describe('ConversationDrawingsPickerModal', () => {
     render(
       <ConversationDrawingsPickerModal
         attachments={[firstDrawing]}
+        parentWindowTitle="Planning thread"
         onLoadAttachment={vi.fn(async () => drawingRecord(firstDrawing))}
         onAttach={vi.fn()}
         onClose={vi.fn()}
@@ -99,7 +100,7 @@ describe('ConversationDrawingsPickerModal', () => {
     expect(dialog.className).toContain('ui-windowed-drawings-picker');
     expect(dialog.getAttribute('data-windowed-subwindow')).toBe('drawing-picker');
     expect(dialog.getAttribute('data-parent-window-attached')).toBe('chat');
-    expect(dialog.getAttribute('data-parent-window-title')).toBe('Chat');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('Planning thread');
     expect(document.querySelector('.ui-windowed-drawings-picker-body')).toBeTruthy();
   });
 

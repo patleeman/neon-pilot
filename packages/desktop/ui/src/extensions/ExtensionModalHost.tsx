@@ -57,6 +57,11 @@ function isWindowedShellActive(): boolean {
   return typeof document !== 'undefined' && document.body.getAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE) === 'true';
 }
 
+function readWindowedParentWindowTitle(props: Record<string, unknown>): string {
+  const title = props.parentWindowTitle;
+  return typeof title === 'string' && title.trim().length > 0 ? title.trim() : 'Chat';
+}
+
 interface ConfirmState {
   title?: string;
   message: string;
@@ -241,6 +246,7 @@ export function ExtensionModalHost() {
   const windowedShellActive = isWindowedShellActive();
   const windowedExcalidrawModal =
     windowedShellActive && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal';
+  const parentWindowTitle = windowedExcalidrawModal ? readWindowedParentWindowTitle(modal.props) : undefined;
   const title = modal.title ?? (windowedExcalidrawModal ? 'Drawing' : undefined);
 
   return (
@@ -265,7 +271,7 @@ export function ExtensionModalHost() {
         )}
         data-windowed-subwindow={windowedExcalidrawModal ? 'drawing-editor' : undefined}
         data-parent-window-attached={windowedExcalidrawModal ? 'chat' : undefined}
-        data-parent-window-title={windowedExcalidrawModal ? 'Chat' : undefined}
+        data-parent-window-title={parentWindowTitle}
       >
         {title ? (
           <DialogHeader

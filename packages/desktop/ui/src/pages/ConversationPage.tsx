@@ -5373,6 +5373,7 @@ export function ConversationPage({
         initialAttachmentId: drawing.attachmentId,
         initialRevision: drawing.revision,
         localId,
+        parentWindowTitle: title,
         saveLabel: 'Update attachment',
       },
       size: 'fullscreen',
@@ -8822,6 +8823,7 @@ export function ConversationPage({
           inputControls={
             <ConversationComposerInputControls
               conversationId={id}
+              parentWindowTitle={title}
               fileInputRef={fileInputRef}
               textareaRef={textareaRef}
               input={input}
@@ -8927,6 +8929,7 @@ export function ConversationPage({
         <Suspense fallback={null}>
           <ConversationDrawingsPickerModal
             attachments={conversationAttachments}
+            parentWindowTitle={title}
             onLoadAttachment={async (attachmentId) => {
               const detail = await api.conversationAttachment(id, attachmentId);
               return detail.attachment;
