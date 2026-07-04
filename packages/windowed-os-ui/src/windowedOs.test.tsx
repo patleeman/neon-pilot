@@ -884,8 +884,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
-    expect(tokensSource).toContain('--wos-titlebar-h: 24px;');
-    expect(tokensSource).toContain('--wos-window-control-size: 18px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 28px;');
+    expect(tokensSource).toContain('--wos-window-control-size: 22px;');
     expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 32px);');
     expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-window__title {\n  min-width: 0;');
@@ -900,6 +900,20 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-dialog__meta::before');
     expect(stylesSource).toContain("content: '/ ';");
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
+  });
+
+  it('keeps titlebar controls compact without making the hit target fussy', () => {
+    const tokensPath = fileURLToPath(new URL('./tokens.css', import.meta.url));
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const tokensSource = readFileSync(tokensPath, 'utf8');
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(tokensSource).toContain('--wos-titlebar-h: 28px;');
+    expect(tokensSource).toContain('--wos-window-control-size: 22px;');
+    expect(tokensSource).not.toContain('--wos-window-control-size: 18px;');
+    expect(stylesSource).toContain('width: var(--wos-window-control-size);');
+    expect(stylesSource).toContain('height: var(--wos-window-control-size);');
+    expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
   });
 
   it('transitions automatic time-of-day theme changes across core desktop chrome', () => {
