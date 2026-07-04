@@ -29,15 +29,54 @@
 }
 
 /* Windowed mode does not use standalone left-edge rails for hierarchy or status. */
-.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-']) {
+.windowed-os-shell
+  :where(
+    .border-l,
+    [class~='border-l'],
+    [class*=' border-l-'],
+    [class*='border-l-'],
+    [class^='border-l-'],
+    [class*='before:border-l'],
+    [class*='after:border-l'],
+    [class*='before:left-0'],
+    [class*='after:left-0'],
+    [class*='before:inset-y-0'],
+    [class*='after:inset-y-0']
+  ) {
   border-left: 0 !important;
   border-left-width: 0 !important;
   border-left-color: transparent !important;
   box-shadow: none !important;
 }
 
-.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])::before,
-.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])::after {
+.windowed-os-shell
+  :where(
+    .border-l,
+    [class~='border-l'],
+    [class*=' border-l-'],
+    [class*='border-l-'],
+    [class^='border-l-'],
+    [class*='before:border-l'],
+    [class*='after:border-l'],
+    [class*='before:left-0'],
+    [class*='after:left-0'],
+    [class*='before:inset-y-0'],
+    [class*='after:inset-y-0']
+  )::before,
+.windowed-os-shell
+  :where(
+    .border-l,
+    [class~='border-l'],
+    [class*=' border-l-'],
+    [class*='border-l-'],
+    [class^='border-l-'],
+    [class*='before:border-l'],
+    [class*='after:border-l'],
+    [class*='before:left-0'],
+    [class*='after:left-0'],
+    [class*='before:inset-y-0'],
+    [class*='after:inset-y-0']
+  )::after {
   content: none !important;
   border-left: 0 !important;
   border-left-width: 0 !important;
@@ -2356,13 +2395,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body .ui-workbench-file-bar {
   display: flex;
-  min-height: 38px;
+  min-height: 34px;
   min-width: 0;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-2);
-  padding: 5px 8px;
+  padding: 4px 8px;
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);
 }
@@ -2372,24 +2411,24 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-height: 26px;
   min-width: 0;
   flex: 1 1 auto;
-  align-items: flex-start;
+  align-items: center;
   border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
   background: var(--wos-surface-2);
-  padding: 4px 8px;
+  padding: 3px 8px;
+  overflow: hidden;
 }
 
 .wos-window-route-body .ui-workbench-file-bar__path-label {
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
   color: var(--wos-ink-700);
   font-family: var(--wos-font-mono);
   font-size: 11px;
   font-weight: 650;
   line-height: 1.35;
-  text-overflow: clip;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wos-window-route-body .ui-workbench-file-bar__button {

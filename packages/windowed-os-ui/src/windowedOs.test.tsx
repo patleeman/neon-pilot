@@ -1070,13 +1070,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(composerStyles).toContain('box-shadow: none !important;');
     expect(composerStyles).toContain('.ui-input-shell {\n  border: 2px solid var(--wos-ink-900) !important;');
     expect(composerStyles).toContain('.ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;');
-    expect(stylesSource).toContain(
-      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-']) {",
-    );
+    expect(stylesSource).toContain('.windowed-os-shell\n  :where(');
+    expect(stylesSource).toContain("[class~='border-l']");
     expect(stylesSource).toContain('Windowed mode does not use standalone left-edge rails for hierarchy or status.');
-    expect(stylesSource).toContain(
-      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])::before,",
-    );
+    expect(stylesSource).toContain("[class*='before:border-l']");
+    expect(stylesSource).toContain("[class*='after:border-l']");
+    expect(stylesSource).toContain("[class*='before:left-0']");
+    expect(stylesSource).toContain("[class*='after:left-0']");
+    expect(stylesSource).toContain(')::before,\n.windowed-os-shell');
     expect(stylesSource).toContain('border-left-color: transparent !important;\n  box-shadow: none !important;');
   });
 
@@ -1597,15 +1598,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip__new');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar');
     expect(stylesSource).toContain(
-      '.wos-window-route-body .ui-workbench-file-bar {\n  display: flex;\n  min-height: 38px;\n  min-width: 0;',
+      '.wos-window-route-body .ui-workbench-file-bar {\n  display: flex;\n  min-height: 34px;\n  min-width: 0;',
     );
-    expect(stylesSource).toContain('align-items: flex-start;\n  gap: 8px;');
+    expect(stylesSource).toContain('align-items: center;\n  gap: 8px;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label');
     expect(stylesSource).toContain(
       '.wos-window-route-body .ui-workbench-file-bar__path {\n  display: flex;\n  min-height: 26px;\n  min-width: 0;\n  flex: 1 1 auto;',
     );
-    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label {\n  min-width: 0;\n  overflow: visible;');
-    expect(stylesSource).toContain('text-overflow: clip;\n  white-space: normal;\n  overflow-wrap: anywhere;');
+    expect(stylesSource).toContain('padding: 3px 8px;\n  overflow: hidden;');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label {\n  min-width: 0;\n  overflow: hidden;');
+    expect(stylesSource).toContain('text-overflow: ellipsis;\n  white-space: nowrap;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-resize-handle__line');
     expect(stylesSource).toContain('.wos-window-route-body--chat .ui-resize-handle {\n  background: transparent !important;');
