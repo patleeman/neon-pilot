@@ -339,7 +339,7 @@ export const DarkChatWithCollapsedWorkbench: Story = {
 
 function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 2080, padding: 24 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
         title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
         accent="chat"

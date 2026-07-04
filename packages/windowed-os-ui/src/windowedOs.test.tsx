@@ -1498,11 +1498,16 @@ describe('Windowed OS Storybook examples', () => {
   it('documents inherited chat chrome in an isolated Storybook example', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const inheritedChatSource = source.slice(
+      source.indexOf('function InheritedChatChromeStory'),
+      source.indexOf('export const InheritedChatChrome'),
+    );
 
     expect(source).toContain('function InheritedChatChromeStory');
     expect(source).toContain('export const InheritedChatChrome');
     expect(source).toContain('export const DarkInheritedChatChrome');
     expect(source).toContain('data-wos-theme={theme}');
+    expect(inheritedChatSource).toContain("style={{ minHeight: '100vh', padding: 24 }}");
     expect(source).toContain('<InheritedChatChromeStory theme="dark" />');
     expect(source).toContain('className="ui-message-card-user"');
     expect(source).toContain('className="ui-message-card-assistant"');
