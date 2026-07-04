@@ -1288,9 +1288,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__item');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary');
+    expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr) minmax(24px, 0.25fr);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary-main');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__label');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__preview');
+    expect(stylesSource).toContain(
+      'flex: 1 1 12rem;\n  min-width: 0;\n  color: var(--wos-ink-600) !important;\n  overflow-wrap: anywhere;\n  white-space: normal;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__rule');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__body');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button');
@@ -1318,6 +1323,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__overflow');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__header');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__preview,');
+    expect(stylesSource).toContain(
+      'color: var(--wos-ink-700) !important;\n  font: var(--wos-text-body);\n  overflow-wrap: anywhere;\n  white-space: normal;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__body');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-subagent-block');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-subagent-block[data-status='complete']");

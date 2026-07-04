@@ -6431,7 +6431,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary {
   display: grid;
   min-height: 30px;
-  grid-template-columns: minmax(0, auto) minmax(24px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(24px, 0.25fr);
   align-items: center;
   gap: 8px;
   cursor: pointer;
@@ -6448,6 +6448,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__summary-main {
   display: flex;
   min-width: 0;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
@@ -6465,11 +6466,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__preview {
+  flex: 1 1 12rem;
   min-width: 0;
   color: var(--wos-ink-600) !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-context-shelf__rule {
@@ -7105,9 +7106,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   min-width: 0;
   color: var(--wos-ink-700) !important;
   font: var(--wos-text-body);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__toggle,
