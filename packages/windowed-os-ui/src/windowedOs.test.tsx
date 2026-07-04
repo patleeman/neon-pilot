@@ -1394,6 +1394,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.ui-windowed-drawings-picker[data-parent-window-attached]');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal[data-parent-window-attached]');
     expect(stylesSource).toContain('display: flex !important;');
+    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker {\n  display: flex;");
+    expect(stylesSource).toContain('flex-direction: column;');
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 72px)) !important;');
     expect(stylesSource).toContain('@media (max-width: 560px) {\n  body[data-neon-pilot-windowed-shell-active=');
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 20px)) !important;');
@@ -1412,8 +1414,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('margin-right: var(--wos-space-3);');
     expect(stylesSource).toContain('text-overflow: ellipsis;');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-toolbar-button');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker-body {\n  display: flex;');
+    expect(stylesSource).toContain('overflow: hidden;');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-resource-picker-toolbar {\n  display: flex;');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-resource-picker-list {\n  display: grid;');
+    expect(stylesSource).toContain('overflow: auto;');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-panel > .ui-panel-muted');
+    expect(stylesSource).toContain('border-left: 0;');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-card-title');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-windowed-drawing-card__row');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-windowed-drawing-card__row {\n  padding: 8px;');
     expect(stylesSource).toContain(
       '.ui-windowed-drawings-picker .ui-windowed-drawing-card__row {\n    align-items: stretch;\n    flex-direction: column;',
     );
