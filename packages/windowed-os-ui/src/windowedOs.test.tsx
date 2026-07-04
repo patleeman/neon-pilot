@@ -1394,7 +1394,11 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
+    expect(source).toContain('function InheritedChatChromeStory');
     expect(source).toContain('export const InheritedChatChrome');
+    expect(source).toContain('export const DarkInheritedChatChrome');
+    expect(source).toContain('data-wos-theme={theme}');
+    expect(source).toContain('<InheritedChatChromeStory theme="dark" />');
     expect(source).toContain('className="ui-message-card-user"');
     expect(source).toContain('className="ui-message-card-assistant"');
     expect(source).toContain('className="ui-tool-block"');

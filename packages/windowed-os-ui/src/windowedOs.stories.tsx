@@ -334,11 +334,11 @@ export const DarkChatWithCollapsedWorkbench: Story = {
   render: () => <AttachedWorkbenchStory theme="dark" workbenchCollapsed />,
 };
 
-export const InheritedChatChrome: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 720, padding: 24 }}>
+function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 720, padding: 24 }}>
       <WindowFrame
-        title="Inherited chat chrome"
+        title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
         accent="chat"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 660 }}
@@ -424,7 +424,15 @@ export const InheritedChatChrome: Story = {
         </div>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const InheritedChatChrome: Story = {
+  render: () => <InheritedChatChromeStory />,
+};
+
+export const DarkInheritedChatChrome: Story = {
+  render: () => <InheritedChatChromeStory theme="dark" />,
 };
 
 export const NavigationPrimitives: Story = {
