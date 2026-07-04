@@ -1408,7 +1408,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body .border-border-subtle,
 .wos-window-route-body .border-border-default {
-  border-color: rgb(var(--color-border-subtle) / 0.36);
+  border-color: color-mix(in srgb, var(--wos-ink-900) 36%, transparent);
 }
 
 .wos-window-route-body [class*='shadow'] {
@@ -1747,6 +1747,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
   box-shadow: none;
+}
+
+.wos-window-route-body .ui-action-tile-main,
+.wos-window-route-body .ui-action-tile-label {
+  color: var(--wos-ink-900) !important;
 }
 
 .wos-window-route-body .ui-action-tile:hover {
@@ -4953,6 +4958,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf {
+  border-color: var(--wos-ink-900) !important;
   border-bottom: 2px solid var(--wos-ink-900) !important;
   background: var(--wos-surface-2) !important;
   padding: 8px 10px;
@@ -5181,6 +5187,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body .ui-composer-preferences-row {
   gap: 6px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-preferences-row .ui-menu-trigger-inline,
+.windowed-os-shell .wos-window-route-body .ui-composer-preferences-row .ui-menu-trigger-inline :where(span) {
+  color: var(--wos-ink-700) !important;
 }
 
 .windowed-os-shell .wos-window-route-body .ui-composer-actions {

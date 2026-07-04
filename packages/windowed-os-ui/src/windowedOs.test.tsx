@@ -752,6 +752,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body .ui-composer-notice[data-tone='warning']");
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf');
+    expect(stylesSource).toContain('border-color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf__row');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf :where(.ui-attachment-chip)');
@@ -765,6 +766,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-tool-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-model-fallback');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-preferences-row__menu-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-preferences-row .ui-menu-trigger-inline');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-actions');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-action-button');
     expect(stylesSource).toContain('font: var(--wos-text-row);');
@@ -816,6 +818,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('box-shadow: 6px 6px 0 oklch(20% 0.01 60 / 0.16);');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile-main');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile-label');
+    expect(stylesSource).toContain('color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile-icon');
   });
 
