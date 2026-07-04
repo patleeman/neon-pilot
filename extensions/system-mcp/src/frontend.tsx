@@ -344,14 +344,26 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
       <WindowedPageShell layout="standard" className="mcp-page-windowed">
         <WindowedPageMain title="MCP Servers">
           <div className="space-y-5">
-            {mcpLoading && !mcpState ? <WindowedStateBlock>Loading MCP servers.</WindowedStateBlock> : null}
+            {mcpLoading && !mcpState ? (
+              <WindowedStateBlock title="Loading MCP servers">
+                Reading explicit config and skill-bundled server wrappers.
+              </WindowedStateBlock>
+            ) : null}
             {mcpError && !mcpState ? (
               <WindowedStateBlock tone="danger" title="MCP servers unavailable">
                 {mcpError}
               </WindowedStateBlock>
             ) : null}
-            {saveState.error ? <WindowedStateBlock tone="danger">{saveState.error}</WindowedStateBlock> : null}
-            {saveState.message ? <WindowedStateBlock tone="positive">{saveState.message}</WindowedStateBlock> : null}
+            {saveState.error ? (
+              <WindowedStateBlock tone="danger" title="MCP config save failed">
+                {saveState.error}
+              </WindowedStateBlock>
+            ) : null}
+            {saveState.message ? (
+              <WindowedStateBlock tone="positive" title="MCP config saved">
+                {saveState.message}
+              </WindowedStateBlock>
+            ) : null}
 
             {mcpState ? (
               <>
@@ -498,8 +510,16 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
                 }
               >
                 <WindowedDialogStack>
-                  {selectedStatus?.message ? <WindowedStateBlock tone="positive">{selectedStatus.message}</WindowedStateBlock> : null}
-                  {selectedStatus?.error ? <WindowedStateBlock tone="danger">{selectedStatus.error}</WindowedStateBlock> : null}
+                  {selectedStatus?.message ? (
+                    <WindowedStateBlock tone="positive" title="Server action complete">
+                      {selectedStatus.message}
+                    </WindowedStateBlock>
+                  ) : null}
+                  {selectedStatus?.error ? (
+                    <WindowedStateBlock tone="danger" title="Server action failed">
+                      {selectedStatus.error}
+                    </WindowedStateBlock>
+                  ) : null}
                   <form
                     className="space-y-3"
                     onSubmit={(event) => {

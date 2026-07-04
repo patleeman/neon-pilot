@@ -266,7 +266,8 @@ describe('McpSettingsPanel', () => {
     const { container, rerender } = render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
 
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
-    expect(screen.getByText('Loading MCP servers.').closest('.wos-state-block')).toBeTruthy();
+    expect(screen.getByText('Loading MCP servers').closest('.wos-state-block__title')).toBeTruthy();
+    expect(screen.getByText('Reading explicit config and skill-bundled server wrappers.').closest('.wos-state-block__body')).toBeTruthy();
 
     mocks.useApi.mockReturnValueOnce({ data: null, loading: false, error: 'load failed', refetch: vi.fn() });
     rerender(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
@@ -274,5 +275,48 @@ describe('McpSettingsPanel', () => {
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByText('MCP servers unavailable')).toBeTruthy();
     expect(screen.getByText('load failed').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
+  });
+
+  it('renders structured windowed save and server action feedback', async () => {
+    mocks.useApi.mockReturnValue(
+      buildUseApiResult({
+        configPath: '/tmp/mcp_servers.json',
+        configExists: true,
+        searchedPaths: ['/tmp/mcp_servers.json'],
+        explicitConfigJson:
+          '{\n  "mcpServers": {\n    "github": {\n      "command": "npx",\n      "args": ["@mcp/github"]\n    }\n  }\n}\n',
+        servers: [
+          {
+            name: 'github',
+            transport: 'stdio',
+            command: 'npx',
+            args: ['@mcp/github'],
+            source: 'config',
+            sourcePath: '/tmp/mcp_servers.json',
+            hasOAuth: false,
+            raw: {},
+          },
+        ],
+        bundledSkills: [],
+      }),
+    );
+    mocks.api.invokeExtensionAction.mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'saveExplicitConfig') return { result: {} };
+      if (action === 'testServer') return { result: { ok: false, message: 'Server did not respond.' } };
+      throw new Error(`Unexpected action ${action}`);
+    });
+
+    render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open MCP server details for github' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Disable' }));
+
+    await waitFor(() => expect(screen.getByText('MCP config saved')).toBeTruthy());
+    expect(screen.getByText('github disabled.').closest('.wos-state-block__body')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+
+    await waitFor(() => expect(screen.getByText('Server action failed')).toBeTruthy());
+    expect(screen.getByText('Server did not respond.').closest('.wos-state-block__body')).toBeTruthy();
   });
 });
