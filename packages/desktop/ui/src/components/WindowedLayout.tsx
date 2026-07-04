@@ -7,7 +7,6 @@ import {
   type TaskbarGroup,
   type TaskbarItem,
   WindowedChatSurface,
-  WindowedDialog,
   WindowedMenuPanel,
   WindowedSegmentedControl,
   WindowedStateBlock,
@@ -50,16 +49,13 @@ import {
   type WindowedOsThemePhase,
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
-import {
-  dispatchWindowedParentWindowLifecycle,
-  WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT,
-  type WindowedParentWindowLifecycleDetail,
-} from '../windowed/windowedChildWindowEvents';
+import { dispatchWindowedParentWindowLifecycle } from '../windowed/windowedChildWindowEvents';
 import { Layout } from './Layout';
 import { findExtensionToolPanelBySlot } from './layout/workbenchRailModel';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
-type WindowKind = 'chat' | 'route';
+type WindowKind = 'chat' | 'route' | 'terminal';
+type LauncherWindowKind = 'chat' | 'route';
 
 interface DesktopWindowModel {
   id: string;
@@ -71,13 +67,15 @@ interface DesktopWindowModel {
   focused: boolean;
   singleton?: boolean;
   archivedOnClose?: boolean;
+  parentWindowId?: string;
+  parentWindowTitle?: string;
 }
 
 interface LauncherItem {
   id: string;
   title: string;
   route: string;
-  kind: WindowKind;
+  kind: LauncherWindowKind;
 }
 
 type DragState = {
@@ -116,7 +114,7 @@ function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: s
   return `route:${input.id}`;
 }
 
-function defaultBounds(index: number, kind: WindowKind): WindowBounds {
+function defaultBounds(index: number, kind: LauncherWindowKind): WindowBounds {
   const desktop =
     typeof window === 'undefined'
       ? { width: 1280, height: 800 }
@@ -124,7 +122,7 @@ function defaultBounds(index: number, kind: WindowKind): WindowBounds {
   return defaultBoundsForDesktop(index, kind, desktop);
 }
 
-function defaultBoundsForDesktop(index: number, kind: WindowKind, desktop: DesktopRect): WindowBounds {
+function defaultBoundsForDesktop(index: number, kind: LauncherWindowKind, desktop: DesktopRect): WindowBounds {
   const ideal = kind === 'chat' ? { width: 1180, height: 760, x: 42, y: 34 } : { width: 1040, height: 650, x: 112, y: 72 };
   const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
   const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
@@ -145,8 +143,22 @@ function defaultBoundsForDesktop(index: number, kind: WindowKind, desktop: Deskt
   };
 }
 
-function nextDefaultBounds(index: number, kind: WindowKind, desktopElement: HTMLElement | null): WindowBounds {
+function nextDefaultBounds(index: number, kind: LauncherWindowKind, desktopElement: HTMLElement | null): WindowBounds {
   return defaultBoundsForDesktop(index, kind, desktopRect(desktopElement));
+}
+
+function terminalChildBounds(parentBounds: WindowBounds, desktop: DesktopRect): WindowBounds {
+  const width = Math.min(760, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
+  const height = Math.min(460, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
+  return constrainWindowBounds(
+    {
+      x: parentBounds.x + 54,
+      y: parentBounds.y + 58,
+      width,
+      height,
+    },
+    desktop,
+  );
 }
 
 function defaultDraftWindow(): DesktopWindowModel {
@@ -194,6 +206,8 @@ function readStoredWindows(): DesktopWindowModel[] {
           focused: record.focused === true,
           singleton: record.singleton === true,
           archivedOnClose: record.archivedOnClose === true,
+          parentWindowId: typeof record.parentWindowId === 'string' ? record.parentWindowId : undefined,
+          parentWindowTitle: typeof record.parentWindowTitle === 'string' ? record.parentWindowTitle : undefined,
         },
       ];
     });
@@ -204,7 +218,10 @@ function readStoredWindows(): DesktopWindowModel[] {
 
 function writeStoredWindows(windows: DesktopWindowModel[]): void {
   try {
-    window.localStorage.setItem(WINDOW_STATE_STORAGE_KEY, JSON.stringify(windows));
+    window.localStorage.setItem(
+      WINDOW_STATE_STORAGE_KEY,
+      JSON.stringify(windows.filter((windowModel) => windowModel.kind === 'chat' || windowModel.kind === 'route')),
+    );
   } catch {
     // Ignore storage failures; the in-memory desktop still works.
   }
@@ -217,6 +234,29 @@ function withFocusedWindow(windows: DesktopWindowModel[], windowId: string): Des
     ...windows.filter((windowModel) => windowModel.id !== windowId).map((windowModel) => ({ ...windowModel, focused: false })),
     { ...selected, focused: true, minimized: false },
   ];
+}
+
+function restoreTerminalChildrenForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
+  const children = windows
+    .filter((windowModel) => windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId)
+    .map((windowModel) => ({ ...windowModel, minimized: false, focused: false }));
+  if (children.length === 0) return windows;
+  return [
+    ...windows.filter((windowModel) => !(windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId)),
+    ...children,
+  ];
+}
+
+function minimizeTerminalChildrenForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
+  return windows.map((windowModel) =>
+    windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId
+      ? { ...windowModel, minimized: true, focused: false }
+      : windowModel,
+  );
+}
+
+function removeTerminalChildrenForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
+  return windows.filter((windowModel) => !(windowModel.kind === 'terminal' && windowModel.parentWindowId === parentWindowId));
 }
 
 function normalizeTitle(title: string): string {
@@ -744,105 +784,61 @@ function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode
   );
 }
 
-function parentLifecycleMatchesChatWindow(
-  detail: WindowedParentWindowLifecycleDetail,
-  parentWindowId: string,
-  parentWindowTitle: string,
-): boolean {
-  if (detail.parentWindowKind !== 'chat') return false;
-  return detail.parentWindowId === parentWindowId || detail.parentWindowTitle === parentWindowTitle;
-}
-
-function WindowedChatTerminalDialog({
+function WindowedChatTerminalWindowBody({
   cwd,
-  onClose,
   parentWindowId,
   parentWindowTitle,
   route,
 }: {
   cwd?: string | null;
-  onClose: () => void;
   parentWindowId: string;
   parentWindowTitle: string;
   route: string;
 }) {
   const extensionRegistry = useExtensionRegistry();
-  const [parentMinimized, setParentMinimized] = useState(false);
   const routeLocationValue = useMemo(() => routeLocation(route), [route]);
   const terminalSurface = useMemo(() => findExtensionToolPanelBySlot(extensionRegistry.surfaces, 'terminal'), [extensionRegistry.surfaces]);
 
-  useEffect(() => {
-    function handleParentLifecycle(event: Event) {
-      const detail = (event as CustomEvent<WindowedParentWindowLifecycleDetail>).detail;
-      if (!detail || !parentLifecycleMatchesChatWindow(detail, parentWindowId, parentWindowTitle)) return;
-      if (detail.reason === 'minimized') {
-        setParentMinimized(true);
-        return;
-      }
-      if (detail.reason === 'restored') {
-        setParentMinimized(false);
-        return;
-      }
-      onClose();
-    }
-
-    window.addEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
-    return () => window.removeEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
-  }, [onClose, parentWindowId, parentWindowTitle]);
-
   return (
-    <WindowedDialog
-      title="Terminal"
-      accent="settings"
-      className="wos-chat-terminal-dialog"
-      parentWindowId={parentWindowId}
-      parentWindowTitle={parentWindowTitle}
-      onClose={onClose}
+    <div
+      className="wos-chat-terminal-dialog__body"
+      data-windowed-subwindow="terminal"
+      data-parent-window-attached="chat"
+      data-parent-window-id={parentWindowId}
+      data-parent-window-title={parentWindowTitle}
     >
-      <div
-        className="wos-chat-terminal-dialog__body"
-        data-windowed-subwindow="terminal"
-        data-parent-window-attached="chat"
-        data-parent-window-id={parentWindowId}
-        data-parent-window-minimized={parentMinimized ? 'true' : undefined}
-        data-parent-window-title={parentWindowTitle}
-      >
-        {terminalSurface ? (
-          <NativeExtensionSurfaceHost
-            surface={terminalSurface}
-            pathname={routeLocationValue.pathname}
-            search={routeLocationValue.search}
-            hash={routeLocationValue.hash}
-            shellPresentation="windowed"
-            cwd={cwd}
-            instanceId={`${parentWindowId}:terminal`}
-          />
-        ) : (
-          <WindowedStateBlock title="Terminal unavailable" tone="warning">
-            The Terminal extension is not registered.
-          </WindowedStateBlock>
-        )}
-      </div>
-    </WindowedDialog>
+      {terminalSurface ? (
+        <NativeExtensionSurfaceHost
+          surface={terminalSurface}
+          pathname={routeLocationValue.pathname}
+          search={routeLocationValue.search}
+          hash={routeLocationValue.hash}
+          shellPresentation="windowed"
+          cwd={cwd}
+          instanceId={`${parentWindowId}:terminal`}
+        />
+      ) : (
+        <WindowedStateBlock title="Terminal unavailable" tone="warning">
+          The Terminal extension is not registered.
+        </WindowedStateBlock>
+      )}
+    </div>
   );
 }
 
 function WindowRouteBody({
   compact = false,
   onNavigate,
-  parentWindowId,
-  parentWindowTitle,
+  onOpenTerminalWindow,
   route,
 }: {
   compact?: boolean;
   onNavigate: WindowNavigate;
-  parentWindowId: string;
-  parentWindowTitle: string;
+  onOpenTerminalWindow: () => void;
   route: string;
 }) {
   const isChatRoute = route.startsWith('/conversations');
   const [chatWorkbenchOpen, setChatWorkbenchOpen] = useState(true);
-  const [terminalWindowOpen, setTerminalWindowOpen] = useState(false);
   const effectiveChatWorkbenchOpen = chatWorkbenchOpen && !compact;
 
   if (!isChatRoute) {
@@ -876,7 +872,7 @@ function WindowRouteBody({
           {effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
         </button>
         {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-        <button type="button" className="wos-chat-window-toolbar__button" onClick={() => setTerminalWindowOpen(true)}>
+        <button type="button" className="wos-chat-window-toolbar__button" onClick={onOpenTerminalWindow}>
           Terminal window
         </button>
       </div>
@@ -916,15 +912,6 @@ function WindowRouteBody({
           </Route>
         </Routes>
       </WindowRouteScope>
-      {terminalWindowOpen ? (
-        <WindowedChatTerminalDialog
-          cwd={null}
-          parentWindowId={parentWindowId}
-          parentWindowTitle={parentWindowTitle}
-          route={route}
-          onClose={() => setTerminalWindowOpen(false)}
-        />
-      ) : null}
     </WindowedChatSurface>
   );
 }
@@ -1078,7 +1065,36 @@ export function WindowedLayout() {
     if (targetWindow?.minimized) {
       dispatchParentLifecycleForWindow(targetWindow, 'restored');
     }
-    setWindows((current) => withFocusedWindow(current, windowId));
+    setWindows((current) => {
+      const focused = withFocusedWindow(current, windowId);
+      return targetWindow?.kind === 'chat' ? restoreTerminalChildrenForParent(focused, targetWindow.id) : focused;
+    });
+  }, []);
+
+  const openTerminalWindow = useCallback((parentWindow: DesktopWindowModel) => {
+    if (parentWindow.kind !== 'chat') return;
+    suspendWindowedBrowserViews();
+    setLauncherOpen(false);
+    setWindows((current) => {
+      const parent = current.find((candidate) => candidate.id === parentWindow.id && candidate.kind === 'chat') ?? parentWindow;
+      const id = `${parent.id}:terminal`;
+      const existing = current.find((candidate) => candidate.id === id);
+      if (existing) {
+        return withFocusedWindow(current, id);
+      }
+      const next: DesktopWindowModel = {
+        id,
+        kind: 'terminal',
+        title: 'Terminal',
+        route: parent.route,
+        bounds: terminalChildBounds(parent.bounds, desktopRect(desktopRef.current)),
+        minimized: false,
+        focused: true,
+        parentWindowId: parent.id,
+        parentWindowTitle: parent.title,
+      };
+      return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
+    });
   }, []);
 
   const openLauncherItem = useCallback((item: LauncherItem, session?: SessionMeta) => {
@@ -1197,7 +1213,12 @@ export function WindowedLayout() {
         delete next[windowModel.id];
         return next;
       });
-      setWindows((current) => ensureFocusedWindow(current.filter((candidate) => candidate.id !== windowModel.id)));
+      setWindows((current) => {
+        const withoutClosed = current.filter((candidate) => candidate.id !== windowModel.id);
+        const withoutChildren =
+          windowModel.kind === 'chat' ? removeTerminalChildrenForParent(withoutClosed, windowModel.id) : withoutClosed;
+        return ensureFocusedWindow(withoutChildren);
+      });
     },
     [conversations],
   );
@@ -1208,7 +1229,10 @@ export function WindowedLayout() {
     if (windowModel) dispatchParentLifecycleForWindow(windowModel, 'minimized');
     setWindows((current) =>
       ensureFocusedWindow(
-        current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
+        minimizeTerminalChildrenForParent(
+          current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
+          windowModel?.kind === 'chat' ? windowModel.id : '',
+        ),
       ),
     );
   }, []);
@@ -1368,9 +1392,18 @@ export function WindowedLayout() {
       suspendWindowedBrowserViews();
       focusWindow(windowModel.id);
       setRestoreBounds((current) => {
-        if (!current[windowModel.id]) return current;
+        const childWindowIds =
+          windowModel.kind === 'chat'
+            ? windowsRef.current
+                .filter((candidate) => candidate.kind === 'terminal' && candidate.parentWindowId === windowModel.id)
+                .map((candidate) => candidate.id)
+            : [];
+        if (!current[windowModel.id] && !childWindowIds.some((childWindowId) => current[childWindowId])) return current;
         const next = { ...current };
         delete next[windowModel.id];
+        for (const childWindowId of childWindowIds) {
+          delete next[childWindowId];
+        }
         return next;
       });
       const resizeState: ResizeState = {
@@ -1622,38 +1655,52 @@ export function WindowedLayout() {
         }}
       >
         {snapPreview ? <div className="wos-snap-preview" style={boundsStyle(snapPreview)} aria-hidden="true" /> : null}
-        {windows.map((windowModel) => (
-          <WindowFrame
-            key={windowModel.id}
-            windowId={windowModel.id}
-            title={windowModel.title}
-            accent={accentForWindow(windowModel)}
-            focused={windowModel.focused}
-            minimized={windowModel.minimized}
-            style={windowFrameStyle(windowModel, visibleWindows)}
-            iframeBlocked={
-              !windowModel.minimized &&
-              canHostBrowserFrame(windowModel) &&
-              (rendererFramePaintBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows))
-            }
-            onPointerDown={() => focusWindow(windowModel.id)}
-            onMinimize={() => minimizeWindow(windowModel.id)}
-            onMaximize={() => toggleMaximize(windowModel)}
-            onClose={() => closeWindow(windowModel)}
-            restoreLabel={restoreBounds[windowModel.id] ? `Restore ${windowModel.title}` : `Maximize ${windowModel.title}`}
-            resizeHandles={(['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'] as ResizeEdge[]).map((edge) => (
-              <div key={edge} className={`wos-resize-handle wos-resize-${edge}`} data-resize-edge={edge} aria-hidden="true" />
-            ))}
-          >
-            <WindowRouteBody
-              compact={windowModel.kind === 'chat' && windowModel.bounds.width < 720}
-              route={windowModel.route}
-              parentWindowId={windowModel.id}
-              parentWindowTitle={windowModel.title}
-              onNavigate={(to) => navigateWindow(windowModel.id, to)}
-            />
-          </WindowFrame>
-        ))}
+        {windows.map((windowModel) => {
+          const isTerminalWindow = windowModel.kind === 'terminal';
+          return (
+            <WindowFrame
+              key={windowModel.id}
+              windowId={windowModel.id}
+              title={windowModel.title}
+              accent={accentForWindow(windowModel)}
+              focused={windowModel.focused}
+              minimized={windowModel.minimized}
+              className={isTerminalWindow ? 'wos-window--child wos-window--terminal' : undefined}
+              style={windowFrameStyle(windowModel, visibleWindows)}
+              iframeBlocked={
+                !windowModel.minimized &&
+                canHostBrowserFrame(windowModel) &&
+                (rendererFramePaintBlocked || isWindowCoveredByHigherWindow(windowModel, visibleWindows))
+              }
+              onPointerDown={() => focusWindow(windowModel.id)}
+              onMinimize={() => minimizeWindow(windowModel.id)}
+              onMaximize={() => toggleMaximize(windowModel)}
+              onClose={() => closeWindow(windowModel)}
+              restoreLabel={restoreBounds[windowModel.id] ? `Restore ${windowModel.title}` : `Maximize ${windowModel.title}`}
+              resizeHandles={(['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'] as ResizeEdge[]).map((edge) => (
+                <div key={edge} className={`wos-resize-handle wos-resize-${edge}`} data-resize-edge={edge} aria-hidden="true" />
+              ))}
+            >
+              {isTerminalWindow ? (
+                <div className="wos-window-route-body wos-window-route-body--terminal">
+                  <WindowedChatTerminalWindowBody
+                    cwd={null}
+                    parentWindowId={windowModel.parentWindowId ?? ''}
+                    parentWindowTitle={windowModel.parentWindowTitle ?? 'Chat'}
+                    route={windowModel.route}
+                  />
+                </div>
+              ) : (
+                <WindowRouteBody
+                  compact={windowModel.kind === 'chat' && windowModel.bounds.width < 720}
+                  route={windowModel.route}
+                  onNavigate={(to) => navigateWindow(windowModel.id, to)}
+                  onOpenTerminalWindow={() => openTerminalWindow(windowModel)}
+                />
+              )}
+            </WindowFrame>
+          );
+        })}
       </main>
       <Taskbar
         startOpen={launcherOpen}

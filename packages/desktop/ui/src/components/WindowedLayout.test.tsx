@@ -2592,13 +2592,21 @@ describe('WindowedLayout route windows', () => {
       },
     ]);
 
-    renderWindowedLayout();
+    const { container } = renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /terminal window/i }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Terminal' });
-    expect(dialog.getAttribute('data-parent-window-id')).toBe('chat:draft');
-    expect(dialog.getAttribute('data-parent-window-title')).toBe('New conversation');
+    const chatWindow = container.querySelector<HTMLElement>('[data-window-id="chat:draft"]');
+    const terminalWindow = screen.getByRole('region', { name: 'Terminal' });
+    expect(terminalWindow.getAttribute('data-window-id')).toBe('chat:draft:terminal');
+    expect(terminalWindow.className).toContain('wos-window--terminal');
+    expect(terminalWindow.closest('[data-window-id="chat:draft"]')).toBeNull();
+    expect(chatWindow?.compareDocumentPosition(terminalWindow) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    const terminalBody = terminalWindow.querySelector('[data-windowed-subwindow="terminal"]');
+    expect(terminalBody?.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(terminalBody?.getAttribute('data-parent-window-title')).toBe('New conversation');
+    expect(screen.getByRole('button', { name: /^terminal$/i })).toBeTruthy();
 
     const terminalHost = screen.getByTestId('native-extension-surface');
     expect(terminalHost.getAttribute('data-extension-id')).toBe('system-terminal');
@@ -2606,47 +2614,17 @@ describe('WindowedLayout route windows', () => {
     expect(terminalHost.getAttribute('data-shell-presentation')).toBe('windowed');
     expect(terminalHost.getAttribute('data-instance-id')).toBe('chat:draft:terminal');
 
-    act(() => {
-      window.dispatchEvent(
-        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
-          detail: {
-            parentWindowId: 'chat:draft',
-            parentWindowKind: 'chat',
-            parentWindowTitle: 'New conversation',
-            reason: 'minimized',
-          },
-        }),
-      );
-    });
-    expect(dialog.querySelector('[data-windowed-subwindow="terminal"]')?.getAttribute('data-parent-window-minimized')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: /minimize new conversation/i }));
+    expect(chatWindow?.getAttribute('data-minimized')).toBe('true');
+    expect(terminalWindow.getAttribute('data-minimized')).toBe('true');
+    expect((terminalWindow as HTMLElement).style.display).toBe('none');
 
-    act(() => {
-      window.dispatchEvent(
-        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
-          detail: {
-            parentWindowId: 'chat:draft',
-            parentWindowKind: 'chat',
-            parentWindowTitle: 'New conversation',
-            reason: 'restored',
-          },
-        }),
-      );
-    });
-    expect(dialog.querySelector('[data-windowed-subwindow="terminal"]')?.getAttribute('data-parent-window-minimized')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /new conversation/i }));
+    expect(chatWindow?.getAttribute('data-minimized')).toBeNull();
+    expect(terminalWindow.getAttribute('data-minimized')).toBeNull();
 
-    act(() => {
-      window.dispatchEvent(
-        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
-          detail: {
-            parentWindowId: 'chat:draft',
-            parentWindowKind: 'chat',
-            parentWindowTitle: 'New conversation',
-            reason: 'closed',
-          },
-        }),
-      );
-    });
-    expect(screen.queryByRole('dialog', { name: 'Terminal' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
+    expect(screen.queryByRole('region', { name: 'Terminal' })).toBeNull();
   });
 
   it('toggles a focused route window from the taskbar between minimized and restored', async () => {
