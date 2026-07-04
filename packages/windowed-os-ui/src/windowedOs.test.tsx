@@ -1085,6 +1085,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__row');
     expect(stylesSource).toContain('flex-wrap: wrap;');
     expect(stylesSource).toContain('flex: 1 1 180px;');
+    expect(stylesSource).toContain('@container wos-window-route (max-width: 560px)');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n    flex-basis: 100%;',
+    );
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip)',
     );

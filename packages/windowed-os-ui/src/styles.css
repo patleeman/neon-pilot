@@ -6645,6 +6645,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   }
 }
 
+@container wos-window-route (max-width: 560px) {
+  .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip) {
+    flex-basis: 100%;
+  }
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-shell,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-positioned-menu {
