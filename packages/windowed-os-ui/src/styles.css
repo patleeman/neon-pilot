@@ -5303,6 +5303,28 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   opacity: 1;
 }
 
+.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static {
+  border: 2px solid var(--wos-ink-900) !important;
+  border-radius: 8px !important;
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-900) !important;
+  box-shadow: none !important;
+  padding: 4px !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item {
+  min-height: 26px;
+  border-radius: 6px;
+  color: var(--wos-ink-900) !important;
+  font: var(--wos-text-row);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item:hover,
+.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item.bg-elevated,
+.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item[aria-selected='true'] {
+  background: var(--wos-chat) !important;
+}
+
 .windowed-os-shell .wos-window-route-body .ui-row-button,
 .windowed-os-shell .wos-window-route-body button.ui-icon-button {
   border: 2px solid var(--wos-ink-900) !important;
