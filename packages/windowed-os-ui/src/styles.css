@@ -1283,6 +1283,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   padding: 0 8px 0 10px;
 }
 
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header-copy,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-header-copy {
+  flex: 0 1 auto;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-title,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-title {
   color: var(--wos-accent-ink);
@@ -1291,10 +1296,15 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[data-parent-window-title] .ui-dialog-header::after,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal[data-parent-window-title] .ui-dialog-header::after {
+  order: 2;
   margin-left: auto;
+  margin-right: var(--wos-space-3);
+  overflow: hidden;
   color: var(--wos-ink-700);
-  content: 'Attached to ' attr(data-parent-window-title);
+  content: 'Attached';
   font: var(--wos-text-caption);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-description,
@@ -1311,6 +1321,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
   box-shadow: none;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-actions {
+  order: 3;
+  margin-left: 0;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions .ui-icon-button:hover,

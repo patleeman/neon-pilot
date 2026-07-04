@@ -1028,7 +1028,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('display: none !important;');
     expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('max-width: none !important;');
-    expect(stylesSource).toContain("content: 'Attached to ' attr(data-parent-window-title);");
+    expect(stylesSource).toContain("content: 'Attached';");
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-header-copy');
+    expect(stylesSource).toContain('flex: 0 1 auto;');
+    expect(stylesSource).toContain('order: 2;');
+    expect(stylesSource).toContain('margin-right: var(--wos-space-3);');
+    expect(stylesSource).toContain('text-overflow: ellipsis;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-actions');
+    expect(stylesSource).toContain('order: 3;');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');
