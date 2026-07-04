@@ -2675,6 +2675,18 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   color: oklch(42% 0.12 25);
 }
 
+.windowed-os-shell[data-wos-theme='dark'] .wos-state-block[data-tone='positive'] {
+  color: var(--wos-success);
+}
+
+.windowed-os-shell[data-wos-theme='dark'] .wos-state-block[data-tone='warning'] {
+  color: var(--wos-warning);
+}
+
+.windowed-os-shell[data-wos-theme='dark'] .wos-state-block[data-tone='danger'] {
+  color: var(--wos-danger);
+}
+
 .wos-state-block__copy {
   display: grid;
   min-width: 0;
