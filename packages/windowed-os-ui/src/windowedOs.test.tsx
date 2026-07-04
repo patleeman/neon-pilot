@@ -29,6 +29,7 @@ import {
   WindowedPageSection,
   WindowedPageShell,
   WindowedPageStack,
+  WindowedSegmentedControl,
   WindowedSettingsGroup,
   WindowedSettingsRow,
   WindowedTerminalFrame,
@@ -296,6 +297,28 @@ describe('WindowedSettingsGroup', () => {
     expect(copyRule).toContain('overflow-wrap: break-word;');
     expect(copyRule).toContain('word-break: normal;');
     expect(copyRule).not.toContain('overflow-wrap: anywhere;');
+  });
+});
+
+describe('WindowedSegmentedControl', () => {
+  it('supports compact visible labels with explicit accessible names', () => {
+    const html = renderToStaticMarkup(
+      <WindowedSegmentedControl
+        ariaLabel="Windowed OS theme"
+        value="auto"
+        options={[
+          { id: 'light', label: 'Light' },
+          { id: 'auto', label: 'Time of day', shortLabel: 'Time' },
+          { id: 'dark', label: 'Dark' },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('role="radiogroup" aria-label="Windowed OS theme"');
+    expect(html).toContain(
+      'aria-label="Time of day" aria-checked="true" data-active="true" class="wos-segmented-control__item" title="Time of day">Time</button>',
+    );
+    expect(html).not.toContain('>Time of day</button>');
   });
 });
 

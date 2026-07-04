@@ -16,9 +16,9 @@ export interface WindowedOsThemePhaseInfo {
   msUntilNextPhase: number;
 }
 
-export const WINDOWED_OS_THEME_OPTIONS: ReadonlyArray<{ id: WindowedOsTheme; label: string }> = [
+export const WINDOWED_OS_THEME_OPTIONS: ReadonlyArray<{ id: WindowedOsTheme; label: string; shortLabel?: string }> = [
   { id: 'light', label: 'Light' },
-  { id: 'auto', label: 'Time' },
+  { id: 'auto', label: 'Time of day', shortLabel: 'Time' },
   { id: 'dark', label: 'Dark' },
 ];
 

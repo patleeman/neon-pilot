@@ -906,6 +906,8 @@ export function WindowedSelect({ className, children, ...props }: WindowedSelect
 export interface WindowedSegmentedOption {
   id: string;
   label: string;
+  shortLabel?: string;
+  title?: string;
 }
 
 export interface WindowedSegmentedControlProps {
@@ -932,12 +934,14 @@ export function WindowedSegmentedControl({
           key={option.id}
           type="button"
           role="radio"
+          aria-label={option.shortLabel && option.shortLabel !== option.label ? option.label : undefined}
           aria-checked={option.id === value}
           data-active={option.id === value}
           className="wos-segmented-control__item"
+          title={option.title ?? option.label}
           onClick={() => onChange?.(option.id)}
         >
-          {option.label}
+          {option.shortLabel ?? option.label}
         </button>
       ))}
     </div>
