@@ -697,6 +697,41 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
+  it('keeps Start menu pointer launch working after prior window focus and desktop dismissal', async () => {
+    mocks.extensions = [
+      ...mocks.extensions,
+      {
+        id: 'system-automations',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'automations', label: 'Automations', route: '/automations' }],
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^routines$/i }));
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+
+    fireEvent.mouseDown(routinesWindow);
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
+    fireEvent.mouseDown(screen.getByLabelText(/windowed neon pilot desktop/i));
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const automations = within(startMenu).getByRole('button', { name: /^automations$/i });
+    fireEvent.mouseDown(automations, { clientX: 2, clientY: 8 });
+    fireEvent.click(automations, { clientX: 2, clientY: 8 });
+
+    const automationsWindow = await screen.findByRole('region', { name: /^automations$/i });
+    expect(within(automationsWindow).getByTestId('extension-route-host').textContent).toBe('/automations:windowed');
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
   it('keeps ordinary window content mounted while the Start menu is open', async () => {
     renderWindowedLayout();
 
