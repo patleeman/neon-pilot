@@ -3265,6 +3265,20 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   }
 }
 
+@media (max-width: 560px) {
+  .wos-page-shell:not([data-layout='standard']) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .wos-page-shell:not([data-layout='standard']) .wos-page-rail {
+    max-height: 168px;
+    border-right: 0;
+    border-bottom: 2px solid var(--wos-ink-900);
+    padding: 8px;
+  }
+}
+
 .wos-badge {
   color: var(--wos-ink-500);
   font: var(--wos-text-meta);

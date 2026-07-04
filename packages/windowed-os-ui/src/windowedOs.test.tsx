@@ -94,6 +94,10 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('container: wos-page-shell / inline-size;');
     expect(stylesSource).toContain('@container wos-page-shell (max-width: 680px)');
     expect(stylesSource).toContain('@container wos-page-shell (max-width: 680px) {\n  .wos-settings-row {');
+    expect(stylesSource).toContain("@media (max-width: 560px) {\n  .wos-page-shell:not([data-layout='standard']) {");
+    expect(stylesSource).toContain('grid-template-rows: auto minmax(0, 1fr);');
+    expect(stylesSource).toContain(".wos-page-shell:not([data-layout='standard']) .wos-page-rail {");
+    expect(stylesSource).toContain('border-right: 0;\n    border-bottom: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain(
       '.wos-settings-row__actions {\n    min-width: 0;\n    max-width: none;\n    justify-content: flex-start;',
     );
