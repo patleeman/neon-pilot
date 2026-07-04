@@ -1388,6 +1388,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-panel-muted');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary .ui-row-button {\n  display: flex;\n  min-height: 26px;',
+    );
+    expect(stylesSource).toContain('padding: 3px 6px;\n  color: var(--wos-ink-900);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card .ui-action-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure-summary');
