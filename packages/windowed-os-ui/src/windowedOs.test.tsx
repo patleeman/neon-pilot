@@ -958,6 +958,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation-body');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button-icon');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-actions-preview');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tooltip-host');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tooltip');
+    expect(stylesSource).toContain('position: absolute;');
+    expect(stylesSource).toContain('width: max-content;');
+    expect(stylesSource).toContain('visibility: hidden;');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tooltip-top-right');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user .ui-tooltip-top-right');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tooltip-bottom-right');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tooltip-host:hover > .ui-tooltip');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-accent');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-danger');
@@ -1450,6 +1460,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="ui-skill-invocation"');
     expect(source).toContain('className="ui-skill-invocation-summary"');
     expect(source).toContain('agent-plugin:local-qa');
+    expect(source).toContain('className="ui-message-actions-preview"');
+    expect(source).toContain('className="ui-tooltip-host relative inline-flex"');
+    expect(source).toContain('className="ui-tooltip ui-tooltip-top-right"');
+    expect(source).toContain('Copy this prompt');
+    expect(source).toContain('Edit and rerun');
     expect(source).toContain('className="ui-tool-block"');
     expect(source).toContain('data-transcript-event="ask-user-question"');
     expect(source).toContain('className="ui-ask-user-question__header"');

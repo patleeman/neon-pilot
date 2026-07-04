@@ -351,9 +351,31 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
             <article className="ui-message-card-user">
               <div className="ui-message-meta">Patrick</div>
               <p>Audit the windowed chat surface and keep the composer compact.</p>
-              <button type="button" className="ui-message-action-button">
-                Copy
-              </button>
+              <div className="ui-message-actions-preview" aria-label="Message actions">
+                <span className="ui-tooltip-host relative inline-flex">
+                  <button type="button" className="ui-message-action-button ui-message-action-button-icon" aria-label="Copy this prompt">
+                    ⎘
+                  </button>
+                  <span className="ui-tooltip ui-tooltip-top-right">Copy this prompt</span>
+                </span>
+                <span className="ui-tooltip-host relative inline-flex">
+                  <button type="button" className="ui-message-action-button ui-message-action-button-icon" aria-label="Edit and rerun">
+                    ✎
+                  </button>
+                  <span className="ui-tooltip ui-tooltip-top-right">Edit and rerun</span>
+                </span>
+                <span className="ui-tooltip-host relative inline-flex">
+                  <button
+                    type="button"
+                    className="ui-message-action-button ui-message-action-button-icon"
+                    aria-label="Fork from here"
+                    disabled
+                  >
+                    …
+                  </button>
+                  <span className="ui-tooltip ui-tooltip-top-right">Forking from here</span>
+                </span>
+              </div>
             </article>
             <article className="ui-message-card-assistant">
               <div className="ui-message-meta">Neon Pilot</div>
