@@ -911,8 +911,12 @@ describe('Windowed OS Storybook examples', () => {
       expect(stylesSource).toContain(`.wos-list-item[data-accent='${accent}']`);
     }
     expect(stylesSource).toContain('.wos-toggle {\n  position: relative;');
-    expect(stylesSource).toContain('border: 1.5px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('width: 44px;\n  min-width: 44px;\n  height: 24px;\n  min-height: 24px;');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain('.wos-toggle__thumb {');
+    expect(stylesSource).toContain('transition: transform 120ms ease;');
+    expect(stylesSource).toContain(".wos-toggle[data-checked='true'] .wos-toggle__thumb {\n  transform: translateX(20px);");
+    expect(stylesSource).toContain('@media (prefers-reduced-motion: reduce) {\n  .wos-toggle__thumb {\n    transition: none;');
     expect(stylesSource).toContain('.wos-toggle:focus-visible {');
     expect(stylesSource).toContain(".windowed-os-shell[data-wos-theme='dark'] .wos-toggle[data-checked='true'][data-accent='settings']");
     expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='chat'],");
