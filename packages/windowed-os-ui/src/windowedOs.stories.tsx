@@ -60,6 +60,9 @@ type Story = StoryObj;
 
 const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS;
 
+const storyImagePreviewSrc =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDcyMCA0MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNmNGVkZTIiLz48cmVjdCB4PSI0MCIgeT0iNDQiIHdpZHRoPSI2NDAiIGhlaWdodD0iMzEyIiByeD0iMjQiIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzE3MTMwZiIgc3Ryb2tlLXdpZHRoPSI4Ii8+PHBhdGggZD0iTTkyIDMwMGwxMTItMTA4IDkyIDY4IDEyOC0xMzIgMjA0IDE3MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDk5ZGRmIiBzdHJva2Utd2lkdGg9IjE4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyMDIiIGN5PSIxMjQiIHI9IjM4IiBmaWxsPSIjZmM4YjI3IiBzdHJva2U9IiMxNzEzMGYiIHN0cm9rZS13aWR0aD0iNiIvPjx0ZXh0IHg9IjgwIiB5PSI4NiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI2IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMTcxMzBmIj5XaW5kb3dlZCBPUyBwcmV2aWV3PC90ZXh0Pjwvc3ZnPg==';
+
 function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-visible' | 'workbench-hidden' }) {
   const paths = {
     browser: (
@@ -336,12 +339,12 @@ export const DarkChatWithCollapsedWorkbench: Story = {
 
 function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 1840, padding: 24 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 2080, padding: 24 }}>
       <WindowFrame
         title={theme === 'dark' ? 'Inherited chat chrome - dark' : 'Inherited chat chrome'}
         accent="chat"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 1780 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 2020 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
@@ -477,6 +480,46 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 </div>
                 <div className="ui-tool-block__output">
                   <pre className="ui-tool-block__pre">114 tests passed</pre>
+                </div>
+              </div>
+              <div className="ui-image-preview" data-loaded="true">
+                <button
+                  type="button"
+                  className="ui-media-preview-button ui-image-preview__button"
+                  aria-label="Inspect image: Windowed OS sketch"
+                >
+                  <img src={storyImagePreviewSrc} alt="Windowed OS sketch" className="ui-image-preview__media" />
+                </button>
+                <div className="ui-image-preview__caption">
+                  <p className="ui-image-preview__caption-text">Windowed OS sketch</p>
+                </div>
+              </div>
+              <div className="ui-image-preview">
+                <div className="ui-image-preview__placeholder">
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="ui-image-preview__placeholder-icon"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="m21 15-5-5L5 21" />
+                  </svg>
+                  <span className="ui-image-preview__placeholder-label">deferred-preview.png</span>
+                  <span className="ui-image-preview__placeholder-meta">1280×720</span>
+                  <button type="button" className="ui-action-button">
+                    Load image
+                  </button>
+                </div>
+                <div className="ui-image-preview__caption">
+                  <p className="ui-image-preview__caption-text">Deferred preview</p>
                 </div>
               </div>
               <div data-transcript-event="ask-user-question">

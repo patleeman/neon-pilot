@@ -1014,6 +1014,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure-summary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure[open] .ui-disclosure-summary::after');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__media');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__placeholder');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__caption');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-backdrop');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-dialog');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-caption');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-dialog .ui-icon-button');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).not.toContain(".windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1']");
     expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-user');
@@ -1503,6 +1512,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="ui-disclosure"');
     expect(source).toContain('className="ui-disclosure-summary"');
     expect(source).toContain('className="ui-inline-run-card__metadata-row"');
+    expect(source).toContain('storyImagePreviewSrc');
+    expect(source).toContain('className="ui-image-preview" data-loaded="true"');
+    expect(source).toContain('className="ui-media-preview-button ui-image-preview__button"');
+    expect(source).toContain('className="ui-image-preview__media"');
+    expect(source).toContain('className="ui-image-preview__placeholder');
+    expect(source).toContain('className="ui-image-preview__caption-text');
     expect(source).toContain('className="conversation-composer-region"');
     expect(source).toContain('className="ui-input-shell"');
     expect(source).toContain('className="ui-composer-attachment-shelf"');
