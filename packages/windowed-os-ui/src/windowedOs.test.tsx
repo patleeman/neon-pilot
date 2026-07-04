@@ -1917,6 +1917,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body');
     expect(stylesSource).toContain('.wos-window-route-body--files .wos-chat-files-dialog__body');
     expect(stylesSource).toContain('.wos-workspace-child-preview {\n  container-type: inline-size;');
+    const workspaceChildPreviewRule = stylesSource.match(/\.wos-workspace-child-preview \{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(workspaceChildPreviewRule).toContain('grid-template-rows: auto minmax(0, 1fr);');
+    expect(workspaceChildPreviewRule).not.toContain('grid-template-rows: auto minmax(0, 1fr) auto;');
     expect(stylesSource).toContain('.wos-workspace-child-preview__toolbar {\n  display: flex;');
     expect(stylesSource).toContain('flex-wrap: wrap;');
     expect(stylesSource).toContain('.wos-workspace-child-preview__cwd {');
@@ -2258,7 +2261,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="wos-workspace-child-preview"');
     expect(source).toContain('aria-label="Workspace files preview"');
     expect(source).toContain('/Users/patrick/workingdir/neon-pilot');
-    expect(source).toContain('Chat-attached child window');
+    expect(source).toContain('<WindowedBadge>5 items</WindowedBadge>');
+    expect(source).toContain('<WindowedBadge>Directory</WindowedBadge>');
+    expect(source).toContain('<WindowedPageSection title="Workspace" meta="Open">');
+    expect(source).not.toContain('Chat-attached child window');
+    expect(source).not.toContain('<WindowedPageSection title="Selection"');
     expect(source).toContain('function BrowserWindowStory');
     expect(source).toContain('export const BrowserWindow');
     expect(source).toContain('export const DarkBrowserWindow');

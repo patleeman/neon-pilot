@@ -3264,40 +3264,17 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
               <div className="wos-workspace-child-preview__toolbar" aria-label="Workspace location">
                 <div className="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</div>
                 <WindowedBadge tone="positive">Synced</WindowedBadge>
+                <WindowedBadge>5 items</WindowedBadge>
+                <WindowedBadge>Directory</WindowedBadge>
               </div>
-              <WindowedPageSection title="Open workspace" meta="5 items">
+              <WindowedPageSection title="Workspace" meta="Open">
                 <WindowedList>
-                  <WindowedListItem
-                    title="packages/desktop/ui/src/components"
-                    meta="Directory"
-                    detail="Windowed shell source"
-                    active
-                    accent="chat"
-                  />
-                  <WindowedListItem
-                    title="packages/windowed-os-ui/src"
-                    meta="Directory"
-                    detail="Canonical desktop design system"
-                    accent="extensions"
-                  />
-                  <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="Desktop mode backlog" accent="skills" />
-                  <WindowedListItem title="extensions/system-browser" meta="Extension" detail="Browser child surface" accent="gateways" />
-                  <WindowedListItem
-                    title="extensions/system-terminal"
-                    meta="Extension"
-                    detail="Terminal child surface"
-                    accent="automations"
-                  />
+                  <WindowedListItem title="packages/desktop/ui/src/components" meta="Directory" detail="source" active accent="chat" />
+                  <WindowedListItem title="packages/windowed-os-ui/src" meta="Directory" detail="design system" accent="extensions" />
+                  <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="backlog" accent="skills" />
+                  <WindowedListItem title="extensions/system-browser" meta="Extension" detail="child tool" accent="gateways" />
+                  <WindowedListItem title="extensions/system-terminal" meta="Extension" detail="child tool" accent="automations" />
                 </WindowedList>
-              </WindowedPageSection>
-              <WindowedPageSection title="Selection" meta="Directory">
-                <WindowedKeyValueList
-                  items={[
-                    { label: 'Parent', value: 'New conversation' },
-                    { label: 'Mode', value: 'Chat-attached child window' },
-                    { label: 'Scope', value: 'Workspace cwd inherited from chat' },
-                  ]}
-                />
               </WindowedPageSection>
             </div>
           </div>
