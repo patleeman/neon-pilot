@@ -106,6 +106,19 @@ function createConfigurableExtension() {
   } as never;
 }
 
+function createRoutedExtension() {
+  return {
+    ...createExtension(),
+    id: 'routed-test',
+    name: 'Routed Test',
+    manifest: {
+      contributes: {
+        views: [{ id: 'routed-test-main', title: 'Routed Test', location: 'main', route: '/routed-test' }],
+      },
+    },
+  } as never;
+}
+
 function createSystemExtension() {
   return {
     ...createExtension(),
@@ -743,6 +756,20 @@ describe('ExtensionManagerPage', () => {
 
     expect(screen.getByTestId('location').textContent).toBe('/settings/extensions/configurable-test');
     expect(screen.queryByRole('dialog', { name: 'Configurable Test' })).toBeNull();
+  });
+
+  it('opens extension routes from the windowed details dialog and closes the dialog', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createRoutedExtension()]);
+    renderWindowedPage({ locationProbe: true });
+
+    expect(await screen.findByText('Routed Test')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Routed Test' }));
+
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Routed Test' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Open' }));
+
+    expect(screen.getByTestId('location').textContent).toBe('/routed-test');
+    expect(screen.queryByRole('dialog', { name: 'Routed Test' })).toBeNull();
   });
 
   it('shows catalog-only extensions in the install modal instead of the installed table', async () => {

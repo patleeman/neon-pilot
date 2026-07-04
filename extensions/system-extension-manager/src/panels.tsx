@@ -1925,7 +1925,13 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
               <>
                 {selectedExtensionBusy ? <span className="wos-extension-dialog-busy">Working</span> : null}
                 {firstRoute(selectedExtension) && selectedExtension.enabled ? (
-                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => navigate(firstRoute(selectedExtension)!)}>
+                  <WindowedPageButton
+                    disabled={selectedExtensionBusy}
+                    onClick={() => {
+                      navigate(firstRoute(selectedExtension)!);
+                      setDetailsExtensionId(null);
+                    }}
+                  >
                     Open
                   </WindowedPageButton>
                 ) : null}
