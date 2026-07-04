@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import {
+  CANONICAL_WINDOWED_APP_SIZES,
   CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
   WindowedActionRow,
@@ -3237,6 +3238,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Skills')?.accent).toBe('skills');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.every((app) => !('meta' in app) && !('detail' in app))).toBe(true);
+    expect(CANONICAL_WINDOWED_APP_SIZES.Settings).toEqual({ width: 980, height: 560 });
+    expect(CANONICAL_WINDOWED_APP_SIZES.Workflows).toEqual({ width: 1040, height: 612 });
+    expect(CANONICAL_WINDOWED_APP_SIZES.Diagnostics).toEqual({ width: 920, height: 540 });
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.filter((app) => app.id !== 'chat').every((app) => CANONICAL_WINDOWED_APP_SIZES[app.title])).toBe(
+      true,
+    );
     expect(source).toContain('CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source).toContain('const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source.slice(source.indexOf('function WorkflowsPageStory'), source.indexOf('export const ModelArenaPage'))).toContain(

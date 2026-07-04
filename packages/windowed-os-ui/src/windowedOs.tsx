@@ -39,6 +39,11 @@ export interface WindowedDesktopAppDefinition {
   accent: AppAccent;
 }
 
+export interface WindowedDesktopAppSize {
+  width: number;
+  height: number;
+}
+
 export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'chat', title: 'Chat', accent: 'chat' },
   { id: 'automations', title: 'Automations', accent: 'automations' },
@@ -52,6 +57,19 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics' },
   { id: 'settings', title: 'Settings', accent: 'settings' },
 ] as const satisfies readonly WindowedDesktopAppDefinition[];
+
+export const CANONICAL_WINDOWED_APP_SIZES: Partial<Record<string, WindowedDesktopAppSize>> = {
+  Automations: { width: 1040, height: 660 },
+  Gateways: { width: 1040, height: 660 },
+  'AI Gateway': { width: 1040, height: 660 },
+  'Model Arena': { width: 1040, height: 660 },
+  Routines: { width: 1040, height: 660 },
+  Settings: { width: 980, height: 560 },
+  Extensions: { width: 1040, height: 660 },
+  Skills: { width: 1040, height: 660 },
+  Workflows: { width: 1040, height: 612 },
+  Diagnostics: { width: 920, height: 540 },
+};
 
 export function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ');

@@ -1,5 +1,6 @@
 import {
   type AppAccent,
+  CANONICAL_WINDOWED_APP_SIZES,
   CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
   type StartMenuItem,
@@ -128,19 +129,6 @@ const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
   { id: 'settings', title: 'Settings', route: '/settings', kind: 'route' },
 ];
 
-const CANONICAL_ROUTE_WINDOW_SIZES: Partial<Record<string, { width: number; height: number }>> = {
-  Automations: { width: 1040, height: 660 },
-  Gateways: { width: 1040, height: 660 },
-  'AI Gateway': { width: 1040, height: 660 },
-  'Model Arena': { width: 1040, height: 660 },
-  Routines: { width: 1040, height: 660 },
-  Settings: { width: 980, height: 560 },
-  Extensions: { width: 1040, height: 660 },
-  Skills: { width: 1040, height: 660 },
-  Workflows: { width: 1040, height: 612 },
-  Diagnostics: { width: 920, height: 540 },
-};
-
 const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]> = new Map(
   CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]),
 );
@@ -156,7 +144,7 @@ function idealWindowBounds(kind: LauncherWindowKind, title?: string): { width: n
   if (kind === 'chat') {
     return { width: 1180, height: 760, x: 42, y: 34 };
   }
-  const size = title ? CANONICAL_ROUTE_WINDOW_SIZES[title] : undefined;
+  const size = title ? CANONICAL_WINDOWED_APP_SIZES[title] : undefined;
   return { width: size?.width ?? 1040, height: size?.height ?? 650, x: 112, y: 72 };
 }
 
