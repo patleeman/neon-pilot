@@ -850,8 +850,10 @@ describe('WindowedDialog content primitives', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(stylesSource).toContain('.wos-dialog__close {\n  position: relative;\n  display: inline-flex;\n  width: 24px;');
-    expect(stylesSource).toContain('height: 24px;\n  flex: 0 0 24px;');
+    expect(stylesSource).toContain(
+      '.wos-dialog__close {\n  position: relative;\n  display: inline-flex;\n  width: var(--wos-window-control-size);',
+    );
+    expect(stylesSource).toContain('height: var(--wos-window-control-size);\n  flex: 0 0 var(--wos-window-control-size);');
   });
 
   it('renders scoped dialog stack and copy classes for reusable subwindow content', () => {
@@ -1095,8 +1097,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
-    expect(tokensSource).toContain('--wos-titlebar-h: 22px;');
-    expect(tokensSource).toContain('--wos-window-control-size: 20px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 20px;');
+    expect(tokensSource).toContain('--wos-window-control-size: 18px;');
     expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 32px);');
     expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-window__title,\n.wos-window__meta {\n  min-width: 0;');
@@ -1119,12 +1121,13 @@ describe('Windowed OS Storybook examples', () => {
     const tokensSource = readFileSync(tokensPath, 'utf8');
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(tokensSource).toContain('--wos-titlebar-h: 22px;');
-    expect(tokensSource).toContain('--wos-window-control-size: 20px;');
-    expect(tokensSource).not.toContain('--wos-window-control-size: 18px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 20px;');
+    expect(tokensSource).toContain('--wos-window-control-size: 18px;');
     expect(stylesSource).toContain('width: var(--wos-window-control-size);');
     expect(stylesSource).toContain('height: var(--wos-window-control-size);');
+    expect(stylesSource).toContain('flex: 0 0 var(--wos-window-control-size);');
     expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
+    expect(stylesSource).toContain('.wos-dialog__close {\n  position: relative;\n  display: inline-flex;');
   });
 
   it('transitions automatic time-of-day theme changes across core desktop chrome', () => {
@@ -2019,7 +2022,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('content: attr(data-parent-window-title);');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-header-copy');
     expect(stylesSource).toContain('min-height: var(--wos-titlebar-h);');
-    expect(stylesSource).toContain('padding: 1px 6px 1px 8px;');
+    expect(stylesSource).toContain('padding: 0 6px 0 8px;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-actions .ui-icon-button');
+    expect(stylesSource).toContain('width: var(--wos-window-control-size);');
+    expect(stylesSource).toContain('height: var(--wos-window-control-size);');
     expect(storiesSource).toContain('<header className="ui-dialog-header" data-parent-window-title="Release planning">');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .ui-dialog-title');
     expect(stylesSource).toContain('margin: 0;');

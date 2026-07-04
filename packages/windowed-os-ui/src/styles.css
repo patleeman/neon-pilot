@@ -1403,13 +1403,13 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__close {
   position: relative;
   display: inline-flex;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
+  width: var(--wos-window-control-size);
+  height: var(--wos-window-control-size);
+  flex: 0 0 var(--wos-window-control-size);
   align-items: center;
   justify-content: center;
   border: 2px solid var(--wos-ink-900);
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
   padding: 0;
@@ -1896,7 +1896,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   gap: 6px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-drawing-accent);
-  padding: 1px 6px 1px 8px;
+  padding: 0 6px 0 8px;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header-copy,
@@ -1916,6 +1916,26 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-actions {
+  display: flex;
+  align-items: center;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions .ui-icon-button,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-actions .ui-icon-button {
+  width: var(--wos-window-control-size);
+  height: var(--wos-window-control-size);
+  flex: 0 0 var(--wos-window-control-size);
+  padding: 0;
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-actions .ui-icon-button svg,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-actions .ui-icon-button svg {
+  width: 12px;
+  height: 12px;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header[data-parent-window-title]::after,
