@@ -5216,7 +5216,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button,
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback,
-.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button {
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > button,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > div > button:not(.ui-context-menu-item),
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button {
   width: 28px;
   min-width: 28px;
   height: 28px;
@@ -5261,7 +5264,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button:hover:not(:disabled),
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback:hover:not(:disabled),
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button:hover:not(:disabled),
-.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button.bg-surface\/55 {
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button.bg-surface\/55,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > button:hover:not(:disabled),
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > div > button:not(.ui-context-menu-item):hover:not(:disabled),
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button:hover:not(:disabled) {
   background: var(--wos-chat) !important;
 }
 
@@ -5269,7 +5275,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button[aria-disabled='true'],
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button:disabled,
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback:disabled,
-.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button:disabled {
+.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button:disabled,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > button:disabled,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > div > button:not(.ui-context-menu-item):disabled,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button:disabled {
   background: var(--wos-surface-2);
   color: var(--wos-ink-500);
   opacity: 1;

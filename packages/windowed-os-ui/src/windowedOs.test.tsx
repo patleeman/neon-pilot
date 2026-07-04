@@ -869,6 +869,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > button');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > div > button:not(.ui-context-menu-item)',
+    );
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item');
