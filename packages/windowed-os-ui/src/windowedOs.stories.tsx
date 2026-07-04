@@ -2805,9 +2805,9 @@ export const DarkExtensionsPage: Story = {
   render: () => <ExtensionsPageStory theme="dark" />,
 };
 
-export const ExtensionsInstallDialog: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 560, padding: 24 }}>
+function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 560, padding: 24 }}>
       <WindowFrame
         title="Extensions"
         accent="extensions"
@@ -2885,7 +2885,15 @@ export const ExtensionsInstallDialog: Story = {
         </WindowedDialog>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const ExtensionsInstallDialog: Story = {
+  render: () => <ExtensionsInstallDialogStory />,
+};
+
+export const DarkExtensionsInstallDialog: Story = {
+  render: () => <ExtensionsInstallDialogStory theme="dark" />,
 };
 
 function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {

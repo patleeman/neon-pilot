@@ -1060,6 +1060,9 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: 2px solid var(--wos-ink-900);\n  border-left: 0 !important;',
+    );
     expect(stylesSource).toContain('.wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('z-index: 30;');
     expect(stylesSource).toContain('.wos-window-route-body--chat > * {\n  min-width: 0;\n  min-height: 0;');
@@ -1075,6 +1078,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('overflow: visible;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border: 2px solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell\n  .wos-window-route-body--chat\n  .conversation-composer-inner');
     expect(stylesSource).toContain(":where(input, textarea, button, select, [contenteditable='true'])");
     expect(stylesSource).toContain(
@@ -1090,6 +1096,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill');
     expect(stylesSource).toContain('display: inline-flex;\n  width: auto;\n  max-width: 100%;');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900);\n  border-left: 0 !important;');
     expect(stylesSource).not.toContain('display: flex;\n  width: 100%;\n  min-height: 28px;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
@@ -1113,6 +1120,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip)',
     );
+    expect(stylesSource).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;');
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip-button)',
     );
@@ -1126,15 +1134,24 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-icon-button)');
     expect(stylesSource).toContain('width: 26px;\n  min-width: 26px;\n  height: 26px;\n  min-height: 26px;');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf button.ui-icon-button {\n  border-left: 0 !important;\n  border-radius: 6px;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-text-button)');
     expect(stylesSource).toContain('min-height: 26px;\n  flex-shrink: 0;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status {\n  display: inline-flex;\n  max-width: 100%;\n  min-height: 22px;\n  align-items: center;\n  margin-top: 6px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
+    );
     expect(stylesSource).toContain('.wos-window-route-body .bg-base');
     expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
     expect(stylesSource).toContain('.wos-window-route-body .text-primary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row');
     expect(stylesSource).toContain('flex-wrap: nowrap;');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row {\n  display: flex;\n  min-height: 38px;\n  min-width: 0;\n  flex-wrap: nowrap;\n  align-items: center;\n  border-top: 2px solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__leading');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__actions');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta');
@@ -2416,7 +2433,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(extensionsSource).not.toContain('title="Inventory"');
     expect(extensionsSource).not.toContain('title="Installed extensions"');
     expect(extensionsSource).not.toContain('title="Review queue"');
+    expect(source).toContain('function ExtensionsInstallDialogStory');
     expect(source).toContain('export const ExtensionsInstallDialog');
+    expect(source).toContain('export const DarkExtensionsInstallDialog');
+    expect(source).toContain('<ExtensionsInstallDialogStory theme="dark" />');
     expect(source).toContain('title="Install extension"');
     expect(source).toContain('wos-extension-install-dialog');
     expect(source).toContain('title="Repositories"');

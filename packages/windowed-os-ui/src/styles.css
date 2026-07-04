@@ -5750,6 +5750,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {
   border-top: 2px solid var(--wos-ink-900);
+  border-left: 0 !important;
   background: var(--wos-surface-1) !important;
   padding: var(--wos-space-4) var(--wos-space-5) !important;
 }
@@ -5773,6 +5774,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   justify-content: flex-start;
   border: 2px solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 8px;
   background: var(--wos-surface-2);
   padding: 4px 9px;
@@ -5797,6 +5799,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
   border: 2px solid var(--wos-ink-900) !important;
+  border-left: 0 !important;
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   box-shadow: none;
@@ -5830,6 +5833,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   flex-wrap: nowrap;
   align-items: center;
   border-top: 2px solid var(--wos-ink-900) !important;
+  border-left: 0 !important;
   padding: 7px 4px 0;
   gap: 6px;
 }
@@ -5854,6 +5858,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell .border-t {
   border-color: var(--wos-ink-900) !important;
+  border-left: 0 !important;
   padding-top: var(--wos-space-3);
 }
 
@@ -5883,6 +5888,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   gap: 4px;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 7px;
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
@@ -5923,6 +5929,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   :where(.ui-attachment-chip-button > span:first-child:not([class])) {
   flex: 0 0 auto;
   border: 1.5px solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 5px;
   background: color-mix(in srgb, var(--wos-chat) 16%, var(--wos-surface-1));
   padding: 1px 4px;
@@ -5954,6 +5961,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   height: 22px;
   flex-shrink: 0;
   border: 1.5px solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 5px;
   background:
     linear-gradient(135deg, transparent 48%, var(--wos-chat) 49% 55%, transparent 56%),
@@ -5966,6 +5974,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   height: 26px;
   min-height: 26px;
   border: 1.5px solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 6px;
   background: var(--wos-surface-1);
   padding: 0;
@@ -5980,6 +5989,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-height: 26px;
   flex-shrink: 0;
   border: 1.5px solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 6px;
   background: var(--wos-surface-1);
   padding: 2px 6px;
@@ -5994,6 +6004,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   margin-top: 6px;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
+  border-left: 0 !important;
   border-radius: 6px;
   background: color-mix(in srgb, var(--wos-chat) 8%, var(--wos-surface-1));
   padding: 2px 6px;
@@ -6925,6 +6936,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900);
   box-shadow: none;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf button.ui-icon-button {
+  border-left: 0 !important;
+  border-radius: 6px;
 }
 
 .windowed-os-shell .wos-window-route-body .ui-row-button:hover,
