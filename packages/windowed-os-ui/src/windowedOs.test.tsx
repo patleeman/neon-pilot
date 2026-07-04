@@ -1034,6 +1034,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
+    expect(stylesSource).toContain('box-shadow: inset 5px 0 0 var(--wos-warning);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf');
     expect(stylesSource).toContain('border-color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
