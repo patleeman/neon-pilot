@@ -686,8 +686,8 @@ function hasExtensionSettings(extension: ExtensionInstallSummary): boolean {
   return hasSchemaSettings || Boolean(extension.manifest?.contributes?.settingsComponent);
 }
 
-function extensionSettingsSectionId(_extension: ExtensionInstallSummary): string {
-  return 'settings-extensions';
+function extensionSettingsTarget(extension: ExtensionInstallSummary): string {
+  return `/settings/extensions/${encodeURIComponent(extension.id)}`;
 }
 
 function formatAppearsInSummary(extension: ExtensionInstallSummary): string {
@@ -1516,13 +1516,13 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       {hasExtensionSettings(extension) ? (
         <IconLink
           compact
-          href={`/settings#${extensionSettingsSectionId(extension)}`}
+          href={extensionSettingsTarget(extension)}
           title={`Configure ${extension.name} in Settings`}
           aria-label={`Configure ${extension.name} in Settings`}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            navigate(`/settings#${extensionSettingsSectionId(extension)}`);
+            navigate(extensionSettingsTarget(extension));
           }}
         >
           <GearIcon />
@@ -1930,10 +1930,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                   </WindowedPageButton>
                 ) : null}
                 {hasExtensionSettings(selectedExtension) ? (
-                  <WindowedPageButton
-                    disabled={selectedExtensionBusy}
-                    onClick={() => navigate(`/settings#${extensionSettingsSectionId(selectedExtension)}`)}
-                  >
+                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => navigate(extensionSettingsTarget(selectedExtension))}>
                     Settings
                   </WindowedPageButton>
                 ) : null}
@@ -2422,7 +2419,7 @@ function extensionSettingsEntries(extension: ExtensionInstallSummary): Array<{ k
 function ExtensionSettingsPointer({ extension }: { extension: ExtensionInstallSummary }) {
   const entries = extensionSettingsEntries(extension).sort((a, b) => a.order - b.order);
   const settingsComponent = extension.manifest?.contributes?.settingsComponent;
-  const target = `/settings#${extensionSettingsSectionId(extension)}`;
+  const target = extensionSettingsTarget(extension);
   return (
     <CompactCard className="py-3" tone="surface">
       <div className="flex flex-wrap items-center justify-between gap-3">

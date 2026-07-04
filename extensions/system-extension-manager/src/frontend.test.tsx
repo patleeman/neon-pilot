@@ -160,7 +160,7 @@ function renderPageWithPa(pa: Record<string, unknown>) {
   );
 }
 
-function renderWindowedPage(options?: { pa?: Record<string, unknown> }) {
+function renderWindowedPage(options?: { pa?: Record<string, unknown>; locationProbe?: boolean }) {
   return render(
     <MemoryRouter initialEntries={['/extensions']}>
       <ExtensionManagerPage
@@ -169,6 +169,7 @@ function renderWindowedPage(options?: { pa?: Record<string, unknown> }) {
         surface={{} as never}
         params={{}}
       />
+      {options?.locationProbe ? <LocationProbe /> : null}
     </MemoryRouter>,
   );
 }
@@ -695,7 +696,9 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect(await screen.findByText('Configurable Test')).toBeTruthy();
-    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings#settings-extensions');
+    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe(
+      '/settings/extensions/configurable-test',
+    );
     expect(screen.queryByLabelText('Configure Menu Test in Settings')).toBeNull();
   });
 
@@ -722,8 +725,23 @@ describe('ExtensionManagerPage', () => {
       }),
     );
     expect(screen.queryByRole('dialog', { name: 'Extension details' })).toBeNull();
-    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings#settings-extensions');
+    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe(
+      '/settings/extensions/configurable-test',
+    );
     expect(screen.queryByText('Toggle a test setting.')).toBeNull();
+  });
+
+  it('opens concrete extension settings from the windowed details dialog', async () => {
+    mocks.extensionInstallations.mockResolvedValue([createConfigurableExtension()]);
+    renderWindowedPage({ locationProbe: true });
+
+    expect(await screen.findByText('Configurable Test')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Configurable Test' }));
+
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Configurable Test' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Settings' }));
+
+    expect(screen.getByTestId('location').textContent).toBe('/settings/extensions/configurable-test');
   });
 
   it('shows catalog-only extensions in the install modal instead of the installed table', async () => {
