@@ -957,6 +957,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="windowed-os-shell wos-theme-phase-card"');
     expect(source).toContain('export const DarkDesktopComposition');
     expect(source).toContain('<DesktopCompositionStory theme="dark" />');
+    expect(source).toContain("left: 'clamp(16px, 6vw, 48px)'");
+    expect(source).toContain("width: 'min(820px, calc(100vw - 64px))'");
+    expect(source).toContain("left: 'clamp(128px, 58vw, 640px)'");
+    expect(source).toContain("width: 'min(520px, calc(100vw - 64px))'");
     expect(source).toContain('data-wos-theme={theme.resolved}');
     expect(source).toContain('data-wos-theme-mode={theme.mode}');
     expect(source).toContain('data-wos-theme-phase={theme.phase}');

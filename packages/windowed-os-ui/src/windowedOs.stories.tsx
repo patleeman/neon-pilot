@@ -191,7 +191,7 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
           title="Chat"
           accent="chat"
           focused
-          style={{ left: 48, top: 36, width: 820, height: 520 }}
+          style={{ left: 'clamp(16px, 6vw, 48px)', top: 36, width: 'min(820px, calc(100vw - 64px))', height: 520 }}
           onMinimize={() => undefined}
           onMaximize={() => undefined}
           onClose={() => undefined}
@@ -208,7 +208,7 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
         <WindowFrame
           title="Gateways"
           accent="gateways"
-          style={{ left: 640, top: 164, width: 520, height: 360 }}
+          style={{ left: 'clamp(128px, 58vw, 640px)', top: 164, width: 'min(520px, calc(100vw - 64px))', height: 360 }}
           onMinimize={() => undefined}
           onMaximize={() => undefined}
           onClose={() => undefined}
