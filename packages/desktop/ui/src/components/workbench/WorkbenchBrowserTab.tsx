@@ -30,9 +30,9 @@ const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '[role="listbox"]',
   '.ui-overlay-backdrop',
   '.ui-dialog-shell',
-  '.ui-menu-shell',
-  '.ui-context-menu-shell',
-  '.ui-positioned-menu',
+  '.ui-menu-shell:not(.ui-positioned-menu-static)',
+  '.ui-context-menu-shell:not(.ui-positioned-menu-static)',
+  '.ui-positioned-menu:not(.ui-positioned-menu-static)',
   '.ui-command-palette-shell',
   '.ui-setup-readiness-popover',
   '.ui-workbench-drop-badge',
@@ -65,6 +65,9 @@ function hasBlockingRendererOverlay(host: HTMLElement | null): boolean {
     if (!isConnectedVisibleElement(element)) {
       return false;
     }
+    if (isIgnoredWindowedBrowserBlocker(element)) {
+      return false;
+    }
     if (host && element.contains(host)) {
       return false;
     }
@@ -77,11 +80,22 @@ function hasWindowedShellOverlay(): boolean {
     return false;
   }
 
-  return Boolean(
-    document.querySelector(
-      `.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell[data-native-browser-blocked="true"], ${TRANSIENT_RENDERER_BLOCKER_SELECTOR}`,
-    ),
+  if (
+    document.querySelector('.windowed-os-shell[data-window-interaction="true"], .windowed-os-shell[data-native-browser-blocked="true"]')
+  ) {
+    return true;
+  }
+
+  return Array.from(document.querySelectorAll<HTMLElement>(TRANSIENT_RENDERER_BLOCKER_SELECTOR)).some(
+    (element) => !isIgnoredWindowedBrowserBlocker(element) && isConnectedVisibleElement(element),
   );
+}
+
+function isWindowedShellActiveOutsideHost(host: HTMLElement | null): boolean {
+  if (!host || !isInsideWindowedShell(host)) {
+    return isWindowedShellActive();
+  }
+  return false;
 }
 
 function isWindowedShellActive(): boolean {
@@ -93,6 +107,10 @@ function isWindowedShellActive(): boolean {
 
 function isConnectedVisibleElement(element: Element): element is HTMLElement {
   return element instanceof HTMLElement && element.isConnected && isVisibleStyle(element);
+}
+
+function isIgnoredWindowedBrowserBlocker(element: Element | null): boolean {
+  return element instanceof HTMLElement && Boolean(element.closest('.wos-resize-handle') || element.closest('.ui-positioned-menu-static'));
 }
 
 function isInsideUnfocusedWindow(host: HTMLElement | null): boolean {
@@ -134,18 +152,6 @@ function isInsideBackgroundWindowedWindow(host: HTMLElement | null): boolean {
 
   const topWindow = windows.reduce((top, candidate) => (windowLayer(candidate) >= windowLayer(top) ? candidate : top), windows[0]!);
   return topWindow !== ownWindow;
-}
-
-function hasSiblingWindowedShellWindow(host: HTMLElement | null): boolean {
-  const ownWindow = host?.closest<HTMLElement>('.wos-window');
-  const shell = ownWindow?.closest('.windowed-os-shell');
-  if (!host || !ownWindow || !shell) {
-    return false;
-  }
-
-  return Array.from(shell.querySelectorAll<HTMLElement>('.wos-window')).some(
-    (candidate) => candidate !== ownWindow && isVisibleStyle(candidate),
-  );
 }
 
 function isBelowTopWindowedShellWindow(host: HTMLElement | null): boolean {
@@ -312,6 +318,9 @@ function isCoveredByWindowDescendantLayer(host: HTMLElement | null): boolean {
     if (element === host || host.contains(element) || element.contains(host)) {
       return false;
     }
+    if (isIgnoredWindowedBrowserBlocker(element)) {
+      return false;
+    }
     if (!isConnectedVisibleElement(element)) {
       return false;
     }
@@ -473,6 +482,9 @@ function isTopmostRendererOwnerAtHostPoints(host: HTMLElement | null): boolean {
     if (!topElement) {
       continue;
     }
+    if (isIgnoredWindowedBrowserBlocker(topElement)) {
+      continue;
+    }
     if (!isHostOwnedRendererElement(host, topElement)) {
       return false;
     }
@@ -520,6 +532,9 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
     if (host.contains(topElement)) {
       return false;
     }
+    if (isIgnoredWindowedBrowserBlocker(topElement)) {
+      return false;
+    }
     const blocker = topElement.closest<HTMLElement>(
       [
         '.wos-window',
@@ -530,9 +545,9 @@ function isCoveredByRendererLayer(host: HTMLElement | null): boolean {
         '.wos-dialog-layer',
         '.ui-overlay-backdrop',
         '.ui-dialog-shell',
-        '.ui-menu-shell',
-        '.ui-context-menu-shell',
-        '.ui-positioned-menu',
+        '.ui-menu-shell:not(.ui-positioned-menu-static)',
+        '.ui-context-menu-shell:not(.ui-positioned-menu-static)',
+        '.ui-positioned-menu:not(.ui-positioned-menu-static)',
         '.ui-setup-readiness-popover',
         '.ui-workbench-drop-badge',
         '.ui-workbench-drop-popover',
@@ -576,9 +591,9 @@ function shouldSuspendForWindowedShellEvent(host: HTMLElement | null, event: Eve
         '.wos-dialog-layer',
         '.wos-snap-preview',
         '.ui-dialog-shell',
-        '.ui-menu-shell',
-        '.ui-context-menu-shell',
-        '.ui-positioned-menu',
+        '.ui-menu-shell:not(.ui-positioned-menu-static)',
+        '.ui-context-menu-shell:not(.ui-positioned-menu-static)',
+        '.ui-positioned-menu:not(.ui-positioned-menu-static)',
         '.ui-setup-readiness-popover',
         '.ui-workbench-drop-badge',
         '.ui-workbench-drop-popover',
@@ -844,13 +859,13 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    const insideWindowedShell = isInsideWindowedShell(host);
-    if (insideWindowedShell || isWindowedShellActive()) {
-      setWindowedBrowserPaused(insideWindowedShell);
+    if (isWindowedShellActiveOutsideHost(host)) {
+      setWindowedBrowserPaused(false);
       hideBrowserView({ force: true, destroy: true });
       return;
     }
 
+    const insideWindowedShell = isInsideWindowedShell(host);
     const blocked =
       Date.now() < windowedShellSuspendUntilRef.current ||
       hasBlockingRendererOverlay(host) ||
@@ -859,7 +874,6 @@ export function WorkbenchBrowserTab({
       isInsideIframeBlockedWindow(host) ||
       isOutsideFocusedWindowedShellWindow(host) ||
       isInsideBackgroundWindowedWindow(host) ||
-      hasSiblingWindowedShellWindow(host) ||
       isBelowTopWindowedShellWindow(host) ||
       isCoveredByWindowedWindow(host) ||
       isCoveredByWindowedChrome(host) ||

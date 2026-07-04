@@ -11,6 +11,7 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
    - Some chat buttons use the dark bordered style while others still look like stable Neon Pilot controls.
    - Run a broader pass on chat transcript rows, tool blocks, composer, workbench tabs, empty workbench state, borders, spacing, typography, and button treatment so the whole conversation window matches the windowed OS design.
    - 2026-07-03 progress: attached workbench new-tab/empty surface now has scoped windowed hooks and a compact dark-bordered launch panel; verified live with the real chat window workbench.
+   - 2026-07-03 progress: native browser/workbench bounds are allowed again for a single focused, unobstructed chat window in desktop mode while overlays, clipped windows, background focus, and overlapping windows still suppress the BrowserView. Static composer/model menus and resize handles no longer falsely block the browser host. Covered with focused browser/layout/main-process/design-system tests, desktop UI/main builds, and live `/?shell=windowed` QA for the unblocked single-chat case plus the overlapping Automations blocked case.
 
 2. Drawing/Scally mode needs windowed styling and sizing fixes.
    - Drawing mode colors do not match the windowed OS palette.

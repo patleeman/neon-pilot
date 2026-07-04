@@ -956,18 +956,22 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window__body:has(.ui-workbench-drop-popover) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.ui-overlay-backdrop) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.ui-dialog-shell) .wos-composited-frame');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-menu-shell) .wos-composited-frame');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-context-menu-shell) .wos-composited-frame');
-    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-positioned-menu) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-menu-shell:not(.ui-positioned-menu-static)) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-context-menu-shell:not(.ui-positioned-menu-static)) .wos-composited-frame');
+    expect(stylesSource).toContain('.windowed-os-shell:has(.ui-positioned-menu:not(.ui-positioned-menu-static)) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.ui-command-palette-shell) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.ui-setup-readiness-popover) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.ui-notification-toaster) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.ui-page-search-popover) .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-overlay-backdrop) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-dialog-shell) .windowed-os-shell .wos-composited-frame');
-    expect(stylesSource).toContain('body:has(.ui-menu-shell) .windowed-os-shell .wos-composited-frame');
-    expect(stylesSource).toContain('body:has(.ui-context-menu-shell) .windowed-os-shell .wos-composited-frame');
-    expect(stylesSource).toContain('body:has(.ui-positioned-menu) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain('body:has(.ui-menu-shell:not(.ui-positioned-menu-static)) .windowed-os-shell .wos-composited-frame');
+    expect(stylesSource).toContain(
+      'body:has(.ui-context-menu-shell:not(.ui-positioned-menu-static)) .windowed-os-shell .wos-composited-frame',
+    );
+    expect(stylesSource).toContain(
+      'body:has(.ui-positioned-menu:not(.ui-positioned-menu-static)) .windowed-os-shell .wos-composited-frame',
+    );
     expect(stylesSource).toContain('body:has(.ui-command-palette-shell) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-notification-toaster) .windowed-os-shell .wos-composited-frame');

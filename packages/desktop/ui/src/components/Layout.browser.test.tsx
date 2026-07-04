@@ -424,13 +424,7 @@ describe('WorkbenchBrowserTab', () => {
     await flushAsyncWork();
 
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
-    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
-      visible: false,
-      sessionKey: null,
-      deactivate: true,
-      destroy: true,
-      windowedShellActive: true,
-    });
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
   it('hides the native browser view while shared renderer overlays are open', async () => {
@@ -634,6 +628,63 @@ describe('WorkbenchBrowserTab', () => {
     await flushAsyncWork();
 
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
+  });
+
+  it('keeps the native browser view visible beside static positioned menu content', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = readBrowserTabsState();
+    const activeBrowserTab: BrowserTabItem =
+      browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+    document.body.replaceChildren();
+
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: HTMLElement) {
+        if (this.classList.contains('wos-resize-handle')) {
+          return { left: 650, top: 20, width: 18, height: 420, right: 668, bottom: 440, x: 650, y: 20, toJSON: () => ({}) };
+        }
+        if (this.classList.contains('wos-window')) {
+          return { left: 0, top: 0, width: 700, height: 500, right: 700, bottom: 500, x: 0, y: 0, toJSON: () => ({}) };
+        }
+        if (this.closest('#browser-root')) {
+          return { left: 20, top: 20, width: 640, height: 420, right: 660, bottom: 440, x: 20, y: 20, toJSON: () => ({}) };
+        }
+        return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) };
+      },
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<div class="windowed-os-shell"><section class="wos-window" data-focused="true"><div id="browser-root"></div><div class="ui-menu-shell ui-context-menu-shell ui-positioned-menu ui-positioned-menu-static"></div><div class="wos-resize-handle wos-resize-e"></div></section></div>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visible: true,
+        bounds: { x: 20, y: 20, width: 640, height: 420 },
+      }),
+    );
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
   });
 
   it('hides the native browser view while semantic renderer menus are open', async () => {
@@ -981,21 +1032,18 @@ describe('WorkbenchBrowserTab', () => {
       visible: false,
       sessionKey: '@global:tab-tab-a',
       deactivate: true,
-      destroy: true,
       windowedShellActive: true,
     });
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
       visible: false,
       sessionKey: '@global:tab-tab-b',
       deactivate: true,
-      destroy: true,
       windowedShellActive: true,
     });
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
       visible: false,
       sessionKey: null,
       deactivate: true,
-      destroy: true,
       windowedShellActive: true,
     });
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
@@ -1039,7 +1087,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('keeps the native browser hidden inside a focused single windowed chat host before blockers mount', async () => {
+  it('shows native browser bounds inside a focused single windowed chat host before blockers mount', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
@@ -1084,10 +1132,12 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: false, deactivate: true, destroy: true, windowedShellActive: true }),
+      expect.objectContaining({
+        visible: true,
+        bounds: { x: 20, y: 20, width: 640, height: 420 },
+      }),
     );
-    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
-    expect(container.textContent).toContain('Browser preview is paused in desktop mode');
+    expect(container.textContent).not.toContain('Browser preview is paused in desktop mode');
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -1190,9 +1240,11 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: false, deactivate: true, destroy: true, windowedShellActive: true }),
+      expect.objectContaining({
+        visible: true,
+        bounds: { x: 20, y: 20, width: 640, height: 420 },
+      }),
     );
-    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -1252,9 +1304,11 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: false, deactivate: true, destroy: true, windowedShellActive: true }),
+      expect.objectContaining({
+        visible: true,
+        bounds: { x: 20, y: 20, width: 640, height: 420 },
+      }),
     );
-    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
 
     setWorkbenchBrowserBounds.mockClear();
     act(() => {
@@ -1831,7 +1885,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('keeps native browser views paused inside a single focused window even when focused-window markers match', async () => {
+  it('shows native browser bounds inside a single focused window when focused-window markers match', async () => {
     document.body.innerHTML = '';
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
@@ -1877,11 +1931,13 @@ describe('WorkbenchBrowserTab', () => {
     });
     await flushAsyncWork();
 
-    expect(container.textContent).toContain('Browser preview is paused in desktop mode');
+    expect(container.textContent).not.toContain('Browser preview is paused in desktop mode');
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(
-      expect.objectContaining({ visible: false, deactivate: true, destroy: true, windowedShellActive: true }),
+      expect.objectContaining({
+        visible: true,
+        bounds: { x: 36, y: 92, width: 728, height: 470 },
+      }),
     );
-    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
   it('hides the native browser view when renderer chrome covers its host', async () => {

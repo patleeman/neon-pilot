@@ -453,7 +453,7 @@ export class DesktopWindowController {
       throw new Error('Workbench browser bounds are invalid.');
     }
 
-    if (input.windowedShellActive === true || isWindowedDesktopShellUrl(tracked.window.webContents.getURL())) {
+    if (input.windowedShellActive === true) {
       return this.workbenchBrowser.setBounds(tracked.window.webContents, false, null, null, true, true);
     }
 

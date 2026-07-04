@@ -1377,9 +1377,7 @@ export function WindowedLayout() {
   const browserBlockingShellInteraction = Boolean(
     launcherOpen || drag || resize || snapPreview || browserLayerSettling || browserBlockedByWindowStack,
   );
-  // Electron BrowserView is a native layer and can escape DOM stacking in the beta desktop shell.
-  // Keep it suppressed until the browser workbench is extracted into a first-class window.
-  const nativeBrowserBlocked = true;
+  const nativeBrowserBlocked = browserBlockingShellInteraction;
   const rendererFramePaintBlocked = browserBlockingShellInteraction;
 
   useWindowedBrowserSuppression(nativeBrowserBlocked);
