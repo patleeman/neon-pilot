@@ -925,13 +925,21 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).toContain('export const ThemeVariants');
     expect(source).toContain('export const TimeOfDayThemePhases');
+    expect(source).toContain('function DrawingsPickerSubwindowStory');
     expect(source).toContain('export const DrawingsPickerSubwindow');
+    expect(source).toContain('export const DarkDrawingsPickerSubwindow');
+    expect(source).toContain('<DrawingsPickerSubwindowStory theme="dark" />');
     expect(source).toContain('data-windowed-subwindow="drawing-picker"');
+    expect(source).toContain('function ExcalidrawEditorSubwindowStory');
     expect(source).toContain('export const ExcalidrawEditorSubwindow');
+    expect(source).toContain('export const DarkExcalidrawEditorSubwindow');
+    expect(source).toContain('<ExcalidrawEditorSubwindowStory theme="dark" />');
     expect(source).toContain('data-windowed-subwindow="drawing-editor"');
     expect(source).toContain('data-windowed-child-window="true"');
     expect(source).toContain('className="ui-overlay-backdrop ui-windowed-excalidraw-backdrop"');
     expect(source).toContain('data-parent-window-title="Release planning"');
+    expect(source).toContain('data-wos-theme={theme}');
+    expect(source).toContain('data-wos-theme-mode={theme}');
     expect(source).toContain('className="wos-theme-variant-grid"');
     expect(source).toContain('className="windowed-os-shell wos-theme-phase-card"');
     expect(source).toContain('export const DarkDesktopComposition');
@@ -1464,6 +1472,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 20px)) !important;');
     expect(stylesSource).toContain('width: min(860px, calc(100vw - 96px)) !important;');
     expect(stylesSource).toContain('height: min(560px, calc(100vh - 156px)) !important;');
+    expect(stylesSource).toContain('display: grid !important;');
+    expect(stylesSource).toContain('grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-backdrop {\n  pointer-events: none;');
     expect(stylesSource).toContain(".ui-windowed-excalidraw-modal[data-parent-window-minimized='true']");
     expect(stylesSource).toContain(".ui-windowed-drawings-picker[data-parent-window-minimized='true']");
@@ -1505,6 +1515,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('order: 3;');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('width: 18px;');
+    expect(stylesSource).toContain(
+      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {\n  display: grid;\n  min-height: 0;",
+    );
+    expect(stylesSource).toContain(
+      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {\n  display: grid;\n  min-height: 0;\n  height: 100%;\n  grid-template-rows: auto minmax(0, 1fr);",
+    );
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {\n  min-height: 0;');
@@ -1512,6 +1528,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {\n  display: grid;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite img');
     expect(stylesSource).toContain('object-fit: contain;');
+    expect(stylesSource).toContain(
+      "body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker),\n  body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop",
+    );
+    expect(stylesSource).toContain('width: min(860px, calc(100vw - 20px)) !important;');
+    expect(stylesSource).toContain('height: min(560px, calc(100vh - 104px)) !important;');
   });
 
   it('contains iframe paint inside window bodies without blanketing window content with the shield', () => {

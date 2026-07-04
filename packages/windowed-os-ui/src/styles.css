@@ -1526,10 +1526,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
+  display: grid !important;
   width: min(860px, calc(100vw - 96px)) !important;
   height: min(560px, calc(100vh - 156px)) !important;
   max-height: min(560px, calc(100vh - 156px)) !important;
   min-height: min(420px, calc(100vh - 156px)) !important;
+  grid-template-rows: auto minmax(0, 1fr);
   max-width: none !important;
   transform: none !important;
 }
@@ -1645,10 +1647,16 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker-
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {
+  display: grid;
+  min-height: 0;
   overflow: hidden;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr);
   background: var(--wos-surface-1);
   color: var(--wos-ink-900);
   font-family: var(--wos-font-body);
@@ -1848,12 +1856,20 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 @media (max-width: 560px) {
-  body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker) {
+  body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker),
+  body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop {
     padding: 64px 10px 40px !important;
   }
 
   body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker {
     width: min(640px, calc(100vw - 20px)) !important;
+    max-height: min(560px, calc(100vh - 104px)) !important;
+  }
+
+  body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
+    width: min(860px, calc(100vw - 20px)) !important;
+    height: min(560px, calc(100vh - 104px)) !important;
+    min-height: min(420px, calc(100vh - 104px)) !important;
     max-height: min(560px, calc(100vh - 104px)) !important;
   }
 

@@ -3197,10 +3197,10 @@ export const DarkBrowserWindow: Story = {
   render: () => <BrowserWindowStory theme="dark" />,
 };
 
-export const DrawingsPickerSubwindow: Story = {
-  render: () => (
+function DrawingsPickerSubwindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
     <WindowedShellBodyAttribute>
-      <div className="windowed-os-shell" data-wos-theme="dark" data-wos-theme-mode="dark" style={{ minHeight: 640, padding: 24 }}>
+      <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 640, padding: 24 }}>
         <div className="ui-overlay-backdrop" role="presentation">
           <section
             role="dialog"
@@ -3285,13 +3285,21 @@ export const DrawingsPickerSubwindow: Story = {
         </div>
       </div>
     </WindowedShellBodyAttribute>
-  ),
+  );
+}
+
+export const DrawingsPickerSubwindow: Story = {
+  render: () => <DrawingsPickerSubwindowStory />,
 };
 
-export const ExcalidrawEditorSubwindow: Story = {
-  render: () => (
+export const DarkDrawingsPickerSubwindow: Story = {
+  render: () => <DrawingsPickerSubwindowStory theme="dark" />,
+};
+
+function ExcalidrawEditorSubwindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
     <WindowedShellBodyAttribute>
-      <div className="windowed-os-shell" data-wos-theme="dark" data-wos-theme-mode="dark" style={{ minHeight: 680, padding: 24 }}>
+      <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 680, padding: 24 }}>
         <div className="ui-overlay-backdrop ui-windowed-excalidraw-backdrop" role="presentation">
           <section
             role="dialog"
@@ -3343,7 +3351,15 @@ export const ExcalidrawEditorSubwindow: Story = {
         </div>
       </div>
     </WindowedShellBodyAttribute>
-  ),
+  );
+}
+
+export const ExcalidrawEditorSubwindow: Story = {
+  render: () => <ExcalidrawEditorSubwindowStory />,
+};
+
+export const DarkExcalidrawEditorSubwindow: Story = {
+  render: () => <ExcalidrawEditorSubwindowStory theme="dark" />,
 };
 
 function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
