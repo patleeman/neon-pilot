@@ -1405,6 +1405,14 @@ export const DarkSettingsTwoColumnPage: Story = {
   render: () => <SettingsTwoColumnPageStory theme="dark" />,
 };
 
+export const SettingsPage: Story = {
+  render: () => <SettingsTwoColumnPageStory />,
+};
+
+export const DarkSettingsPage: Story = {
+  render: () => <SettingsTwoColumnPageStory theme="dark" />,
+};
+
 export const StandardSinglePanePage: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>

@@ -1948,7 +1948,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body .ui-workbench-panel {
   border-right: 0;
-  border-left: 2px solid var(--wos-ink-900);
+  border-left: 0;
   background: var(--wos-surface-2);
   color: var(--wos-ink-900);
   font-family: var(--wos-font-display);
@@ -1956,7 +1956,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true'] {
   min-width: 0;
-  border-left: 2px solid var(--wos-ink-900);
+  border-left: 0;
   background: var(--wos-surface-2);
   container: wos-attached-workbench / inline-size;
 }
@@ -4925,7 +4925,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  border-left: 2px solid var(--wos-ink-900);
+  border-left: 0;
   background: var(--wos-surface-2);
 }
 
@@ -5565,6 +5565,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   box-shadow: none;
 }
 
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill,
+.windowed-os-shell .wos-window-route-body--chat .ui-input-shell,
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf {
+  border-left-width: 0 !important;
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
   overflow: visible;
 }
@@ -5897,7 +5904,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote {
-  border-left: 3px solid var(--wos-chat);
+  border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-chat) 64%, var(--wos-ink-900));
   background: color-mix(in srgb, var(--wos-chat) 10%, var(--wos-surface-1));
   margin-inline: 0;
   padding: 6px 10px;
@@ -6695,9 +6702,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   display: grid;
   gap: 6px;
   margin-top: 7px;
-  margin-left: 10px !important;
-  border-left: 2px solid var(--wos-ink-900) !important;
-  padding-left: 8px !important;
+  margin-left: 0 !important;
+  border-top: 2px solid var(--wos-ink-900) !important;
+  padding-top: 8px !important;
+  padding-left: 0 !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__overflow {

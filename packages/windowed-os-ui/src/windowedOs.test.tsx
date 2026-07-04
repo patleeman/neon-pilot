@@ -1062,6 +1062,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-warning) 14%, var(--wos-surface-2));');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice,\n.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill,\n.windowed-os-shell .wos-window-route-body--chat .ui-input-shell,\n.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf',
+    );
+    expect(stylesSource).toContain('border-left-width: 0 !important;');
     expect(stylesSource).not.toContain('box-shadow: inset 5px 0 0 var(--wos-warning);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf');
     expect(stylesSource).toContain('border-color: var(--wos-ink-900) !important;');
@@ -1160,6 +1164,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-meta');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown {');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote');
+    expect(stylesSource).toContain('border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-chat) 64%, var(--wos-ink-900));');
+    expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown blockquote {\n  border-left');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown :not(pre) > code');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown pre');
     expect(stylesSource).toContain(
@@ -1199,6 +1205,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__summary-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__rule');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body');
+    expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).not.toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 10px !important;\n  border-left',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__overflow');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block__header');
@@ -1268,8 +1278,12 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel {\n  border-right: 0;\n  border-left: 0;');
     expect(stylesSource).toContain(
       ".wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true']",
+    );
+    expect(stylesSource).toContain(
+      ".wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true'] {\n  min-width: 0;\n  border-left: 0;",
     );
     expect(stylesSource).toContain('container: wos-attached-workbench / inline-size;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel__body');
@@ -1896,6 +1910,8 @@ describe('Windowed OS Storybook examples', () => {
     );
 
     expect(source).toContain('function SettingsTwoColumnPageStory');
+    expect(source).toContain('export const SettingsPage');
+    expect(source).toContain('export const DarkSettingsPage');
     expect(source).toContain('export const SettingsTwoColumnPage');
     expect(source).toContain('export const DarkSettingsTwoColumnPage');
     expect(source).toContain('<SettingsTwoColumnPageStory theme="dark" />');
