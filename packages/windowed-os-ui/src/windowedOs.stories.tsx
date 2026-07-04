@@ -382,7 +382,7 @@ export const ThemeVariants: Story = {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', minHeight: 520 }}>
       {[
         { mode: 'light', resolved: 'light', phase: 'bright-noon', title: 'Light desktop' },
-        { mode: 'auto', resolved: 'dark', phase: 'dusk', title: 'Auto dusk desktop' },
+        { mode: 'auto', resolved: 'dark', phase: 'dusk', title: 'Time of day dusk desktop' },
         { mode: 'dark', resolved: 'dark', phase: 'night', title: 'Dark desktop' },
       ].map((theme) => (
         <div
@@ -434,7 +434,7 @@ export const ThemeVariants: Story = {
                       value={theme.mode}
                       options={[
                         { id: 'light', label: 'Light' },
-                        { id: 'auto', label: 'Auto' },
+                        { id: 'auto', label: 'Time' },
                         { id: 'dark', label: 'Dark' },
                       ]}
                     />

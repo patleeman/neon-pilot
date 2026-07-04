@@ -729,7 +729,7 @@ export interface WindowedSegmentedOption {
 }
 
 export interface WindowedSegmentedControlProps {
-  options: WindowedSegmentedOption[];
+  options: ReadonlyArray<WindowedSegmentedOption>;
   value: string;
   onChange?: (value: string) => void;
   ariaLabel: string;

@@ -120,6 +120,7 @@ export { type ColorTheme, type ThemeAccent, type ThemePreference, useTheme } fro
 export {
   readWindowedOsTheme,
   WINDOWED_OS_THEME_CHANGED_EVENT,
+  WINDOWED_OS_THEME_OPTIONS,
   WINDOWED_OS_THEME_STORAGE_KEY,
   type WindowedOsTheme,
   writeWindowedOsTheme,

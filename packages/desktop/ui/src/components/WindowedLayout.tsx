@@ -44,6 +44,7 @@ import {
   type SnapTarget,
   type WindowBounds,
   WINDOWED_OS_THEME_CHANGED_EVENT,
+  WINDOWED_OS_THEME_OPTIONS,
   WINDOWED_OS_THEME_STORAGE_KEY,
   type WindowedOsTheme,
   type WindowedOsThemePhase,
@@ -1779,11 +1780,7 @@ export function WindowedLayout() {
       accent="settings"
       className="wos-taskbar-theme-toggle"
       value={windowedTheme}
-      options={[
-        { id: 'light', label: 'Light' },
-        { id: 'auto', label: 'Auto' },
-        { id: 'dark', label: 'Dark' },
-      ]}
+      options={WINDOWED_OS_THEME_OPTIONS}
       onChange={(value) => {
         const nextTheme: WindowedOsTheme = value === 'dark' || value === 'auto' ? value : 'light';
         setWindowedTheme(nextTheme);

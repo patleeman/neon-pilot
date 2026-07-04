@@ -35,6 +35,7 @@ export interface ColorTheme {
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type ThemeAccent = 'lime' | 'forest' | 'cobalt' | 'ember' | 'violet' | 'ink';
 export type WindowedOsTheme = 'light' | 'dark' | 'auto';
+export declare const WINDOWED_OS_THEME_OPTIONS: ReadonlyArray<{ id: WindowedOsTheme; label: string }>;
 export type UnifiedSettingsEntry = unknown;
 
 export declare const SettingsPanel: HostComponent;

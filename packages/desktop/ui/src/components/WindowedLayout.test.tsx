@@ -461,7 +461,7 @@ describe('WindowedLayout route windows', () => {
     const desktopControls = screen.getByLabelText('Desktop controls');
     expect(within(desktopControls).getByRole('radiogroup', { name: /windowed os theme/i })).toBeTruthy();
     expect(within(desktopControls).getByRole('radio', { name: 'Light' }).getAttribute('aria-checked')).toBe('true');
-    expect(within(desktopControls).getByRole('radio', { name: 'Auto' }).getAttribute('aria-checked')).toBe('false');
+    expect(within(desktopControls).getByRole('radio', { name: 'Time' }).getAttribute('aria-checked')).toBe('false');
   });
 
   it('restores the persisted windowed OS theme and updates it from the taskbar', () => {
@@ -490,7 +490,7 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-wos-theme-mode')).toBe('auto');
     expect(['light', 'dark']).toContain(shell?.getAttribute('data-wos-theme'));
     expect(shell?.getAttribute('data-wos-theme-phase')).toBeTruthy();
-    expect(within(desktopControls).getByRole('radio', { name: 'Auto' }).getAttribute('aria-checked')).toBe('true');
+    expect(within(desktopControls).getByRole('radio', { name: 'Time' }).getAttribute('aria-checked')).toBe('true');
 
     fireEvent.click(within(desktopControls).getByRole('radio', { name: 'Dark' }));
 

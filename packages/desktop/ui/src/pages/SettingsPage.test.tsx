@@ -385,7 +385,7 @@ describe('SettingsPage', () => {
     expect(html).toContain('aria-label="Windowed OS theme"');
     expect(html).toContain('class="wos-segmented-control"');
     expect(html).toContain('data-accent="settings"');
-    expect(html).toContain('>Auto</button>');
+    expect(html).toContain('>Time</button>');
     expect(html).not.toContain('Theme, accent, and visual defaults.');
     expect(html).not.toContain('Model and transcript defaults for new conversations.');
     expect(html).not.toContain('Connect model providers, save credentials, and add model overrides.');

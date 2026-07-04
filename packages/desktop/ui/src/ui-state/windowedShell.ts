@@ -8,6 +8,12 @@ export type WindowedOsResolvedTheme = 'light' | 'dark';
 export type WindowedOsTheme = WindowedOsResolvedTheme | 'auto';
 export type WindowedOsThemePhase = 'deep-night' | 'night' | 'dawn' | 'morning' | 'bright-noon' | 'afternoon' | 'dusk';
 
+export const WINDOWED_OS_THEME_OPTIONS: ReadonlyArray<{ id: WindowedOsTheme; label: string }> = [
+  { id: 'light', label: 'Light' },
+  { id: 'auto', label: 'Time' },
+  { id: 'dark', label: 'Dark' },
+];
+
 export interface DesktopRect {
   width: number;
   height: number;

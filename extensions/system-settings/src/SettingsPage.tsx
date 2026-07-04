@@ -50,6 +50,7 @@ import {
   useExtensionRegistry,
   useTheme,
   WINDOWED_OS_THEME_CHANGED_EVENT,
+  WINDOWED_OS_THEME_OPTIONS,
   type WindowedOsTheme,
   writeWindowedOsTheme,
 } from '@neon-pilot/extensions/settings';
@@ -3996,11 +3997,7 @@ export function SettingsPage({
                     setWindowedOsTheme(nextTheme);
                     writeWindowedOsTheme(nextTheme);
                   }}
-                  options={[
-                    { id: 'light', label: 'Light' },
-                    { id: 'auto', label: 'Auto' },
-                    { id: 'dark', label: 'Dark' },
-                  ]}
+                  options={WINDOWED_OS_THEME_OPTIONS}
                 />
               </SettingsControlRow>
             ) : null}
