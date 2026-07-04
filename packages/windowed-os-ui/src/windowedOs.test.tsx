@@ -1390,6 +1390,23 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('grid-template-rows: minmax(0, 1fr);');
   });
 
+  it('documents inherited chat chrome in an isolated Storybook example', () => {
+    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
+    const source = readFileSync(storiesPath, 'utf8');
+
+    expect(source).toContain('export const InheritedChatChrome');
+    expect(source).toContain('className="ui-message-card-user"');
+    expect(source).toContain('className="ui-message-card-assistant"');
+    expect(source).toContain('className="ui-tool-block"');
+    expect(source).toContain('className="conversation-composer-region"');
+    expect(source).toContain('className="ui-input-shell"');
+    expect(source).toContain('className="ui-composer-input-controls"');
+    expect(source).toContain('className="ui-composer-tool-button"');
+    expect(source).toContain('className="ui-composer-model-fallback"');
+    expect(source).toContain('className="ui-positioned-menu-static"');
+    expect(source).toContain('className="ui-context-menu-item bg-elevated"');
+  });
+
   it('defines a reusable danger tone for windowed page buttons', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');

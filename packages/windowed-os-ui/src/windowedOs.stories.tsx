@@ -60,7 +60,7 @@ type Story = StoryObj;
 
 const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS;
 
-function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-visible' }) {
+function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-visible' | 'workbench-hidden' }) {
   const paths = {
     browser: (
       <>
@@ -81,6 +81,13 @@ function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-
         <rect x="4" y="5" width="16" height="14" rx="1.5" />
         <path d="M13 5v14" />
         <path d="m10 9-4 3 4 3" />
+      </>
+    ),
+    'workbench-hidden': (
+      <>
+        <rect x="4" y="5" width="16" height="14" rx="1.5" />
+        <path d="M13 5v14" />
+        <path d="m15 9 4 3-4 3" />
       </>
     ),
   };
@@ -325,6 +332,99 @@ export const ChatWithCollapsedWorkbench: Story = {
 
 export const DarkChatWithCollapsedWorkbench: Story = {
   render: () => <AttachedWorkbenchStory theme="dark" workbenchCollapsed />,
+};
+
+export const InheritedChatChrome: Story = {
+  render: () => (
+    <div className="windowed-os-shell" style={{ minHeight: 720, padding: 24 }}>
+      <WindowFrame
+        title="Inherited chat chrome"
+        accent="chat"
+        focused
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 660 }}
+        onMinimize={() => undefined}
+        onMaximize={() => undefined}
+        onClose={() => undefined}
+      >
+        <div className="wos-window-route-body wos-window-route-body--chat">
+          <section data-chat-transcript-panel="1" aria-label="Transcript preview">
+            <article className="ui-message-card-user">
+              <div className="ui-message-meta">Patrick</div>
+              <p>Audit the windowed chat surface and keep the composer compact.</p>
+              <button type="button" className="ui-message-action-button">
+                Copy
+              </button>
+            </article>
+            <article className="ui-message-card-assistant">
+              <div className="ui-message-meta">Neon Pilot</div>
+              <p>The inherited transcript chrome now uses the windowed border, type, and action treatment.</p>
+              <span className="ui-pill ui-pill-accent">Windowed</span>
+              <div className="ui-tool-block">
+                <div className="ui-tool-block__body">Ran package checks</div>
+                <div className="ui-tool-block__linked-runs">
+                  <button type="button" className="ui-tool-block__linked-run">
+                    windowed-os-ui tests
+                  </button>
+                </div>
+                <div className="ui-tool-block__output">
+                  <pre className="ui-tool-block__pre">114 tests passed</pre>
+                </div>
+              </div>
+            </article>
+          </section>
+          <section className="conversation-composer-region" aria-label="Composer preview">
+            <div className="conversation-composer-inner">
+              <div className="ui-composer-notice" data-tone="warning">
+                <span className="ui-pill ui-pill-warning ui-composer-notice__pill">No workspace attached</span>
+              </div>
+              <div className="ui-input-shell">
+                <div className="ui-composer-input-controls">
+                  <div className="ui-composer-input-controls__editor">
+                    <textarea aria-label="Message" placeholder="Message Neon Pilot" />
+                  </div>
+                  <div className="ui-composer-input-controls__control-row">
+                    <div className="ui-composer-input-controls__leading">
+                      <button type="button" className="ui-composer-tool-button" aria-label="Attach file">
+                        +
+                      </button>
+                      <button type="button" className="ui-composer-model-fallback">
+                        GPT-5.3
+                      </button>
+                      <div className="ui-composer-preferences-row">
+                        <button type="button" className="ui-composer-preferences-row__menu-button" aria-label="Thinking">
+                          T
+                        </button>
+                        <span className="ui-menu-trigger-inline">Default</span>
+                      </div>
+                    </div>
+                    <div className="ui-composer-input-controls__actions">
+                      <div className="ui-composer-actions">
+                        <button type="button" className="ui-composer-action-button" aria-label="Send">
+                          Send
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="ui-composer-meta">
+                <span className="ui-composer-meta__primary">GPT-5.3 Codex Spark</span>
+                <span className="ui-composer-meta__workspace">Chat - no workspace</span>
+              </div>
+              <div className="ui-positioned-menu-static" role="menu" aria-label="Model menu preview">
+                <button type="button" className="ui-context-menu-item" role="menuitem">
+                  Model GPT-5.3 Codex Spark
+                </button>
+                <button type="button" className="ui-context-menu-item bg-elevated" role="menuitem">
+                  Thinking Default
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </WindowFrame>
+    </div>
+  ),
 };
 
 export const NavigationPrimitives: Story = {
