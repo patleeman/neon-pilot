@@ -4919,6 +4919,42 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   padding-top: var(--wos-space-3);
 }
 
+.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf {
+  border-bottom: 2px solid var(--wos-ink-900) !important;
+  background: var(--wos-surface-2) !important;
+  padding: 8px 10px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf__row {
+  gap: 6px;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf :where(.ui-attachment-chip) {
+  min-height: 28px;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 7px;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  box-shadow: none;
+  font: var(--wos-text-row);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf :where(button, .ui-attachment-chip-button) {
+  color: var(--wos-ink-900);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf :where(button:hover, .ui-attachment-chip-button:hover) {
+  background: var(--wos-chat);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf__status {
+  margin-top: 6px;
+  color: var(--wos-ink-600);
+  font-family: var(--wos-font-mono);
+  font-size: 10px;
+  font-weight: 650;
+}
+
 .windowed-os-shell .wos-window-route-body .ui-input-shell textarea,
 .windowed-os-shell .wos-window-route-body .ui-input-shell [contenteditable='true'] {
   color: var(--wos-ink-900);

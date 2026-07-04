@@ -747,6 +747,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell textarea::placeholder');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell:focus-within');
     expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf');
+    expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf__row');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf :where(.ui-attachment-chip)');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf__status');
     expect(stylesSource).toContain('.wos-window-route-body .bg-base');
     expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
     expect(stylesSource).toContain('.wos-window-route-body .text-primary');

@@ -336,9 +336,9 @@ export function ComposerAttachmentShelf({
         drawingAttachments.length > 0 ||
         drawingsBusy ||
         drawingsError) && (
-        <div className="border-b border-border-subtle/60 bg-base/20 px-4 py-3">
+        <div className="ui-composer-attachment-shelf border-b border-border-subtle/60 bg-base/20 px-4 py-3">
           {(attachments.length > 0 || videoAttachments.length > 0 || audioAttachments.length > 0 || documentAttachments.length > 0) && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="ui-composer-attachment-shelf__row flex flex-wrap gap-1.5">
               {attachments.map((file, index) => {
                 const fileName = file.name || 'Image attachment';
                 const canPreview = file.mimeType.startsWith('image/') && Boolean(file.previewUrl);
@@ -457,7 +457,7 @@ export function ComposerAttachmentShelf({
           {drawingAttachments.length > 0 && (
             <div
               className={cx(
-                'flex flex-wrap gap-1.5',
+                'ui-composer-attachment-shelf__row flex flex-wrap gap-1.5',
                 (attachments.length > 0 || videoAttachments.length > 0 || audioAttachments.length > 0 || documentAttachments.length > 0) &&
                   'mt-2',
               )}
@@ -505,8 +505,8 @@ export function ComposerAttachmentShelf({
             </div>
           )}
 
-          {drawingsBusy && <div className="text-[11px] text-dim">Syncing drawings…</div>}
-          {drawingsError && <div className="text-[11px] text-danger">{drawingsError}</div>}
+          {drawingsBusy && <div className="ui-composer-attachment-shelf__status text-[11px] text-dim">Syncing drawings…</div>}
+          {drawingsError && <div className="ui-composer-attachment-shelf__status text-[11px] text-danger">{drawingsError}</div>}
         </div>
       )}
 

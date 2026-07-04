@@ -87,6 +87,10 @@ describe('ComposerAttachmentShelf', () => {
   it('opens an image preview for composer image attachments without touching the original file', () => {
     const { container } = renderShelf({ attachments: [imageAttachment] });
 
+    expect(container.querySelector('.ui-composer-attachment-shelf')).not.toBeNull();
+    expect(container.querySelector('.ui-composer-attachment-shelf__row')).not.toBeNull();
+    expect(container.querySelector('.ui-attachment-chip')).not.toBeNull();
+
     click(container.querySelector('button[aria-label="Preview Screenshot 2026-04-22.png"]'));
 
     expect(createObjectURLMock).not.toHaveBeenCalled();
@@ -111,10 +115,24 @@ describe('ComposerAttachmentShelf', () => {
       ],
     });
 
+    expect(container.querySelector('.ui-composer-attachment-shelf__row')).not.toBeNull();
+
     click(container.querySelector('button[aria-label="Preview Wireframe (rev 3)"]'));
 
     expect(container.querySelector('[role="dialog"][aria-label="Wireframe (rev 3)"]')).not.toBeNull();
     expect(createObjectURLMock).not.toHaveBeenCalled();
+  });
+
+  it('exposes stable shelf status hooks for drawing sync states', () => {
+    const { container } = renderShelf({
+      drawingsBusy: true,
+      drawingsError: 'Drawings failed to sync',
+    });
+
+    expect(container.querySelector('.ui-composer-attachment-shelf')).not.toBeNull();
+    expect(container.querySelectorAll('.ui-composer-attachment-shelf__status')).toHaveLength(2);
+    expect(container.textContent).toContain('Syncing drawings');
+    expect(container.textContent).toContain('Drawings failed to sync');
   });
 
   it('closes the composer image preview from the shared command event', () => {
