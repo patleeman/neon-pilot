@@ -116,6 +116,7 @@ const MIN_WINDOW_HEIGHT = 260;
 const WINDOWED_BROWSER_SETTLE_MS = 1200;
 const FALLBACK_TASKBAR_HEIGHT = 44;
 const DEFAULT_WINDOW_BOTTOM_GUTTER = 56;
+const DEFAULT_CHAT_WORKBENCH_COLLAPSED = true;
 const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 
 const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
@@ -197,6 +198,7 @@ function defaultDraftWindow(): DesktopWindowModel {
     minimized: false,
     focused: true,
     archivedOnClose: false,
+    workbenchCollapsed: DEFAULT_CHAT_WORKBENCH_COLLAPSED,
   };
 }
 
@@ -713,6 +715,7 @@ function focusChatWindowIn(
     minimized: false,
     focused: true,
     archivedOnClose: !isDraft,
+    workbenchCollapsed: DEFAULT_CHAT_WORKBENCH_COLLAPSED,
     workspaceCwd: conversationWorkspaceCwd(session),
   };
   return [...windows.map((windowModel) => ({ ...windowModel, focused: false })), next];
@@ -737,6 +740,7 @@ function retargetChatWindowIn(
     route: isDraft ? '/conversations/new' : route,
     title: session ? conversationWindowTitle(session) : isDraft ? 'New conversation' : existing.title,
     archivedOnClose: !isDraft,
+    workbenchCollapsed: existing.kind === 'chat' ? existing.workbenchCollapsed : DEFAULT_CHAT_WORKBENCH_COLLAPSED,
     workspaceCwd: conversationWorkspaceCwd(session),
   };
 
@@ -1451,6 +1455,7 @@ export function WindowedLayout() {
         focused: true,
         singleton: item.kind === 'route',
         archivedOnClose: item.kind === 'chat' && Boolean(session?.id),
+        workbenchCollapsed: item.kind === 'chat' ? DEFAULT_CHAT_WORKBENCH_COLLAPSED : undefined,
         workspaceCwd: item.kind === 'chat' ? conversationWorkspaceCwd(session ?? null) : null,
       };
       return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
