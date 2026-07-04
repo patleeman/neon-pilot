@@ -189,11 +189,11 @@ function StoryChatWindowToolbar({
   activeTool?: 'browser' | 'files' | 'terminal';
   workbenchCollapsed?: boolean;
 }) {
-  const workbenchToggleLabel = workbenchCollapsed ? 'Show workbench' : 'Hide workbench';
+  const workbenchToggleLabel = workbenchCollapsed ? 'Show tools panel' : 'Hide tools panel';
 
   return (
     <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-      <div className="wos-chat-window-toolbar__label">Workbench</div>
+      <div className="wos-chat-window-toolbar__label">Tools</div>
       <div className="wos-chat-window-toolbar__actions">
         <button
           type="button"
@@ -402,10 +402,10 @@ function AttachedWorkbenchStory({
             {!workbenchCollapsed ? (
               <aside
                 className="wos-chat-workbench__panel ui-workbench-panel"
-                aria-label="Attached workbench"
+                aria-label="Attached tools"
                 data-windowed-attached-workbench="true"
               >
-                <div className="wos-chat-workbench__tabs ui-workbench-tab-strip" role="tablist" aria-label="Workbench tabs">
+                <div className="wos-chat-workbench__tabs ui-workbench-tab-strip" role="tablist" aria-label="Tool tabs">
                   <button type="button" className="ui-workbench-tab ui-workbench-tab-active" role="tab" aria-selected="true">
                     Files
                   </button>
@@ -449,7 +449,7 @@ function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 
       style={{ minHeight: 700, padding: 24 }}
     >
       <WindowFrame
-        title="Browser workbench"
+        title="Browser tools"
         accent="chat"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(980px, 100%)', height: 640 }}
@@ -462,7 +462,7 @@ function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 
           <div className="wos-chat-workbench">
             <WindowedChatSurface>
               <WindowedChatMain title="Browser QA" composer={<WindowedChatComposer actionLabel="Send" />}>
-                <WindowedMessageBubble from="user">Open the browser workbench and inspect the release notes preview.</WindowedMessageBubble>
+                <WindowedMessageBubble from="user">Open the browser tools and inspect the release notes preview.</WindowedMessageBubble>
                 <WindowedMessageBubble>
                   The attached browser is visible, but the native BrowserView is paused while another window or overlay owns focus.
                 </WindowedMessageBubble>
@@ -470,10 +470,10 @@ function AttachedBrowserWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 
             </WindowedChatSurface>
             <aside
               className="wos-chat-workbench__panel ui-workbench-panel"
-              aria-label="Attached browser workbench"
+              aria-label="Attached browser tools"
               data-windowed-attached-workbench="true"
             >
-              <div className="wos-chat-workbench__tabs ui-workbench-tab-strip" role="tablist" aria-label="Workbench tabs">
+              <div className="wos-chat-workbench__tabs ui-workbench-tab-strip" role="tablist" aria-label="Tool tabs">
                 <button type="button" className="ui-workbench-tab" role="tab" aria-selected="false">
                   Files
                 </button>
@@ -806,7 +806,7 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                           ◯
                         </span>
                         <span className="ui-choice-row-main">
-                          <span className="ui-choice-row-label">Workbench tabs</span>
+                          <span className="ui-choice-row-label">Tool tabs</span>
                           <span className="ui-choice-row-details">Audit the attached browser and file surface again.</span>
                         </span>
                       </button>
@@ -1411,7 +1411,7 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
           <WindowedSettingsRow title="Snap preview" description="Show the snap target overlay above every window">
             <WindowedToggle checked accent="settings" label="Show snap preview" />
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Default chat width" description="New conversations open with room for the workbench">
+          <WindowedSettingsRow title="Default chat width" description="New conversations open with room for tools">
             <WindowedNumberStepper aria-label="Default chat width" value={1120} min={720} max={1440} unit="px" onChange={() => undefined} />
           </WindowedSettingsRow>
         </WindowedSettingsGroup>
@@ -1426,7 +1426,7 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
           <WindowedSettingsRow title="New conversation" description="Open a new Chat window">
             <WindowedBadge tone="neutral">⌘ N</WindowedBadge>
           </WindowedSettingsRow>
-          <WindowedSettingsRow title="Toggle workbench" description="Show or collapse the attached Chat workbench">
+          <WindowedSettingsRow title="Toggle tools" description="Show or collapse attached Chat tools">
             <WindowedBadge tone="neutral">⌘ ⇧ B</WindowedBadge>
           </WindowedSettingsRow>
           <WindowedSettingsRow title="Command palette" description="Find apps, commands, and recent work">
@@ -2832,7 +2832,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
                 <WindowedDataRow
                   name="system-browser"
-                  meta="Built-in · Workbench, tools"
+                  meta="Built-in · Chat tools"
                   status={
                     <span className="wos-status-stack">
                       <WindowedBadge tone="warning">Update available</WindowedBadge>
@@ -2851,7 +2851,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                 />
                 <WindowedDataRow
                   name="system-terminal"
-                  meta="Built-in · Workbench"
+                  meta="Built-in · Chat tools"
                   status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
                   action={
                     <span className="wos-inline-actions">
@@ -2920,7 +2920,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
           />
           <WindowedKeyValueList
             items={[
-              { label: 'Appears in', value: 'Workbench, tools' },
+              { label: 'Appears in', value: 'Chat tools' },
               { label: 'Skills', value: 'None' },
               { label: 'Tools', value: 'browser_snapshot, browser_cdp' },
             ]}

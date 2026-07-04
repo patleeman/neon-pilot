@@ -1107,7 +1107,7 @@ function WindowRouteBody({
       data-workbench-collapsed={effectiveChatWorkbenchOpen ? undefined : 'true'}
     >
       <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
-        <div className="wos-chat-window-toolbar__label">Workbench</div>
+        <div className="wos-chat-window-toolbar__label">Tools</div>
         <div className="wos-chat-window-toolbar__actions">
           {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
           <button
@@ -1115,14 +1115,14 @@ function WindowRouteBody({
             className="wos-chat-window-toolbar__button"
             data-density="icon"
             aria-pressed={effectiveChatWorkbenchOpen && !compact}
-            aria-label={effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
+            aria-label={effectiveChatWorkbenchOpen ? 'Hide tools panel' : 'Show tools panel'}
             disabled={compact}
             title={
               compact
-                ? 'Resize the chat window wider to show the workbench.'
+                ? 'Resize the chat window wider to show the tools panel.'
                 : effectiveChatWorkbenchOpen
-                  ? 'Hide workbench'
-                  : 'Show workbench'
+                  ? 'Hide tools panel'
+                  : 'Show tools panel'
             }
             onClick={() => {
               onWorkbenchCollapsedChange(effectiveChatWorkbenchOpen);
@@ -1139,7 +1139,7 @@ function WindowRouteBody({
             disabled={browserUnavailable}
             title={
               extensionRegistry.loading
-                ? 'Loading workbench tools.'
+                ? 'Loading tools.'
                 : browserSurface
                   ? 'Open Browser window'
                   : 'Enable the Browser extension to open a Browser window.'
@@ -1157,7 +1157,7 @@ function WindowRouteBody({
             disabled={filesUnavailable}
             title={
               extensionRegistry.loading
-                ? 'Loading workbench tools.'
+                ? 'Loading tools.'
                 : filesSurface
                   ? 'Open Workspace window'
                   : 'Enable the Files extension to open a Workspace window.'
@@ -1175,7 +1175,7 @@ function WindowRouteBody({
             disabled={terminalUnavailable}
             title={
               extensionRegistry.loading
-                ? 'Loading workbench tools.'
+                ? 'Loading tools.'
                 : terminalSurface
                   ? 'Open Terminal window'
                   : 'Enable the Terminal extension to open a Terminal window.'

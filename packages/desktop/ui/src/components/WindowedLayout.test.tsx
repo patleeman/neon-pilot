@@ -370,7 +370,7 @@ describe('WindowedLayout route windows', () => {
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
     expect(
       within(chatWindow)
-        .getByRole('button', { name: /show workbench/i })
+        .getByRole('button', { name: /show tools panel/i })
         .getAttribute('data-density'),
     ).toBe('icon');
     expect(
@@ -401,7 +401,7 @@ describe('WindowedLayout route windows', () => {
         .getAttribute('data-density'),
     ).toBe('icon');
     expect((within(chatWindow).getByRole('button', { name: /open terminal window/i }) as HTMLButtonElement).disabled).toBe(true);
-    expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')?.textContent?.trim()).toBe('Workbench');
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')?.textContent?.trim()).toBe('Tools');
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(4);
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
   });
@@ -414,7 +414,7 @@ describe('WindowedLayout route windows', () => {
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
     const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
-    const showToggle = within(chatWindow).getByRole('button', { name: /show workbench/i });
+    const showToggle = within(chatWindow).getByRole('button', { name: /show tools panel/i });
     const initialHiddenCalls = setWorkbenchBrowserBounds.mock.calls.length;
 
     expect(showToggle.getAttribute('aria-pressed')).toBe('false');
@@ -428,7 +428,7 @@ describe('WindowedLayout route windows', () => {
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('false');
     expect(
       within(chatWindow)
-        .getByRole('button', { name: /hide workbench/i })
+        .getByRole('button', { name: /hide tools panel/i })
         .getAttribute('aria-pressed'),
     ).toBe('true');
     await waitFor(() => {
@@ -448,13 +448,13 @@ describe('WindowedLayout route windows', () => {
     expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('true');
     expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('false');
 
-    fireEvent.click(within(restoredChatWindow).getByRole('button', { name: /hide workbench/i }));
+    fireEvent.click(within(restoredChatWindow).getByRole('button', { name: /hide tools panel/i }));
     expect(restoredChatWindow.querySelector('.wos-window-route-body--chat')?.getAttribute('data-workbench-collapsed')).toBe('true');
     expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
     expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
     expect(
       within(restoredChatWindow)
-        .getByRole('button', { name: /show workbench/i })
+        .getByRole('button', { name: /show tools panel/i })
         .getAttribute('aria-pressed'),
     ).toBe('false');
   });
@@ -476,7 +476,7 @@ describe('WindowedLayout route windows', () => {
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
     const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
-    const toggle = within(chatWindow).getByRole('button', { name: /show workbench/i });
+    const toggle = within(chatWindow).getByRole('button', { name: /show tools panel/i });
 
     expect(chatSurface?.getAttribute('data-compact')).toBe('true');
     expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBe('true');

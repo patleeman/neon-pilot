@@ -2057,7 +2057,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}");
     expect(source).toContain('className="wos-chat-window-toolbar"');
     expect(source).toContain('function StoryChatWindowToolbar');
-    expect(source).toContain("const workbenchToggleLabel = workbenchCollapsed ? 'Show workbench' : 'Hide workbench';");
+    expect(source).toContain("const workbenchToggleLabel = workbenchCollapsed ? 'Show tools panel' : 'Hide tools panel';");
+    expect(source).toContain('<div className="wos-chat-window-toolbar__label">Tools</div>');
+    expect(source).not.toContain('<div className="wos-chat-window-toolbar__label">Workbench</div>');
     expect(source).toContain('aria-label={workbenchToggleLabel}');
     expect(source).toContain('aria-pressed={!workbenchCollapsed}');
     expect(source).toContain("name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'}");
