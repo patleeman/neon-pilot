@@ -6338,6 +6338,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block {
+  overflow: hidden;
   border: 1.5px solid var(--wos-ink-900);
   border-radius: 8px;
   background: var(--wos-surface-2);
@@ -6350,6 +6351,20 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs,
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output {
   border-color: var(--wos-ink-900) !important;
+  padding: 7px 9px;
+  color: var(--wos-ink-900);
+  font: var(--wos-text-body);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__body {
+  background: var(--wos-surface-1) !important;
+  font-weight: 700;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs,
+.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__output {
+  border-top: 1.5px solid var(--wos-ink-900) !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine,

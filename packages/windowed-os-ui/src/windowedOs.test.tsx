@@ -1060,8 +1060,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-danger');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__body');
+    expect(stylesSource).toContain('overflow: hidden;\n  border: 1.5px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('padding: 7px 9px;');
+    expect(stylesSource).toContain('font-weight: 700;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs');
+    expect(stylesSource).toContain('border-top: 1.5px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs-summary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-run');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs');
