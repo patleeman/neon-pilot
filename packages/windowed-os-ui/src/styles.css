@@ -741,6 +741,27 @@
   pointer-events: auto;
 }
 
+.windowed-os-shell .ui-windowed-browser-host__state {
+  width: min(420px, 100%);
+}
+
+.windowed-os-shell .ui-windowed-browser-host__state .wos-state-block__body {
+  display: grid;
+  gap: 8px;
+}
+
+.windowed-os-shell .ui-windowed-browser-host__url {
+  overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 32%, transparent);
+  border-radius: 7px;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-700);
+  padding: 5px 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--wos-text-caption);
+}
+
 .windowed-os-shell[data-native-browser-blocked='true'] .ui-windowed-browser-host[data-windowed-browser-host='true'] {
   overflow: hidden;
   isolation: isolate;

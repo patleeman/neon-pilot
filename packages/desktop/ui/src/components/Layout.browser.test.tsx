@@ -856,7 +856,46 @@ describe('WorkbenchBrowserTab', () => {
     expect(host).toBeTruthy();
     expect(host?.className).toContain('ui-windowed-browser-host');
     expect(container.textContent).toContain('Browser preview is paused in desktop mode');
+    expect(container.textContent).toContain(activeBrowserTab.url);
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));
+    expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
+  });
+
+  it('shows an explicit empty-tab status when a windowed browser preview is paused before navigation', async () => {
+    const setWorkbenchBrowserBounds = vi.fn(async () => null);
+    const navigateWorkbenchBrowser = vi.fn(async () => null);
+    const browserTabsState: BrowserTabsState = {
+      version: 1,
+      activeTabId: 'tab-empty',
+      tabs: [{ id: 'tab-empty', title: 'Browser', url: '', urlDraft: '' }],
+      closedTabs: [],
+    };
+    const activeBrowserTab = browserTabsState.tabs[0]!;
+    window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
+
+    const container = document.createElement('div');
+    container.innerHTML =
+      '<div class="windowed-os-shell" data-native-browser-blocked="true"><section class="wos-window" data-focused="true"><div id="browser-root"></div></section></div>';
+    document.body.appendChild(container);
+    const browserRoot = container.querySelector('#browser-root')!;
+    root = createRoot(browserRoot);
+    act(() => {
+      root?.render(
+        <WorkbenchBrowserTab
+          tabsState={browserTabsState}
+          activeTab={activeBrowserTab}
+          onSetTabsState={vi.fn()}
+          onClose={() => undefined}
+          onNewTab={vi.fn()}
+          onReopenTab={vi.fn()}
+          onCloseCurrentTab={vi.fn()}
+        />,
+      );
+    });
+    await flushAsyncWork();
+
+    expect(container.textContent).toContain('Browser preview is paused in desktop mode');
+    expect(container.textContent).toContain('No page loaded');
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 

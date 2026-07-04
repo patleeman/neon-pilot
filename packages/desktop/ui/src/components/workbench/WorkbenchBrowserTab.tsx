@@ -1,3 +1,4 @@
+import { WindowedStateBlock } from '@neon-pilot/windowed-os-ui';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { api } from '../../client/api';
@@ -1268,7 +1269,17 @@ export function WorkbenchBrowserTab({
         ) : null}
         {hostedByWindowedShell && windowedBrowserPaused ? (
           <div className="ui-windowed-browser-host__blocker" role="status">
-            Browser preview is paused in desktop mode while the window system is active.
+            <WindowedStateBlock
+              title="Browser preview is paused in desktop mode"
+              tone="warning"
+              className="ui-windowed-browser-host__state"
+            >
+              <span>
+                Native browser content is paused while the window system is active. Tabs and the current address are preserved for the
+                dedicated browser window pass.
+              </span>
+              <span className="ui-windowed-browser-host__url">{urlDraft || 'No page loaded'}</span>
+            </WindowedStateBlock>
           </div>
         ) : null}
         {pendingMarkers.map((marker, index) => {

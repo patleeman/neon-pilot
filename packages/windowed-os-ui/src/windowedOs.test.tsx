@@ -855,6 +855,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-composited-frame {\n  position: relative;');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host {');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__blocker {');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__state {');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__url {');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button:disabled');
     expect(stylesSource).toContain(
       ".windowed-os-shell[data-native-browser-blocked='true'] .ui-windowed-browser-host[data-windowed-browser-host='true']",
