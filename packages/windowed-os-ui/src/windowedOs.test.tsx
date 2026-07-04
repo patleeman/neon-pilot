@@ -1485,10 +1485,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary');
     expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary {\n  display: flex;\n  min-width: 0;\n  flex-wrap: wrap;',
+    );
+    expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary .ui-row-button {\n  display: flex;\n  min-height: 26px;',
     );
     expect(stylesSource).toContain('padding: 3px 6px;\n  color: var(--wos-ink-900);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card .ui-action-button');
+    expect(stylesSource).toContain('max-width: 100%;\n  flex: 0 1 auto;');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__metadata-row');
+    expect(stylesSource).toContain('grid-template-columns: minmax(6rem, auto) minmax(0, 1fr);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure-summary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure[open] .ui-disclosure-summary::after');
@@ -1498,10 +1504,24 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__tool');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__text');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-image-preview {\n  overflow: hidden;\n  width: min(100%, 560px);',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__media');
+    expect(stylesSource).toContain('min-height: 160px;\n  max-height: min(320px, 46vh);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__placeholder');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__caption');
+    expect(stylesSource).toContain('@container wos-window-route (max-width: 560px)');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card .ui-action-button {\n    width: 100%;',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__metadata-row {\n    grid-template-columns: minmax(0, 1fr);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__media,\n  .windowed-os-shell .wos-window-route-body--chat .ui-image-preview__placeholder {\n    min-height: 132px;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-backdrop');
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-dialog');
     expect(stylesSource).toContain('width: min(760px, calc(100vw - 32px));');
