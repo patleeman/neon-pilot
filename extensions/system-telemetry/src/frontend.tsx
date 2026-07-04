@@ -186,7 +186,6 @@ export function TelemetryPage({ pa, context }: ExtensionSurfaceProps) {
               items={[
                 { label: 'Range', value: range.toUpperCase() },
                 { label: 'Activity', value: hasDiagnosticActivity ? 'Present' : 'None' },
-                { label: 'Loading', value: loading ? 'Yes' : 'No' },
                 { label: 'Errors', value: summary ? `${summary.toolErrors}` : '0' },
               ]}
             />

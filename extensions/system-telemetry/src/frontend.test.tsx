@@ -290,6 +290,7 @@ describe('TelemetryPage', () => {
     expect(screen.queryByText('Selected')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Data' })).toBeTruthy();
     expect(screen.getByText('Health')).toBeTruthy();
+    expect(screen.queryByText('Loading')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Models' })).toBeTruthy();
     expect(screen.getAllByText('gpt-5.4').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Tool calls' })).toBeTruthy();
