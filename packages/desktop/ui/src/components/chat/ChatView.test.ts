@@ -1246,6 +1246,13 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('<details');
     expect(html).toContain('data-context-type="system_prompt"');
+    expect(html).toContain('ui-context-shelf');
+    expect(html).toContain('ui-context-shelf__item');
+    expect(html).toContain('ui-context-shelf__summary');
+    expect(html).toContain('ui-context-shelf__summary-main');
+    expect(html).toContain('ui-context-shelf__label');
+    expect(html).toContain('ui-context-shelf__preview');
+    expect(html).toContain('ui-context-shelf__rule');
     expect(html).toContain('System prompt');
     expect(html).toContain('Runtime instructions available for inspection. 14 tokens');
     expect(html).not.toContain('You are Patrick');
@@ -1327,6 +1334,11 @@ describe('chat view streaming disclosure', () => {
 
     expect(html).toContain('<details');
     expect(html).toContain('data-context-shelf="1"');
+    expect(html).toContain('ui-context-shelf');
+    expect(html).toContain('ui-context-shelf__item');
+    expect(html).toContain('ui-context-shelf__summary-main');
+    expect(html).toContain('ui-context-shelf__label');
+    expect(html).toContain('ui-context-shelf__preview');
     expect(html).toContain('bg-border-subtle');
     expect(html).toContain('h-px');
     expect(html).toContain('Context added');
@@ -1480,6 +1492,7 @@ describe('chat view streaming disclosure', () => {
     );
 
     expect(html).toContain('data-lifecycle-marker="auto-resume"');
+    expect(html).toContain('ui-context-lifecycle-marker');
     expect(html).toContain('Goal resumed automatically');
     expect(html).not.toContain('<details');
     expect(html).not.toContain('Objective: keep shipping');
@@ -1502,6 +1515,7 @@ describe('chat view streaming disclosure', () => {
     );
 
     expect(html).toContain('data-lifecycle-marker="workspace-change"');
+    expect(html).toContain('ui-context-lifecycle-marker');
     expect(html).toContain('Workspace changed');
     expect(html).toContain('title="Working directory changed from Chats to /Users/patrick/workingdir/personal-agent."');
     expect(html).not.toContain('<details');

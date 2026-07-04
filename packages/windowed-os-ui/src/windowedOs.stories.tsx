@@ -419,6 +419,27 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                   </div>
                 </details>
               </div>
+              <div className="ui-context-lifecycle-marker" data-context-shelf="1" data-lifecycle-marker="auto-resume">
+                <span aria-hidden="true">↻</span>
+                <span>Goal resumed automatically</span>
+                <span className="ui-message-meta">2m ago</span>
+              </div>
+              <div className="ui-context-shelf" data-context-shelf="1">
+                <details className="ui-context-shelf__item" data-context-type="referenced_context" open>
+                  <summary className="ui-context-shelf__summary">
+                    <span className="ui-context-shelf__summary-main">
+                      <span className="ui-context-shelf__chevron" aria-hidden="true">
+                        ›
+                      </span>
+                      <span className="ui-context-shelf__label">Context added</span>
+                      <span className="ui-context-shelf__preview">Workspace notes and open window state were attached.</span>
+                      <span className="ui-message-meta">now</span>
+                    </span>
+                    <span className="ui-context-shelf__rule" aria-hidden="true" />
+                  </summary>
+                  <div className="ui-context-shelf__body">Workspace notes and open window state were attached for this turn.</div>
+                </details>
+              </div>
               <span className="ui-pill ui-pill-accent">Windowed</span>
               <div className="ui-trace-cluster" data-open="true">
                 <div className="ui-trace-cluster__summary">

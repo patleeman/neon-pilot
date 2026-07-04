@@ -160,12 +160,14 @@ const AUTO_RESUME_CONTEXT_TYPES = new Set([
 ]);
 
 const QUIET_LIFECYCLE_CONTEXT_TYPES = new Set([...AUTO_RESUME_CONTEXT_TYPES, 'conversation_workspace_change']);
-const contextShelfItemClassName = 'group/item w-full !overflow-visible !rounded-none !border-0 !bg-transparent text-[12px] text-secondary';
+const contextShelfItemClassName =
+  'ui-context-shelf__item group/item w-full !overflow-visible !rounded-none !border-0 !bg-transparent text-[12px] text-secondary';
 const contextShelfSummaryClassName =
-  'grid w-full cursor-pointer list-none grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary before:!content-none after:!content-none [&::-webkit-details-marker]:hidden';
-const contextShelfBodyClassName = 'mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary';
+  'ui-context-shelf__summary grid w-full cursor-pointer list-none grid-cols-[auto_1fr] items-center gap-2 text-[11px] marker:hidden hover:text-secondary before:!content-none after:!content-none [&::-webkit-details-marker]:hidden';
+const contextShelfBodyClassName =
+  'ui-context-shelf__body mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary';
 const contextShelfSystemPromptBodyClassName =
-  'mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary/80';
+  'ui-context-shelf__body ui-context-shelf__body--system mt-3 max-h-[min(34rem,52vh)] w-full overflow-auto pl-5 pr-2 text-[12px] leading-relaxed text-secondary/80';
 
 function isAutoResumeLifecycleContext(block: Extract<MessageBlock, { type: 'context' | 'summary' }>): boolean {
   return block.type === 'context' && AUTO_RESUME_CONTEXT_TYPES.has(block.customType ?? '');
@@ -235,7 +237,7 @@ function QuietLifecycleMarker({ blocks, marker }: { blocks: Extract<MessageBlock
   if (backgroundRun) {
     return (
       <MessageActionButton
-        className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75 hover:text-secondary"
+        className="ui-context-lifecycle-marker flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75 hover:text-secondary"
         data-context-shelf="1"
         data-lifecycle-marker={marker}
         title={tooltip ?? backgroundRun.runId}
@@ -248,7 +250,7 @@ function QuietLifecycleMarker({ blocks, marker }: { blocks: Extract<MessageBlock
   }
   return (
     <div
-      className="flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75"
+      className="ui-context-lifecycle-marker flex w-[78%] items-center gap-2 px-2 py-0.5 text-[11px] text-dim/75"
       data-context-shelf="1"
       data-lifecycle-marker={marker}
       title={tooltip}
@@ -642,8 +644,8 @@ export const ContextShelf = memo(function ContextShelf({
     blocks.length > 0 &&
     blocks.every((block) => block.type === 'context' && block.customType === 'model_arena_duel');
   const shelfClassName = isWideArenaShelf
-    ? 'my-5 relative left-1/2 w-[min(96rem,calc(100vw_-_28rem))] min-w-full max-w-[calc(100vw_-_2rem)] -translate-x-1/2 space-y-1.5 text-dim'
-    : 'my-5 w-full max-w-[72rem] space-y-1.5 text-dim';
+    ? 'ui-context-shelf my-5 relative left-1/2 w-[min(96rem,calc(100vw_-_28rem))] min-w-full max-w-[calc(100vw_-_2rem)] -translate-x-1/2 space-y-1.5 text-dim'
+    : 'ui-context-shelf my-5 w-full max-w-[72rem] space-y-1.5 text-dim';
 
   if (!hasSystemPrompt && !remoteControlled && blocks.length > 0 && blocks.every(isQuietLifecycleContext)) {
     const marker = blocks.every(isAutoResumeLifecycleContext) ? 'auto-resume' : 'workspace-change';
@@ -664,16 +666,16 @@ export const ContextShelf = memo(function ContextShelf({
           summaryClassName={contextShelfSummaryClassName}
           summary={
             <>
-              <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-                <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+              <span className="ui-context-shelf__summary-main flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                <span className="ui-context-shelf__chevron text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
                   ›
                 </span>
-                <span className="shrink-0 font-medium text-primary/90">System prompt</span>
-                <span className="min-w-0 truncate text-dim/90">
+                <span className="ui-context-shelf__label shrink-0 font-medium text-primary/90">System prompt</span>
+                <span className="ui-context-shelf__preview min-w-0 truncate text-dim/90">
                   {formatSystemPromptPreview(toolDefinitions.length, systemPromptTokenCount)}
                 </span>
               </span>
-              <span className="h-px bg-border-subtle" aria-hidden="true" />
+              <span className="ui-context-shelf__rule h-px bg-border-subtle" aria-hidden="true" />
             </>
           }
         >
@@ -696,14 +698,14 @@ export const ContextShelf = memo(function ContextShelf({
           bodyClassName="!border-t-0 !p-0"
           summary={
             <>
-              <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-                <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+              <span className="ui-context-shelf__summary-main flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                <span className="ui-context-shelf__chevron text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
                   ›
                 </span>
-                <span className="shrink-0 font-medium text-primary/90">Remote control</span>
-                <span className="min-w-0 truncate text-dim/90">{remoteControlText}</span>
+                <span className="ui-context-shelf__label shrink-0 font-medium text-primary/90">Remote control</span>
+                <span className="ui-context-shelf__preview min-w-0 truncate text-dim/90">{remoteControlText}</span>
               </span>
-              <span className="h-px bg-border-subtle" aria-hidden="true" />
+              <span className="ui-context-shelf__rule h-px bg-border-subtle" aria-hidden="true" />
             </>
           }
         >
@@ -783,15 +785,15 @@ export const ContextShelf = memo(function ContextShelf({
             summaryClassName={contextShelfSummaryClassName}
             summary={
               <>
-                <span className="flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
-                  <span className="text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
+                <span className="ui-context-shelf__summary-main flex min-w-0 max-w-[78vw] items-center gap-1.5 sm:max-w-[42rem]">
+                  <span className="ui-context-shelf__chevron text-dim/70 transition-transform group-open/item:rotate-90" aria-hidden="true">
                     ›
                   </span>
-                  <span className="shrink-0 font-medium text-primary/90">{contextShelfLabel(block)}</span>
-                  <span className="min-w-0 truncate text-dim/90">{contextShelfPreview(block)}</span>
+                  <span className="ui-context-shelf__label shrink-0 font-medium text-primary/90">{contextShelfLabel(block)}</span>
+                  <span className="ui-context-shelf__preview min-w-0 truncate text-dim/90">{contextShelfPreview(block)}</span>
                   {block.ts ? <span className="ui-message-meta shrink-0">{timeAgo(block.ts)}</span> : null}
                 </span>
-                <span className="h-px bg-border-subtle" aria-hidden="true" />
+                <span className="ui-context-shelf__rule h-px bg-border-subtle" aria-hidden="true" />
               </>
             }
           >
