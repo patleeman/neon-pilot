@@ -3500,7 +3500,7 @@ function ExcalidrawEditorSubwindowStory({ theme = 'light' }: { theme?: 'light' |
             <div className="ui-windowed-excalidraw-modal-body">
               <div className="excalidraw-editor-modal">
                 <div className="excalidraw-editor-modal__toolbar" aria-label="Drawing controls">
-                  <button type="button" className="ui-toolbar-button">
+                  <button type="button" className="ui-toolbar-button" data-active="true" aria-pressed="true">
                     Select
                   </button>
                   <button type="button" className="ui-toolbar-button">
@@ -3509,6 +3509,7 @@ function ExcalidrawEditorSubwindowStory({ theme = 'light' }: { theme?: 'light' |
                   <button type="button" className="ui-action-button">
                     Save
                   </button>
+                  <span className="ui-windowed-excalidraw-status">Saved 3m ago</span>
                 </div>
                 <div className="excalidraw-editor-modal__canvas">
                   <div className="excalidraw-embed-lite" aria-label="Drawing canvas preview">

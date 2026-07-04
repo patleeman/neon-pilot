@@ -1663,6 +1663,9 @@ body[data-neon-pilot-windowed-shell-active='true']
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal {
+  --wos-drawing-accent: var(--wos-gateways);
+  --wos-drawing-canvas: color-mix(in srgb, var(--wos-surface-1) 76%, var(--wos-surface-0));
+
   overflow: hidden;
   border: 2px solid var(--wos-ink-900) !important;
   border-radius: 10px !important;
@@ -1714,7 +1717,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   align-items: center;
   gap: 6px;
   border-bottom: 2px solid var(--wos-ink-900);
-  background: var(--wos-chat);
+  background: var(--wos-drawing-accent);
   padding: 1px 6px 1px 8px;
 }
 
@@ -1746,7 +1749,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   min-width: 0;
   border: 1.5px solid var(--wos-ink-900);
   border-radius: var(--wos-radius-pill);
-  background: color-mix(in srgb, var(--wos-surface-1) 82%, var(--wos-chat));
+  background: color-mix(in srgb, var(--wos-surface-1) 82%, var(--wos-drawing-accent));
   padding: 1px 6px;
   overflow: hidden;
   color: var(--wos-ink-900);
@@ -1842,6 +1845,20 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   padding: 5px 8px;
 }
 
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar::before {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: var(--wos-radius-pill);
+  background: color-mix(in srgb, var(--wos-drawing-accent) 26%, var(--wos-surface-1));
+  padding: 0 8px;
+  color: var(--wos-ink-900);
+  content: 'DRAWING';
+  font: var(--wos-text-eyebrow);
+  letter-spacing: 0.02em;
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-icon-button,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-toolbar-button,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-action-button {
@@ -1854,10 +1871,37 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   font: var(--wos-text-row);
 }
 
+body[data-neon-pilot-windowed-shell-active='true']
+  .ui-windowed-excalidraw-modal
+  .excalidraw-editor-modal__toolbar
+  :where(.ui-toolbar-button, .ui-action-button)[data-active='true'],
+body[data-neon-pilot-windowed-shell-active='true']
+  .ui-windowed-excalidraw-modal
+  .excalidraw-editor-modal__toolbar
+  :where(.ui-toolbar-button, .ui-action-button)[aria-pressed='true'] {
+  background: var(--wos-drawing-accent);
+  color: var(--wos-accent-ink);
+}
+
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-icon-button:hover,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-toolbar-button:hover,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar .ui-action-button:hover {
-  background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));
+  background: color-mix(in srgb, var(--wos-drawing-accent) 24%, var(--wos-surface-1));
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-windowed-excalidraw-status {
+  display: inline-flex;
+  min-height: 24px;
+  min-width: 0;
+  align-items: center;
+  margin-left: auto;
+  border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);
+  border-radius: var(--wos-radius-pill);
+  background: color-mix(in srgb, var(--wos-surface-1) 78%, var(--wos-drawing-accent));
+  padding: 0 8px;
+  color: var(--wos-ink-700);
+  font: var(--wos-text-meta);
+  white-space: nowrap;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {
@@ -1865,14 +1909,24 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   min-height: 0;
   overflow: hidden;
   border-top: 0;
-  background: var(--wos-surface-1);
+  background:
+    linear-gradient(var(--wos-grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--wos-grid-line) 1px, transparent 1px),
+    var(--wos-drawing-canvas);
+  background-size:
+    24px 24px,
+    24px 24px,
+    auto;
+  padding: 18px;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite {
   display: grid;
   min-width: 0;
   min-height: 100%;
-  background: var(--wos-surface-1);
+  overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 32%, transparent);
+  border-radius: var(--wos-radius-md);
+  background: color-mix(in srgb, var(--wos-surface-1) 86%, var(--wos-drawing-accent));
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {
@@ -1880,18 +1934,22 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
   min-width: 0;
   min-height: 100%;
   place-items: center;
-  --color-primary: var(--wos-chat);
-  --color-primary-darker: color-mix(in srgb, var(--wos-chat) 82%, var(--wos-ink-900));
-  --color-primary-darkest: color-mix(in srgb, var(--wos-chat) 68%, var(--wos-ink-900));
-  --color-primary-light: color-mix(in srgb, var(--wos-chat) 22%, var(--wos-surface-1));
-  background: var(--wos-surface-1);
+  --color-primary: var(--wos-drawing-accent);
+  --color-primary-darker: color-mix(in srgb, var(--wos-drawing-accent) 82%, var(--wos-ink-900));
+  --color-primary-darkest: color-mix(in srgb, var(--wos-drawing-accent) 68%, var(--wos-ink-900));
+  --color-primary-light: color-mix(in srgb, var(--wos-drawing-accent) 22%, var(--wos-surface-1));
+  background: transparent;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite img {
   display: block;
   width: min(82%, 640px);
   max-height: calc(100% - 32px);
+  border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 38%, transparent);
+  border-radius: var(--wos-radius-sm);
+  background: var(--wos-surface-1);
   object-fit: contain;
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--wos-ink-900) 12%, transparent);
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-resource-picker-toolbar {
@@ -1967,14 +2025,14 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-toolbar-button:hover,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-toolbar-button:focus-visible {
-  background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));
+  background: color-mix(in srgb, var(--wos-drawing-accent) 18%, var(--wos-surface-1));
   outline: 2px solid var(--wos-ink-900);
   outline-offset: 1px;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-toolbar-button.text-accent,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-toolbar-button[data-active='true'] {
-  background: var(--wos-chat);
+  background: var(--wos-drawing-accent);
   color: var(--wos-accent-ink);
 }
 
