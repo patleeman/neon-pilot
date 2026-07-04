@@ -32,6 +32,8 @@ const requiredCanonicalStoryIds = [
   'windowed-os-desktop-shell--dark-chat-with-attached-browser-workbench',
   'windowed-os-desktop-shell--inherited-chat-chrome',
   'windowed-os-desktop-shell--dark-inherited-chat-chrome',
+  'windowed-os-desktop-shell--image-inspect-dialog',
+  'windowed-os-desktop-shell--dark-image-inspect-dialog',
   'windowed-os-desktop-shell--settings-page',
   'windowed-os-desktop-shell--dark-settings-page',
   'windowed-os-desktop-shell--settings-providers-page',

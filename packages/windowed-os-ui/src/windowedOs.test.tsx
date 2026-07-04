@@ -1132,6 +1132,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const ImageInspectDialog');
     expect(source).toContain('export const DarkImageInspectDialog');
     expect(source).toContain('<ImageInspectDialogStory theme="dark" />');
+    expect(source.slice(source.indexOf('function ImageInspectDialogStory'), source.indexOf('export const ImageInspectDialog'))).toContain(
+      "style={{ minHeight: '100vh' }}",
+    );
     expect(source).toContain('className="ui-image-inspect-dialog" role="dialog" aria-modal="true"');
     expect(source).toContain('className="ui-image-inspect-caption__meta"');
     expect(source).toContain('function ExcalidrawEditorSubwindowStory');
@@ -3145,6 +3148,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--time-of-day-theme-phases'");
     expect(source).toContain("'windowed-os-desktop-shell--chat-with-tool-windows'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-chat-with-tool-windows'");
+    expect(source).toContain("'windowed-os-desktop-shell--image-inspect-dialog'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-image-inspect-dialog'");
     expect(source).toContain("'windowed-os-desktop-shell--settings-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-settings-page'");
     expect(source).toContain("'windowed-os-desktop-shell--automations-page'");
@@ -3171,6 +3176,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--dark-workspace-window'");
     expect(source).toContain("'windowed-os-desktop-shell--browser-window'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-browser-window'");
+    expect(source).toContain("'windowed-os-desktop-shell--drawings-picker-subwindow'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-drawings-picker-subwindow'");
+    expect(source).toContain("'windowed-os-desktop-shell--excalidraw-editor-subwindow'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-excalidraw-editor-subwindow'");
     expect(source).toContain("'windowed-os-desktop-shell--embedded-extension-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-embedded-extension-page'");
     expect(source).toContain('Missing canonical Windowed OS Storybook entries:');

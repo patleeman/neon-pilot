@@ -941,11 +941,11 @@ export const DarkInheritedChatChrome: Story = {
 
 function ImageInspectDialogStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 640 }}>
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh' }}>
       <div
         className="ui-image-inspect-backdrop"
         style={{
-          minHeight: 640,
+          minHeight: '100vh',
           display: 'grid',
           placeItems: 'center',
           padding: 24,
