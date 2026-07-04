@@ -1687,9 +1687,14 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical Skills desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
-    const skillsSource = source.slice(source.indexOf('export const SkillsPage'), source.indexOf('export const CoreDataPrimitives'));
+    const skillsSource = source.slice(source.indexOf('function SkillsPageStory'), source.indexOf('export const CoreDataPrimitives'));
 
+    expect(source).toContain('function SkillsPageStory');
     expect(source).toContain('export const SkillsPage');
+    expect(source).toContain('export const DarkSkillsPage');
+    expect(source).toContain('<SkillsPageStory theme="dark" />');
+    expect(skillsSource).toContain("title={theme === 'dark' ? 'Skills - dark' : 'Skills'}");
+    expect(skillsSource).toContain('data-wos-theme={theme}');
     expect(skillsSource).toContain('title="Browse skills"');
     expect(skillsSource).not.toContain('eyebrow="Skill library"');
     expect(skillsSource).toContain('title="Sources"');
@@ -1770,8 +1775,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source.slice(source.indexOf('function ModelArenaPageStory'), source.indexOf('export const DiagnosticsPage'))).toContain(
       'accent="model-arena"',
     );
-    expect(source.slice(source.indexOf('export const SkillsPage'), source.indexOf('export const CoreDataPrimitives'))).toContain(
-      'title="Skills"\n        accent="skills"',
+    expect(source.slice(source.indexOf('function SkillsPageStory'), source.indexOf('export const CoreDataPrimitives'))).toContain(
+      "title={theme === 'dark' ? 'Skills - dark' : 'Skills'}\n        accent=\"skills\"",
     );
     expect(source).not.toContain("title: 'Prompt Assembly'");
   });

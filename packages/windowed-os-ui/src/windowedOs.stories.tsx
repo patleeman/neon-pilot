@@ -2265,11 +2265,11 @@ export const ExtensionsInstallDialog: Story = {
   ),
 };
 
-export const SkillsPage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title="Skills"
+        title={theme === 'dark' ? 'Skills - dark' : 'Skills'}
         accent="skills"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -2429,7 +2429,15 @@ export const SkillsPage: Story = {
         </WindowedDialog>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const SkillsPage: Story = {
+  render: () => <SkillsPageStory />,
+};
+
+export const DarkSkillsPage: Story = {
+  render: () => <SkillsPageStory theme="dark" />,
 };
 
 export const CoreDataPrimitives: Story = {
