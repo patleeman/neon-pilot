@@ -1390,6 +1390,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-chart-panel {');
     expect(stylesSource).toContain('.wos-chart-panel__header {');
     expect(stylesSource).toContain('.wos-chart-panel__body {');
+    expect(stylesSource).toContain('.wos-diagnostics-overview__charts {');
     expect(stylesSource).toContain('.wos-heatmap .wos-chart-panel__body {');
     expect(stylesSource).toContain('.wos-heatmap-grid {');
     expect(stylesSource).toContain('.wos-heatmap-cell-4 {');
@@ -1888,8 +1889,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Telemetry"');
     expect(source).toContain('ariaLabel="Diagnostics range"');
-    expect(source).toContain('title="Data"');
     expect(source).toContain('title="Overview"');
+    expect(source).toContain('meta="24H · Loaded"');
+    expect(source).toContain('className="wos-diagnostics-overview"');
+    expect(source).toContain('className="wos-diagnostics-overview__charts"');
+    expect(source).toContain('<StoryTokenActivityChart />');
+    expect(source).toContain('<StoryTimeSeriesChart />');
     expect(source).toContain('title="Status"');
     expect(source).toContain('title="Health"');
     expect(source).toContain('title="Usage"');

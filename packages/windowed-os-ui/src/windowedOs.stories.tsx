@@ -63,6 +63,53 @@ const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS;
 const storyImagePreviewSrc =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDcyMCA0MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNmNGVkZTIiLz48cmVjdCB4PSI0MCIgeT0iNDQiIHdpZHRoPSI2NDAiIGhlaWdodD0iMzEyIiByeD0iMjQiIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzE3MTMwZiIgc3Ryb2tlLXdpZHRoPSI4Ii8+PHBhdGggZD0iTTkyIDMwMGwxMTItMTA4IDkyIDY4IDEyOC0xMzIgMjA0IDE3MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDk5ZGRmIiBzdHJva2Utd2lkdGg9IjE4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyMDIiIGN5PSIxMjQiIHI9IjM4IiBmaWxsPSIjZmM4YjI3IiBzdHJva2U9IiMxNzEzMGYiIHN0cm9rZS13aWR0aD0iNiIvPjx0ZXh0IHg9IjgwIiB5PSI4NiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI2IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMTcxMzBmIj5XaW5kb3dlZCBPUyBwcmV2aWV3PC90ZXh0Pjwvc3ZnPg==';
 
+function StoryTokenActivityChart() {
+  return (
+    <WindowedChartPanel title="Token Activity" meta="24H · 1.4M total · 58K avg" className="wos-heatmap">
+      <div className="wos-heatmap-grid" aria-hidden="true">
+        {Array.from({ length: 12 }).map((_, week) => (
+          <div key={week} className="wos-heatmap-week">
+            {Array.from({ length: 7 }).map((__, day) => (
+              <span key={day} className={`wos-heatmap-cell wos-heatmap-cell-${(week + day) % 5}`} />
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="wos-heatmap-legend">
+        <span>Less</span>
+        {[0, 1, 2, 3, 4].map((level) => (
+          <span key={level} className={`wos-heatmap-legend-cell wos-heatmap-cell-${level}`} />
+        ))}
+        <span>More</span>
+        <span className="wos-heatmap-peak">Peak: 312K tokens</span>
+      </div>
+    </WindowedChartPanel>
+  );
+}
+
+function StoryTimeSeriesChart() {
+  return (
+    <WindowedChartPanel title="Time Series" meta="4 metrics overlaid · 7 days" className="wos-braid-chart">
+      <svg className="wos-braid-chart-svg" viewBox="0 0 700 110" preserveAspectRatio="none" role="img" aria-label="Sample time series">
+        <path d="M0,72 L116,50 L232,65 L348,30 L464,44 L580,24 L700,38" className="wos-braid-line wos-braid-line--input" fill="none" />
+        <path d="M0,82 L116,76 L232,70 L348,58 L464,62 L580,40 L700,46" className="wos-braid-line wos-braid-line--output" fill="none" />
+        <path d="M0,88 L116,80 L232,85 L348,74 L464,70 L580,64 L700,60" className="wos-braid-line wos-braid-line--cost" fill="none" />
+      </svg>
+      <div className="wos-braid-legend">
+        <span className="wos-braid-legend-item">
+          <span className="wos-braid-legend-line wos-braid-line--input" />
+          Input
+        </span>
+        <span className="wos-braid-legend-item">
+          <span className="wos-braid-legend-line wos-braid-line--output" />
+          Output
+        </span>
+        <span className="wos-braid-peak">Peak: 312K tokens</span>
+      </div>
+    </WindowedChartPanel>
+  );
+}
+
 function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-visible' | 'workbench-hidden' }) {
   const paths = {
     browser: (
@@ -1063,62 +1110,8 @@ export const ChartPrimitives: Story = {
         <WindowedPageShell layout="standard">
           <WindowedPageMain title="Diagnostics">
             <WindowedPageSection title="Usage" meta="Shared chart chrome">
-              <WindowedChartPanel title="Token Activity" meta="24H · 1.4M total · 58K avg" className="wos-heatmap">
-                <div className="wos-heatmap-grid" aria-hidden="true">
-                  {Array.from({ length: 12 }).map((_, week) => (
-                    <div key={week} className="wos-heatmap-week">
-                      {Array.from({ length: 7 }).map((__, day) => (
-                        <span key={day} className={`wos-heatmap-cell wos-heatmap-cell-${(week + day) % 5}`} />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-                <div className="wos-heatmap-legend">
-                  <span>Less</span>
-                  {[0, 1, 2, 3, 4].map((level) => (
-                    <span key={level} className={`wos-heatmap-legend-cell wos-heatmap-cell-${level}`} />
-                  ))}
-                  <span>More</span>
-                  <span className="wos-heatmap-peak">Peak: 312K tokens</span>
-                </div>
-              </WindowedChartPanel>
-
-              <WindowedChartPanel title="Time Series" meta="4 metrics overlaid · 7 days" className="wos-braid-chart">
-                <svg
-                  className="wos-braid-chart-svg"
-                  viewBox="0 0 700 110"
-                  preserveAspectRatio="none"
-                  role="img"
-                  aria-label="Sample time series"
-                >
-                  <path
-                    d="M0,72 L116,50 L232,65 L348,30 L464,44 L580,24 L700,38"
-                    className="wos-braid-line wos-braid-line--input"
-                    fill="none"
-                  />
-                  <path
-                    d="M0,82 L116,76 L232,70 L348,58 L464,62 L580,40 L700,46"
-                    className="wos-braid-line wos-braid-line--output"
-                    fill="none"
-                  />
-                  <path
-                    d="M0,88 L116,80 L232,85 L348,74 L464,70 L580,64 L700,60"
-                    className="wos-braid-line wos-braid-line--cost"
-                    fill="none"
-                  />
-                </svg>
-                <div className="wos-braid-legend">
-                  <span className="wos-braid-legend-item">
-                    <span className="wos-braid-legend-line wos-braid-line--input" />
-                    Input
-                  </span>
-                  <span className="wos-braid-legend-item">
-                    <span className="wos-braid-legend-line wos-braid-line--output" />
-                    Output
-                  </span>
-                  <span className="wos-braid-peak">Peak: 312K tokens</span>
-                </div>
-              </WindowedChartPanel>
+              <StoryTokenActivityChart />
+              <StoryTimeSeriesChart />
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
@@ -2284,26 +2277,20 @@ function DiagnosticsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
               </>
             }
           >
-            <WindowedPageSection title="Data" meta="Loaded">
-              <WindowedKeyValueList
+            <WindowedPageSection title="Overview" meta="24H · Loaded" className="wos-diagnostics-overview">
+              <WindowedKeyValueGrid
+                columns={4}
                 items={[
                   { label: 'Sessions', value: '8' },
                   { label: 'Runs', value: '42' },
                   { label: 'Tools', value: '216' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Overview" meta="24H">
-              <WindowedKeyValueGrid
-                columns={4}
-                items={[
-                  { label: 'Input', value: '1.4M' },
-                  { label: 'Output', value: '312K' },
-                  { label: 'Cached', value: '68%' },
                   { label: 'Errors', value: <WindowedBadge tone="warning">2</WindowedBadge> },
                 ]}
               />
+              <div className="wos-diagnostics-overview__charts">
+                <StoryTokenActivityChart />
+                <StoryTimeSeriesChart />
+              </div>
             </WindowedPageSection>
 
             <WindowedPageSection title="Status" meta="Current range">
