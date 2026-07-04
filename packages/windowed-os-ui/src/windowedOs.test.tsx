@@ -1093,12 +1093,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell\n  :where(');
     expect(stylesSource).toContain("[class~='border-l']");
     expect(stylesSource).toContain('Windowed mode does not use standalone left-edge rails for hierarchy or status.');
+    expect(stylesSource).toContain("[class*=':border-l']");
+    expect(stylesSource).toContain("[class*=':border-l-']");
     expect(stylesSource).toContain("[class*='before:border-l']");
     expect(stylesSource).toContain("[class*='after:border-l']");
     expect(stylesSource).toContain("[class*='before:left-0']");
     expect(stylesSource).toContain("[class*='after:left-0']");
     expect(stylesSource).toContain(')::before,\n.windowed-os-shell');
-    expect(stylesSource).toContain('border-left-color: transparent !important;\n  box-shadow: none !important;');
+    expect(stylesSource).toContain(
+      'border-left-color: transparent !important;\n  margin-left: 0 !important;\n  padding-left: 0 !important;',
+    );
   });
 
   it('bans positive left-edge border treatments from the windowed OS stylesheet', () => {
@@ -1406,6 +1410,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-left-color: transparent !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body--chat\n  :where(\n    .ui-input-shell,\n    .ui-composer-meta,\n    .ui-message-card-user,\n    .ui-message-card-assistant,',
+    );
+    expect(stylesSource).toContain('.ui-context-lifecycle-marker,\n    .ui-context-shelf__item,\n    .ui-tool-block,');
+    expect(stylesSource).toContain('.ui-inline-run-card,\n    .ui-disclosure,\n    .ui-skill-invocation,\n    .ui-thinking-block,');
+    expect(stylesSource).toContain('.ui-markdown blockquote,\n    .ui-markdown pre,\n    .ui-markdown table');
+    expect(stylesSource).toContain(
+      'border-left: 0 !important;\n  border-top-left-radius: 0 !important;\n  border-bottom-left-radius: 0 !important;',
+    );
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-meta');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-meta {\n  color: var(--wos-ink-600);');
@@ -2440,6 +2453,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(inheritedRailRule).toContain("[class*=' border-l-']");
     expect(inheritedRailRule).toContain("[class*='border-l-']");
     expect(inheritedRailRule).toContain("[class^='border-l-']");
+    expect(inheritedRailRule).toContain("[class*=':border-l']");
+    expect(inheritedRailRule).toContain("[class*=':border-l-']");
     expect(inheritedRailRule).toContain('.conversation-composer-region');
     expect(inheritedRailRule).toContain('.conversation-composer-inner');
     expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf');
@@ -2452,7 +2467,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(inheritedRailRule).toContain('box-shadow: none !important;');
     expect(stylesSource).toContain('.wos-window-route-body--chat .ui-resize-handle__line {\n  display: none !important;');
     expect(stylesSource).toContain(
-      ".wos-window-route-body--chat\n  :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])",
+      ".wos-window-route-body--chat\n  :where(\n    .border-l,\n    [class~='border-l'],\n    [class*=' border-l-'],\n    [class*='border-l-'],\n    [class^='border-l-'],\n    [class*=':border-l'],\n    [class*=':border-l-']",
     );
     expect(stylesSource).toContain('border-left-color: transparent !important;');
   });

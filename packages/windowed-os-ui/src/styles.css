@@ -36,6 +36,8 @@
     [class*=' border-l-'],
     [class*='border-l-'],
     [class^='border-l-'],
+    [class*=':border-l'],
+    [class*=':border-l-'],
     [class*='before:border-l'],
     [class*='after:border-l'],
     [class*='before:left-0'],
@@ -46,6 +48,8 @@
   border-left: 0 !important;
   border-left-width: 0 !important;
   border-left-color: transparent !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
   box-shadow: none !important;
 }
 
@@ -56,6 +60,8 @@
     [class*=' border-l-'],
     [class*='border-l-'],
     [class^='border-l-'],
+    [class*=':border-l'],
+    [class*=':border-l-'],
     [class*='before:border-l'],
     [class*='after:border-l'],
     [class*='before:left-0'],
@@ -70,6 +76,8 @@
     [class*=' border-l-'],
     [class*='border-l-'],
     [class^='border-l-'],
+    [class*=':border-l'],
+    [class*=':border-l-'],
     [class*='before:border-l'],
     [class*='after:border-l'],
     [class*='before:left-0'],
@@ -6221,6 +6229,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
+  border-left: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
   overflow: visible;
 }
 
@@ -6494,6 +6508,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class*=' border-l-'],
     [class*='border-l-'],
     [class^='border-l-'],
+    [class*=':border-l'],
+    [class*=':border-l-'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6513,6 +6529,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class*=' border-l-'],
     [class*='border-l-'],
     [class^='border-l-'],
+    [class*=':border-l'],
+    [class*=':border-l-'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6546,15 +6564,27 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .border-l,
 .windowed-os-shell .wos-window-route-body--chat [class~='border-l'],
-.windowed-os-shell .wos-window-route-body--chat [class*='border-l-'] {
+.windowed-os-shell .wos-window-route-body--chat [class*='border-l-'],
+.windowed-os-shell .wos-window-route-body--chat [class*=':border-l'],
+.windowed-os-shell .wos-window-route-body--chat [class*=':border-l-'] {
   border-left: 0 !important;
   border-left-width: 0 !important;
   border-left-color: transparent !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
 .windowed-os-shell
   .wos-window-route-body--chat
-  :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-']) {
+  :where(
+    .border-l,
+    [class~='border-l'],
+    [class*=' border-l-'],
+    [class*='border-l-'],
+    [class^='border-l-'],
+    [class*=':border-l'],
+    [class*=':border-l-']
+  ) {
   box-shadow: none !important;
 }
 
@@ -6578,6 +6608,32 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   overflow: hidden;
   background: var(--wos-surface-1);
   padding: 8px var(--wos-space-5);
+}
+
+.windowed-os-shell
+  .wos-window-route-body--chat
+  :where(
+    .ui-input-shell,
+    .ui-composer-meta,
+    .ui-message-card-user,
+    .ui-message-card-assistant,
+    .ui-context-lifecycle-marker,
+    .ui-context-shelf__item,
+    .ui-tool-block,
+    .ui-tool-block__linked-runs-summary,
+    .ui-tool-block__linked-run,
+    .ui-panel-muted,
+    .ui-inline-run-card,
+    .ui-disclosure,
+    .ui-skill-invocation,
+    .ui-thinking-block,
+    .ui-markdown blockquote,
+    .ui-markdown pre,
+    .ui-markdown table
+  ) {
+  border-left: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-message-meta {
