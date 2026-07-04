@@ -337,15 +337,19 @@ function AttachedWorkbenchStory({
               </WindowedChatMain>
             </WindowedChatSurface>
             {!workbenchCollapsed ? (
-              <aside className="wos-chat-workbench__panel" aria-label="Attached workbench">
-                <div className="wos-chat-workbench__tabs" role="tablist" aria-label="Workbench tabs">
-                  <button type="button" role="tab" aria-selected="true">
+              <aside
+                className="wos-chat-workbench__panel ui-workbench-panel"
+                aria-label="Attached workbench"
+                data-windowed-attached-workbench="true"
+              >
+                <div className="wos-chat-workbench__tabs ui-workbench-tab-strip" role="tablist" aria-label="Workbench tabs">
+                  <button type="button" className="ui-workbench-tab ui-workbench-tab-active" role="tab" aria-selected="true">
                     Files
                   </button>
-                  <button type="button" role="tab" aria-selected="false">
+                  <button type="button" className="ui-workbench-tab" role="tab" aria-selected="false">
                     Browser
                   </button>
-                  <button type="button" role="tab" aria-selected="false">
+                  <button type="button" className="ui-workbench-tab" role="tab" aria-selected="false">
                     Terminal
                   </button>
                 </div>

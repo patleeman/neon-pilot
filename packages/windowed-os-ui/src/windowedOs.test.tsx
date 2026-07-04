@@ -1112,7 +1112,9 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel');
-    expect(stylesSource).toContain(".wos-window-route-body--chat .ui-workbench-panel[data-windowed-attached-workbench='true']");
+    expect(stylesSource).toContain(
+      ".wos-window-route-body--chat :where(.ui-workbench-panel, .wos-chat-workbench__panel)[data-windowed-attached-workbench='true']",
+    );
     expect(stylesSource).toContain('container: wos-attached-workbench / inline-size;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-panel__body');
     expect(stylesSource).toContain(".wos-window-route-body .ui-workbench-panel[data-has-open-file='true'] .ui-workbench-panel__body");
@@ -1134,7 +1136,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__inner');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__title');
     expect(stylesSource).toContain('box-shadow: var(--wos-shadow-offset);');
+    expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-surface-1) 88%, var(--wos-surface-2));');
+    expect(stylesSource).not.toContain('color-mix(in srgb, var(--wos-surface-1) 92%, white)');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid');
+    expect(stylesSource).toContain('@container wos-attached-workbench (max-width: 360px)');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip__scroller');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab {\n    flex: 1 1 132px;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:hover');
@@ -1535,6 +1543,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('aria-label="Open Browser window"');
     expect(source).toContain('aria-label="Open Terminal window"');
     expect(source).toContain('data-density="icon"');
+    expect(source).toContain('data-windowed-attached-workbench="true"');
+    expect(source).toContain('className="wos-chat-workbench__panel ui-workbench-panel"');
+    expect(source).toContain('className="wos-chat-workbench__tabs ui-workbench-tab-strip"');
+    expect(source).toContain('className="ui-workbench-tab ui-workbench-tab-active"');
   });
 
   it('defines a one-column chat layout when the attached workbench is collapsed', () => {
