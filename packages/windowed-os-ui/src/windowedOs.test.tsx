@@ -1100,6 +1100,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-warning');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-danger');
     expect(stylesSource).toContain('font: var(--wos-text-row);');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-warning {\n  background: var(--wos-surface-1) !important;\n  box-shadow: inset 5px 0 0 var(--wos-warning);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-danger {\n  background: var(--wos-surface-1) !important;\n  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--wos-danger) 72%, transparent);',
+    );
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated");
