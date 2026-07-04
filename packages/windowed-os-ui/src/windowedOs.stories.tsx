@@ -1323,7 +1323,134 @@ export const ChartPrimitives: Story = {
   ),
 };
 
-function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+type SettingsStorySectionId = 'appearance' | 'providers' | 'desktop' | 'shortcuts';
+
+const settingsStorySections: Array<{
+  id: SettingsStorySectionId;
+  title: string;
+  status?: ReactNode;
+}> = [
+  { id: 'appearance', title: 'Appearance' },
+  { id: 'providers', title: 'Providers', status: <WindowedBadge tone="positive">2</WindowedBadge> },
+  { id: 'desktop', title: 'Desktop', status: <WindowedBadge tone="neutral">Beta</WindowedBadge> },
+  { id: 'shortcuts', title: 'Shortcuts' },
+];
+
+function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySectionId }) {
+  if (activeSection === 'providers') {
+    return (
+      <WindowedPageMain title="Providers" actions={<WindowedPageButton tone="accent">Connect</WindowedPageButton>}>
+        <WindowedSettingsGroup title="Configured providers">
+          <WindowedSettingsRow title="OpenAI" description="Default chat and tool model provider">
+            <WindowedToggle checked accent="settings" label="Enable OpenAI provider" />
+          </WindowedSettingsRow>
+          <WindowedSettingsRow title="Anthropic" description="Used for long-context review and planning">
+            <WindowedToggle checked accent="settings" label="Enable Anthropic provider" />
+          </WindowedSettingsRow>
+          <WindowedSettingsRow title="Local bridge" description="Routes compatible local model servers through AI Gateway">
+            <WindowedPageButton>Configure</WindowedPageButton>
+          </WindowedSettingsRow>
+        </WindowedSettingsGroup>
+        <WindowedSettingsGroup title="Routing">
+          <WindowedSettingsRow title="Default model" description="Used when a conversation does not choose a model">
+            <WindowedSelect aria-label="Default model">
+              <option>Auto</option>
+              <option>GPT-5.4</option>
+              <option>Claude Sonnet</option>
+            </WindowedSelect>
+          </WindowedSettingsRow>
+        </WindowedSettingsGroup>
+      </WindowedPageMain>
+    );
+  }
+
+  if (activeSection === 'desktop') {
+    return (
+      <WindowedPageMain title="Desktop" actions={<WindowedPageButton tone="accent">Apply</WindowedPageButton>}>
+        <WindowedSettingsGroup title="Window behavior">
+          <WindowedSettingsRow title="Windowed mode" description="Open core apps as movable desktop windows">
+            <WindowedToggle checked accent="settings" label="Enable windowed desktop mode" />
+          </WindowedSettingsRow>
+          <WindowedSettingsRow title="Snap preview" description="Show the snap target overlay above every window">
+            <WindowedToggle checked accent="settings" label="Show snap preview" />
+          </WindowedSettingsRow>
+          <WindowedSettingsRow title="Default chat width" description="New conversations open with room for the workbench">
+            <WindowedNumberStepper aria-label="Default chat width" value={1120} min={720} max={1440} unit="px" onChange={() => undefined} />
+          </WindowedSettingsRow>
+        </WindowedSettingsGroup>
+      </WindowedPageMain>
+    );
+  }
+
+  if (activeSection === 'shortcuts') {
+    return (
+      <WindowedPageMain title="Shortcuts" actions={<WindowedPageButton>Record shortcut</WindowedPageButton>}>
+        <WindowedSettingsGroup title="Desktop shortcuts">
+          <WindowedSettingsRow title="New conversation" description="Open a new Chat window">
+            <WindowedBadge tone="neutral">⌘ N</WindowedBadge>
+          </WindowedSettingsRow>
+          <WindowedSettingsRow title="Toggle workbench" description="Show or collapse the attached Chat workbench">
+            <WindowedBadge tone="neutral">⌘ ⇧ B</WindowedBadge>
+          </WindowedSettingsRow>
+          <WindowedSettingsRow title="Command palette" description="Find apps, commands, and recent work">
+            <WindowedBadge tone="neutral">⌘ K</WindowedBadge>
+          </WindowedSettingsRow>
+        </WindowedSettingsGroup>
+      </WindowedPageMain>
+    );
+  }
+
+  return (
+    <WindowedPageMain title="Appearance" actions={<WindowedPageButton>Reset</WindowedPageButton>}>
+      <WindowedSettingsGroup title="Appearance">
+        <WindowedSettingsRow
+          title="Theme"
+          description="Follows the current system appearance"
+          actionsClassName="settings-page-control-actions"
+        >
+          <WindowedSelect aria-label="Theme">
+            <option>System</option>
+            <option>Light</option>
+            <option>Dark</option>
+          </WindowedSelect>
+        </WindowedSettingsRow>
+        <WindowedSettingsRow title="Accent" description="Used for selection and focused controls">
+          <WindowedSegmentedControl
+            ariaLabel="Accent"
+            value="orange"
+            options={[
+              { value: 'orange', label: 'Orange' },
+              { value: 'cobalt', label: 'Cobalt' },
+              { value: 'green', label: 'Green' },
+            ]}
+          />
+        </WindowedSettingsRow>
+        <WindowedSettingsRow title="Interface scale" description="Keeps window chrome and app content compact">
+          <WindowedSegmentedControl
+            ariaLabel="Interface scale"
+            value="comfortable"
+            options={[
+              { value: 'compact', label: 'Compact' },
+              { value: 'comfortable', label: 'Comfortable' },
+              { value: 'spacious', label: 'Spacious' },
+            ]}
+          />
+        </WindowedSettingsRow>
+        <WindowedSettingsRow title="Monospace size" description="Used by terminals, tool output, and code blocks">
+          <WindowedNumberStepper aria-label="Monospace size" value={12} min={10} max={16} unit="px" onChange={() => undefined} />
+        </WindowedSettingsRow>
+      </WindowedSettingsGroup>
+    </WindowedPageMain>
+  );
+}
+
+function SettingsTwoColumnPageStory({
+  theme = 'light',
+  activeSection = 'appearance',
+}: {
+  theme?: 'light' | 'dark';
+  activeSection?: SettingsStorySectionId;
+}) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
@@ -1338,75 +1465,19 @@ function SettingsTwoColumnPageStory({ theme = 'light' }: { theme?: 'light' | 'da
         <WindowedPageShell layout="two-column">
           <WindowedPageRail title="Sections" accent="settings" showHeader={false}>
             <WindowedList>
-              <WindowedListItem title="Appearance" active accent="settings" onSelect={() => undefined} />
-              <WindowedListItem
-                title="Providers"
-                accent="settings"
-                status={<WindowedBadge tone="positive">2</WindowedBadge>}
-                onSelect={() => undefined}
-              />
-              <WindowedListItem title="Extensions" accent="settings" onSelect={() => undefined} />
-              <WindowedListItem
-                title="Desktop"
-                accent="settings"
-                status={<WindowedBadge tone="neutral">Beta</WindowedBadge>}
-                onSelect={() => undefined}
-              />
-              <WindowedListItem title="Shortcuts" accent="settings" onSelect={() => undefined} />
+              {settingsStorySections.map((section) => (
+                <WindowedListItem
+                  key={section.id}
+                  title={section.title}
+                  active={activeSection === section.id}
+                  accent="settings"
+                  status={section.status}
+                  onSelect={() => undefined}
+                />
+              ))}
             </WindowedList>
           </WindowedPageRail>
-          <WindowedPageMain
-            title="Appearance"
-            actions={
-              <>
-                <WindowedPageButton>Reset</WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedSettingsGroup title="Appearance">
-              <WindowedSettingsRow
-                title="Theme"
-                description="Follows the current system appearance"
-                actionsClassName="settings-page-control-actions"
-              >
-                <WindowedSelect aria-label="Theme">
-                  <option>System</option>
-                  <option>Light</option>
-                  <option>Dark</option>
-                </WindowedSelect>
-              </WindowedSettingsRow>
-              <WindowedSettingsRow title="Accent" description="Used for selection and focused controls">
-                <WindowedSegmentedControl
-                  ariaLabel="Accent"
-                  value="orange"
-                  options={[
-                    { value: 'orange', label: 'Orange' },
-                    { value: 'cobalt', label: 'Cobalt' },
-                    { value: 'green', label: 'Green' },
-                  ]}
-                />
-              </WindowedSettingsRow>
-              <WindowedSettingsRow title="Desktop mode" description="Open apps as movable windows">
-                <WindowedToggle checked accent="settings" label="Toggle windowed desktop mode" />
-              </WindowedSettingsRow>
-            </WindowedSettingsGroup>
-            <WindowedSettingsGroup title="Typography">
-              <WindowedSettingsRow title="Interface scale" description="Keeps window chrome and app content compact">
-                <WindowedSegmentedControl
-                  ariaLabel="Interface scale"
-                  value="comfortable"
-                  options={[
-                    { value: 'compact', label: 'Compact' },
-                    { value: 'comfortable', label: 'Comfortable' },
-                    { value: 'spacious', label: 'Spacious' },
-                  ]}
-                />
-              </WindowedSettingsRow>
-              <WindowedSettingsRow title="Monospace size" description="Used by terminals, tool output, and code blocks">
-                <WindowedNumberStepper aria-label="Monospace size" value={12} min={10} max={16} unit="px" onChange={() => undefined} />
-              </WindowedSettingsRow>
-            </WindowedSettingsGroup>
-          </WindowedPageMain>
+          <SettingsPageContent activeSection={activeSection} />
         </WindowedPageShell>
       </WindowFrame>
     </div>
@@ -1427,6 +1498,30 @@ export const SettingsPage: Story = {
 
 export const DarkSettingsPage: Story = {
   render: () => <SettingsTwoColumnPageStory theme="dark" />,
+};
+
+export const SettingsProvidersPage: Story = {
+  render: () => <SettingsTwoColumnPageStory activeSection="providers" />,
+};
+
+export const DarkSettingsProvidersPage: Story = {
+  render: () => <SettingsTwoColumnPageStory theme="dark" activeSection="providers" />,
+};
+
+export const SettingsDesktopPage: Story = {
+  render: () => <SettingsTwoColumnPageStory activeSection="desktop" />,
+};
+
+export const DarkSettingsDesktopPage: Story = {
+  render: () => <SettingsTwoColumnPageStory theme="dark" activeSection="desktop" />,
+};
+
+export const SettingsShortcutsPage: Story = {
+  render: () => <SettingsTwoColumnPageStory activeSection="shortcuts" />,
+};
+
+export const DarkSettingsShortcutsPage: Story = {
+  render: () => <SettingsTwoColumnPageStory theme="dark" activeSection="shortcuts" />,
 };
 
 function StandardSinglePanePageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {

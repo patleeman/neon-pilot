@@ -2200,7 +2200,7 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
     const settingsSource = source.slice(
-      source.indexOf('function SettingsTwoColumnPageStory'),
+      source.indexOf('type SettingsStorySectionId'),
       source.indexOf('export const StandardSinglePanePage'),
     );
 
@@ -2209,25 +2209,42 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const DarkSettingsPage');
     expect(source).toContain('export const SettingsTwoColumnPage');
     expect(source).toContain('export const DarkSettingsTwoColumnPage');
+    expect(source).toContain('type SettingsStorySectionId');
+    expect(source).toContain('function SettingsPageContent');
+    expect(source).toContain("activeSection = 'appearance'");
+    expect(source).toContain('export const SettingsProvidersPage');
+    expect(source).toContain('export const DarkSettingsProvidersPage');
+    expect(source).toContain('export const SettingsDesktopPage');
+    expect(source).toContain('export const DarkSettingsDesktopPage');
+    expect(source).toContain('export const SettingsShortcutsPage');
+    expect(source).toContain('export const DarkSettingsShortcutsPage');
     expect(source).toContain('<SettingsTwoColumnPageStory theme="dark" />');
+    expect(source).toContain('<SettingsTwoColumnPageStory theme="dark" activeSection="providers" />');
+    expect(source).toContain('<SettingsTwoColumnPageStory theme="dark" activeSection="desktop" />');
+    expect(source).toContain('<SettingsTwoColumnPageStory theme="dark" activeSection="shortcuts" />');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('layout="two-column"');
     expect(source).toContain('<WindowedPageRail');
     expect(source).toContain('showHeader={false}');
     expect(source).toContain('title="Sections"');
     expect(settingsSource).toContain("minHeight: '100vh'");
-    expect(source).toContain('onSelect={() => undefined}');
+    expect(settingsSource).toContain('{settingsStorySections.map((section) => (');
+    expect(settingsSource).toContain('active={activeSection === section.id}');
+    expect(settingsSource).toContain('onSelect={() => undefined}');
     expect(source).toContain('<WindowedSettingsGroup title="Appearance"');
-    expect(source).toContain('<WindowedSettingsGroup title="Typography"');
+    expect(source).toContain('<WindowedSettingsGroup title="Configured providers"');
+    expect(source).toContain('<WindowedSettingsGroup title="Window behavior"');
+    expect(source).toContain('<WindowedSettingsGroup title="Desktop shortcuts"');
     expect(source).toContain('title="Theme"');
     expect(source).toContain('title="Interface scale"');
     expect(source).toContain('ariaLabel="Interface scale"');
     expect(source).toContain('title="Monospace size"');
     expect(source).toContain('aria-label="Monospace size"');
     expect(settingsSource).toContain('<WindowedPageButton>Reset</WindowedPageButton>');
-    expect(settingsSource).not.toContain('<WindowedPageButton tone="accent">Apply</WindowedPageButton>');
-    expect(settingsSource).not.toContain('<WindowedSettingsGroup title="Providers"');
-    expect(settingsSource).not.toContain('Add provider');
+    expect(settingsSource).toContain('<WindowedPageButton tone="accent">Apply</WindowedPageButton>');
+    expect(settingsSource).toContain("activeSection === 'providers'");
+    expect(settingsSource).toContain("activeSection === 'desktop'");
+    expect(settingsSource).toContain("activeSection === 'shortcuts'");
     expect(settingsSource).not.toContain('WindowedDataRow name="OpenAI"');
     expect(source).not.toContain('title="Settings sections"');
   });
