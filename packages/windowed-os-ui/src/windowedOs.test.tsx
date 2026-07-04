@@ -11,6 +11,7 @@ import {
   WindowedBrowserToolbar,
   WindowedChartPanel,
   WindowedChatToolLauncher,
+  WindowedChildWindowEmptyState,
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
@@ -1027,6 +1028,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(html).toContain('class="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</div>');
     expect(html).toContain('class="wos-badge">Synced</span>');
     expect(html).toContain('class="wos-badge">5 items</span>');
+  });
+
+  it('renders child window empty states through a reusable windowed primitive', () => {
+    const html = renderToStaticMarkup(
+      <WindowedChildWindowEmptyState title="Browser unavailable">The Browser extension is not registered.</WindowedChildWindowEmptyState>,
+    );
+
+    expect(html).toContain('class="wos-chat-child-window-empty"');
+    expect(html).toContain('class="wos-state-block" data-tone="warning"');
+    expect(html).toContain('Browser unavailable');
+    expect(html).toContain('The Browser extension is not registered.');
   });
 
   it('keeps canonical design tokens in the scoped token stylesheet', () => {

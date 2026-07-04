@@ -269,6 +269,23 @@ export function WindowedWorkspaceLocationBar({
   );
 }
 
+export interface WindowedChildWindowEmptyStateProps {
+  title: string;
+  children: ReactNode;
+  tone?: WindowedStateBlockProps['tone'];
+  className?: string;
+}
+
+export function WindowedChildWindowEmptyState({ title, children, tone = 'warning', className }: WindowedChildWindowEmptyStateProps) {
+  return (
+    <div className={cx('wos-chat-child-window-empty', className)}>
+      <WindowedStateBlock title={title} tone={tone}>
+        {children}
+      </WindowedStateBlock>
+    </div>
+  );
+}
+
 export interface WindowedPageShellProps {
   children: ReactNode;
   className?: string;

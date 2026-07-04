@@ -9,6 +9,7 @@ import {
   WindowedChatSurface,
   WindowedChatToolLauncher,
   type WindowedChatToolLauncherItem,
+  WindowedChildWindowEmptyState,
   WindowedMenuPanel,
   WindowedSegmentedControl,
   WindowedStateBlock,
@@ -877,11 +878,9 @@ function WindowedChatTerminalWindowBody({
           instanceId={`${parentWindowId}:terminal`}
         />
       ) : (
-        <div className="wos-chat-child-window-empty">
-          <WindowedStateBlock title="Terminal unavailable" tone="warning">
-            The Terminal extension is not registered.
-          </WindowedStateBlock>
-        </div>
+        <WindowedChildWindowEmptyState title="Terminal unavailable">
+          The Terminal extension is not registered.
+        </WindowedChildWindowEmptyState>
       )}
     </div>
   );
@@ -964,11 +963,7 @@ function WindowedChatFilesWindowBody({
           instanceId={`${parentWindowId}:files`}
         />
       ) : (
-        <div className="wos-chat-child-window-empty">
-          <WindowedStateBlock title="Workspace unavailable" tone="warning">
-            The Files extension is not registered.
-          </WindowedStateBlock>
-        </div>
+        <WindowedChildWindowEmptyState title="Workspace unavailable">The Files extension is not registered.</WindowedChildWindowEmptyState>
       )}
     </div>
   );
@@ -1005,11 +1000,7 @@ function WindowedChatBrowserWindowBody({
           instanceId={`${parentWindowId}:browser`}
         />
       ) : (
-        <div className="wos-chat-child-window-empty">
-          <WindowedStateBlock title="Browser unavailable" tone="warning">
-            The Browser extension is not registered.
-          </WindowedStateBlock>
-        </div>
+        <WindowedChildWindowEmptyState title="Browser unavailable">The Browser extension is not registered.</WindowedChildWindowEmptyState>
       )}
     </div>
   );

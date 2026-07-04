@@ -31,6 +31,8 @@ export {
   WindowedChatToolLauncher,
   type WindowedChatToolLauncherItem,
   type WindowedChatToolLauncherProps,
+  WindowedChildWindowEmptyState,
+  type WindowedChildWindowEmptyStateProps,
   type WindowedDataColumn,
   WindowedDataRow,
   type WindowedDataRowProps,
