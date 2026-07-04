@@ -66,11 +66,13 @@
 }
 
 .wos-theme-variant-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(396px, 100%), 1fr));
   min-height: 520px;
 }
 
 .wos-theme-variant-grid > .windowed-os-shell {
+  box-sizing: border-box;
+  width: 100%;
   min-height: 520px;
   padding: 18px;
 }
@@ -729,6 +731,7 @@
   position: absolute;
   isolation: isolate;
   display: grid;
+  box-sizing: border-box;
   min-width: min(360px, calc(100vw - 32px));
   min-height: min(260px, calc(100vh - 32px));
   grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);

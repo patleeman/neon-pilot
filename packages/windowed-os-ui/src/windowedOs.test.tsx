@@ -100,7 +100,8 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('@container wos-page-shell (max-width: 420px)');
     expect(stylesSource).toContain('.wos-settings-row__actions .wos-segmented-control {\n    display: grid;\n    width: 100%;');
     expect(stylesSource).toContain('.wos-settings-row__actions .wos-segmented-control__item {\n    width: 100%;\n    border-right: 0;');
-    expect(stylesSource).toContain('.wos-theme-variant-grid {\n  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));');
+    expect(stylesSource).toContain('.wos-theme-variant-grid {\n  grid-template-columns: repeat(auto-fit, minmax(min(396px, 100%), 1fr));');
+    expect(stylesSource).toContain('.wos-theme-variant-grid > .windowed-os-shell {\n  box-sizing: border-box;\n  width: 100%;');
     expect(stylesSource).toContain('.wos-theme-phase-grid {\n  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));');
     expect(stylesSource).toContain('.wos-theme-phase-card {\n  min-height: 320px;');
     expect(stylesSource).toContain(".wos-key-value-grid[data-columns='4']");
@@ -574,6 +575,9 @@ describe('WindowFrame', () => {
 
     expect(stylesSource).toContain('min-width: min(360px, calc(100vw - 32px));');
     expect(stylesSource).toContain('min-height: min(260px, calc(100vh - 32px));');
+    expect(stylesSource).toContain(
+      '.wos-window {\n  position: absolute;\n  isolation: isolate;\n  display: grid;\n  box-sizing: border-box;',
+    );
     expect(stylesSource).not.toContain('min-width: 360px;\n  min-height: 260px;');
   });
 
