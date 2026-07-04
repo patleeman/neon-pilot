@@ -1636,8 +1636,12 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
+    expect(source).toContain('function ModelArenaPageStory');
     expect(source).toContain('export const ModelArenaPage');
-    expect(source).toContain('title="Model Arena"');
+    expect(source).toContain('export const DarkModelArenaPage');
+    expect(source).toContain('<ModelArenaPageStory theme="dark" />');
+    expect(source).toContain("title={theme === 'dark' ? 'Model Arena - dark' : 'Model Arena'}");
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Model duels"');
     expect(source).toContain('title="Overview"');
     expect(source).toContain('title="Status"');
@@ -1755,8 +1759,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source.slice(source.indexOf('export const GatewaysPage'), source.indexOf('export const ModelArenaPage'))).toContain(
       'export const AIGatewayPage',
     );
-    expect(source.slice(source.indexOf('export const ModelArenaPage'), source.indexOf('export const DiagnosticsPage'))).toContain(
-      'title="Model Arena"\n        accent="model-arena"',
+    expect(source.slice(source.indexOf('function ModelArenaPageStory'), source.indexOf('export const DiagnosticsPage'))).toContain(
+      'accent="model-arena"',
     );
     expect(source.slice(source.indexOf('export const SkillsPage'), source.indexOf('export const CoreDataPrimitives'))).toContain(
       'title="Skills"\n        accent="skills"',
