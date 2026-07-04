@@ -5441,6 +5441,15 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   gap: 8px;
 }
 
+.wos-arena-challenger-table {
+  --wos-data-column-template: minmax(112px, 0.9fr) minmax(180px, 1.35fr) auto;
+}
+
+.wos-arena-challenger-table .wos-data-row__cell {
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+}
+
 .windowed-os-shell :where(.wos-page-main__heading h1, .wos-window-route-body .ui-app-page-title) {
   font-family: var(--wos-font-display);
   font-size: 17px;
