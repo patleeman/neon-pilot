@@ -1895,6 +1895,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(skillsSource).toContain('title="Installed"');
     expect(skillsSource).toContain('ariaLabel="Skills view"');
     expect(skillsSource).toContain('<WindowedDialog title="local-qa"');
+    expect(skillsSource.indexOf('</WindowFrame>')).toBeLessThan(skillsSource.indexOf('<WindowedDialog title="local-qa"'));
     expect(skillsSource).not.toContain('title="Inventory"');
     expect(skillsSource).not.toContain('title="Installed skills"');
   });

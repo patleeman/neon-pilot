@@ -2770,21 +2770,21 @@ function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
-        <WindowedDialog title="local-qa" meta="Marketplace skill" accent="skills" parentWindowTitle="Skills" onClose={() => undefined}>
-          <WindowedDialogStack>
-            <WindowedDialogCopy>Browser and app checks for local product QA.</WindowedDialogCopy>
-            <WindowedKeyValueList
-              items={[
-                { label: 'Capability', value: 'QA' },
-                { label: 'Source', value: 'Agent plugin' },
-                { label: 'Trust', value: 'Trusted' },
-                { label: 'State', value: 'Available' },
-                { label: 'Identifier', value: 'agent-plugin:local-qa' },
-              ]}
-            />
-          </WindowedDialogStack>
-        </WindowedDialog>
       </WindowFrame>
+      <WindowedDialog title="local-qa" meta="Marketplace skill" accent="skills" parentWindowTitle="Skills" onClose={() => undefined}>
+        <WindowedDialogStack>
+          <WindowedDialogCopy>Browser and app checks for local product QA.</WindowedDialogCopy>
+          <WindowedKeyValueList
+            items={[
+              { label: 'Capability', value: 'QA' },
+              { label: 'Source', value: 'Agent plugin' },
+              { label: 'Trust', value: 'Trusted' },
+              { label: 'State', value: 'Available' },
+              { label: 'Identifier', value: 'agent-plugin:local-qa' },
+            ]}
+          />
+        </WindowedDialogStack>
+      </WindowedDialog>
     </div>
   );
 }
