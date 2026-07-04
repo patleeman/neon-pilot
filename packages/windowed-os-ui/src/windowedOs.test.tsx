@@ -1178,7 +1178,11 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat [data-chat-transcript-panel='1']");
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .border-l {\n  border-left-width: 0 !important;');
+    expect(stylesSource).toContain(
+      ".windowed-os-shell .wos-window-route-body--chat .border-l,\n.windowed-os-shell .wos-window-route-body--chat [class~='border-l'],\n.windowed-os-shell .wos-window-route-body--chat [class*='border-l-']",
+    );
+    expect(stylesSource).toContain('border-left: 0 !important;\n  border-left-width: 0 !important;');
+    expect(stylesSource).toContain('border-left-color: transparent !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant');
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));');
@@ -1968,11 +1972,23 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
     const workbenchRailRule = stylesSource.match(/\.wos-window-route-body \.ui-workbench-rail \{[^}]+}/)?.[0] ?? '';
     const contextRailRule = stylesSource.match(/\.wos-window-route-body \.ui-context-rail \{[^}]+}/)?.[0] ?? '';
+    const inheritedRailRule =
+      stylesSource.match(/\.windowed-os-shell\n {2}\.wos-window-route-body--chat\n {2}:where\([^}]+box-shadow: none !important;\n}/)?.[0] ??
+      '';
 
     expect(workbenchRailRule).toContain('border-left: 0 !important;');
     expect(contextRailRule).toContain('border-left: 0 !important;');
     expect(workbenchRailRule).not.toContain('border-left: 2px');
     expect(contextRailRule).not.toContain('border-left: 2px');
+    expect(inheritedRailRule).toContain('.ui-composer-notice');
+    expect(inheritedRailRule).toContain("[class*='border-l-']");
+    expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf');
+    expect(inheritedRailRule).toContain('.ui-context-lifecycle-marker');
+    expect(inheritedRailRule).toContain('.ui-context-shelf__item');
+    expect(inheritedRailRule).toContain('.ui-trace-cluster__body');
+    expect(inheritedRailRule).toContain('content: none !important;');
+    expect(inheritedRailRule).toContain('border-left: 0 !important;');
+    expect(inheritedRailRule).toContain('box-shadow: none !important;');
   });
 
   it('documents the Settings-only two-column rail pattern', () => {

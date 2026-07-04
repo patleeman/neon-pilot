@@ -5923,6 +5923,35 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   content: none;
 }
 
+.windowed-os-shell
+  .wos-window-route-body--chat
+  :where(
+    .border-l,
+    [class*='border-l-'],
+    .ui-composer-notice,
+    .ui-composer-attachment-shelf,
+    .ui-context-lifecycle-marker,
+    .ui-context-shelf__item,
+    .ui-trace-cluster__body,
+    [data-context-shelf]
+  )::before,
+.windowed-os-shell
+  .wos-window-route-body--chat
+  :where(
+    .border-l,
+    [class*='border-l-'],
+    .ui-composer-notice,
+    .ui-composer-attachment-shelf,
+    .ui-context-lifecycle-marker,
+    .ui-context-shelf__item,
+    .ui-trace-cluster__body,
+    [data-context-shelf]
+  )::after {
+  content: none !important;
+  border-left: 0 !important;
+  box-shadow: none !important;
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta :where(svg) {
   color: var(--wos-ink-600);
 }
@@ -5938,8 +5967,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   font-family: var(--wos-font-body);
 }
 
-.windowed-os-shell .wos-window-route-body--chat .border-l {
+.windowed-os-shell .wos-window-route-body--chat .border-l,
+.windowed-os-shell .wos-window-route-body--chat [class~='border-l'],
+.windowed-os-shell .wos-window-route-body--chat [class*='border-l-'] {
+  border-left: 0 !important;
   border-left-width: 0 !important;
+  border-left-color: transparent !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-message-card-user,
