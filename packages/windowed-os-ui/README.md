@@ -33,6 +33,7 @@ Use this package as the canonical implementation target for windowed OS shell ch
 
 - `pnpm --dir packages/windowed-os-ui run storybook` starts the isolated Storybook on port `6016`.
 - `pnpm --dir packages/windowed-os-ui run build:storybook` builds the canonical visual reference.
+- `pnpm --dir packages/windowed-os-ui run qa:storybook` checks the built canonical stories at wide and compact viewports for missing stories, horizontal overflow, and clipped buttons. Run `build:storybook` first.
 - `pnpm --dir packages/windowed-os-ui run test` runs the package guardrails for Storybook coverage and stable-shell leakage.
 - `pnpm --dir packages/windowed-os-ui run build` type-checks the package exports.
 
