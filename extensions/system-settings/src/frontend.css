@@ -536,6 +536,54 @@
   font-size: 0.6875rem;
 }
 
+.settings-page-windowed .settings-page-control-actions .ui-segmented-control {
+  overflow: hidden;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 0.5rem;
+  background: var(--wos-surface-1);
+}
+
+.settings-page-windowed .settings-page-control-actions .ui-segmented-button {
+  min-height: 1.75rem;
+  border-color: var(--wos-ink-900);
+  background: transparent;
+  color: var(--wos-ink-700);
+  font-family: var(--wos-font-display);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.settings-page-windowed .settings-page-control-actions .ui-segmented-button:hover {
+  background: var(--wos-surface-3);
+  color: var(--wos-ink-900);
+}
+
+.settings-page-windowed .settings-page-control-actions .ui-segmented-button-active,
+.settings-page-windowed .settings-page-control-actions .ui-segmented-button-active:hover {
+  background: var(--wos-settings);
+  color: var(--wos-ink-900);
+}
+
+.settings-page-windowed .settings-page-control-actions .ui-swatch-option {
+  min-height: 1.75rem;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 0.5rem;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.settings-page-windowed .settings-page-control-actions .ui-swatch-option:hover {
+  background: var(--wos-surface-3);
+}
+
+.settings-page-windowed .settings-page-control-actions .ui-swatch-option-checked {
+  background: var(--wos-settings);
+  color: var(--wos-ink-900);
+}
+
 .settings-page-windowed .settings-page-provider-editor {
   padding: 0.75rem 0.625rem;
 }

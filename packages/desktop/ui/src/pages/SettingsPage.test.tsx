@@ -440,6 +440,10 @@ describe('SettingsPage', () => {
     expect(itemRule).toContain('border-radius: 0;');
     expect(source).toContain('.settings-page-windowed .settings-page-row-group.wos-settings-group');
     expect(source).toContain('.settings-page-windowed .settings-page-control-row.wos-settings-row');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-control');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-button-active');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-swatch-option');
+    expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-swatch-option-checked');
   });
 
   it('keeps windowed extension settings panels out of nested settings groups', () => {
