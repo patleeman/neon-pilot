@@ -38,8 +38,16 @@
     [class^='border-l-'],
     [class*=':border-l'],
     [class*=':border-l-'],
+    [class~='border-s'],
+    [class*=' border-s-'],
+    [class*='border-s-'],
+    [class^='border-s-'],
+    [class*=':border-s'],
+    [class*=':border-s-'],
     [class*='before:border-l'],
     [class*='after:border-l'],
+    [class*='before:border-s'],
+    [class*='after:border-s'],
     [class*='before:left-0'],
     [class*='after:left-0'],
     [class*='before:inset-y-0'],
@@ -62,8 +70,16 @@
     [class^='border-l-'],
     [class*=':border-l'],
     [class*=':border-l-'],
+    [class~='border-s'],
+    [class*=' border-s-'],
+    [class*='border-s-'],
+    [class^='border-s-'],
+    [class*=':border-s'],
+    [class*=':border-s-'],
     [class*='before:border-l'],
     [class*='after:border-l'],
+    [class*='before:border-s'],
+    [class*='after:border-s'],
     [class*='before:left-0'],
     [class*='after:left-0'],
     [class*='before:inset-y-0'],
@@ -78,8 +94,16 @@
     [class^='border-l-'],
     [class*=':border-l'],
     [class*=':border-l-'],
+    [class~='border-s'],
+    [class*=' border-s-'],
+    [class*='border-s-'],
+    [class^='border-s-'],
+    [class*=':border-s'],
+    [class*=':border-s-'],
     [class*='before:border-l'],
     [class*='after:border-l'],
+    [class*='before:border-s'],
+    [class*='after:border-s'],
     [class*='before:left-0'],
     [class*='after:left-0'],
     [class*='before:inset-y-0'],
@@ -88,6 +112,22 @@
   content: none !important;
   border-left: 0 !important;
   border-left-width: 0 !important;
+  box-shadow: none !important;
+}
+
+.windowed-os-shell
+  :where(
+    [class*='absolute'][class*='left-0'][class*='w-px'],
+    [class*='absolute'][class*='inset-y-0'][class*='w-px'],
+    [class*='absolute'][class*='start-0'][class*='w-px'],
+    [class*='absolute'][class*='left-0'][class*='w-[1px]'],
+    [class*='absolute'][class*='inset-y-0'][class*='w-[1px]'],
+    [class*='absolute'][class*='start-0'][class*='w-[1px]']
+  ) {
+  display: none !important;
+  border-left: 0 !important;
+  border-inline-start: 0 !important;
+  background: transparent !important;
   box-shadow: none !important;
 }
 
@@ -6579,6 +6619,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class^='border-l-'],
     [class*=':border-l'],
     [class*=':border-l-'],
+    [class~='border-s'],
+    [class*=' border-s-'],
+    [class*='border-s-'],
+    [class^='border-s-'],
+    [class*=':border-s'],
+    [class*=':border-s-'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6600,6 +6646,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class^='border-l-'],
     [class*=':border-l'],
     [class*=':border-l-'],
+    [class~='border-s'],
+    [class*=' border-s-'],
+    [class*='border-s-'],
+    [class^='border-s-'],
+    [class*=':border-s'],
+    [class*=':border-s-'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6635,8 +6687,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat [class~='border-l'],
 .windowed-os-shell .wos-window-route-body--chat [class*='border-l-'],
 .windowed-os-shell .wos-window-route-body--chat [class*=':border-l'],
-.windowed-os-shell .wos-window-route-body--chat [class*=':border-l-'] {
+.windowed-os-shell .wos-window-route-body--chat [class*=':border-l-'],
+.windowed-os-shell .wos-window-route-body--chat [class~='border-s'],
+.windowed-os-shell .wos-window-route-body--chat [class*='border-s-'],
+.windowed-os-shell .wos-window-route-body--chat [class*=':border-s'],
+.windowed-os-shell .wos-window-route-body--chat [class*=':border-s-'] {
   border-left: 0 !important;
+  border-inline-start: 0 !important;
   border-left-width: 0 !important;
   border-left-color: transparent !important;
   margin-left: 0 !important;
@@ -6652,7 +6709,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     [class*='border-l-'],
     [class^='border-l-'],
     [class*=':border-l'],
-    [class*=':border-l-']
+    [class*=':border-l-'],
+    [class~='border-s'],
+    [class*=' border-s-'],
+    [class*='border-s-'],
+    [class^='border-s-'],
+    [class*=':border-s'],
+    [class*=':border-s-']
   ) {
   box-shadow: none !important;
 }

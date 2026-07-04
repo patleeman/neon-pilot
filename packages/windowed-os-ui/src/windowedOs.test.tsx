@@ -1113,10 +1113,17 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('Windowed mode does not use standalone left-edge rails for hierarchy or status.');
     expect(stylesSource).toContain("[class*=':border-l']");
     expect(stylesSource).toContain("[class*=':border-l-']");
+    expect(stylesSource).toContain("[class~='border-s']");
+    expect(stylesSource).toContain("[class*=':border-s']");
     expect(stylesSource).toContain("[class*='before:border-l']");
     expect(stylesSource).toContain("[class*='after:border-l']");
+    expect(stylesSource).toContain("[class*='before:border-s']");
+    expect(stylesSource).toContain("[class*='after:border-s']");
     expect(stylesSource).toContain("[class*='before:left-0']");
     expect(stylesSource).toContain("[class*='after:left-0']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='left-0'][class*='w-px']");
+    expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[1px]']");
+    expect(stylesSource).toContain('border-inline-start: 0 !important;');
     expect(stylesSource).toContain(')::before,\n.windowed-os-shell');
     expect(stylesSource).toContain(
       'border-left-color: transparent !important;\n  margin-left: 0 !important;\n  padding-left: 0 !important;',
@@ -1130,6 +1137,12 @@ describe('Windowed OS Storybook examples', () => {
       const value = declaration.slice(declaration.indexOf(':') + 1, -1).trim();
       return !value.startsWith('0') && !value.startsWith('transparent');
     });
+    const positiveInlineStartBorders = (stylesSource.match(/border-inline-start(?:-width|-color)?:\s*[^;]+;/g) ?? []).filter(
+      (declaration) => {
+        const value = declaration.slice(declaration.indexOf(':') + 1, -1).trim();
+        return !value.startsWith('0') && !value.startsWith('transparent');
+      },
+    );
     const positiveLeftInsetShadows = (stylesSource.match(/box-shadow:\s*[^;]+;/g) ?? []).filter((declaration) => {
       const value = declaration
         .slice(declaration.indexOf(':') + 1, -1)
@@ -1140,6 +1153,7 @@ describe('Windowed OS Storybook examples', () => {
     });
 
     expect(positiveLeftBorders).toEqual([]);
+    expect(positiveInlineStartBorders).toEqual([]);
     expect(positiveLeftInsetShadows).toEqual([]);
   });
 
@@ -2538,6 +2552,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(inheritedRailRule).toContain("[class^='border-l-']");
     expect(inheritedRailRule).toContain("[class*=':border-l']");
     expect(inheritedRailRule).toContain("[class*=':border-l-']");
+    expect(inheritedRailRule).toContain("[class~='border-s']");
+    expect(inheritedRailRule).toContain("[class*=' border-s-']");
+    expect(inheritedRailRule).toContain("[class*='border-s-']");
+    expect(inheritedRailRule).toContain("[class^='border-s-']");
+    expect(inheritedRailRule).toContain("[class*=':border-s']");
+    expect(inheritedRailRule).toContain("[class*=':border-s-']");
     expect(inheritedRailRule).toContain('.conversation-composer-region');
     expect(inheritedRailRule).toContain('.conversation-composer-inner');
     expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf');
