@@ -1528,13 +1528,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-danger');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__body');
-    expect(stylesSource).toContain('overflow: hidden;\n  border: 1.5px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('overflow: hidden;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);');
     expect(stylesSource).toContain('min-width: 0;\n  max-width: 100%;\n  border-color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('padding: 7px 9px;');
     expect(stylesSource).toContain('font-weight: 700;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs');
-    expect(stylesSource).toContain('border-top: 1.5px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs-summary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-run');
     expect(stylesSource).toContain(
@@ -1557,6 +1557,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-choice-row-details');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block {\n  overflow: hidden;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome:first-child {\n  border-bottom: var(--wos-border-strong) solid var(--wos-ink-900) !important;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__command');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__output');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__empty-output');
@@ -1585,6 +1591,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__metadata-row');
     expect(stylesSource).toContain('grid-template-columns: minmax(6rem, auto) minmax(0, 1fr);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__output');
+    expect(stylesSource).toContain('border-top: var(--wos-border-strong) solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('border-bottom: var(--wos-border-strong) solid var(--wos-ink-900);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure-summary');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-disclosure[open] .ui-disclosure-summary::after');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block');
@@ -1593,6 +1601,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__tool');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-error-block__text');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview');
+    expect(stylesSource).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-image-preview {\n  overflow: hidden;\n  width: min(100%, 560px);',
     );
