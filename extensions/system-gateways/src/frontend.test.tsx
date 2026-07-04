@@ -162,9 +162,10 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     </section>
   ),
   WindowedDialogStack: ({ children }: { children: React.ReactNode }) => <div className="wos-dialog-stack">{children}</div>,
-  WindowedEmptyState: ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
+  WindowedEmptyState: ({ children, title, tone }: { children: React.ReactNode; title?: React.ReactNode; tone?: string }) => (
     <div className="wos-empty-state" data-tone={tone}>
-      {children}
+      {title ? <div className="wos-empty-state__title">{title}</div> : null}
+      <div className="wos-empty-state__copy">{children}</div>
     </div>
   ),
   WindowedField: ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
@@ -435,8 +436,10 @@ describe('GatewaysPage', () => {
     expect(screen.getByRole('dialog', { name: 'Telegram access' })).toBeTruthy();
     expect(accessRow.getAttribute('data-selected')).toBe('true');
     expect(screen.getByText('Approved users')).toBeTruthy();
-    expect(screen.getByText('No approved users yet.').classList.contains('wos-empty-state')).toBe(true);
-    expect(screen.getByText('No approved chats yet.').classList.contains('wos-empty-state')).toBe(true);
+    expect(screen.getByText('No approved users yet').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(screen.getByText('Add Telegram user IDs above.').closest('.wos-empty-state__copy')).toBeTruthy();
+    expect(screen.getByText('No approved chats yet').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(screen.getByText('Add Telegram chat IDs above.').closest('.wos-empty-state__copy')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Telegram user ID'), { target: { value: '1191448898' } });
     expect(screen.getByRole('button', { name: 'Add approved users' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
@@ -447,7 +450,10 @@ describe('GatewaysPage', () => {
     fireEvent.click(activityRow);
     expect(screen.getByRole('dialog', { name: 'Recent activity' })).toBeTruthy();
     expect(activityRow.getAttribute('data-selected')).toBe('true');
-    expect(screen.getByText('No Telegram gateway events yet.').classList.contains('wos-empty-state')).toBe(true);
+    expect(screen.getByText('No Telegram gateway events yet').closest('.wos-empty-state__title')).toBeTruthy();
+    expect(
+      screen.getByText('Gateway events appear after Telegram receives or routes work.').closest('.wos-empty-state__copy'),
+    ).toBeTruthy();
     expect(container.querySelector('.wos-gateway-empty')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Close Recent activity'));
@@ -543,7 +549,7 @@ describe('GatewaysPage', () => {
     expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Unavailable')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Could not load' })).toBeNull();
+    expect(screen.getByText('Could not load gateway settings')).toBeTruthy();
   });
 
   it('saves and clears the bot token through the Telegram token route', async () => {
@@ -701,6 +707,36 @@ describe('GatewaysPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add approved users' }));
 
     expect(await screen.findByText('Telegram access IDs must be numeric. Chat IDs may start with -.')).toBeTruthy();
+  });
+
+  it('shows windowed mutation errors with a structured state title', async () => {
+    const calls = installFetchMock({
+      token: { configured: true },
+      patchAccess: { error: 'Telegram access IDs must be numeric. Chat IDs may start with -.' },
+    });
+    globalThis.fetch = vi.fn(async (path: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(path);
+      calls.push({ path: url, init });
+      if (url === '/api/gateways') return jsonResponse(baseGateway);
+      if (url === '/api/gateways/telegram/token' && (!init?.method || init.method === 'GET')) return jsonResponse({ configured: true });
+      if (url === '/api/gateways/telegram/access' && (!init?.method || init.method === 'GET')) {
+        return jsonResponse({ approvedUserIds: [], approvedChatIds: [] });
+      }
+      if (url === '/api/gateways/telegram/access' && init?.method === 'PATCH') {
+        return jsonResponse({ error: 'Telegram access IDs must be numeric. Chat IDs may start with -.' }, 400);
+      }
+      return jsonResponse({ error: `Unhandled ${url}` }, 404);
+    }) as never;
+
+    render(<GatewaysPage context={{ shellPresentation: 'windowed' } as never} />);
+    await screen.findByRole('heading', { name: 'Telegram' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Telegram access', exact: true }));
+    fireEvent.change(screen.getByLabelText('Telegram user ID'), { target: { value: '@alice' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add approved users' }));
+
+    expect(await screen.findByText('Gateway needs attention')).toBeTruthy();
+    expect(screen.getByText('Telegram access IDs must be numeric. Chat IDs may start with -.')).toBeTruthy();
   });
 
   it('shows a recovery state when gateway APIs fail', async () => {

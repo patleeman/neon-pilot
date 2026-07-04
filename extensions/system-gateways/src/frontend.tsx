@@ -280,7 +280,9 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
         <WindowedPageShell layout="standard" className="gateways-page-windowed">
           <WindowedPageMain title="Telegram" actions={<WindowedPageButton onClick={() => void load()}>Try again</WindowedPageButton>}>
             <WindowedPageSection title="Status" meta="Unavailable">
-              <WindowedStateBlock tone="danger">{error ?? 'Gateway settings could not be loaded.'}</WindowedStateBlock>
+              <WindowedStateBlock tone="danger" title="Could not load gateway settings">
+                {error ?? 'Gateway settings could not be loaded.'}
+              </WindowedStateBlock>
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
@@ -353,7 +355,9 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
           >
             {error ? (
               <WindowedPageSection title="Action needed">
-                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+                <WindowedStateBlock tone="danger" title="Gateway needs attention">
+                  {error}
+                </WindowedStateBlock>
               </WindowedPageSection>
             ) : null}
             {notice ? (
@@ -565,6 +569,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <WindowedAllowlistEditor
                   title="Approved users"
                   emptyLabel="No approved users yet."
+                  emptyDescription="Add Telegram user IDs above."
                   inputLabel="Telegram user ID"
                   placeholder="1191448898"
                   values={pageState.access.approvedUserIds}
@@ -590,6 +595,7 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                 <WindowedAllowlistEditor
                   title="Approved chats"
                   emptyLabel="No approved chats yet."
+                  emptyDescription="Add Telegram chat IDs above."
                   inputLabel="Telegram chat ID"
                   placeholder="-1001192755030"
                   values={pageState.access.approvedChatIds}
@@ -630,7 +636,9 @@ export function GatewaysPage({ context }: Pick<ExtensionSurfaceProps, 'context'>
                   ))}
                 </WindowedTimeline>
               ) : (
-                <WindowedEmptyState>No Telegram gateway events yet.</WindowedEmptyState>
+                <WindowedEmptyState title="No Telegram gateway events yet">
+                  Gateway events appear after Telegram receives or routes work.
+                </WindowedEmptyState>
               )
             ) : null}
           </WindowedDialog>
@@ -927,6 +935,7 @@ export function GatewaysContextRail() {
 function WindowedAllowlistEditor({
   title,
   emptyLabel,
+  emptyDescription,
   inputLabel,
   placeholder,
   values,
@@ -938,6 +947,7 @@ function WindowedAllowlistEditor({
 }: {
   title: string;
   emptyLabel: string;
+  emptyDescription: string;
   inputLabel: string;
   placeholder: string;
   values: string[];
@@ -1003,7 +1013,7 @@ function WindowedAllowlistEditor({
           ))}
         </WindowedList>
       ) : (
-        <WindowedEmptyState>{emptyLabel}</WindowedEmptyState>
+        <WindowedEmptyState title={emptyLabel.replace(/\.$/, '')}>{emptyDescription}</WindowedEmptyState>
       )}
     </div>
   );
