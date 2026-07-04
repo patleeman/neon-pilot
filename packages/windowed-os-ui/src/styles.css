@@ -1552,6 +1552,42 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   padding: var(--wos-space-4) var(--wos-space-5);
 }
 
+.wos-window-route-body .ui-workbench-new-tab-page {
+  align-items: stretch;
+  justify-content: stretch;
+  background:
+    linear-gradient(oklch(20% 0.01 60 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(20% 0.01 60 / 0.08) 1px, transparent 1px),
+    var(--wos-surface-1);
+  background-size: 20px 20px;
+  padding: var(--wos-space-5);
+  text-align: left;
+}
+
+.wos-window-route-body .ui-workbench-new-tab-page__inner {
+  display: flex;
+  max-width: none !important;
+  flex-direction: column;
+  justify-content: center;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wos-surface-1) 92%, white);
+  padding: var(--wos-space-6);
+  box-shadow: 6px 6px 0 oklch(20% 0.01 60 / 0.16);
+}
+
+.wos-window-route-body .ui-workbench-new-tab-page__label {
+  color: var(--wos-ink-500);
+  font: var(--wos-text-eyebrow);
+  letter-spacing: 0.02em;
+}
+
+.wos-window-route-body .ui-workbench-new-tab-page__title {
+  margin-top: var(--wos-space-2);
+  color: var(--wos-ink-900);
+  font: var(--wos-text-section);
+}
+
 .wos-window-route-body .ui-workbench-new-tab-grid {
   gap: var(--wos-space-4);
 }

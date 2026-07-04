@@ -1427,10 +1427,12 @@ function WorkbenchNewTabPage({
   }, [onStartSideChat, conversationId]);
 
   return (
-    <div className="flex h-full min-w-0 items-center justify-center px-2 text-center select-text sm:px-4">
-      <div className="w-full min-w-0" style={{ maxWidth: 'min(36rem, 100%)' }}>
-        <SectionLabel tone="secondary">Workbench</SectionLabel>
-        <h2 className="mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
+    <div className="ui-workbench-new-tab-page flex h-full min-w-0 items-center justify-center px-2 text-center select-text sm:px-4">
+      <div className="ui-workbench-new-tab-page__inner w-full min-w-0" style={{ maxWidth: 'min(36rem, 100%)' }}>
+        <SectionLabel className="ui-workbench-new-tab-page__label" tone="secondary">
+          Workbench
+        </SectionLabel>
+        <h2 className="ui-workbench-new-tab-page__title mt-2 text-xl font-semibold text-primary text-balance">Open a tab</h2>
         <div className="ui-workbench-new-tab-grid mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(10rem,100%),1fr))] gap-2">
           {canOpenFileExplorer ? (
             <ActionTile

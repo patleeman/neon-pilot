@@ -10,6 +10,7 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
    - The chat composer/input box does not have the same dark bordered windowed treatment.
    - Some chat buttons use the dark bordered style while others still look like stable Neon Pilot controls.
    - Run a broader pass on chat transcript rows, tool blocks, composer, workbench tabs, empty workbench state, borders, spacing, typography, and button treatment so the whole conversation window matches the windowed OS design.
+   - 2026-07-03 progress: attached workbench new-tab/empty surface now has scoped windowed hooks and a compact dark-bordered launch panel; verified live with the real chat window workbench.
 
 2. Drawing/Scally mode needs windowed styling and sizing fixes.
    - Drawing mode colors do not match the windowed OS palette.
