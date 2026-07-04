@@ -877,6 +877,7 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).not.toContain('.wos-window-route-body > * {\n  flex: 1 1 auto;');
     expect(stylesSource).toContain(".wos-window-route-body > [role='status'][aria-live='polite']");
+    expect(stylesSource).toContain(".wos-window-route-body > [role='status'][aria-live='polite']:empty::before");
     expect(stylesSource).toContain('content: attr(aria-label);');
     expect(stylesSource).toContain('.wos-window-route-loading {\n  display: grid;');
     expect(stylesSource).toContain('place-items: center;');

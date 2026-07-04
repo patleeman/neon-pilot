@@ -1127,7 +1127,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   font: var(--wos-text-body);
 }
 
-.wos-window-route-body > [role='status'][aria-live='polite']::before {
+.wos-window-route-body > [role='status'][aria-live='polite']:empty::before {
   content: attr(aria-label);
 }
 
