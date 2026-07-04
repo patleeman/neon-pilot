@@ -2493,41 +2493,40 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
             </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
-
-        <WindowedDialog
-          title="system-browser"
-          meta="update available"
-          accent="extensions"
-          parentWindowTitle="Extensions"
-          onClose={() => undefined}
-          actions={
-            <>
-              <WindowedPageButton>Open</WindowedPageButton>
-              <WindowedPageButton>Settings</WindowedPageButton>
-              <WindowedPageButton>Folder</WindowedPageButton>
-            </>
-          }
-        >
-          <div className="wos-extension-detail-grid">
-            <WindowedKeyValueList
-              items={[
-                { label: 'State', value: 'Update available' },
-                { label: 'Source', value: 'Built-in' },
-                { label: 'Version', value: 'v0.11.39' },
-                { label: 'Settings', value: 'Configurable' },
-              ]}
-            />
-            <WindowedKeyValueList
-              items={[
-                { label: 'Appears in', value: 'Workbench, tools' },
-                { label: 'Skills', value: 'None' },
-                { label: 'Tools', value: 'browser_snapshot, browser_cdp' },
-              ]}
-            />
-            <p className="wos-extension-detail-description">Workbench browser and browser automation surfaces.</p>
-          </div>
-        </WindowedDialog>
       </WindowFrame>
+      <WindowedDialog
+        title="system-browser"
+        meta="update available"
+        accent="extensions"
+        parentWindowTitle="Extensions"
+        onClose={() => undefined}
+        actions={
+          <>
+            <WindowedPageButton>Open</WindowedPageButton>
+            <WindowedPageButton>Settings</WindowedPageButton>
+            <WindowedPageButton>Folder</WindowedPageButton>
+          </>
+        }
+      >
+        <div className="wos-extension-detail-grid">
+          <WindowedKeyValueList
+            items={[
+              { label: 'State', value: 'Update available' },
+              { label: 'Source', value: 'Built-in' },
+              { label: 'Version', value: 'v0.11.39' },
+              { label: 'Settings', value: 'Configurable' },
+            ]}
+          />
+          <WindowedKeyValueList
+            items={[
+              { label: 'Appears in', value: 'Workbench, tools' },
+              { label: 'Skills', value: 'None' },
+              { label: 'Tools', value: 'browser_snapshot, browser_cdp' },
+            ]}
+          />
+          <p className="wos-extension-detail-description">Workbench browser and browser automation surfaces.</p>
+        </div>
+      </WindowedDialog>
     </div>
   );
 }

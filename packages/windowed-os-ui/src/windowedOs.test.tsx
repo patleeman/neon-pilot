@@ -634,6 +634,15 @@ describe('WindowedDialog content primitives', () => {
     expect(html).toContain('class="wos-dialog-copy"');
     expect(html).toContain('Browser and app checks for local product QA.');
   });
+
+  it('uses scoped windowed focus treatment for focused subwindow frames', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain('.wos-dialog:focus {\n  outline: none;\n}');
+    expect(stylesSource).toContain('.wos-dialog:focus-visible {');
+    expect(stylesSource).toContain('0 0 0 4px var(--wos-ink-900)');
+  });
 });
 
 describe('WindowedTerminalFrame', () => {
@@ -1912,6 +1921,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(extensionsSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
     expect(extensionsSource).toContain('<WindowedDialog');
     expect(extensionsSource).toContain('title="system-browser"');
+    expect(extensionsSource.indexOf('</WindowFrame>')).toBeLessThan(extensionsSource.indexOf('<WindowedDialog'));
     expect(extensionsSource).not.toContain('title="Inventory"');
     expect(extensionsSource).not.toContain('title="Installed extensions"');
     expect(extensionsSource).not.toContain('title="Review queue"');

@@ -915,6 +915,10 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   pointer-events: auto;
 }
 
+.wos-dialog:focus {
+  outline: none;
+}
+
 .wos-dialog-layer[data-modal='true'] .wos-dialog {
   width: min(760px, 100%);
 }
@@ -922,6 +926,13 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog[data-parent-window-attached='true'] {
   box-shadow:
     8px 8px 0 color-mix(in srgb, var(--wos-ink-900) 13%, transparent),
+    var(--wos-shadow-window);
+}
+
+.wos-dialog:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--wos-surface-0),
+    0 0 0 4px var(--wos-ink-900),
     var(--wos-shadow-window);
 }
 
