@@ -853,7 +853,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
-    expect(tokensSource).toContain('--wos-titlebar-h: 32px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 30px;');
     expect(tokensSource).toContain('--wos-window-control-size: 20px;');
     expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 34px);');
     expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
