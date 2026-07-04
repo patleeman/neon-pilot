@@ -997,19 +997,21 @@ describe('Windowed OS Storybook examples', () => {
       <WindowedBrowserToolbar
         address="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"
         actions={[
-          { id: 'back', label: 'Go back', icon: '←', disabled: true },
+          { id: 'back', label: 'Go back', icon: '←', disabled: true, title: 'Previous page' },
           { id: 'forward', label: 'Go forward', icon: '→', disabled: true },
           { id: 'reload', label: 'Reload browser preview', icon: '↻' },
           { id: 'close', label: 'Close browser tab', icon: '×', placement: 'trailing' },
         ]}
+        placeholder="https://example.com"
         readOnly
       />,
     );
 
     expect(html).toContain('class="wos-browser-toolbar"');
     expect(html).toContain('aria-label="Browser controls"');
-    expect(html).toContain('class="wos-browser-toolbar__button" aria-label="Go back" disabled=""');
+    expect(html).toContain('aria-label="Go back" disabled="" title="Previous page"');
     expect(html).toContain('class="wos-browser-toolbar__address" aria-label="Browser URL"');
+    expect(html).toContain('placeholder="https://example.com"');
     expect(html).toContain('readonly=""');
     expect(html).toContain('value="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"');
     expect(html.indexOf('aria-label="Close browser tab"')).toBeGreaterThan(html.indexOf('wos-browser-toolbar__address'));

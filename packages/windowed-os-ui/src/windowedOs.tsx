@@ -9,6 +9,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  type Ref,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
   useEffect,
@@ -187,6 +188,7 @@ export interface WindowedBrowserToolbarAction {
   icon: ReactNode;
   disabled?: boolean;
   placement?: 'leading' | 'trailing';
+  title?: string;
   onSelect?: () => void;
 }
 
@@ -197,6 +199,8 @@ export interface WindowedBrowserToolbarProps {
   addressLabel?: string;
   readOnly?: boolean;
   className?: string;
+  inputRef?: Ref<HTMLInputElement>;
+  placeholder?: string;
   onAddressChange?: (value: string) => void;
   onSubmit?: FormHTMLAttributes<HTMLFormElement>['onSubmit'];
 }
@@ -208,6 +212,8 @@ export function WindowedBrowserToolbar({
   addressLabel = 'Browser URL',
   readOnly = false,
   className,
+  inputRef,
+  placeholder,
   onAddressChange,
   onSubmit,
 }: WindowedBrowserToolbarProps) {
@@ -220,6 +226,7 @@ export function WindowedBrowserToolbar({
       className="wos-browser-toolbar__button"
       aria-label={action.label}
       disabled={action.disabled}
+      title={action.title ?? action.label}
       onClick={action.onSelect}
     >
       {action.icon}
@@ -237,9 +244,11 @@ export function WindowedBrowserToolbar({
     >
       {leadingActions.map(renderAction)}
       <input
+        ref={inputRef}
         className="wos-browser-toolbar__address"
         aria-label={addressLabel}
         value={address}
+        placeholder={placeholder}
         readOnly={readOnly}
         onChange={(event) => onAddressChange?.(event.currentTarget.value)}
       />

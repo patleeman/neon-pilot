@@ -906,6 +906,10 @@ describe('WorkbenchBrowserTab', () => {
     const host = container.querySelector('[data-windowed-browser-host="true"]');
     expect(host).toBeTruthy();
     expect(host?.className).toContain('ui-windowed-browser-host');
+    expect(container.querySelector('.wos-browser-toolbar')).toBeTruthy();
+    expect(container.querySelector<HTMLInputElement>('.wos-browser-toolbar__address')?.value).toBe(
+      activeBrowserTab.urlDraft || activeBrowserTab.url,
+    );
     expect(container.textContent).toContain('Browser preview is paused in desktop mode');
     expect(container.textContent).toContain(activeBrowserTab.url);
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false, deactivate: true }));

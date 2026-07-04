@@ -1,4 +1,4 @@
-import { WindowedStateBlock } from '@neon-pilot/windowed-os-ui';
+import { WindowedBrowserToolbar, type WindowedBrowserToolbarAction, WindowedStateBlock } from '@neon-pilot/windowed-os-ui';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { api } from '../../client/api';
@@ -1236,61 +1236,109 @@ export function WorkbenchBrowserTab({
     setStatus('Browser comment added to composer.');
   }
 
+  const windowedBrowserToolbarActions: WindowedBrowserToolbarAction[] = [
+    {
+      id: 'back',
+      label: 'Go back',
+      icon: '←',
+      disabled: !state?.canGoBack,
+      onSelect: () => void runBrowserCommand(() => bridge!.goBackWorkbenchBrowser({ sessionKey: browserSessionKey })),
+    },
+    {
+      id: 'forward',
+      label: 'Go forward',
+      icon: '→',
+      disabled: !state?.canGoForward,
+      onSelect: () => void runBrowserCommand(() => bridge!.goForwardWorkbenchBrowser({ sessionKey: browserSessionKey })),
+    },
+    {
+      id: 'reload',
+      label: state?.loading ? 'Stop loading' : 'Reload',
+      icon: state?.loading ? '×' : '↻',
+      onSelect: () =>
+        void runBrowserCommand(() =>
+          state?.loading
+            ? bridge!.stopWorkbenchBrowser({ sessionKey: browserSessionKey })
+            : bridge!.reloadWorkbenchBrowser({ sessionKey: browserSessionKey }),
+        ),
+    },
+    {
+      id: 'close',
+      label: 'Close browser tab',
+      icon: '×',
+      placement: 'trailing',
+      onSelect: handleCloseCurrentBrowserTab,
+    },
+  ];
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <form
-        className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void runBrowserCommand(() => bridge!.navigateWorkbenchBrowser({ url: urlDraft, sessionKey: browserSessionKey }));
-        }}
-      >
-        <IconButton
-          compact
-          size="sm"
-          disabled={!state?.canGoBack}
-          aria-label="Go back"
-          title="Go back"
-          onClick={() => void runBrowserCommand(() => bridge!.goBackWorkbenchBrowser({ sessionKey: browserSessionKey }))}
-        >
-          ←
-        </IconButton>
-        <IconButton
-          compact
-          size="sm"
-          disabled={!state?.canGoForward}
-          aria-label="Go forward"
-          title="Go forward"
-          onClick={() => void runBrowserCommand(() => bridge!.goForwardWorkbenchBrowser({ sessionKey: browserSessionKey }))}
-        >
-          →
-        </IconButton>
-        <IconButton
-          compact
-          size="sm"
-          aria-label={state?.loading ? 'Stop loading' : 'Reload'}
-          title={state?.loading ? 'Stop loading' : 'Reload'}
-          onClick={() =>
-            void runBrowserCommand(() =>
-              state?.loading
-                ? bridge!.stopWorkbenchBrowser({ sessionKey: browserSessionKey })
-                : bridge!.reloadWorkbenchBrowser({ sessionKey: browserSessionKey }),
-            )
-          }
-        >
-          {state?.loading ? '×' : '↻'}
-        </IconButton>
-        <TextInput
-          ref={urlInputRef}
-          className="min-w-0 flex-1"
-          value={urlDraft}
-          onChange={(event) => handleUrlInputChange(event.target.value)}
+      {hostedByWindowedShell ? (
+        <WindowedBrowserToolbar
+          address={urlDraft}
+          actions={windowedBrowserToolbarActions}
+          inputRef={urlInputRef}
           placeholder="https://example.com"
+          onAddressChange={handleUrlInputChange}
+          onSubmit={() => {
+            void runBrowserCommand(() => bridge!.navigateWorkbenchBrowser({ url: urlDraft, sessionKey: browserSessionKey }));
+          }}
         />
-        <IconButton compact size="sm" aria-label="Close browser tab" title="Close browser tab" onClick={handleCloseCurrentBrowserTab}>
-          ×
-        </IconButton>
-      </form>
+      ) : (
+        <form
+          className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void runBrowserCommand(() => bridge!.navigateWorkbenchBrowser({ url: urlDraft, sessionKey: browserSessionKey }));
+          }}
+        >
+          <IconButton
+            compact
+            size="sm"
+            disabled={!state?.canGoBack}
+            aria-label="Go back"
+            title="Go back"
+            onClick={() => void runBrowserCommand(() => bridge!.goBackWorkbenchBrowser({ sessionKey: browserSessionKey }))}
+          >
+            ←
+          </IconButton>
+          <IconButton
+            compact
+            size="sm"
+            disabled={!state?.canGoForward}
+            aria-label="Go forward"
+            title="Go forward"
+            onClick={() => void runBrowserCommand(() => bridge!.goForwardWorkbenchBrowser({ sessionKey: browserSessionKey }))}
+          >
+            →
+          </IconButton>
+          <IconButton
+            compact
+            size="sm"
+            aria-label={state?.loading ? 'Stop loading' : 'Reload'}
+            title={state?.loading ? 'Stop loading' : 'Reload'}
+            onClick={() =>
+              void runBrowserCommand(() =>
+                state?.loading
+                  ? bridge!.stopWorkbenchBrowser({ sessionKey: browserSessionKey })
+                  : bridge!.reloadWorkbenchBrowser({ sessionKey: browserSessionKey }),
+              )
+            }
+          >
+            {state?.loading ? '×' : '↻'}
+          </IconButton>
+          <TextInput
+            ref={urlInputRef}
+            className="min-w-0 flex-1"
+            value={urlDraft}
+            onChange={(event) => handleUrlInputChange(event.target.value)}
+            placeholder="https://example.com"
+          />
+          <IconButton compact size="sm" aria-label="Close browser tab" title="Close browser tab" onClick={handleCloseCurrentBrowserTab}>
+            ×
+          </IconButton>
+        </form>
+      )}
       <div
         ref={browserHostRef}
         className={`relative min-h-[220px] flex-1 overflow-hidden bg-base${hostedByWindowedShell ? ' ui-windowed-browser-host' : ''}`}
