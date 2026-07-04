@@ -864,6 +864,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('padding: 3px 6px 3px 8px;');
     expect(stylesSource).toContain('.wos-dialog__identity {\n  display: flex;');
     expect(stylesSource).toContain('align-items: center;\n  gap: 6px;');
+    expect(stylesSource).toContain('flex: 1 1 180px;');
+    expect(stylesSource).toContain('.ui-composer-attachment-shelf__status {\n  display: inline-flex;');
     expect(stylesSource).toContain('.wos-dialog__meta::before');
     expect(stylesSource).toContain("content: '/ ';");
     expect(stylesSource).not.toContain('--wos-surface-0: oklch(95% 0.022 75);');
@@ -1080,7 +1082,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__row');
     expect(stylesSource).toContain('flex-wrap: wrap;');
-    expect(stylesSource).toContain('flex: 1 1 260px;');
+    expect(stylesSource).toContain('flex: 1 1 180px;');
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip)',
     );
