@@ -514,7 +514,13 @@ describe('Windowed chat styling', () => {
       '.wos-chat-composer__input {\n  min-height: 32px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
     );
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta {\n  min-height: 24px;\n  margin-top: 5px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta {\n  display: flex;\n  min-height: 24px;',
+    );
+    expect(stylesSource).toContain('flex-wrap: wrap;\n  align-items: center;\n  gap: 3px 8px;');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__primary');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace');
+    expect(stylesSource).toContain(
+      ".windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace::before {\n  content: '|';",
     );
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user,\n.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant {\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',

@@ -5548,8 +5548,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta {
+  display: flex;
   min-height: 24px;
   margin-top: 5px;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 8px;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 7px;
   background: var(--wos-surface-2);
@@ -5564,6 +5569,26 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__primary,
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__primary {
+  max-width: 100%;
+  color: var(--wos-ink-900);
+  font-weight: 800;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace {
+  max-width: 100%;
+  color: var(--wos-ink-600);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta__workspace::before {
+  content: '|';
+  margin-right: 8px;
+  color: var(--wos-ink-500);
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-meta :where(svg) {
