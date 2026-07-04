@@ -1068,6 +1068,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill');
+    expect(stylesSource).toContain('display: inline-flex;\n  width: auto;\n  max-width: 100%;');
+    expect(stylesSource).not.toContain('display: flex;\n  width: 100%;\n  min-height: 28px;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-warning) 14%, var(--wos-surface-2));');
@@ -1489,7 +1491,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__state {');
     expect(stylesSource).toContain('width: min(420px, 100%);\n  min-width: 0;');
     expect(stylesSource).toContain('max-height: 100%;\n  overflow: auto;\n  scrollbar-gutter: stable both-edges;');
+    expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__state .wos-state-block {');
+    expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-surface-1) 88%, var(--wos-warning) 12%);');
+    expect(stylesSource).toContain('box-shadow: var(--wos-shadow-button);');
     expect(stylesSource).toContain('.windowed-os-shell .ui-windowed-browser-host__url {');
+    expect(stylesSource).toContain('display: block;\n  width: 100%;\n  min-width: 0;');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
     expect(stylesSource).toContain('font-size: 10px;');
     expect(stylesSource).toContain(".windowed-os-shell[data-wos-theme='dark'] .wos-state-block[data-tone='warning']");
@@ -1771,7 +1777,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const TerminalWindow');
     expect(source).toContain('<WindowedTerminalFrame cwd="/Users/patrick/workingdir/neon-pilot" status="PTY shell">');
     expect(source).toContain('PASS terminal frame tokens');
+    expect(source).toContain('function BrowserWindowStory');
     expect(source).toContain('export const BrowserWindow');
+    expect(source).toContain('export const DarkBrowserWindow');
+    expect(source).toContain('<BrowserWindowStory theme="dark" />');
     expect(source).toContain('data-windowed-subwindow="browser"');
     expect(source).toContain('aria-label="Browser child window preview"');
   });

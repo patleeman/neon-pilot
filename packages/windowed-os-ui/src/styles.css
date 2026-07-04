@@ -932,12 +932,23 @@
   scrollbar-gutter: stable both-edges;
 }
 
+.windowed-os-shell .ui-windowed-browser-host__state .wos-state-block {
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wos-surface-1) 88%, var(--wos-warning) 12%);
+  box-shadow: var(--wos-shadow-button);
+}
+
 .windowed-os-shell .ui-windowed-browser-host__state .wos-state-block__body {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .windowed-os-shell .ui-windowed-browser-host__url {
+  display: block;
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
   border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 32%, transparent);
   border-radius: 7px;
@@ -5593,13 +5604,16 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-notice {
+  display: flex;
+  min-width: 0;
   margin: 0 0 8px;
   text-align: left;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill {
-  display: flex;
-  width: 100%;
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
   min-height: 28px;
   align-items: center;
   justify-content: flex-start;
