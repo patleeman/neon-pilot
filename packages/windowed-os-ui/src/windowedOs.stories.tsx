@@ -207,7 +207,15 @@ export const TaskbarMenuPlacement: Story = {
   ),
 };
 
-function AttachedWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+function AttachedWorkbenchStory({
+  theme = 'light',
+  workbenchCollapsed = false,
+}: {
+  theme?: 'light' | 'dark';
+  workbenchCollapsed?: boolean;
+}) {
+  const workbenchToggleLabel = workbenchCollapsed ? 'Show workbench' : 'Hide workbench';
+
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 700, padding: 24 }}>
       <WindowFrame
@@ -219,7 +227,10 @@ function AttachedWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 'dark' 
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <div className="wos-window-route-body wos-window-route-body--chat">
+        <div
+          className="wos-window-route-body wos-window-route-body--chat"
+          data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}
+        >
           <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
             <div className="wos-chat-window-toolbar__label">Workbench</div>
             <div className="wos-chat-window-toolbar__actions">
@@ -227,11 +238,11 @@ function AttachedWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 'dark' 
                 type="button"
                 className="wos-chat-window-toolbar__button"
                 data-density="icon"
-                aria-label="Hide workbench"
-                title="Hide workbench"
-                aria-pressed="true"
+                aria-label={workbenchToggleLabel}
+                title={workbenchToggleLabel}
+                aria-pressed={!workbenchCollapsed}
               >
-                <StoryToolbarIcon name="workbench-visible" />
+                <StoryToolbarIcon name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'} />
               </button>
               <button
                 type="button"
@@ -266,31 +277,33 @@ function AttachedWorkbenchStory({ theme = 'light' }: { theme?: 'light' | 'dark' 
                 </WindowedMessageBubble>
               </WindowedChatMain>
             </WindowedChatSurface>
-            <aside className="wos-chat-workbench__panel" aria-label="Attached workbench">
-              <div className="wos-chat-workbench__tabs" role="tablist" aria-label="Workbench tabs">
-                <button type="button" role="tab" aria-selected="true">
-                  Files
-                </button>
-                <button type="button" role="tab" aria-selected="false">
-                  Browser
-                </button>
-                <button type="button" role="tab" aria-selected="false">
-                  Terminal
-                </button>
-              </div>
-              <WindowedPageSection title="Workspace" meta="3 open">
-                <WindowedList>
-                  <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
-                  <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
-                  <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
-                </WindowedList>
-              </WindowedPageSection>
-              <WindowedPageSection title="Terminal" meta="Last command">
-                <WindowedStateBlock tone="positive" title="Validation passed">
-                  pnpm --dir packages/windowed-os-ui run build
-                </WindowedStateBlock>
-              </WindowedPageSection>
-            </aside>
+            {!workbenchCollapsed ? (
+              <aside className="wos-chat-workbench__panel" aria-label="Attached workbench">
+                <div className="wos-chat-workbench__tabs" role="tablist" aria-label="Workbench tabs">
+                  <button type="button" role="tab" aria-selected="true">
+                    Files
+                  </button>
+                  <button type="button" role="tab" aria-selected="false">
+                    Browser
+                  </button>
+                  <button type="button" role="tab" aria-selected="false">
+                    Terminal
+                  </button>
+                </div>
+                <WindowedPageSection title="Workspace" meta="3 open">
+                  <WindowedList>
+                    <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
+                    <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
+                    <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
+                  </WindowedList>
+                </WindowedPageSection>
+                <WindowedPageSection title="Terminal" meta="Last command">
+                  <WindowedStateBlock tone="positive" title="Validation passed">
+                    pnpm --dir packages/windowed-os-ui run build
+                  </WindowedStateBlock>
+                </WindowedPageSection>
+              </aside>
+            ) : null}
           </div>
         </div>
       </WindowFrame>
@@ -304,6 +317,14 @@ export const ChatWithAttachedWorkbench: Story = {
 
 export const DarkChatWithAttachedWorkbench: Story = {
   render: () => <AttachedWorkbenchStory theme="dark" />,
+};
+
+export const ChatWithCollapsedWorkbench: Story = {
+  render: () => <AttachedWorkbenchStory workbenchCollapsed />,
+};
+
+export const DarkChatWithCollapsedWorkbench: Story = {
+  render: () => <AttachedWorkbenchStory theme="dark" workbenchCollapsed />,
 };
 
 export const NavigationPrimitives: Story = {

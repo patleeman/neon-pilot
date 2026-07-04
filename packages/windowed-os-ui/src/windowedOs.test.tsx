@@ -1364,14 +1364,30 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('function AttachedWorkbenchStory');
     expect(source).toContain('export const ChatWithAttachedWorkbench');
     expect(source).toContain('export const DarkChatWithAttachedWorkbench');
+    expect(source).toContain('export const ChatWithCollapsedWorkbench');
+    expect(source).toContain('export const DarkChatWithCollapsedWorkbench');
     expect(source).toContain('<AttachedWorkbenchStory theme="dark" />');
+    expect(source).toContain('<AttachedWorkbenchStory workbenchCollapsed />');
+    expect(source).toContain('<AttachedWorkbenchStory theme="dark" workbenchCollapsed />');
     expect(source).toContain('data-wos-theme={theme}');
+    expect(source).toContain("data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}");
     expect(source).toContain('className="wos-chat-window-toolbar"');
-    expect(source).toContain('aria-label="Hide workbench"');
-    expect(source).toContain('aria-pressed="true"');
+    expect(source).toContain("const workbenchToggleLabel = workbenchCollapsed ? 'Show workbench' : 'Hide workbench';");
+    expect(source).toContain('aria-label={workbenchToggleLabel}');
+    expect(source).toContain('aria-pressed={!workbenchCollapsed}');
+    expect(source).toContain("name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'}");
     expect(source).toContain('aria-label="Open Browser window"');
     expect(source).toContain('aria-label="Open Terminal window"');
     expect(source).toContain('data-density="icon"');
+  });
+
+  it('defines a one-column chat layout when the attached workbench is collapsed', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".wos-window-route-body--chat[data-workbench-collapsed='true'] .wos-chat-workbench");
+    expect(stylesSource).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(stylesSource).toContain('grid-template-rows: minmax(0, 1fr);');
   });
 
   it('defines a reusable danger tone for windowed page buttons', () => {

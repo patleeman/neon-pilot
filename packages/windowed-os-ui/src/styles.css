@@ -4450,6 +4450,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   background: var(--wos-surface-1);
 }
 
+.wos-window-route-body--chat[data-workbench-collapsed='true'] .wos-chat-workbench {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .wos-chat-workbench__panel {
   display: flex;
   min-width: 0;
@@ -4651,6 +4655,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   .wos-chat-workbench {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(320px, 1fr) minmax(220px, 42%);
+  }
+
+  .wos-window-route-body--chat[data-workbench-collapsed='true'] .wos-chat-workbench {
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .wos-chat-workbench__panel {
