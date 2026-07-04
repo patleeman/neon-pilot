@@ -721,6 +721,23 @@ describe('WindowedLayout route windows', () => {
     }
   });
 
+  it('searches the Start menu by canonical app aliases', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    fireEvent.change(within(startMenu).getByRole('searchbox', { name: /search apps/i }), { target: { value: 'preferences' } });
+
+    expect(within(startMenu).getByRole('button', { name: /^settings$/i })).toBeTruthy();
+    expect(within(startMenu).queryByRole('button', { name: /^chat$/i })).toBeNull();
+
+    fireEvent.mouseDown(within(startMenu).getByRole('button', { name: /^settings$/i }), { button: 0 });
+
+    expect(await screen.findByRole('region', { name: /^settings$/i })).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
   it('closes the start menu when the desktop is clicked outside it', () => {
     const { container } = renderWindowedLayout();
 

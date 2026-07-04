@@ -223,6 +223,34 @@ describe('WindowedListItem interactions', () => {
 });
 
 describe('StartMenu interactions', () => {
+  it('filters apps by canonical aliases and ids', () => {
+    render(
+      <StartMenu
+        open
+        items={[
+          { id: 'chat', title: 'Chat', accent: 'chat', aliases: ['conversation'], onSelect: () => undefined },
+          {
+            id: 'settings',
+            title: 'Settings',
+            accent: 'settings',
+            aliases: ['preferences', 'providers'],
+            onSelect: () => undefined,
+          },
+        ]}
+        onClose={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('searchbox', { name: /search apps/i }), { target: { value: 'preferences' } });
+
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Chat' })).toBeNull();
+
+    fireEvent.change(screen.getByRole('searchbox', { name: /search apps/i }), { target: { value: 'set' } });
+
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy();
+  });
+
   it('launches apps on primary press without double-selecting on click', () => {
     const onSelect = vi.fn();
 

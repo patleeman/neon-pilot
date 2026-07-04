@@ -3241,6 +3241,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Model Arena')?.accent).toBe('model-arena');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Skills')?.accent).toBe('skills');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Settings')?.aliases).toContain('preferences');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Routines')?.aliases).toContain('agent hooks');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Extensions')?.aliases).toContain('extension manager');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.every((app) => app.aliases && app.aliases.length > 0)).toBe(true);
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.every((app) => !('meta' in app) && !('detail' in app))).toBe(true);
     expect(CANONICAL_WINDOWED_APP_SIZES.Settings).toEqual({ width: 980, height: 560 });
     expect(CANONICAL_WINDOWED_APP_SIZES.Workflows).toEqual({ width: 1040, height: 612 });

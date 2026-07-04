@@ -37,6 +37,7 @@ export interface WindowedDesktopAppDefinition {
   id: string;
   title: string;
   accent: AppAccent;
+  aliases?: readonly string[];
 }
 
 export interface WindowedDesktopAppSize {
@@ -45,17 +46,17 @@ export interface WindowedDesktopAppSize {
 }
 
 export const CANONICAL_WINDOWED_DESKTOP_APPS = [
-  { id: 'chat', title: 'Chat', accent: 'chat' },
-  { id: 'automations', title: 'Automations', accent: 'automations' },
-  { id: 'workflows', title: 'Workflows', accent: 'workflows' },
-  { id: 'gateways', title: 'Gateways', accent: 'gateways' },
-  { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways' },
-  { id: 'model-arena', title: 'Model Arena', accent: 'model-arena' },
-  { id: 'routines', title: 'Routines', accent: 'routines' },
-  { id: 'extensions', title: 'Extensions', accent: 'extensions' },
-  { id: 'skills', title: 'Skills', accent: 'skills' },
-  { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics' },
-  { id: 'settings', title: 'Settings', accent: 'settings' },
+  { id: 'chat', title: 'Chat', accent: 'chat', aliases: ['conversation', 'thread', 'new conversation'] },
+  { id: 'automations', title: 'Automations', accent: 'automations', aliases: ['tasks', 'scheduled runs', 'background runs'] },
+  { id: 'workflows', title: 'Workflows', accent: 'workflows', aliases: ['saved workflows', 'runs', 'workflow runs'] },
+  { id: 'gateways', title: 'Gateways', accent: 'gateways', aliases: ['gateway', 'connectors', 'messaging'] },
+  { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways', aliases: ['models', 'routing', 'providers'] },
+  { id: 'model-arena', title: 'Model Arena', accent: 'model-arena', aliases: ['arena', 'duels', 'model comparison'] },
+  { id: 'routines', title: 'Routines', accent: 'routines', aliases: ['hooks', 'agent hooks', 'before agent start'] },
+  { id: 'extensions', title: 'Extensions', accent: 'extensions', aliases: ['extension manager', 'apps', 'plugins'] },
+  { id: 'skills', title: 'Skills', accent: 'skills', aliases: ['skill manager', 'agent skills'] },
+  { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics', aliases: ['logs', 'telemetry', 'health'] },
+  { id: 'settings', title: 'Settings', accent: 'settings', aliases: ['preferences', 'providers', 'desktop', 'shortcuts'] },
 ] as const satisfies readonly WindowedDesktopAppDefinition[];
 
 export const CANONICAL_WINDOWED_APP_SIZES: Partial<Record<string, WindowedDesktopAppSize>> = {
@@ -1459,6 +1460,7 @@ export function WindowedChatComposer({ placeholder = 'Message Neon Pilot...', ac
 export interface StartMenuItem {
   id: string;
   title: string;
+  aliases?: readonly string[];
   accent?: AppAccent;
   count?: number;
   focused?: boolean;
@@ -1470,6 +1472,12 @@ export interface StartMenuProps {
   open: boolean;
   items: StartMenuItem[];
   onClose?: () => void;
+}
+
+function startMenuItemMatchesQuery(item: StartMenuItem, normalizedQuery: string): boolean {
+  if (item.title.toLowerCase().includes(normalizedQuery)) return true;
+  if (item.id.toLowerCase().includes(normalizedQuery)) return true;
+  return item.aliases?.some((alias) => alias.toLowerCase().includes(normalizedQuery)) ?? false;
 }
 
 export function StartMenu({ open, items, onClose }: StartMenuProps) {
@@ -1501,7 +1509,7 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return items;
-    return items.filter((item) => item.title.toLowerCase().includes(normalizedQuery));
+    return items.filter((item) => startMenuItemMatchesQuery(item, normalizedQuery));
   }, [items, query]);
   useEffect(() => {
     setActiveIndex(0);

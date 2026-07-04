@@ -1833,6 +1833,7 @@ export function WindowedLayout() {
     return {
       id: item.id,
       title: item.title,
+      aliases: CANONICAL_WINDOWED_APP_BY_TITLE.get(item.title)?.aliases,
       accent: accentForTitle(item.title),
       count: matchingWindows.length > 1 ? matchingWindows.length : undefined,
       open: matchingWindows.length > 0,
