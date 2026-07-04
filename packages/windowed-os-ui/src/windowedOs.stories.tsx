@@ -92,9 +92,9 @@ function StoryToolbarIcon({ name }: { name: 'browser' | 'terminal' | 'workbench-
   );
 }
 
-export const DesktopComposition: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 720 }}>
+function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 720 }}>
       <main className="wos-desktop" style={{ height: 678 }}>
         <StartMenu open items={canonicalDesktopApps.map((app) => ({ ...app, onSelect: () => undefined }))} />
         <WindowFrame
@@ -146,7 +146,15 @@ export const DesktopComposition: Story = {
         ]}
       />
     </div>
-  ),
+  );
+}
+
+export const DesktopComposition: Story = {
+  render: () => <DesktopCompositionStory />,
+};
+
+export const DarkDesktopComposition: Story = {
+  render: () => <DesktopCompositionStory theme="dark" />,
 };
 
 export const TaskbarMenuPlacement: Story = {

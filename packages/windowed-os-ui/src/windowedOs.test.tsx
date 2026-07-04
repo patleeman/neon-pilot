@@ -763,6 +763,8 @@ describe('Windowed OS Storybook examples', () => {
     const source = readFileSync(storiesPath, 'utf8');
 
     expect(source).toContain('export const ThemeVariants');
+    expect(source).toContain('export const DarkDesktopComposition');
+    expect(source).toContain('<DesktopCompositionStory theme="dark" />');
     expect(source).toContain('data-wos-theme={theme.resolved}');
     expect(source).toContain('data-wos-theme-mode={theme.mode}');
     expect(source).toContain('data-wos-theme-phase={theme.phase}');
