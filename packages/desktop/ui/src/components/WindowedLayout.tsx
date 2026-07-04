@@ -7,6 +7,7 @@ import {
   type TaskbarGroup,
   type TaskbarItem,
   WindowedChatSurface,
+  WindowedDialog,
   WindowedMenuPanel,
   WindowedSegmentedControl,
   WindowedStateBlock,
@@ -25,6 +26,7 @@ import {
 
 import { getDesktopBridge } from '../desktop/desktopBridge';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
+import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
@@ -48,8 +50,13 @@ import {
   type WindowedOsThemePhase,
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
-import { dispatchWindowedParentWindowLifecycle } from '../windowed/windowedChildWindowEvents';
+import {
+  dispatchWindowedParentWindowLifecycle,
+  WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT,
+  type WindowedParentWindowLifecycleDetail,
+} from '../windowed/windowedChildWindowEvents';
 import { Layout } from './Layout';
+import { findExtensionToolPanelBySlot } from './layout/workbenchRailModel';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
 type WindowKind = 'chat' | 'route';
@@ -737,9 +744,105 @@ function WindowRouteScope({ children, onNavigate, route }: { children: ReactNode
   );
 }
 
-function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boolean; onNavigate: WindowNavigate; route: string }) {
+function parentLifecycleMatchesChatWindow(
+  detail: WindowedParentWindowLifecycleDetail,
+  parentWindowId: string,
+  parentWindowTitle: string,
+): boolean {
+  if (detail.parentWindowKind !== 'chat') return false;
+  return detail.parentWindowId === parentWindowId || detail.parentWindowTitle === parentWindowTitle;
+}
+
+function WindowedChatTerminalDialog({
+  cwd,
+  onClose,
+  parentWindowId,
+  parentWindowTitle,
+  route,
+}: {
+  cwd?: string | null;
+  onClose: () => void;
+  parentWindowId: string;
+  parentWindowTitle: string;
+  route: string;
+}) {
+  const extensionRegistry = useExtensionRegistry();
+  const [parentMinimized, setParentMinimized] = useState(false);
+  const routeLocationValue = useMemo(() => routeLocation(route), [route]);
+  const terminalSurface = useMemo(() => findExtensionToolPanelBySlot(extensionRegistry.surfaces, 'terminal'), [extensionRegistry.surfaces]);
+
+  useEffect(() => {
+    function handleParentLifecycle(event: Event) {
+      const detail = (event as CustomEvent<WindowedParentWindowLifecycleDetail>).detail;
+      if (!detail || !parentLifecycleMatchesChatWindow(detail, parentWindowId, parentWindowTitle)) return;
+      if (detail.reason === 'minimized') {
+        setParentMinimized(true);
+        return;
+      }
+      if (detail.reason === 'restored') {
+        setParentMinimized(false);
+        return;
+      }
+      onClose();
+    }
+
+    window.addEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
+    return () => window.removeEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleParentLifecycle);
+  }, [onClose, parentWindowId, parentWindowTitle]);
+
+  return (
+    <WindowedDialog
+      title="Terminal"
+      accent="settings"
+      className="wos-chat-terminal-dialog"
+      parentWindowId={parentWindowId}
+      parentWindowTitle={parentWindowTitle}
+      onClose={onClose}
+    >
+      <div
+        className="wos-chat-terminal-dialog__body"
+        data-windowed-subwindow="terminal"
+        data-parent-window-attached="chat"
+        data-parent-window-id={parentWindowId}
+        data-parent-window-minimized={parentMinimized ? 'true' : undefined}
+        data-parent-window-title={parentWindowTitle}
+      >
+        {terminalSurface ? (
+          <NativeExtensionSurfaceHost
+            surface={terminalSurface}
+            pathname={routeLocationValue.pathname}
+            search={routeLocationValue.search}
+            hash={routeLocationValue.hash}
+            shellPresentation="windowed"
+            cwd={cwd}
+            instanceId={`${parentWindowId}:terminal`}
+          />
+        ) : (
+          <WindowedStateBlock title="Terminal unavailable" tone="warning">
+            The Terminal extension is not registered.
+          </WindowedStateBlock>
+        )}
+      </div>
+    </WindowedDialog>
+  );
+}
+
+function WindowRouteBody({
+  compact = false,
+  onNavigate,
+  parentWindowId,
+  parentWindowTitle,
+  route,
+}: {
+  compact?: boolean;
+  onNavigate: WindowNavigate;
+  parentWindowId: string;
+  parentWindowTitle: string;
+  route: string;
+}) {
   const isChatRoute = route.startsWith('/conversations');
   const [chatWorkbenchOpen, setChatWorkbenchOpen] = useState(true);
+  const [terminalWindowOpen, setTerminalWindowOpen] = useState(false);
   const effectiveChatWorkbenchOpen = chatWorkbenchOpen && !compact;
 
   if (!isChatRoute) {
@@ -771,6 +874,10 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
           onClick={() => setChatWorkbenchOpen((open) => !open)}
         >
           {effectiveChatWorkbenchOpen ? 'Hide workbench' : 'Show workbench'}
+        </button>
+        {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
+        <button type="button" className="wos-chat-window-toolbar__button" onClick={() => setTerminalWindowOpen(true)}>
+          Terminal window
         </button>
       </div>
       <WindowRouteScope route={route} onNavigate={onNavigate}>
@@ -809,6 +916,15 @@ function WindowRouteBody({ compact = false, onNavigate, route }: { compact?: boo
           </Route>
         </Routes>
       </WindowRouteScope>
+      {terminalWindowOpen ? (
+        <WindowedChatTerminalDialog
+          cwd={null}
+          parentWindowId={parentWindowId}
+          parentWindowTitle={parentWindowTitle}
+          route={route}
+          onClose={() => setTerminalWindowOpen(false)}
+        />
+      ) : null}
     </WindowedChatSurface>
   );
 }
@@ -1532,6 +1648,8 @@ export function WindowedLayout() {
             <WindowRouteBody
               compact={windowModel.kind === 'chat' && windowModel.bounds.width < 720}
               route={windowModel.route}
+              parentWindowId={windowModel.id}
+              parentWindowTitle={windowModel.title}
               onNavigate={(to) => navigateWindow(windowModel.id, to)}
             />
           </WindowFrame>

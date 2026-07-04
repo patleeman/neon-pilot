@@ -1033,6 +1033,23 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   padding: 10px;
 }
 
+.wos-chat-terminal-dialog {
+  width: min(780px, calc(100% - 8px));
+  height: min(500px, calc(100% - 12px));
+}
+
+.wos-chat-terminal-dialog .wos-dialog__body,
+.wos-chat-terminal-dialog__body,
+.wos-chat-terminal-dialog__body > [data-extension-id='system-terminal'] {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.wos-chat-terminal-dialog .wos-dialog__body {
+  padding: 0;
+}
+
 .wos-dialog-stack {
   display: grid;
   min-width: 0;
@@ -1574,8 +1591,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: stretch;
   justify-content: stretch;
   background:
-    linear-gradient(oklch(20% 0.01 60 / 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(20% 0.01 60 / 0.08) 1px, transparent 1px),
+    linear-gradient(oklch(20% 0.01 60 / 0.08) 1px, transparent 1px), linear-gradient(90deg, oklch(20% 0.01 60 / 0.08) 1px, transparent 1px),
     var(--wos-surface-1);
   background-size: 20px 20px;
   padding: var(--wos-space-5);

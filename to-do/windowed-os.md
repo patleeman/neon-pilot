@@ -29,11 +29,13 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
    - 2026-07-03 progress: chat parent windows now publish close/minimize lifecycle events, and the windowed Excalidraw child window attaches by stable parent window id. Verified live in `/?shell=windowed`: creating a drawing from New conversation opened a child window with `data-parent-window-id="chat:draft"`, and minimizing New conversation dismissed the drawing child window.
    - 2026-07-03 progress: parent minimize/restore is now reversible for the drawing child window. Verified live in `/?shell=windowed`: creating a drawing kept one mounted child window, minimizing New conversation set `data-parent-window-minimized="true"` and `display: none`, then restoring New conversation from the taskbar cleared the minimized flag and restored the child window.
    - 2026-07-03 progress: saved drawings picker now uses the same parent id lifecycle and reversible minimize/restore data hook as the drawing editor. Covered with focused picker/shell/design-system tests and desktop UI build; live app-path QA reached `/?shell=windowed`, but Automations owner-thread navigation did not open a persisted chat window in that run, so saved-picker visual lifecycle still needs a successful persisted-chat live pass.
+   - 2026-07-03 progress: chat windows now expose a parent-attached Terminal child window from the window toolbar. The child hosts the real `system-terminal` surface in windowed presentation, carries parent id/title metadata, and closes with parent lifecycle events. Covered with focused shell/design-system tests, desktop UI/windowed package builds, and live `/?shell=windowed` QA for open, parent minimize/restore, and parent close.
 
 4. Extract workbench tools into sub-windows.
    - Once sub-windows exist, explore pulling Chat, Terminal, Browser, and Drawing out of the attached two-pane workbench.
    - Chat can then become a cleaner primary conversation window, with workbench tools as parent-attached child windows.
    - After proving this in Chat, sweep other apps for modal/right-panel surfaces that should become sub-windows.
+   - 2026-07-03 progress: Terminal is now the first real workbench tool available as a chat-attached child window while leaving the attached workbench tab path intact.
 
 ## Verified / Retired
 

@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   tabs: [] as Array<{ id: string; title?: string; messageCount?: number }>,
   conversationsLoading: false,
   topBarElements: [] as Array<{ extensionId: string; id: string; component: string; label?: string; frontendEntry?: string }>,
+  surfaces: [] as Array<Record<string, unknown>>,
   extensions: [
     {
       id: 'system-routines',
@@ -69,6 +70,29 @@ vi.mock('./Layout', async () => {
   };
 });
 
+vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
+  NativeExtensionSurfaceHost: ({
+    cwd,
+    instanceId,
+    shellPresentation,
+    surface,
+  }: {
+    cwd?: string | null;
+    instanceId?: string | null;
+    shellPresentation?: 'stable' | 'windowed';
+    surface: { extensionId: string; id: string };
+  }) => (
+    <div
+      data-testid="native-extension-surface"
+      data-cwd={cwd ?? ''}
+      data-extension-id={surface.extensionId}
+      data-instance-id={instanceId ?? ''}
+      data-shell-presentation={shellPresentation ?? 'stable'}
+      data-surface-id={surface.id}
+    />
+  ),
+}));
+
 vi.mock('../extensions/ExtensionRouteHost', async () => {
   const { useLocation, useNavigate } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
@@ -97,7 +121,7 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
     loading: mocks.registryLoading,
     error: null,
     extensions: mocks.extensions,
-    surfaces: [],
+    surfaces: mocks.surfaces,
     topBarElements: mocks.topBarElements,
   }),
 }));
@@ -154,6 +178,7 @@ describe('WindowedLayout route windows', () => {
     mocks.tabs = [];
     mocks.conversationsLoading = false;
     mocks.topBarElements = [];
+    mocks.surfaces = [];
     mocks.extensions = [
       {
         id: 'system-routines',
@@ -2542,6 +2567,86 @@ describe('WindowedLayout route windows', () => {
     } finally {
       window.removeEventListener(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, handleLifecycle);
     }
+  });
+
+  it('opens a terminal child window from chat and attaches it to the parent lifecycle', async () => {
+    mocks.surfaces = [
+      {
+        extensionId: 'system-terminal',
+        id: 'terminal-panel',
+        title: 'Terminal',
+        location: 'rightRail',
+        component: 'TerminalPanel',
+        toolSlot: 'terminal',
+      },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /terminal window/i }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Terminal' });
+    expect(dialog.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(dialog.getAttribute('data-parent-window-title')).toBe('New conversation');
+
+    const terminalHost = screen.getByTestId('native-extension-surface');
+    expect(terminalHost.getAttribute('data-extension-id')).toBe('system-terminal');
+    expect(terminalHost.getAttribute('data-surface-id')).toBe('terminal-panel');
+    expect(terminalHost.getAttribute('data-shell-presentation')).toBe('windowed');
+    expect(terminalHost.getAttribute('data-instance-id')).toBe('chat:draft:terminal');
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+          detail: {
+            parentWindowId: 'chat:draft',
+            parentWindowKind: 'chat',
+            parentWindowTitle: 'New conversation',
+            reason: 'minimized',
+          },
+        }),
+      );
+    });
+    expect(dialog.querySelector('[data-windowed-subwindow="terminal"]')?.getAttribute('data-parent-window-minimized')).toBe('true');
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+          detail: {
+            parentWindowId: 'chat:draft',
+            parentWindowKind: 'chat',
+            parentWindowTitle: 'New conversation',
+            reason: 'restored',
+          },
+        }),
+      );
+    });
+    expect(dialog.querySelector('[data-windowed-subwindow="terminal"]')?.getAttribute('data-parent-window-minimized')).toBeNull();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, {
+          detail: {
+            parentWindowId: 'chat:draft',
+            parentWindowKind: 'chat',
+            parentWindowTitle: 'New conversation',
+            reason: 'closed',
+          },
+        }),
+      );
+    });
+    expect(screen.queryByRole('dialog', { name: 'Terminal' })).toBeNull();
   });
 
   it('toggles a focused route window from the taskbar between minimized and restored', async () => {
