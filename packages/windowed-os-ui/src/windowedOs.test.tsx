@@ -1514,6 +1514,15 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__caption');
     expect(stylesSource).toContain('@container wos-window-route (max-width: 560px)');
     expect(stylesSource).toContain(
+      ".windowed-os-shell .wos-window-route-body--chat [data-transcript-event='ask-user-question'] {\n    padding: 7px;",
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__tabs {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) auto;',
+    );
+    expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card .ui-action-button {\n    width: 100%;',
     );
     expect(stylesSource).toContain(
@@ -1521,6 +1530,17 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-image-preview__media,\n  .windowed-os-shell .wos-window-route-body--chat .ui-image-preview__placeholder {\n    min-height: 132px;',
+    );
+    expect(stylesSource).toContain('@container wos-window-route (max-width: 420px)');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-choice-row {\n    grid-template-columns: auto minmax(0, 1fr);',
+    );
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-choice-row-prefix {\n    display: none;');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {\n    grid-template-columns: minmax(0, 1fr);',
+    );
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary .ui-row-button {\n    width: 100%;',
     );
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-backdrop');
     expect(stylesSource).toContain('.windowed-os-shell .ui-image-inspect-dialog');

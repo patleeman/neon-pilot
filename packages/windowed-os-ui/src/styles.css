@@ -7609,6 +7609,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {
   display: flex;
   min-height: 30px;
+  min-width: 0;
   align-items: center;
   gap: 8px;
   border-color: var(--wos-ink-900) !important;
@@ -7975,8 +7976,37 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 @container wos-window-route (max-width: 560px) {
+  .windowed-os-shell .wos-window-route-body--chat [data-transcript-event='ask-user-question'] {
+    padding: 7px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
+    gap: 5px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-ask-user-question__tabs .ui-action-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px 8px;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome .ui-terminal-block__muted {
+    justify-self: end;
+    text-align: right;
+  }
+
   .windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary {
     align-items: stretch;
+    gap: 6px;
+    padding: 7px;
   }
 
   .windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card .ui-action-button {
@@ -7996,6 +8026,29 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   .windowed-os-shell .wos-window-route-body--chat .ui-image-preview__media,
   .windowed-os-shell .wos-window-route-body--chat .ui-image-preview__placeholder {
     min-height: 132px;
+  }
+}
+
+@container wos-window-route (max-width: 420px) {
+  .windowed-os-shell .wos-window-route-body--chat .ui-choice-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-choice-row-prefix {
+    display: none;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-terminal-block__chrome .ui-terminal-block__muted {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .windowed-os-shell .wos-window-route-body--chat .ui-inline-run-card__summary .ui-row-button {
+    width: 100%;
   }
 }
 
