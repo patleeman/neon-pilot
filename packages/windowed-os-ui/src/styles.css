@@ -5046,7 +5046,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true'] {
   color: var(--wos-ink-900);
+  font-family: var(--wos-font-body) !important;
   font-size: 12px !important;
+  font-weight: 500 !important;
   line-height: 1.45 !important;
 }
 

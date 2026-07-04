@@ -779,6 +779,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       ".windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,\n.windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true']",
     );
+    expect(stylesSource).toContain('font-family: var(--wos-font-body) !important;');
+    expect(stylesSource).toContain('font-weight: 500 !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea::placeholder');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell:focus-within');
     expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
