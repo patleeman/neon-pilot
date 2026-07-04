@@ -79,6 +79,7 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
    - Suggested phases: deep night, night, dawn, morning, bright noon, afternoon, dusk.
    - Include manual override modes: light, dark, and time-of-day.
    - Respect reduced motion where relevant, while keeping color transitions gentle.
+   - 2026-07-04 progress: taskbar theme mode now exposes the automatic option as "Time of day" to assistive tech and hover/tooltips while keeping the compact visible "Time" label. Covered by windowed design-system and desktop shell tests.
 
 ## Product / Architecture
 
