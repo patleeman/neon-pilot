@@ -1453,6 +1453,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-diagnostics-overview__charts {');
     expect(stylesSource).toContain('.wos-heatmap .wos-chart-panel__body {');
     expect(stylesSource).toContain('.wos-heatmap-grid {');
+    expect(stylesSource).toContain('width: max-content;');
+    expect(stylesSource).toContain('max-width: 100%;');
+    expect(stylesSource).toContain('.wos-heatmap-legend {\n  display: flex;\n  width: 100%;\n  min-width: 0;');
+    expect(stylesSource).not.toContain('min-width: 500px;');
     expect(stylesSource).toContain('.wos-heatmap-cell-4 {');
     expect(stylesSource).toContain('.wos-heatmap-share {');
   });

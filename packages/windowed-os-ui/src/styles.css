@@ -3130,7 +3130,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-heatmap-grid {
   display: flex;
-  min-width: 500px;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
   gap: 2px;
 }
 
@@ -3185,7 +3187,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-heatmap-legend {
   display: flex;
-  min-width: 500px;
+  width: 100%;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--wos-space-3);
