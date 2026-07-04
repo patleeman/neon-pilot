@@ -225,6 +225,13 @@ function ExcalidrawEditor({
   const excalidrawTheme = getExcalidrawTheme();
   const drawingTitle = initialTitle?.trim() || 'Drawing';
   const busy = attaching || persisting || moving;
+  const editorStatus = loadError
+    ? 'error'
+    : LoadedExcalidraw
+      ? savedRef.attachmentId
+        ? `rev ${savedRef.revision ?? initialRevision ?? 1}`
+        : 'draft'
+      : 'loading';
 
   useEffect(() => {
     let cancelled = false;
@@ -345,6 +352,7 @@ function ExcalidrawEditor({
           <Ico d={attaching ? ICON.refresh : ICON.attach} size={12} />
           <span>{attaching ? 'Attaching...' : attachButtonLabel}</span>
         </Button>
+        <span className="ui-windowed-excalidraw-status">{editorStatus}</span>
       </div>
 
       <div className="excalidraw-editor-modal__canvas min-h-0 flex-1 overflow-hidden">

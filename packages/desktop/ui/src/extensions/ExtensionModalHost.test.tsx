@@ -194,9 +194,8 @@ describe('ExtensionModalHost modal bridge', () => {
       );
     });
 
-    expect(await screen.findByText('Drawing editor')).not.toBeNull();
-    const dialog = screen.getByRole('dialog', { name: 'Drawing' });
-    expect(screen.getByText('Drawing')).not.toBeNull();
+    const dialog = await screen.findByRole('dialog', { name: 'Drawing editor' });
+    expect(dialog.querySelector('.ui-dialog-title')?.textContent).toBe('Drawing editor');
     expect(dialog.className).toContain('ui-windowed-extension-modal');
     expect(dialog.className).toContain('ui-windowed-excalidraw-modal');
     expect(dialog.className).not.toContain('ui-extension-modal-fullscreen');
@@ -237,8 +236,7 @@ describe('ExtensionModalHost modal bridge', () => {
       );
     });
 
-    expect(await screen.findByText('Drawing editor')).not.toBeNull();
-    const dialog = screen.getByRole('dialog', { name: 'Drawing' });
+    const dialog = await screen.findByRole('dialog', { name: 'Drawing editor' });
 
     act(() => {
       window.dispatchEvent(

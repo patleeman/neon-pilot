@@ -26,6 +26,7 @@ Running beta/design notes for the separate Neon Pilot windowed desktop mode.
    - Modal chrome/actions should match the dark-bordered windowed button and surface treatment.
    - This likely should stop being a giant modal and become a child/sub-window.
    - 2026-07-03 progress: Excalidraw editor opens as a non-modal windowed child surface in desktop mode instead of inheriting the fullscreen extension modal class; verified live with `aria-modal=false`, `data-windowed-child-window=true`, click-through backdrop, and 860x560 sizing.
+   - 2026-07-04 progress: the live Excalidraw editor now exposes the same compact toolbar status pill as the canonical drawing subwindow target (`draft`, `rev N`, loading/error), and the window title reads `Drawing editor` in desktop mode. Covered with focused editor/modal-host tests, targeted extension build, desktop UI build, Storybook build, and dark drawing-editor Storybook visual QA.
 
 3. Add parent-attached sub-windows.
    - Need a sub-window concept for windows attached to a parent window.

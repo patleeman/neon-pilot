@@ -290,7 +290,7 @@ export function ExtensionModalHost() {
   const modalSizeClasses = resolveExtensionModalSizeClasses(windowedExcalidrawModal ? 'default' : modal.size);
   const parentWindowTitle = windowedExcalidrawModal ? readWindowedParentWindowTitle(modal.props) : undefined;
   const parentWindowId = windowedExcalidrawModal ? (readWindowedParentWindowId(modal.props) ?? undefined) : undefined;
-  const title = modal.title ?? (windowedExcalidrawModal ? 'Drawing' : undefined);
+  const title = modal.title ?? (windowedExcalidrawModal ? 'Drawing editor' : undefined);
 
   return (
     <>

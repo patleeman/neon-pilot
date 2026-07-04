@@ -83,6 +83,7 @@ describe('ExcalidrawEditorModal', () => {
     expect(document.querySelector('.excalidraw-editor-modal')).toBeTruthy();
     expect(document.querySelector('.excalidraw-editor-modal__toolbar')).toBeTruthy();
     expect(document.querySelector('.excalidraw-editor-modal__canvas')).toBeTruthy();
+    expect(document.querySelector('.ui-windowed-excalidraw-status')?.textContent).toBe('draft');
     fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }));
 
     await waitFor(() => expect(pa.conversations.createAttachment).toHaveBeenCalledTimes(1));
@@ -113,5 +114,25 @@ describe('ExcalidrawEditorModal', () => {
         revision: 1,
       }),
     );
+  });
+
+  it('renders saved drawing revision state in the windowed toolbar status pill', async () => {
+    const pa = createPa();
+
+    render(
+      <ExcalidrawEditorModal
+        pa={pa as never}
+        close={vi.fn()}
+        props={{
+          conversationId: 'conversation-1',
+          initialAttachmentId: 'drawing-1',
+          initialRevision: 3,
+          initialScene: scene as never,
+        }}
+      />,
+    );
+
+    expect((await screen.findByTestId('fake-excalidraw-theme')).textContent).toBe('light');
+    expect(document.querySelector('.ui-windowed-excalidraw-status')?.textContent).toBe('rev 3');
   });
 });
