@@ -1108,11 +1108,11 @@ export const AutomationFormPrimitives: Story = {
   ),
 };
 
-export const AutomationsPage: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 672, padding: 24 }}>
+function AutomationsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title="Automations"
+        title={theme === 'dark' ? 'Automations - dark' : 'Automations'}
         accent="automations"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -1207,7 +1207,15 @@ export const AutomationsPage: Story = {
         </WindowedPageSection>
       </WindowedDialog>
     </div>
-  ),
+  );
+}
+
+export const AutomationsPage: Story = {
+  render: () => <AutomationsPageStory />,
+};
+
+export const DarkAutomationsPage: Story = {
+  render: () => <AutomationsPageStory theme="dark" />,
 };
 
 export const GatewaysPage: Story = {

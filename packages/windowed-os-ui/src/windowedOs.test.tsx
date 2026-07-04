@@ -1538,7 +1538,11 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
+    expect(source).toContain('function AutomationsPageStory');
     expect(source).toContain('export const AutomationsPage');
+    expect(source).toContain('export const DarkAutomationsPage');
+    expect(source).toContain('<AutomationsPageStory theme="dark" />');
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('title="Automations"');
     expect(source).not.toContain('eyebrow="Scheduled work"');
     expect(source).toContain('title="Overview"');
