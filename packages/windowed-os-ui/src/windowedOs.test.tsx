@@ -1582,10 +1582,14 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical AI Gateway desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
-    const aiGatewaySource = source.slice(source.indexOf('export const AIGatewayPage'), source.indexOf('export const RoutinesPage'));
+    const aiGatewaySource = source.slice(source.indexOf('function AIGatewayPageStory'), source.indexOf('export const RoutinesPage'));
 
+    expect(source).toContain('function AIGatewayPageStory');
     expect(source).toContain('export const AIGatewayPage');
-    expect(aiGatewaySource).toContain('title="AI Gateway"\n        accent="gateways"');
+    expect(source).toContain('export const DarkAIGatewayPage');
+    expect(source).toContain('<AIGatewayPageStory theme="dark" />');
+    expect(aiGatewaySource).toContain("title={theme === 'dark' ? 'AI Gateway - dark' : 'AI Gateway'}");
+    expect(aiGatewaySource).toContain('data-wos-theme={theme}');
     expect(aiGatewaySource).toContain('title="Loopback endpoint"');
     expect(aiGatewaySource).toContain('title="Listener"');
     expect(aiGatewaySource).toContain('title="Codex client setup"');
