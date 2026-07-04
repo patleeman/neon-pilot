@@ -980,12 +980,18 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-window-route-body--chat {\n  display: grid;\n  grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar {\n  display: flex;');
+    expect(stylesSource).toContain('min-height: 42px;');
+    expect(stylesSource).toContain('flex-wrap: wrap;');
     expect(stylesSource).toContain('justify-content: space-between;');
-    expect(stylesSource).toContain('gap: 6px;');
+    expect(stylesSource).toContain('gap: 6px 8px;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('box-shadow: inset 0 -2px 0 var(--wos-surface-3);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__label');
+    expect(stylesSource).toContain('border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__actions');
+    expect(stylesSource).toContain('flex: 0 1 auto;');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[data-density='icon']");
+    expect(stylesSource).toContain('flex: 0 0 30px;');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button svg');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
     expect(stylesSource).toContain('color: var(--wos-accent-ink);');
