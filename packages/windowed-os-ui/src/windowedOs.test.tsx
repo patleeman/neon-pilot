@@ -2782,7 +2782,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(settingsSource).toContain('{settingsStorySections.map((section) => (');
     expect(settingsSource).toContain('active={activeSection === section.id}');
     expect(settingsSource).toContain('onSelect={() => undefined}');
-    expect(source).toContain('<WindowedSettingsGroup title="Appearance"');
+    expect(source).toContain('<WindowedSettingsGroup title="Interface"');
+    expect(settingsSource).not.toContain(
+      '<WindowedPageMain title="Appearance" actions={<WindowedPageButton>Reset</WindowedPageButton>}>\n      <WindowedSettingsGroup title="Appearance">',
+    );
     expect(source).toContain('<WindowedSettingsGroup title="Configured providers"');
     expect(source).toContain('<WindowedSettingsGroup title="Window behavior"');
     expect(source).toContain('<WindowedSettingsGroup title="Desktop shortcuts"');

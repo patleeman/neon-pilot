@@ -1404,7 +1404,7 @@ function SettingsPageContent({ activeSection }: { activeSection: SettingsStorySe
 
   return (
     <WindowedPageMain title="Appearance" actions={<WindowedPageButton>Reset</WindowedPageButton>}>
-      <WindowedSettingsGroup title="Appearance">
+      <WindowedSettingsGroup title="Interface">
         <WindowedSettingsRow title="Theme" description="System" actionsClassName="settings-page-control-actions">
           <WindowedSelect aria-label="Theme">
             <option>System</option>
