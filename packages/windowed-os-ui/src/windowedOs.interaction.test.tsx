@@ -135,7 +135,7 @@ describe('WindowedDataRow interactions', () => {
   it('selects the row by click and keyboard without treating itself as a nested control', () => {
     const onSelect = vi.fn();
 
-    render(<WindowedDataRow name="system-browser" meta="Workbench browser" selected accent="extensions" onSelect={onSelect} />);
+    render(<WindowedDataRow name="system-browser" meta="Browser app" selected accent="extensions" onSelect={onSelect} />);
 
     const row = screen.getByRole('button', { name: /system-browser/i });
     expect(row.getAttribute('data-selected')).toBe('true');

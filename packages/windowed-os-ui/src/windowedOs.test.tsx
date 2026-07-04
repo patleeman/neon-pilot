@@ -1092,9 +1092,15 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(composerStart).toBeGreaterThan(-1);
     expect(composerEnd).toBeGreaterThan(composerStart);
-    expect(composerStyles).toContain('border-left: 0 !important;');
     expect(composerStyles).toContain('box-shadow: none !important;');
     expect(composerStyles).toContain('.ui-input-shell {\n  border: 2px solid var(--wos-ink-900) !important;');
+    const inputShellRule =
+      composerStyles.match(/\.windowed-os-shell \.wos-window-route-body--chat \.ui-input-shell \{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(inputShellRule).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(inputShellRule).toContain('border-radius: 8px;');
+    expect(inputShellRule).not.toContain('border-left: 0');
+    expect(inputShellRule).not.toContain('border-top-left-radius: 0');
+    expect(inputShellRule).not.toContain('border-bottom-left-radius: 0');
     expect(composerStyles).toContain('.ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;');
     expect(stylesSource).toContain('.windowed-os-shell\n  :where(');
     expect(stylesSource).toContain("[class~='border-l']");
@@ -1417,13 +1423,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-left-color: transparent !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant');
-    expect(stylesSource).toContain(
-      '.wos-window-route-body--chat\n  :where(\n    .ui-input-shell,\n    .ui-composer-meta,\n    .ui-message-card-user,\n    .ui-message-card-assistant,',
-    );
-    expect(stylesSource).toContain('.ui-context-lifecycle-marker,\n    .ui-context-shelf__item,\n    .ui-tool-block,');
-    expect(stylesSource).toContain('.ui-inline-run-card,\n    .ui-disclosure,\n    .ui-skill-invocation,\n    .ui-thinking-block,');
-    expect(stylesSource).toContain('.ui-markdown blockquote,\n    .ui-markdown pre,\n    .ui-markdown table');
-    expect(stylesSource).toContain(
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-context-lifecycle-marker');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-skill-invocation');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-thinking-block');
+    expect(stylesSource).not.toContain(
       'border-left: 0 !important;\n  border-top-left-radius: 0 !important;\n  border-bottom-left-radius: 0 !important;',
     );
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));');
@@ -2895,6 +2899,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(extensionsSource).toContain('parentWindowTitle="Extensions"');
     expect(extensionsSource).toContain('className="wos-extension-detail-grid"');
     expect(extensionsSource).toContain('className="wos-extension-detail-description"');
+    expect(extensionsSource).toContain('Browser app surfaces and automation tools.');
+    expect(extensionsSource).toContain('meta="Browser app and automation tools"');
+    expect(extensionsSource).not.toContain('Workbench browser');
     expect(extensionsSource.indexOf('</WindowFrame>')).toBeLessThan(extensionsSource.indexOf('<WindowedDialog'));
     expect(extensionsSource).not.toContain('title="Inventory"');
     expect(extensionsSource).not.toContain('title="Installed extensions"');

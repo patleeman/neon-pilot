@@ -6304,12 +6304,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
-  border-left: 0 !important;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-}
-
-.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
   overflow: visible;
 }
 
@@ -6683,32 +6677,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   overflow: hidden;
   background: var(--wos-surface-1);
   padding: 8px var(--wos-space-5);
-}
-
-.windowed-os-shell
-  .wos-window-route-body--chat
-  :where(
-    .ui-input-shell,
-    .ui-composer-meta,
-    .ui-message-card-user,
-    .ui-message-card-assistant,
-    .ui-context-lifecycle-marker,
-    .ui-context-shelf__item,
-    .ui-tool-block,
-    .ui-tool-block__linked-runs-summary,
-    .ui-tool-block__linked-run,
-    .ui-panel-muted,
-    .ui-inline-run-card,
-    .ui-disclosure,
-    .ui-skill-invocation,
-    .ui-thinking-block,
-    .ui-markdown blockquote,
-    .ui-markdown pre,
-    .ui-markdown table
-  ) {
-  border-left: 0 !important;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-message-meta {

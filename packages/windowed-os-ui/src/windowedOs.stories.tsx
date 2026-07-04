@@ -2899,7 +2899,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               { label: 'Tools', value: 'browser_snapshot, browser_cdp' },
             ]}
           />
-          <p className="wos-extension-detail-description">Workbench browser and browser automation surfaces.</p>
+          <p className="wos-extension-detail-description">Browser app surfaces and automation tools.</p>
         </div>
       </WindowedDialog>
     </div>
@@ -2932,7 +2932,7 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
               <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
                 <WindowedDataRow
                   name="system-browser"
-                  meta="Workbench browser and browser automation"
+                  meta="Browser app and automation tools"
                   status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
                   action={<WindowedPageButton>Details</WindowedPageButton>}
                 />
