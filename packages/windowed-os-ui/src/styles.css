@@ -28,6 +28,21 @@
   cursor: default;
 }
 
+.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-']) {
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-'])::before,
+.windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-'])::after {
+  content: none !important;
+  border-left: 0 !important;
+  border-left-width: 0 !important;
+  box-shadow: none !important;
+}
+
 .windowed-os-shell
   :where(
     a[href],
@@ -4751,6 +4766,40 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   color: var(--wos-ink-700);
   font: var(--wos-text-body);
   overflow-wrap: anywhere;
+}
+
+@container (max-width: 520px) {
+  .wos-list-item__title,
+  .wos-list-item__detail,
+  .wos-timeline-item__title {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .wos-timeline-item__header {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 4px 8px;
+  }
+}
+
+@media (max-width: 520px) {
+  .wos-list-item__title,
+  .wos-list-item__detail,
+  .wos-timeline-item__title {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .wos-timeline-item__header {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 4px 8px;
+  }
 }
 
 .wos-routine-empty,

@@ -986,6 +986,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(composerStyles).toContain('.ui-input-shell {\n  border: 2px solid var(--wos-ink-900) !important;');
     expect(composerStyles).toContain('.ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;');
     expect(composerStyles).not.toContain('border-left: 0');
+    expect(stylesSource).toContain(
+      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-']) {",
+    );
+    expect(stylesSource).toContain(
+      ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-'])::before,",
+    );
+    expect(stylesSource).toContain('border-left-color: transparent !important;\n  box-shadow: none !important;');
   });
 
   it('styles canonical app-specific accents across shared windowed primitives', () => {
@@ -1467,6 +1474,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-timeline-item__body {\n  min-width: 0;\n  overflow: visible;');
     expect(stylesSource).toContain('.wos-timeline-item__content {\n  margin-top: 4px;');
     expect(stylesSource).toContain('overflow-wrap: anywhere;');
+    expect(stylesSource).toContain('@container (max-width: 520px) {\n  .wos-list-item__title,');
+    expect(stylesSource).toContain('.wos-list-item__detail,\n  .wos-timeline-item__title {');
+    expect(stylesSource).toContain('text-overflow: clip;\n    white-space: normal;\n    overflow-wrap: anywhere;');
+    expect(stylesSource).toContain('.wos-timeline-item__header {\n    flex-wrap: wrap;');
+    expect(stylesSource).toContain('@media (max-width: 520px) {\n  .wos-list-item__title,');
   });
 
   it('defines a separate host hook for native extension pages in windowed windows', () => {
