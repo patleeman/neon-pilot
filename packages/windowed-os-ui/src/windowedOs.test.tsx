@@ -861,6 +861,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('box-shadow: 6px 6px 0 oklch(20% 0.01 60 / 0.16);');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:hover');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile-icon');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile-main');
     expect(stylesSource).toContain('.wos-window-route-body .ui-action-tile-label');
     expect(stylesSource).toContain('color: var(--wos-ink-900) !important;');

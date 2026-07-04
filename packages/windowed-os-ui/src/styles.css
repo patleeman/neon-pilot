@@ -5391,7 +5391,30 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 
 .windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile {
   min-height: 42px;
+  border: 2px solid var(--wos-ink-900) !important;
+  background: var(--wos-surface-1) !important;
+  color: var(--wos-ink-900) !important;
+  box-shadow: none;
   padding: 8px var(--wos-space-5);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:hover,
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:focus-visible {
+  background: var(--wos-chat) !important;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1.5px solid var(--wos-ink-900);
+  border-radius: 6px;
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile-main {
