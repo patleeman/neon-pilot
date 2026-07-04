@@ -46,8 +46,10 @@ export function ConversationComposer({
   return (
     <div className={className} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
       {notice && (
-        <div className="mb-2 text-center">
-          <Pill tone={notice.tone}>{notice.text}</Pill>
+        <div className="ui-composer-notice mb-2 text-center" data-tone={notice.tone}>
+          <Pill className="ui-composer-notice__pill" tone={notice.tone}>
+            {notice.text}
+          </Pill>
         </div>
       )}
 
