@@ -5569,12 +5569,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   box-shadow: none;
 }
 
-.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice,
-.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill,
-.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
-  border-left-width: 2px !important;
-}
-
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
   overflow: visible;
 }

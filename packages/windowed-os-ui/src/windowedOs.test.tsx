@@ -1064,10 +1064,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-warning) 14%, var(--wos-surface-2));');
-    expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice,\n.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill,\n.windowed-os-shell .wos-window-route-body--chat .ui-input-shell',
+    expect(stylesSource).not.toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice,\n.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill,\n.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border-left-width',
     );
-    expect(stylesSource).toContain('border-left-width: 2px !important;');
     expect(stylesSource).toContain('border-left: 0 !important;');
     expect(stylesSource).not.toContain('box-shadow: inset 5px 0 0 var(--wos-warning);');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf');
