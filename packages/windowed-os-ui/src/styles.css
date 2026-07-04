@@ -5421,10 +5421,18 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item {
-  min-height: 26px;
+  min-height: 32px;
+  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 6px;
+  background: var(--wos-surface-1) !important;
+  padding: 4px 8px !important;
   color: var(--wos-ink-900) !important;
   font: var(--wos-text-row);
+  box-shadow: none !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item + .ui-context-menu-item {
+  margin-top: 4px;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item:hover,
