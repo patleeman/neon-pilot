@@ -1319,6 +1319,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-resize-handle__line');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-rail');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-rail {\n  border-left: 0 !important;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page');
     expect(stylesSource).toContain('linear-gradient(var(--wos-grid-line) 1px, transparent 1px)');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page__inner');
@@ -1923,6 +1924,18 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(source).not.toContain('ui-context-rail');
     expect(source).not.toContain('ui-app-page-');
+  });
+
+  it('bans standalone left rail dividers from inherited route chrome', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+    const workbenchRailRule = stylesSource.match(/\.wos-window-route-body \.ui-workbench-rail \{[^}]+}/)?.[0] ?? '';
+    const contextRailRule = stylesSource.match(/\.wos-window-route-body \.ui-context-rail \{[^}]+}/)?.[0] ?? '';
+
+    expect(workbenchRailRule).toContain('border-left: 0 !important;');
+    expect(contextRailRule).toContain('border-left: 0 !important;');
+    expect(workbenchRailRule).not.toContain('border-left: 2px');
+    expect(contextRailRule).not.toContain('border-left: 2px');
   });
 
   it('documents the Settings-only two-column rail pattern', () => {

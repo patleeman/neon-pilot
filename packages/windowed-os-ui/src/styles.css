@@ -2192,7 +2192,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-window-route-body .ui-workbench-rail {
-  border-left: 2px solid var(--wos-ink-900);
+  border-left: 0 !important;
   background: var(--wos-surface-2);
 }
 
@@ -2334,7 +2334,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-left: 2px solid var(--wos-ink-900);
+  border-left: 0 !important;
   background: var(--wos-surface-2);
   color: var(--wos-ink-900);
   font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
