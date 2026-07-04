@@ -1078,13 +1078,13 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar {
   display: flex;
   min-width: 0;
-  min-height: 26px;
+  min-height: var(--wos-titlebar-h);
   align-items: center;
   justify-content: space-between;
   gap: 6px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-settings);
-  padding: 2px 6px 2px 8px;
+  padding: 1px 6px 1px 8px;
   cursor: grab;
   user-select: none;
 }
@@ -1545,12 +1545,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker[
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-header {
   display: flex;
-  min-height: 26px;
+  min-height: var(--wos-titlebar-h);
   align-items: center;
   gap: 6px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-chat);
-  padding: 2px 6px 2px 8px;
+  padding: 1px 6px 1px 8px;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-header-copy,
