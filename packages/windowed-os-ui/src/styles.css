@@ -5009,6 +5009,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   width: min(820px, 100%);
 }
 
+.wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true'] {
+  width: min(820px, calc(100% - 112px));
+  max-height: min(620px, calc(100% - 120px));
+}
+
 .wos-extension-install {
   display: grid;
   gap: 10px;
@@ -5058,6 +5063,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   }
 
   .wos-dialog[data-parent-window-attached='true'] {
+    width: 100%;
+    max-height: calc(100% - 8px);
+  }
+
+  .wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true'] {
     width: 100%;
     max-height: calc(100% - 8px);
   }

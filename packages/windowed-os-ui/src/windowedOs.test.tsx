@@ -1720,8 +1720,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true']");
     expect(stylesSource).toContain('width: min(500px, calc(100% - 112px));');
     expect(stylesSource).toContain('max-height: min(460px, calc(100% - 120px));');
+    expect(stylesSource).toContain(".wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true']");
+    expect(stylesSource).toContain('width: min(820px, calc(100% - 112px));');
+    expect(stylesSource).toContain('max-height: min(620px, calc(100% - 120px));');
     expect(stylesSource).toContain('8px 8px 0 color-mix(in srgb, var(--wos-ink-900) 13%, transparent)');
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true'] {\n    width: 100%;");
+    expect(stylesSource).toContain(".wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true'] {\n    width: 100%;");
   });
 
   it('styles attached terminal panels with scoped windowed tokens', () => {
