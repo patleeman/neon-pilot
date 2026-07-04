@@ -101,6 +101,7 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('border-right: 0;\n    border-bottom: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain("@container wos-window-route (max-width: 560px) {\n  .wos-page-shell:not([data-layout='standard']) {");
     expect(stylesSource).toContain(".wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list {\n    display: flex;");
+    expect(stylesSource).toContain('width: 100%;\n    min-width: 100%;\n    flex-wrap: wrap;');
     expect(stylesSource).toContain(
       ".wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list-item {\n    width: auto;\n    min-width: max-content;",
     );
@@ -2509,7 +2510,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border: 1.5px solid var(--wos-line-strong);');
     expect(stylesSource).toContain('scrollbar-width: none;');
     expect(stylesSource).toContain('.wos-page-rail::-webkit-scrollbar {\n    display: none;');
-    expect(stylesSource).toContain('.wos-page-rail .wos-list {\n    display: flex;\n    width: max-content;');
+    expect(stylesSource).toContain('.wos-page-rail .wos-list {\n    display: flex;\n    width: 100%;');
+    expect(stylesSource).toContain('width: 100%;\n    min-width: 100%;\n    flex-wrap: wrap;');
     expect(stylesSource).toContain('.wos-page-rail .wos-list-item + .wos-list-item {\n    border-top: 1.5px solid var(--wos-ink-900);');
   });
 
@@ -2907,6 +2909,36 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('const storyNames = [');
     expect(source).toContain("'windowed-os-desktop-shell--theme-variants'");
     expect(source).toContain("'windowed-os-desktop-shell--time-of-day-theme-phases'");
+    expect(source).toContain("'windowed-os-desktop-shell--chat-with-tool-windows'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-chat-with-tool-windows'");
+    expect(source).toContain("'windowed-os-desktop-shell--settings-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-settings-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--automations-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-automations-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--workflows-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-workflows-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--gateways-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-gateways-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--ai-gateway-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-ai-gateway-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--model-arena-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-model-arena-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--routines-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-routines-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--extensions-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-extensions-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--skills-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-skills-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--diagnostics-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-diagnostics-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--terminal-window'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-terminal-window'");
+    expect(source).toContain("'windowed-os-desktop-shell--workspace-window'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-workspace-window'");
+    expect(source).toContain("'windowed-os-desktop-shell--browser-window'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-browser-window'");
+    expect(source).toContain("'windowed-os-desktop-shell--embedded-extension-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-embedded-extension-page'");
     expect(source).toContain('Missing canonical Windowed OS Storybook entries:');
     expect(source).toContain("storiesAllowingOffscreenWindows = new Set([\n  'windowed-os-desktop-shell--desktop-composition'");
     expect(source).toContain("element.closest('.wos-taskbar__items')");

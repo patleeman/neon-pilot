@@ -3662,8 +3662,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
   .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list {
     display: flex;
-    width: max-content;
+    width: 100%;
     min-width: 100%;
+    flex-wrap: wrap;
     gap: 6px;
     border: 0;
     background: transparent;
@@ -3705,8 +3706,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
   .wos-page-shell:not([data-layout='standard']) .wos-page-rail .wos-list {
     display: flex;
-    width: max-content;
+    width: 100%;
     min-width: 100%;
+    flex-wrap: wrap;
     gap: 6px;
     border: 0;
     background: transparent;
