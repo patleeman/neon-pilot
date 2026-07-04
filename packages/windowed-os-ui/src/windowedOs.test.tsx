@@ -643,6 +643,7 @@ describe('Windowed OS tokens', () => {
 
     for (const token of [
       '--wos-surface-disabled',
+      '--wos-accent-ink',
       '--wos-success',
       '--wos-danger-hover',
       '--wos-border-hairline',
@@ -673,6 +674,7 @@ describe('Windowed OS tokens', () => {
     expect(tokensSource).toContain('.wos-window-route-body .ui-workbench-panel');
     expect(tokensSource).toContain('color-scheme: dark;');
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
+    expect(tokensSource).toContain('--wos-accent-ink: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-grid-line: oklch(93% 0.012 75 / 0.075);');
     expect(tokensSource).toContain('--wos-shadow-window: 0 26px 56px rgba(0, 0, 0, 0.42);');
     expect(tokensSource).toContain('--wos-shadow-offset: 6px 6px 0 oklch(93% 0.012 75 / 0.14);');
@@ -681,6 +683,7 @@ describe('Windowed OS tokens', () => {
     expect(stylesSource).toContain('background: var(--wos-danger-hover);');
     expect(stylesSource).toContain('color: var(--wos-success);');
     expect(stylesSource).toContain('background: var(--wos-surface-disabled);');
+    expect(stylesSource).toContain('color: var(--wos-accent-ink);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
     expect(stylesSource).toContain('.wos-extension-dialog-busy');
     expect(stylesSource).toContain(".wos-dialog-layer[data-modal='true']");
@@ -759,6 +762,10 @@ describe('Windowed OS Storybook examples', () => {
       expect(stylesSource).toContain(`.wos-toggle[data-checked='true'][data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-list-item[data-accent='${accent}']`);
     }
+    expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='chat'],");
+    expect(stylesSource).toContain(".wos-window__titlebar[data-accent='chat'],");
+    expect(stylesSource).toContain(".wos-dialog__titlebar[data-accent='chat'],");
+    expect(stylesSource).toContain('color: var(--wos-accent-ink);');
   });
 
   it('styles keyboard-highlighted Start menu results inside the scoped desktop chrome', () => {
@@ -824,6 +831,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[data-density='icon']");
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button svg');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
+    expect(stylesSource).toContain('color: var(--wos-accent-ink);');
   });
 
   it('restyles stable conversation controls with scoped windowed chrome', () => {
@@ -884,6 +892,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated");
     expect(stylesSource).toContain('background: var(--wos-chat, oklch(66% 0.14 250)) !important;');
+    expect(stylesSource).toContain('color: var(--wos-accent-ink) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-row-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-conversation-setup-empty');
     expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .conversation-composer-region');
@@ -929,6 +938,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab {');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-active');
     expect(stylesSource).toContain('box-shadow: inset 0 -3px 0 var(--wos-ink-900);');
+    expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab:hover .ui-workbench-tab-icon');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-close-button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-action-button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-tab-strip__new');

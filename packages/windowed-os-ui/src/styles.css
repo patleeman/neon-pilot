@@ -286,6 +286,19 @@
   background: var(--wos-chat);
 }
 
+.wos-taskbar__button[data-focused='true'][data-accent='chat'],
+.wos-taskbar__button[data-focused='true'][data-accent='routines'],
+.wos-taskbar__button[data-focused='true'][data-accent='workflows'],
+.wos-taskbar__button[data-focused='true'][data-accent='automations'],
+.wos-taskbar__button[data-focused='true'][data-accent='gateways'],
+.wos-taskbar__button[data-focused='true'][data-accent='model-arena'],
+.wos-taskbar__button[data-focused='true'][data-accent='extensions'],
+.wos-taskbar__button[data-focused='true'][data-accent='skills'],
+.wos-taskbar__button[data-focused='true'][data-accent='telemetry'],
+.wos-taskbar__button[data-focused='true'][data-accent='diagnostics'] {
+  color: var(--wos-accent-ink);
+}
+
 .wos-taskbar__button[data-focused='true'][data-accent='routines'] {
   background: var(--wos-routines);
 }
@@ -399,6 +412,29 @@
 .wos-app-monogram[data-accent='settings'],
 .wos-window__titlebar[data-accent='settings'] {
   background: var(--wos-settings);
+}
+
+.wos-app-monogram[data-accent='chat'],
+.wos-app-monogram[data-accent='routines'],
+.wos-app-monogram[data-accent='workflows'],
+.wos-app-monogram[data-accent='automations'],
+.wos-app-monogram[data-accent='gateways'],
+.wos-app-monogram[data-accent='model-arena'],
+.wos-app-monogram[data-accent='extensions'],
+.wos-app-monogram[data-accent='skills'],
+.wos-app-monogram[data-accent='telemetry'],
+.wos-app-monogram[data-accent='diagnostics'],
+.wos-window__titlebar[data-accent='chat'],
+.wos-window__titlebar[data-accent='routines'],
+.wos-window__titlebar[data-accent='workflows'],
+.wos-window__titlebar[data-accent='automations'],
+.wos-window__titlebar[data-accent='gateways'],
+.wos-window__titlebar[data-accent='model-arena'],
+.wos-window__titlebar[data-accent='extensions'],
+.wos-window__titlebar[data-accent='skills'],
+.wos-window__titlebar[data-accent='telemetry'],
+.wos-window__titlebar[data-accent='diagnostics'] {
+  color: var(--wos-accent-ink);
 }
 
 .wos-app-tile {
@@ -914,6 +950,19 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   background: var(--wos-chat);
 }
 
+.wos-dialog__titlebar[data-accent='chat'],
+.wos-dialog__titlebar[data-accent='routines'],
+.wos-dialog__titlebar[data-accent='workflows'],
+.wos-dialog__titlebar[data-accent='automations'],
+.wos-dialog__titlebar[data-accent='gateways'],
+.wos-dialog__titlebar[data-accent='model-arena'],
+.wos-dialog__titlebar[data-accent='extensions'],
+.wos-dialog__titlebar[data-accent='skills'],
+.wos-dialog__titlebar[data-accent='telemetry'],
+.wos-dialog__titlebar[data-accent='diagnostics'] {
+  color: var(--wos-accent-ink);
+}
+
 .wos-dialog__titlebar[data-accent='routines'] {
   background: var(--wos-routines);
 }
@@ -1236,7 +1285,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-dialog-title,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .ui-dialog-title {
-  color: var(--wos-ink-900);
+  color: var(--wos-accent-ink);
   font: var(--wos-text-subsection);
 }
 
@@ -1408,6 +1457,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-chat-window-toolbar__button:hover,
 .wos-chat-window-toolbar__button[aria-pressed='true'] {
   background: var(--wos-chat);
+  color: var(--wos-accent-ink);
 }
 
 .wos-chat-window-toolbar__button:disabled {
@@ -1592,11 +1642,16 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-window-route-body .ui-workbench-tab:hover,
 .wos-window-route-body .ui-workbench-tab-active {
   background: var(--wos-chat);
-  color: var(--wos-ink-900);
+  color: var(--wos-accent-ink);
 }
 
 .wos-window-route-body .ui-workbench-tab-active {
   box-shadow: inset 0 -3px 0 var(--wos-ink-900);
+}
+
+.wos-window-route-body .ui-workbench-tab:hover .ui-workbench-tab-icon,
+.wos-window-route-body .ui-workbench-tab-active .ui-workbench-tab-icon {
+  color: var(--wos-accent-ink);
 }
 
 .wos-window-route-body .ui-workbench-tab-button {
@@ -1651,6 +1706,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body .ui-workbench-tab-strip__new.bg-surface {
   background: var(--wos-chat);
+  color: var(--wos-accent-ink);
 }
 
 .wos-window-route-body .ui-workbench-file-bar {
@@ -1696,11 +1752,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-window-route-body .ui-workbench-file-bar__button:hover,
 .wos-window-route-body .ui-workbench-file-bar__button[aria-pressed='true'] {
   background: var(--wos-chat) !important;
+  color: var(--wos-accent-ink);
 }
 
 .wos-window-route-body .ui-workbench-file-bar__button.text-accent {
   background: var(--wos-chat) !important;
-  color: var(--wos-ink-900) !important;
+  color: var(--wos-accent-ink) !important;
 }
 
 .wos-window-route-body .ui-workbench-panel__body {
@@ -1810,6 +1867,13 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body .ui-action-tile:hover {
   background: var(--wos-chat);
+  color: var(--wos-accent-ink);
+}
+
+.wos-window-route-body .ui-action-tile:hover .ui-action-tile-main,
+.wos-window-route-body .ui-action-tile:hover .ui-action-tile-label,
+.wos-window-route-body .ui-action-tile:hover .ui-action-tile-icon {
+  color: var(--wos-accent-ink) !important;
 }
 
 .wos-window-route-body .ui-action-tile-icon {
@@ -4390,6 +4454,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-chat-workbench__tabs button[aria-selected='true'] {
   background: var(--wos-chat);
+  color: var(--wos-accent-ink);
   box-shadow: inset 0 -3px 0 var(--wos-ink-900);
 }
 
@@ -4511,7 +4576,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-self: flex-end;
   border-bottom-right-radius: 4px;
   background: var(--wos-chat);
-  color: white;
+  color: var(--wos-accent-ink);
 }
 
 .wos-message-bubble[data-from='assistant'] {
@@ -4545,7 +4610,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   border: 2px solid var(--wos-ink-900);
   border-radius: 9px;
   background: var(--wos-chat);
-  color: white;
+  color: var(--wos-accent-ink);
   padding: 0 10px;
   font: var(--wos-text-row);
 }
@@ -5148,7 +5213,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-message-action-button:hover,
 .windowed-os-shell .wos-window-route-body--chat .ui-message-action-button:focus-visible {
   background: var(--wos-chat);
-  color: var(--wos-ink-900);
+  color: var(--wos-accent-ink);
   text-decoration: none;
 }
 
@@ -5186,7 +5251,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-pill-accent,
 .windowed-os-shell .wos-window-route-body--chat .ui-pill-solid-accent {
   background: var(--wos-chat);
-  color: var(--wos-ink-900);
+  color: var(--wos-accent-ink);
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-pill-danger {
@@ -5272,6 +5337,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button:hover:not(:disabled) {
   background: var(--wos-chat);
+  color: var(--wos-accent-ink);
 }
 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button:hover:not(:disabled),
@@ -5282,6 +5348,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > div > button:not(.ui-context-menu-item):hover:not(:disabled),
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button:hover:not(:disabled) {
   background: var(--wos-chat) !important;
+  color: var(--wos-accent-ink);
 }
 
 .windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button:disabled,
@@ -5319,6 +5386,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item:hover,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated,
 body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-selected='true'] {
   background: var(--wos-chat, oklch(66% 0.14 250)) !important;
+  color: var(--wos-accent-ink) !important;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item:disabled,
@@ -5347,6 +5415,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item.bg-elevated,
 .windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item[aria-selected='true'] {
   background: var(--wos-chat) !important;
+  color: var(--wos-accent-ink) !important;
 }
 
 .windowed-os-shell .wos-window-route-body .ui-row-button,
@@ -5361,6 +5430,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 .windowed-os-shell .wos-window-route-body .ui-row-button:hover,
 .windowed-os-shell .wos-window-route-body button.ui-icon-button:hover {
   background: var(--wos-chat) !important;
+  color: var(--wos-accent-ink) !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block {
@@ -5448,6 +5518,14 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 .windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:hover,
 .windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:focus-visible {
   background: var(--wos-chat) !important;
+  color: var(--wos-accent-ink) !important;
+}
+
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:hover .ui-action-tile-icon,
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:hover .ui-action-tile-label,
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:focus-visible .ui-action-tile-icon,
+.windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile:focus-visible .ui-action-tile-label {
+  color: var(--wos-accent-ink) !important;
 }
 
 .windowed-os-shell .wos-window-route-body .ui-workbench-new-tab-grid .ui-action-tile-icon {
