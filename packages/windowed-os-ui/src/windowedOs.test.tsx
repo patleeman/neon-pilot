@@ -100,6 +100,9 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('@container wos-page-shell (max-width: 420px)');
     expect(stylesSource).toContain('.wos-settings-row__actions .wos-segmented-control {\n    display: grid;\n    width: 100%;');
     expect(stylesSource).toContain('.wos-settings-row__actions .wos-segmented-control__item {\n    width: 100%;\n    border-right: 0;');
+    expect(stylesSource).toContain('.wos-theme-variant-grid {\n  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));');
+    expect(stylesSource).toContain('.wos-theme-phase-grid {\n  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));');
+    expect(stylesSource).toContain('.wos-theme-phase-card {\n  min-height: 320px;');
     expect(stylesSource).toContain(".wos-key-value-grid[data-columns='4']");
     expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(even)');
     expect(stylesSource).toContain('.wos-key-value-grid__item:nth-child(n + 3)');
@@ -875,12 +878,18 @@ describe('Windowed OS Storybook examples', () => {
     const source = readFileSync(storiesPath, 'utf8');
 
     expect(source).toContain('export const ThemeVariants');
+    expect(source).toContain('export const TimeOfDayThemePhases');
+    expect(source).toContain('className="wos-theme-variant-grid"');
+    expect(source).toContain('className="windowed-os-shell wos-theme-phase-card"');
     expect(source).toContain('export const DarkDesktopComposition');
     expect(source).toContain('<DesktopCompositionStory theme="dark" />');
     expect(source).toContain('data-wos-theme={theme.resolved}');
     expect(source).toContain('data-wos-theme-mode={theme.mode}');
     expect(source).toContain('data-wos-theme-phase={theme.phase}');
     expect(source).toContain("mode: 'auto'");
+    for (const phase of ['deep-night', 'night', 'dawn', 'morning', 'bright-noon', 'afternoon', 'dusk']) {
+      expect(source).toContain(`phase: '${phase}'`);
+    }
     expect(source).toContain('Theme tokens');
   });
 

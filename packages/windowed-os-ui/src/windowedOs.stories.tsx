@@ -65,6 +65,16 @@ const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS;
 const storyImagePreviewSrc =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDcyMCA0MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNmNGVkZTIiLz48cmVjdCB4PSI0MCIgeT0iNDQiIHdpZHRoPSI2NDAiIGhlaWdodD0iMzEyIiByeD0iMjQiIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzE3MTMwZiIgc3Ryb2tlLXdpZHRoPSI4Ii8+PHBhdGggZD0iTTkyIDMwMGwxMTItMTA4IDkyIDY4IDEyOC0xMzIgMjA0IDE3MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDk5ZGRmIiBzdHJva2Utd2lkdGg9IjE4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyMDIiIGN5PSIxMjQiIHI9IjM4IiBmaWxsPSIjZmM4YjI3IiBzdHJva2U9IiMxNzEzMGYiIHN0cm9rZS13aWR0aD0iNiIvPjx0ZXh0IHg9IjgwIiB5PSI4NiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI2IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMTcxMzBmIj5XaW5kb3dlZCBPUyBwcmV2aWV3PC90ZXh0Pjwvc3ZnPg==';
 
+const timeOfDayPhases = [
+  { phase: 'deep-night', resolved: 'dark', title: 'Deep night', time: '02:00', badge: 'Low glare' },
+  { phase: 'night', resolved: 'dark', title: 'Night', time: '04:30', badge: 'Quiet' },
+  { phase: 'dawn', resolved: 'light', title: 'Dawn', time: '06:30', badge: 'Warm start' },
+  { phase: 'morning', resolved: 'light', title: 'Morning', time: '09:00', badge: 'Clear' },
+  { phase: 'bright-noon', resolved: 'light', title: 'Bright noon', time: '12:30', badge: 'High contrast' },
+  { phase: 'afternoon', resolved: 'light', title: 'Afternoon', time: '15:30', badge: 'Soft' },
+  { phase: 'dusk', resolved: 'dark', title: 'Dusk', time: '19:30', badge: 'Dimmed' },
+] as const;
+
 function StoryTokenActivityChart() {
   return (
     <WindowedChartPanel title="Token Activity" meta="24H · 1.4M total · 58K avg" className="wos-heatmap">
@@ -1024,7 +1034,7 @@ export const WindowChromePrimitives: Story = {
 
 export const ThemeVariants: Story = {
   render: () => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', minHeight: 520 }}>
+    <div className="wos-theme-variant-grid">
       {[
         { mode: 'light', resolved: 'light', phase: 'bright-noon', title: 'Light desktop' },
         { mode: 'auto', resolved: 'dark', phase: 'dusk', title: 'Time of day dusk desktop' },
@@ -1036,7 +1046,7 @@ export const ThemeVariants: Story = {
           data-wos-theme={theme.resolved}
           data-wos-theme-mode={theme.mode}
           data-wos-theme-phase={theme.phase}
-          style={{ minHeight: 520, padding: 18 }}
+          style={{ minHeight: 520 }}
         >
           <WindowFrame
             title={theme.title}
@@ -1096,6 +1106,58 @@ export const ThemeVariants: Story = {
               { id: `${theme.mode}-settings`, title: 'Settings', accent: 'settings', onSelect: () => undefined },
             ]}
           />
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const TimeOfDayThemePhases: Story = {
+  render: () => (
+    <div className="wos-theme-phase-grid" aria-label="Time of day theme phases">
+      {timeOfDayPhases.map((theme) => (
+        <div
+          key={theme.phase}
+          className="windowed-os-shell wos-theme-phase-card"
+          data-wos-theme={theme.resolved}
+          data-wos-theme-mode="auto"
+          data-wos-theme-phase={theme.phase}
+        >
+          <WindowFrame
+            title={theme.title}
+            accent={theme.resolved === 'dark' ? 'chat' : 'settings'}
+            focused={theme.phase === 'bright-noon'}
+            style={{ position: 'relative', left: 0, top: 0, width: '100%', height: 260 }}
+            onMinimize={() => undefined}
+            onMaximize={() => undefined}
+            onClose={() => undefined}
+          >
+            <WindowedPageMain
+              title={theme.time}
+              actions={<WindowedBadge tone={theme.resolved === 'dark' ? 'warning' : 'positive'}>{theme.badge}</WindowedBadge>}
+            >
+              <WindowedPageSection title={theme.phase} meta={theme.resolved}>
+                <WindowedToolbar
+                  end={
+                    <WindowedToggle
+                      checked
+                      accent={theme.resolved === 'dark' ? 'chat' : 'settings'}
+                      label={`${theme.title} automatic theme`}
+                    />
+                  }
+                >
+                  <WindowedSegmentedControl
+                    ariaLabel={`${theme.title} resolved theme`}
+                    value={theme.resolved}
+                    options={[
+                      { id: 'light', label: 'Light' },
+                      { id: 'dark', label: 'Dark' },
+                    ]}
+                  />
+                </WindowedToolbar>
+              </WindowedPageSection>
+            </WindowedPageMain>
+          </WindowFrame>
         </div>
       ))}
     </div>
