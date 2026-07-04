@@ -3479,7 +3479,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-data-row[data-selected='true'] .wos-data-row__name,
 .wos-data-row[data-selected='true'] .wos-data-row__meta,
-.wos-data-row[data-selected='true'] .wos-data-row__cell {
+.wos-data-row[data-selected='true'] .wos-data-row__cell,
+.wos-data-row[data-selected='true'] .wos-badge,
+.wos-data-row[data-selected='true'] .wos-status-note {
   color: var(--wos-data-row-active-ink, var(--wos-ink-900));
 }
 

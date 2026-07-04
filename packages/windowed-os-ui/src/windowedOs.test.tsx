@@ -93,6 +93,16 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('.wos-automation-queue .wos-data-row');
   });
 
+  it('keeps selected row badge and status text legible on active accent colors', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(".wos-data-row[data-selected='true'] .wos-data-row__cell,");
+    expect(stylesSource).toContain(".wos-data-row[data-selected='true'] .wos-badge,");
+    expect(stylesSource).toContain(".wos-data-row[data-selected='true'] .wos-status-note");
+    expect(stylesSource).toContain('color: var(--wos-data-row-active-ink, var(--wos-ink-900));');
+  });
+
   it('stacks Model Arena status controls in compact window containers', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
