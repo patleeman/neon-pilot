@@ -2762,7 +2762,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               />
             </WindowedPageSection>
 
-            <WindowedPageSection>
+            <WindowedPageSection variant="toolbar">
               <WindowedToolbar>
                 <WindowedTextInput aria-label="Search extensions" placeholder="Search extensions" />
               </WindowedToolbar>
@@ -3035,7 +3035,7 @@ function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
               />
             </WindowedPageSection>
 
-            <WindowedPageSection>
+            <WindowedPageSection variant="toolbar">
               <WindowedToolbar as="form" formProps={{ onSubmit: (event) => event.preventDefault() }}>
                 <WindowedTextInput aria-label="Search marketplace skills" placeholder="Search marketplace skills" />
                 <WindowedPageButton>Clear</WindowedPageButton>
@@ -3045,7 +3045,7 @@ function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
               </WindowedToolbar>
             </WindowedPageSection>
 
-            <WindowedPageSection>
+            <WindowedPageSection variant="toolbar">
               <WindowedFormGrid columns={3}>
                 <WindowedField label="Capability">
                   <WindowedSelect aria-label="Filter by capability" defaultValue="all">

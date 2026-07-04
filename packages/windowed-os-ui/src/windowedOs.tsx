@@ -232,11 +232,12 @@ export interface WindowedPageSectionProps {
   meta?: string;
   children: ReactNode;
   className?: string;
+  variant?: 'panel' | 'toolbar';
 }
 
-export function WindowedPageSection({ title, meta, children, className }: WindowedPageSectionProps) {
+export function WindowedPageSection({ title, meta, children, className, variant = 'panel' }: WindowedPageSectionProps) {
   return (
-    <section className={cx('wos-page-section', className)}>
+    <section className={cx('wos-page-section', className)} data-variant={variant}>
       {title || meta ? (
         <header className="wos-page-section__header">
           {title ? <h3>{title}</h3> : null}

@@ -2944,6 +2944,25 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   background: transparent;
 }
 
+.wos-page-section[data-variant='toolbar'] {
+  overflow: visible;
+  border-color: var(--wos-line-subtle);
+  background: color-mix(in srgb, var(--wos-surface-2) 58%, var(--wos-surface-1));
+}
+
+.wos-page-section[data-variant='toolbar'] .wos-toolbar {
+  min-height: 38px;
+  padding: var(--wos-space-3) var(--wos-space-4);
+}
+
+.wos-page-section[data-variant='toolbar'] .wos-form-grid {
+  padding: var(--wos-space-4);
+}
+
+.wos-page-section[data-variant='toolbar'] .wos-field {
+  min-width: min(100%, 150px);
+}
+
 .wos-page-section__header {
   display: flex;
   align-items: center;

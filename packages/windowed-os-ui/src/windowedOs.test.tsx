@@ -508,6 +508,20 @@ describe('WindowedPageSection', () => {
     expect(stylesSource).toContain('border-bottom: var(--wos-border-hairline) solid var(--wos-line-subtle);');
   });
 
+  it('provides a flatter toolbar variant for search and filter toolstrips', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+    const html = renderToStaticMarkup(<WindowedPageSection variant="toolbar">Search</WindowedPageSection>);
+
+    expect(html).toContain('data-variant="toolbar"');
+    expect(stylesSource).toContain(".wos-page-section[data-variant='toolbar'] {");
+    expect(stylesSource).toContain('overflow: visible;');
+    expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-surface-2) 58%, var(--wos-surface-1));');
+    expect(stylesSource).toContain(".wos-page-section[data-variant='toolbar'] .wos-toolbar {");
+    expect(stylesSource).toContain('min-height: 38px;');
+    expect(stylesSource).toContain(".wos-page-section[data-variant='toolbar'] .wos-form-grid {");
+  });
+
   it('softens page sections inside child dialogs so detail windows avoid nested frame chrome', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
@@ -526,6 +540,7 @@ describe('WindowedPageSection', () => {
     const html = renderToStaticMarkup(<WindowedPageSection>Filters</WindowedPageSection>);
 
     expect(html).toContain('class="wos-page-section"');
+    expect(html).toContain('data-variant="panel"');
     expect(html).toContain('Filters');
     expect(html).not.toContain('wos-page-section__header');
   });
@@ -2641,6 +2656,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(skillsSource).toContain('title="Browse skills"');
     expect(skillsSource).not.toContain('eyebrow="Skill library"');
     expect(skillsSource).toContain('title="Sources"');
+    expect(skillsSource).toContain('<WindowedPageSection variant="toolbar">');
     expect(skillsSource).toContain('Search marketplace skills');
     expect(skillsSource).toContain('title="Marketplace"');
     expect(skillsSource).toContain('title="Installed"');
@@ -2670,6 +2686,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(extensionsSource.indexOf('<WindowedPageRail title="Extensions"')).toBeLessThan(extensionsSource.indexOf('<WindowedPageMain'));
     expect(extensionsSource).not.toContain('eyebrow="Extension manager"');
     expect(extensionsSource).toContain('title="Sources"');
+    expect(extensionsSource).toContain('<WindowedPageSection variant="toolbar">');
     expect(extensionsSource).toContain('Search extensions');
     expect(extensionsSource).toContain('title="Installed"');
     expect(extensionsSource).toContain('ariaLabel="Extension view"');
