@@ -5571,9 +5571,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-notice,
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill,
-.windowed-os-shell .wos-window-route-body--chat .ui-input-shell,
-.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf {
-  border-left-width: 0 !important;
+.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
+  border-left-width: 2px !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
@@ -5632,8 +5631,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf {
-  border-color: var(--wos-ink-900) !important;
+  border-top: 0 !important;
+  border-right: 0 !important;
   border-bottom: 2px solid var(--wos-ink-900) !important;
+  border-left: 0 !important;
   background: var(--wos-surface-2) !important;
   padding: 8px 10px;
 }
@@ -5844,6 +5845,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   max-width: none;
   padding: var(--wos-space-5) var(--wos-space-5) 112px !important;
   font-family: var(--wos-font-body);
+}
+
+.windowed-os-shell .wos-window-route-body--chat .border-l {
+  border-left-width: 0 !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-message-card-user,
@@ -6708,6 +6713,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   margin-top: 7px;
   margin-left: 0 !important;
   border-top: 2px solid var(--wos-ink-900) !important;
+  border-left: 0 !important;
   padding-top: 8px !important;
   padding-left: 0 !important;
 }
