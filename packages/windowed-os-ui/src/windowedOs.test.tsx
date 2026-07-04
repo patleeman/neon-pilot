@@ -1822,6 +1822,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.ui-windowed-drawings-picker-body {\n  display: flex;');
     expect(stylesSource).toContain('overflow: hidden;');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-resource-picker-toolbar {\n  display: flex;');
+    expect(storiesSource).toContain('className="ui-windowed-drawings-picker-filter"');
+    expect(storiesSource).toContain('className="ui-windowed-drawings-picker-count tabular-nums"');
+    expect(storiesSource).not.toContain('className="ui-input bg-elevated"');
+    expect(storiesSource).not.toContain('className="ui-pill ui-pill-muted tabular-nums"');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-windowed-drawings-picker-filter');
+    expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-windowed-drawings-picker-count');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-resource-picker-list {\n  display: grid;');
     expect(stylesSource).toContain('overflow: auto;');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-panel > .ui-panel-muted');

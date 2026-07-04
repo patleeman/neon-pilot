@@ -2085,7 +2085,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-input,
-body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker input {
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker input,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-windowed-drawings-picker-filter {
   min-width: 0;
   min-height: 30px;
   flex: 1 1 220px;
@@ -2097,8 +2098,12 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   font: var(--wos-text-row);
 }
 
-body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-pill {
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-pill,
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-windowed-drawings-picker-count {
+  display: inline-flex;
   min-height: 24px;
+  align-items: center;
+  justify-content: center;
   border: 1.5px solid var(--wos-ink-900);
   border-radius: var(--wos-radius-pill);
   background: var(--wos-surface-1);

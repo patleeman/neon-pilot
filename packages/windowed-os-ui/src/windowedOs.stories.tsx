@@ -3386,8 +3386,8 @@ function DrawingsPickerSubwindowStory({ theme = 'light' }: { theme?: 'light' | '
             </header>
             <div className="ui-windowed-drawings-picker-body">
               <div className="ui-resource-picker-toolbar">
-                <input className="ui-input bg-elevated" aria-label="Filter drawings" value="windowed" readOnly />
-                <span className="ui-pill ui-pill-muted tabular-nums">2</span>
+                <input className="ui-windowed-drawings-picker-filter" aria-label="Filter drawings" value="windowed" readOnly />
+                <span className="ui-windowed-drawings-picker-count tabular-nums">2</span>
               </div>
               <div className="ui-resource-picker-list">
                 <article className="ui-panel">
