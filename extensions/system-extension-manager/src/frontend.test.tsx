@@ -742,6 +742,7 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Settings' }));
 
     expect(screen.getByTestId('location').textContent).toBe('/settings/extensions/configurable-test');
+    expect(screen.queryByRole('dialog', { name: 'Configurable Test' })).toBeNull();
   });
 
   it('shows catalog-only extensions in the install modal instead of the installed table', async () => {

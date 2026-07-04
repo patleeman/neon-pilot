@@ -1930,7 +1930,13 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                   </WindowedPageButton>
                 ) : null}
                 {hasExtensionSettings(selectedExtension) ? (
-                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => navigate(extensionSettingsTarget(selectedExtension))}>
+                  <WindowedPageButton
+                    disabled={selectedExtensionBusy}
+                    onClick={() => {
+                      navigate(extensionSettingsTarget(selectedExtension));
+                      setDetailsExtensionId(null);
+                    }}
+                  >
                     Settings
                   </WindowedPageButton>
                 ) : null}
