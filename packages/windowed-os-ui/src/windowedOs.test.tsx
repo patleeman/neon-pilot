@@ -2366,6 +2366,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(routinesSource).toContain('initialOffset={{ x: 0, y: 390 }}');
     expect(source).not.toContain('title="Selected routine"');
     expect(source).not.toContain('ariaLabel="Routine scope"');
+    expect(routinesSource.match(/className="wos-routine-summary-row"/g)).toHaveLength(3);
+    expect(stylesSource).toContain('.wos-routine-summary-row .wos-data-row__name,\n.wos-routine-summary-row .wos-data-row__meta');
     expect(stylesSource).toContain('.wos-routine-summary-row .wos-data-row__meta');
     expect(stylesSource).toContain('overflow-wrap: anywhere;');
   });

@@ -2054,6 +2054,7 @@ function RoutinesPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
               <WindowedTimeline>
                 <WindowedTimelineItem title="Repo context loader" meta="1 · Run prompt" tone="positive">
                   <WindowedDataRow
+                    className="wos-routine-summary-row"
                     name="Load workspace glossary, repo instructions, and active desktop-mode notes before the agent starts."
                     meta="enabled · gpt-5"
                     status={<WindowedBadge tone="positive">Continues</WindowedBadge>}
@@ -2067,6 +2068,7 @@ function RoutinesPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
                 </WindowedTimelineItem>
                 <WindowedTimelineItem title="Taste gate" meta="2 · Choose path" tone="warning">
                   <WindowedDataRow
+                    className="wos-routine-summary-row"
                     name="Route frontend-heavy changes through the design taste checklist before editing."
                     meta="enabled"
                     status={<WindowedBadge tone="warning">2 paths</WindowedBadge>}
@@ -2101,6 +2103,7 @@ function RoutinesPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
               <WindowedTimeline>
                 <WindowedTimelineItem title="Session handoff" meta="1 · Run prompt" tone="neutral">
                   <WindowedDataRow
+                    className="wos-routine-summary-row"
                     name="Write a compact handoff when a long-running desktop-mode task changes state."
                     meta="enabled"
                     status={<WindowedBadge tone="positive">Warns on fail</WindowedBadge>}

@@ -4766,6 +4766,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   margin-top: 8px;
 }
 
+.wos-routine-summary-row .wos-data-row__name,
 .wos-routine-summary-row .wos-data-row__meta {
   white-space: normal;
   overflow-wrap: anywhere;
