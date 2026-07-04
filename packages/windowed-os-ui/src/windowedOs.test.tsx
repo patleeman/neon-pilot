@@ -766,70 +766,75 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .conversation-composer-region');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900);');
     expect(stylesSource).toContain('.wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('z-index: 30;');
     expect(stylesSource).toContain('.wos-window-route-body--chat .ui-input-shell');
     expect(stylesSource).toContain('overflow: visible;');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell {');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {');
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain('.windowed-os-shell\n  .wos-window-route-body--chat\n  .conversation-composer-inner');
+    expect(stylesSource).toContain(":where(input, textarea, button, select, [contenteditable='true'])");
     expect(stylesSource).toContain(
-      ".windowed-os-shell .wos-window-route-body .conversation-composer-inner :where(input, textarea, button, select, [contenteditable='true'])",
+      ".windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea,\n.windowed-os-shell .wos-window-route-body--chat .ui-input-shell [contenteditable='true']",
     );
-    expect(stylesSource).toContain(
-      ".windowed-os-shell .wos-window-route-body .ui-input-shell textarea,\n.windowed-os-shell .wos-window-route-body .ui-input-shell [contenteditable='true']",
-    );
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell textarea::placeholder');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell:focus-within');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell textarea::placeholder');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell:focus-within');
     expect(stylesSource).toContain('outline: 2px solid var(--wos-chat);');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-notice');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-notice__pill');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill.ui-composer-notice__pill');
-    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body .ui-composer-notice[data-tone='warning']");
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
+    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf');
     expect(stylesSource).toContain('border-color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf__row');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf :where(.ui-attachment-chip)');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-attachment-shelf__status');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__row');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip)',
+    );
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status');
     expect(stylesSource).toContain('.wos-window-route-body .bg-base');
     expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
     expect(stylesSource).toContain('.wos-window-route-body .text-primary');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-input-controls');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-input-controls__control-row');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-meta');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-tool-button');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-model-fallback');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-preferences-row__menu-button');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-preferences-row .ui-menu-trigger-inline');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-composer-actions');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body button.ui-composer-action-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button');
     expect(stylesSource).toContain('font: var(--wos-text-row);');
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item");
     expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated");
     expect(stylesSource).toContain('background: var(--wos-chat, oklch(66% 0.14 250)) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-row-button');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-conversation-setup-empty');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-conversation-setup-empty');
+    expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .conversation-composer-region');
+    expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .ui-input-shell {');
   });
 
   it('restyles transcript cards, metadata, pills, and tool blocks with scoped windowed chrome', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1']");
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-user');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-assistant');
+    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat [data-chat-transcript-panel='1']");
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant');
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-1));');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-meta');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-action-button');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-message-action-button-icon');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill-accent');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-pill-danger');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-tool-block');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-meta');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button-icon');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-accent');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill-danger');
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).not.toContain(".windowed-os-shell .wos-window-route-body [data-chat-transcript-panel='1']");
+    expect(stylesSource).not.toContain('.windowed-os-shell .wos-window-route-body .ui-message-card-user');
   });
 
   it('restyles the attached workbench tab strip with scoped windowed chrome', () => {
