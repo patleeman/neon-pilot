@@ -903,6 +903,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const TimeOfDayThemePhases');
     expect(source).toContain('export const DrawingsPickerSubwindow');
     expect(source).toContain('data-windowed-subwindow="drawing-picker"');
+    expect(source).toContain('export const ExcalidrawEditorSubwindow');
+    expect(source).toContain('data-windowed-subwindow="drawing-editor"');
+    expect(source).toContain('data-windowed-child-window="true"');
+    expect(source).toContain('className="ui-overlay-backdrop ui-windowed-excalidraw-backdrop"');
     expect(source).toContain('data-parent-window-title="Release planning"');
     expect(source).toContain('className="wos-theme-variant-grid"');
     expect(source).toContain('className="windowed-os-shell wos-theme-phase-card"');
@@ -1432,6 +1436,11 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {\n  min-height: 0;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite {\n  display: grid;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {\n  display: grid;');
+    expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-embed-lite img');
+    expect(stylesSource).toContain('object-fit: contain;');
   });
 
   it('contains iframe paint inside window bodies without blanketing window content with the shield', () => {

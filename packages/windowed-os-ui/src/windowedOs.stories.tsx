@@ -3231,6 +3231,64 @@ export const DrawingsPickerSubwindow: Story = {
   ),
 };
 
+export const ExcalidrawEditorSubwindow: Story = {
+  render: () => (
+    <WindowedShellBodyAttribute>
+      <div className="windowed-os-shell" data-wos-theme="dark" data-wos-theme-mode="dark" style={{ minHeight: 680, padding: 24 }}>
+        <div className="ui-overlay-backdrop ui-windowed-excalidraw-backdrop" role="presentation">
+          <section
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="excalidraw-editor-title"
+            className="ui-dialog-shell ui-windowed-excalidraw-modal"
+            data-windowed-subwindow="drawing-editor"
+            data-windowed-child-window="true"
+            data-parent-window-attached="chat"
+            data-parent-window-id="chat:release-plan"
+            data-parent-window-title="Release planning"
+          >
+            <header className="ui-dialog-header">
+              <div className="ui-dialog-header-copy">
+                <h2 id="excalidraw-editor-title" className="ui-dialog-title">
+                  Drawing editor
+                </h2>
+                <p className="ui-dialog-description">Edit the attached sketch.</p>
+              </div>
+              <div className="ui-dialog-actions">
+                <button type="button" className="ui-icon-button" aria-label="Close drawing editor" title="Close drawing editor">
+                  x
+                </button>
+              </div>
+            </header>
+            <div className="ui-windowed-excalidraw-modal-body">
+              <div className="excalidraw-editor-modal">
+                <div className="excalidraw-editor-modal__toolbar" aria-label="Drawing controls">
+                  <button type="button" className="ui-toolbar-button">
+                    Select
+                  </button>
+                  <button type="button" className="ui-toolbar-button">
+                    Shape
+                  </button>
+                  <button type="button" className="ui-action-button">
+                    Save
+                  </button>
+                </div>
+                <div className="excalidraw-editor-modal__canvas">
+                  <div className="excalidraw-embed-lite" aria-label="Drawing canvas preview">
+                    <div className="excalidraw">
+                      <img src={storyImagePreviewSrc} alt="Windowed OS sketch preview" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </WindowedShellBodyAttribute>
+  ),
+};
+
 function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>

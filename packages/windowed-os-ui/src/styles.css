@@ -1585,20 +1585,34 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal__canvas {
+  min-height: 0;
+  overflow: hidden;
   border-top: 0;
   background: var(--wos-surface-1);
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite {
+  display: grid;
+  min-height: 100%;
   background: var(--wos-surface-1);
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite .excalidraw {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
   --color-primary: var(--wos-chat);
   --color-primary-darker: color-mix(in srgb, var(--wos-chat) 82%, var(--wos-ink-900));
   --color-primary-darkest: color-mix(in srgb, var(--wos-chat) 68%, var(--wos-ink-900));
   --color-primary-light: color-mix(in srgb, var(--wos-chat) 22%, var(--wos-surface-1));
   background: var(--wos-surface-1);
+}
+
+body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-embed-lite img {
+  display: block;
+  width: min(82%, 640px);
+  max-height: calc(100% - 32px);
+  object-fit: contain;
 }
 
 body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker .ui-resource-picker-toolbar {
