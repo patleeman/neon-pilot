@@ -1447,7 +1447,12 @@ function SettingsTwoColumnPageStory({
   activeSection?: SettingsStorySectionId;
 }) {
   return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
+    <div
+      className="windowed-os-shell"
+      data-wos-theme={theme}
+      data-wos-theme-mode={theme}
+      style={{ boxSizing: 'border-box', minHeight: '100vh', height: '100vh', overflow: 'hidden', padding: 24 }}
+    >
       <WindowFrame
         title="Settings"
         accent="settings"

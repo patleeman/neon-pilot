@@ -2274,6 +2274,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('showHeader={false}');
     expect(source).toContain('title="Sections"');
     expect(settingsSource).toContain("minHeight: '100vh'");
+    expect(settingsSource).toContain("height: '100vh'");
+    expect(settingsSource).toContain("overflow: 'hidden'");
+    expect(settingsSource).toContain("boxSizing: 'border-box'");
     expect(settingsSource).toContain('{settingsStorySections.map((section) => (');
     expect(settingsSource).toContain('active={activeSection === section.id}');
     expect(settingsSource).toContain('onSelect={() => undefined}');
