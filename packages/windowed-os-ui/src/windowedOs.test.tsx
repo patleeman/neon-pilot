@@ -393,6 +393,16 @@ describe('WindowedNumberStepper', () => {
 });
 
 describe('WindowedPageSection', () => {
+  it('uses strong windowed borders for repeated page panels', () => {
+    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
+    const stylesSource = readFileSync(stylesPath, 'utf8');
+
+    expect(stylesSource).toContain(
+      '.wos-page-section {\n  overflow: hidden;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
+    );
+    expect(stylesSource).toContain('border-bottom: var(--wos-border-strong) solid var(--wos-ink-900);');
+  });
+
   it('omits header chrome for structural wrapper sections', () => {
     const html = renderToStaticMarkup(<WindowedPageSection>Filters</WindowedPageSection>);
 

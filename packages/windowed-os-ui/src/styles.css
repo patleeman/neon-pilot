@@ -2197,7 +2197,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-page-section {
   overflow: hidden;
-  border: 1.5px solid var(--wos-ink-900);
+  border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: var(--wos-radius-md);
   background: var(--wos-surface-2);
 }
@@ -2207,7 +2207,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   justify-content: space-between;
   gap: var(--wos-space-4);
-  border-bottom: 1.5px solid var(--wos-ink-900);
+  border-bottom: var(--wos-border-strong) solid var(--wos-ink-900);
   padding: 5px var(--wos-space-4);
 }
 
