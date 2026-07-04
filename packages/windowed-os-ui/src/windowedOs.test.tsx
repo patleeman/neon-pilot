@@ -1048,6 +1048,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-']) {",
     );
+    expect(stylesSource).toContain('Windowed mode does not use standalone left-edge rails for hierarchy or status.');
     expect(stylesSource).toContain(
       ".windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-'])::before,",
     );
@@ -2280,7 +2281,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(workbenchRailRule).not.toContain('border-left: 2px');
     expect(contextRailRule).not.toContain('border-left: 2px');
     expect(inheritedRailRule).toContain('.ui-composer-notice');
+    expect(inheritedRailRule).toContain("[class~='border-l']");
+    expect(inheritedRailRule).toContain("[class*=' border-l-']");
     expect(inheritedRailRule).toContain("[class*='border-l-']");
+    expect(inheritedRailRule).toContain("[class^='border-l-']");
     expect(inheritedRailRule).toContain('.conversation-composer-region');
     expect(inheritedRailRule).toContain('.conversation-composer-inner');
     expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf');
@@ -2292,7 +2296,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(inheritedRailRule).toContain('border-left: 0 !important;');
     expect(inheritedRailRule).toContain('box-shadow: none !important;');
     expect(stylesSource).toContain('.wos-window-route-body--chat .ui-resize-handle__line {\n  display: none !important;');
-    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat :where([class~='border-l'], [class*='border-l-'])");
+    expect(stylesSource).toContain(
+      ".wos-window-route-body--chat\n  :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-'])",
+    );
     expect(stylesSource).toContain('border-left-color: transparent !important;');
   });
 

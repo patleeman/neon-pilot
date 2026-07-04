@@ -28,6 +28,7 @@
   cursor: default;
 }
 
+/* Windowed mode does not use standalone left-edge rails for hierarchy or status. */
 .windowed-os-shell :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class^='border-l-']) {
   border-left: 0 !important;
   border-left-width: 0 !important;
@@ -6253,7 +6254,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   .wos-window-route-body--chat
   :where(
     .border-l,
+    [class~='border-l'],
+    [class*=' border-l-'],
     [class*='border-l-'],
+    [class^='border-l-'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6269,7 +6273,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   .wos-window-route-body--chat
   :where(
     .border-l,
+    [class~='border-l'],
+    [class*=' border-l-'],
     [class*='border-l-'],
+    [class^='border-l-'],
     .conversation-composer-region,
     .conversation-composer-inner,
     .ui-composer-notice,
@@ -6309,7 +6316,9 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   border-left-color: transparent !important;
 }
 
-.windowed-os-shell .wos-window-route-body--chat :where([class~='border-l'], [class*='border-l-']) {
+.windowed-os-shell
+  .wos-window-route-body--chat
+  :where(.border-l, [class~='border-l'], [class*=' border-l-'], [class*='border-l-'], [class^='border-l-']) {
   box-shadow: none !important;
 }
 
