@@ -6246,7 +6246,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     .ui-composer-attachment-shelf,
     .ui-context-lifecycle-marker,
     .ui-context-shelf__item,
-    .ui-trace-cluster__body,
     [data-context-shelf]
   )::before,
 .windowed-os-shell
@@ -6258,7 +6257,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
     .ui-composer-attachment-shelf,
     .ui-context-lifecycle-marker,
     .ui-context-shelf__item,
-    .ui-trace-cluster__body,
     [data-context-shelf]
   )::after {
   content: none !important;
@@ -7101,7 +7099,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf button.ui-icon-button {
-  border-left: 0 !important;
+  border: 1.5px solid var(--wos-ink-900) !important;
   border-radius: 6px;
 }
 
@@ -7171,7 +7169,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   margin-top: 7px;
   margin-left: 0 !important;
   border-top: 2px solid var(--wos-ink-900) !important;
-  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
   padding-top: 8px !important;
   padding-left: 0 !important;
 }

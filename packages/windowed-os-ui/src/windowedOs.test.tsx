@@ -1365,7 +1365,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__rule');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body');
     expect(stylesSource).toContain('border-top: 2px solid var(--wos-ink-900) !important;');
-    expect(stylesSource).toContain('border-left: 0 !important;');
+    expect(stylesSource).toContain('border-right: 0 !important;\n  border-bottom: 0 !important;');
+    expect(stylesSource).not.toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 0 !important;\n  border-top: 2px solid var(--wos-ink-900) !important;\n  border-left',
+    );
     expect(stylesSource).not.toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-trace-cluster__body {\n  display: grid;\n  gap: 6px;\n  margin-top: 7px;\n  margin-left: 10px !important;\n  border-left',
     );
@@ -2228,7 +2231,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(inheritedRailRule).toContain('.ui-composer-attachment-shelf');
     expect(inheritedRailRule).toContain('.ui-context-lifecycle-marker');
     expect(inheritedRailRule).toContain('.ui-context-shelf__item');
-    expect(inheritedRailRule).toContain('.ui-trace-cluster__body');
+    expect(inheritedRailRule).not.toContain('.ui-trace-cluster__body');
     expect(inheritedRailRule).toContain('content: none !important;');
     expect(inheritedRailRule).toContain('border-left: 0 !important;');
     expect(inheritedRailRule).toContain('box-shadow: none !important;');
