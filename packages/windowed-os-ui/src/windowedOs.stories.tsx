@@ -3073,9 +3073,9 @@ export const CoreDataPrimitives: Story = {
   ),
 };
 
-export const TerminalWindow: Story = {
-  render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
+function TerminalWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+  return (
+    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 520, padding: 24 }}>
       <WindowFrame
         title="Terminal"
         accent="extensions"
@@ -3097,7 +3097,15 @@ export const TerminalWindow: Story = {
         </WindowedTerminalFrame>
       </WindowFrame>
     </div>
-  ),
+  );
+}
+
+export const TerminalWindow: Story = {
+  render: () => <TerminalWindowStory />,
+};
+
+export const DarkTerminalWindow: Story = {
+  render: () => <TerminalWindowStory theme="dark" />,
 };
 
 function BrowserWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {

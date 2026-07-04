@@ -1704,12 +1704,23 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-terminal-frame');
+    expect(stylesSource).toContain('.wos-terminal-frame {\n  container-type: inline-size;');
     expect(stylesSource).toContain('.wos-terminal-frame__status');
     expect(stylesSource).toContain('.wos-terminal-frame__body');
     expect(stylesSource).toContain('.wos-terminal-panel');
+    expect(stylesSource).toContain('.wos-terminal-panel {\n  display: block;');
     expect(stylesSource).toContain('background: var(--wos-surface-1);');
     expect(stylesSource).toContain('color: var(--wos-ink-900);');
+    expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('border-radius: 8px;');
+    expect(stylesSource).toContain('.wos-terminal-frame__status {\n  display: flex;');
+    expect(stylesSource).toContain('min-height: 34px;');
+    expect(stylesSource).toContain('.wos-terminal-frame__body {\n  display: grid;');
     expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).toContain('.wos-terminal-panel pre {\n  margin: 0;\n  padding: 8px;');
+    expect(stylesSource).toContain('@container (max-width: 420px)');
+    expect(stylesSource).toContain('.wos-terminal-frame__status {\n    align-items: flex-start;\n    flex-direction: column;');
+    expect(stylesSource).toContain('.wos-terminal-frame__state {\n    flex-shrink: 1;\n    max-width: 100%;');
     expect(stylesSource).toContain('.wos-terminal-panel :where(.xterm, .xterm-screen, .xterm-viewport)');
   });
 
@@ -1822,6 +1833,10 @@ describe('Windowed OS Storybook examples', () => {
     const source = readFileSync(storiesPath, 'utf8');
 
     expect(source).toContain('export const TerminalWindow');
+    expect(source).toContain('function TerminalWindowStory');
+    expect(source).toContain('export const DarkTerminalWindow');
+    expect(source).toContain('<TerminalWindowStory theme="dark" />');
+    expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('<WindowedTerminalFrame cwd="/Users/patrick/workingdir/neon-pilot" status="PTY shell">');
     expect(source).toContain('PASS terminal frame tokens');
     expect(source).toContain('function BrowserWindowStory');
