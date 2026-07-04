@@ -1793,6 +1793,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const BrowserWindow');
     expect(source).toContain('export const DarkBrowserWindow');
     expect(source).toContain('<BrowserWindowStory theme="dark" />');
+    expect(source).toContain("style={{ minHeight: '100vh', padding: 24 }}");
     expect(source).toContain('data-windowed-subwindow="browser"');
     expect(source).toContain('aria-label="Browser child window preview"');
   });
