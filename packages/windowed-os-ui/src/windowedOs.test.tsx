@@ -124,8 +124,10 @@ describe('WindowedDataTable', () => {
     expect(stylesSource).toContain('.wos-arena-status-row__copy');
     expect(stylesSource).toContain('.wos-arena-status-row__copy {\n  min-width: 0;');
     expect(stylesSource).toContain('overflow-wrap: anywhere;');
+    expect(stylesSource).toContain('.wos-arena-settings-dialog {');
+    expect(stylesSource).toContain('width: min(540px, calc(100% - 8px));');
     expect(stylesSource).toContain('@container (max-width: 640px)');
-    expect(stylesSource).toContain('.wos-arena-status-row {\n    grid-template-columns: minmax(0, 1fr);');
+    expect(stylesSource).toContain('.wos-arena-status-row,\n  .wos-arena-settings-dialog .wos-arena-settings-grid {');
     expect(stylesSource).toContain('justify-items: start;');
   });
 });
@@ -1876,6 +1878,8 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical Model Arena desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const arenaSource = source.slice(source.indexOf('function ModelArenaPageStory'), source.indexOf('export const ModelArenaPage'));
+    const arenaMainSource = arenaSource.slice(arenaSource.indexOf('<WindowFrame'), arenaSource.indexOf('</WindowFrame>'));
 
     expect(source).toContain('function ModelArenaPageStory');
     expect(source).toContain('export const ModelArenaPage');
@@ -1888,18 +1892,28 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Status"');
     expect(source).toContain('title="Challengers"');
     expect(source).toContain('title="Sampling"');
+    expect(source).toContain('title="Arena settings"');
+    expect(source).toContain('parentWindowTitle="Model Arena"');
+    expect(source).toContain('className="wos-arena-settings-dialog"');
     expect(source).toContain('<WindowedNumberStepper');
     expect(source).toContain('unit="%"');
     expect(source).toContain('unit="votes"');
     expect(source).toContain('unit="chars"');
-    expect(source).toContain('title="Leader"');
+    expect(source).toContain('title="Active duel"');
     expect(source).toContain('title="Rankings"');
+    expect(source).toContain('title="Recent duels"');
     expect(source).toContain('aria-label="Task type"');
+    expect(source).toContain('<WindowedPageButton>Settings</WindowedPageButton>');
+    expect(source).toContain('Vote primary');
+    expect(source).toContain('Vote challenger');
     expect(source).toContain('Disable Model Arena');
     expect(source).toContain('<WindowedDataRow');
     expect(source).toContain('cells={[');
+    expect(arenaMainSource).not.toContain('title="Challengers"');
+    expect(arenaMainSource).not.toContain('title="Sampling"');
+    expect(arenaMainSource.indexOf('title="Active duel"')).toBeLessThan(arenaMainSource.indexOf('title="Rankings"'));
     expect(source).not.toContain('wos-arena-ranking-row');
-    expect(source).not.toContain('title="Active duel"');
+    expect(source).not.toContain('title="Leader"');
   });
 
   it('documents the canonical Diagnostics desktop page', () => {

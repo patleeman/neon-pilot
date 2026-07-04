@@ -4413,7 +4413,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 @container (max-width: 640px) {
-  .wos-arena-status-row {
+  .wos-arena-status-row,
+  .wos-arena-settings-dialog .wos-arena-settings-grid {
     grid-template-columns: minmax(0, 1fr);
     justify-items: start;
   }
@@ -4949,6 +4950,11 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-arena-status-row__copy {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.wos-arena-settings-dialog {
+  width: min(540px, calc(100% - 8px));
+  max-height: min(540px, calc(100% - 12px));
 }
 
 .wos-arena-add-row {

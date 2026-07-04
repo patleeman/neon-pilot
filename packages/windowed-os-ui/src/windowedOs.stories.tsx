@@ -4,6 +4,7 @@ import {
   CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
   Taskbar,
+  WindowedActionRow,
   WindowedAppTile,
   WindowedBadge,
   WindowedChartPanel,
@@ -27,6 +28,7 @@ import {
   WindowedMessageBubble,
   WindowedNumberStepper,
   WindowedPageButton,
+  WindowedPageGrid,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -2119,6 +2121,7 @@ function ModelArenaPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                   <option value="review">review</option>
                 </WindowedSelect>
                 <WindowedBadge tone="positive">Running</WindowedBadge>
+                <WindowedPageButton>Settings</WindowedPageButton>
                 <WindowedPageButton>Refresh</WindowedPageButton>
               </>
             }
@@ -2135,79 +2138,22 @@ function ModelArenaPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               />
             </WindowedPageSection>
 
-            <WindowedPageSection title="Status" meta="Automatic duels on">
-              <div className="wos-arena-status-row">
-                <span>Comparing challenger runs against conversation models.</span>
-                <WindowedToggle checked accent="model-arena" label="Disable Model Arena" />
-              </div>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Challengers" meta="3 selected">
-              <div className="wos-arena-add-row">
-                <WindowedField label="Model" span="full">
-                  <WindowedSelect aria-label="Challenger model" defaultValue="openai:gpt-5.4-mini">
-                    <optgroup label="OpenAI">
-                      <option value="openai:gpt-5.4-mini">gpt-5.4-mini</option>
-                      <option value="openai:gpt-5.4">gpt-5.4</option>
-                    </optgroup>
-                    <optgroup label="Anthropic">
-                      <option value="anthropic:claude-sonnet-4.5">claude-sonnet-4.5</option>
-                    </optgroup>
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedPageButton tone="accent">Add</WindowedPageButton>
-              </div>
-              <WindowedDataTable
-                className="wos-arena-challenger-table"
-                columns={[{ label: 'Model' }, { label: 'Reference' }, { label: 'Action', align: 'right' }]}
-              >
-                <WindowedDataRow
-                  name="gpt-5.4-mini"
-                  cells={['openai:gpt-5.4-mini']}
-                  action={<WindowedPageButton>Remove</WindowedPageButton>}
+            <WindowedPageSection title="Active duel" meta="Voting open">
+              <WindowedPageGrid columns={2}>
+                <WindowedKeyValueList
+                  items={[
+                    { label: 'Primary', value: 'openai:gpt-5.4' },
+                    { label: 'Challenger', value: 'anthropic:claude-sonnet-4.5' },
+                    { label: 'Task', value: 'coding' },
+                    { label: 'Started', value: '12:03:42' },
+                  ]}
                 />
-                <WindowedDataRow
-                  name="claude-sonnet-4.5"
-                  cells={['anthropic:claude-sonnet-4.5']}
-                  action={<WindowedPageButton>Remove</WindowedPageButton>}
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Sampling">
-              <div className="wos-arena-settings-grid">
-                <WindowedField label="Initial rate">
-                  <WindowedNumberStepper aria-label="Initial rate" value={20} onChange={() => undefined} min={0} max={100} unit="%" />
-                </WindowedField>
-                <WindowedField label="Later rate">
-                  <WindowedNumberStepper aria-label="Later rate" value={5} onChange={() => undefined} min={0} max={100} unit="%" />
-                </WindowedField>
-                <WindowedField label="Ramp after">
-                  <WindowedNumberStepper aria-label="Ramp after" value={120} onChange={() => undefined} min={0} max={5000} unit="votes" />
-                </WindowedField>
-                <WindowedField label="Minimum prompt">
-                  <WindowedNumberStepper
-                    aria-label="Minimum prompt"
-                    value={280}
-                    onChange={() => undefined}
-                    min={0}
-                    max={2000}
-                    step={10}
-                    unit="chars"
-                  />
-                </WindowedField>
-              </div>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Leader">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Model', value: 'openai:gpt-5.4' },
-                  { label: 'Rating', value: 1684 },
-                  { label: 'Record', value: '42W/19L/0T' },
-                  { label: 'Confidence', value: 'High' },
-                ]}
-              />
+                <WindowedActionRow align="start">
+                  <WindowedPageButton tone="accent">Vote primary</WindowedPageButton>
+                  <WindowedPageButton>Vote challenger</WindowedPageButton>
+                  <WindowedPageButton>Cancel duel</WindowedPageButton>
+                </WindowedActionRow>
+              </WindowedPageGrid>
             </WindowedPageSection>
 
             <WindowedPageSection title="Rankings" meta="4 models">
@@ -2240,9 +2186,106 @@ function ModelArenaPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                 />
               </WindowedDataTable>
             </WindowedPageSection>
+
+            <WindowedPageSection title="Recent duels" meta="42 retained">
+              <WindowedDataTable columns={[{ label: 'Duel' }, { label: 'Result' }, { label: 'Time', align: 'right' }]}>
+                <WindowedDataRow
+                  name="openai:gpt-5.4 vs anthropic:claude-sonnet-4.5"
+                  meta="coding · prompt 1,284 chars"
+                  status={<WindowedBadge tone="warning">Voting</WindowedBadge>}
+                  cells={[{ value: 'now', align: 'right' }]}
+                />
+                <WindowedDataRow
+                  name="openai:gpt-5.4 vs openai:gpt-5.4-mini"
+                  meta="review · selected primary"
+                  status={<WindowedBadge tone="positive">Primary won</WindowedBadge>}
+                  cells={[{ value: '12:01', align: 'right' }]}
+                />
+                <WindowedDataRow
+                  name="anthropic:claude-sonnet-4.5 vs openai:gpt-5.4-mini"
+                  meta="coding · cancelled"
+                  status={<WindowedBadge tone="neutral">Cancelled</WindowedBadge>}
+                  cells={[{ value: '11:58', align: 'right' }]}
+                />
+              </WindowedDataTable>
+            </WindowedPageSection>
           </WindowedPageMain>
         </WindowedPageShell>
       </WindowFrame>
+      <WindowedDialog
+        title="Arena settings"
+        meta="Automatic duels on"
+        accent="model-arena"
+        parentWindowTitle="Model Arena"
+        className="wos-arena-settings-dialog"
+        onClose={() => undefined}
+      >
+        <WindowedDialogStack>
+          <WindowedPageSection title="Status" meta="Automatic duels on">
+            <div className="wos-arena-status-row">
+              <span className="wos-arena-status-row__copy">Comparing challenger runs against conversation models.</span>
+              <WindowedToggle checked accent="model-arena" label="Disable Model Arena" />
+            </div>
+          </WindowedPageSection>
+
+          <WindowedPageSection title="Challengers" meta="3 selected">
+            <div className="wos-arena-add-row">
+              <WindowedField label="Model" span="full">
+                <WindowedSelect aria-label="Challenger model" defaultValue="openai:gpt-5.4-mini">
+                  <optgroup label="OpenAI">
+                    <option value="openai:gpt-5.4-mini">gpt-5.4-mini</option>
+                    <option value="openai:gpt-5.4">gpt-5.4</option>
+                  </optgroup>
+                  <optgroup label="Anthropic">
+                    <option value="anthropic:claude-sonnet-4.5">claude-sonnet-4.5</option>
+                  </optgroup>
+                </WindowedSelect>
+              </WindowedField>
+              <WindowedPageButton tone="accent">Add</WindowedPageButton>
+            </div>
+            <WindowedDataTable
+              className="wos-arena-challenger-table"
+              columns={[{ label: 'Model' }, { label: 'Reference' }, { label: 'Action', align: 'right' }]}
+            >
+              <WindowedDataRow
+                name="gpt-5.4-mini"
+                cells={['openai:gpt-5.4-mini']}
+                action={<WindowedPageButton>Remove</WindowedPageButton>}
+              />
+              <WindowedDataRow
+                name="claude-sonnet-4.5"
+                cells={['anthropic:claude-sonnet-4.5']}
+                action={<WindowedPageButton>Remove</WindowedPageButton>}
+              />
+            </WindowedDataTable>
+          </WindowedPageSection>
+
+          <WindowedPageSection title="Sampling">
+            <div className="wos-arena-settings-grid">
+              <WindowedField label="Initial rate">
+                <WindowedNumberStepper aria-label="Initial rate" value={20} onChange={() => undefined} min={0} max={100} unit="%" />
+              </WindowedField>
+              <WindowedField label="Later rate">
+                <WindowedNumberStepper aria-label="Later rate" value={5} onChange={() => undefined} min={0} max={100} unit="%" />
+              </WindowedField>
+              <WindowedField label="Ramp after">
+                <WindowedNumberStepper aria-label="Ramp after" value={120} onChange={() => undefined} min={0} max={5000} unit="votes" />
+              </WindowedField>
+              <WindowedField label="Minimum prompt">
+                <WindowedNumberStepper
+                  aria-label="Minimum prompt"
+                  value={280}
+                  onChange={() => undefined}
+                  min={0}
+                  max={2000}
+                  step={10}
+                  unit="chars"
+                />
+              </WindowedField>
+            </div>
+          </WindowedPageSection>
+        </WindowedDialogStack>
+      </WindowedDialog>
     </div>
   );
 }
