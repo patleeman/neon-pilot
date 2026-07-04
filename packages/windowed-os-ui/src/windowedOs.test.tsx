@@ -1344,6 +1344,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__path-label {\n  min-width: 0;\n  overflow: hidden;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-file-bar__button');
     expect(stylesSource).toContain('.wos-window-route-body .ui-resize-handle__line');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .ui-resize-handle {\n  background: transparent !important;');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .ui-resize-handle__line {\n  display: none !important;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-rail');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-rail {\n  border-left: 0 !important;');
     expect(stylesSource).toContain('.wos-window-route-body .ui-workbench-new-tab-page');
@@ -1525,6 +1527,23 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-chat-browser-dialog__body');
     expect(stylesSource).toContain(".wos-chat-browser-dialog__body > [data-extension-id='system-browser']");
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body');
+    expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body .wos-browser-toolbar,');
+    expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body form:first-child,');
+    expect(stylesSource).toContain('min-height: 42px;');
+    expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900) !important;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button',
+    );
+    expect(stylesSource).toContain('flex: 0 0 28px;');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input',
+    );
+    expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
+    expect(stylesSource).toContain('@container (max-width: 420px)');
+    expect(stylesSource).toContain(
+      '.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button {\n    order: 1;',
+    );
+    expect(stylesSource).toContain('order: 2;\n    flex-basis: 100%;');
     expect(stylesSource).toContain('.wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-windowed-browser-host');
     expect(stylesSource).toContain('.wos-chat-child-window-empty');
     expect(stylesSource).toContain('.wos-chat-child-window-empty .wos-state-block');
@@ -1804,6 +1823,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<BrowserWindowStory theme="dark" />');
     expect(source).toContain("style={{ minHeight: '100vh', padding: 24 }}");
     expect(source).toContain('data-windowed-subwindow="browser"');
+    expect(source).toContain('className="wos-browser-toolbar"');
+    expect(source).toContain('aria-label="Browser controls"');
+    expect(source).toContain('className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go back" disabled');
+    expect(source).toContain('className="ui-text-input"');
     expect(source).toContain('aria-label="Browser child window preview"');
   });
 
@@ -1999,6 +2022,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(inheritedRailRule).toContain('content: none !important;');
     expect(inheritedRailRule).toContain('border-left: 0 !important;');
     expect(inheritedRailRule).toContain('box-shadow: none !important;');
+    expect(stylesSource).toContain('.wos-window-route-body--chat .ui-resize-handle__line {\n  display: none !important;');
+    expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat :where([class~='border-l'], [class*='border-l-'])");
+    expect(stylesSource).toContain('border-left-color: transparent !important;');
   });
 
   it('documents the Settings-only two-column rail pattern', () => {

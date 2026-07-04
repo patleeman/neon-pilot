@@ -1272,6 +1272,66 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   flex-direction: column;
 }
 
+.wos-window-route-body--browser .wos-chat-browser-dialog__body .wos-browser-toolbar,
+.wos-window-route-body--browser .wos-chat-browser-dialog__body form:first-child,
+.wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-workbench-file-bar {
+  display: flex;
+  min-width: 0;
+  min-height: 42px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 2px solid var(--wos-ink-900) !important;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  padding: 6px 8px;
+}
+
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button,
+.wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-workbench-file-bar__button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  flex: 0 0 28px;
+  border: 2px solid var(--wos-ink-900);
+  border-radius: 8px;
+  background: var(--wos-surface-1);
+  color: var(--wos-ink-900);
+  padding: 0;
+  box-shadow: none;
+}
+
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button:disabled {
+  background: var(--wos-surface-disabled);
+  color: var(--wos-ink-500);
+  opacity: 1;
+}
+
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input,
+.wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-workbench-file-bar__path {
+  min-width: min(180px, 100%);
+  flex: 1 1 14rem;
+}
+
+.wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input {
+  height: 28px;
+  font-family: var(--wos-font-mono);
+  font-size: 11px;
+}
+
+@container (max-width: 420px) {
+  .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-icon-button {
+    order: 1;
+  }
+
+  .wos-window-route-body--browser .wos-chat-browser-dialog__body :where(.wos-browser-toolbar, form:first-child) .ui-text-input {
+    order: 2;
+    flex-basis: 100%;
+  }
+}
+
 .wos-window-route-body--browser .wos-chat-browser-dialog__body .ui-windowed-browser-host {
   flex: 1 1 auto;
 }
@@ -2213,6 +2273,19 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-window-route-body .ui-resize-handle:hover .ui-resize-handle__line {
   background: var(--wos-chat) !important;
+}
+
+.wos-window-route-body--chat .ui-resize-handle {
+  background: transparent !important;
+}
+
+.wos-window-route-body--chat .ui-resize-handle__line {
+  display: none !important;
+}
+
+.wos-window-route-body--chat .ui-resize-handle:hover,
+.wos-window-route-body--chat .ui-resize-handle:focus-visible {
+  background: color-mix(in srgb, var(--wos-chat) 14%, transparent) !important;
 }
 
 .wos-window-route-body .ui-workbench-rail {
@@ -6010,6 +6083,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   border-left: 0 !important;
   border-left-width: 0 !important;
   border-left-color: transparent !important;
+}
+
+.windowed-os-shell .wos-window-route-body--chat :where([class~='border-l'], [class*='border-l-']) {
+  box-shadow: none !important;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-message-card-user,

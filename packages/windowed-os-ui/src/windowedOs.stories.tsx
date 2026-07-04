@@ -3119,16 +3119,25 @@ function BrowserWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
           data-parent-window-title="New conversation"
         >
           <div className="wos-chat-browser-dialog__body">
-            <div className="ui-workbench-file-bar" aria-label="Browser controls">
-              <div className="ui-workbench-file-bar__path">
-                <span className="ui-workbench-file-bar__path-label">
-                  https://docs.neonpilot.local/releases/windowed-desktop/browser-preview
-                </span>
-              </div>
-              <button type="button" className="ui-workbench-file-bar__button" aria-label="Reload browser preview">
+            <form className="wos-browser-toolbar" aria-label="Browser controls" onSubmit={(event) => event.preventDefault()}>
+              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go back" disabled>
+                ←
+              </button>
+              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Go forward" disabled>
+                →
+              </button>
+              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Reload browser preview">
                 ↻
               </button>
-            </div>
+              <input
+                className="ui-text-input"
+                aria-label="Browser URL"
+                defaultValue="https://docs.neonpilot.local/releases/windowed-desktop/browser-preview"
+              />
+              <button type="button" className="ui-icon-button ui-icon-button-compact ui-icon-button-sm" aria-label="Close browser tab">
+                ×
+              </button>
+            </form>
             <div className="ui-windowed-browser-host" data-windowed-browser-host="true" aria-label="Browser child window preview">
               <div className="ui-windowed-browser-host__blocker">
                 <div className="ui-windowed-browser-host__state">
