@@ -814,7 +814,7 @@ function WindowedChatTerminalWindowBody({
 }) {
   const extensionRegistry = useExtensionRegistry();
   const routeLocationValue = useMemo(() => routeLocation(route), [route]);
-  const terminalSurface = useMemo(() => findExtensionToolPanelBySlot(extensionRegistry.surfaces, 'terminal'), [extensionRegistry.surfaces]);
+  const terminalSurface = useMemo(() => findTerminalSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
 
   return (
     <div
@@ -845,6 +845,23 @@ function WindowedChatTerminalWindowBody({
   );
 }
 
+type WorkbenchToolSurfaceList = Parameters<typeof findExtensionToolPanelBySlot>[0];
+
+function findTerminalSurface(surfaces: WorkbenchToolSurfaceList) {
+  return findExtensionToolPanelBySlot(surfaces, 'terminal');
+}
+
+function findBrowserSurface(surfaces: WorkbenchToolSurfaceList) {
+  return (
+    surfaces.find((surface) => {
+      const record = surface as Record<string, unknown>;
+      return (
+        surface.extensionId === 'system-browser' && (surface.id === 'browser-workbench' || record.component === 'BrowserWorkbenchPanel')
+      );
+    }) ?? findExtensionToolPanelBySlot(surfaces, 'browser')
+  );
+}
+
 function WindowedChatBrowserWindowBody({
   parentWindowId,
   parentWindowTitle,
@@ -856,16 +873,7 @@ function WindowedChatBrowserWindowBody({
 }) {
   const extensionRegistry = useExtensionRegistry();
   const routeLocationValue = useMemo(() => routeLocation(route), [route]);
-  const browserSurface = useMemo(
-    () =>
-      extensionRegistry.surfaces.find((surface) => {
-        const record = surface as Record<string, unknown>;
-        return (
-          surface.extensionId === 'system-browser' && (surface.id === 'browser-workbench' || record.component === 'BrowserWorkbenchPanel')
-        );
-      }) ?? findExtensionToolPanelBySlot(extensionRegistry.surfaces, 'browser'),
-    [extensionRegistry.surfaces],
-  );
+  const browserSurface = useMemo(() => findBrowserSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
 
   return (
     <div
@@ -948,8 +956,13 @@ function WindowRouteBody({
   route: string;
 }) {
   const isChatRoute = route.startsWith('/conversations');
+  const extensionRegistry = useExtensionRegistry();
   const [chatWorkbenchOpen, setChatWorkbenchOpen] = useState(true);
   const effectiveChatWorkbenchOpen = chatWorkbenchOpen && !compact;
+  const browserSurface = useMemo(() => findBrowserSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
+  const terminalSurface = useMemo(() => findTerminalSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
+  const browserUnavailable = extensionRegistry.loading || !browserSurface;
+  const terminalUnavailable = extensionRegistry.loading || !terminalSurface;
 
   if (!isChatRoute) {
     return (
@@ -997,7 +1010,14 @@ function WindowRouteBody({
             className="wos-chat-window-toolbar__button"
             data-density="icon"
             aria-label="Open Browser window"
-            title="Open Browser window"
+            disabled={browserUnavailable}
+            title={
+              extensionRegistry.loading
+                ? 'Loading workbench tools.'
+                : browserSurface
+                  ? 'Open Browser window'
+                  : 'Enable the Browser extension to open a Browser window.'
+            }
             onClick={onOpenBrowserWindow}
           >
             <WindowedChatToolbarIcon name="browser" />
@@ -1008,7 +1028,14 @@ function WindowRouteBody({
             className="wos-chat-window-toolbar__button"
             data-density="icon"
             aria-label="Open Terminal window"
-            title="Open Terminal window"
+            disabled={terminalUnavailable}
+            title={
+              extensionRegistry.loading
+                ? 'Loading workbench tools.'
+                : terminalSurface
+                  ? 'Open Terminal window'
+                  : 'Enable the Terminal extension to open a Terminal window.'
+            }
             onClick={onOpenTerminalWindow}
           >
             <WindowedChatToolbarIcon name="terminal" />

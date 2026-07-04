@@ -376,11 +376,18 @@ describe('WindowedLayout route windows', () => {
         .getByRole('button', { name: /open browser window/i })
         .getAttribute('data-density'),
     ).toBe('icon');
+    expect((within(chatWindow).getByRole('button', { name: /open browser window/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      within(chatWindow)
+        .getByRole('button', { name: /open browser window/i })
+        .getAttribute('title'),
+    ).toContain('Enable the Browser');
     expect(
       within(chatWindow)
         .getByRole('button', { name: /open terminal window/i })
         .getAttribute('data-density'),
     ).toBe('icon');
+    expect((within(chatWindow).getByRole('button', { name: /open terminal window/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')?.textContent?.trim()).toBe('Workbench');
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(3);
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
@@ -2756,7 +2763,7 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('region', { name: 'Browser' })).toBeNull();
   });
 
-  it('uses centered windowed empty chrome when a browser child surface is unavailable', () => {
+  it('disables the browser child window action when the browser surface is unavailable', () => {
     mocks.surfaces = [];
     seedWindowedWindows([
       {
@@ -2771,12 +2778,14 @@ describe('WindowedLayout route windows', () => {
     ]);
 
     const { container } = renderWindowedLayout();
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    const browserButton = within(chatWindow).getByRole('button', { name: /browser window/i }) as HTMLButtonElement;
 
-    fireEvent.click(screen.getByRole('button', { name: /browser window/i }));
+    expect(browserButton.disabled).toBe(true);
+    expect(browserButton.getAttribute('title')).toContain('Enable the Browser');
+    fireEvent.click(browserButton);
 
-    const browserWindow = screen.getByRole('region', { name: 'Browser' });
-    expect(browserWindow.querySelector('.wos-chat-child-window-empty .wos-state-block')).toBeTruthy();
-    expect(screen.getByText('Browser unavailable')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Browser' })).toBeNull();
     expect(container.querySelector('[data-window-id="chat:draft:browser"] .ui-error-state')).toBeNull();
   });
 
