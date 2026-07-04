@@ -1046,6 +1046,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const DarkDrawingsPickerSubwindow');
     expect(source).toContain('<DrawingsPickerSubwindowStory theme="dark" />');
     expect(source).toContain('data-windowed-subwindow="drawing-picker"');
+    expect(source).not.toContain('Attach a saved drawing to the next prompt.');
     expect(source).toContain('function ImageInspectDialogStory');
     expect(source).toContain('export const ImageInspectDialog');
     expect(source).toContain('export const DarkImageInspectDialog');
@@ -1060,6 +1061,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-windowed-child-window="true"');
     expect(source).toContain('className="ui-overlay-backdrop ui-windowed-excalidraw-backdrop"');
     expect(source).toContain('data-parent-window-title="Release planning"');
+    expect(source).not.toContain('Edit the attached sketch.');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).toContain('data-wos-theme-mode={theme}');
     expect(source).toContain('className="wos-theme-variant-grid"');
@@ -2260,6 +2262,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="wos-chat-files-dialog__body"');
     expect(source).toContain('className="wos-workspace-child-preview"');
     expect(source).toContain('aria-label="Workspace files preview"');
+    expect(source).not.toContain('meta="Attached child window"');
     expect(source).toContain('/Users/patrick/workingdir/neon-pilot');
     expect(source).toContain('<WindowedBadge>5 items</WindowedBadge>');
     expect(source).toContain('<WindowedBadge>Directory</WindowedBadge>');

@@ -387,7 +387,7 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 <span className="wos-workspace-child-preview__cwd">/Users/patrick/workingdir/neon-pilot</span>
                 <WindowedBadge tone="neutral">3 open</WindowedBadge>
               </div>
-              <WindowedPageSection title="Workspace" meta="Attached child window">
+              <WindowedPageSection title="Workspace" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
                   <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
@@ -3377,7 +3377,6 @@ function DrawingsPickerSubwindowStory({ theme = 'light' }: { theme?: 'light' | '
                 <h2 id="drawings-picker-title" className="ui-dialog-title">
                   Conversation drawings
                 </h2>
-                <p className="ui-dialog-description">Attach a saved drawing to the next prompt.</p>
               </div>
               <div className="ui-dialog-actions">
                 <button type="button" className="ui-icon-button" aria-label="Close drawings picker" title="Close drawings picker">
@@ -3477,7 +3476,6 @@ function ExcalidrawEditorSubwindowStory({ theme = 'light' }: { theme?: 'light' |
                 <h2 id="excalidraw-editor-title" className="ui-dialog-title">
                   Drawing editor
                 </h2>
-                <p className="ui-dialog-description">Edit the attached sketch.</p>
               </div>
               <div className="ui-dialog-actions">
                 <button type="button" className="ui-icon-button" aria-label="Close drawing editor" title="Close drawing editor">
