@@ -1219,9 +1219,9 @@ describe('Windowed OS Storybook examples', () => {
       composerStyles.match(/\.windowed-os-shell \.wos-window-route-body--chat \.ui-input-shell \{[\s\S]*?\n\}/)?.[0] ?? '';
     expect(inputShellRule).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
     expect(inputShellRule).toContain('border-radius: 8px;');
-    expect(inputShellRule).not.toContain('border-left: 0');
-    expect(inputShellRule).not.toContain('border-top-left-radius: 0');
-    expect(inputShellRule).not.toContain('border-bottom-left-radius: 0');
+    expect(inputShellRule).toContain('border-left: 0 !important;');
+    expect(inputShellRule).toContain('border-top-left-radius: 0;');
+    expect(inputShellRule).toContain('border-bottom-left-radius: 0;');
     expect(composerStyles).toContain('.ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;');
     expect(stylesSource).toContain('.windowed-os-shell\n  :where(');
     expect(stylesSource).toContain("[class~='border-l']");
@@ -1415,7 +1415,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('overflow: visible;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;\n  border-radius: 8px;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
     );
     expect(stylesSource).toContain('.windowed-os-shell\n  .wos-window-route-body--chat\n  .conversation-composer-inner');
     expect(stylesSource).toContain(":where(input, textarea, button, select, [contenteditable='true'])");
@@ -1432,7 +1432,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill');
     expect(stylesSource).toContain('display: inline-flex;\n  width: auto;\n  max-width: 100%;');
-    expect(stylesSource).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-radius: 8px;');
+    expect(stylesSource).toContain(
+      'justify-content: flex-start;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
+    );
     expect(stylesSource).not.toContain('display: flex;\n  width: 100%;\n  min-height: 28px;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-pill.ui-composer-notice__pill');
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
@@ -1458,6 +1460,10 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(stylesSource).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-radius: 7px;');
     expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip) {\n  display: inline-flex;\n  min-height: 28px;',
+    );
+    expect(stylesSource).toContain('gap: 4px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;');
+    expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf :where(.ui-attachment-chip-button)',
     );
     expect(stylesSource).toContain(':where(.ui-attachment-chip-button > span:first-child:not([class]))');
@@ -1477,7 +1483,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('min-height: 26px;\n  flex-shrink: 0;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status {\n  display: inline-flex;\n  max-width: 100%;\n  min-height: 22px;\n  align-items: center;\n  margin-top: 6px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-radius: 6px;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-attachment-shelf__status {\n  display: inline-flex;\n  max-width: 100%;\n  min-height: 22px;\n  align-items: center;\n  margin-top: 6px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
+    );
+    expect(stylesSource).toContain(
+      'margin-top: 6px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
     );
     expect(stylesSource).toContain('.wos-window-route-body .bg-base');
     expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
@@ -1491,6 +1500,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__leading');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__actions');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta');
+    expect(stylesSource).toContain(
+      '.windowed-os-shell .wos-window-route-body--chat .ui-composer-meta {\n  display: flex;\n  min-height: 24px;',
+    );
+    expect(stylesSource).toContain(
+      'gap: 3px 8px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
+    );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-tool-button');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-model-fallback');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat button.ui-composer-preferences-row__menu-button');
