@@ -135,7 +135,7 @@ function StoryTimeSeriesChart() {
   );
 }
 
-function StoryToolbarIcon({ name }: { name: 'browser' | 'files' | 'terminal' | 'workbench-visible' | 'workbench-hidden' }) {
+function StoryToolbarIcon({ name }: { name: 'browser' | 'files' | 'terminal' }) {
   const paths = {
     browser: (
       <>
@@ -159,20 +159,6 @@ function StoryToolbarIcon({ name }: { name: 'browser' | 'files' | 'terminal' | '
         <path d="M12 16h6" />
       </>
     ),
-    'workbench-visible': (
-      <>
-        <rect x="4" y="5" width="16" height="14" rx="1.5" />
-        <path d="M13 5v14" />
-        <path d="m10 9-4 3 4 3" />
-      </>
-    ),
-    'workbench-hidden': (
-      <>
-        <rect x="4" y="5" width="16" height="14" rx="1.5" />
-        <path d="M13 5v14" />
-        <path d="m15 9 4 3-4 3" />
-      </>
-    ),
   };
 
   return (
@@ -182,29 +168,11 @@ function StoryToolbarIcon({ name }: { name: 'browser' | 'files' | 'terminal' | '
   );
 }
 
-function StoryChatWindowToolbar({
-  activeTool,
-  workbenchCollapsed = false,
-}: {
-  activeTool?: 'browser' | 'files' | 'terminal';
-  workbenchCollapsed?: boolean;
-}) {
-  const workbenchToggleLabel = workbenchCollapsed ? 'Show tools panel' : 'Hide tools panel';
-
+function StoryChatWindowToolbar({ activeTool }: { activeTool?: 'browser' | 'files' | 'terminal' }) {
   return (
     <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
       <div className="wos-chat-window-toolbar__label">Tools</div>
       <div className="wos-chat-window-toolbar__actions">
-        <button
-          type="button"
-          className="wos-chat-window-toolbar__button"
-          data-density="icon"
-          aria-label={workbenchToggleLabel}
-          title={workbenchToggleLabel}
-          aria-pressed={!workbenchCollapsed}
-        >
-          <StoryToolbarIcon name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'} />
-        </button>
         <button
           type="button"
           className="wos-chat-window-toolbar__button"
@@ -385,7 +353,7 @@ function AttachedWorkbenchStory({
           className="wos-window-route-body wos-window-route-body--chat"
           data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}
         >
-          <StoryChatWindowToolbar activeTool={workbenchCollapsed ? undefined : 'files'} workbenchCollapsed={workbenchCollapsed} />
+          <StoryChatWindowToolbar activeTool={workbenchCollapsed ? undefined : 'files'} />
           <div className="wos-chat-workbench">
             <WindowedChatSurface>
               <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>

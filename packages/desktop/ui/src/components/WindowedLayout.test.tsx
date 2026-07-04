@@ -356,7 +356,7 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow.querySelector('.wos-window-route-body--extension')?.textContent).toContain('/routines:windowed');
   });
 
-  it('renders chat windows inside the canonical windowed chat surface with attached workbench layout', () => {
+  it('renders chat windows inside the canonical windowed chat surface with child tool launchers only', () => {
     renderWindowedLayout();
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
@@ -368,11 +368,8 @@ describe('WindowedLayout route windows', () => {
     expect(within(chatWindow).getByTestId('embedded-layout')).toBeTruthy();
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
-    expect(
-      within(chatWindow)
-        .getByRole('button', { name: /show tools panel/i })
-        .getAttribute('data-density'),
-    ).toBe('icon');
+    expect(within(chatWindow).queryByRole('button', { name: /show tools panel/i })).toBeNull();
+    expect(within(chatWindow).queryByRole('button', { name: /hide tools panel/i })).toBeNull();
     expect(
       within(chatWindow)
         .getByRole('button', { name: /open browser window/i })
@@ -402,64 +399,36 @@ describe('WindowedLayout route windows', () => {
     ).toBe('icon');
     expect((within(chatWindow).getByRole('button', { name: /open terminal window/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')?.textContent?.trim()).toBe('Tools');
-    expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(4);
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(3);
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
   });
 
-  it('shows, persists, and restores the attached workbench from the chat window toolbar', async () => {
-    const setWorkbenchBrowserBounds = vi.fn(async () => null);
-    window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
+  it('suppresses the legacy attached workbench even when stored state requested it open', () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 32, y: 32, width: 1180, height: 720 },
+        minimized: false,
+        focused: true,
+        workbenchCollapsed: false,
+      },
+    ]);
 
-    const { unmount } = renderWindowedLayout();
+    renderWindowedLayout();
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
     const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
-    const showToggle = within(chatWindow).getByRole('button', { name: /show tools panel/i });
-    const initialHiddenCalls = setWorkbenchBrowserBounds.mock.calls.length;
 
-    expect(showToggle.getAttribute('aria-pressed')).toBe('false');
     expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBe('true');
+    expect(within(chatWindow).queryByRole('button', { name: /hide tools panel/i })).toBeNull();
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
-
-    fireEvent.click(showToggle);
-    expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBeNull();
-    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('true');
-    expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('false');
-    expect(
-      within(chatWindow)
-        .getByRole('button', { name: /hide tools panel/i })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
-    await waitFor(() => {
-      expect(setWorkbenchBrowserBounds.mock.calls.length).toBeGreaterThan(initialHiddenCalls);
-      const storedWindows = JSON.parse(window.localStorage.getItem('pa:windowed-os-shell-windows:v1') ?? '[]') as Array<{
-        id?: string;
-        workbenchCollapsed?: boolean;
-      }>;
-      expect(storedWindows.find((windowModel) => windowModel.id === 'chat:draft')?.workbenchCollapsed).toBe(false);
-    });
-
-    unmount();
-    renderWindowedLayout();
-
-    const restoredChatWindow = screen.getByRole('region', { name: /new conversation/i });
-    expect(restoredChatWindow.querySelector('.wos-window-route-body--chat')?.getAttribute('data-workbench-collapsed')).toBeNull();
-    expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('true');
-    expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('false');
-
-    fireEvent.click(within(restoredChatWindow).getByRole('button', { name: /hide tools panel/i }));
-    expect(restoredChatWindow.querySelector('.wos-window-route-body--chat')?.getAttribute('data-workbench-collapsed')).toBe('true');
-    expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
-    expect(within(restoredChatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
-    expect(
-      within(restoredChatWindow)
-        .getByRole('button', { name: /show tools panel/i })
-        .getAttribute('aria-pressed'),
-    ).toBe('false');
   });
 
-  it('auto-collapses the attached workbench when a chat window is too narrow', () => {
+  it('keeps compact chat windows in the child-tools-only layout', () => {
     seedWindowedWindows([
       {
         id: 'chat:draft',
@@ -476,13 +445,11 @@ describe('WindowedLayout route windows', () => {
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
     const chatSurface = chatWindow.querySelector('.wos-window-route-body--chat');
-    const toggle = within(chatWindow).getByRole('button', { name: /show tools panel/i });
 
     expect(chatSurface?.getAttribute('data-compact')).toBe('true');
     expect(chatSurface?.getAttribute('data-workbench-collapsed')).toBe('true');
-    expect((toggle as HTMLButtonElement).disabled).toBe(true);
-    expect(toggle.getAttribute('aria-pressed')).toBe('false');
-    expect(toggle.getAttribute('title')).toContain('Resize');
+    expect(within(chatWindow).queryByRole('button', { name: /show tools panel/i })).toBeNull();
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(3);
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.forceWorkbench).toBe('false');
     expect(within(chatWindow).getByTestId('mock-layout-props').dataset.suppressWorkbench).toBe('true');
   });

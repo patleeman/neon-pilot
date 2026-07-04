@@ -1125,7 +1125,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('z-index: 1100;');
   });
 
-  it('styles the windowed chat workbench toggle as compact window chrome', () => {
+  it('styles the windowed chat tool launchers as compact window chrome', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
@@ -2037,7 +2037,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('aria-label="Browser child window preview"');
   });
 
-  it('documents the chat workbench toggle in the attached-workbench Storybook example', () => {
+  it('documents child tool launchers in the attached-workbench Storybook example', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 
@@ -2057,12 +2057,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("data-workbench-collapsed={workbenchCollapsed ? 'true' : undefined}");
     expect(source).toContain('className="wos-chat-window-toolbar"');
     expect(source).toContain('function StoryChatWindowToolbar');
-    expect(source).toContain("const workbenchToggleLabel = workbenchCollapsed ? 'Show tools panel' : 'Hide tools panel';");
     expect(source).toContain('<div className="wos-chat-window-toolbar__label">Tools</div>');
     expect(source).not.toContain('<div className="wos-chat-window-toolbar__label">Workbench</div>');
-    expect(source).toContain('aria-label={workbenchToggleLabel}');
-    expect(source).toContain('aria-pressed={!workbenchCollapsed}');
-    expect(source).toContain("name={workbenchCollapsed ? 'workbench-hidden' : 'workbench-visible'}");
+    expect(source).not.toContain('Show tools panel');
+    expect(source).not.toContain('Hide tools panel');
+    expect(source).not.toContain('workbench-hidden');
+    expect(source).not.toContain('workbench-visible');
     expect(source).toContain('aria-label="Open Browser window"');
     expect(source).toContain('aria-label="Open Workspace window"');
     expect(source).toContain('aria-label="Open Terminal window"');

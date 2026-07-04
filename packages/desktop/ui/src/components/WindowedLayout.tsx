@@ -108,7 +108,7 @@ type ResizeState = DragState & {
 };
 
 type WindowNavigate = (to: To) => void;
-type WindowedChatToolbarIconName = 'browser' | 'files' | 'terminal' | 'workbench-hidden' | 'workbench-visible';
+type WindowedChatToolbarIconName = 'browser' | 'files' | 'terminal';
 
 const WINDOW_STATE_STORAGE_KEY = 'pa:windowed-os-shell-windows:v1';
 const MIN_WINDOW_WIDTH = 360;
@@ -1036,20 +1036,6 @@ function WindowedChatToolbarIcon({ name }: { name: WindowedChatToolbarIconName }
         <path d="M12 16h6" />
       </>
     ),
-    'workbench-hidden': (
-      <>
-        <rect x="4" y="5" width="16" height="14" rx="1.5" />
-        <path d="M13 5v14" />
-        <path d="m8 9 4 3-4 3" />
-      </>
-    ),
-    'workbench-visible': (
-      <>
-        <rect x="4" y="5" width="16" height="14" rx="1.5" />
-        <path d="M13 5v14" />
-        <path d="m10 9-4 3 4 3" />
-      </>
-    ),
   };
 
   return (
@@ -1065,22 +1051,17 @@ function WindowRouteBody({
   onOpenFilesWindow,
   onNavigate,
   onOpenTerminalWindow,
-  onWorkbenchCollapsedChange,
   route,
-  workbenchCollapsed = false,
 }: {
   compact?: boolean;
   onOpenBrowserWindow: () => void;
   onOpenFilesWindow: () => void;
   onNavigate: WindowNavigate;
   onOpenTerminalWindow: () => void;
-  onWorkbenchCollapsedChange: (collapsed: boolean) => void;
   route: string;
-  workbenchCollapsed?: boolean;
 }) {
   const isChatRoute = route.startsWith('/conversations');
   const extensionRegistry = useExtensionRegistry();
-  const effectiveChatWorkbenchOpen = !workbenchCollapsed && !compact;
   const browserSurface = useMemo(() => findBrowserSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
   const filesSurface = useMemo(() => findFilesSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
   const terminalSurface = useMemo(() => findTerminalSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
@@ -1104,32 +1085,11 @@ function WindowRouteBody({
     <WindowedChatSurface
       className="wos-window-route-body wos-window-route-body--chat"
       data-compact={compact ? 'true' : undefined}
-      data-workbench-collapsed={effectiveChatWorkbenchOpen ? undefined : 'true'}
+      data-workbench-collapsed="true"
     >
       <div className="wos-chat-window-toolbar" aria-label="Chat window controls">
         <div className="wos-chat-window-toolbar__label">Tools</div>
         <div className="wos-chat-window-toolbar__actions">
-          {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
-          <button
-            type="button"
-            className="wos-chat-window-toolbar__button"
-            data-density="icon"
-            aria-pressed={effectiveChatWorkbenchOpen && !compact}
-            aria-label={effectiveChatWorkbenchOpen ? 'Hide tools panel' : 'Show tools panel'}
-            disabled={compact}
-            title={
-              compact
-                ? 'Resize the chat window wider to show the tools panel.'
-                : effectiveChatWorkbenchOpen
-                  ? 'Hide tools panel'
-                  : 'Show tools panel'
-            }
-            onClick={() => {
-              onWorkbenchCollapsedChange(effectiveChatWorkbenchOpen);
-            }}
-          >
-            <WindowedChatToolbarIcon name={effectiveChatWorkbenchOpen ? 'workbench-visible' : 'workbench-hidden'} />
-          </button>
           {/* ui-pattern-ok raw-control reason="Windowed OS uses isolated desktop chrome; this toolbar action must use the wos design-system button class instead of stable shell primitives." */}
           <button
             type="button"
@@ -1188,12 +1148,7 @@ function WindowRouteBody({
       </div>
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
-          <Route
-            path="/"
-            element={
-              <Layout embeddedWindowChrome forceWorkbench={effectiveChatWorkbenchOpen} suppressWorkbench={!effectiveChatWorkbenchOpen} />
-            }
-          >
+          <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench={false} suppressWorkbench />}>
             <Route
               path="conversations"
               element={
@@ -1513,15 +1468,6 @@ export function WindowedLayout() {
     },
     [chatSessions, launcherItems],
   );
-
-  const setChatWorkbenchCollapsed = useCallback((windowId: string, collapsed: boolean) => {
-    suspendWindowedBrowserViews();
-    setWindows((current) =>
-      current.map((windowModel) =>
-        windowModel.id === windowId && windowModel.kind === 'chat' ? { ...windowModel, workbenchCollapsed: collapsed } : windowModel,
-      ),
-    );
-  }, []);
 
   useEffect(() => {
     const handleDesktopNavigate = (event: Event) => {
@@ -2054,8 +2000,6 @@ export function WindowedLayout() {
                   onOpenBrowserWindow={() => openBrowserWindow(windowModel)}
                   onOpenFilesWindow={() => openFilesWindow(windowModel)}
                   onOpenTerminalWindow={() => openTerminalWindow(windowModel)}
-                  onWorkbenchCollapsedChange={(collapsed) => setChatWorkbenchCollapsed(windowModel.id, collapsed)}
-                  workbenchCollapsed={windowModel.workbenchCollapsed}
                 />
               )}
             </WindowFrame>
