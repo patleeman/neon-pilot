@@ -135,7 +135,7 @@ describe('McpSettingsPanel', () => {
     expect(html).toContain('npx @mcp/github');
   });
 
-  it('edits the selected explicit server from the detail panel', async () => {
+  it('edits the selected explicit server from the stable settings editor', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     mocks.useApi.mockReturnValue({
       ...buildUseApiResult({
@@ -254,6 +254,8 @@ describe('McpSettingsPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open MCP server details for github' }));
 
     expect(screen.getByRole('dialog', { name: 'Server details: github' })).toBeTruthy();
+    expect(document.querySelector('[data-windowed-subwindow="mcp-server-details"]')).toBeTruthy();
+    expect(document.querySelector('[data-parent-window-title="Settings"]')).toBeTruthy();
     expect(screen.getByDisplayValue('npx')).toBeTruthy();
     expect(screen.getByDisplayValue('@mcp/github')).toBeTruthy();
     const actionRemoveButton = document.querySelector('.wos-dialog__actions button[data-tone="danger"]');
