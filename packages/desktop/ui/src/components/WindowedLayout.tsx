@@ -94,11 +94,18 @@ interface DesktopWindowModel {
   parentMinimized?: boolean;
 }
 
-interface LauncherItem {
+interface WindowedAppRegistration {
   id: string;
   title: string;
   route: string;
   kind: LauncherWindowKind;
+  source: 'core' | 'extension';
+  sourceExtensionId?: string;
+  accent: AppAccent;
+  window: {
+    allowMultiple: boolean;
+    singleton: boolean;
+  };
 }
 
 type DragState = {
@@ -126,9 +133,25 @@ const DEFAULT_WINDOW_BOTTOM_GUTTER = 56;
 const DEFAULT_CHAT_WORKBENCH_COLLAPSED = true;
 const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 
-const STATIC_LAUNCHER_ITEMS: LauncherItem[] = [
-  { id: 'chat', title: 'Chat', route: '/conversations/new', kind: 'chat' },
-  { id: 'settings', title: 'Settings', route: '/settings', kind: 'route' },
+const CORE_WINDOWED_APPS: WindowedAppRegistration[] = [
+  {
+    id: 'chat',
+    title: 'Chat',
+    route: '/conversations/new',
+    kind: 'chat',
+    source: 'core',
+    accent: 'chat',
+    window: { allowMultiple: true, singleton: false },
+  },
+  {
+    id: 'settings',
+    title: 'Settings',
+    route: '/settings',
+    kind: 'route',
+    source: 'core',
+    accent: 'settings',
+    window: { allowMultiple: false, singleton: true },
+  },
 ];
 
 const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]> = new Map(
@@ -137,7 +160,7 @@ const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, (typeof CANONICAL_WIN
 const CANONICAL_LAUNCHER_ORDER: readonly string[] = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
 const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
-function createId(input: Pick<LauncherItem, 'kind' | 'route' | 'id'>, suffix?: string): string {
+function createId(input: Pick<WindowedAppRegistration, 'kind' | 'route' | 'id'>, suffix?: string): string {
   if (input.kind === 'chat') return `chat:${suffix ?? 'draft'}`;
   return `route:${input.id}`;
 }
@@ -350,45 +373,50 @@ function conversationWorkspaceCwd(session: SessionMeta | null): string | null {
   return session?.workspaceCwd || session?.cwd || null;
 }
 
-function buildLauncherItems(extensionRegistry: ReturnType<typeof useExtensionRegistry>): LauncherItem[] {
-  const seen = new Set(STATIC_LAUNCHER_ITEMS.map((item) => item.route));
+function createExtensionWindowedAppRegistration(input: {
+  extensionId: string;
+  id: string;
+  title: string;
+  route: string;
+}): WindowedAppRegistration {
+  return {
+    id: `${input.extensionId}:${input.id}`,
+    title: input.title,
+    route: input.route,
+    kind: 'route',
+    source: 'extension',
+    sourceExtensionId: input.extensionId,
+    accent: accentForTitle(input.title),
+    window: { allowMultiple: false, singleton: true },
+  };
+}
+
+function buildWindowedAppRegistry(extensionRegistry: ReturnType<typeof useExtensionRegistry>): WindowedAppRegistration[] {
+  const [chatApp, settingsApp] = CORE_WINDOWED_APPS;
+  const seen = new Set(CORE_WINDOWED_APPS.map((item) => item.route));
   const dynamic = extensionRegistry.extensions
     .filter((extension) => extension.enabled)
     .flatMap((extension) => {
-      const navItems = (extension.contributes?.nav ?? []).flatMap((item): LauncherItem[] => {
+      const navItems = (extension.contributes?.nav ?? []).flatMap((item): WindowedAppRegistration[] => {
         if (!item.route || seen.has(item.route)) return [];
         seen.add(item.route);
-        return [
-          {
-            id: `${extension.id}:${item.id}`,
-            title: item.label,
-            route: item.route,
-            kind: 'route',
-          },
-        ];
+        return [createExtensionWindowedAppRegistration({ extensionId: extension.id, id: item.id, title: item.label, route: item.route })];
       });
 
-      const mainViewItems = (extension.contributes?.views ?? []).flatMap((view): LauncherItem[] => {
+      const mainViewItems = (extension.contributes?.views ?? []).flatMap((view): WindowedAppRegistration[] => {
         if (view.location !== 'main' || !view.route || !isTopLevelRoute(view.route) || seen.has(view.route)) return [];
         seen.add(view.route);
-        return [
-          {
-            id: `${extension.id}:${view.id}`,
-            title: view.title,
-            route: view.route,
-            kind: 'route',
-          },
-        ];
+        return [createExtensionWindowedAppRegistration({ extensionId: extension.id, id: view.id, title: view.title, route: view.route })];
       });
 
       return [...navItems, ...mainViewItems];
     })
-    .sort(compareLauncherItems);
+    .sort(compareWindowedApps);
 
-  return [STATIC_LAUNCHER_ITEMS[0]!, ...dynamic, STATIC_LAUNCHER_ITEMS[1]!];
+  return [chatApp!, ...dynamic, settingsApp!];
 }
 
-function compareLauncherItems(left: LauncherItem, right: LauncherItem): number {
+function compareWindowedApps(left: WindowedAppRegistration, right: WindowedAppRegistration): number {
   const leftRank = CANONICAL_LAUNCHER_ORDER.indexOf(left.title);
   const rightRank = CANONICAL_LAUNCHER_ORDER.indexOf(right.title);
   const normalizedLeftRank = leftRank >= 0 ? leftRank : CANONICAL_LAUNCHER_ORDER.length;
@@ -625,19 +653,19 @@ function routePathname(route: string): string {
   }
 }
 
-function routeMatchesLauncherItem(route: string, item: LauncherItem): boolean {
-  if (item.kind !== 'route') return false;
+function routeMatchesWindowedApp(route: string, app: WindowedAppRegistration): boolean {
+  if (app.kind !== 'route') return false;
   const pathname = routePathname(route);
-  const itemPathname = routePathname(item.route);
-  return pathname === itemPathname || pathname.startsWith(`${itemPathname.replace(/\/$/, '')}/`);
+  const appPathname = routePathname(app.route);
+  return pathname === appPathname || pathname.startsWith(`${appPathname.replace(/\/$/, '')}/`);
 }
 
-function findLauncherItemForRoute(route: string, launcherItems: LauncherItem[]): LauncherItem | null {
-  return launcherItems.find((item) => routeMatchesLauncherItem(route, item)) ?? null;
+function findWindowedAppForRoute(route: string, apps: WindowedAppRegistration[]): WindowedAppRegistration | null {
+  return apps.find((app) => routeMatchesWindowedApp(route, app)) ?? null;
 }
 
-function routeWindowMatchesLauncherItem(windowModel: DesktopWindowModel, id: string, item: LauncherItem): boolean {
-  return windowModel.kind === 'route' && (windowModel.id === id || routeMatchesLauncherItem(windowModel.route, item));
+function routeWindowMatchesWindowedApp(windowModel: DesktopWindowModel, id: string, app: WindowedAppRegistration): boolean {
+  return windowModel.kind === 'route' && (windowModel.id === id || routeMatchesWindowedApp(windowModel.route, app));
 }
 
 function chatSessionIdForRoute(route: string): string | null {
@@ -668,7 +696,7 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
 }
 
-function canonicalizeRouteWindows(windows: DesktopWindowModel[], launcherItems: LauncherItem[]): DesktopWindowModel[] {
+function canonicalizeRouteWindows(windows: DesktopWindowModel[], apps: WindowedAppRegistration[]): DesktopWindowModel[] {
   let changed = false;
   const next: DesktopWindowModel[] = [];
 
@@ -678,21 +706,21 @@ function canonicalizeRouteWindows(windows: DesktopWindowModel[], launcherItems: 
       continue;
     }
 
-    const launcherItem = findLauncherItemForRoute(windowModel.route, launcherItems);
-    if (!launcherItem) {
+    const app = findWindowedAppForRoute(windowModel.route, apps);
+    if (!app) {
       changed = true;
       continue;
     }
 
-    const canonicalId = createId(launcherItem);
+    const canonicalId = createId(app);
     const canonicalWindow: DesktopWindowModel =
-      windowModel.id === canonicalId && windowModel.title === launcherItem.title && windowModel.singleton === true
+      windowModel.id === canonicalId && windowModel.title === app.title && windowModel.singleton === app.window.singleton
         ? windowModel
         : {
             ...windowModel,
             id: canonicalId,
-            title: launcherItem.title,
-            singleton: true,
+            title: app.title,
+            singleton: app.window.singleton,
           };
     changed ||= canonicalWindow !== windowModel;
 
@@ -714,23 +742,23 @@ function canonicalizeRouteWindows(windows: DesktopWindowModel[], launcherItems: 
 function focusRouteWindowIn(
   windows: DesktopWindowModel[],
   route: string,
-  item: LauncherItem,
+  app: WindowedAppRegistration,
   desktopElement: HTMLElement | null,
 ): DesktopWindowModel[] {
-  const id = createId(item);
-  const existing = windows.find((windowModel) => routeWindowMatchesLauncherItem(windowModel, id, item));
+  const id = createId(app);
+  const existing = windows.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app));
   if (existing) {
     return [
       ...windows.filter((windowModel) => windowModel.id !== existing.id).map((windowModel) => ({ ...windowModel, focused: false })),
-      { ...existing, id, title: item.title, route, minimized: false, focused: true },
+      { ...existing, id, title: app.title, route, minimized: false, focused: true },
     ];
   }
   const next: DesktopWindowModel = {
     id,
     kind: 'route',
-    title: item.title,
+    title: app.title,
     route,
-    bounds: nextDefaultBounds(windows.length, 'route', desktopElement, item.title),
+    bounds: nextDefaultBounds(windows.length, 'route', desktopElement, app.title),
     minimized: false,
     focused: true,
     singleton: true,
@@ -1284,7 +1312,7 @@ export function WindowedLayout() {
   const [windowedTheme, setWindowedTheme] = useState<WindowedOsTheme>(() => readWindowedOsTheme());
   const [windowedThemePhase, setWindowedThemePhase] = useState<WindowedOsThemePhase>(() => resolveWindowedOsThemePhase());
 
-  const launcherItems = useMemo(() => buildLauncherItems(extensionRegistry), [extensionRegistry]);
+  const windowedApps = useMemo(() => buildWindowedAppRegistry(extensionRegistry), [extensionRegistry]);
   const chatSessions = useMemo(
     () => [...conversations.pinnedSessions, ...conversations.tabs],
     [conversations.pinnedSessions, conversations.tabs],
@@ -1365,9 +1393,9 @@ export function WindowedLayout() {
   useEffect(() => {
     if (extensionRegistry.loading) return;
     setWindows((current) => {
-      return canonicalizeRouteWindows(current, launcherItems);
+      return canonicalizeRouteWindows(current, windowedApps);
     });
-  }, [extensionRegistry.loading, launcherItems]);
+  }, [extensionRegistry.loading, windowedApps]);
 
   useEffect(() => {
     writeStoredWindows(windows);
@@ -1467,23 +1495,23 @@ export function WindowedLayout() {
     [openChildWindow],
   );
 
-  const openLauncherItem = useCallback((item: LauncherItem, session?: SessionMeta) => {
-    const id = createId(item, session?.id);
-    const title = item.kind === 'chat' && session ? conversationWindowTitle(session) : item.title;
-    const route = item.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : item.route;
+  const openWindowedApp = useCallback((app: WindowedAppRegistration, session?: SessionMeta) => {
+    const id = createId(app, session?.id);
+    const title = app.kind === 'chat' && session ? conversationWindowTitle(session) : app.title;
+    const route = app.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : app.route;
     suspendWindowedBrowserViews();
     setLauncherOpen(false);
     setWindows((current) => {
       const existing =
-        item.kind === 'route'
-          ? current.find((windowModel) => routeWindowMatchesLauncherItem(windowModel, id, item))
+        app.kind === 'route'
+          ? current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app))
           : current.find((windowModel) => windowModel.id === id);
       if (existing) {
         return withFocusedWindow(
           current.map((windowModel) =>
-            windowModel.id === existing.id && item.kind === 'route'
-              ? { ...windowModel, id, title: item.title, route: item.route }
-              : windowModel.id === existing.id && item.kind === 'chat'
+            windowModel.id === existing.id && app.kind === 'route'
+              ? { ...windowModel, id, title: app.title, route: app.route }
+              : windowModel.id === existing.id && app.kind === 'chat'
                 ? { ...windowModel, title, route, workspaceCwd: conversationWorkspaceCwd(session ?? null) }
                 : windowModel,
           ),
@@ -1492,16 +1520,16 @@ export function WindowedLayout() {
       }
       const next: DesktopWindowModel = {
         id,
-        kind: item.kind,
+        kind: app.kind,
         title,
         route,
-        bounds: nextDefaultBounds(current.length, item.kind, desktopRef.current, title),
+        bounds: nextDefaultBounds(current.length, app.kind, desktopRef.current, title),
         minimized: false,
         focused: true,
-        singleton: item.kind === 'route',
-        archivedOnClose: item.kind === 'chat' && Boolean(session?.id),
-        workbenchCollapsed: item.kind === 'chat' ? DEFAULT_CHAT_WORKBENCH_COLLAPSED : undefined,
-        workspaceCwd: item.kind === 'chat' ? conversationWorkspaceCwd(session ?? null) : null,
+        singleton: app.window.singleton,
+        archivedOnClose: app.kind === 'chat' && Boolean(session?.id),
+        workbenchCollapsed: app.kind === 'chat' ? DEFAULT_CHAT_WORKBENCH_COLLAPSED : undefined,
+        workspaceCwd: app.kind === 'chat' ? conversationWorkspaceCwd(session ?? null) : null,
       };
       return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
     });
@@ -1509,14 +1537,14 @@ export function WindowedLayout() {
 
   const openRouteWindow = useCallback(
     (route: string) => {
-      const item = findLauncherItemForRoute(route, launcherItems);
-      if (!item) return false;
+      const app = findWindowedAppForRoute(route, windowedApps);
+      if (!app) return false;
       suspendWindowedBrowserViews();
       setLauncherOpen(false);
-      setWindows((current) => focusRouteWindowIn(current, route, item, desktopRef.current));
+      setWindows((current) => focusRouteWindowIn(current, route, app, desktopRef.current));
       return true;
     },
-    [launcherItems],
+    [windowedApps],
   );
 
   const openChatWindow = useCallback(
@@ -1541,11 +1569,11 @@ export function WindowedLayout() {
         const chatSessionId = chatSessionIdForRoute(route);
         if (chatSessionId && existing.kind !== 'chat') return focusChatWindowIn(current, route, chatSessions, desktopRef.current);
 
-        const targetLauncherItem = findLauncherItemForRoute(route, launcherItems);
-        if (targetLauncherItem) {
-          const currentLauncherItem = findLauncherItemForRoute(existing.route, launcherItems);
-          if (!currentLauncherItem || currentLauncherItem.id !== targetLauncherItem.id) {
-            return focusRouteWindowIn(current, route, targetLauncherItem, desktopRef.current);
+        const targetApp = findWindowedAppForRoute(route, windowedApps);
+        if (targetApp) {
+          const currentApp = findWindowedAppForRoute(existing.route, windowedApps);
+          if (!currentApp || currentApp.id !== targetApp.id) {
+            return focusRouteWindowIn(current, route, targetApp, desktopRef.current);
           }
         }
 
@@ -1556,7 +1584,7 @@ export function WindowedLayout() {
         return retargetChatWindowIn(current, windowId, existing, route, chatSessions);
       });
     },
-    [chatSessions, launcherItems],
+    [chatSessions, windowedApps],
   );
 
   useEffect(() => {
@@ -1900,20 +1928,18 @@ export function WindowedLayout() {
   const rendererFramePaintBlocked = browserBlockingShellInteraction;
 
   useWindowedBrowserSuppression(nativeBrowserBlocked);
-  const startMenuItems = launcherItems.map((item): StartMenuItem => {
+  const startMenuItems = windowedApps.map((app): StartMenuItem => {
     const matchingWindows =
-      item.kind === 'chat'
-        ? chatWindows
-        : windows.filter((windowModel) => routeWindowMatchesLauncherItem(windowModel, createId(item), item));
+      app.kind === 'chat' ? chatWindows : windows.filter((windowModel) => routeWindowMatchesWindowedApp(windowModel, createId(app), app));
     return {
-      id: item.id,
-      title: item.title,
-      aliases: CANONICAL_WINDOWED_APP_BY_TITLE.get(item.title)?.aliases,
-      accent: accentForTitle(item.title),
+      id: app.id,
+      title: app.title,
+      aliases: CANONICAL_WINDOWED_APP_BY_TITLE.get(app.title)?.aliases,
+      accent: app.accent,
       count: matchingWindows.length > 1 ? matchingWindows.length : undefined,
       open: matchingWindows.length > 0,
       focused: matchingWindows.some((windowModel) => windowModel.focused && !windowModel.minimized),
-      onSelect: () => openLauncherItem(item),
+      onSelect: () => openWindowedApp(app),
     };
   });
   const routeTaskItems = windows
