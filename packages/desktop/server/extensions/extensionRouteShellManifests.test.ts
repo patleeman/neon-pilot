@@ -164,22 +164,12 @@ describe('first-party extension route shell manifests', () => {
     }
   });
 
-  it('keeps route-owned context rails declared as primary rightRail views', () => {
-    const routes = [['system-routines', '/routines', 'routines-context-rail']] as const;
-
-    for (const [extensionId, route, rightSidebarView] of routes) {
-      const manifest = readManifest(extensionId);
-      const nav = routeNav(manifest, route);
-      expect(nav.rightSidebarView).toBe(rightSidebarView);
-      expect(viewById(manifest, rightSidebarView)).toMatchObject({ location: 'rightRail', placement: 'primary' });
-    }
-  });
-
-  it('keeps App Manager main-only so details use the route-owned dialog flow', () => {
+  it('keeps dialog-driven detail routes free of route-owned right rails', () => {
     const routes = [
       ['system-extension-manager', '/extensions'],
       ['system-gateways', '/gateways'],
       ['system-model-arena', '/model-arena'],
+      ['system-routines', '/routines'],
       ['system-skills', '/skills'],
     ] as const;
 

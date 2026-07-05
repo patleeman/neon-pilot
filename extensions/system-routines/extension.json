@@ -68,16 +68,6 @@
         "component": "RoutinesSidebar",
         "icon": "automation",
         "activation": "on-route"
-      },
-      {
-        "id": "routines-context-rail",
-        "title": "Routine context",
-        "location": "rightRail",
-        "placement": "primary",
-        "scope": "global",
-        "component": "RoutinesContextRail",
-        "icon": "automation",
-        "activation": "on-route"
       }
     ],
     "nav": [
@@ -88,8 +78,7 @@
         "icon": "automation",
         "pageType": "editor",
         "section": "primary",
-        "sidebarView": "routines-sidebar",
-        "rightSidebarView": "routines-context-rail"
+        "sidebarView": "routines-sidebar"
       }
     ],
     "cliCommands": [

@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RoutinesContextRail, RoutinesPage, RoutinesSidebar } from './RoutinesPage.js';
+import { RoutinesPage, RoutinesSidebar } from './RoutinesPage.js';
 import type { Routine, RoutineRunRecord } from './types.js';
 
 const baseState = {
@@ -122,7 +122,7 @@ function propsWithContext(
     surface: {
       id: context.surfaceId ?? 'page',
       title: 'Routines',
-      location: context.surfaceId === 'routines-sidebar' ? 'sidebar' : context.surfaceId === 'routines-context-rail' ? 'rightRail' : 'main',
+      location: context.surfaceId === 'routines-sidebar' ? 'sidebar' : 'main',
       component: 'RoutinesPage',
     },
     params: {},
@@ -259,6 +259,39 @@ describe('RoutinesPage', () => {
     expect(runsDialog.getAttribute('data-parent-window-title')).toBe('Routines');
     expect(screen.getByText('Run history appears here after routines execute.')).toBeTruthy();
     expect(screen.queryByText('Routine context')).toBeNull();
+  });
+
+  it('shows sanitized run details in the windowed runs dialog', async () => {
+    const { pa, state } = createPa();
+    state.runs.unshift({
+      id: 'run-raw-error',
+      hookId: 'checkpoint',
+      position: 'before',
+      status: 'warned',
+      startedAt: '2026-01-01T00:01:00.000Z',
+      completedAt: '2026-01-01T00:01:00.000Z',
+      context: {},
+      steps: [
+        {
+          routineId: 'r1',
+          routineName: 'Review code changes',
+          status: 'warned',
+          message:
+            'Codex error: {"type":"error","error":{"type":"usage_limit_reached","message":"The usage limit has been reached"},"status_code":429,"headers":{"X-Codex-Active-Limit":"codex_bengalfox"}}',
+          skillRefs: [],
+        },
+      ],
+    } satisfies RoutineRunRecord);
+
+    render(<RoutinesPage {...propsWithContext(pa, { shellPresentation: 'windowed' })} />);
+
+    expect(await screen.findByRole('heading', { name: 'Checkpoint' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Runs' }));
+
+    expect(await screen.findByText(/Review code changes: warned/)).toBeTruthy();
+    expect(screen.getByText(/Routine model call failed \(429\): The usage limit has been reached/)).toBeTruthy();
+    expect(screen.queryByText(/X-Codex/)).toBeNull();
+    expect(screen.queryByText(/headers/)).toBeNull();
   });
 
   it('uses shared windowed empty-state chrome for empty routine lanes', async () => {
@@ -402,32 +435,6 @@ describe('RoutinesPage', () => {
     expect(screen.getByRole('button', { name: 'Done adding routine event' })).toBeTruthy();
   });
 
-  it('keeps the context rail aligned when a checkpoint example is added locally', async () => {
-    const { pa, state } = createPa();
-    state.routines = [];
-    state.hooks = state.hooks.map((hook) => ({ ...hook, summary: 'No routines' }));
-
-    render(
-      <>
-        <RoutinesSidebar {...propsWithContext(pa, { surfaceId: 'routines-sidebar' })} />
-        <RoutinesPage {...props(pa)} />
-        <RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />
-      </>,
-    );
-
-    await screen.findByText('How Routines work');
-    expect(screen.getByText('No event selected')).toBeTruthy();
-
-    fireEvent.click(screen.getAllByText('Create')[0]);
-
-    expect(await screen.findByText('When Checkpoint runs')).toBeTruthy();
-    await waitFor(() => expect(screen.queryByText('No event selected')).toBeNull());
-    await waitFor(() => expect(screen.queryByText('No routines yet. Add an event to start.')).toBeNull());
-    expect(screen.getAllByText('Checkpoint').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Before').length).toBeGreaterThan(0);
-  });
-
   it('edits paths inline and collapses the form after save', async () => {
     const { pa, invoke } = createPa();
     render(<RoutinesPage {...props(pa)} />);
@@ -508,69 +515,5 @@ describe('RoutinesPage', () => {
     await screen.findByText('Temporary instruction');
     fireEvent.click(screen.getByLabelText('Delete Temporary instruction'));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('deleteRoutine', expect.objectContaining({ routineId: expect.any(String) })));
-  });
-
-  it('refreshes run history when routines are invalidated', async () => {
-    const { pa, state, emitInvalidation } = createPa();
-    render(<RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />);
-    await screen.findByText('Routine context');
-
-    expect(screen.getByText('No routine runs yet.')).toBeTruthy();
-
-    state.runs.unshift({
-      id: 'run-qa',
-      hookId: 'checkpoint',
-      position: 'before',
-      status: 'blocked',
-      startedAt: '2026-01-01T00:01:00.000Z',
-      completedAt: '2026-01-01T00:01:00.000Z',
-      context: {},
-      steps: [
-        {
-          routineId: 'r1',
-          routineName: 'Review code changes',
-          status: 'blocked',
-          message: 'Blocked by QA',
-          skillRefs: [],
-        },
-      ],
-    } satisfies RoutineRunRecord);
-
-    await act(async () => {
-      emitInvalidation(['routines']);
-      await Promise.resolve();
-    });
-
-    expect(await screen.findByText(/Review code changes: blocked/)).toBeTruthy();
-    expect(screen.getByText(/Blocked by QA/)).toBeTruthy();
-  });
-
-  it('sanitizes persisted structured provider errors in run history', async () => {
-    const { pa, state } = createPa();
-    state.runs.unshift({
-      id: 'run-raw-error',
-      hookId: 'checkpoint',
-      position: 'before',
-      status: 'warned',
-      startedAt: '2026-01-01T00:01:00.000Z',
-      completedAt: '2026-01-01T00:01:00.000Z',
-      context: {},
-      steps: [
-        {
-          routineId: 'r1',
-          routineName: 'Review code changes',
-          status: 'warned',
-          message:
-            'Codex error: {"type":"error","error":{"type":"usage_limit_reached","message":"The usage limit has been reached"},"status_code":429,"headers":{"X-Codex-Active-Limit":"codex_bengalfox"}}',
-          skillRefs: [],
-        },
-      ],
-    } satisfies RoutineRunRecord);
-
-    render(<RoutinesContextRail {...propsWithContext(pa, { surfaceId: 'routines-context-rail' })} />);
-
-    expect(await screen.findByText(/Routine model call failed \(429\): The usage limit has been reached/)).toBeTruthy();
-    expect(screen.queryByText(/X-Codex/)).toBeNull();
-    expect(screen.queryByText(/headers/)).toBeNull();
   });
 });

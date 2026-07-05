@@ -5,10 +5,6 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
-  ContextRail,
-  ContextRailBody,
-  ContextRailHeader,
-  ContextRailSection,
   cx,
   EmptyState,
   ErrorState,
@@ -526,113 +522,6 @@ export function RoutinesSidebar({ pa, context }: ExtensionSurfaceProps) {
         onShowAllHooksChange={setShowAllHooks}
       />
     </SidebarSection>
-  );
-}
-
-function RoutinesRunHistory({ selectedHook, runs }: { selectedHook: HookWithSummary; runs: RoutineRunRecord[] }) {
-  if (runs.length === 0) {
-    return <div className="py-6 text-[12px] text-secondary">No routine runs yet.</div>;
-  }
-
-  return (
-    <div className="grid gap-2">
-      {runs.map((run) => (
-        <div key={run.id} className="ui-flat-panel">
-          <div className="flex items-center justify-between gap-2">
-            <b className="text-[12px] capitalize text-primary">{run.status}</b>
-            <span className="text-[11px] text-secondary">{new Date(run.startedAt).toLocaleString()}</span>
-          </div>
-          <div className="mt-2 grid gap-1 text-[12px] text-secondary">
-            {run.steps.length === 0 ? <div>{selectedHook.title} ran without recorded steps.</div> : null}
-            {run.steps.map((step, index) => (
-              <div key={`${step.routineId}-${index}`}>
-                {step.routineName}: {step.outcome ?? step.status}
-                {step.message ? ` — ${sanitizeRunStepMessage(step.message)}` : ''}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function RoutinesContextRail({ pa, context }: ExtensionSurfaceProps) {
-  const [data, setData] = useState<StateResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const selectedHookId = hookIdFromHash(context.hash) ?? '';
-
-  const load = useCallback(async () => {
-    try {
-      const result = (await pa.extension.invoke('getState', {})) as StateResult;
-      setData(result);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [pa]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    const onState = (event: Event) => setData((event as CustomEvent<StateResult>).detail);
-    window.addEventListener('neon-pilot-routines-state', onState);
-    return () => window.removeEventListener('neon-pilot-routines-state', onState);
-  }, []);
-
-  useEffect(() => {
-    const subscription = pa.ui.subscribeInvalidations((event) => {
-      if (event.topics.some((topic) => topic === 'routines')) void load();
-    });
-    return () => subscription.unsubscribe();
-  }, [load, pa]);
-
-  if (error) return <div className="p-4 text-[12px] text-danger">{error}</div>;
-  if (!data) return <RoutinesLoadingState />;
-
-  const firstActiveHookId = data.routines.find((routine) => routine.enabled)?.hookId;
-  const selectedHook = data.hooks.find((hook) => hook.id === selectedHookId) ?? data.hooks.find((hook) => hook.id === firstActiveHookId);
-  if (!selectedHook) {
-    return (
-      <ContextRail>
-        <ContextRailHeader eyebrow="Routine context" title="No event selected" subtitle="Add an event to inspect routines and runs." />
-        <ContextRailBody>
-          <ContextRailSection title="Runs">
-            <div className="py-6 text-[12px] text-secondary">Run history appears here after routines execute.</div>
-          </ContextRailSection>
-        </ContextRailBody>
-      </ContextRail>
-    );
-  }
-
-  const hookRoutines = data.routines.filter((routine) => routine.hookId === selectedHook.id);
-  const selectedRuns = data.runs.filter((run) => run.hookId === selectedHook.id).slice(0, 20);
-  const beforeCount = hookRoutines.filter((routine) => routine.position === 'before').length;
-  const afterCount = hookRoutines.filter((routine) => routine.position === 'after').length;
-
-  return (
-    <ContextRail>
-      <ContextRailHeader eyebrow="Routine context" title={selectedHook.title} subtitle={ownerLabel(selectedHook.ownerExtensionId)} />
-      <ContextRailBody>
-        <ContextRailSection title="Timeline">
-          <div className="grid grid-cols-2 gap-2 text-[12px]">
-            <div className="ui-flat-panel">
-              <div className="text-[18px] font-semibold text-primary">{beforeCount}</div>
-              <div className="mt-1 text-secondary">Before</div>
-            </div>
-            <div className="ui-flat-panel">
-              <div className="text-[18px] font-semibold text-primary">{afterCount}</div>
-              <div className="mt-1 text-secondary">After</div>
-            </div>
-          </div>
-        </ContextRailSection>
-        <ContextRailSection title="Runs">
-          <RoutinesRunHistory selectedHook={selectedHook} runs={selectedRuns} />
-        </ContextRailSection>
-      </ContextRailBody>
-    </ContextRail>
   );
 }
 
@@ -2410,7 +2299,18 @@ export function RoutinesPage({ pa, context }: ExtensionSurfaceProps) {
               <WindowedTimeline>
                 {selectedRuns.slice(0, 12).map((run) => (
                   <WindowedTimelineItem key={run.id} title={run.status} meta={new Date(run.startedAt).toLocaleString()}>
-                    {run.steps.length ? `${run.steps.length} recorded steps` : `${selectedHook.title} ran without recorded steps.`}
+                    {run.steps.length ? (
+                      <div className="grid gap-1">
+                        {run.steps.map((step, index) => (
+                          <div key={`${step.routineId}-${index}`}>
+                            {step.routineName}: {step.outcome ?? step.status}
+                            {step.message ? ` - ${sanitizeRunStepMessage(step.message)}` : ''}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      `${selectedHook.title} ran without recorded steps.`
+                    )}
                   </WindowedTimelineItem>
                 ))}
               </WindowedTimeline>
