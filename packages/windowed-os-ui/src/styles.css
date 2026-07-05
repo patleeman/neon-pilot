@@ -578,8 +578,7 @@
 .wos-taskbar__button[data-focused='true'][data-accent='automations'],
 .wos-taskbar__button[data-focused='true'][data-accent='drawing'],
 .wos-taskbar__button[data-focused='true'][data-accent='apps'],
-.wos-taskbar__button[data-focused='true'][data-accent='telemetry'],
-.wos-taskbar__button[data-focused='true'][data-accent='diagnostics'] {
+.wos-taskbar__button[data-focused='true'][data-accent='telemetry'] {
   color: var(--wos-accent-ink);
 }
 
@@ -597,10 +596,6 @@
 
 .wos-taskbar__button[data-focused='true'][data-accent='telemetry'] {
   background: var(--wos-telemetry);
-}
-
-.wos-taskbar__button[data-focused='true'][data-accent='diagnostics'] {
-  background: var(--wos-diagnostics);
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='settings'] {
@@ -652,11 +647,6 @@
   background: var(--wos-telemetry);
 }
 
-.wos-app-monogram[data-accent='diagnostics'],
-.wos-window__titlebar[data-accent='diagnostics'] {
-  background: var(--wos-diagnostics);
-}
-
 .wos-app-monogram[data-accent='settings'],
 .wos-window__titlebar[data-accent='settings'] {
   background: var(--wos-settings);
@@ -667,13 +657,11 @@
 .wos-app-monogram[data-accent='drawing'],
 .wos-app-monogram[data-accent='apps'],
 .wos-app-monogram[data-accent='telemetry'],
-.wos-app-monogram[data-accent='diagnostics'],
 .wos-window__titlebar[data-accent='chat'],
 .wos-window__titlebar[data-accent='automations'],
 .wos-window__titlebar[data-accent='drawing'],
 .wos-window__titlebar[data-accent='apps'],
-.wos-window__titlebar[data-accent='telemetry'],
-.wos-window__titlebar[data-accent='diagnostics'] {
+.wos-window__titlebar[data-accent='telemetry'] {
   color: var(--wos-accent-ink);
 }
 
@@ -969,8 +957,7 @@
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta,
 .wos-window__titlebar[data-accent='drawing'] .wos-window__meta,
 .wos-window__titlebar[data-accent='apps'] .wos-window__meta,
-.wos-window__titlebar[data-accent='telemetry'] .wos-window__meta,
-.wos-window__titlebar[data-accent='diagnostics'] .wos-window__meta {
+.wos-window__titlebar[data-accent='telemetry'] .wos-window__meta {
   color: color-mix(in oklab, var(--wos-accent-ink) 88%, var(--wos-surface-0));
 }
 
@@ -978,8 +965,7 @@
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='drawing'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='apps'] .wos-window__meta::before,
-.wos-window__titlebar[data-accent='telemetry'] .wos-window__meta::before,
-.wos-window__titlebar[data-accent='diagnostics'] .wos-window__meta::before {
+.wos-window__titlebar[data-accent='telemetry'] .wos-window__meta::before {
   color: color-mix(in oklab, var(--wos-accent-ink) 74%, var(--wos-surface-0));
 }
 
@@ -1338,8 +1324,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='automations'],
 .wos-dialog__titlebar[data-accent='drawing'],
 .wos-dialog__titlebar[data-accent='apps'],
-.wos-dialog__titlebar[data-accent='telemetry'],
-.wos-dialog__titlebar[data-accent='diagnostics'] {
+.wos-dialog__titlebar[data-accent='telemetry'] {
   color: var(--wos-accent-ink);
 }
 
@@ -1357,10 +1342,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__titlebar[data-accent='telemetry'] {
   background: var(--wos-telemetry);
-}
-
-.wos-dialog__titlebar[data-accent='diagnostics'] {
-  background: var(--wos-diagnostics);
 }
 
 .wos-dialog__identity {
@@ -1396,8 +1377,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='apps'] .wos-dialog__meta,
-.wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta,
-.wos-dialog__titlebar[data-accent='diagnostics'] .wos-dialog__meta {
+.wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta {
   color: color-mix(in oklab, var(--wos-accent-ink) 88%, var(--wos-surface-0));
 }
 
@@ -1405,8 +1385,7 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='apps'] .wos-dialog__meta::before,
-.wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta::before,
-.wos-dialog__titlebar[data-accent='diagnostics'] .wos-dialog__meta::before {
+.wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta::before {
   color: color-mix(in oklab, var(--wos-accent-ink) 74%, var(--wos-surface-0));
 }
 
@@ -3726,11 +3705,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   --wos-segmented-active-ink: var(--wos-accent-ink);
 }
 
-.wos-segmented-control[data-accent='diagnostics'] {
-  --wos-segmented-active: var(--wos-diagnostics);
-  --wos-segmented-active-ink: var(--wos-accent-ink);
-}
-
 .wos-segmented-control[data-accent='settings'] {
   --wos-segmented-active: var(--wos-settings);
   --wos-segmented-active-ink: var(--wos-accent-ink);
@@ -4421,7 +4395,7 @@ button.wos-chat-window-toolbar__status:focus-visible {
   display: block;
   min-width: 2px;
   height: 100%;
-  background: var(--wos-diagnostics);
+  background: var(--wos-telemetry);
 }
 
 .wos-model-usage-bar[data-tone='warning'] span {
@@ -4509,7 +4483,7 @@ button.wos-chat-window-toolbar__status:focus-visible {
 }
 
 .wos-context-pressure-segments span[data-segment='system'] {
-  background: var(--wos-diagnostics);
+  background: var(--wos-telemetry);
 }
 
 .wos-context-pressure-segments span[data-segment='user'] {
@@ -4552,7 +4526,7 @@ button.wos-chat-window-toolbar__status:focus-visible {
   display: block;
   min-width: 2px;
   height: 100%;
-  background: var(--wos-diagnostics);
+  background: var(--wos-telemetry);
 }
 
 .wos-agent-loop {
@@ -4610,7 +4584,7 @@ button.wos-chat-window-toolbar__status:focus-visible {
   display: block;
   width: var(--wos-agent-loop-duration);
   height: 100%;
-  background: var(--wos-diagnostics);
+  background: var(--wos-telemetry);
 }
 
 .wos-agent-loop-duration[data-tone='danger'] .wos-agent-loop-duration__bar {
@@ -4677,10 +4651,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-toggle[data-checked='true'][data-accent='telemetry'] {
   background: var(--wos-telemetry);
-}
-
-.wos-toggle[data-checked='true'][data-accent='diagnostics'] {
-  background: var(--wos-diagnostics);
 }
 
 .wos-toggle[data-checked='true'][data-accent='settings'] {
@@ -4809,9 +4779,8 @@ button.wos-chat-window-toolbar__status:focus-visible {
   --wos-data-row-active-ink: var(--wos-ink-900);
 }
 
-.wos-data-row[data-accent='telemetry'],
-.wos-data-row[data-accent='diagnostics'] {
-  --wos-data-row-active: var(--wos-diagnostics);
+.wos-data-row[data-accent='telemetry'] {
+  --wos-data-row-active: var(--wos-telemetry);
   --wos-data-row-active-ink: white;
 }
 
@@ -5081,11 +5050,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-list-item[data-accent='telemetry'] {
   --wos-list-active: var(--wos-telemetry);
-  --wos-list-active-ink: var(--wos-accent-ink);
-}
-
-.wos-list-item[data-accent='diagnostics'] {
-  --wos-list-active: var(--wos-diagnostics);
   --wos-list-active-ink: var(--wos-accent-ink);
 }
 

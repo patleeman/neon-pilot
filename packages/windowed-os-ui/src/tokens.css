@@ -17,7 +17,6 @@
   --wos-drawing: oklch(68% 0.16 42);
   --wos-apps: oklch(70% 0.15 60);
   --wos-telemetry: oklch(68% 0.16 25);
-  --wos-diagnostics: oklch(63% 0.16 35);
   --wos-settings: oklch(85% 0.02 75);
   --wos-success: oklch(58% 0.14 150);
   --wos-warning: oklch(74% 0.15 78);
@@ -91,7 +90,6 @@
   --wos-drawing: oklch(74% 0.16 48);
   --wos-apps: oklch(76% 0.15 70);
   --wos-telemetry: oklch(72% 0.16 35);
-  --wos-diagnostics: oklch(70% 0.16 35);
   --wos-settings: oklch(38% 0.025 260);
   --wos-success: oklch(70% 0.14 150);
   --wos-warning: oklch(80% 0.15 78);

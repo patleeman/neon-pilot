@@ -1333,7 +1333,7 @@ export const ChartPrimitives: Story = {
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
       <WindowFrame
         title="Diagnostics"
-        accent="diagnostics"
+        accent="settings"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(960px, 100%)', height: 460 }}
         onMinimize={() => undefined}
