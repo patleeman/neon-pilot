@@ -1208,7 +1208,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     }
     void bridge.openPath(extension.packageRoot).then((result) => {
       if (!result.opened) {
-        setNotice({ type: 'error', message: result.error ?? extension.packageRoot ?? 'Could not open extension folder.' });
+        setNotice({ type: 'error', message: result.error ?? extension.packageRoot ?? 'Could not open app package folder.' });
       }
     });
   }, []);

@@ -110,7 +110,7 @@ export function getExtensionCompatibilityError(
   if (!neonPilotRange) return null;
   const compatible = satisfiesVersionRange(appVersion, neonPilotRange);
   if (compatible === false) {
-    return `Extension "${manifest.name || manifest.id}" requires Neon Pilot ${neonPilotRange}, but this app is ${appVersion}.`;
+    return `App package "${manifest.name || manifest.id}" requires Neon Pilot ${neonPilotRange}, but this app is ${appVersion}.`;
   }
   return null;
 }

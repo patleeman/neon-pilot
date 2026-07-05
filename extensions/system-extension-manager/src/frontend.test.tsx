@@ -134,7 +134,7 @@ function createRequiredSystemExtension() {
     ...createSystemExtension(),
     id: 'system-settings',
     name: 'Settings panels',
-    description: 'Native extension routes for first-party settings panels.',
+    description: 'Native app routes for first-party settings panels.',
     required: true,
   } as never;
 }
@@ -651,10 +651,10 @@ describe('ExtensionManagerPage', () => {
     expect(rows[2]).toContain('Enabled A');
   });
 
-  it('keeps the extensions table visible when enabling an extension fails', async () => {
+  it('keeps the apps table visible when enabling an app fails', async () => {
     const notify = vi.fn();
     mocks.extensionInstallations.mockResolvedValue([{ ...createExtension(), enabled: false, status: 'disabled' }]);
-    mocks.updateExtension.mockRejectedValue(new Error('Extension "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.'));
+    mocks.updateExtension.mockRejectedValue(new Error('App package "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.'));
 
     renderPage({ notify });
 
@@ -662,13 +662,13 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(screen.getByLabelText('Enable Menu Test'));
 
     expect(await screen.findByText('Failed to enable Menu Test')).toBeTruthy();
-    expect(screen.getByText('Extension "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.')).toBeTruthy();
+    expect(screen.getByText('App package "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.')).toBeTruthy();
     expect(screen.getAllByText('App Manager').length).toBeGreaterThan(0);
     expect(screen.getByText('1 installed · 0 enabled')).toBeTruthy();
     expect(screen.getByLabelText('Enable Menu Test')).toBeTruthy();
     expect(notify).toHaveBeenCalledWith({
       message: 'Failed to enable Menu Test',
-      details: 'Extension "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.',
+      details: 'App package "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.',
       type: 'error',
       source: 'system-extension-manager',
     });
@@ -735,7 +735,7 @@ describe('ExtensionManagerPage', () => {
         }),
       }),
     );
-    expect(screen.queryByRole('dialog', { name: 'Extension details' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'App details' })).toBeNull();
     expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings/apps/configurable-test');
     expect(screen.queryByText('Toggle a test setting.')).toBeNull();
   });
@@ -754,7 +754,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('dialog', { name: 'Configurable Test' })).toBeNull();
   });
 
-  it('opens extension routes from the windowed details dialog and closes the dialog', async () => {
+  it('opens app routes from the windowed details dialog and closes the dialog', async () => {
     mocks.extensionInstallations.mockResolvedValue([createRoutedExtension()]);
     renderWindowedPage({ locationProbe: true });
 
@@ -768,7 +768,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('dialog', { name: 'Routed Test' })).toBeNull();
   });
 
-  it('shows catalog-only extensions in the install modal instead of the installed table', async () => {
+  it('shows catalog-only apps in the install modal instead of the installed table', async () => {
     const callAction = vi.fn().mockResolvedValue({
       ok: true,
       version: '0.9.1-rc.6',
@@ -1288,8 +1288,8 @@ describe('ExtensionManagerPage', () => {
           extensions: [
             {
               id: 'native-extension',
-              name: 'Native Extension',
-              description: 'A native Neon Pilot extension.',
+              name: 'Native App',
+              description: 'A native Neon Pilot app package.',
               version: '1.0.0',
               tag: 'v1.0.0',
               packageType: 'extension',

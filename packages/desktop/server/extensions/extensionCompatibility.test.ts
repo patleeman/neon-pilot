@@ -27,13 +27,13 @@ describe('extension compatibility', () => {
     expect(satisfiesVersionRange('0.11.7', '>=0.10')).toBe(null);
   });
 
-  it('formats extension compatibility errors with the effective app version', () => {
+  it('formats app package compatibility errors with the effective app version', () => {
     expect(
       getExtensionCompatibilityError(
         { id: 'system-writing-studio', name: 'Writing Studio', compatibility: { neonPilot: '>=0.10.0 <0.11.0' } },
         '0.11.7',
       ),
-    ).toBe('Extension "Writing Studio" requires Neon Pilot >=0.10.0 <0.11.0, but this app is 0.11.7.');
+    ).toBe('App package "Writing Studio" requires Neon Pilot >=0.10.0 <0.11.0, but this app is 0.11.7.');
     expect(
       getExtensionCompatibilityError(
         { id: 'system-writing-studio', name: 'Writing Studio', compatibility: { neonPilot: '>=0.10.0' } },
