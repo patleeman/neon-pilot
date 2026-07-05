@@ -24,7 +24,7 @@ describe('NativeExtensionToolBlockHost', () => {
     );
 
     expect(html).toContain('self_preservation');
-    expect(html).toContain('Extension renderer unavailable.');
+    expect(html).toContain('App renderer unavailable.');
   });
 
   it('uses the bundled checkpoint renderer when registry data is stale', () => {
@@ -44,7 +44,7 @@ describe('NativeExtensionToolBlockHost', () => {
       }),
     );
 
-    expect(html).not.toContain('Extension renderer unavailable.');
+    expect(html).not.toContain('App renderer unavailable.');
     expect(html).toContain('Loading tool');
   });
 });

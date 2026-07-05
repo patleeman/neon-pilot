@@ -123,7 +123,7 @@ function MissingExtensionRendererFallback({ block }: { block: ToolBlock }) {
         <Pill tone={isError ? 'danger' : 'muted'} mono>
           {block.tool}
         </Pill>
-        <span className="text-dim">Extension renderer unavailable.</span>
+        <span className="text-dim">App renderer unavailable.</span>
       </div>
       {output ? <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-secondary">{output}</pre> : null}
     </SurfacePanel>
@@ -198,7 +198,7 @@ class ExtensionToolBlockErrorBoundary extends React.Component<
     const message = error instanceof Error ? error.message : String(error);
     addNotification({
       type: 'error',
-      message: `Extension tool block error: ${message}`,
+      message: `App tool block error: ${message}`,
       details: error instanceof Error ? error.stack : undefined,
       source: this.props.extensionId,
     });

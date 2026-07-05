@@ -129,8 +129,8 @@ function presentToolBlockOutput(input: { output: string; status?: 'running' | 'o
   const output = /^This operation was aborted\.?$/i.test(message ?? '')
     ? 'Stopped before finishing. The tool call was interrupted or cancelled.'
     : message
-      ? `Extension action failed: ${message}`
-      : 'Extension action failed.';
+      ? `App action failed: ${message}`
+      : 'App action failed.';
   return { output, ...(isError ? { status: 'error' as const } : {}) };
 }
 

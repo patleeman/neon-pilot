@@ -605,7 +605,7 @@ function presentTraceErrorMessage(message: string): string {
 
   const extensionModuleLoadFailure = /^Extension "([^"]+)" action "([^"]+)" failed: Cannot find module\b/.exec(normalized);
   if (extensionModuleLoadFailure) {
-    return `Extension "${extensionModuleLoadFailure[1]}" action "${extensionModuleLoadFailure[2]}" could not start because a required app module was unavailable. Rebuild or restart Neon Pilot and try again.`;
+    return `App package "${extensionModuleLoadFailure[1]}" action "${extensionModuleLoadFailure[2]}" could not start because a required app module was unavailable. Rebuild or restart Neon Pilot and try again.`;
   }
 
   if (/^Cannot find module\b/.test(normalized)) {

@@ -97,6 +97,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 validation: focused app-registry, WindowedLayout, and windowed design-system tests plus `pnpm --dir packages/windowed-os-ui run build` passed for the `app-manager` canonical id rename.
    - 2026-07-05 progress: App Manager now uses `/apps` as its canonical nav/view/command route. `/extensions` remains a legacy view and Windowed OS route alias, so old links still focus the App Manager app without adding a duplicate launcher item.
    - 2026-07-05 validation: focused App Manager manifest/frontend tests, ExtensionPage route tests, Sidebar tests, app-registry tests, WindowedLayout tests, route-shell manifest tests, `pnpm run extension:build -- extensions/system-extension-manager`, and `pnpm --dir packages/desktop run build:ui` passed for the `/apps` canonical route migration.
+   - 2026-07-05 progress: chat/transcript extension-host fallback copy now presents missing renderers, app action failures, and module-load failures as app/app-package failures instead of normal-user Extension failures while preserving raw extension-host matching at the runtime boundary.
+   - 2026-07-05 validation: focused transcript renderer/chat tests and `pnpm --dir packages/desktop run build:ui` passed for the app-facing chat fallback copy.
 
 ### Next concrete implementation backlog
 

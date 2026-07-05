@@ -787,7 +787,7 @@ describe('chat view streaming disclosure', () => {
     expect(html).not.toContain('>terminated<');
   });
 
-  it('hides raw module paths from extension action load failures', () => {
+  it('hides raw module paths from app package action load failures', () => {
     const html = renderToStaticMarkup(
       createElement(ErrorBlock, {
         block: {
@@ -800,7 +800,7 @@ describe('chat view streaming disclosure', () => {
     );
 
     expect(html).toContain(
-      'Extension &quot;system-ds4&quot; action &quot;ds4StartServer&quot; could not start because a required app module was unavailable.',
+      'App package &quot;system-ds4&quot; action &quot;ds4StartServer&quot; could not start because a required app module was unavailable.',
     );
     expect(html).toContain('ui-error-block__text');
     expect(html).toContain('Rebuild or restart Neon Pilot and try again.');
