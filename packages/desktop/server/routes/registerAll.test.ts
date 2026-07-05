@@ -8,6 +8,7 @@ const routeModules = vi.hoisted(() => ({
   registerExtensionRoutes: vi.fn(),
   registerFilePickerRoutes: vi.fn(),
   registerGatewayRoutes: vi.fn(),
+  registerGlobalActivityRoutes: vi.fn(),
   registerLiveSessionRoutes: vi.fn(),
   registerModelRoutes: vi.fn(),
   registerRunAppRoutes: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('./conversationState.js', () => ({ registerConversationStateRoutes: rout
 vi.mock('./executions.js', () => ({ registerExecutionRoutes: routeModules.registerExecutionRoutes }));
 vi.mock('./extensions.js', () => ({ registerExtensionRoutes: routeModules.registerExtensionRoutes }));
 vi.mock('./filePicker.js', () => ({ registerFilePickerRoutes: routeModules.registerFilePickerRoutes }));
+vi.mock('./globalActivity.js', () => ({ registerGlobalActivityRoutes: routeModules.registerGlobalActivityRoutes }));
 vi.mock('./gateways.js', () => ({ registerGatewayRoutes: routeModules.registerGatewayRoutes }));
 vi.mock('./liveSessions.js', () => ({ registerLiveSessionRoutes: routeModules.registerLiveSessionRoutes }));
 vi.mock('./models.js', () => ({ registerModelRoutes: routeModules.registerModelRoutes }));
@@ -49,6 +51,7 @@ describe('registerServerRoutes', () => {
 
     expect(routeModules.registerAppTelemetryRoutes).toHaveBeenCalledWith(app);
     expect(routeModules.registerExecutionRoutes).toHaveBeenCalledWith(app);
+    expect(routeModules.registerGlobalActivityRoutes).toHaveBeenCalledWith(app);
 
     for (const register of [
       routeModules.registerSettingsRoutes,
@@ -81,6 +84,7 @@ describe('registerServerRoutes', () => {
       routeModules.registerConversationStateRoutes,
       routeModules.registerLiveSessionRoutes,
       routeModules.registerExecutionRoutes,
+      routeModules.registerGlobalActivityRoutes,
       routeModules.registerRunAppRoutes,
       routeModules.registerFilePickerRoutes,
       routeModules.registerWorkspaceExplorerRoutes,

@@ -7,6 +7,7 @@ import { registerExecutionRoutes } from './executions.js';
 import { registerExtensionRoutes } from './extensions.js';
 import { registerFilePickerRoutes } from './filePicker.js';
 import { registerGatewayRoutes } from './gateways.js';
+import { registerGlobalActivityRoutes } from './globalActivity.js';
 import { registerLiveSessionRoutes } from './liveSessions.js';
 import { registerModelRoutes } from './models.js';
 import { registerRunAppRoutes } from './runsApp.js';
@@ -45,6 +46,8 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
   registerLiveSessionRoutes(app, context);
 
   registerExecutionRoutes(app);
+
+  registerGlobalActivityRoutes(app);
 
   registerRunAppRoutes(app, context);
 
