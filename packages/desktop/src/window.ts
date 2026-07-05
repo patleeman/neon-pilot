@@ -114,7 +114,7 @@ export function toDesktopShellRoute(url: string): string {
 export function isWindowedDesktopShellUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    return parsed.searchParams.get('shell') === 'windowed';
+    return parsed.searchParams.get('desktop-shell') === '1';
   } catch {
     return false;
   }

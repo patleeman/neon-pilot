@@ -72,13 +72,14 @@ describe('toDesktopShellRoute', () => {
 
 describe('isWindowedDesktopShellUrl', () => {
   it('detects the windowed desktop shell route', () => {
-    expect(isWindowedDesktopShellUrl('neon-pilot://app/?shell=windowed&desktop-shell=1')).toBe(true);
-    expect(isWindowedDesktopShellUrl('https://app.neon-pilot.dev/?desktop-shell=1&shell=windowed')).toBe(true);
+    expect(isWindowedDesktopShellUrl('neon-pilot://app/?desktop-shell=1')).toBe(true);
+    expect(isWindowedDesktopShellUrl('https://app.neon-pilot.dev/?desktop-shell=1')).toBe(true);
+    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings?desktop-shell=1')).toBe(true);
   });
 
-  it('leaves stable desktop shell routes and invalid URLs alone', () => {
-    expect(isWindowedDesktopShellUrl('neon-pilot://app/?desktop-shell=1')).toBe(false);
-    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings?shell=stable&desktop-shell=1')).toBe(false);
+  it('leaves ordinary app URLs and invalid URLs alone', () => {
+    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings')).toBe(false);
+    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings?mode=desktop')).toBe(false);
     expect(isWindowedDesktopShellUrl('not a url')).toBe(false);
   });
 });
