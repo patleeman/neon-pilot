@@ -993,10 +993,10 @@ describe('Windowed OS tokens', () => {
     expect(stylesSource).toContain('background: var(--wos-surface-disabled);');
     expect(stylesSource).toContain('color: var(--wos-accent-ink);');
     expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
-    expect(stylesSource).toContain('.wos-extension-dialog-busy');
-    expect(stylesSource).toContain('.wos-extension-detail-grid .wos-key-value-list');
-    expect(stylesSource).toContain('.wos-extension-detail-grid > * {\n  min-width: 0;');
-    expect(stylesSource).toContain('.wos-extension-detail-description {\n  grid-column: 1 / -1;\n  margin: 0;\n  border: 1.5px solid');
+    expect(stylesSource).toContain('.wos-app-dialog-busy');
+    expect(stylesSource).toContain('.wos-app-detail-grid .wos-key-value-list');
+    expect(stylesSource).toContain('.wos-app-detail-grid > * {\n  min-width: 0;');
+    expect(stylesSource).toContain('.wos-app-detail-description {\n  grid-column: 1 / -1;\n  margin: 0;\n  border: 1.5px solid');
     expect(stylesSource).toContain('overflow-wrap: anywhere;');
     expect(stylesSource).toContain(".wos-dialog-layer[data-modal='true']");
     expect(stylesSource).toContain('pointer-events: none;');
@@ -2400,12 +2400,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true']");
     expect(stylesSource).toContain('width: min(500px, calc(100% - 112px));');
     expect(stylesSource).toContain('max-height: min(460px, calc(100% - 120px));');
-    expect(stylesSource).toContain(".wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true']");
+    expect(stylesSource).toContain(".wos-dialog.wos-app-install-dialog[data-parent-window-attached='true']");
     expect(stylesSource).toContain('width: min(820px, calc(100% - 112px));');
     expect(stylesSource).toContain('max-height: min(620px, calc(100% - 120px));');
     expect(stylesSource).toContain('8px 8px 0 color-mix(in srgb, var(--wos-ink-900) 13%, transparent)');
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true'] {\n    width: 100%;");
-    expect(stylesSource).toContain(".wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true'] {\n    width: 100%;");
+    expect(stylesSource).toContain(".wos-dialog.wos-app-install-dialog[data-parent-window-attached='true'] {\n    width: 100%;");
   });
 
   it('styles attached terminal panels with scoped windowed tokens', () => {
@@ -3226,51 +3226,48 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical App Manager desktop page and detail subwindow pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
-    const extensionsSource = source.slice(
-      source.indexOf('function ExtensionsPageStory'),
-      source.indexOf('export const ExtensionsInstallDialog'),
-    );
+    const appManagerSource = source.slice(source.indexOf('function AppManagerPageStory'), source.indexOf('export const AppInstallDialog'));
 
-    expect(source).toContain('function ExtensionsPageStory');
-    expect(source).toContain('export const ExtensionsPage');
-    expect(source).toContain('export const DarkExtensionsPage');
-    expect(source).toContain('<ExtensionsPageStory theme="dark" />');
-    expect(extensionsSource).toContain('title="App Manager"');
-    expect(extensionsSource).toContain('data-wos-theme={theme}');
-    expect(extensionsSource).toContain('<WindowedPageShell layout="standard">');
-    expect(extensionsSource).not.toContain('<WindowedPageRail title="App Manager"');
-    expect(extensionsSource.indexOf('<WindowedPageSection variant="toolbar">')).toBeGreaterThan(
-      extensionsSource.indexOf('<WindowedPageMain'),
+    expect(source).toContain('function AppManagerPageStory');
+    expect(source).toContain('export const AppManagerPage');
+    expect(source).toContain('export const DarkAppManagerPage');
+    expect(source).toContain('<AppManagerPageStory theme="dark" />');
+    expect(appManagerSource).toContain('title="App Manager"');
+    expect(appManagerSource).toContain('data-wos-theme={theme}');
+    expect(appManagerSource).toContain('<WindowedPageShell layout="standard">');
+    expect(appManagerSource).not.toContain('<WindowedPageRail title="App Manager"');
+    expect(appManagerSource.indexOf('<WindowedPageSection variant="toolbar">')).toBeGreaterThan(
+      appManagerSource.indexOf('<WindowedPageMain'),
     );
-    expect(extensionsSource).not.toContain('eyebrow="Extension manager"');
-    expect(extensionsSource).toContain('title="Catalog"');
-    expect(extensionsSource).toContain('<WindowedKeyValueGrid');
-    expect(extensionsSource).toContain('<WindowedPageSection variant="toolbar">');
-    expect(extensionsSource).toContain('Search apps');
-    expect(extensionsSource).toContain('title="Installed"');
-    expect(extensionsSource).toContain('ariaLabel="App view"');
-    expect(extensionsSource.indexOf('ariaLabel="App view"')).toBeGreaterThan(
-      extensionsSource.indexOf('<WindowedPageSection variant="toolbar">'),
+    expect(appManagerSource).not.toContain('eyebrow="Extension manager"');
+    expect(appManagerSource).toContain('title="Catalog"');
+    expect(appManagerSource).toContain('<WindowedKeyValueGrid');
+    expect(appManagerSource).toContain('<WindowedPageSection variant="toolbar">');
+    expect(appManagerSource).toContain('Search apps');
+    expect(appManagerSource).toContain('title="Installed"');
+    expect(appManagerSource).toContain('ariaLabel="App view"');
+    expect(appManagerSource.indexOf('ariaLabel="App view"')).toBeGreaterThan(
+      appManagerSource.indexOf('<WindowedPageSection variant="toolbar">'),
     );
-    expect(extensionsSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
-    expect(extensionsSource).toContain('<WindowedDialog');
-    expect(extensionsSource).toContain('title="system-browser"');
-    expect(extensionsSource).toContain('parentWindowTitle="App Manager"');
-    expect(extensionsSource).toContain('className="wos-extension-detail-grid"');
-    expect(extensionsSource).toContain('className="wos-extension-detail-description"');
-    expect(extensionsSource).toContain('Browser app surfaces and automation tools.');
-    expect(extensionsSource).toContain('meta="Browser app and automation tools"');
-    expect(extensionsSource).not.toContain('Workbench browser');
-    expect(extensionsSource.indexOf('</WindowFrame>')).toBeLessThan(extensionsSource.indexOf('<WindowedDialog'));
-    expect(extensionsSource).not.toContain('title="Inventory"');
-    expect(extensionsSource).not.toContain('title="Installed extensions"');
-    expect(extensionsSource).not.toContain('title="Review queue"');
-    expect(source).toContain('function ExtensionsInstallDialogStory');
-    expect(source).toContain('export const ExtensionsInstallDialog');
-    expect(source).toContain('export const DarkExtensionsInstallDialog');
-    expect(source).toContain('<ExtensionsInstallDialogStory theme="dark" />');
+    expect(appManagerSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
+    expect(appManagerSource).toContain('<WindowedDialog');
+    expect(appManagerSource).toContain('title="system-browser"');
+    expect(appManagerSource).toContain('parentWindowTitle="App Manager"');
+    expect(appManagerSource).toContain('className="wos-app-detail-grid"');
+    expect(appManagerSource).toContain('className="wos-app-detail-description"');
+    expect(appManagerSource).toContain('Browser app surfaces and automation tools.');
+    expect(appManagerSource).toContain('meta="Browser app and automation tools"');
+    expect(appManagerSource).not.toContain('Workbench browser');
+    expect(appManagerSource.indexOf('</WindowFrame>')).toBeLessThan(appManagerSource.indexOf('<WindowedDialog'));
+    expect(appManagerSource).not.toContain('title="Inventory"');
+    expect(appManagerSource).not.toContain('title="Installed extensions"');
+    expect(appManagerSource).not.toContain('title="Review queue"');
+    expect(source).toContain('function AppInstallDialogStory');
+    expect(source).toContain('export const AppInstallDialog');
+    expect(source).toContain('export const DarkAppInstallDialog');
+    expect(source).toContain('<AppInstallDialogStory theme="dark" />');
     expect(source).toContain('title="Install app"');
-    expect(source).toContain('wos-extension-install-dialog');
+    expect(source).toContain('wos-app-install-dialog');
     expect(source).toContain('title="Repositories"');
   });
 

@@ -5780,22 +5780,22 @@ button.wos-chat-window-toolbar__status:focus-visible {
   align-items: stretch;
 }
 
-.wos-extension-detail-grid {
+.wos-app-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(120px, 0.85fr);
   gap: 8px;
   align-items: start;
 }
 
-.wos-extension-detail-grid > * {
+.wos-app-detail-grid > * {
   min-width: 0;
 }
 
-.wos-extension-detail-grid .wos-key-value-list {
+.wos-app-detail-grid .wos-key-value-list {
   border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 48%, transparent);
 }
 
-.wos-extension-detail-actions {
+.wos-app-detail-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -5803,12 +5803,12 @@ button.wos-chat-window-toolbar__status:focus-visible {
   justify-content: flex-end;
 }
 
-.wos-extension-dialog-busy {
+.wos-app-dialog-busy {
   color: var(--wos-ink-500);
   font: var(--wos-text-label);
 }
 
-.wos-extension-detail-description {
+.wos-app-detail-description {
   grid-column: 1 / -1;
   margin: 0;
   border: 1.5px solid color-mix(in srgb, var(--wos-ink-900) 48%, transparent);
@@ -5821,27 +5821,27 @@ button.wos-chat-window-toolbar__status:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.wos-extension-install-dialog {
+.wos-app-install-dialog {
   width: min(820px, 100%);
 }
 
-.wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true'] {
+.wos-dialog.wos-app-install-dialog[data-parent-window-attached='true'] {
   width: min(820px, calc(100% - 112px));
   max-height: min(620px, calc(100% - 120px));
 }
 
-.wos-extension-install {
+.wos-app-install {
   display: grid;
   gap: 10px;
 }
 
-.wos-extension-install__errors {
+.wos-app-install__errors {
   margin-top: 8px;
   color: oklch(42% 0.16 30);
   font: var(--wos-text-meta);
 }
 
-.wos-extension-install__errors p {
+.wos-app-install__errors p {
   margin: 0;
 }
 
@@ -5850,11 +5850,11 @@ button.wos-chat-window-toolbar__status:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .wos-extension-detail-grid {
+  .wos-app-detail-grid {
     grid-template-columns: 1fr;
   }
 
-  .wos-extension-detail-actions {
+  .wos-app-detail-actions {
     justify-content: flex-start;
   }
 
@@ -5883,7 +5883,7 @@ button.wos-chat-window-toolbar__status:focus-visible {
     max-height: calc(100% - 8px);
   }
 
-  .wos-dialog.wos-extension-install-dialog[data-parent-window-attached='true'] {
+  .wos-dialog.wos-app-install-dialog[data-parent-window-attached='true'] {
     width: 100%;
     max-height: calc(100% - 8px);
   }

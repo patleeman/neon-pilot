@@ -227,8 +227,8 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
             <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
               <WindowedMessageBubble from="user">Draft the changelog for v0.9</WindowedMessageBubble>
               <WindowedMessageBubble>On it. Pulling merged PRs since the last tag.</WindowedMessageBubble>
-              <WindowedMessageBubble from="user">Group by extension, please.</WindowedMessageBubble>
-              <WindowedMessageBubble>Done. Six groups, linked to their extension pages.</WindowedMessageBubble>
+              <WindowedMessageBubble from="user">Group by app, please.</WindowedMessageBubble>
+              <WindowedMessageBubble>Done. Six groups, linked to their app pages.</WindowedMessageBubble>
             </WindowedChatMain>
           </WindowedChatSurface>
         </WindowFrame>
@@ -347,10 +347,10 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
           <WindowedChatSurface>
             <WindowedChatMain title="Release notes" composer={<WindowedChatComposer actionLabel="Send" />}>
               <WindowedMessageBubble from="user">Draft the changelog for v0.11.39.</WindowedMessageBubble>
-              <WindowedMessageBubble>Reading the current branch and grouping changes by extension.</WindowedMessageBubble>
+              <WindowedMessageBubble>Reading the current branch and grouping changes by app.</WindowedMessageBubble>
               <WindowedMessageBubble from="user">Keep it compact and include blockers only when action is required.</WindowedMessageBubble>
               <WindowedMessageBubble>
-                Ready. I found three UI changes, one extension rebuild, and no release blockers.
+                Ready. I found three UI changes, one app package rebuild, and no release blockers.
               </WindowedMessageBubble>
             </WindowedChatMain>
           </WindowedChatSurface>
@@ -382,7 +382,7 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
               <WindowedPageSection title="Files" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
-                  <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
+                  <WindowedListItem title="apps/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
                   <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
                 </WindowedList>
               </WindowedPageSection>
@@ -1780,7 +1780,7 @@ export const AutomationFormPrimitives: Story = {
                 </WindowedField>
                 <WindowedField label="Instruction" span="full">
                   <WindowedTextarea
-                    defaultValue="Summarize merged changes since the last release checkpoint. Group updates by extension and include blockers only when action is required."
+                    defaultValue="Summarize merged changes since the last release checkpoint. Group updates by app and include blockers only when action is required."
                     aria-label="Automation instruction"
                   />
                 </WindowedField>
@@ -2390,7 +2390,7 @@ function WorkflowsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
                   status={<WindowedBadge tone="positive">completed</WindowedBadge>}
                 />
                 <WindowedListItem
-                  title="Extension hardening"
+                  title="App hardening"
                   meta="verification"
                   detail="Failed yesterday"
                   accent="workflows"
@@ -2783,7 +2783,7 @@ export const DarkDiagnosticsPage: Story = {
   render: () => <DiagnosticsPageStory theme="dark" />,
 };
 
-function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
@@ -2919,7 +2919,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
           </>
         }
       >
-        <div className="wos-extension-detail-grid">
+        <div className="wos-app-detail-grid">
           <WindowedKeyValueList
             items={[
               { label: 'State', value: 'Update available' },
@@ -2935,22 +2935,22 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               { label: 'Tools', value: 'browser_snapshot, browser_cdp' },
             ]}
           />
-          <p className="wos-extension-detail-description">Browser app surfaces and automation tools.</p>
+          <p className="wos-app-detail-description">Browser app surfaces and automation tools.</p>
         </div>
       </WindowedDialog>
     </div>
   );
 }
 
-export const ExtensionsPage: Story = {
-  render: () => <ExtensionsPageStory />,
+export const AppManagerPage: Story = {
+  render: () => <AppManagerPageStory />,
 };
 
-export const DarkExtensionsPage: Story = {
-  render: () => <ExtensionsPageStory theme="dark" />,
+export const DarkAppManagerPage: Story = {
+  render: () => <AppManagerPageStory theme="dark" />,
 };
 
-function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
+function AppInstallDialogStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 560, padding: 24 }}>
       <WindowFrame
@@ -2982,10 +2982,10 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
           meta="3 available · 2 sources"
           accent="extensions"
           parentWindowTitle="App Manager"
-          className="wos-extension-install-dialog"
+          className="wos-app-install-dialog"
           onClose={() => undefined}
         >
-          <div className="wos-extension-install">
+          <div className="wos-app-install">
             <WindowedPageSection title="Repositories" meta="2">
               <WindowedToolbar>
                 <WindowedTextInput aria-label="App repository" placeholder="GitHub URL or owner/name" />
@@ -2994,13 +2994,13 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
               <WindowedDataTable columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
                 <WindowedDataRow
                   name="Personal marketplace"
-                  meta="patrick/extensions"
+                  meta="patrick/apps"
                   status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
                   action={<WindowedPageButton>Remove</WindowedPageButton>}
                 />
                 <WindowedDataRow
                   name="Neon Pilot"
-                  meta="neon-pilot/extensions"
+                  meta="neon-pilot/apps"
                   status={<WindowedBadge tone="positive">enabled</WindowedBadge>}
                   action={<span aria-hidden="true" />}
                 />
@@ -3033,12 +3033,12 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
   );
 }
 
-export const ExtensionsInstallDialog: Story = {
-  render: () => <ExtensionsInstallDialogStory />,
+export const AppInstallDialog: Story = {
+  render: () => <AppInstallDialogStory />,
 };
 
-export const DarkExtensionsInstallDialog: Story = {
-  render: () => <ExtensionsInstallDialogStory theme="dark" />,
+export const DarkAppInstallDialog: Story = {
+  render: () => <AppInstallDialogStory theme="dark" />,
 };
 
 function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
@@ -3307,8 +3307,8 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
                   <WindowedListItem title="packages/desktop/ui/src/components" meta="Directory" detail="source" active accent="chat" />
                   <WindowedListItem title="packages/windowed-os-ui/src" meta="Directory" detail="design system" accent="extensions" />
                   <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="backlog" accent="skills" />
-                  <WindowedListItem title="extensions/system-browser" meta="Extension" detail="child tool" accent="gateways" />
-                  <WindowedListItem title="extensions/system-terminal" meta="Extension" detail="child tool" accent="automations" />
+                  <WindowedListItem title="apps/system-browser" meta="App package" detail="child tool" accent="gateways" />
+                  <WindowedListItem title="apps/system-terminal" meta="App package" detail="child tool" accent="automations" />
                 </WindowedList>
               </WindowedPageSection>
             </div>
