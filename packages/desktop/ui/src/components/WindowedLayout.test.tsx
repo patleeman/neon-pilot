@@ -227,7 +227,7 @@ describe('WindowedLayout route windows', () => {
     ];
   });
 
-  it('deactivates stale browser views as soon as the windowed shell mounts', async () => {
+  it('deactivates stale browser views as soon as the desktop shell mounts', async () => {
     window.localStorage.setItem(
       'pa:workbench-browser-tabs',
       JSON.stringify({

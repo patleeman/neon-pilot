@@ -869,7 +869,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
   });
 
-  it('hides the native browser view while the windowed shell explicitly blocks native browser surfaces', async () => {
+  it('hides the native browser view while the desktop shell explicitly blocks native browser surfaces', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
@@ -1328,7 +1328,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('hides the native browser view when the windowed shell suspends browser surfaces', async () => {
+  it('hides the native browser view when the desktop shell suspends browser surfaces', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
@@ -1368,7 +1368,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
   });
 
-  it('keeps the native browser view hidden during the windowed shell suspension window', async () => {
+  it('keeps the native browser view hidden during the desktop shell suspension window', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
@@ -1455,7 +1455,7 @@ describe('WorkbenchBrowserTab', () => {
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });
 
-  it('keeps the native browser hidden while the windowed shell blocks native browser paint', async () => {
+  it('keeps the native browser hidden while the desktop shell blocks native browser paint', async () => {
     const setWorkbenchBrowserBounds = vi.fn(async () => null);
     const navigateWorkbenchBrowser = vi.fn(async () => null);
     const browserTabsState: BrowserTabsState = readBrowserTabsState();
