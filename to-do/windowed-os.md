@@ -47,9 +47,11 @@ The deeper app/extension product model remains important, but the current goal i
    - Screenshot and inspect Chat, Settings, App Manager/Extensions, Skills, Gateways, Model Arena, Routines, Automations, Terminal, Browser, Files, and Diagnostics in light and dark.
    - Fix contrast, spacing, typography, control treatment, hover/focus states, and clipped/overlapping content as each issue is found.
    - 2026-07-05 progress: crowded live dark-mode taskbars now scroll the focused app button into view when a far-right window becomes active, keeping the active button out from under the trailing theme controls. Verified in Electron/CDP with Automations focused after opening the dark app matrix.
+   - 2026-07-05 progress: live Electron/CDP dark-mode route sweep opened Automations, Gateways, AI Gateway, Model Arena, Routines, App Manager, Skills, and Diagnostics as desktop windows; after route data settled, each rendered content in the window layer with no old right-rail/inspector surfaces detected. Screenshot QA: `/tmp/windowed-os-dark-route-sweep-after-wait.png`.
 2. Settings live route polish.
    - Verify the real `shellPresentation="windowed"` Settings route, not only Storybook targets.
    - Polish provider settings, extension/app settings components, dense rows, section navigation, narrow window behavior, and the removal of unnecessary right-side/stable-shell panels.
+   - 2026-07-05 progress: live Electron/CDP dark-mode sweep verified Settings uses the real `settings-page-windowed` two-column shell, renders a single routed section page, keeps the left section rail active across Appearance/Providers/Conversation/Workspace/Commands/Security/Apps/Desktop, and does not render the old inspector/right rail or Stable shell control. Screenshot QA: `/tmp/windowed-os-dark-settings-live.png`.
 3. Browser and Files child-window live QA.
    - Open from Chat, reload/restart with child windows open, minimize/restore parent, minimize children independently, close parent, toggle themes, overlap windows, clip windows, and verify native BrowserView/iframe behavior does not overlay desktop chrome.
    - 2026-07-04 progress: Browser and Files toolbar actions now resolve the parent chat by live window id before opening child windows, fixing the live no-op where enabled toolbar buttons did not spawn child windows after reload/focus changes. Verified in the running Electron app via CDP: Browser and Files opened as sibling desktop windows with chat parent metadata and taskbar entries.
@@ -59,6 +61,7 @@ The deeper app/extension product model remains important, but the current goal i
 4. Inherited chat polish.
    - Continue the scoped windowed CSS/design-system pass for transcript rows, running/tool states, action buttons, menus, composer states, attachments, model picker, CWD/context indicator, and dark-mode readability.
    - 2026-07-04 progress: chat-attached child-window empty states now override warning tint with normal windowed ink contrast so Files/Browser unavailable copy stays readable in dark mode. Covered with windowed OS tests/builds, desktop UI build, and live dark-mode screenshot QA.
+   - 2026-07-05 progress: live dark-mode Chat QA verified the compact top toolbar, CWD/context control, Browser/Files/Terminal icon actions, workspace picker, and composer controls render with readable contrast and no horizontal overflow in a clean New conversation window. Screenshot QA: `/tmp/windowed-os-dark-chat-current.png`.
 5. Modal/right-panel to subwindow cleanup.
    - Sweep app surfaces for stable right panels, oversized modals, and detail drawers.
    - Convert appropriate detail/edit/inspect surfaces into parent-attached desktop subwindows with taskbar/lifecycle behavior.
