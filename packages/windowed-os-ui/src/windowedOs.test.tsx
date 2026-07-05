@@ -1438,14 +1438,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('padding: 7px 10px;');
     expect(stylesSource).toContain('box-shadow: inset 0 -2px 0 var(--wos-surface-3);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__status');
+    expect(stylesSource).toContain('flex: 1 1 220px;');
     expect(stylesSource).toContain('min-height: 32px;');
+    expect(stylesSource).toContain('max-width: min(42ch, calc(100% - 132px));');
     expect(stylesSource).toContain('button.wos-chat-window-toolbar__status');
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-chat) 18%, var(--wos-surface-2));');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__status-label');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__status-detail');
     expect(stylesSource).toContain('border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__actions');
-    expect(stylesSource).toContain('flex: 0 1 auto;');
+    expect(stylesSource).toContain('flex: 0 0 auto;');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[data-density='icon']");
     expect(stylesSource).toContain('flex: 0 0 32px;');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button svg');

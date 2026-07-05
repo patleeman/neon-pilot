@@ -2451,9 +2451,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-chat-window-toolbar__status {
   display: grid;
+  flex: 1 1 220px;
   min-height: 32px;
   min-width: 0;
-  max-width: min(54ch, 62%);
+  max-width: min(42ch, calc(100% - 132px));
   align-content: center;
   overflow: hidden;
   border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);
@@ -2501,7 +2502,7 @@ button.wos-chat-window-toolbar__status:focus-visible {
 .wos-chat-window-toolbar__actions {
   display: inline-flex;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
