@@ -2,23 +2,15 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
-  ContextRail,
-  ContextRailBody,
-  ContextRailHeader,
-  ContextRailSection,
   ErrorState,
   type ExtensionSurfaceProps,
   IconButton,
-  KeyValueItem,
-  KeyValueList,
   KeyValueTable,
   Notice,
-  PanelMessage,
   QuietLoadingState,
   StatusDot,
   Switch,
   TextInput,
-  TextLink,
   WindowedBadge,
   WindowedDataRow,
   WindowedDataTable,
@@ -839,107 +831,6 @@ function WindowedGatewaysLoading() {
         </WindowedPageSection>
       </WindowedPageMain>
     </WindowedPageShell>
-  );
-}
-
-export function GatewaysContextRail() {
-  const [state, setState] = useState<PageState | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    setError(null);
-    void loadPageState()
-      .then(setState)
-      .catch((err) => setError(errorMessage(err)));
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    const handleInvalidation = (event: Event) => {
-      const detail = (event as CustomEvent<{ topics?: unknown }>).detail;
-      const topics = Array.isArray(detail?.topics) ? detail.topics : [];
-      if (topics.includes('gateways') || topics.includes('sessions')) {
-        load();
-      }
-    };
-    window.addEventListener('neon-pilot-app-invalidate', handleInvalidation);
-    return () => window.removeEventListener('neon-pilot-app-invalidate', handleInvalidation);
-  }, [load]);
-
-  const telegramProvider = state?.gateway.providers.find((provider) => provider.id === TELEGRAM_PROVIDER_ID) ?? null;
-  const telegramConnection = state?.gateway.connections.find((connection) => connection.provider === TELEGRAM_PROVIDER_ID) ?? null;
-  const telegramEvents = state?.gateway.events.filter((event) => event.provider === TELEGRAM_PROVIDER_ID).slice(0, 8) ?? [];
-
-  return (
-    <ContextRail>
-      <ContextRailHeader
-        eyebrow="Gateway context"
-        title={telegramProvider?.label ?? 'Telegram'}
-        subtitle={state?.token.configured ? formatGatewayStatus(telegramConnection?.status ?? 'needs_config') : 'Token missing'}
-      />
-      <ContextRailBody>
-        {error ? <Notice tone="danger">{error}</Notice> : null}
-        {!state && !error ? <QuietLoadingState label="Loading gateway context" className="min-h-12" /> : null}
-        {state ? (
-          <>
-            <ContextRailSection
-              title="Status"
-              actions={
-                <StatusDot
-                  tone={statusDotTone(
-                    telegramConnection?.status ?? 'needs_config',
-                    state.token.configured,
-                    Boolean(telegramConnection?.enabled),
-                  )}
-                  size="xs"
-                />
-              }
-            >
-              <KeyValueList>
-                <KeyValueItem label="Setup" value={telegramProvider?.setupRoute ?? '/gateways'} />
-                <KeyValueItem label="Configuration" value={formatConfigurationLocation(telegramProvider?.configurationLocation)} />
-                <KeyValueItem
-                  label="Docs"
-                  value={
-                    telegramProvider?.docsUrl ? (
-                      <TextLink href={telegramProvider.docsUrl} target="_blank" rel="noreferrer">
-                        Telegram Bot API
-                      </TextLink>
-                    ) : (
-                      'Telegram Bot API'
-                    )
-                  }
-                />
-                <KeyValueItem
-                  label="Last update"
-                  value={telegramConnection?.updatedAt ? formatDate(telegramConnection.updatedAt) : 'Never'}
-                />
-              </KeyValueList>
-            </ContextRailSection>
-
-            <ContextRailSection title="Recent activity">
-              {telegramEvents.length > 0 ? (
-                <ol className="divide-y divide-border-subtle">
-                  {telegramEvents.map((event) => (
-                    <li key={event.id} className="py-2">
-                      <div className="text-[13px] text-primary">{event.message}</div>
-                      <div className="mt-1 text-[11px] text-secondary">
-                        {formatEventKind(event.kind)} · {formatDate(event.createdAt)}
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <PanelMessage className="py-2">No Telegram gateway events yet.</PanelMessage>
-              )}
-            </ContextRailSection>
-          </>
-        ) : null}
-      </ContextRailBody>
-    </ContextRail>
   );
 }
 

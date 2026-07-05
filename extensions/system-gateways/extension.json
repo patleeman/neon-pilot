@@ -30,17 +30,6 @@
         "component": "GatewaysPage",
         "icon": "app",
         "activation": "on-route"
-      },
-      {
-        "id": "gateway-context-rail",
-        "title": "Gateway context",
-        "location": "rightRail",
-        "route": "/gateways",
-        "placement": "primary",
-        "scope": "global",
-        "component": "GatewaysContextRail",
-        "icon": "app",
-        "activation": "on-open"
       }
     ],
     "nav": [
@@ -50,8 +39,7 @@
         "route": "/gateways",
         "icon": "app",
         "pageType": "setup",
-        "section": "primary",
-        "rightSidebarView": "gateway-context-rail"
+        "section": "primary"
       }
     ],
     "gatewayProviders": [

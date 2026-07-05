@@ -69,6 +69,7 @@ describe('first-party extension route shell manifests', () => {
   it('keeps main-only routes free of contextual-left and right-sidebar declarations', () => {
     const routes = [
       ['system-automations', '/automations'],
+      ['system-gateways', '/gateways'],
       ['system-telemetry', '/telemetry'],
       ['system-skills', '/skills'],
     ] as const;
@@ -164,7 +165,6 @@ describe('first-party extension route shell manifests', () => {
 
   it('keeps route-owned context rails declared as primary rightRail views', () => {
     const routes = [
-      ['system-gateways', '/gateways', 'gateway-context-rail'],
       ['system-model-arena', '/model-arena', 'model-arena-context-rail'],
       ['system-routines', '/routines', 'routines-context-rail'],
     ] as const;
@@ -180,6 +180,7 @@ describe('first-party extension route shell manifests', () => {
   it('keeps App Manager main-only so details use the route-owned dialog flow', () => {
     const routes = [
       ['system-extension-manager', '/extensions'],
+      ['system-gateways', '/gateways'],
       ['system-skills', '/skills'],
     ] as const;
 

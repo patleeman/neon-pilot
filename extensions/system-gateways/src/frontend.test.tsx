@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GatewaysContextRail, GatewaysPage } from './frontend';
+import { GatewaysPage } from './frontend';
 
 vi.mock('@neon-pilot/extensions/ui', () => ({
   AppPageIntro: ({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) => (
@@ -20,20 +20,6 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
     tone: _tone,
     ...props
   }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; tone?: string }) => <button {...props}>{children}</button>,
-  ContextRail: ({ children }: { children: React.ReactNode }) => <aside>{children}</aside>,
-  ContextRailBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  ContextRailHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
-    <header>
-      <h2>{title}</h2>
-      {subtitle ? <p>{subtitle}</p> : null}
-    </header>
-  ),
-  ContextRailSection: ({ title, children }: { title?: string; children: React.ReactNode }) => (
-    <section>
-      {title ? <h3>{title}</h3> : null}
-      {children}
-    </section>
-  ),
   ErrorState: ({ message }: { message: string }) => <div>{message}</div>,
   IconButton: ({ children, compact: _compact, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { compact?: boolean }) => (
     <button {...props}>{children}</button>
@@ -760,34 +746,5 @@ describe('GatewaysPage', () => {
 
     expect(await screen.findByText('gateway unavailable')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
-  });
-});
-
-describe('GatewaysContextRail', () => {
-  it('renders provider metadata and recent activity in the right rail', async () => {
-    installFetchMock({
-      token: { configured: true },
-      gateway: {
-        ...baseGateway,
-        connections: [{ ...baseGateway.connections[0], status: 'active', enabled: true }],
-        events: [
-          {
-            id: 'event-1',
-            provider: 'telegram',
-            kind: 'status',
-            message: 'Telegram gateway enabled',
-            createdAt: '2026-06-26T12:01:00.000Z',
-          },
-        ],
-      },
-    });
-
-    render(<GatewaysContextRail />);
-
-    expect(await screen.findByText('Telegram')).toBeTruthy();
-    expect(screen.queryByText('Loading gateway context...')).toBeNull();
-    expect(screen.getByText('Gateways page')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Telegram Bot API' }).getAttribute('href')).toBe('https://core.telegram.org/bots/api');
-    expect(screen.getByText('Telegram gateway enabled')).toBeTruthy();
   });
 });
