@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import React from 'react';
 import { renderToString } from 'react-dom/server';
@@ -26,6 +26,9 @@ vi.mock('../ui-state/theme', () => ({
 }));
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
+
+const systemSettingsSourcePath = (relativePath: string) =>
+  fileURLToPath(new URL(`../../../../../extensions/system-settings/src/${relativePath}`, import.meta.url));
 
 function buildUseApiResult<T>(data: T) {
   return {
@@ -431,7 +434,7 @@ describe('SettingsPage', () => {
   });
 
   it('keeps the windowed settings rail on the shared list-row grammar', () => {
-    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/frontend.css'), 'utf8');
+    const source = readFileSync(systemSettingsSourcePath('frontend.css'), 'utf8');
     const listRule = source.match(/\.settings-page-windowed-nav \.wos-list \{[^}]+}/)?.[0] ?? '';
     const itemRule = source.match(/\.settings-page-windowed-nav \.wos-list-item \{[^}]+}/)?.[0] ?? '';
 
@@ -449,12 +452,20 @@ describe('SettingsPage', () => {
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-button-active');
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-swatch-option');
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-swatch-option-checked');
+    expect(source).toContain('.settings-page-windowed .settings-page-extension-settings-stack-windowed');
+    expect(source).toContain('.settings-page-windowed .settings-page-extension-component-stack-windowed');
+    expect(source).toContain('.settings-page-windowed .settings-page-extension-component-body-windowed');
+    expect(source).toContain('.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel');
+    expect(source).toContain('border: 1.5px solid var(--wos-line-strong);');
+    expect(source).toContain('background: var(--wos-surface-2);');
   });
 
   it('keeps windowed extension settings panels out of nested settings groups', () => {
-    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/SettingsPage.tsx'), 'utf8');
+    const source = readFileSync(systemSettingsSourcePath('SettingsPage.tsx'), 'utf8');
 
     expect(source).toContain("if (shellPresentation === 'windowed') {");
+    expect(source).toContain('settings-page-extension-settings-stack-windowed');
+    expect(source).toContain('settings-page-extension-component-stack-windowed');
     expect(source).toContain('settings-page-extension-component-body-windowed');
     expect(source).toContain('<SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />');
   });

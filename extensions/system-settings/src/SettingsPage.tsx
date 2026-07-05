@@ -2221,6 +2221,7 @@ function ExtensionSettingsSection({
 
   const editedKeys = useRef(new Set<string>());
   const saveSequenceByKey = useRef(new Map<string, number>());
+  const useWindowedChrome = useContext(WindowedSettingsChromeContext);
 
   // Track explicit user edits so the values-refetch merge below preserves
   // only keys the user has touched, not every key that happens to differ.
@@ -2319,7 +2320,9 @@ function ExtensionSettingsSection({
 
   if (groupByExtension) {
     return (
-      <div className={separated ? 'space-y-3 pt-4' : 'space-y-3'}>
+      <div
+        className={cx(separated ? 'space-y-3 pt-4' : 'space-y-3', useWindowedChrome && 'settings-page-extension-settings-stack-windowed')}
+      >
         {entriesByExtension.map(([extensionId, entries]) => {
           const entriesByGroup = new Map<string, UnifiedSettingsEntry[]>();
           for (const entry of entries) {
@@ -2361,7 +2364,7 @@ function ExtensionSettingsSection({
   }
 
   return (
-    <div className={separated ? 'space-y-3 pt-4' : 'space-y-3'}>
+    <div className={cx(separated ? 'space-y-3 pt-4' : 'space-y-3', useWindowedChrome && 'settings-page-extension-settings-stack-windowed')}>
       {[...grouped.entries()].map(([group, entries]) => (
         <SettingsGroup key={group} title={group} className={SETTINGS_PANEL_DENSE_CLASS}>
           {entries.map((entry) => (
@@ -2426,7 +2429,7 @@ function ExtensionSettingsComponentPanels({
   if (visibleRegistrations.length === 0) return null;
   if (shellPresentation === 'windowed') {
     return (
-      <div className="space-y-3 pt-4">
+      <div className="space-y-3 pt-4 settings-page-extension-component-stack-windowed">
         {visibleRegistrations.map((registration) => (
           <div
             key={`${registration.extensionId}:${registration.id}`}

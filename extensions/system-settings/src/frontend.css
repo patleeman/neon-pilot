@@ -605,6 +605,38 @@
   padding: 0.5rem 0.625rem;
 }
 
+.settings-page-windowed .settings-page-extension-settings-stack-windowed,
+.settings-page-windowed .settings-page-extension-component-stack-windowed {
+  display: grid;
+  gap: 0.625rem;
+  padding-top: 0;
+}
+
+.settings-page-windowed .settings-page-extension-component-body-windowed {
+  overflow: hidden;
+  border: 1.5px solid var(--wos-line-strong);
+  border-radius: 0.5rem;
+  background: var(--wos-surface-2);
+  padding: 0;
+}
+
+.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel > .ui-settings-panel-header {
+  min-height: 2rem;
+  border-bottom: 1.5px solid var(--wos-line-subtle);
+  padding: 0.5rem 0.625rem;
+}
+
+.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel > .ui-settings-panel-content {
+  gap: 0;
+  padding: 0;
+}
+
 @container (max-width: 560px) {
   .settings-page-windowed.wos-page-shell[data-layout='two-column'] {
     grid-template-columns: minmax(0, 1fr);
