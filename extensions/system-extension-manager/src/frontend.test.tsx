@@ -214,8 +214,8 @@ describe('ExtensionManagerPage', () => {
 
     renderPage();
 
-    expect(await screen.findByRole('status', { name: 'Loading extensions' })).toBeTruthy();
-    expect(screen.queryByText('Loading extensions...')).toBeNull();
+    expect(await screen.findByRole('status', { name: 'Loading apps' })).toBeTruthy();
+    expect(screen.queryByText('Loading apps...')).toBeNull();
   });
 
   it('keeps the row actions menu focused on opening the package folder', async () => {
@@ -325,8 +325,8 @@ describe('ExtensionManagerPage', () => {
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-extension-detail-grid')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
-    expect(screen.getByPlaceholderText('Search extensions')).toBeTruthy();
-    expect(screen.getByRole('radiogroup', { name: 'Extension view' })).toBeTruthy();
+    expect(screen.getByPlaceholderText('Search apps')).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'App view' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Installed/ })).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Platform/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
@@ -344,7 +344,7 @@ describe('ExtensionManagerPage', () => {
 
     const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
     expect(detailsDialog.getAttribute('data-parent-window-attached')).toBe('true');
-    expect(detailsDialog.getAttribute('data-parent-window-title')).toBe('Extensions');
+    expect(detailsDialog.getAttribute('data-parent-window-title')).toBe('App Manager');
     expect(within(detailsDialog).getByText('Appears in')).toBeTruthy();
     expect(within(detailsDialog).getByText('Folder')).toBeTruthy();
     expect(container.querySelector('.wos-extension-detail-grid')).toBeTruthy();
@@ -447,8 +447,8 @@ describe('ExtensionManagerPage', () => {
     mocks.extensionInstallations.mockReturnValue(deferred.promise);
     const { container } = renderWindowedPage();
 
-    expect(await screen.findByText('Loading extensions')).toBeTruthy();
-    expect(screen.getByText('Loading extensions').closest('.wos-loading-state')).toBeTruthy();
+    expect(await screen.findByText('Loading apps')).toBeTruthy();
+    expect(screen.getByText('Loading apps').closest('.wos-loading-state')).toBeTruthy();
     expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
     expect(container.querySelector('[role="status"]')).toBeNull();
     expect(container.querySelector('.ui-empty-state')).toBeNull();
@@ -500,7 +500,7 @@ describe('ExtensionManagerPage', () => {
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Install' }));
 
-    const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
+    const dialog = await screen.findByRole('dialog', { name: 'Install app' });
     expect(dialog.className).toContain('wos-dialog');
     expect(dialog.className).toContain('wos-extension-install-dialog');
     expect(container.querySelector('.wos-extension-install')).toBeTruthy();
@@ -579,7 +579,7 @@ describe('ExtensionManagerPage', () => {
     mocks.extensionInstallations.mockResolvedValue([createRequiredSystemExtension(), createExtension()]);
     renderPage();
 
-    expect((await screen.findAllByRole('heading', { name: 'Extensions' })).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('heading', { name: 'App Manager' })).length).toBeGreaterThan(0);
     expect(screen.getByText('Menu Test')).toBeTruthy();
     expect(screen.queryByText('Settings panels')).toBeNull();
     expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
@@ -601,19 +601,19 @@ describe('ExtensionManagerPage', () => {
     expect(await screen.findByText('Menu Test')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Platform' }));
 
-    expect(screen.getByText('No platform extensions')).toBeTruthy();
+    expect(screen.getByText('No platform apps')).toBeTruthy();
     expect(screen.getByText('Required platform surfaces appear here when they are installed.')).toBeTruthy();
     expect(screen.queryByText('Clear search to show all installed extensions.')).toBeNull();
   });
 
-  it('uses attention-specific empty copy when no extensions need attention', async () => {
+  it('uses attention-specific empty copy when no apps need attention', async () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension()]);
     renderPage();
 
     expect(await screen.findByText('Menu Test')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Attention' }));
 
-    expect(screen.getByText('No extensions need attention')).toBeTruthy();
+    expect(screen.getByText('No apps need attention')).toBeTruthy();
     expect(screen.getByText('Diagnostics, updates, invalid state, and catalog drift will appear here.')).toBeTruthy();
     expect(screen.queryByText('Clear search to show all installed extensions.')).toBeNull();
   });
@@ -663,7 +663,7 @@ describe('ExtensionManagerPage', () => {
 
     expect(await screen.findByText('Failed to enable Menu Test')).toBeTruthy();
     expect(screen.getByText('Extension "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.')).toBeTruthy();
-    expect(screen.getAllByText('Extensions').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('App Manager').length).toBeGreaterThan(0);
     expect(screen.getByText('1 installed · 0 enabled')).toBeTruthy();
     expect(screen.getByLabelText('Enable Menu Test')).toBeTruthy();
     expect(notify).toHaveBeenCalledWith({
@@ -796,7 +796,7 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(screen.queryByText('Available Only')).toBeNull();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
     expect(await screen.findByText('Available Only')).toBeTruthy();
   });
 
@@ -823,11 +823,11 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.change(screen.getByPlaceholderText('Search extensions…'), { target: { value: 'Menu Test' } });
+    fireEvent.change(screen.getByPlaceholderText('Search apps…'), { target: { value: 'Menu Test' } });
     expect(screen.getByText('Menu Test')).toBeTruthy();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
-    const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
+    const dialog = await screen.findByRole('dialog', { name: 'Install app' });
 
     expect(within(dialog).getByText('Available Only')).toBeTruthy();
   });
@@ -864,10 +864,10 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
 
     expect(await screen.findByText('Available Only')).toBeTruthy();
-    expect(within(screen.getByRole('dialog', { name: 'Install extension' })).queryByText('Agent Browser')).toBeNull();
+    expect(within(screen.getByRole('dialog', { name: 'Install app' })).queryByText('Agent Browser')).toBeNull();
   });
 
   it('installs an available extension from the install modal', async () => {
@@ -900,12 +900,12 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
-    const dialog = await screen.findByRole('dialog', { name: 'Install extension' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
+    const dialog = await screen.findByRole('dialog', { name: 'Install app' });
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Install' }));
 
-    await screen.findByText("Installed Available Only. Enable it from the extensions list when you're ready.");
+    await screen.findByText("Installed Available Only. Enable it from the app list when you're ready.");
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'installCatalogExtension', { id: 'available-only' });
     expect(mocks.extensionInstallations).toHaveBeenCalledTimes(2);
     expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
@@ -1172,7 +1172,7 @@ describe('ExtensionManagerPage', () => {
     expect(await screen.findByRole('button', { name: 'Update all (2)' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Update all (2)' }));
 
-    expect(await screen.findByText('Updated 2 extensions.')).toBeTruthy();
+    expect(await screen.findByText('Updated 2 apps.')).toBeTruthy();
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-ds4' });
     expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
@@ -1310,10 +1310,10 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Install extension' }).at(-1)!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
     expect(screen.queryByPlaceholderText('Extension, agent plugin, marketplace package, URL, or local path')).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'Package type' })).toBeNull();
-    expect(screen.getByText('Available extensions')).toBeTruthy();
+    expect(screen.getByText('Available apps')).toBeTruthy();
     expect(callAction).not.toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', expect.anything());
   });
 });

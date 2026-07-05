@@ -11,9 +11,9 @@ describe('system-extension-manager manifest', () => {
 
   it('has the expected identity', () => {
     expect(manifest.id).toBe('system-extension-manager');
-    expect(manifest.name).toBe('Extension Manager');
+    expect(manifest.name).toBe('App Manager');
     expect(manifest.packageType).toBe('system');
-    expect(manifest.description).toBe('Inspect, install, update, enable, disable, validate, reload, snapshot, and delete extensions.');
+    expect(manifest.description).toBe('Inspect, install, update, enable, disable, validate, reload, snapshot, and delete app packages.');
   });
 
   it('has a valid schema version', () => {
@@ -26,7 +26,7 @@ describe('system-extension-manager manifest', () => {
   });
 
   it('contributes the canonical extension page', () => {
-    expect(manifest.contributes.nav).toContainEqual(expect.objectContaining({ label: 'Extensions', route: '/extensions' }));
+    expect(manifest.contributes.nav).toContainEqual(expect.objectContaining({ label: 'App Manager', route: '/extensions' }));
     expect(manifest.contributes.views).toContainEqual(
       expect.objectContaining({
         route: '/extensions',
@@ -38,7 +38,7 @@ describe('system-extension-manager manifest', () => {
         id: 'extension-repositories',
         component: 'ExtensionRepositoriesSettingsPanel',
         sectionId: 'settings-extension-repositories',
-        label: 'Extension repositories',
+        label: 'App repositories',
       }),
     );
   });
@@ -47,20 +47,20 @@ describe('system-extension-manager manifest', () => {
     const commands = new Map(manifest.contributes.commands.map((command: { id: string }) => [command.id, command]));
 
     expect(commands.get('open')).toMatchObject({
-      title: 'Open Extensions',
+      title: 'Open App Manager',
       action: 'app.navigate',
       args: { to: '/extensions' },
     });
     expect(commands.get('reload-registry')).toMatchObject({
-      title: 'Reload Extensions',
+      title: 'Reload Apps',
       action: 'reloadExtensions',
     });
     expect(commands.get('list-catalog')).toMatchObject({
-      title: 'List Installable Extensions',
+      title: 'List Installable Apps',
       action: 'listInstallableExtensions',
     });
     expect(commands.get('install-catalog')).toMatchObject({
-      title: 'Install Catalog Extension',
+      title: 'Install Catalog App',
       action: 'installCatalogExtension',
       argsSchema: {
         required: ['id'],
@@ -69,7 +69,7 @@ describe('system-extension-manager manifest', () => {
       },
     });
     expect(commands.get('update-catalog')).toMatchObject({
-      title: 'Update Catalog Extension',
+      title: 'Update Catalog App',
       action: 'updateCatalogExtension',
       argsSchema: {
         required: ['id'],

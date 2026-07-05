@@ -666,7 +666,7 @@ describe('WindowedLayout route windows', () => {
         id: 'system-extension-manager',
         enabled: true,
         contributes: {
-          nav: [{ id: 'extensions', label: 'Extensions', route: '/extensions' }],
+          nav: [{ id: 'extensions', label: 'App Manager', route: '/extensions' }],
         },
       },
       {
@@ -1308,8 +1308,8 @@ describe('WindowedLayout route windows', () => {
         id: 'system-extension-manager',
         enabled: true,
         contributes: {
-          nav: [{ id: 'extensions-nav', label: 'Extensions', route: '/extensions' }],
-          views: [{ id: 'extensions-page', title: 'Extensions', location: 'main', route: '/extensions' }],
+          nav: [{ id: 'extensions-nav', label: 'App Manager', route: '/extensions' }],
+          views: [{ id: 'extensions-page', title: 'App Manager', location: 'main', route: '/extensions' }],
         },
       },
       {
@@ -1364,7 +1364,7 @@ describe('WindowedLayout route windows', () => {
       'Gateways',
       'Model Arena',
       'Routines',
-      'Extensions',
+      'App Manager',
       'Skills',
       'Diagnostics',
       'Settings',
@@ -1374,7 +1374,7 @@ describe('WindowedLayout route windows', () => {
       'Chat',
       'Automations',
       'Workflows',
-      'Extensions',
+      'App Manager',
       'Gateways',
       'Model Arena',
       'Routines',

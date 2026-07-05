@@ -17,7 +17,7 @@ function loadingFallback(props: ExtensionSurfaceProps, label: string): ReactNode
 
 export function ExtensionManagerPage(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={loadingFallback(props, 'Loading extensions page')}>
+    <Suspense fallback={loadingFallback(props, 'Loading App Manager')}>
       <LazyExtensionManagerPage {...props} />
     </Suspense>
   );
@@ -25,7 +25,7 @@ export function ExtensionManagerPage(props: ExtensionSurfaceProps) {
 
 export function ExtensionDetailsRail(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={loadingFallback(props, 'Loading extension details')}>
+    <Suspense fallback={loadingFallback(props, 'Loading app package details')}>
       <LazyExtensionDetailsRail {...props} />
     </Suspense>
   );
@@ -33,7 +33,7 @@ export function ExtensionDetailsRail(props: ExtensionSurfaceProps) {
 
 export function ExtensionRepositoriesSettingsPanel(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={loadingFallback(props, 'Loading extension repository settings')}>
+    <Suspense fallback={loadingFallback(props, 'Loading app repository settings')}>
       <LazyExtensionRepositoriesSettingsPanel {...props} />
     </Suspense>
   );

@@ -373,10 +373,10 @@ describe('WindowedActionRow', () => {
 
 describe('WindowedEmptyState', () => {
   it('renders loading states as native windowed state blocks', () => {
-    const html = renderToStaticMarkup(<WindowedLoadingState label="Loading extensions page" />);
+    const html = renderToStaticMarkup(<WindowedLoadingState label="Loading App Manager" />);
 
     expect(html).toContain('class="wos-state-block wos-loading-state"');
-    expect(html).toContain('Loading extensions page');
+    expect(html).toContain('Loading App Manager');
     expect(html).toContain('Preparing the window contents.');
     expect(html).not.toContain('ui-loading');
   });
@@ -857,7 +857,7 @@ describe('WindowedDialog content primitives', () => {
   it('supports explicit modal subwindows for blocking flows', () => {
     const html = renderToStaticMarkup(
       <WindowedDialog title="Confirm install" accent="extensions" modal onClose={() => undefined}>
-        Install extension
+        Install app
       </WindowedDialog>,
     );
 
@@ -2967,7 +2967,7 @@ describe('Windowed OS Storybook examples', () => {
     const source = readFileSync(storiesPath, 'utf8');
 
     expect(source).toContain('<WindowedToolbar>');
-    expect(source).toContain('aria-label="Search available extensions"');
+    expect(source).toContain('aria-label="Search available apps"');
   });
 
   it('documents shared form grid primitives for windowed forms', () => {
@@ -3214,7 +3214,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(skillsSource).not.toContain('title="Installed skills"');
   });
 
-  it('documents the canonical Extensions desktop page and detail subwindow pattern', () => {
+  it('documents the canonical App Manager desktop page and detail subwindow pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
     const extensionsSource = source.slice(
@@ -3226,10 +3226,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const ExtensionsPage');
     expect(source).toContain('export const DarkExtensionsPage');
     expect(source).toContain('<ExtensionsPageStory theme="dark" />');
-    expect(extensionsSource).toContain('title="Extensions"');
+    expect(extensionsSource).toContain('title="App Manager"');
     expect(extensionsSource).toContain('data-wos-theme={theme}');
     expect(extensionsSource).toContain('<WindowedPageShell layout="standard">');
-    expect(extensionsSource).not.toContain('<WindowedPageRail title="Extensions"');
+    expect(extensionsSource).not.toContain('<WindowedPageRail title="App Manager"');
     expect(extensionsSource.indexOf('<WindowedPageSection variant="toolbar">')).toBeGreaterThan(
       extensionsSource.indexOf('<WindowedPageMain'),
     );
@@ -3237,16 +3237,16 @@ describe('Windowed OS Storybook examples', () => {
     expect(extensionsSource).toContain('title="Catalog"');
     expect(extensionsSource).toContain('<WindowedKeyValueGrid');
     expect(extensionsSource).toContain('<WindowedPageSection variant="toolbar">');
-    expect(extensionsSource).toContain('Search extensions');
+    expect(extensionsSource).toContain('Search apps');
     expect(extensionsSource).toContain('title="Installed"');
-    expect(extensionsSource).toContain('ariaLabel="Extension view"');
-    expect(extensionsSource.indexOf('ariaLabel="Extension view"')).toBeGreaterThan(
+    expect(extensionsSource).toContain('ariaLabel="App view"');
+    expect(extensionsSource.indexOf('ariaLabel="App view"')).toBeGreaterThan(
       extensionsSource.indexOf('<WindowedPageSection variant="toolbar">'),
     );
     expect(extensionsSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
     expect(extensionsSource).toContain('<WindowedDialog');
     expect(extensionsSource).toContain('title="system-browser"');
-    expect(extensionsSource).toContain('parentWindowTitle="Extensions"');
+    expect(extensionsSource).toContain('parentWindowTitle="App Manager"');
     expect(extensionsSource).toContain('className="wos-extension-detail-grid"');
     expect(extensionsSource).toContain('className="wos-extension-detail-description"');
     expect(extensionsSource).toContain('Browser app surfaces and automation tools.');
@@ -3260,7 +3260,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const ExtensionsInstallDialog');
     expect(source).toContain('export const DarkExtensionsInstallDialog');
     expect(source).toContain('<ExtensionsInstallDialogStory theme="dark" />');
-    expect(source).toContain('title="Install extension"');
+    expect(source).toContain('title="Install app"');
     expect(source).toContain('wos-extension-install-dialog');
     expect(source).toContain('title="Repositories"');
   });
@@ -3298,7 +3298,7 @@ describe('Windowed OS Storybook examples', () => {
       'AI Gateway',
       'Model Arena',
       'Routines',
-      'Extensions',
+      'App Manager',
       'Skills',
       'Diagnostics',
       'Settings',
@@ -3311,7 +3311,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Diagnostics')?.accent).toBe('diagnostics');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Settings')?.aliases).toContain('preferences');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Routines')?.aliases).toContain('agent hooks');
-    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Extensions')?.aliases).toContain('extension manager');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'App Manager')?.aliases).toContain('extension manager');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.every((app) => app.aliases && app.aliases.length > 0)).toBe(true);
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.every((app) => !('meta' in app) && !('detail' in app))).toBe(true);
     expect(CANONICAL_WINDOWED_APP_SIZES.Settings).toEqual({ width: 980, height: 560 });

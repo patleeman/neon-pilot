@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "id": "system-extension-manager",
-  "name": "Extension Manager",
+  "name": "App Manager",
   "packageType": "system",
-  "description": "Inspect, install, update, enable, disable, validate, reload, snapshot, and delete extensions.",
+  "description": "Inspect, install, update, enable, disable, validate, reload, snapshot, and delete app packages.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -79,7 +79,7 @@
       {
         "id": "installExtensionFromUrl",
         "handler": "installExtensionFromUrl",
-        "title": "Install extension from URL",
+        "title": "Install app package from URL",
         "worker": {
           "enabled": true
         }
@@ -175,7 +175,7 @@
     "nav": [
       {
         "id": "extensions-nav",
-        "label": "Extensions",
+        "label": "App Manager",
         "route": "/extensions",
         "icon": "sparkle",
         "pageType": "table",
@@ -186,7 +186,7 @@
     "views": [
       {
         "id": "extensions-page",
-        "title": "Extensions",
+        "title": "App Manager",
         "location": "main",
         "route": "/extensions",
         "component": "ExtensionManagerPage",
@@ -194,7 +194,7 @@
       },
       {
         "id": "extension-details-rail",
-        "title": "Extension details",
+        "title": "App package details",
         "location": "rightRail",
         "route": "/extensions",
         "component": "ExtensionDetailsRail",
@@ -207,16 +207,16 @@
       "id": "extension-repositories",
       "component": "ExtensionRepositoriesSettingsPanel",
       "sectionId": "settings-extension-repositories",
-      "label": "Extension repositories",
-      "description": "Choose where Neon Pilot looks for extensions you can install. Add a GitHub source only when you want extensions from another trusted repository.",
+      "label": "App repositories",
+      "description": "Choose where Neon Pilot looks for app packages you can install. Add a GitHub source only when you want packages from another trusted repository.",
       "order": 20
     },
     "commands": [
       {
         "id": "open",
-        "title": "Open Extensions",
-        "category": "Extensions",
-        "description": "Open the Extension Manager.",
+        "title": "Open App Manager",
+        "category": "Apps",
+        "description": "Open the App Manager.",
         "action": "app.navigate",
         "args": {
           "to": "/extensions"
@@ -225,30 +225,30 @@
       },
       {
         "id": "reload-registry",
-        "title": "Reload Extensions",
-        "category": "Extensions",
-        "description": "Refresh the installed extension list.",
+        "title": "Reload Apps",
+        "category": "Apps",
+        "description": "Refresh the installed app package list.",
         "action": "reloadExtensions"
       },
       {
         "id": "list-catalog",
-        "title": "List Installable Extensions",
-        "category": "Extensions",
-        "description": "Refresh and list installable extension catalog entries.",
+        "title": "List Installable Apps",
+        "category": "Apps",
+        "description": "Refresh and list installable app catalog entries.",
         "action": "listInstallableExtensions"
       },
       {
         "id": "install-catalog",
-        "title": "Install Catalog Extension",
-        "category": "Extensions",
-        "description": "Install an extension from the catalog by id.",
+        "title": "Install Catalog App",
+        "category": "Apps",
+        "description": "Install an app package from the catalog by id.",
         "action": "installCatalogExtension",
         "argsSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "description": "Catalog extension id to install."
+              "description": "Catalog app package id to install."
             }
           },
           "required": ["id"],
@@ -257,16 +257,16 @@
       },
       {
         "id": "update-catalog",
-        "title": "Update Catalog Extension",
-        "category": "Extensions",
-        "description": "Update an installed catalog extension by id.",
+        "title": "Update Catalog App",
+        "category": "Apps",
+        "description": "Update an installed catalog app package by id.",
         "action": "updateCatalogExtension",
         "argsSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "description": "Catalog extension id to update."
+              "description": "Catalog app package id to update."
             }
           },
           "required": ["id"],

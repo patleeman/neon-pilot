@@ -1134,7 +1134,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
           throw new Error('Agent capability packages are installed from Settings → Agent capability packages.');
         }
         await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
-        setNotice({ type: 'success', message: `Installed ${item.name}. Enable it from the extensions list when you're ready.` });
+        setNotice({ type: 'success', message: `Installed ${item.name}. Enable it from the app list when you're ready.` });
         notifyExtensionRegistryChanged();
         await load();
         loadCatalog();
@@ -1374,15 +1374,15 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
   const updateAllExtensions = useCallback(async () => {
     if (updatableExtensions.length === 0) return;
     const confirmed = await pa.ui.confirm({
-      title: 'Update extensions',
-      message: `Update ${updatableExtensions.length} extension${updatableExtensions.length === 1 ? '' : 's'} now?`,
+      title: 'Update apps',
+      message: `Update ${updatableExtensions.length} app${updatableExtensions.length === 1 ? '' : 's'} now?`,
     });
     if (!confirmed) return;
 
     setBusyId('update-all');
     setNotice({
       type: 'info',
-      message: `Updating ${updatableExtensions.length} extension${updatableExtensions.length === 1 ? '' : 's'}...`,
+      message: `Updating ${updatableExtensions.length} app${updatableExtensions.length === 1 ? '' : 's'}...`,
     });
 
     const failures: string[] = [];
@@ -1408,11 +1408,11 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     }
 
     if (failures.length) {
-      showActionError(`Updated ${updatedCount} extension${updatedCount === 1 ? '' : 's'}; ${failures.length} failed.`, failures.join('\n'));
+      showActionError(`Updated ${updatedCount} app${updatedCount === 1 ? '' : 's'}; ${failures.length} failed.`, failures.join('\n'));
       return;
     }
 
-    setNotice({ type: 'success', message: `Updated ${updatedCount} extension${updatedCount === 1 ? '' : 's'}.` });
+    setNotice({ type: 'success', message: `Updated ${updatedCount} app${updatedCount === 1 ? '' : 's'}.` });
   }, [load, loadCatalog, pa.extensions, pa.ui, showActionError, updatableExtensions]);
 
   const extensionHasIssue = useCallback(
@@ -1473,22 +1473,22 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     .filter(Boolean)
     .join(' · ');
 
-  const sectionTitle = activeFilter === 'attention' ? 'Needs Attention' : activeFilter === 'platform' ? 'Platform' : 'Extensions';
+  const sectionTitle = activeFilter === 'attention' ? 'Needs Attention' : activeFilter === 'platform' ? 'Platform' : 'Apps';
   const hasSearchQuery = query.trim().length > 0;
   const emptyVisibleExtensionsTitle = hasSearchQuery
-    ? 'No matching extensions'
+    ? 'No matching apps'
     : activeFilter === 'platform'
-      ? 'No platform extensions'
+      ? 'No platform apps'
       : activeFilter === 'attention'
-        ? 'No extensions need attention'
-        : 'No matching extensions';
+        ? 'No apps need attention'
+        : 'No matching apps';
   const emptyVisibleExtensionsBody = hasSearchQuery
-    ? 'Clear search to show all installed extensions.'
+    ? 'Clear search to show all installed apps.'
     : activeFilter === 'platform'
       ? 'Required platform surfaces appear here when they are installed.'
       : activeFilter === 'attention'
         ? 'Diagnostics, updates, invalid state, and catalog drift will appear here.'
-        : 'Clear search to show all installed extensions.';
+        : 'Clear search to show all installed apps.';
 
   const renderExtensionActions = (
     extension: ExtensionInstallSummary,
@@ -1741,7 +1741,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             actions={
               <>
                 <WindowedSegmentedControl
-                  ariaLabel="Extension view"
+                  ariaLabel="App view"
                   accent="extensions"
                   value={activeFilter}
                   options={filterItems.map((item) => ({ id: item.id, label: `${item.label} ${item.meta}` }))}
@@ -1786,8 +1786,8 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                 <WindowedTextInput
                   value={query}
                   onChange={(event) => setQuery(event.currentTarget.value)}
-                  placeholder="Search extensions"
-                  aria-label="Search extensions"
+                  placeholder="Search apps"
+                  aria-label="Search apps"
                 />
               </WindowedToolbar>
             </WindowedPageSection>
@@ -1806,7 +1806,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
             {catalogError ? (
               <WindowedPageSection>
-                <WindowedStateBlock tone="danger" title="Could not load installable extensions">
+                <WindowedStateBlock tone="danger" title="Could not load installable apps">
                   {catalogError}
                 </WindowedStateBlock>
               </WindowedPageSection>
@@ -1814,14 +1814,14 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
             <WindowedPageSection title="Installed" meta={sectionSummary}>
               {loading ? (
-                <WindowedLoadingState label="Loading extensions" />
+                <WindowedLoadingState label="Loading apps" />
               ) : extensions.length === 0 ? (
                 <WindowedEmptyState>Add capabilities to Neon Pilot.</WindowedEmptyState>
               ) : visibleExtensions.length === 0 ? (
                 <WindowedEmptyState>{emptyVisibleExtensionsTitle}</WindowedEmptyState>
               ) : (
                 <WindowedDataTable
-                  columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}
+                  columns={[{ label: 'App' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}
                   columnTemplate="minmax(16rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.72fr)"
                 >
                   {visibleExtensions.map((extension) => {
@@ -1919,7 +1919,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             title={selectedExtension.name}
             meta={`${extensionStatusLabel(selectedExtension)} · ${extensionSourceLabel(selectedExtension)}`}
             accent="extensions"
-            parentWindowTitle="Extensions"
+            parentWindowTitle="App Manager"
             onClose={() => setDetailsExtensionId(null)}
             actions={
               <>
@@ -2005,11 +2005,11 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             shellClassName={embedded ? 'max-w-none px-0 py-0' : undefined}
             contentClassName={embedded ? 'space-y-6' : 'flex flex-col gap-7'}
           >
-            {!embedded ? <AppPageIntro title="Extensions" /> : null}
+            {!embedded ? <AppPageIntro title="App Manager" /> : null}
 
             <DataTableToolbar
               tabs={
-                <TabList ariaLabel="Extension filters" variant="underline">
+                <TabList ariaLabel="App filters" variant="underline">
                   {(
                     [
                       ['all', 'All'],
@@ -2028,7 +2028,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                 <SearchInput
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search extensions…"
+                  placeholder="Search apps…"
                   className="max-w-full"
                 />
               }
@@ -2037,8 +2037,8 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                   <IconButton
                     compact
                     type="button"
-                    aria-label="Reload extensions"
-                    title="Reload extensions"
+                    aria-label="Reload apps"
+                    title="Reload apps"
                     disabled={busyId === 'update-all'}
                     onClick={() => {
                       notifyExtensionRegistryChanged();
@@ -2049,7 +2049,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                     <RefreshIcon />
                   </IconButton>
                   {updatableExtensions.length ? (
-                    <Button title="Update all extensions" disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
+                    <Button title="Update all apps" disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
                       <RefreshIcon />
                       {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
                     </Button>
@@ -2059,7 +2059,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                     variant="action"
                     tone="accent"
                     data-onboarding-target="build-extension"
-                    title="Build extension with agent"
+                    title="Build app with agent"
                     disabled={busyId === 'update-all'}
                     onClick={startExtensionBuildConversation}
                   >
@@ -2068,8 +2068,8 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                   </Button>
                   <IconButton
                     compact
-                    aria-label="Install extension"
-                    title="Install extension"
+                    aria-label="Install app"
+                    title="Install app"
                     disabled={busyId === 'update-all'}
                     onClick={() => setInstallModalOpen(true)}
                   >
@@ -2085,19 +2085,19 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
               </div>
             ) : null}
 
-            {catalogError ? <ErrorState title="Could not load installable extensions" message={catalogError} /> : null}
+            {catalogError ? <ErrorState title="Could not load installable apps" message={catalogError} /> : null}
 
             <section className="space-y-5">
               {activeFilter === 'all' ? null : <h2 className="text-[15px] font-semibold leading-tight text-primary">{sectionTitle}</h2>}
               {loading ? (
-                <QuietLoadingState label="Loading extensions" className="min-h-24" />
+                <QuietLoadingState label="Loading apps" className="min-h-24" />
               ) : extensions.length === 0 ? (
                 <EmptyState
                   title="Add capabilities to Neon Pilot"
-                  body="Extensions add native pages, tools, settings, skills, and workflow surfaces without changing the core app."
+                  body="Apps add native pages, tools, settings, skills, and workflow surfaces."
                   steps={[
-                    'Install a released extension from a configured source.',
-                    'Ask an agent to build a small native extension.',
+                    'Install a released app from a configured source.',
+                    'Ask an agent to build a small native app.',
                     'Use this page to validate, reload, enable, and inspect it.',
                   ]}
                   align="start"
@@ -2166,7 +2166,7 @@ function InstallExtensionModal({
 
   return (
     <Dialog
-      aria-label="Install extension"
+      aria-label="Install app"
       className="max-w-3xl bg-base"
       onClose={onClose}
       style={{
@@ -2178,8 +2178,8 @@ function InstallExtensionModal({
       }}
     >
       <DialogHeader
-        title="Install Extension"
-        description="Install native Neon Pilot extensions from configured extension repositories."
+        title="Install App"
+        description="Install native Neon Pilot apps from configured app repositories."
         className="px-6 py-4"
         actions={
           <IconButton type="button" onClick={onClose} aria-label="Close install dialog" title="Close">
@@ -2190,7 +2190,7 @@ function InstallExtensionModal({
 
       <DialogBody className="space-y-5 px-6 py-5">
         <section className="space-y-2">
-          <SectionLabel>Extension repositories</SectionLabel>
+          <SectionLabel>App repositories</SectionLabel>
           <ExtensionRepositoriesControl
             sources={catalogSources}
             sourceErrors={catalogSourceErrors}
@@ -2205,12 +2205,12 @@ function InstallExtensionModal({
         {catalogItems.length ? (
           <section className="space-y-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <SectionLabel>Available extensions</SectionLabel>
+              <SectionLabel>Available apps</SectionLabel>
               <SearchInput
                 className="h-8 min-w-0 bg-base text-[12px] sm:w-72"
                 value={marketplaceQuery}
                 onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
-                placeholder="Search extensions"
+                placeholder="Search apps"
               />
             </div>
             <ResourceList>
@@ -2224,7 +2224,7 @@ function InstallExtensionModal({
                     title={item.name}
                     detail={
                       <>
-                        {item.description || 'Neon Pilot extension'}
+                        {item.description || 'Neon Pilot app'}
                         {item.compatibilityWarning ? <span className="block text-warning">{item.compatibilityWarning}</span> : null}
                         {item.unavailableReason ? <span className="block text-warning">{item.unavailableReason}</span> : null}
                       </>
@@ -2253,7 +2253,7 @@ function InstallExtensionModal({
                 );
               })}
             </ResourceList>
-            {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No extension matches.</PanelMessage> : null}
+            {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No app matches.</PanelMessage> : null}
           </section>
         ) : null}
       </DialogBody>
@@ -2297,10 +2297,10 @@ function WindowedInstallExtensionDialog({
 
   return (
     <WindowedDialog
-      title="Install extension"
+      title="Install app"
       meta={`${catalogItems.length} available · ${catalogSources.length} sources`}
       accent="extensions"
-      parentWindowTitle="Extensions"
+      parentWindowTitle="App Manager"
       className="wos-extension-install-dialog"
       onClose={onClose}
     >
@@ -2311,7 +2311,7 @@ function WindowedInstallExtensionDialog({
               value={catalogSourceInput}
               onChange={(event) => onCatalogSourceInputChange(event.currentTarget.value)}
               placeholder="GitHub URL or owner/name"
-              aria-label="Extension repository"
+              aria-label="App repository"
             />
             <WindowedPageButton disabled={catalogBusyId === 'extension-source'} onClick={onAddCatalogSource}>
               {catalogBusyId === 'extension-source' ? 'Adding' : 'Add'}
@@ -2363,12 +2363,12 @@ function WindowedInstallExtensionDialog({
           <WindowedTextInput
             value={marketplaceQuery}
             onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
-            placeholder="Search extensions"
-            aria-label="Search available extensions"
+            placeholder="Search apps"
+            aria-label="Search available apps"
           />
           {catalogItems.length ? (
             <WindowedDataTable
-              columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}
+              columns={[{ label: 'App' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}
               columnTemplate="minmax(16rem, 1fr) minmax(7rem, 0.38fr) minmax(6rem, 0.34fr)"
             >
               {visibleCatalogItems.map((item) => {
@@ -2405,10 +2405,10 @@ function WindowedInstallExtensionDialog({
               })}
             </WindowedDataTable>
           ) : (
-            <PanelMessage className="py-2">No installable extensions found.</PanelMessage>
+            <PanelMessage className="py-2">No installable apps found.</PanelMessage>
           )}
           {catalogItems.length > 0 && visibleCatalogItems.length === 0 ? (
-            <PanelMessage className="py-2">No extension matches.</PanelMessage>
+            <PanelMessage className="py-2">No app matches.</PanelMessage>
           ) : null}
         </WindowedPageSection>
       </div>

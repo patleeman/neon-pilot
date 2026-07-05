@@ -2787,7 +2787,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title="Extensions"
+        title="App Manager"
         accent="extensions"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
@@ -2797,7 +2797,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            title="Extensions"
+            title="App Manager"
             actions={
               <>
                 <WindowedPageButton>Reload</WindowedPageButton>
@@ -2811,7 +2811,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
               <WindowedToolbar
                 end={
                   <WindowedSegmentedControl
-                    ariaLabel="Extension view"
+                    ariaLabel="App view"
                     accent="extensions"
                     value="all"
                     options={[
@@ -2823,7 +2823,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                   />
                 }
               >
-                <WindowedTextInput aria-label="Search extensions" placeholder="Search extensions" />
+                <WindowedTextInput aria-label="Search apps" placeholder="Search apps" />
               </WindowedToolbar>
             </WindowedPageSection>
 
@@ -2839,7 +2839,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
             </WindowedPageSection>
 
             <WindowedPageSection title="Installed" meta="16 installed · 14 enabled">
-              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
+              <WindowedDataTable columns={[{ label: 'App' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}>
                 <WindowedDataRow
                   name="system-browser"
                   meta="Built-in · Chat tools"
@@ -2909,7 +2909,7 @@ function ExtensionsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
         title="system-browser"
         meta="update available"
         accent="extensions"
-        parentWindowTitle="Extensions"
+        parentWindowTitle="App Manager"
         onClose={() => undefined}
         actions={
           <>
@@ -2954,7 +2954,7 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 560, padding: 24 }}>
       <WindowFrame
-        title="Extensions"
+        title="App Manager"
         accent="extensions"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(920px, 100%)', height: 540 }}
@@ -2963,9 +2963,9 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
         onClose={() => undefined}
       >
         <WindowedPageShell layout="standard">
-          <WindowedPageMain title="Extensions" actions={<WindowedPageButton tone="accent">Install</WindowedPageButton>}>
+          <WindowedPageMain title="App Manager" actions={<WindowedPageButton tone="accent">Install</WindowedPageButton>}>
             <WindowedPageSection title="Installed" meta="18">
-              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+              <WindowedDataTable columns={[{ label: 'App' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
                 <WindowedDataRow
                   name="system-browser"
                   meta="Browser app and automation tools"
@@ -2978,17 +2978,17 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
         </WindowedPageShell>
 
         <WindowedDialog
-          title="Install extension"
+          title="Install app"
           meta="3 available · 2 sources"
           accent="extensions"
-          parentWindowTitle="Extensions"
+          parentWindowTitle="App Manager"
           className="wos-extension-install-dialog"
           onClose={() => undefined}
         >
           <div className="wos-extension-install">
             <WindowedPageSection title="Repositories" meta="2">
               <WindowedToolbar>
-                <WindowedTextInput aria-label="Extension repository" placeholder="GitHub URL or owner/name" />
+                <WindowedTextInput aria-label="App repository" placeholder="GitHub URL or owner/name" />
                 <WindowedPageButton>Add</WindowedPageButton>
               </WindowedToolbar>
               <WindowedDataTable columns={[{ label: 'Source' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
@@ -3009,9 +3009,9 @@ function ExtensionsInstallDialogStory({ theme = 'light' }: { theme?: 'light' | '
 
             <WindowedPageSection title="Available" meta="3">
               <WindowedToolbar>
-                <WindowedTextInput aria-label="Search available extensions" placeholder="Search extensions" />
+                <WindowedTextInput aria-label="Search available apps" placeholder="Search apps" />
               </WindowedToolbar>
-              <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
+              <WindowedDataTable columns={[{ label: 'App' }, { label: 'State' }, { label: 'Actions', align: 'right' }]}>
                 <WindowedDataRow
                   name="agent-browser"
                   meta="Browser automation surface"
@@ -3220,7 +3220,7 @@ export const CoreDataPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
       <WindowFrame
-        title="Extensions"
+        title="App Manager"
         accent="extensions"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(760px, 100%)', height: 430 }}
@@ -3228,9 +3228,9 @@ export const CoreDataPrimitives: Story = {
         onMaximize={() => undefined}
         onClose={() => undefined}
       >
-        <WindowedPageMain title="Extensions" actions={<WindowedPageButton tone="accent">New</WindowedPageButton>}>
+        <WindowedPageMain title="App Manager" actions={<WindowedPageButton tone="accent">New</WindowedPageButton>}>
           <WindowedPageSection title="Installed" meta="3 enabled">
-            <WindowedDataTable columns={[{ label: 'Extension' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
+            <WindowedDataTable columns={[{ label: 'App' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
               <WindowedDataRow name="GitHub Sync" meta="Chat tool · Skill" enabled />
               <WindowedDataRow name="Voice Mode" meta="Chat tool" enabled />
               <WindowedDataRow name="Web Search" meta="Chat tool · Skill" enabled={false} />

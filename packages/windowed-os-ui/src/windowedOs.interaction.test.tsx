@@ -108,7 +108,7 @@ describe('WindowedDialog interactions', () => {
   it('keeps modal subwindows fixed for blocking flows', () => {
     render(
       <WindowedDialog title="Confirm install" accent="extensions" modal onClose={() => undefined}>
-        Install extension
+        Install app
       </WindowedDialog>,
     );
 
