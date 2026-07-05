@@ -46,7 +46,7 @@ describe('system-settings manifest', () => {
       '/settings/workspace': 'WorkspaceSettingsPage',
       '/settings/commands': 'CommandsSettingsPage',
       '/settings/security': 'SecuritySettingsPage',
-      '/settings/apps': 'ExtensionsSettingsPage',
+      '/settings/apps': 'AppsSettingsPage',
     });
     expect(views.find((v: { id: string; location?: string }) => v.id === 'settings-sidebar')).toMatchObject({
       location: 'sidebar',

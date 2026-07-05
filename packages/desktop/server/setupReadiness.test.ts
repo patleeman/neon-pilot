@@ -144,7 +144,7 @@ describe('setupReadiness', () => {
 
     expect(snapshot.items[0]).toMatchObject({
       status: 'blocked',
-      actions: [{ id: 'open-extension-settings', label: 'Open Settings', tone: 'default', route: '/settings/extensions/ext' }],
+      actions: [{ id: 'open-extension-settings', label: 'Open Settings', tone: 'default', route: '/settings/apps/ext' }],
     });
   });
 
@@ -175,7 +175,7 @@ describe('setupReadiness', () => {
     expect(snapshot.items[0]).toMatchObject({
       status: 'unknown',
       error: 'backend unavailable',
-      actions: [{ id: 'open-extension-settings', label: 'Open Settings', route: '/settings/extensions/ext' }],
+      actions: [{ id: 'open-extension-settings', label: 'Open Settings', route: '/settings/apps/ext' }],
     });
     expect(snapshot.counts).toMatchObject({ incomplete: 1, unknown: 1 });
   });

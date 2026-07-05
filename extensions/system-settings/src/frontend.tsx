@@ -11,7 +11,7 @@ type SettingsSectionId =
   | 'settings-workspace'
   | 'settings-commands'
   | 'settings-security'
-  | 'settings-extensions'
+  | 'settings-apps'
   | 'settings-providers'
   | 'settings-desktop';
 
@@ -55,8 +55,8 @@ export function SecuritySettingsPage(props: ExtensionSurfaceProps) {
   return <SettingsSectionPage {...props} sectionIds={['settings-security']} />;
 }
 
-export function ExtensionsSettingsPage(props: ExtensionSurfaceProps) {
-  return <SettingsSectionPage {...props} sectionIds={['settings-extensions']} />;
+export function AppsSettingsPage(props: ExtensionSurfaceProps) {
+  return <SettingsSectionPage {...props} sectionIds={['settings-apps']} />;
 }
 
 export function DesktopSettingsPage(props: ExtensionSurfaceProps) {

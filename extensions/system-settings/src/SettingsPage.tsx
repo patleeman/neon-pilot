@@ -95,7 +95,7 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-workspace', label: 'Workspace' },
   { id: 'settings-commands', label: 'Commands' },
   { id: 'settings-security', label: 'Security' },
-  { id: 'settings-extensions', label: 'Apps' },
+  { id: 'settings-apps', label: 'Apps' },
   { id: 'settings-desktop', label: 'Desktop' },
 ] as const satisfies readonly { id: string; label: string }[];
 
@@ -106,7 +106,7 @@ const SETTINGS_ROOT_ROUTES: Record<(typeof SETTINGS_QUICK_LINKS)[number]['id'], 
   'settings-workspace': '/settings/workspace',
   'settings-commands': '/settings/commands',
   'settings-security': '/settings/security',
-  'settings-extensions': '/settings/apps',
+  'settings-apps': '/settings/apps',
   'settings-desktop': '/settings/desktop',
 };
 
@@ -247,10 +247,10 @@ export function readSettingsSectionIdFromHash(hash: string): string {
 
 export function readSettingsSectionIdFromPathname(pathname: string): SettingsQuickLinkId | '' {
   const normalizedPathname = pathname.replace(/\/+$/, '');
-  const extensionSettingsMatch = normalizedPathname.match(/^\/settings\/(?:apps|extensions)\/([^/]+)$/);
-  if (extensionSettingsMatch) {
+  const appSettingsMatch = normalizedPathname.match(/^\/settings\/(?:apps|extensions)\/([^/]+)$/);
+  if (appSettingsMatch) {
     try {
-      return settingsExtensionAnchorId(decodeURIComponent(extensionSettingsMatch[1]));
+      return settingsAppAnchorId(decodeURIComponent(appSettingsMatch[1]));
     } catch {
       return '';
     }
@@ -271,7 +271,7 @@ export function readSettingsSectionIdFromPathname(pathname: string): SettingsQui
       return 'settings-security';
     case '/settings/apps':
     case '/settings/extensions':
-      return 'settings-extensions';
+      return 'settings-apps';
     case '/settings':
       return '';
     case '/settings/desktop':
@@ -283,7 +283,7 @@ export function readSettingsSectionIdFromPathname(pathname: string): SettingsQui
 
 function readSettingsSectionIdFromLocation(pathname = '', hash = ''): SettingsQuickLinkId | '' {
   const fromPath = readSettingsSectionIdFromPathname(pathname);
-  if (fromPath && fromPath !== 'settings-extensions') {
+  if (fromPath && fromPath !== 'settings-apps') {
     return fromPath;
   }
   return readSettingsSectionIdFromHash(hash) || fromPath;
@@ -476,7 +476,7 @@ function buildDesktopShortcutItems(
     editable: true,
     conflictScope: 'global' as const,
   }));
-  const extensionItems = extensionKeybindings.map((keybinding) => ({
+  const appItems = extensionKeybindings.map((keybinding) => ({
     id: `${keybinding.extensionId}:${keybinding.surfaceId}`,
     owner: keybinding.packageType === 'system' ? 'Built-in app' : 'App',
     label: keybinding.title,
@@ -489,7 +489,7 @@ function buildDesktopShortcutItems(
     enabled: keybinding.enabled,
     defaultShortcuts: keybinding.defaultKeys,
   }));
-  return [...coreItems, ...extensionItems];
+  return [...coreItems, ...appItems];
 }
 
 function findDuplicateShortcut(items: ShortcutListItem[]): ShortcutListConflict | null {
@@ -998,15 +998,15 @@ function formatSettingsEntryFallbackLabel(key: string): string {
     .replace(/^./, (char) => char.toUpperCase());
 }
 
-function settingsExtensionAnchorId(extensionId: string): SettingsQuickLinkId {
+function settingsAppAnchorId(extensionId: string): SettingsQuickLinkId {
   const suffix = extensionId
     .trim()
     .replace(/[^A-Za-z0-9_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return `settings-extension-${suffix || 'extension'}`;
+  return `settings-app-${suffix || 'app'}`;
 }
 
-function settingsExtensionRoute(extensionId: string): string {
+function settingsAppRoute(extensionId: string): string {
   return `/settings/apps/${encodeURIComponent(extensionId)}`;
 }
 
@@ -1029,9 +1029,9 @@ function settingsQuickLinkRoute(item: SettingsQuickLink): string {
   return item.route ?? SETTINGS_ROOT_ROUTES[item.id as keyof typeof SETTINGS_ROOT_ROUTES] ?? `/settings#${item.id}`;
 }
 
-let cachedExtensionSettingsQuickLinks: SettingsQuickLink[] = [];
+let cachedAppSettingsQuickLinks: SettingsQuickLink[] = [];
 
-function buildExtensionSettingsQuickLinks({
+function buildAppSettingsQuickLinks({
   schema,
   settingsComponents,
   extensions,
@@ -1064,9 +1064,9 @@ function buildExtensionSettingsQuickLinks({
       const component = componentByExtensionId.get(extensionId);
       const hasScalarSettings = scalarExtensionIds.has(extensionId);
       return {
-        id: settingsExtensionAnchorId(extensionId),
+        id: settingsAppAnchorId(extensionId),
         label: extensionDisplayName(extensionId, extensions),
-        route: settingsExtensionRoute(extensionId),
+        route: settingsAppRoute(extensionId),
         extensionId,
         sortGroup: hasScalarSettings ? 0 : 1,
         sortOrder: component?.order ?? 0,
@@ -1081,9 +1081,9 @@ function useSettingsNavigation(sectionIds?: readonly SettingsQuickLinkId[]) {
   const { data: settingsSchemaForToc } = useApi<UnifiedSettingsEntry[]>(api.settingsSchema as never);
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
   const visibleSectionIds = useMemo(() => (sectionIds ? new Set(sectionIds) : null), [sectionIds]);
-  const extensionSettingsQuickLinks = useMemo(
+  const appSettingsQuickLinks = useMemo(
     () =>
-      buildExtensionSettingsQuickLinks({
+      buildAppSettingsQuickLinks({
         schema: settingsSchemaForToc,
         settingsComponents: extensionRegistry.settingsComponents,
         extensions: extensionRegistry.extensions,
@@ -1091,20 +1091,17 @@ function useSettingsNavigation(sectionIds?: readonly SettingsQuickLinkId[]) {
     [extensionRegistry.extensions, extensionRegistry.settingsComponents, settingsSchemaForToc],
   );
   useEffect(() => {
-    if (extensionSettingsQuickLinks.length > 0) {
-      cachedExtensionSettingsQuickLinks = extensionSettingsQuickLinks;
+    if (appSettingsQuickLinks.length > 0) {
+      cachedAppSettingsQuickLinks = appSettingsQuickLinks;
     }
-  }, [extensionSettingsQuickLinks]);
-  const effectiveExtensionSettingsQuickLinks =
-    extensionSettingsQuickLinks.length > 0 ? extensionSettingsQuickLinks : cachedExtensionSettingsQuickLinks;
+  }, [appSettingsQuickLinks]);
+  const effectiveAppSettingsQuickLinks = appSettingsQuickLinks.length > 0 ? appSettingsQuickLinks : cachedAppSettingsQuickLinks;
   const settingsQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
-    if (effectiveExtensionSettingsQuickLinks.length === 0) {
+    if (effectiveAppSettingsQuickLinks.length === 0) {
       return SETTINGS_QUICK_LINKS;
     }
-    return SETTINGS_QUICK_LINKS.map((item) =>
-      item.id === 'settings-extensions' ? { ...item, children: effectiveExtensionSettingsQuickLinks } : item,
-    );
-  }, [effectiveExtensionSettingsQuickLinks]);
+    return SETTINGS_QUICK_LINKS.map((item) => (item.id === 'settings-apps' ? { ...item, children: effectiveAppSettingsQuickLinks } : item));
+  }, [effectiveAppSettingsQuickLinks]);
   const shellQuickLinks = useMemo<readonly SettingsQuickLink[]>(() => {
     const includeDesktopSection = desktopEnvironment?.isElectron || isDesktopShell() || visibleSectionIds?.has('settings-desktop');
     return includeDesktopSection ? settingsQuickLinks : settingsQuickLinks.filter((item) => item.id !== 'settings-desktop');
@@ -1895,7 +1892,7 @@ function SettingsTableOfContents({
           {renderLink(item)}
           {item.children &&
           item.children.length > 0 &&
-          (item.id === 'settings-extensions' || item.id === activeId || item.children.some((child) => child.id === activeId))
+          (item.id === 'settings-apps' || item.id === activeId || item.children.some((child) => child.id === activeId))
             ? item.children.map((child) => renderLink(child, true))
             : null}
         </div>
@@ -2321,9 +2318,7 @@ function ExtensionSettingsSection({
 
   if (groupByExtension) {
     return (
-      <div
-        className={cx(separated ? 'space-y-3 pt-4' : 'space-y-3', useWindowedChrome && 'settings-page-extension-settings-stack-windowed')}
-      >
+      <div className={cx(separated ? 'space-y-3 pt-4' : 'space-y-3', useWindowedChrome && 'settings-page-app-settings-stack-windowed')}>
         {entriesByExtension.map(([extensionId, entries]) => {
           const entriesByGroup = new Map<string, UnifiedSettingsEntry[]>();
           for (const entry of entries) {
@@ -2337,12 +2332,12 @@ function ExtensionSettingsSection({
             <SettingsGroup
               key={extensionId}
               title={extensionLabel}
-              id={settingsExtensionAnchorId(extensionId)}
-              className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-settings-group')}
+              id={settingsAppAnchorId(extensionId)}
+              className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-app-settings-group')}
             >
               {groupedEntries.map(([group, groupEntries]) => (
                 <div key={group} className="contents">
-                  {groupedEntries.length > 1 ? <div className="settings-page-extension-group-label">{group}</div> : null}
+                  {groupedEntries.length > 1 ? <div className="settings-page-app-group-label">{group}</div> : null}
                   {groupEntries.map((entry) => (
                     <SettingsField
                       key={entry.key}
@@ -2365,7 +2360,7 @@ function ExtensionSettingsSection({
   }
 
   return (
-    <div className={cx(separated ? 'space-y-3 pt-4' : 'space-y-3', useWindowedChrome && 'settings-page-extension-settings-stack-windowed')}>
+    <div className={cx(separated ? 'space-y-3 pt-4' : 'space-y-3', useWindowedChrome && 'settings-page-app-settings-stack-windowed')}>
       {[...grouped.entries()].map(([group, entries]) => (
         <SettingsGroup key={group} title={group} className={SETTINGS_PANEL_DENSE_CLASS}>
           {entries.map((entry) => (
@@ -2385,27 +2380,27 @@ function ExtensionSettingsSection({
   );
 }
 
-function ExtensionSettingsIndex({ items }: { items: readonly SettingsQuickLink[] }) {
-  const extensionItems = items.find((item) => item.id === 'settings-extensions')?.children ?? [];
-  if (extensionItems.length === 0) {
+function AppSettingsIndex({ items }: { items: readonly SettingsQuickLink[] }) {
+  const appItems = items.find((item) => item.id === 'settings-apps')?.children ?? [];
+  if (appItems.length === 0) {
     return <p className="settings-page-panel-message ui-card-meta">No installed apps expose settings.</p>;
   }
 
   return (
     <SettingsGroup title="App settings" className={SETTINGS_PANEL_DENSE_CLASS}>
-      {extensionItems.map((item) => (
+      {appItems.map((item) => (
         <SettingsControlRow
           key={item.id}
           title={
-            <a className="settings-page-extension-index-link" href={item.route ?? `/settings#${item.id}`}>
+            <a className="settings-page-app-index-link" href={item.route ?? `/settings#${item.id}`}>
               {item.label}
             </a>
           }
           description={item.extensionId}
-          className="settings-page-extension-index-row"
-          actionsClassName="settings-page-extension-index-actions"
+          className="settings-page-app-index-row"
+          actionsClassName="settings-page-app-index-actions"
         >
-          <span className="settings-page-extension-index-chevron" aria-hidden="true">
+          <span className="settings-page-app-index-chevron" aria-hidden="true">
             ›
           </span>
         </SettingsControlRow>
@@ -2430,12 +2425,12 @@ function ExtensionSettingsComponentPanels({
   if (visibleRegistrations.length === 0) return null;
   if (shellPresentation === 'windowed') {
     return (
-      <div className="space-y-3 pt-4 settings-page-extension-component-stack-windowed">
+      <div className="space-y-3 pt-4 settings-page-app-component-stack-windowed">
         {visibleRegistrations.map((registration) => (
           <div
             key={`${registration.extensionId}:${registration.id}`}
-            id={settingsExtensionAnchorId(registration.extensionId)}
-            className="settings-page-extension-component-body settings-page-extension-component-body-windowed"
+            id={settingsAppAnchorId(registration.extensionId)}
+            className="settings-page-app-component-body settings-page-app-component-body-windowed"
           >
             <SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />
           </div>
@@ -2448,12 +2443,12 @@ function ExtensionSettingsComponentPanels({
       {visibleRegistrations.map((registration) => (
         <SettingsGroup
           key={`${registration.extensionId}:${registration.id}`}
-          id={settingsExtensionAnchorId(registration.extensionId)}
+          id={settingsAppAnchorId(registration.extensionId)}
           title={registration.label}
           description={registration.description}
-          className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-extension-components-group')}
+          className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-app-components-group')}
         >
-          <div className="settings-page-extension-component-body">
+          <div className="settings-page-app-component-body">
             <SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />
           </div>
         </SettingsGroup>
@@ -2791,8 +2786,8 @@ export function SettingsPage({
     }
     return settingsNavLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id;
   }, [effectiveActiveQuickLinkId, settingsNavLinks]);
-  const activeExtensionSettingsLink = useMemo(() => {
-    if (activeRootSectionId !== 'settings-extensions' || effectiveActiveQuickLinkId === 'settings-extensions') {
+  const activeAppSettingsLink = useMemo(() => {
+    if (activeRootSectionId !== 'settings-apps' || effectiveActiveQuickLinkId === 'settings-apps') {
       return null;
     }
     return visibleTocLinks.find((item) => item.id === effectiveActiveQuickLinkId && item.extensionId) ?? null;
@@ -3882,7 +3877,7 @@ export function SettingsPage({
   }
 
   const activeRootLink = settingsNavLinks.find((item) => item.id === activeRootSectionId) ?? settingsNavLinks[0] ?? null;
-  const activeSectionTitle = settingsQuickLinkLabelText(activeExtensionSettingsLink?.label ?? activeRootLink?.label ?? 'Settings');
+  const activeSectionTitle = settingsQuickLinkLabelText(activeAppSettingsLink?.label ?? activeRootLink?.label ?? 'Settings');
 
   function focusSettingsSection(item: SettingsQuickLink) {
     setActiveQuickLinkId(item.id);
@@ -4189,13 +4184,13 @@ export function SettingsPage({
           <ExtensionSecretsSection />
         </SettingsSection>
 
-        <SettingsSection id="settings-extensions" label={activeExtensionSettingsLink?.label ?? 'Apps'}>
-          {activeExtensionSettingsLink?.extensionId ? (
+        <SettingsSection id="settings-apps" label={activeAppSettingsLink?.label ?? 'Apps'}>
+          {activeAppSettingsLink?.extensionId ? (
             <>
-              <ExtensionSettingsSection includeExtensionIds={[activeExtensionSettingsLink.extensionId]} extensionLabels={extensionLabels} />
+              <ExtensionSettingsSection includeExtensionIds={[activeAppSettingsLink.extensionId]} extensionLabels={extensionLabels} />
               <ExtensionSettingsComponentPanels
                 registrations={extensionRegistry.settingsComponents}
-                includeExtensionIds={[activeExtensionSettingsLink.extensionId]}
+                includeExtensionIds={[activeAppSettingsLink.extensionId]}
                 shellPresentation={context?.shellPresentation}
               />
             </>
@@ -4206,7 +4201,7 @@ export function SettingsPage({
                 registrations={extensionRegistry.settingsComponents}
                 shellPresentation={context?.shellPresentation}
               />
-              <ExtensionSettingsIndex items={settingsNavLinks} />
+              <AppSettingsIndex items={settingsNavLinks} />
             </>
           )}
         </SettingsSection>

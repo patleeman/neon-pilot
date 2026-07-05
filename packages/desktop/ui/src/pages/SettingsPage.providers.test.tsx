@@ -757,7 +757,7 @@ describe('SettingsPage provider model editor', () => {
       },
     ]);
 
-    const { container } = renderPage('settings-extensions');
+    const { container } = renderPage('settings-apps');
     await flushAsyncWork();
 
     expect(container.querySelector('button[aria-label="Save extension settings"]')).toBeNull();
@@ -787,7 +787,7 @@ describe('SettingsPage provider model editor', () => {
       },
     ]);
 
-    const { container } = renderPage('settings-extensions');
+    const { container } = renderPage('settings-apps');
     await flushAsyncWork();
 
     const input = queryInput(container, 'input[value="Old label"]');
@@ -817,7 +817,7 @@ describe('SettingsPage provider model editor', () => {
       },
     ]);
 
-    const { container } = renderPage('settings-extensions');
+    const { container } = renderPage('settings-apps');
     await flushAsyncWork();
 
     const select = container.querySelector('select');

@@ -128,7 +128,7 @@ function fallbackActionFor(extensionId: string): SetupReadinessAction {
     id: 'open-extension-settings',
     label: 'Open Settings',
     tone: 'default',
-    route: `/settings/extensions/${encodeURIComponent(extensionId)}`,
+    route: `/settings/apps/${encodeURIComponent(extensionId)}`,
   };
 }
 

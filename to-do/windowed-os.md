@@ -85,6 +85,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 validation: `@neon-pilot/windowed-os-ui` tests, TypeScript build, Storybook build, and built-Storybook Chrome QA confirmed the App Manager and App Install stories render with app-facing labels, new app hooks, and no visible `Extensions` copy. Screenshot QA: `/tmp/windowed-os-storybook-app-manager-page.png` and `/tmp/windowed-os-storybook-app-install-dialog.png`.
    - 2026-07-05 progress: App Manager backend action results now use app-package language for smoke checks, enable/disable, and registry reload messages while preserving extension ids/actions as the runtime boundary.
    - 2026-07-05 validation: focused App Manager backend/manifest/frontend tests and `pnpm run extension:build -- extensions/system-extension-manager` passed for the app-facing backend result copy.
+   - 2026-07-05 progress: Settings app-owned navigation now uses app-facing ids/classes (`settings-apps`, `settings-app-*`, `settings-page-app-*`) and the manifest view id is `apps`; `/settings/extensions` remains only as a legacy route parser alias. Setup-readiness fallback actions now generate `/settings/apps/:id`, and the Windowed OS Storybook QA roster now requires the App Manager/App Install story ids instead of the retired Extensions story ids.
+   - 2026-07-05 validation: focused Settings route/model/manifest tests, desktop Settings render tests, setup-readiness tests, Windowed OS design tests, `pnpm run extension:build -- extensions/system-settings`, and `pnpm --dir packages/desktop run build:ui` passed for the app-facing Settings route cleanup.
 
 ### Next concrete implementation backlog
 

@@ -3379,8 +3379,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--dark-model-arena-page'");
     expect(source).toContain("'windowed-os-desktop-shell--routines-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-routines-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--extensions-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-extensions-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--app-manager-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-app-manager-page'");
+    expect(source).toContain("'windowed-os-desktop-shell--app-install-dialog'");
+    expect(source).toContain("'windowed-os-desktop-shell--dark-app-install-dialog'");
     expect(source).toContain("'windowed-os-desktop-shell--skills-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-skills-page'");
     expect(source).toContain("'windowed-os-desktop-shell--diagnostics-page'");

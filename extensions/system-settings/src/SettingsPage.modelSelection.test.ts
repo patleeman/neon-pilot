@@ -77,14 +77,14 @@ describe('settings hash section parsing', () => {
     expect(readSettingsSectionIdFromPathname('/settings/commands/')).toBe('settings-commands');
     expect(readSettingsSectionIdFromPathname('/settings/security')).toBe('settings-security');
     expect(readSettingsSectionIdFromPathname('/settings/security/')).toBe('settings-security');
-    expect(readSettingsSectionIdFromPathname('/settings/apps')).toBe('settings-extensions');
-    expect(readSettingsSectionIdFromPathname('/settings/apps/')).toBe('settings-extensions');
-    expect(readSettingsSectionIdFromPathname('/settings/apps/system-reply-actions')).toBe('settings-extension-system-reply-actions');
-    expect(readSettingsSectionIdFromPathname('/settings/apps/system%3Alocal')).toBe('settings-extension-system-local');
-    expect(readSettingsSectionIdFromPathname('/settings/extensions')).toBe('settings-extensions');
-    expect(readSettingsSectionIdFromPathname('/settings/extensions/')).toBe('settings-extensions');
-    expect(readSettingsSectionIdFromPathname('/settings/extensions/system-reply-actions')).toBe('settings-extension-system-reply-actions');
-    expect(readSettingsSectionIdFromPathname('/settings/extensions/system%3Alocal')).toBe('settings-extension-system-local');
+    expect(readSettingsSectionIdFromPathname('/settings/apps')).toBe('settings-apps');
+    expect(readSettingsSectionIdFromPathname('/settings/apps/')).toBe('settings-apps');
+    expect(readSettingsSectionIdFromPathname('/settings/apps/system-reply-actions')).toBe('settings-app-system-reply-actions');
+    expect(readSettingsSectionIdFromPathname('/settings/apps/system%3Alocal')).toBe('settings-app-system-local');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions')).toBe('settings-apps');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions/')).toBe('settings-apps');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions/system-reply-actions')).toBe('settings-app-system-reply-actions');
+    expect(readSettingsSectionIdFromPathname('/settings/extensions/system%3Alocal')).toBe('settings-app-system-local');
     expect(readSettingsSectionIdFromPathname('/settings/desktop')).toBe('settings-desktop');
     expect(readSettingsSectionIdFromPathname('/settings')).toBe('');
   });
@@ -95,13 +95,13 @@ describe('settings hash section parsing', () => {
         { pathname: '/settings/apps', hash: '', search: '' },
         { pathname: '/settings/apps/system-reply-actions', hash: '' },
       ),
-    ).toBe('settings-extension-system-reply-actions');
+    ).toBe('settings-app-system-reply-actions');
     expect(
       readSettingsSectionIdFromContext(
         { pathname: '/settings/apps', hash: '', search: '' },
-        { pathname: '/settings/apps/system-reply-actions', hash: '#settings-extensions' },
+        { pathname: '/settings/apps/system-reply-actions', hash: '#settings-apps' },
       ),
-    ).toBe('settings-extension-system-reply-actions');
+    ).toBe('settings-app-system-reply-actions');
   });
 });
 
@@ -170,7 +170,7 @@ describe('settings section scrolling', () => {
     container.scrollTo = scrollTo;
     document.body.appendChild(container);
 
-    scrollSettingsSectionIntoView(container, 'settings-extension-missing');
+    scrollSettingsSectionIntoView(container, 'settings-app-missing');
 
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
   });
@@ -199,10 +199,10 @@ describe('windowed settings navigation', () => {
   it('uses app-first labels for the extension settings surface', () => {
     const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/SettingsPage.tsx'), 'utf8');
 
-    expect(source).toContain("{ id: 'settings-extensions', label: 'Apps' }");
+    expect(source).toContain("{ id: 'settings-apps', label: 'Apps' }");
     expect(source).toContain('No installed apps expose settings.');
     expect(source).toContain('title="App settings"');
-    expect(source).not.toContain("{ id: 'settings-extensions', label: 'Extensions' }");
+    expect(source).not.toContain("{ id: 'settings-apps', label: 'Extensions' }");
     expect(source).not.toContain('No installed extensions expose settings.');
     expect(source).not.toContain('title="Extension settings"');
   });

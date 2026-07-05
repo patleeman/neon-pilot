@@ -319,11 +319,11 @@
         "activation": "on-route"
       },
       {
-        "id": "extensions",
+        "id": "apps",
         "title": "App settings",
         "location": "main",
         "route": "/settings/apps",
-        "component": "ExtensionsSettingsPage",
+        "component": "AppsSettingsPage",
         "activation": "on-route"
       },
       {

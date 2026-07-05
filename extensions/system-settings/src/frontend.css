@@ -118,33 +118,33 @@
   max-width: 18rem;
 }
 
-.settings-page-extension-index-row.ui-settings-row {
+.settings-page-app-index-row.ui-settings-row {
   transition:
     background-color 120ms ease,
     color 120ms ease;
 }
 
-.settings-page-extension-index-row.ui-settings-row:hover {
+.settings-page-app-index-row.ui-settings-row:hover {
   background: rgb(var(--color-surface-3) / 0.36);
 }
 
-.settings-page-extension-index-link {
+.settings-page-app-index-link {
   color: inherit;
   text-decoration: none;
 }
 
-.settings-page-extension-index-link:focus-visible {
+.settings-page-app-index-link:focus-visible {
   outline: 2px solid rgb(var(--color-accent));
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
 
-.settings-page-extension-index-actions.ui-settings-row-actions {
+.settings-page-app-index-actions.ui-settings-row-actions {
   min-width: 1.5rem;
   max-width: 1.5rem;
 }
 
-.settings-page-extension-index-chevron {
+.settings-page-app-index-chevron {
   color: rgb(var(--color-tertiary));
   font-size: 1rem;
   line-height: 1;
@@ -289,22 +289,22 @@
   gap: 0.25rem;
 }
 
-.settings-page-extension-settings-group > .ui-settings-panel-content,
-.settings-page-extension-components-group > .ui-settings-panel-content {
+.settings-page-app-settings-group > .ui-settings-panel-content,
+.settings-page-app-components-group > .ui-settings-panel-content {
   gap: 0;
 }
 
-.settings-page-extension-settings-section,
-.settings-page-extension-component {
+.settings-page-app-settings-section,
+.settings-page-app-component {
   border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
 }
 
-.settings-page-extension-settings-section:first-child,
-.settings-page-extension-component:first-child {
+.settings-page-app-settings-section:first-child,
+.settings-page-app-component:first-child {
   border-top: 0;
 }
 
-.settings-page-extension-subheading {
+.settings-page-app-subheading {
   min-height: 2.125rem;
   padding: 0.625rem 0.75rem 0.5rem;
   font-size: 0.8125rem;
@@ -313,7 +313,7 @@
   color: rgb(var(--color-primary));
 }
 
-.settings-page-extension-group-label {
+.settings-page-app-group-label {
   border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
   padding: 0.5rem 0.75rem 0.25rem;
   font-size: 0.6875rem;
@@ -323,9 +323,9 @@
   color: rgb(var(--color-tertiary));
 }
 
-.settings-page-extension-settings-section > .ui-settings-field,
-.settings-page-extension-component .ui-settings-row,
-.settings-page-extension-component .ui-settings-field {
+.settings-page-app-settings-section > .ui-settings-field,
+.settings-page-app-component .ui-settings-row,
+.settings-page-app-component .ui-settings-field {
   border-right: 0;
   border-bottom: 0;
   border-left: 0;
@@ -333,12 +333,12 @@
   background: transparent;
 }
 
-.settings-page-extension-component-body {
+.settings-page-app-component-body {
   border-top: 1px solid rgb(var(--color-border-subtle) / 0.42);
   padding: 0.75rem;
 }
 
-.settings-page-extension-component-body > .ui-settings-panel {
+.settings-page-app-component-body > .ui-settings-panel {
   gap: 0;
   overflow: hidden;
   border: 1px solid rgb(var(--color-border-subtle) / 0.66);
@@ -347,23 +347,23 @@
   padding: 0;
 }
 
-.settings-page-extension-component-body > .ui-settings-panel + .ui-settings-panel {
+.settings-page-app-component-body > .ui-settings-panel + .ui-settings-panel {
   margin-top: 0.75rem;
 }
 
-.settings-page-extension-component-body > .ui-settings-panel > .ui-settings-panel-header {
+.settings-page-app-component-body > .ui-settings-panel > .ui-settings-panel-header {
   min-height: 2.25rem;
   border-bottom: 1px solid rgb(var(--color-border-subtle) / 0.5);
   padding: 0.625rem 0.75rem;
 }
 
-.settings-page-extension-component-body > .ui-settings-panel > .ui-settings-panel-content {
+.settings-page-app-component-body > .ui-settings-panel > .ui-settings-panel-content {
   gap: 0;
   padding: 0;
 }
 
-.settings-page-extension-component-body > .ui-settings-row:first-child,
-.settings-page-extension-component-body > .ui-settings-field:first-child {
+.settings-page-app-component-body > .ui-settings-row:first-child,
+.settings-page-app-component-body > .ui-settings-field:first-child {
   border-top: 0;
 }
 
@@ -606,14 +606,14 @@
   padding: 0.5rem 0.625rem;
 }
 
-.settings-page-windowed .settings-page-extension-settings-stack-windowed,
-.settings-page-windowed .settings-page-extension-component-stack-windowed {
+.settings-page-windowed .settings-page-app-settings-stack-windowed,
+.settings-page-windowed .settings-page-app-component-stack-windowed {
   display: grid;
   gap: 0.625rem;
   padding-top: 0;
 }
 
-.settings-page-windowed .settings-page-extension-component-body-windowed {
+.settings-page-windowed .settings-page-app-component-body-windowed {
   overflow: hidden;
   border: 1.5px solid var(--wos-line-strong);
   border-radius: 0.5rem;
@@ -621,19 +621,19 @@
   padding: 0;
 }
 
-.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel {
+.settings-page-windowed .settings-page-app-component-body-windowed > .ui-settings-panel {
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 
-.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel > .ui-settings-panel-header {
+.settings-page-windowed .settings-page-app-component-body-windowed > .ui-settings-panel > .ui-settings-panel-header {
   min-height: 2rem;
   border-bottom: 1.5px solid var(--wos-line-subtle);
   padding: 0.5rem 0.625rem;
 }
 
-.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel > .ui-settings-panel-content {
+.settings-page-windowed .settings-page-app-component-body-windowed > .ui-settings-panel > .ui-settings-panel-content {
   gap: 0;
   padding: 0;
 }

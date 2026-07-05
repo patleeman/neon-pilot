@@ -452,10 +452,10 @@ describe('SettingsPage', () => {
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-segmented-button-active');
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-swatch-option');
     expect(source).toContain('.settings-page-windowed .settings-page-control-actions .ui-swatch-option-checked');
-    expect(source).toContain('.settings-page-windowed .settings-page-extension-settings-stack-windowed');
-    expect(source).toContain('.settings-page-windowed .settings-page-extension-component-stack-windowed');
-    expect(source).toContain('.settings-page-windowed .settings-page-extension-component-body-windowed');
-    expect(source).toContain('.settings-page-windowed .settings-page-extension-component-body-windowed > .ui-settings-panel');
+    expect(source).toContain('.settings-page-windowed .settings-page-app-settings-stack-windowed');
+    expect(source).toContain('.settings-page-windowed .settings-page-app-component-stack-windowed');
+    expect(source).toContain('.settings-page-windowed .settings-page-app-component-body-windowed');
+    expect(source).toContain('.settings-page-windowed .settings-page-app-component-body-windowed > .ui-settings-panel');
     expect(source).toContain('border: 1.5px solid var(--wos-line-strong);');
     expect(source).toContain('background: var(--wos-surface-2);');
   });
@@ -464,9 +464,9 @@ describe('SettingsPage', () => {
     const source = readFileSync(systemSettingsSourcePath('SettingsPage.tsx'), 'utf8');
 
     expect(source).toContain("if (shellPresentation === 'windowed') {");
-    expect(source).toContain('settings-page-extension-settings-stack-windowed');
-    expect(source).toContain('settings-page-extension-component-stack-windowed');
-    expect(source).toContain('settings-page-extension-component-body-windowed');
+    expect(source).toContain('settings-page-app-settings-stack-windowed');
+    expect(source).toContain('settings-page-app-component-stack-windowed');
+    expect(source).toContain('settings-page-app-component-body-windowed');
     expect(source).toContain('<SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />');
   });
 

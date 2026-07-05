@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CommandsSettingsPage, ExtensionsSettingsPage, SecuritySettingsPage } from '../../../../../extensions/system-settings/src/frontend';
+import { AppsSettingsPage, CommandsSettingsPage, SecuritySettingsPage } from '../../../../../extensions/system-settings/src/frontend';
 import { SettingsPage } from '../../../../../extensions/system-settings/src/SettingsPage';
 import { useAppEvents, useSseConnection } from '../app/contexts';
 import { api } from '../client/api';
@@ -49,11 +49,7 @@ function renderPage(pathname: string, sectionIds?: React.ComponentProps<typeof S
 
 function renderDirectSettingsRoute(pathname: string): string {
   const Component =
-    pathname === '/settings/commands'
-      ? CommandsSettingsPage
-      : pathname === '/settings/security'
-        ? SecuritySettingsPage
-        : ExtensionsSettingsPage;
+    pathname === '/settings/commands' ? CommandsSettingsPage : pathname === '/settings/security' ? SecuritySettingsPage : AppsSettingsPage;
   return renderToString(
     <MemoryRouter initialEntries={[pathname]}>
       <Routes>
@@ -128,14 +124,14 @@ describe('SettingsPage — untested panel rendering', () => {
   });
 
   it('does not render extension manager management UI in settings', () => {
-    const html = renderPage('/settings', ['settings-extensions']);
+    const html = renderPage('/settings', ['settings-apps']);
     expect(html).toContain('Apps');
     expect(html).not.toContain('AGENTS.md files');
   });
 
   it('renders the aggregate extensions section without the old in-page quick link', () => {
     const html = renderPage('/settings');
-    expect(html).not.toContain('href="#settings-extensions"');
+    expect(html).not.toContain('href="#settings-apps"');
     expect(html).not.toContain('Installed extensions, imported plugin packages, instruction files, skills, tools, and extension settings.');
   });
 
