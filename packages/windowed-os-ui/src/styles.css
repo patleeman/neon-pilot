@@ -575,7 +575,6 @@
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='chat'],
-.wos-taskbar__button[data-focused='true'][data-accent='workflows'],
 .wos-taskbar__button[data-focused='true'][data-accent='automations'],
 .wos-taskbar__button[data-focused='true'][data-accent='gateways'],
 .wos-taskbar__button[data-focused='true'][data-accent='drawing'],
@@ -583,10 +582,6 @@
 .wos-taskbar__button[data-focused='true'][data-accent='telemetry'],
 .wos-taskbar__button[data-focused='true'][data-accent='diagnostics'] {
   color: var(--wos-accent-ink);
-}
-
-.wos-taskbar__button[data-focused='true'][data-accent='workflows'] {
-  background: var(--wos-workflows);
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='automations'] {
@@ -642,11 +637,6 @@
   background: var(--wos-chat);
 }
 
-.wos-app-monogram[data-accent='workflows'],
-.wos-window__titlebar[data-accent='workflows'] {
-  background: var(--wos-workflows);
-}
-
 .wos-app-monogram[data-accent='automations'],
 .wos-window__titlebar[data-accent='automations'] {
   background: var(--wos-automations);
@@ -683,7 +673,6 @@
 }
 
 .wos-app-monogram[data-accent='chat'],
-.wos-app-monogram[data-accent='workflows'],
 .wos-app-monogram[data-accent='automations'],
 .wos-app-monogram[data-accent='gateways'],
 .wos-app-monogram[data-accent='drawing'],
@@ -691,7 +680,6 @@
 .wos-app-monogram[data-accent='telemetry'],
 .wos-app-monogram[data-accent='diagnostics'],
 .wos-window__titlebar[data-accent='chat'],
-.wos-window__titlebar[data-accent='workflows'],
 .wos-window__titlebar[data-accent='automations'],
 .wos-window__titlebar[data-accent='gateways'],
 .wos-window__titlebar[data-accent='drawing'],
@@ -990,7 +978,6 @@
 }
 
 .wos-window__titlebar[data-accent='chat'] .wos-window__meta,
-.wos-window__titlebar[data-accent='workflows'] .wos-window__meta,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta,
 .wos-window__titlebar[data-accent='drawing'] .wos-window__meta,
@@ -1001,7 +988,6 @@
 }
 
 .wos-window__titlebar[data-accent='chat'] .wos-window__meta::before,
-.wos-window__titlebar[data-accent='workflows'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='drawing'] .wos-window__meta::before,
@@ -1363,7 +1349,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog__titlebar[data-accent='chat'],
-.wos-dialog__titlebar[data-accent='workflows'],
 .wos-dialog__titlebar[data-accent='automations'],
 .wos-dialog__titlebar[data-accent='gateways'],
 .wos-dialog__titlebar[data-accent='drawing'],
@@ -1371,10 +1356,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='telemetry'],
 .wos-dialog__titlebar[data-accent='diagnostics'] {
   color: var(--wos-accent-ink);
-}
-
-.wos-dialog__titlebar[data-accent='workflows'] {
-  background: var(--wos-workflows);
 }
 
 .wos-dialog__titlebar[data-accent='automations'] {
@@ -1431,7 +1412,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta,
-.wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta,
@@ -1442,7 +1422,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta::before,
-.wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta::before,
@@ -3752,11 +3731,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   --wos-segmented-active-ink: var(--wos-accent-ink);
 }
 
-.wos-segmented-control[data-accent='workflows'] {
-  --wos-segmented-active: var(--wos-workflows);
-  --wos-segmented-active-ink: var(--wos-accent-ink);
-}
-
 .wos-segmented-control[data-accent='automations'] {
   --wos-segmented-active: var(--wos-automations);
   --wos-segmented-active-ink: var(--wos-accent-ink);
@@ -3890,59 +3864,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-empty-state__action {
   flex: 0 0 auto;
-}
-
-.wos-workflows-tool-grid,
-.wos-workflows-actions {
-  display: grid;
-  min-width: 0;
-  gap: 6px;
-}
-
-.wos-workflows-tool-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.wos-workflows-tool-grid .wos-input {
-  grid-column: 1 / -1;
-}
-
-.wos-workflows-tool-option {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-  border: 1.5px solid var(--wos-ink-900);
-  border-radius: 8px;
-  background: var(--wos-surface-1);
-  padding: 5px 7px;
-  color: var(--wos-ink-900);
-  font: var(--wos-text-row);
-}
-
-.wos-workflows-events {
-  max-height: 18rem;
-  overflow: auto;
-}
-
-.wos-workflows-event {
-  display: grid;
-  gap: 3px;
-  border-top: 1.5px solid var(--wos-surface-3);
-  padding: 7px 9px;
-  color: var(--wos-ink-900);
-  font: var(--wos-text-body);
-}
-
-.wos-workflows-event:first-child {
-  border-top: 0;
-}
-
-.wos-workflows-event__meta {
-  color: var(--wos-ink-500);
-  font: var(--wos-text-eyebrow);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 @media (max-width: 760px) {
@@ -4772,10 +4693,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   background: var(--wos-chat);
 }
 
-.wos-toggle[data-checked='true'][data-accent='workflows'] {
-  background: var(--wos-workflows);
-}
-
 .wos-toggle[data-checked='true'][data-accent='automations'] {
   background: var(--wos-automations);
 }
@@ -4908,11 +4825,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-data-row[data-accent='chat'] {
   --wos-data-row-active: var(--wos-chat);
-  --wos-data-row-active-ink: white;
-}
-
-.wos-data-row[data-accent='workflows'] {
-  --wos-data-row-active: var(--wos-workflows);
   --wos-data-row-active-ink: white;
 }
 
@@ -5188,11 +5100,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-list-item[data-accent='chat'] {
   --wos-list-active: var(--wos-chat);
-  --wos-list-active-ink: var(--wos-accent-ink);
-}
-
-.wos-list-item[data-accent='workflows'] {
-  --wos-list-active: var(--wos-workflows);
   --wos-list-active-ink: var(--wos-accent-ink);
 }
 

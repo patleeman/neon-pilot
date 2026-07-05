@@ -13,7 +13,6 @@
   --wos-surface-3: oklch(90% 0.015 75);
   --wos-surface-disabled: oklch(88% 0.02 60);
   --wos-chat: oklch(66% 0.14 250);
-  --wos-workflows: oklch(64% 0.13 175);
   --wos-automations: oklch(62% 0.14 300);
   --wos-gateways: oklch(62% 0.14 200);
   --wos-drawing: oklch(68% 0.16 42);
@@ -89,7 +88,6 @@
   --wos-surface-3: oklch(34% 0.028 260);
   --wos-surface-disabled: oklch(30% 0.018 260);
   --wos-chat: oklch(68% 0.15 250);
-  --wos-workflows: oklch(68% 0.13 175);
   --wos-automations: oklch(68% 0.14 300);
   --wos-gateways: oklch(70% 0.14 200);
   --wos-drawing: oklch(74% 0.16 48);

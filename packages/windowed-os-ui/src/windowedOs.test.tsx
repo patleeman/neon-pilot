@@ -1094,7 +1094,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-surface-0: oklch(95% 0.022 75);');
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-apps: oklch(70% 0.15 60);');
-    expect(tokensSource).toContain('--wos-workflows:');
     expect(tokensSource).toContain('--wos-diagnostics:');
     expect(tokensSource).toContain('--wos-titlebar-h: 24px;');
     expect(tokensSource).toContain('--wos-window-control-size: 18px;');
@@ -1306,7 +1305,7 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    for (const accent of ['workflows', 'automations', 'drawing', 'diagnostics']) {
+    for (const accent of ['automations', 'drawing', 'diagnostics']) {
       expect(stylesSource).toContain(`.wos-window__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-dialog__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-segmented-control[data-accent='${accent}']`);
