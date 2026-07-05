@@ -57,7 +57,8 @@ vi.mock('./systemExtensionModules', () => ({
           React.useEffect(() => {
             void pa.automations.list();
           }, [pa]);
-          return <div>Automations loaded in {context.shellPresentation ?? 'unset'} shell</div>;
+          const shellLabel = context.shellPresentation === 'windowed' ? 'desktop' : (context.shellPresentation ?? 'unset');
+          return <div>Automations loaded in {shellLabel} shell</div>;
         },
       }),
     ],
@@ -150,11 +151,11 @@ describe('NativeExtensionSurfaceHost', () => {
 
     await vi.waitFor(() => expect(container.textContent).toContain('Automations'));
     expect(container.textContent).toContain('Automations loaded');
-    expect(container.textContent).toContain('windowed shell');
+    expect(container.textContent).toContain('desktop shell');
     expect(apiMocks.automations.list).toHaveBeenCalled();
   });
 
-  it('passes windowed shell presentation to native extension surfaces', async () => {
+  it('passes desktop shell presentation to native extension surfaces', async () => {
     const surface: NativeExtensionViewSummary = {
       extensionId: 'system-automations',
       id: 'page',
@@ -173,7 +174,7 @@ describe('NativeExtensionSurfaceHost', () => {
       root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/automations" search="" hash="" shellPresentation="windowed" />);
     });
 
-    await vi.waitFor(() => expect(container.textContent).toContain('windowed shell'));
+    await vi.waitFor(() => expect(container.textContent).toContain('desktop shell'));
     const host = container.querySelector('[data-extension-surface-id="page"]');
     expect(host?.getAttribute('data-shell-presentation')).toBe('windowed');
     expect(host?.className).toContain('wos-native-extension-surface');

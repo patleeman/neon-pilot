@@ -115,7 +115,7 @@ describe('ExtensionPage', () => {
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
   });
 
-  it('passes windowed shell presentation through to native extension pages', () => {
+  it('passes desktop shell presentation through to native extension pages', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: false,
       error: null,
@@ -166,7 +166,7 @@ describe('ExtensionPage', () => {
     expect(container.querySelector('.wos-state-block')).toBeTruthy();
   });
 
-  it('shows visible registry loading chrome when windowed shell presentation is explicit', () => {
+  it('shows visible registry loading chrome when desktop shell presentation is explicit', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: true,
       error: null,
@@ -188,7 +188,7 @@ describe('ExtensionPage', () => {
     expect(container.querySelector('.wos-state-block')).toBeTruthy();
   });
 
-  it('shows visible unavailable route chrome in the windowed shell', () => {
+  it('shows visible unavailable route chrome in the desktop shell', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/missing-extension-route']}>
         <ExtensionPage shellPresentation="windowed" />

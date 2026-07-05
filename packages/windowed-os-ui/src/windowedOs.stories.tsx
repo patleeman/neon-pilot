@@ -65,11 +65,11 @@ type Story = StoryObj;
 
 const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS;
 
-function WindowedShellBodyAttribute({ children }: { children: ReactNode }) {
+function DesktopShellBodyAttribute({ children }: { children: ReactNode }) {
   useEffect(() => {
-    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+    document.body.setAttribute('data-neon-pilot-desktop-shell-active', 'true');
     return () => {
-      document.body.removeAttribute('data-neon-pilot-windowed-shell-active');
+      document.body.removeAttribute('data-neon-pilot-desktop-shell-active');
     };
   }, []);
 
@@ -619,7 +619,7 @@ function InheritedChatChromeStory({ theme = 'light' }: { theme?: 'light' | 'dark
                         <span className="ui-thinking-block__toggle">hide</span>
                       </button>
                       <div className="ui-thinking-block__body">
-                        <p>Style only the windowed shell, keep normal chat untouched.</p>
+                        <p>Style only the desktop shell, keep normal chat untouched.</p>
                         <p>Verify light and dark before checkpointing.</p>
                       </div>
                     </div>
@@ -2352,7 +2352,7 @@ export const DarkBrowserWindow: Story = {
 
 function DrawingsPickerSubwindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <WindowedShellBodyAttribute>
+    <DesktopShellBodyAttribute>
       <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 640, padding: 24 }}>
         <div className="ui-overlay-backdrop" role="presentation">
           <section
@@ -2436,7 +2436,7 @@ function DrawingsPickerSubwindowStory({ theme = 'light' }: { theme?: 'light' | '
           </section>
         </div>
       </div>
-    </WindowedShellBodyAttribute>
+    </DesktopShellBodyAttribute>
   );
 }
 
@@ -2450,7 +2450,7 @@ export const DarkDrawingsPickerSubwindow: Story = {
 
 function ExcalidrawEditorSubwindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
-    <WindowedShellBodyAttribute>
+    <DesktopShellBodyAttribute>
       <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
         <div className="ui-overlay-backdrop ui-windowed-excalidraw-backdrop" role="presentation">
           <section
@@ -2502,7 +2502,7 @@ function ExcalidrawEditorSubwindowStory({ theme = 'light' }: { theme?: 'light' |
           </section>
         </div>
       </div>
-    </WindowedShellBodyAttribute>
+    </DesktopShellBodyAttribute>
   );
 }
 
