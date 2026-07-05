@@ -95,7 +95,7 @@ const SETTINGS_QUICK_LINKS = [
   { id: 'settings-workspace', label: 'Workspace' },
   { id: 'settings-commands', label: 'Commands' },
   { id: 'settings-security', label: 'Security' },
-  { id: 'settings-extensions', label: 'Extensions' },
+  { id: 'settings-extensions', label: 'Apps' },
   { id: 'settings-desktop', label: 'Desktop' },
 ] as const satisfies readonly { id: string; label: string }[];
 
@@ -2387,11 +2387,11 @@ function ExtensionSettingsSection({
 function ExtensionSettingsIndex({ items }: { items: readonly SettingsQuickLink[] }) {
   const extensionItems = items.find((item) => item.id === 'settings-extensions')?.children ?? [];
   if (extensionItems.length === 0) {
-    return <p className="settings-page-panel-message ui-card-meta">No installed extensions expose settings.</p>;
+    return <p className="settings-page-panel-message ui-card-meta">No installed apps expose settings.</p>;
   }
 
   return (
-    <SettingsGroup title="Extension settings" className={SETTINGS_PANEL_DENSE_CLASS}>
+    <SettingsGroup title="App settings" className={SETTINGS_PANEL_DENSE_CLASS}>
       {extensionItems.map((item) => (
         <SettingsControlRow
           key={item.id}
@@ -4188,7 +4188,7 @@ export function SettingsPage({
           <ExtensionSecretsSection />
         </SettingsSection>
 
-        <SettingsSection id="settings-extensions" label={activeExtensionSettingsLink?.label ?? 'Extensions'}>
+        <SettingsSection id="settings-extensions" label={activeExtensionSettingsLink?.label ?? 'Apps'}>
           {activeExtensionSettingsLink?.extensionId ? (
             <>
               <ExtensionSettingsSection includeExtensionIds={[activeExtensionSettingsLink.extensionId]} extensionLabels={extensionLabels} />

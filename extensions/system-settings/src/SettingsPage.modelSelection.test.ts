@@ -188,6 +188,19 @@ describe('windowed settings navigation', () => {
     expect(source).toContain("sectionIds={['settings-appearance']}");
     expect(source).toContain('export function ConversationSettingsPage');
     expect(source).toContain("sectionIds={['settings-conversation']}");
+    expect(source).toContain('<SettingsPage sectionIds={sectionIds} context={context} />');
+    expect(source).not.toContain('return <SettingsPage context={context} />;');
+  });
+
+  it('uses app-first labels for the extension settings surface', () => {
+    const source = readFileSync(join(process.cwd(), 'extensions/system-settings/src/SettingsPage.tsx'), 'utf8');
+
+    expect(source).toContain("{ id: 'settings-extensions', label: 'Apps' }");
+    expect(source).toContain('No installed apps expose settings.');
+    expect(source).toContain('title="App settings"');
+    expect(source).not.toContain("{ id: 'settings-extensions', label: 'Extensions' }");
+    expect(source).not.toContain('No installed extensions expose settings.');
+    expect(source).not.toContain('title="Extension settings"');
   });
 
   it('stacks the windowed settings rail and controls inside narrow windows', () => {

@@ -17,7 +17,7 @@ type SettingsSectionId =
 
 function SettingsSectionPage({ sectionIds, context }: ExtensionSurfaceProps & { sectionIds: SettingsSectionId[] }) {
   if (context.shellPresentation === 'windowed') {
-    return <SettingsPage context={context} />;
+    return <SettingsPage sectionIds={sectionIds} context={context} />;
   }
 
   useEffect(() => {
