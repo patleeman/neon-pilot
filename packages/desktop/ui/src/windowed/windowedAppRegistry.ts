@@ -16,7 +16,7 @@ export interface WindowedAppRegistration {
   route: string;
   kind: WindowedLauncherKind;
   source: WindowedAppSource;
-  sourceExtensionId?: string;
+  sourcePackageId?: string;
   owner: WindowedAppRuntimeOwner;
   accent: AppAccent;
   aliases?: readonly string[];
@@ -56,7 +56,7 @@ const CANONICAL_WINDOWED_APP_ROUTE_ALIASES: Readonly<
   'app-manager': ['/extensions'],
 };
 
-const CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS: Readonly<Partial<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>>> = {
+const CANONICAL_WINDOWED_APP_OWNER_PACKAGES: Readonly<Partial<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>>> = {
   browser: 'system-browser',
   files: 'system-files',
   terminal: 'system-terminal',
@@ -91,9 +91,9 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
   const seenTitles = new Set<string>();
 
   const canonicalApps = CANONICAL_WINDOWED_DESKTOP_APPS.flatMap((app): WindowedAppRegistration[] => {
-    const ownerExtensionId = CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS[app.id];
-    if (ownerExtensionId && !enabledExtensionIds.has(ownerExtensionId)) return [];
-    const registration = createCanonicalWindowedAppRegistration(app, ownerExtensionId);
+    const ownerPackageId = CANONICAL_WINDOWED_APP_OWNER_PACKAGES[app.id];
+    if (ownerPackageId && !enabledExtensionIds.has(ownerPackageId)) return [];
+    const registration = createCanonicalWindowedAppRegistration(app, ownerPackageId);
     seenRoutes.add(registration.route);
     for (const alias of registration.routeAliases ?? []) {
       seenRoutes.add(alias);
@@ -108,8 +108,8 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
       const navItems = (extension.contributes?.nav ?? []).flatMap((item): WindowedAppRegistration[] => {
         if (!item.route || seenRoutes.has(item.route) || seenTitles.has(item.label)) return [];
         if (!isTopLevelRoute(item.route)) return [];
-        const app = createExtensionWindowedAppRegistration({
-          extensionId: extension.id,
+        const app = createAppPackageWindowedAppRegistration({
+          packageId: extension.id,
           id: item.id,
           title: item.label,
           route: item.route,
@@ -122,8 +122,8 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
       const mainViewItems = (extension.contributes?.views ?? []).flatMap((view): WindowedAppRegistration[] => {
         if (view.location !== 'main' || !view.route || !isTopLevelRoute(view.route)) return [];
         if (seenRoutes.has(view.route) || seenTitles.has(view.title)) return [];
-        const app = createExtensionWindowedAppRegistration({
-          extensionId: extension.id,
+        const app = createAppPackageWindowedAppRegistration({
+          packageId: extension.id,
           id: view.id,
           title: view.title,
           route: view.route,
@@ -142,7 +142,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
 
 function createCanonicalWindowedAppRegistration(
   app: (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number],
-  ownerExtensionId: string | undefined,
+  ownerPackageId: string | undefined,
 ): WindowedAppRegistration {
   const isCore = CORE_WINDOWED_APP_IDS.has(app.id);
   return {
@@ -151,8 +151,8 @@ function createCanonicalWindowedAppRegistration(
     route: CANONICAL_WINDOWED_APP_ROUTES[app.id],
     kind: app.id === 'chat' ? 'chat' : app.id === 'browser' || app.id === 'files' || app.id === 'terminal' ? app.id : 'route',
     source: isCore ? 'core' : 'app-package',
-    ...(ownerExtensionId ? { sourceExtensionId: ownerExtensionId } : {}),
-    owner: ownerExtensionId ? { packageId: ownerExtensionId, packageType: 'extension' } : { packageType: 'core' },
+    ...(ownerPackageId ? { sourcePackageId: ownerPackageId } : {}),
+    owner: ownerPackageId ? { packageId: ownerPackageId, packageType: 'extension' } : { packageType: 'core' },
     accent: app.accent,
     aliases: app.aliases,
     routeAliases: CANONICAL_WINDOWED_APP_ROUTE_ALIASES[app.id],
@@ -160,20 +160,20 @@ function createCanonicalWindowedAppRegistration(
   };
 }
 
-function createExtensionWindowedAppRegistration(input: {
-  extensionId: string;
+function createAppPackageWindowedAppRegistration(input: {
+  packageId: string;
   id: string;
   title: string;
   route: string;
 }): WindowedAppRegistration {
   return {
-    id: `${input.extensionId}:${input.id}`,
+    id: `${input.packageId}:${input.id}`,
     title: input.title,
     route: input.route,
     kind: 'route',
     source: 'app-package',
-    sourceExtensionId: input.extensionId,
-    owner: { packageId: input.extensionId, packageType: 'extension' },
+    sourcePackageId: input.packageId,
+    owner: { packageId: input.packageId, packageType: 'extension' },
     accent: accentForTitle(input.title),
     window: { allowMultiple: false, singleton: true },
   };

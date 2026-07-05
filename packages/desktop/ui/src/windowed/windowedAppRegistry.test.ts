@@ -54,26 +54,26 @@ describe('windowed app registry', () => {
       kind: 'browser',
       route: '/browser',
       source: 'app-package',
-      sourceExtensionId: 'system-browser',
+      sourcePackageId: 'system-browser',
       owner: { packageId: 'system-browser', packageType: 'extension' },
     });
     expect(apps.find((app) => app.title === 'Files')).toMatchObject({
       id: 'files',
       kind: 'files',
       route: '/files',
-      sourceExtensionId: 'system-files',
+      sourcePackageId: 'system-files',
     });
     expect(apps.find((app) => app.title === 'Terminal')).toMatchObject({
       id: 'terminal',
       kind: 'terminal',
       route: '/terminal',
-      sourceExtensionId: 'system-terminal',
+      sourcePackageId: 'system-terminal',
     });
     expect(apps.find((app) => app.title === 'Automations')).toMatchObject({
       id: 'automations',
       route: '/automations',
       source: 'app-package',
-      sourceExtensionId: 'system-automations',
+      sourcePackageId: 'system-automations',
       owner: { packageId: 'system-automations', packageType: 'extension' },
       accent: 'automations',
     });
@@ -144,7 +144,7 @@ describe('windowed app registry', () => {
     expect(apps.map((app) => app.title)).toEqual(['Chat', 'Boards', 'Reports', 'Settings']);
     expect(apps.find((app) => app.title === 'Boards')).toMatchObject({
       source: 'app-package',
-      sourceExtensionId: 'custom-package',
+      sourcePackageId: 'custom-package',
       owner: { packageId: 'custom-package', packageType: 'extension' },
     });
     expect(apps.some((app) => app.title === 'Board details')).toBe(false);
