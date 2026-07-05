@@ -861,7 +861,7 @@ export interface ExtensionBackend {
    * startup; all errors should be caught and logged internally.
    */
   startupAction?: string;
-  /** Action id to call immediately after the extension is enabled from the Extensions page. */
+  /** Action id to call immediately after the extension is enabled from App Manager. */
   onEnableAction?: string;
   /** Action id to call immediately after the extension is disabled. */
   onDisableAction?: string;

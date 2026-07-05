@@ -66,9 +66,9 @@ export interface MarketplaceSource {
 const MARKETPLACE_SOURCES: MarketplaceSource[] = [
   {
     id: 'neon-pilot-release',
-    name: 'Neon Pilot Extensions',
+    name: 'Neon Pilot Apps',
     ecosystem: 'neon-pilot',
-    description: 'First-party Neon Pilot extension bundles published from patleeman/neon-pilot-extensions.',
+    description: 'First-party Neon Pilot app packages published from patleeman/neon-pilot-extensions.',
     supportedPackageTypes: ['extension'],
     installStatus: 'supported',
     owner: FIRST_PARTY_REPO.owner,
@@ -259,7 +259,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
           id: source.id,
           name: source.name ?? `${source.owner}/${source.repo}`,
           ecosystem: 'neon-pilot',
-          description: `Extensions from ${source.owner}/${source.repo}.`,
+          description: `App packages from ${source.owner}/${source.repo}.`,
           supportedPackageTypes: ['extension'],
           installStatus: 'supported',
           owner: source.owner,
@@ -292,7 +292,7 @@ function defaultExtensionCatalogSource(): ExtensionCatalogSource {
     owner: FIRST_PARTY_REPO.owner,
     repo: FIRST_PARTY_REPO.repo,
     enabled: true,
-    name: 'Neon Pilot Extensions',
+    name: 'Neon Pilot Apps',
   };
 }
 

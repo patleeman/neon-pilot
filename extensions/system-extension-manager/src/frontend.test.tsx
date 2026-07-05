@@ -1215,7 +1215,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByText('Fresh Extension')).toBeTruthy();
   });
 
-  it('renders extension repositories as a settings panel', async () => {
+  it('renders app repositories as a settings panel', async () => {
     const callAction = vi.fn().mockResolvedValue({
       sources: [
         {
@@ -1224,7 +1224,7 @@ describe('ExtensionManagerPage', () => {
           owner: 'patleeman',
           repo: 'neon-pilot-extensions',
           enabled: true,
-          name: 'Neon Pilot Extensions',
+          name: 'Neon Pilot Apps',
         },
       ],
     });
@@ -1234,13 +1234,13 @@ describe('ExtensionManagerPage', () => {
       extensions: { callAction },
     });
 
-    expect(await screen.findByText('Neon Pilot Extensions')).toBeTruthy();
+    expect(await screen.findByText('Neon Pilot Apps')).toBeTruthy();
     expect(screen.getByPlaceholderText('GitHub URL or owner/name')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'readExtensionSources', {});
   });
 
-  it('adds extension repositories from the settings panel', async () => {
+  it('adds app repositories from the settings panel', async () => {
     const readResult = {
       sources: [
         {
@@ -1249,7 +1249,7 @@ describe('ExtensionManagerPage', () => {
           owner: 'patleeman',
           repo: 'neon-pilot-extensions',
           enabled: true,
-          name: 'Neon Pilot Extensions',
+          name: 'Neon Pilot Apps',
         },
       ],
     };

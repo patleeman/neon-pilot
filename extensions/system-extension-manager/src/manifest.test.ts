@@ -51,7 +51,7 @@ describe('system-extension-manager manifest', () => {
     );
   });
 
-  it('command-backs extension manager workflows', () => {
+  it('command-backs App Manager workflows', () => {
     const commands = new Map(manifest.contributes.commands.map((command: { id: string }) => [command.id, command]));
 
     expect(commands.get('open')).toMatchObject({

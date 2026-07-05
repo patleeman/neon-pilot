@@ -225,7 +225,7 @@ describe('registerServerRoutes smoke test', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe('system-extension-manager');
-    expect(body.name).toBe('Extension Manager');
+    expect(body.name).toBe('App Manager');
     expect(body.packageType).toBe('system');
     expect(body.contributes?.views).toBeDefined();
     expect(body.contributes?.nav).toBeDefined();

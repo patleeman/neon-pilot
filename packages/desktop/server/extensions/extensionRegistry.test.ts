@@ -255,8 +255,9 @@ describe('extension registry', () => {
     rmSync(stateRoot, { recursive: true, force: true });
   });
 
-  it('exposes the extension manager as the standalone /extensions route', () => {
+  it('exposes App Manager on the canonical /apps route with a legacy /extensions alias', () => {
     const routes = readExtensionRegistrySnapshot().routes;
+    expect(routes).toContainEqual(expect.objectContaining({ extensionId: 'system-extension-manager', route: '/apps' }));
     expect(routes).toContainEqual(expect.objectContaining({ extensionId: 'system-extension-manager', route: '/extensions' }));
   });
 
@@ -740,7 +741,7 @@ describe('extension registry', () => {
       JSON.stringify({
         schemaVersion: 2,
         id: 'system-extension-manager',
-        name: 'Extension Manager',
+        name: 'App Manager',
         packageType: 'system',
       }),
     );
@@ -876,7 +877,7 @@ describe('extension registry', () => {
               id: 'discord',
               label: 'Discord',
               description: 'Route Discord messages into Neon Pilot.',
-              setupRoute: '/extensions/discord-gateway',
+              setupRoute: '/apps/discord-gateway',
               order: 30,
             },
           ],
@@ -891,7 +892,7 @@ describe('extension registry', () => {
           id: 'discord',
           label: 'Discord',
           configurationLocation: 'extension',
-          setupRoute: '/extensions/discord-gateway',
+          setupRoute: '/apps/discord-gateway',
         }),
       ]),
     );
