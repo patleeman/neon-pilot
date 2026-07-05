@@ -193,7 +193,7 @@ describe('OnboardingBootstrap', () => {
     expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 0 });
   });
 
-  it('points the extension-building step at the Extensions page action', async () => {
+  it('points the app-building step at the Apps page action', async () => {
     const { pa } = createPa({
       ensureResult: {
         state: { status: 'active', stepIndex: 2, updatedAt: '2026-06-25T00:00:00.000Z' },

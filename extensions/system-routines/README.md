@@ -1,6 +1,6 @@
 # Routines
 
-Routines are prompt-based workflow blocks that run before or after user-visible lifecycle events. Extensions and tools call the `runHook` backend action with a hook id and context; this extension loads enabled routines for that hook, runs their instructions, records run history, and returns whether the lifecycle event can continue.
+Routines are prompt-based workflow blocks that run before or after user-visible lifecycle events. Apps and tools call the `runHook` backend action with a hook id and context; this extension loads enabled routines for that hook, runs their instructions, records run history, and returns whether the lifecycle event can continue.
 
 ## Product shape
 

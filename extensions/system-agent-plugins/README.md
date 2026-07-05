@@ -2,7 +2,7 @@
 
 The Agent Plugins extension imports Codex plugins and Claude Code plugins from marketplace-style repositories into Neon Pilot so agents can use their skills, instructions, docs, and MCP servers.
 
-Extensions are Neon Pilot-native app packages. Agent plugins are Neon Pilot's umbrella term for external marketplace packages from the Codex and Claude ecosystems: plugin bundles that may contain skills, instruction files, hooks, MCP declarations, and related docs. This extension owns the import and compatibility workflow so Extension Manager can stay focused on native Neon Pilot extensions.
+App packages are Neon Pilot-native capability bundles. Agent plugins are Neon Pilot's umbrella term for external marketplace packages from the Codex and Claude ecosystems: plugin bundles that may contain skills, instruction files, hooks, MCP declarations, and related docs. This extension owns the import and compatibility workflow so App Manager can stay focused on native Neon Pilot app packages.
 
 Codex uses **plugins** for installable bundles that package skills, app integrations, and MCP servers into reusable workflows for Codex. Claude uses **plugins** and **marketplaces** for Claude Code packages, and also uses **Agent Skills** for modular skill packages. Neon Pilot's importer supports those marketplace/plugin package shapes first, then wraps compatible behavior into Neon Pilot extension and skill surfaces.
 

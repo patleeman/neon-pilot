@@ -271,12 +271,12 @@ const HOOK_POINTS: RoutineHookPoint[] = [
   },
   {
     id: 'extension.install',
-    title: 'Extension install or import',
-    group: 'Extensions',
-    description: 'Security-review extension installs, imports, validation failures, and self-test failures.',
+    title: 'App install or import',
+    group: 'Apps',
+    description: 'Security-review app installs, imports, validation failures, and self-test failures.',
     ownerExtensionId: 'system-extension-manager',
     variables: [
-      { name: 'extensionId', label: 'Extension' },
+      { name: 'extensionId', label: 'App' },
       { name: 'status', label: 'Status' },
     ],
   },
@@ -342,7 +342,7 @@ function normalizeHookPoint(value: unknown): RoutineHookPoint | null {
   return {
     id,
     title,
-    group: stringValue(value.group, 'Extensions').trim() || 'Extensions',
+    group: stringValue(value.group, 'Apps').trim() || 'Apps',
     description: stringValue(value.description, `Routines that run around ${title.toLowerCase()}.`),
     ownerExtensionId: stringValue(value.ownerExtensionId, 'unknown').trim() || 'unknown',
     variables: Array.isArray(value.variables)

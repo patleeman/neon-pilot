@@ -10,13 +10,13 @@ looking at, and keeps the user oriented with a compact overlay.
 
 The tour teaches the core Neon Pilot idea:
 
-- Neon Pilot has a small core: conversations, runtime, routing, and the
-  extension host.
-- Most product capabilities are extensions.
-- Extensions can add pages, workbench views, composer controls, tools,
+- Neon Pilot has a small core: conversations, runtime, routing, and the app
+  host.
+- Most product capabilities are apps.
+- Apps can add pages, workbench views, composer controls, tools,
   commands, settings, automations, model integrations, and agent context.
 - If the user wants a feature, they can ask the agent to build or modify an
-  extension, then iterate until it fits.
+  app package, then iterate until it fits.
 
 ## Flow
 
@@ -24,11 +24,11 @@ On first launch from a landing/new-conversation route, the extension starts a
 lightweight tour:
 
 1. **Settings -> Providers** - connect the model provider Neon Pilot will use.
-2. **Extensions** - explain that the app is built from extensions.
-3. **Extensions** - explain that new capabilities can be built by talking to the
+2. **Apps** - explain that the app is built from apps.
+3. **Apps** - explain that new capabilities can be built by talking to the
    agent.
 4. **New conversation** - show Chat vs folder-based work.
-5. **New conversation** - finish by drafting an extension-building starter
+5. **New conversation** - finish by drafting an app-building starter
    prompt.
 
 Users can skip at any point. Completed and skipped states are persisted in
