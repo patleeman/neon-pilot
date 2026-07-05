@@ -50,27 +50,6 @@ describe('extension package paths', () => {
     }
   });
 
-  it('does not auto-load fork-excluded extensions from bundled extension roots', () => {
-    const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
-    const bundledRoot = join(tempRoot, 'extensions');
-    const installablePackageRoot = writeExtension(bundledRoot, 'system-dynamic-workflows');
-    const bundledPackageRoot = writeExtension(bundledRoot, 'system-settings');
-
-    Object.defineProperty(process, 'resourcesPath', {
-      value: tempRoot,
-      configurable: true,
-    });
-    delete process.env.NEON_PILOT_REPO_ROOT;
-
-    try {
-      const paths = listExtensionPackagePaths();
-      expect(paths).not.toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: installablePackageRoot })]));
-      expect(paths).toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: bundledPackageRoot, source: 'bundled' })]));
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  });
-
   it('loads configured installable extension paths as external user extensions', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const extensionRoot = writeExtension(join(tempRoot, 'installable-extensions'), 'system-local-models');

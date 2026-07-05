@@ -133,37 +133,6 @@ describe('extension catalog', () => {
     );
   });
 
-  it('hides fork-excluded first-party packages from remote and local catalogs', async () => {
-    const repoRoot = mkdtempSync(join(tmpdir(), 'np-fork-excluded-bundles-'));
-    const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
-    mkdirSync(bundleDir, { recursive: true });
-    writeFileSync(join(bundleDir, 'system-dynamic-workflows.neon-extension.zip'), new Uint8Array([1, 2, 3, 4]));
-    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({
-          packages: [
-            {
-              id: 'system-dynamic-workflows',
-              tag: 'v0.11.14',
-              artifact: 'system-dynamic-workflows.neon-extension.zip',
-            },
-          ],
-        }),
-      })),
-    );
-
-    const { installCatalogExtension, listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
-    const catalog = await listInstallableExtensionCatalog();
-
-    expect(catalog.extensions.some((extension) => extension.id === 'system-dynamic-workflows')).toBe(false);
-    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).rejects.toThrow('Unknown installable extension');
-
-    rmSync(repoRoot, { recursive: true, force: true });
-  });
-
   it('keeps locally packaged installable bundles when the release catalog omits them', async () => {
     const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-release-bundles-'));
     const bundleDir = join(repoRoot, 'dist', 'installable-extensions');

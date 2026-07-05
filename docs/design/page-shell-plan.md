@@ -108,7 +108,6 @@ Current implementation work should focus on conformance and verification:
 - Chat: Conversation page. Threads left, Conversation main, Workbench right.
 - Automations: Table page. Blank contextual left, Automations table main. No right sidebar; create/edit/details stay in the main workflow.
 - Gateways: Setup page. Blank contextual left, setup main, docs/activity/test output context rail.
-- Dynamic Workflows: Editor page. Workflow selector left, workflow editor main, no right sidebar yet.
 - Routines: Editor page. Routine selector left, routine editor main, inspector/run history right.
 - Model Arena: Dashboard page. Blank contextual left, arena main, duel/challenger detail right.
 - Diagnostics: Dashboard page. Blank contextual left, diagnostics main, optional metric detail right later.
@@ -120,19 +119,18 @@ Current implementation work should focus on conformance and verification:
 
 This is the working checklist for conforming existing first-party page routes to the accepted shell model and approved page types.
 
-| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar              | Status                                                                |
-| ------------------ | -------------------------- | ------------ | ----------------------------------------- | -------------------------- | --------------------------------------------------------------------- |
-| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench                  | Accepted shell owner                                                  |
-| `/automations`     | `system-automations`       | Table        | Blank                                     | None                       | Conformed shell; main-only table workflow                             |
-| `/gateways`        | `system-gateways`          | Setup        | Blank                                     | `gateway-context-rail`     | Conformed shell; main status summary flattened                        |
-| `/ai-gateway`      | `system-model-gateway`     | Setup        | Blank                                     | None                       | Conformed shell; gateway runtime controls are main-only               |
-| `/model-arena`     | `system-model-arena`       | Dashboard    | Blank                                     | `model-arena-context-rail` | Conformed shell; dashboard visual sweep remains                       |
-| `/routines`        | `system-routines`          | Editor       | `routines-sidebar`                        | `routines-context-rail`    | Conformed                                                             |
-| `/workflows`       | `system-dynamic-workflows` | Editor       | `workflows-sidebar`                       | None                       | Conformed shell; consider a context rail if workflow inspection grows |
-| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                       | Conformed                                                             |
-| `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail`      | Conformed                                                             |
-| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                       | Conformed; details open inside the App Manager window                 |
-| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                       | Conformed shell; settings grammar needs separate sweep                |
+| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar              | Status                                                  |
+| ------------------ | -------------------------- | ------------ | ----------------------------------------- | -------------------------- | ------------------------------------------------------- |
+| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench                  | Accepted shell owner                                    |
+| `/automations`     | `system-automations`       | Table        | Blank                                     | None                       | Conformed shell; main-only table workflow               |
+| `/gateways`        | `system-gateways`          | Setup        | Blank                                     | `gateway-context-rail`     | Conformed shell; main status summary flattened          |
+| `/ai-gateway`      | `system-model-gateway`     | Setup        | Blank                                     | None                       | Conformed shell; gateway runtime controls are main-only |
+| `/model-arena`     | `system-model-arena`       | Dashboard    | Blank                                     | `model-arena-context-rail` | Conformed shell; dashboard visual sweep remains         |
+| `/routines`        | `system-routines`          | Editor       | `routines-sidebar`                        | `routines-context-rail`    | Conformed                                               |
+| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                       | Conformed                                               |
+| `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail`      | Conformed                                               |
+| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                       | Conformed; details open inside the App Manager window   |
+| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                       | Conformed shell; settings grammar needs separate sweep  |
 
 Remaining broad sweeps:
 
@@ -204,7 +202,7 @@ Use these slices to finish conformance against the approved shell and page-type 
    - Normalize host and extension settings under the Settings-page grammar.
 
 5. Editor/dashboard sweep
-   - Keep Routines and Dynamic Workflows as Editor pages with contextual-left navigators.
+   - Keep Routines as an Editor page with contextual-left navigation.
    - Treat Model Arena as Dashboard unless repeated evaluation routes justify a separate Evaluation type later.
    - Keep Diagnostics as Dashboard and avoid page-local second-column reinvention.
 

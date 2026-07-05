@@ -258,18 +258,6 @@ const HOOK_POINTS: RoutineHookPoint[] = [
     ],
   },
   {
-    id: 'workflow.step',
-    title: 'Workflow step',
-    group: 'Workflows',
-    description: 'Review workflow plans, step results, failures, and completion.',
-    ownerExtensionId: 'system-dynamic-workflows',
-    variables: [
-      { name: 'workflowId', label: 'Workflow' },
-      { name: 'step', label: 'Step' },
-      { name: 'status', label: 'Status' },
-    ],
-  },
-  {
     id: 'extension.install',
     title: 'App install or import',
     group: 'Apps',

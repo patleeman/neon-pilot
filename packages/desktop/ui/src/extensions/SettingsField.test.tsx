@@ -18,13 +18,13 @@ const emojiListEntry: UnifiedSettingsEntry = {
 };
 
 const agentToolListEntry: UnifiedSettingsEntry = {
-  extensionId: 'system-dynamic-workflows',
-  key: 'dynamicWorkflows.defaultAgentAllowedTools',
+  extensionId: 'test-settings-agent-tools',
+  key: 'agentTools.defaultAllowedTools',
   type: 'string',
   control: 'agent-tool-list',
   default: 'bash,read,edit,write',
-  description: 'Default tool names for workflow subagents.',
-  group: 'Dynamic Workflows',
+  description: 'Default tool names for delegated agents.',
+  group: 'Agent Tools',
   placeholder: 'Custom tool name',
   order: 20,
 };
@@ -127,12 +127,12 @@ describe('SettingsField', () => {
     const { getByLabelText } = render(<SettingsField entry={agentToolListEntry} value="bash,read,custom_tool" onChange={onChange} />);
 
     fireEvent.click(getByLabelText('edit'));
-    expect(onChange).toHaveBeenLastCalledWith('dynamicWorkflows.defaultAgentAllowedTools', 'bash,read,edit,custom_tool');
+    expect(onChange).toHaveBeenLastCalledWith('agentTools.defaultAllowedTools', 'bash,read,edit,custom_tool');
 
     fireEvent.change(getByLabelText('Additional agent tool 1'), { target: { value: 'browser_snapshot' } });
-    expect(onChange).toHaveBeenLastCalledWith('dynamicWorkflows.defaultAgentAllowedTools', 'bash,read,browser_snapshot');
+    expect(onChange).toHaveBeenLastCalledWith('agentTools.defaultAllowedTools', 'bash,read,browser_snapshot');
 
     fireEvent.click(getByLabelText('Remove additional agent tool 1'));
-    expect(onChange).toHaveBeenLastCalledWith('dynamicWorkflows.defaultAgentAllowedTools', 'bash,read');
+    expect(onChange).toHaveBeenLastCalledWith('agentTools.defaultAllowedTools', 'bash,read');
   });
 });

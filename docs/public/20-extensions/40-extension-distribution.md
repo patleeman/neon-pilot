@@ -60,7 +60,6 @@ Current first-party optional packages:
 | Browser           | Workbench browser views and browser automation tools                  |
 | DS4               | DeepSeek V4 Flash local model profile and DS4-shaped tools            |
 | DuckDuckGo Search | DuckDuckGo-backed agent web search                                    |
-| Dynamic Workflows | model-authored JavaScript workflow coordinators and subagent fan-out  |
 | Exa Search        | Exa-backed agent web search with extension-managed secrets            |
 | Knowledge         | knowledge base file browsing, editing, references, and sync           |
 | Suggested Context | related conversation suggestions for new prompts                      |

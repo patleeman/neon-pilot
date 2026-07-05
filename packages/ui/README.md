@@ -142,8 +142,8 @@ These production areas already use the shared package and are useful examples fo
 - Extension page shell and states: `system-telemetry`, `system-skills`, `system-extension-manager`
 - Forms and settings: `system-automations`, `system-knowledge`, desktop `SettingsField`, workbench browser comment forms
 - Search and filters: `system-extension-manager`, `system-automations`
-- Menus and tabs: `system-extension-manager`, `system-dynamic-workflows`, `system-prompt-assembly`, `system-model-picker`
-- Data display: telemetry trace views, dynamic workflows, prompt assembly, artifacts, diffs
+- Menus and tabs: `system-extension-manager`, `system-prompt-assembly`, `system-model-picker`
+- Data display: telemetry trace views, prompt assembly, artifacts, diffs
 - Workbench and rail chrome: artifact preview panes and checkpoint diff rails
 - Workbench tabs: desktop workbench browser, artifact, file, and chat tab strip
 - Shelf chrome: queued prompts, background work, automations, deferred attention, and extension browser tab rails

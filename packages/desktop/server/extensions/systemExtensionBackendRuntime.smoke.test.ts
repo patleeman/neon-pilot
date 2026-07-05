@@ -540,28 +540,6 @@ const smokes = {
     const result = await module.checkpoint({ action: 'list' }, ctx);
     assert(result.action === 'list', 'checkpoint list did not return list action');
   },
-  async 'system-dynamic-workflows'() {
-    const result = await module.workflow(
-      {
-        name: 'Smoke workflow',
-        args: { subject: 'runtime' },
-        waitForCompletion: true,
-        script:
-          "await workflow.phase('verify');\n" +
-          "workflow.log('running ' + args.subject);\n" +
-          "return workflow.finish('done:' + args.subject);",
-      },
-      ctx,
-    );
-    assert(result?.details?.status === 'completed', 'dynamic workflow did not complete: ' + JSON.stringify(result?.details));
-    assert(result?.content?.[0]?.text?.includes('done:runtime'), 'dynamic workflow result missing');
-    const list = await module.listWorkflows({}, ctx);
-    assert(Array.isArray(list.workflows) && list.workflows.length === 1, 'dynamic workflows list failed');
-    const detail = await module.getWorkflow({ workflowId: result.details.workflowId }, ctx);
-    assert(detail.workflow?.resultText === 'done:runtime', 'dynamic workflow detail missing final result');
-    assert(detail.events.some((event) => event.type === 'log'), 'dynamic workflow log event missing');
-    await expectReject(() => module.workflow({ name: 'Smoke' }, ctx), /script is required/i);
-  },
   async 'system-extension-manager'() {
     const result = await module.listHostViewComponents({}, ctx);
     assert(result.ok === true && Array.isArray(result.hostViewComponents), 'host component list failed');
@@ -827,12 +805,6 @@ describe('system extension backend runtime smoke tests', () => {
       systemBackends.map((backend) => backend.id).filter((id) => !smokeIds.has(id)),
       'Missing system extension backend runtime smoke cases',
     ).toEqual([]);
-  });
-
-  it('does not pre-install fork-excluded extensions', () => {
-    const summary = listExtensionInstallSummaries().find((item) => item.id === 'system-dynamic-workflows');
-
-    expect(summary, 'system-dynamic-workflows is fork-excluded and should not be pre-installed').toBeUndefined();
   });
 
   it('imports each prebuilt backend and exercises one safe runtime path', () => {

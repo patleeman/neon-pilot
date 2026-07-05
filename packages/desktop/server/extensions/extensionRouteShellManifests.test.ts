@@ -52,7 +52,6 @@ describe('first-party extension route shell manifests', () => {
       ['system-gateways', '/gateways', 'setup'],
       ['system-model-arena', '/model-arena', 'dashboard'],
       ['system-routines', '/routines', 'editor'],
-      ['system-dynamic-workflows', '/workflows', 'editor'],
       ['system-telemetry', '/telemetry', 'dashboard'],
       ['system-skills', '/skills', 'table'],
       ['system-extension-manager', '/apps', 'table'],
@@ -107,7 +106,6 @@ describe('first-party extension route shell manifests', () => {
       'system-gateways',
       'system-model-arena',
       'system-routines',
-      'system-dynamic-workflows',
       'system-telemetry',
       'system-skills',
       'system-extension-manager',
@@ -128,7 +126,6 @@ describe('first-party extension route shell manifests', () => {
   it('keeps routes with contextual navigation bound to sidebar views', () => {
     const routes = [
       ['system-routines', '/routines', 'routines-sidebar'],
-      ['system-dynamic-workflows', '/workflows', 'workflows-sidebar'],
       ['system-settings', '/settings', 'settings-sidebar'],
     ] as const;
 
@@ -146,7 +143,6 @@ describe('first-party extension route shell manifests', () => {
       'system-gateways',
       'system-model-arena',
       'system-routines',
-      'system-dynamic-workflows',
       'system-telemetry',
       'system-skills',
       'system-extension-manager',
@@ -187,7 +183,6 @@ describe('first-party extension route shell manifests', () => {
       'system-gateways',
       'system-model-arena',
       'system-routines',
-      'system-dynamic-workflows',
       'system-telemetry',
       'system-skills',
       'system-extension-manager',

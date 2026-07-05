@@ -20,7 +20,7 @@ Approved shell rules:
 | ------------ | ----------------------------------------- | --------------------------------- | ----------------------------- | ------------------------------- |
 | Conversation | Transcript-first agent work               | Threads or conversation navigator | Workbench/context rail        | Chat                            |
 | Table        | Durable object management                 | Blank                             | Selected-item details         | Automations, Skills, Extensions |
-| Editor       | Structured object editing                 | Optional object/step navigator    | Inspector/history/preview     | Routines, Dynamic Workflows     |
+| Editor       | Structured object editing                 | Optional object/step navigator    | Inspector/history/preview     | Routines                        |
 | Settings     | Preferences and configuration             | Optional settings navigation      | Help/details only when useful | Settings, extension settings    |
 | Dashboard    | Metrics, diagnostics, status              | Blank                             | Metric/log/detail context     | Diagnostics, Model Arena        |
 | Setup        | Credential, provider, install, onboarding | Optional selector                 | Docs/activity/test output     | Gateways, Setup Readiness       |
@@ -36,7 +36,6 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 | `/gateways`        | Setup        | Blank              | Gateway context | Provider onboarding, readiness, docs, activity, and test output use Setup grammar.                      |
 | `/model-arena`     | Dashboard    | Blank              | Arena context   | Monitors challenger state, eligibility, settings, and history.                                          |
 | `/routines`        | Editor       | Routine navigator  | Routine context | Structured routine editing with optional inspector/history context.                                     |
-| `/workflows`       | Editor       | Workflow navigator | None            | Add a context rail only when workflow inspection grows.                                                 |
 | `/telemetry`       | Dashboard    | Blank              | None            | Metrics/status view.                                                                                    |
 | `/ai-gateway`      | Setup        | Blank              | None            | Gateway runtime controls are main-only in the windowed shell.                                           |
 | `/skills`          | Table        | Blank              | Skill detail    | Selected skill details belong in the right sidebar.                                                     |
@@ -47,18 +46,17 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 
 Every first-party extension route with a `main` view must declare one approved page type on its nav item.
 
-| Extension                  | Route          | Page type   | Contextual left     | Right sidebar              |
-| -------------------------- | -------------- | ----------- | ------------------- | -------------------------- |
-| `system-automations`       | `/automations` | `table`     | None                | None                       |
-| `system-dynamic-workflows` | `/workflows`   | `editor`    | `workflows-sidebar` | None                       |
-| `system-extension-manager` | `/extensions`  | `table`     | None                | None                       |
-| `system-gateways`          | `/gateways`    | `setup`     | None                | `gateway-context-rail`     |
-| `system-model-arena`       | `/model-arena` | `dashboard` | None                | `model-arena-context-rail` |
-| `system-model-gateway`     | `/ai-gateway`  | `setup`     | None                | None                       |
-| `system-routines`          | `/routines`    | `editor`    | `routines-sidebar`  | `routines-context-rail`    |
-| `system-settings`          | `/settings`    | `settings`  | `settings-sidebar`  | None                       |
-| `system-skills`            | `/skills`      | `table`     | None                | `skills-context-rail`      |
-| `system-telemetry`         | `/telemetry`   | `dashboard` | None                | None                       |
+| Extension                  | Route          | Page type   | Contextual left    | Right sidebar              |
+| -------------------------- | -------------- | ----------- | ------------------ | -------------------------- |
+| `system-automations`       | `/automations` | `table`     | None               | None                       |
+| `system-extension-manager` | `/extensions`  | `table`     | None               | None                       |
+| `system-gateways`          | `/gateways`    | `setup`     | None               | `gateway-context-rail`     |
+| `system-model-arena`       | `/model-arena` | `dashboard` | None               | `model-arena-context-rail` |
+| `system-model-gateway`     | `/ai-gateway`  | `setup`     | None               | None                       |
+| `system-routines`          | `/routines`    | `editor`    | `routines-sidebar` | `routines-context-rail`    |
+| `system-settings`          | `/settings`    | `settings`  | `settings-sidebar` | None                       |
+| `system-skills`            | `/skills`      | `table`     | None               | `skills-context-rail`      |
+| `system-telemetry`         | `/telemetry`   | `dashboard` | None               | None                       |
 
 The manifest shape keeps side-region fields off `main` views. Side-region metadata belongs only on `sidebar` and `rightRail` views; the nav item binds those views to a route with `sidebarView` and `rightSidebarView`.
 
