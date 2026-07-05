@@ -43,7 +43,7 @@ const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_
   'ai-gateway': '/ai-gateway',
   'model-arena': '/model-arena',
   routines: '/routines',
-  extensions: '/extensions',
+  'app-manager': '/extensions',
   skills: '/skills',
   diagnostics: '/telemetry',
   settings: '/settings',
@@ -59,7 +59,7 @@ const CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS: Readonly<Partial<Record<(typeof C
   'ai-gateway': 'system-model-gateway',
   'model-arena': 'system-model-arena',
   routines: 'system-routines',
-  extensions: 'system-extension-manager',
+  'app-manager': 'system-extension-manager',
   skills: 'system-skills',
   diagnostics: 'system-telemetry',
 };

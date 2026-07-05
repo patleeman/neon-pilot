@@ -57,7 +57,7 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways', aliases: ['models', 'routing', 'providers'] },
   { id: 'model-arena', title: 'Model Arena', accent: 'model-arena', aliases: ['arena', 'duels', 'model comparison'] },
   { id: 'routines', title: 'Routines', accent: 'routines', aliases: ['hooks', 'agent hooks', 'before agent start'] },
-  { id: 'extensions', title: 'App Manager', accent: 'apps', aliases: ['extensions', 'extension manager', 'apps', 'plugins'] },
+  { id: 'app-manager', title: 'App Manager', accent: 'apps', aliases: ['extensions', 'extension manager', 'apps', 'plugins'] },
   { id: 'skills', title: 'Skills', accent: 'skills', aliases: ['skill manager', 'agent skills'] },
   { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics', aliases: ['logs', 'telemetry', 'health'] },
   { id: 'settings', title: 'Settings', accent: 'settings', aliases: ['preferences', 'providers', 'desktop', 'shortcuts'] },

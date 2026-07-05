@@ -116,7 +116,7 @@ describe('windowed app registry', () => {
 
     expect(apps.map((app) => app.title)).toEqual(['Chat', 'App Manager', 'Settings']);
     expect(apps.find((app) => app.route === '/extensions')).toMatchObject({
-      id: 'extensions',
+      id: 'app-manager',
       title: 'App Manager',
       accent: 'apps',
     });

@@ -89,6 +89,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 validation: focused Settings route/model/manifest tests, desktop Settings render tests, setup-readiness tests, Windowed OS design tests, `pnpm run extension:build -- extensions/system-settings`, and `pnpm --dir packages/desktop run build:ui` passed for the app-facing Settings route cleanup.
    - 2026-07-05 progress: the Windowed OS design-system accent for App Manager is now `apps` instead of `extensions` (`AppAccent`, `data-accent`, and `--wos-apps` tokens), while `/extensions` and `extension manager` remain only as route/search compatibility affordances.
    - 2026-07-05 validation: focused windowed design-system, interaction, app-registry, and WindowedLayout tests passed, and `pnpm --dir packages/windowed-os-ui run build` passed for the app-facing accent rename.
+   - 2026-07-05 progress: App Manager's canonical Windowed OS app id is now `app-manager`; the `/extensions` route and `extension manager` search alias remain compatibility affordances, but taskbar/start-menu/window identity now uses app-facing metadata.
+   - 2026-07-05 validation: focused app-registry, WindowedLayout, and windowed design-system tests plus `pnpm --dir packages/windowed-os-ui run build` passed for the `app-manager` canonical id rename.
 
 ### Next concrete implementation backlog
 
