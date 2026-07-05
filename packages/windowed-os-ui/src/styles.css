@@ -2499,25 +2499,46 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .wos-window-route-body .bg-base,
 .wos-window-route-body .bg-panel,
 .wos-window-route-body .bg-surface,
-.wos-window-route-body .bg-elevated {
+.wos-window-route-body .bg-elevated,
+.wos-window-route-body [class*='bg-base/'],
+.wos-window-route-body [class*='bg-panel/'],
+.wos-window-route-body [class*='bg-surface/'],
+.wos-window-route-body [class*='bg-elevated/'] {
   background: var(--wos-surface-1) !important;
   color: var(--wos-ink-900) !important;
 }
 
 .wos-window-route-body .bg-panel,
-.wos-window-route-body .bg-elevated {
+.wos-window-route-body .bg-elevated,
+.wos-window-route-body [class*='bg-panel/'],
+.wos-window-route-body [class*='bg-elevated/'] {
   background: var(--wos-surface-2) !important;
 }
 
-.wos-window-route-body .text-primary {
+.wos-window-route-body .text-primary,
+.wos-window-route-body [class*='text-primary/'],
+.wos-window-route-body .text-foreground,
+.wos-window-route-body [class*='text-foreground/'],
+.wos-window-route-body .text-black,
+.wos-window-route-body [class*='text-black/'] {
   color: var(--wos-ink-900) !important;
 }
 
-.wos-window-route-body .text-secondary {
+.wos-window-route-body .text-secondary,
+.wos-window-route-body [class*='text-secondary/'],
+.wos-window-route-body .text-muted,
+.wos-window-route-body [class*='text-muted/'],
+.wos-window-route-body .text-muted-foreground,
+.wos-window-route-body [class*='text-muted-foreground/'] {
   color: var(--wos-ink-700) !important;
 }
 
-.wos-window-route-body .text-dim {
+.wos-window-route-body .text-dim,
+.wos-window-route-body [class*='text-dim/'],
+.wos-window-route-body .text-tertiary,
+.wos-window-route-body [class*='text-tertiary/'],
+.wos-window-route-body .text-subtle,
+.wos-window-route-body [class*='text-subtle/'] {
   color: var(--wos-ink-500) !important;
 }
 

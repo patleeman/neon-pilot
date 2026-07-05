@@ -1545,7 +1545,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border-radius: 6px;\n  background: color-mix(in srgb, var(--wos-chat) 8%, var(--wos-surface-1));');
     expect(stylesSource).toContain('.wos-window-route-body .bg-base');
     expect(stylesSource).toContain('background: var(--wos-surface-1) !important;');
+    expect(stylesSource).toContain(".wos-window-route-body [class*='bg-surface/']");
     expect(stylesSource).toContain('.wos-window-route-body .text-primary');
+    expect(stylesSource).toContain(".wos-window-route-body [class*='text-primary/']");
+    expect(stylesSource).toContain('.wos-window-route-body .text-foreground');
+    expect(stylesSource).toContain('.wos-window-route-body .text-black');
+    expect(stylesSource).toContain(".wos-window-route-body [class*='text-secondary/']");
+    expect(stylesSource).toContain('.wos-window-route-body .text-muted');
+    expect(stylesSource).toContain('.wos-window-route-body .text-muted-foreground');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-input-controls__control-row');
     expect(stylesSource).toContain('flex-wrap: nowrap;');
