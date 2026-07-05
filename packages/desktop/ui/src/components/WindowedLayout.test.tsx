@@ -2912,6 +2912,88 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('region', { name: 'Workspace' })).toBeNull();
   });
 
+  it('retargets chat child windows when a draft chat navigates into a saved conversation', async () => {
+    mocks.tabs = [{ id: 'session-2', title: 'Saved planning thread', messageCount: 1 }];
+    mocks.surfaces = [
+      {
+        extensionId: 'system-terminal',
+        id: 'terminal-panel',
+        title: 'Terminal',
+        location: 'rightRail',
+        component: 'TerminalPanel',
+        toolSlot: 'terminal',
+      },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /terminal window/i }));
+    expect(screen.getByRole('region', { name: 'Terminal' }).getAttribute('data-window-id')).toBe('chat:draft:terminal');
+
+    fireEvent.click(screen.getByRole('button', { name: /navigate inside window/i }));
+
+    const terminalWindow = screen.getByRole('region', { name: 'Terminal' });
+    expect(screen.queryByRole('region', { name: /new conversation/i })).toBeNull();
+    expect(screen.getByRole('region', { name: /saved planning thread/i })).toBeTruthy();
+    expect(terminalWindow.getAttribute('data-window-id')).toBe('chat:session-2:terminal');
+    expect(terminalWindow.getAttribute('data-parent-window-id')).toBe('chat:session-2');
+    expect(terminalWindow.getAttribute('data-parent-window-title')).toBe('Saved planning thread');
+    expect(terminalWindow.querySelector('[data-windowed-subwindow="terminal"]')?.getAttribute('data-parent-window-id')).toBe(
+      'chat:session-2',
+    );
+    expect(screen.getByTestId('native-extension-surface').getAttribute('data-instance-id')).toBe('chat:session-2:terminal');
+  });
+
+  it('keeps independently minimized child windows minimized when a parent chat restores', async () => {
+    mocks.surfaces = [
+      {
+        extensionId: 'system-terminal',
+        id: 'terminal-panel',
+        title: 'Terminal',
+        location: 'rightRail',
+        component: 'TerminalPanel',
+        toolSlot: 'terminal',
+      },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /terminal window/i }));
+    const taskbar = screen.getByRole('navigation', { name: /open windows/i });
+    const terminalTaskbarButton = within(taskbar).getByRole('button', { name: /^terminal$/i });
+    fireEvent.click(terminalTaskbarButton);
+    expect(terminalTaskbarButton.getAttribute('data-minimized')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: /minimize new conversation/i }));
+    fireEvent.click(screen.getByRole('button', { name: /new conversation/i }));
+
+    expect(container.querySelector('[data-window-id="chat:draft"]')?.getAttribute('data-minimized')).toBeNull();
+    expect(container.querySelector('[data-window-id="chat:draft:terminal"]')?.getAttribute('data-minimized')).toBe('true');
+    expect(terminalTaskbarButton.getAttribute('data-minimized')).toBe('true');
+  });
+
   it('opens a browser child window from chat and attaches it to the parent lifecycle', async () => {
     mocks.surfaces = [
       {
@@ -3024,6 +3106,48 @@ describe('WindowedLayout route windows', () => {
 
     expect(screen.queryByRole('region', { name: 'Browser' })).toBeNull();
     expect(container.querySelector('[data-window-id="chat:draft:browser"] .ui-error-state')).toBeNull();
+  });
+
+  it('restores persisted child windows whose parent chat still exists', async () => {
+    mocks.surfaces = [
+      {
+        extensionId: 'system-browser',
+        id: 'browser-workbench',
+        title: 'Browser',
+        location: 'workbench',
+        component: 'BrowserWorkbenchPanel',
+      },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'chat:draft:browser',
+        kind: 'browser',
+        title: 'Browser',
+        route: '/conversations/new',
+        bounds: { x: 96, y: 92, width: 760, height: 460 },
+        minimized: false,
+        focused: true,
+        parentWindowId: 'chat:draft',
+        parentWindowTitle: 'New conversation',
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const browserWindow = screen.getByRole('region', { name: 'Browser' });
+    expect(browserWindow.getAttribute('data-window-id')).toBe('chat:draft:browser');
+    expect(browserWindow.getAttribute('data-parent-window-id')).toBe('chat:draft');
+    expect(browserWindow.querySelector('[data-windowed-subwindow="browser"]')).toBeTruthy();
+    expect(screen.getByTestId('native-extension-surface').getAttribute('data-instance-id')).toBe('chat:draft:browser');
   });
 
   it('toggles a focused route window from the taskbar between minimized and restored', async () => {

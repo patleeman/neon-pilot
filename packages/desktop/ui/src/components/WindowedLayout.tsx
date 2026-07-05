@@ -91,6 +91,7 @@ interface DesktopWindowModel {
   workspaceCwd?: string | null;
   parentWindowId?: string;
   parentWindowTitle?: string;
+  parentMinimized?: boolean;
 }
 
 interface LauncherItem {
@@ -226,7 +227,11 @@ function readStoredWindows(): DesktopWindowModel[] {
       const record = item as Partial<DesktopWindowModel>;
       if (
         typeof record.id !== 'string' ||
-        (record.kind !== 'chat' && record.kind !== 'route') ||
+        (record.kind !== 'chat' &&
+          record.kind !== 'route' &&
+          record.kind !== 'terminal' &&
+          record.kind !== 'browser' &&
+          record.kind !== 'files') ||
         typeof record.title !== 'string' ||
         typeof record.route !== 'string' ||
         !record.bounds ||
@@ -252,6 +257,7 @@ function readStoredWindows(): DesktopWindowModel[] {
           workspaceCwd: typeof record.workspaceCwd === 'string' ? record.workspaceCwd : null,
           parentWindowId: typeof record.parentWindowId === 'string' ? record.parentWindowId : undefined,
           parentWindowTitle: typeof record.parentWindowTitle === 'string' ? record.parentWindowTitle : undefined,
+          parentMinimized: record.parentMinimized === true,
         },
       ];
     });
@@ -264,7 +270,14 @@ function writeStoredWindows(windows: DesktopWindowModel[]): void {
   try {
     window.localStorage.setItem(
       WINDOW_STATE_STORAGE_KEY,
-      JSON.stringify(windows.filter((windowModel) => windowModel.kind === 'chat' || windowModel.kind === 'route')),
+      JSON.stringify(
+        windows.filter(
+          (windowModel) =>
+            windowModel.kind === 'chat' ||
+            windowModel.kind === 'route' ||
+            (isChildWindowKind(windowModel.kind) && typeof windowModel.parentWindowId === 'string'),
+        ),
+      ),
     );
   } catch {
     // Ignore storage failures; the in-memory desktop still works.
@@ -291,19 +304,38 @@ function isChildWindowForParent(windowModel: DesktopWindowModel, parentWindowId:
 function restoreChildWindowsForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
   const children = windows
     .filter((windowModel) => isChildWindowForParent(windowModel, parentWindowId))
-    .map((windowModel) => ({ ...windowModel, minimized: false, focused: false }));
+    .map((windowModel) => ({
+      ...windowModel,
+      minimized: windowModel.parentMinimized ? false : windowModel.minimized,
+      focused: false,
+      parentMinimized: false,
+    }));
   if (children.length === 0) return windows;
   return [...windows.filter((windowModel) => !isChildWindowForParent(windowModel, parentWindowId)), ...children];
 }
 
 function minimizeChildWindowsForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
   return windows.map((windowModel) =>
-    isChildWindowForParent(windowModel, parentWindowId) ? { ...windowModel, minimized: true, focused: false } : windowModel,
+    isChildWindowForParent(windowModel, parentWindowId)
+      ? { ...windowModel, minimized: true, focused: false, parentMinimized: !windowModel.minimized }
+      : windowModel,
   );
 }
 
 function removeChildWindowsForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
   return windows.filter((windowModel) => !isChildWindowForParent(windowModel, parentWindowId));
+}
+
+function retargetChildWindowForParent(windowModel: DesktopWindowModel, nextParent: DesktopWindowModel): DesktopWindowModel {
+  const childKind = windowModel.kind;
+  return {
+    ...windowModel,
+    id: `${nextParent.id}:${childKind}`,
+    route: nextParent.route,
+    workspaceCwd: nextParent.workspaceCwd ?? null,
+    parentWindowId: nextParent.id,
+    parentWindowTitle: nextParent.title,
+  };
 }
 
 function normalizeTitle(title: string): string {
@@ -767,6 +799,8 @@ function retargetChatWindowIn(
   return windows.flatMap((windowModel) => {
     if (windowModel.id === windowId) return [nextWindow];
     if (windowModel.id === nextId) return [];
+    if (isChildWindowForParent(windowModel, nextId)) return [];
+    if (isChildWindowForParent(windowModel, windowId)) return [retargetChildWindowForParent(windowModel, nextWindow)];
     return [windowModel];
   });
 }
@@ -776,6 +810,32 @@ function reconcileChatWindows(windows: DesktopWindowModel[], chatSessions: Sessi
   let changed = false;
 
   const next = windows.flatMap((windowModel): DesktopWindowModel[] => {
+    if (isChildWindowKind(windowModel.kind)) {
+      const parent = windowModel.parentWindowId ? windows.find((candidate) => candidate.id === windowModel.parentWindowId) : null;
+      if (!parent || parent.kind !== 'chat') {
+        changed = true;
+        return [];
+      }
+      const route = parent.route;
+      const workspaceCwd = parent.workspaceCwd ?? null;
+      const parentWindowTitle = parent.title;
+      const reconciledWindow =
+        windowModel.route === route &&
+        windowModel.workspaceCwd === workspaceCwd &&
+        windowModel.parentWindowTitle === parentWindowTitle &&
+        windowModel.id === `${parent.id}:${windowModel.kind}`
+          ? windowModel
+          : {
+              ...windowModel,
+              id: `${parent.id}:${windowModel.kind}`,
+              route,
+              workspaceCwd,
+              parentWindowTitle,
+            };
+      changed ||= reconciledWindow !== windowModel;
+      return [reconciledWindow];
+    }
+
     if (windowModel.kind !== 'chat' || !windowModel.id.startsWith('chat:')) {
       return [windowModel];
     }
