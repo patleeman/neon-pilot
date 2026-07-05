@@ -34,6 +34,7 @@ import type {
   GatewayProviderId,
   GatewayState,
   GatewayStatus,
+  GlobalActivityResult,
   InjectedPromptMessage,
   InstructionFilesState,
   LiveSessionCreateResult,
@@ -1403,6 +1404,17 @@ export const api = {
     put<SecretsState>(`/secrets/${encodeURIComponent(extensionId)}/${encodeURIComponent(secretId)}`, { value }),
   deleteSecret: async (extensionId: string, secretId: string) =>
     del<SecretsState>(`/secrets/${encodeURIComponent(extensionId)}/${encodeURIComponent(secretId)}`),
+
+  // ── Global activity ─────────────────────────────────────────────────────
+
+  activity: async (options?: { limit?: number; kind?: 'conversation' | 'execution' | 'all'; active?: boolean }) => {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.kind) params.set('kind', options.kind);
+    if (options?.active !== undefined) params.set('active', String(options.active));
+    const qs = params.toString();
+    return get<GlobalActivityResult>(`/api/activity${qs ? `?${qs}` : ''}`);
+  },
 
   // ── Setup readiness ─────────────────────────────────────────────
 

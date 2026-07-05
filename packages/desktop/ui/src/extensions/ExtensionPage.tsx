@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 import { addNotification } from '../components/notifications/notificationStore';
 import { ButtonLink, CenteredMessage, ErrorState, QuietLoadingState } from '../components/ui';
+import { ActivityPage } from '../pages/ActivityPage';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
@@ -30,14 +31,9 @@ const CORE_WINDOWED_PLACEHOLDER_PAGES = new Map<
       body: 'Worker results, persona messages, and questions will arrive here after Inbox is wired to the documents store.',
     },
   ],
-  [
-    '/activity',
-    {
-      title: 'Activity pending',
-      body: 'Worker runs, background tasks, and app activity will appear here after the Activity runtime is wired.',
-    },
-  ],
 ]);
+
+const CORE_WINDOWED_FEATURE_PAGES = new Map<string, () => JSX.Element>([['/activity', () => <ActivityPage />]]);
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
   {
     id: 'extensions-page',
@@ -122,12 +118,30 @@ export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresent
   }, [location.pathname, registry.extensions, registry.surfaces]);
   const staleExtensionRoute = STALE_EXTENSION_ROUTES.has(location.pathname);
   const placeholderPage = CORE_WINDOWED_PLACEHOLDER_PAGES.get(location.pathname);
+  const featurePage = CORE_WINDOWED_FEATURE_PAGES.get(location.pathname);
 
   useEffect(() => {
     if (registry.error) {
       addNotification({ type: 'error', message: `Extension registry error: ${registry.error}`, source: 'core' });
     }
   }, [registry.error]);
+
+  if (nativeSurface) {
+    return (
+      <NativeExtensionSurfaceHost
+        key={extensionSurfaceRouteKey(nativeSurface, location.pathname, location.search, location.hash)}
+        surface={nativeSurface}
+        pathname={location.pathname}
+        search={location.search}
+        hash={location.hash}
+        shellPresentation={shellPresentation}
+      />
+    );
+  }
+
+  if (featurePage) {
+    return featurePage();
+  }
 
   if (registry.loading && !nativeSurface) {
     return <ExtensionPageLoading shellPresentation={shellPresentation} />;
@@ -142,19 +156,6 @@ export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresent
       );
     }
     return <ErrorState message={`Apps unavailable: ${registry.error}`} />;
-  }
-
-  if (nativeSurface) {
-    return (
-      <NativeExtensionSurfaceHost
-        key={extensionSurfaceRouteKey(nativeSurface, location.pathname, location.search, location.hash)}
-        surface={nativeSurface}
-        pathname={location.pathname}
-        search={location.search}
-        hash={location.hash}
-        shellPresentation={shellPresentation}
-      />
-    );
   }
 
   if (placeholderPage) {

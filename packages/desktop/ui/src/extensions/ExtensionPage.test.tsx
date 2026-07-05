@@ -6,11 +6,27 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { addNotification } from '../components/notifications/notificationStore';
+import { useApi } from '../hooks/useApi';
 import { ExtensionPage } from './ExtensionPage';
 import { useExtensionRegistry } from './useExtensionRegistry';
 
 vi.mock('../components/notifications/notificationStore', () => ({
   addNotification: vi.fn(),
+}));
+
+vi.mock('../hooks/useApi', () => ({
+  useApi: vi.fn(() => ({
+    data: null,
+    loading: true,
+    refreshing: false,
+    error: null,
+    refetch: vi.fn(),
+    replaceData: vi.fn(),
+  })),
+}));
+
+vi.mock('../hooks/useInvalidateOnTopics', () => ({
+  useInvalidateOnTopics: vi.fn(),
 }));
 
 vi.mock('./NativeExtensionSurfaceHost', () => ({
@@ -53,6 +69,15 @@ describe('ExtensionPage', () => {
       routes: [],
       surfaces: [],
     } as never);
+    vi.mocked(useApi).mockReset();
+    vi.mocked(useApi).mockReturnValue({
+      data: null,
+      loading: true,
+      refreshing: false,
+      error: null,
+      refetch: vi.fn(),
+      replaceData: vi.fn(),
+    });
   });
 
   it('falls back to the bundled extension manager page when the registry route is missing', () => {
@@ -226,16 +251,76 @@ describe('ExtensionPage', () => {
     ).toBeTruthy();
 
     cleanup();
+    vi.mocked(useApi).mockReturnValue({
+      data: { items: [], total: 0 },
+      loading: false,
+      refreshing: false,
+      error: null,
+      refetch: vi.fn(),
+      replaceData: vi.fn(),
+    });
     render(
       <MemoryRouter initialEntries={['/activity']}>
         <ExtensionPage shellPresentation="windowed" />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('status', { name: 'Activity pending' })).toBeTruthy();
-    expect(
-      screen.getByText('Worker runs, background tasks, and app activity will appear here after the Activity runtime is wired.'),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Activity' })).toBeTruthy();
+    expect(screen.getByText('No activity yet')).toBeTruthy();
+  });
+
+  it('renders core feature pages while the extension registry is loading', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: true,
+      error: null,
+      extensions: [],
+      routes: [],
+      surfaces: [],
+    } as never);
+    vi.mocked(useApi).mockReturnValue({
+      data: { items: [], total: 0 },
+      loading: false,
+      refreshing: false,
+      error: null,
+      refetch: vi.fn(),
+      replaceData: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/activity']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Activity' })).toBeTruthy();
+    expect(screen.queryByRole('status', { name: 'Loading app page' })).toBeNull();
+  });
+
+  it('renders core feature pages when the extension registry errors', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: 'registry unavailable',
+      extensions: [],
+      routes: [],
+      surfaces: [],
+    } as never);
+    vi.mocked(useApi).mockReturnValue({
+      data: { items: [], total: 0 },
+      loading: false,
+      refreshing: false,
+      error: null,
+      refetch: vi.fn(),
+      replaceData: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/activity']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Activity' })).toBeTruthy();
+    expect(screen.queryByRole('status', { name: 'Apps unavailable' })).toBeNull();
   });
 
   it('renders the most specific extension route when parent and child routes both match', () => {
@@ -357,6 +442,8 @@ describe('ExtensionPage', () => {
   });
 
   it('shows a calm recovery state for unknown extension routes without warning toasts', () => {
+    vi.mocked(addNotification).mockClear();
+
     render(
       <MemoryRouter initialEntries={['/missing-extension-route']}>
         <ExtensionPage />

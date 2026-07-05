@@ -592,6 +592,26 @@ export interface ExecutionDetailResult {
   execution: ExecutionRecord;
 }
 
+export type GlobalActivityKind = 'conversation' | 'execution';
+export type GlobalActivityStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'unknown';
+
+export interface GlobalActivityItem {
+  id: string;
+  kind: GlobalActivityKind;
+  title: string;
+  subtitle?: string;
+  status: GlobalActivityStatus;
+  conversationId?: string;
+  conversationTitle?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface GlobalActivityResult {
+  items: GlobalActivityItem[];
+  total: number;
+}
+
 interface LogTail {
   path?: string;
   lines: string[];
