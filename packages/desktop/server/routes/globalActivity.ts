@@ -1,6 +1,7 @@
 import type { Express, Response } from 'express';
 
 import { listConversationSessionsSnapshot } from '../conversations/conversationService.js';
+import type { ExecutionKind, ExecutionVisibility } from '../executions/executionService.js';
 import { listExecutions } from '../executions/executionService.js';
 import { logError } from '../middleware/index.js';
 
@@ -15,6 +16,18 @@ export interface GlobalActivityItem {
   title: string;
   subtitle?: string;
   status: GlobalActivityStatus;
+  /** True while the row is queued or running. Drives active/done grouping in the UI. */
+  active?: boolean;
+  /** User-facing source label, e.g. "Background command", "Subagent", "Conversation". */
+  source?: string;
+  /** Typed execution kind for executions; undefined for conversation rows. */
+  executionKind?: ExecutionKind;
+  /** Execution visibility channel. */
+  visibility?: ExecutionVisibility;
+  /** Underlying shell command for background-command executions. */
+  command?: string;
+  /** Working directory the row is executing in, when known. */
+  cwd?: string;
   conversationId?: string;
   conversationTitle?: string;
   createdAt?: string;
@@ -60,6 +73,28 @@ function normalizeExecutionStatus(status: string): GlobalActivityStatus {
   return 'unknown';
 }
 
+function isActiveStatus(status: GlobalActivityStatus): boolean {
+  return status === 'running' || status === 'queued';
+}
+
+/** User-facing label for an execution's worker/app source. */
+function executionSourceLabel(kind: ExecutionKind): string {
+  switch (kind) {
+    case 'background-command':
+      return 'Background command';
+    case 'subagent':
+      return 'Subagent';
+    case 'scheduled-task':
+      return 'Scheduled task';
+    case 'deferred-resume':
+      return 'Deferred resume';
+    case 'conversation':
+      return 'Conversation run';
+    case 'unknown':
+      return 'Worker';
+  }
+}
+
 function handleError(res: Response, err: unknown): void {
   logError('request handler error', {
     message: err instanceof Error ? err.message : String(err),
@@ -82,33 +117,48 @@ export function registerGlobalActivityRoutes(router: Pick<Express, 'get'>): void
       const sessionTitleById = new Map(sessions.map((s) => [s.id, s.title]));
 
       // Build conversation activity items
-      const conversationItems: GlobalActivityItem[] = sessions.map((s) => ({
-        id: `conversation:${s.id}`,
-        kind: 'conversation' as const,
-        title: s.title,
-        subtitle: s.cwdSlug ? `in ${s.cwdSlug}` : undefined,
-        status: (s.isLive || s.isRunning ? 'running' : 'completed') as GlobalActivityStatus,
-        conversationId: s.id,
-        conversationTitle: s.title,
-        createdAt: s.timestamp,
-        updatedAt: s.lastActivityAt ?? s.timestamp,
-      }));
+      const conversationItems: GlobalActivityItem[] = sessions.map((s) => {
+        const status: GlobalActivityStatus = s.isLive || s.isRunning ? 'running' : 'completed';
+        return {
+          id: `conversation:${s.id}`,
+          kind: 'conversation' as const,
+          title: s.title,
+          subtitle: s.cwdSlug ? `in ${s.cwdSlug}` : undefined,
+          status,
+          active: isActiveStatus(status),
+          source: 'Conversation',
+          conversationId: s.id,
+          conversationTitle: s.title,
+          createdAt: s.timestamp,
+          updatedAt: s.lastActivityAt ?? s.timestamp,
+        };
+      });
 
       // Collect executions across all conversations
       const { executions } = await listExecutions();
 
-      // Build execution activity items
-      const executionItems: GlobalActivityItem[] = executions.map((e) => ({
-        id: `execution:${e.id}`,
-        kind: 'execution' as const,
-        title: e.title,
-        subtitle: e.subtitle ?? e.command,
-        status: normalizeExecutionStatus(e.status),
-        conversationId: e.conversationId,
-        conversationTitle: e.conversationId ? sessionTitleById.get(e.conversationId) : undefined,
-        createdAt: e.createdAt,
-        updatedAt: e.updatedAt ?? e.completedAt ?? e.startedAt ?? e.createdAt,
-      }));
+      // Build execution activity items, enriched with worker/app-centric fields.
+      const executionItems: GlobalActivityItem[] = executions.map((e) => {
+        const status = normalizeExecutionStatus(e.status);
+        const subtitle = e.subtitle ?? e.command;
+        return {
+          id: `execution:${e.id}`,
+          kind: 'execution' as const,
+          title: e.title,
+          subtitle,
+          status,
+          active: isActiveStatus(status),
+          source: executionSourceLabel(e.kind),
+          executionKind: e.kind,
+          visibility: e.visibility,
+          command: e.command,
+          cwd: e.cwd,
+          conversationId: e.conversationId,
+          conversationTitle: e.conversationId ? sessionTitleById.get(e.conversationId) : undefined,
+          createdAt: e.createdAt,
+          updatedAt: e.updatedAt ?? e.completedAt ?? e.startedAt ?? e.createdAt,
+        };
+      });
 
       // Merge
       const rawItems: GlobalActivityItem[] = [...conversationItems, ...executionItems];
@@ -126,8 +176,14 @@ export function registerGlobalActivityRoutes(router: Pick<Express, 'get'>): void
         filtered = filtered.filter((item) => item.status !== 'running' && item.status !== 'queued');
       }
 
-      // Sort by updatedAt descending (most recent first); stable within same timestamp
+      // Sort: active (queued/running) rows first, then by updatedAt descending.
+      // Active work floats to the top so the page reads as a worker task manager;
+      // within each group the most recent updatedAt wins, and the sort is stable
+      // for equal timestamps so equal-time rows keep their collection order.
       filtered.sort((a, b) => {
+        const aActive = (a.active ?? isActiveStatus(a.status)) ? 1 : 0;
+        const bActive = (b.active ?? isActiveStatus(b.status)) ? 1 : 0;
+        if (aActive !== bActive) return bActive - aActive;
         const aTime = a.updatedAt ?? a.createdAt ?? '';
         const bTime = b.updatedAt ?? b.createdAt ?? '';
         return bTime.localeCompare(aTime);

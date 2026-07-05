@@ -80,6 +80,10 @@ describe('registerGlobalActivityRoutes', () => {
     };
   }
 
+  function findItem(call: { items: Array<{ id: string }> }, id: string) {
+    return call.items.find((item) => item.id === id);
+  }
+
   it('returns an empty activity feed when there is no data', async () => {
     const { activityHandler } = createHarness();
     listConversationSessionsSnapshotMock.mockReturnValue([]);
@@ -218,6 +222,149 @@ describe('registerGlobalActivityRoutes', () => {
     expect(byId['execution:run-c']).toBe('cancelled');
     expect(byId['execution:run-i']).toBe('cancelled');
     expect(byId['execution:run-u']).toBe('unknown');
+  });
+
+  it('enriches execution rows with worker/app-centric fields', async () => {
+    const { activityHandler } = createHarness();
+    listConversationSessionsSnapshotMock.mockReturnValue([session('conv-1', { title: 'My Awesome Chat' })]);
+    listExecutionsMock.mockResolvedValue({
+      executions: [
+        execution('run-1', {
+          kind: 'subagent',
+          status: 'running',
+          conversationId: 'conv-1',
+          command: 'npm run build',
+          cwd: '/repo',
+          updatedAt: '2026-06-19T15:00:00.000Z',
+        }),
+        execution('run-2', {
+          kind: 'background-command',
+          status: 'completed',
+          command: 'ls -la',
+          cwd: '/repo/sub',
+        }),
+      ],
+    });
+
+    const res = createJsonResponse();
+    await activityHandler({ query: {} }, res);
+
+    const call = res.json.mock.calls[0][0] as { items: Array<Record<string, unknown>> };
+    const subagent = findItem(call as never, 'execution:run-1') as Record<string, unknown>;
+    const command = findItem(call as never, 'execution:run-2') as Record<string, unknown>;
+
+    expect(subagent).toEqual(
+      expect.objectContaining({
+        id: 'execution:run-1',
+        kind: 'execution',
+        status: 'running',
+        active: true,
+        source: 'Subagent',
+        executionKind: 'subagent',
+        visibility: 'primary',
+        command: 'npm run build',
+        cwd: '/repo',
+        conversationId: 'conv-1',
+        conversationTitle: 'My Awesome Chat',
+      }),
+    );
+    expect(command).toEqual(
+      expect.objectContaining({
+        id: 'execution:run-2',
+        kind: 'execution',
+        status: 'completed',
+        active: false,
+        source: 'Background command',
+        executionKind: 'background-command',
+        command: 'ls -la',
+        cwd: '/repo/sub',
+      }),
+    );
+  });
+
+  it('marks conversation rows with source and active grouping', async () => {
+    const { activityHandler } = createHarness();
+    listConversationSessionsSnapshotMock.mockReturnValue([
+      session('conv-1', { isLive: true, timestamp: '2026-06-19T11:00:00.000Z', lastActivityAt: '2026-06-19T14:00:00.000Z' }),
+      session('conv-2', { timestamp: '2026-06-19T10:00:00.000Z', lastActivityAt: '2026-06-19T13:00:00.000Z' }),
+    ]);
+    listExecutionsMock.mockResolvedValue({ executions: [] });
+
+    const res = createJsonResponse();
+    await activityHandler({ query: {} }, res);
+
+    const call = res.json.mock.calls[0][0] as { items: Array<Record<string, unknown>> };
+    const live = findItem(call as never, 'conversation:conv-1') as Record<string, unknown>;
+    const done = findItem(call as never, 'conversation:conv-2') as Record<string, unknown>;
+
+    expect(live).toEqual(
+      expect.objectContaining({
+        id: 'conversation:conv-1',
+        kind: 'conversation',
+        status: 'running',
+        active: true,
+        source: 'Conversation',
+        conversationId: 'conv-1',
+      }),
+    );
+    expect(done).toEqual(
+      expect.objectContaining({
+        id: 'conversation:conv-2',
+        kind: 'conversation',
+        status: 'completed',
+        active: false,
+        source: 'Conversation',
+      }),
+    );
+  });
+
+  it('maps execution kinds to user-facing source labels', async () => {
+    const { activityHandler } = createHarness();
+    listConversationSessionsSnapshotMock.mockReturnValue([]);
+    listExecutionsMock.mockResolvedValue({
+      executions: [
+        execution('a', { kind: 'background-command' }),
+        execution('b', { kind: 'subagent' }),
+        execution('c', { kind: 'scheduled-task' }),
+        execution('d', { kind: 'deferred-resume' }),
+        execution('e', { kind: 'conversation' }),
+        execution('f', { kind: 'unknown' }),
+      ],
+    });
+
+    const res = createJsonResponse();
+    await activityHandler({ query: {} }, res);
+
+    const call = res.json.mock.calls[0][0] as { items: Array<{ id: string; source?: string }> };
+    const byId = Object.fromEntries(call.items.map((item) => [item.id, item.source]));
+    expect(byId['execution:a']).toBe('Background command');
+    expect(byId['execution:b']).toBe('Subagent');
+    expect(byId['execution:c']).toBe('Scheduled task');
+    expect(byId['execution:d']).toBe('Deferred resume');
+    expect(byId['execution:e']).toBe('Conversation run');
+    expect(byId['execution:f']).toBe('Worker');
+  });
+
+  it('surfaces active rows before done rows when sorting', async () => {
+    const { activityHandler } = createHarness();
+    listConversationSessionsSnapshotMock.mockReturnValue([
+      session('conv-old', { timestamp: '2026-06-19T09:00:00.000Z', lastActivityAt: '2026-06-19T09:00:00.000Z' }),
+    ]);
+    listExecutionsMock.mockResolvedValue({
+      executions: [
+        execution('run-done', { status: 'completed', updatedAt: '2026-06-19T16:00:00.000Z' }),
+        execution('run-active', { status: 'running', updatedAt: '2026-06-19T08:00:00.000Z' }),
+      ],
+    });
+
+    const res = createJsonResponse();
+    await activityHandler({ query: {} }, res);
+
+    const call = res.json.mock.calls[0][0] as { items: Array<{ id: string }> };
+    // The active run is older than the done run, but active rows float to the top.
+    expect(call.items[0].id).toBe('execution:run-active');
+    expect(call.items[1].id).toBe('execution:run-done');
+    expect(call.items[2].id).toBe('conversation:conv-old');
   });
 
   it('uses conversationTitle from session metadata', async () => {

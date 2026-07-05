@@ -24,7 +24,7 @@ import { useApi } from '../hooks/useApi';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import type { GlobalActivityItem, GlobalActivityResult } from '../shared/types';
 
-type KindFilter = 'all' | 'conversation' | 'execution';
+type ActivityFilter = 'all' | 'active' | 'conversation' | 'execution';
 
 function statusTone(status: GlobalActivityItem['status']): 'success' | 'warning' | 'danger' | 'muted' | 'accent' {
   switch (status) {
@@ -60,8 +60,15 @@ function statusLabel(status: GlobalActivityItem['status']): string {
   }
 }
 
-function kindLabel(kind: GlobalActivityItem['kind']): string {
-  return kind === 'conversation' ? 'Chat' : 'Run';
+function itemIsActive(item: GlobalActivityItem): boolean {
+  return Boolean(item.active) || item.status === 'running' || item.status === 'queued';
+}
+
+/** User-facing source label for a row. Falls back to a kind label when the
+ * backend did not provide one (e.g. older cached responses). */
+function itemSourceLabel(item: GlobalActivityItem): string {
+  if (item.source) return item.source;
+  return item.kind === 'conversation' ? 'Conversation' : 'Worker';
 }
 
 function timeAgoShort(iso: string | undefined): string {
@@ -77,9 +84,10 @@ function timeAgoShort(iso: string | undefined): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-function filterItems(items: GlobalActivityItem[], kindFilter: KindFilter): GlobalActivityItem[] {
-  if (kindFilter === 'all') return items;
-  return items.filter((item) => item.kind === kindFilter);
+function filterItems(items: GlobalActivityItem[], filter: ActivityFilter): GlobalActivityItem[] {
+  if (filter === 'all') return items;
+  if (filter === 'active') return items.filter(itemIsActive);
+  return items.filter((item) => item.kind === filter);
 }
 
 function ActivityEmptyState() {
@@ -87,8 +95,8 @@ function ActivityEmptyState() {
     <DataTableEmptyRow colSpan={4}>
       <AppPageEmptyState
         title="No activity yet"
-        body="Conversations, background commands, and worker runs appear here as they execute."
-        steps={['Start or resume a conversation', 'Run a terminal command in chat', 'Delegate work to a worker']}
+        body="Conversations, background commands, subagents, and scheduled tasks appear here as they run."
+        steps={['Start or resume a conversation', 'Run a terminal command in chat', 'Delegate work to a subagent or schedule a task']}
         align="start"
       />
     </DataTableEmptyRow>
@@ -96,7 +104,7 @@ function ActivityEmptyState() {
 }
 
 export function ActivityPage() {
-  const [kindFilter, setKindFilter] = useState<KindFilter>('all');
+  const [filter, setFilter] = useState<ActivityFilter>('all');
 
   const fetcher = useCallback(async (): Promise<GlobalActivityResult> => {
     return api.activity({ limit: 200 });
@@ -105,15 +113,18 @@ export function ActivityPage() {
   const { data, loading, refreshing, error, refetch } = useApi(fetcher, 'global-activity');
   useInvalidateOnTopics(['sessions', 'executions'], refetch);
 
-  const items = data ? filterItems(data.items, kindFilter) : [];
-  const conversationCount = data ? data.items.filter((i) => i.kind === 'conversation').length : 0;
-  const executionCount = data ? data.items.filter((i) => i.kind === 'execution').length : 0;
+  const allItems = data ? data.items : [];
+  const items = filterItems(allItems, filter);
+  const conversationCount = allItems.filter((i) => i.kind === 'conversation').length;
+  const executionCount = allItems.filter((i) => i.kind === 'execution').length;
+  const activeCount = allItems.filter(itemIsActive).length;
 
   return (
     <AppPageLayout>
       <div className="flex min-h-0 flex-col gap-4">
         <AppPageIntro
           title="Activity"
+          summary="Conversations and background workers running across the app."
           actions={
             <ToolbarButton type="button" disabled={loading && !data} onClick={() => refetch({ resetLoading: false })}>
               {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -123,15 +134,18 @@ export function ActivityPage() {
 
         <DataTableToolbar
           tabs={
-            <TabList ariaLabel="Filter activity by kind">
-              <TabButton active={kindFilter === 'all'} onClick={() => setKindFilter('all')}>
+            <TabList ariaLabel="Filter activity">
+              <TabButton active={filter === 'all'} onClick={() => setFilter('all')}>
                 All{data ? ` ${data.total}` : ''}
               </TabButton>
-              <TabButton active={kindFilter === 'conversation'} onClick={() => setKindFilter('conversation')}>
+              <TabButton active={filter === 'active'} onClick={() => setFilter('active')}>
+                Active{activeCount > 0 ? ` ${activeCount}` : ''}
+              </TabButton>
+              <TabButton active={filter === 'conversation'} onClick={() => setFilter('conversation')}>
                 Conversations{conversationCount > 0 ? ` ${conversationCount}` : ''}
               </TabButton>
-              <TabButton active={kindFilter === 'execution'} onClick={() => setKindFilter('execution')}>
-                Executions{executionCount > 0 ? ` ${executionCount}` : ''}
+              <TabButton active={filter === 'execution'} onClick={() => setFilter('execution')}>
+                Workers{executionCount > 0 ? ` ${executionCount}` : ''}
               </TabButton>
             </TabList>
           }
@@ -143,7 +157,7 @@ export function ActivityPage() {
             <DataTableRow>
               <DataTableHeaderCell style={{ width: '2rem' }} />
               <DataTableHeaderCell>Item</DataTableHeaderCell>
-              <DataTableHeaderCell style={{ width: '5rem' }}>Kind</DataTableHeaderCell>
+              <DataTableHeaderCell style={{ width: '8rem' }}>Source</DataTableHeaderCell>
               <DataTableHeaderCell style={{ width: '6rem' }}>When</DataTableHeaderCell>
             </DataTableRow>
           </DataTableHead>
@@ -167,9 +181,7 @@ export function ActivityPage() {
                   <DataTableCell className="max-w-0 align-middle">
                     <div className="truncate">
                       <span className="text-[13px] font-medium">{item.title}</span>
-                      {item.subtitle ? (
-                        <span className="ml-3 border-l border-border-subtle pl-3 text-[11px] text-tertiary">{item.subtitle}</span>
-                      ) : null}
+                      {item.subtitle ? <span className="text-[11px] text-tertiary"> / {item.subtitle}</span> : null}
                     </div>
                     {item.conversationTitle && item.kind === 'execution' ? (
                       <div className="truncate text-[10px] text-tertiary leading-tight">in {item.conversationTitle}</div>
@@ -177,7 +189,7 @@ export function ActivityPage() {
                   </DataTableCell>
                   <DataTableCell className="align-middle">
                     <span className="inline-block rounded-sm bg-bg-subtle px-1.5 py-0.5 text-[10px] font-medium uppercase leading-tight tracking-wide text-secondary">
-                      {kindLabel(item.kind)}
+                      {itemSourceLabel(item)}
                     </span>
                   </DataTableCell>
                   <DataTableCell className="whitespace-nowrap align-middle text-[11px] text-tertiary">

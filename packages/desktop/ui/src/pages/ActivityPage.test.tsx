@@ -117,7 +117,7 @@ describe('ActivityPage', () => {
     const items: GlobalActivityItem[] = [
       makeItem({ id: 'conversation:a', title: 'Chat A', kind: 'conversation', status: 'completed' }),
       makeItem({ id: 'conversation:b', title: 'Chat B', kind: 'conversation', status: 'completed' }),
-      makeItem({ id: 'execution:c', title: 'Run C', kind: 'execution', status: 'running' }),
+      makeItem({ id: 'execution:c', title: 'Run C', kind: 'execution', status: 'running', active: true }),
     ];
     const result: GlobalActivityResult = { items, total: 3 };
     vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
@@ -125,10 +125,12 @@ describe('ActivityPage', () => {
 
     // All tab should show total
     expect(screen.getByText('All 3')).toBeTruthy();
+    // Active tab should show the running worker count
+    expect(screen.getByText('Active 1')).toBeTruthy();
     // Conversations tab should show count
     expect(screen.getByText('Conversations 2')).toBeTruthy();
-    // Executions tab should show count
-    expect(screen.getByText('Executions 1')).toBeTruthy();
+    // Workers tab (formerly Executions) should show count
+    expect(screen.getByText('Workers 1')).toBeTruthy();
   });
 
   it('filters items when a kind tab is selected', () => {
@@ -143,7 +145,7 @@ describe('ActivityPage', () => {
     expect(screen.getByText('Chat only')).toBeTruthy();
     expect(screen.getByText('Run only')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Executions 1' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Workers 1' }));
 
     expect(screen.queryByText('Chat only')).toBeNull();
     expect(screen.getByText('Run only')).toBeTruthy();
@@ -161,6 +163,38 @@ describe('ActivityPage', () => {
     for (const status of statuses) {
       expect(screen.getByText(`Status ${status}`)).toBeTruthy();
     }
+  });
+
+  it('filters to active workers when the Active tab is selected', () => {
+    const items: GlobalActivityItem[] = [
+      makeItem({ id: 'conversation:a', title: 'Live chat', kind: 'conversation', status: 'running', active: true }),
+      makeItem({ id: 'execution:b', title: 'Done worker', kind: 'execution', status: 'completed' }),
+      makeItem({ id: 'execution:c', title: 'Running worker', kind: 'execution', status: 'running', active: true }),
+    ];
+    const result: GlobalActivityResult = { items, total: 3 };
+    vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
+    renderActivityPage();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Active 2' }));
+
+    expect(screen.getByText('Live chat')).toBeTruthy();
+    expect(screen.getByText('Running worker')).toBeTruthy();
+    expect(screen.queryByText('Done worker')).toBeNull();
+  });
+
+  it('renders the backend source label for worker rows', () => {
+    const items: GlobalActivityItem[] = [
+      makeItem({ id: 'execution:a', title: 'Shell job', kind: 'execution', status: 'completed', source: 'Background command' }),
+      makeItem({ id: 'execution:b', title: 'Helper agent', kind: 'execution', status: 'running', source: 'Subagent' }),
+      makeItem({ id: 'conversation:c', title: 'My chat', kind: 'conversation', status: 'completed', source: 'Conversation' }),
+    ];
+    const result: GlobalActivityResult = { items, total: 3 };
+    vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
+    renderActivityPage();
+
+    expect(screen.getByText('Background command')).toBeTruthy();
+    expect(screen.getByText('Subagent')).toBeTruthy();
+    expect(screen.getByText('Conversation')).toBeTruthy();
   });
 
   it('shows conversation context for execution items', () => {

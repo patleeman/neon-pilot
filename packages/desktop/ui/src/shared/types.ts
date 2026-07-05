@@ -601,6 +601,18 @@ export interface GlobalActivityItem {
   title: string;
   subtitle?: string;
   status: GlobalActivityStatus;
+  /** True while the row is queued or running. Drives active/done grouping in the UI. */
+  active?: boolean;
+  /** User-facing source label, e.g. "Background command", "Subagent", "Conversation". */
+  source?: string;
+  /** Typed execution kind for executions; undefined for conversation rows. */
+  executionKind?: ExecutionKind;
+  /** Execution visibility channel. */
+  visibility?: ExecutionVisibility;
+  /** Underlying shell command for background-command executions. */
+  command?: string;
+  /** Working directory the row is executing in, when known. */
+  cwd?: string;
   conversationId?: string;
   conversationTitle?: string;
   createdAt?: string;
