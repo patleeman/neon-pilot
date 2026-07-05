@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import { app, clipboard, dialog, Notification, shell } from 'electron';
+import { app, dialog, shell } from 'electron';
 
 import { applyDesktopAboutPanelOptions } from './about.js';
 import { applyDesktopApplicationIcon } from './app-icon.js';
@@ -20,7 +20,6 @@ import { startDesktopBackendWarmup } from './startup-backend-warmup.js';
 import { loadDesktopConfig, readDesktopAppPreferences, updateDesktopAppPreferences } from './state/desktop-config.js';
 import { DesktopTrayController } from './tray.js';
 import { DesktopUpdateManager } from './updates/update-manager.js';
-import { importClipboardUrlToKnowledge } from './url-clipper.js';
 import { DesktopWindowController } from './window.js';
 
 let hostManager: HostManager | undefined;
@@ -189,44 +188,6 @@ function logDesktopMainMessage(level: 'info' | 'error', message: string): void {
 function logBootstrapError(error: unknown): void {
   const rendered = error instanceof Error ? (error.stack ?? error.message) : String(error);
   logDesktopMainMessage('error', rendered);
-}
-
-function showClipperNotification(input: { title: string; body: string }): void {
-  if (Notification.isSupported()) {
-    new Notification(input).show();
-    return;
-  }
-
-  void dialog.showMessageBox({
-    type: 'info',
-    message: input.title,
-    detail: input.body,
-  });
-}
-
-async function clipUrlFromClipboard(): Promise<void> {
-  if (!hostManager) {
-    throw new Error('Desktop runtime is not ready.');
-  }
-
-  const imported = await importClipboardUrlToKnowledge({
-    host: hostManager,
-    clipboardText: clipboard.readText('clipboard'),
-  });
-  const noteId = imported.note?.id ? `Saved to ${imported.note.id}` : 'Saved to Knowledge Inbox.';
-  showClipperNotification({
-    title: 'URL clipped',
-    body: `${imported.title}\n${noteId}`,
-  });
-}
-
-function clipUrlFromClipboardAndNotify(): void {
-  void clipUrlFromClipboard().catch((error) => {
-    showClipperNotification({
-      title: 'Could not clip URL',
-      body: renderDesktopErrorMessage(error),
-    });
-  });
 }
 
 function reportDesktopError(error: unknown): void {
@@ -477,9 +438,6 @@ async function bootstrapDesktopApp(): Promise<void> {
     onNewConversation: () => {
       void openNewConversation();
     },
-    onClipUrlFromClipboard: () => {
-      clipUrlFromClipboardAndNotify();
-    },
     onCloseConversation: () => {
       windowController?.sendShortcutToFocusedWindow('close-conversation');
     },
@@ -567,7 +525,6 @@ async function bootstrapDesktopApp(): Promise<void> {
       void openConversation(conversationId);
     },
     onNewConversation: shellActions.onNewConversation,
-    onClipUrlFromClipboard: shellActions.onClipUrlFromClipboard,
     onSettings: shellActions.onSettings,
     onCheckForUpdates: shellActions.onCheckForUpdates,
     onRestartRuntime: shellActions.onRestartRuntime,

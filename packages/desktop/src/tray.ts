@@ -9,7 +9,6 @@ export interface DesktopTrayActions {
   onOpen: () => void;
   onOpenConversation: (conversationId: string) => void;
   onNewConversation: () => void;
-  onClipUrlFromClipboard: () => void;
   onSettings: () => void;
   onCheckForUpdates: () => void;
   onRestartRuntime: () => void;
@@ -88,11 +87,6 @@ export function buildDesktopTrayMenuTemplate(options: {
     {
       label: 'New Conversation',
       click: actions.onNewConversation,
-      enabled: controlsReady,
-    },
-    {
-      label: 'Clip URL from Clipboard',
-      click: actions.onClipUrlFromClipboard,
       enabled: controlsReady,
     },
     {

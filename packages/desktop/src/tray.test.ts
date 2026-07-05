@@ -50,7 +50,6 @@ describe('buildDesktopTrayMenuTemplate', () => {
     expect(enabledLabels).toEqual([
       { label: 'Show Neon Pilot Testing', enabled: true },
       { label: 'New Conversation', enabled: true },
-      { label: 'Clip URL from Clipboard', enabled: true },
       { label: 'Settings…', enabled: true },
       { label: 'Check for Updates…', enabled: true },
       { label: 'Restart Runtime', enabled: true },
@@ -77,7 +76,7 @@ describe('buildDesktopTrayMenuTemplate', () => {
     ).toBe(true);
   });
 
-  it('includes clip URL from clipboard when ready', () => {
+  it('does not include the removed clipboard URL action', () => {
     const items = buildDesktopTrayMenuTemplate({
       startupState: { kind: 'ready' },
       actions: {} as ReturnType<typeof buildDesktopTrayMenuTemplate> extends never
@@ -89,7 +88,7 @@ describe('buildDesktopTrayMenuTemplate', () => {
       items.some(
         (item: Electron.MenuItemConstructorOptions | Electron.MenuItem) => 'label' in item && item.label === 'Clip URL from Clipboard',
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('includes Settings and Quit', () => {
