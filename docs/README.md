@@ -109,7 +109,6 @@ Bundled system extensions:
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing
-- [Gateways](../extensions/system-gateways/README.md) — external messaging gateway registration and bridge surfaces
 - [Git Status](../extensions/system-git-status/README.md) — branch and diff status in the composer
 - [Goal Mode](../extensions/system-auto-mode/README.md) — persisted goal tracking and automatic continuation
 - [Hashline Edit](../extensions/system-hashline-edit/README.md) — hash-anchored read and edit tools for guarded line operations
@@ -118,7 +117,6 @@ Bundled system extensions:
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
 - [Model Arena](../extensions/system-model-arena/README.md) — blind challenger model duels and local preference stats
-- [AI Gateway](../extensions/system-model-gateway/README.md) — opt-in local Responses API proxy for external coding agents
 - [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
 - [Neon Pilot CLI](../extensions/system-neon-pilot-admin-cli/README.md) — unified CLI control plane for internal agents and external callers
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run guided tour over real app pages

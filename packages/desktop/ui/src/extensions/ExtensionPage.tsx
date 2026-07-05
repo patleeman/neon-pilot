@@ -8,7 +8,7 @@ import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
 
-const STALE_EXTENSION_ROUTES = new Set(['/gateways']);
+const STALE_EXTENSION_ROUTES = new Set<string>();
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
   {
     id: 'extensions-page',

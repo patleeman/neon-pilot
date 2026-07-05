@@ -45,8 +45,8 @@
           <p class="status-pill"><span></span>Powered by the Pi Coding Agent</p>
           <h1 id="hero-title">A workbench your agent can rebuild.</h1>
           <p class="hero-lede">
-            Neon Pilot wraps the Pi Coding Agent in a durable macOS desktop app. Ask once, and your agent ships new commands,
-            tools, pages, and workbench panels as first-class extensions. Bring any provider. Keep everything on your machine.
+            Neon Pilot wraps the Pi Coding Agent in a durable macOS desktop app. Ask once, and your agent ships new commands, tools, pages,
+            and workbench panels as first-class extensions. Bring any provider. Keep everything on your machine.
           </p>
 
           <div class="cta-row">
@@ -181,16 +181,14 @@
             <button type="button" class="active" data-provider="openai">OpenAI</button>
             <button type="button" data-provider="opencodeGo">Opencode Go</button>
             <button type="button" data-provider="local">Local</button>
-            <button type="button" data-provider="gateways">Gateways</button>
+            <button type="button" data-provider="aggregators">Aggregators</button>
             <button type="button" data-provider="anthropic">Anthropic</button>
             <button type="button" data-provider="google">Google</button>
           </div>
           <div class="provider-content">
             <div>
               <h3><span data-provider-name>OpenAI</span><small data-provider-tag>subscription + key</small></h3>
-              <p data-provider-note>
-                Use a ChatGPT Plus or Pro subscription through Codex, or bring an OpenAI API key.
-              </p>
+              <p data-provider-note>Use a ChatGPT Plus or Pro subscription through Codex, or bring an OpenAI API key.</p>
               <p class="connect-label">Connect via</p>
               <div class="connect-list" data-provider-connect>
                 <span>ChatGPT Plus/Pro</span>
@@ -308,8 +306,8 @@
           command: 'neon-pilot models add ollama',
           store: 'Everything runs on-device. Nothing is sent anywhere by design.',
         },
-        gateways: {
-          name: 'Gateways',
+        aggregators: {
+          name: 'Aggregators',
           tag: 'gateway',
           note: 'One key fronts many vendors through OpenRouter, Vercel AI Gateway, or Cloudflare AI Gateway.',
           connect: ['OpenRouter', 'Vercel AI Gateway', 'Cloudflare'],
@@ -319,8 +317,7 @@
         anthropic: {
           name: 'Anthropic',
           tag: 'subscription + key',
-          note:
-            'Sign in with a Claude Pro or Max subscription, or bring an API key. Subscription use draws from extra usage billed per token, not your plan limits.',
+          note: 'Sign in with a Claude Pro or Max subscription, or bring an API key. Subscription use draws from extra usage billed per token, not your plan limits.',
           connect: ['Claude Pro/Max login', 'API key'],
           command: 'neon-pilot bootstrap provider set-key anthropic',
           store: 'OAuth tokens and keys are stored locally and never leave your machine.',
@@ -355,7 +352,9 @@
           providerNote.textContent = provider.note;
           providerCommand.textContent = provider.command;
           providerStore.textContent = provider.store;
-          providerConnect.replaceChildren(...provider.connect.map((label) => Object.assign(document.createElement('span'), { textContent: label })));
+          providerConnect.replaceChildren(
+            ...provider.connect.map((label) => Object.assign(document.createElement('span'), { textContent: label })),
+          );
         });
       });
 

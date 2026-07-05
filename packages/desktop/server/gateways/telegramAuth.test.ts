@@ -40,7 +40,7 @@ describe('telegramAuth', () => {
     authStorage.instance.get.mockReturnValue({ type: 'api_key', key: 'legacy-token' });
 
     expect(readTelegramBotToken('/auth.json', '/state')).toBe('secret-token');
-    expect(secrets.resolveSecret).toHaveBeenCalledWith('system-gateways', 'telegramBotToken', '/state');
+    expect(secrets.resolveSecret).toHaveBeenCalledWith('host-gateways', 'telegramBotToken', '/state');
     expect(authStorage.create).not.toHaveBeenCalled();
   });
 
@@ -54,7 +54,7 @@ describe('telegramAuth', () => {
 
   it('treats a missing optional gateway secret declaration as unconfigured', () => {
     secrets.resolveSecret.mockImplementation(() => {
-      throw new Error('Secret "system-gateways/telegramBotToken" is not registered by an enabled extension.');
+      throw new Error('Secret "host-gateways/telegramBotToken" is not registered by an enabled extension.');
     });
 
     expect(readTelegramBotToken('/auth.json', '/state')).toBeNull();
@@ -87,13 +87,13 @@ describe('telegramAuth', () => {
     removeTelegramBotToken('/auth.json', '/state');
 
     expect(providerSecrets.deleteProviderApiKeySecret).toHaveBeenCalledWith('telegram', '/state');
-    expect(secrets.deleteSecret).toHaveBeenCalledWith('system-gateways', 'telegramBotToken', '/state');
+    expect(secrets.deleteSecret).toHaveBeenCalledWith('host-gateways', 'telegramBotToken', '/state');
     expect(authStorage.instance.remove).toHaveBeenCalledWith('telegram');
   });
 
   it('removes token when the optional extension secret declaration is absent', () => {
     secrets.deleteSecret.mockImplementation(() => {
-      throw new Error('Secret "system-gateways/telegramBotToken" is not registered by an enabled extension.');
+      throw new Error('Secret "host-gateways/telegramBotToken" is not registered by an enabled extension.');
     });
 
     removeTelegramBotToken('/auth.json', '/state');

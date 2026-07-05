@@ -569,22 +569,6 @@ const smokes = {
     const result = await module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
   },
-  async 'system-model-gateway'() {
-    const status = await module.status({}, ctx);
-    assert(status.baseUrl === 'http://127.0.0.1:8766/v1', 'AI Gateway status returned unexpected baseUrl');
-    assert(status.defaultModel === 'auto', 'AI Gateway default model should be auto');
-    assert(status.running === false, 'AI Gateway smoke should not auto-start the loopback listener');
-
-    const health = await module.healthRoute({}, ctx);
-    assert(health.status === 200 && health.body?.ok === true, 'AI Gateway health route failed');
-
-    const models = await module.modelsRoute({}, ctx);
-    assert(models.status === 200 && Array.isArray(models.body?.data), 'AI Gateway models route failed');
-    assert(models.body.data.some((model) => model.id === 'neon-pilot-fake'), 'AI Gateway fake model missing');
-
-    const response = await module.responsesRoute({ body: { model: 'neon-pilot-fake', input: 'smoke' } }, ctx);
-    assert(response.status === 200 && response.body?.status === 'completed', 'AI Gateway fake response failed');
-  },
   async 'system-model-arena'() {
     const saved = await module.saveArenaSettings({ automaticDuels: false, challengerModels: ['smoke-provider/smoke-model'] }, ctx);
     assert(saved.settings?.automaticDuels === false, 'Model Arena settings save failed');

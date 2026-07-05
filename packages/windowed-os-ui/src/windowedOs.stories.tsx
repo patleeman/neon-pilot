@@ -382,7 +382,7 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
               <WindowedPageSection title="Files" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
-                  <WindowedListItem title="apps/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
+                  <WindowedListItem title="apps/system-browser" meta="Built" detail="Frontend bundle" accent="gateways" />
                   <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="apps" />
                 </WindowedList>
               </WindowedPageSection>
@@ -993,7 +993,7 @@ export const NavigationPrimitives: Story = {
             <div style={{ display: 'grid', gap: 6, padding: 10 }}>
               <WindowedAppTile label="Chat" accent="chat" />
               <WindowedAppTile label="Automations" accent="automations" />
-              <WindowedAppTile label="Gateways" accent="gateways" />
+              <WindowedAppTile label="Browser" accent="gateways" />
             </div>
           </WindowedPageSection>
           <WindowedPageSection title="Taskbar apps">
@@ -1002,7 +1002,7 @@ export const NavigationPrimitives: Story = {
                 <WindowedAppTile label="Chat" accent="chat" count={3} variant="taskbar" />
               </span>
               <span className="wos-taskbar__button">
-                <WindowedAppTile label="Gateways" accent="gateways" variant="taskbar" />
+                <WindowedAppTile label="Browser" accent="gateways" variant="taskbar" />
               </span>
               <span className="wos-taskbar__button">
                 <WindowedAppTile label="Terminal" meta="New conversation" accent="chat" variant="taskbar" />
@@ -1223,7 +1223,7 @@ function DenseAppPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
       <WindowFrame
-        title="Gateways"
+        title="Browser"
         accent="gateways"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 560 }}
@@ -1232,7 +1232,7 @@ function DenseAppPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
         onClose={() => undefined}
       >
         <WindowedPageShell layout="standard">
-          <WindowedPageMain title="Telegram" actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}>
+          <WindowedPageMain title="Browser" actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}>
             <WindowedPageSection title="Providers" meta="2 enabled">
               <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
                 <WindowedDataRow name="Telegram" meta="Gateway" enabled status={<WindowedBadge tone="positive">Enabled</WindowedBadge>} />
@@ -1254,11 +1254,11 @@ function DenseAppPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
             <WindowedPageSection title="Status">
               <WindowedKeyValueList
                 items={[
-                  { label: 'Setup', value: '/gateways' },
-                  { label: 'Configuration', value: 'Gateways page' },
+                  { label: 'Setup', value: '/browser' },
+                  { label: 'Configuration', value: 'Browser page' },
                   {
                     label: 'Enabled',
-                    value: <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />,
+                    value: <WindowedToggle checked accent="gateways" label="Toggle Browser preview" />,
                   },
                 ]}
               />
@@ -1655,7 +1655,7 @@ export const CanonicalDensity: Story = {
             <WindowedPageSection title="Canonical controls" meta="8px grid">
               <WindowedFormGrid columns={3}>
                 <WindowedField label="Name">
-                  <WindowedTextInput defaultValue="Telegram gateway" aria-label="Name" />
+                  <WindowedTextInput defaultValue="Browser preview" aria-label="Name" />
                 </WindowedField>
                 <WindowedField label="Mode">
                   <WindowedSelect defaultValue="allowlist" aria-label="Mode">
@@ -1934,345 +1934,6 @@ export const AutomationsPage: Story = {
 export const DarkAutomationsPage: Story = {
   render: () => <AutomationsPageStory theme="dark" />,
 };
-
-function GatewaysPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
-  return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
-      <WindowFrame
-        title="Gateways"
-        accent="gateways"
-        focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
-        onMinimize={() => undefined}
-        onMaximize={() => undefined}
-        onClose={() => undefined}
-      >
-        <WindowedPageShell layout="standard">
-          <WindowedPageMain
-            title="Gateways"
-            actions={
-              <>
-                <WindowedPageButton>Test bot</WindowedPageButton>
-                <WindowedPageButton>Configure</WindowedPageButton>
-                <WindowedPageButton>Refresh</WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedPageSection title="Status" meta="runtime">
-              <WindowedKeyValueGrid
-                columns={4}
-                items={[
-                  { label: 'Providers', value: 1 },
-                  { label: 'Token', value: <WindowedBadge tone="positive">configured</WindowedBadge> },
-                  { label: 'Runtime', value: <WindowedBadge tone="positive">polling</WindowedBadge> },
-                  { label: 'Approved', value: 7 },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Providers" meta="1 available">
-              <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Configuration', align: 'right' }]}>
-                <WindowedDataRow
-                  name="Telegram"
-                  meta="Bot token saved"
-                  status={<WindowedBadge tone="positive">polling</WindowedBadge>}
-                  action={<WindowedPageButton>Settings</WindowedPageButton>}
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Readiness" meta="Enabled">
-              <WindowedKeyValueGrid
-                columns={3}
-                items={[
-                  { label: 'Token', value: 'Configured' },
-                  { label: 'Connection', value: 'Created' },
-                  { label: 'Runtime', value: 'Polling' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Gateway tools" meta="Subwindows">
-              <WindowedDataTable columns={[{ label: 'Tool' }, { label: 'State' }, { label: 'Open', align: 'right' }]}>
-                <WindowedDataRow
-                  name="Configuration"
-                  meta="Setup route, docs, and bot token"
-                  status={<WindowedBadge tone="positive">configured</WindowedBadge>}
-                  action={<WindowedPageButton>Open</WindowedPageButton>}
-                />
-                <WindowedDataRow
-                  name="Access"
-                  meta="Approved Telegram users and chats"
-                  status={<WindowedBadge tone="neutral">7 approved</WindowedBadge>}
-                  action={<WindowedPageButton>Open</WindowedPageButton>}
-                />
-                <WindowedDataRow
-                  name="Activity"
-                  meta="Recent gateway events"
-                  status={<WindowedBadge tone="positive">8 events</WindowedBadge>}
-                  action={<WindowedPageButton>Open</WindowedPageButton>}
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-          </WindowedPageMain>
-        </WindowedPageShell>
-      </WindowFrame>
-      <WindowedDialog
-        title="Telegram configuration"
-        meta="Token configured"
-        accent="gateways"
-        className="wos-gateway-dialog wos-gateway-dialog--configuration"
-        parentWindowTitle="Gateways"
-        subwindowId="gateway-configuration"
-        onClose={() => undefined}
-      >
-        <WindowedKeyValueList
-          items={[
-            { label: 'Setup', value: '/settings/gateways/telegram' },
-            { label: 'Configuration', value: 'Settings' },
-            { label: 'Docs', value: 'Telegram Bot API' },
-          ]}
-        />
-        <WindowedPageSection title="Token">
-          <WindowedTextInput aria-label="Telegram token" type="password" defaultValue="bot-token-redacted" />
-        </WindowedPageSection>
-      </WindowedDialog>
-    </div>
-  );
-}
-
-export const GatewaysPage: Story = {
-  render: () => <GatewaysPageStory />,
-};
-
-export const DarkGatewaysPage: Story = {
-  render: () => <GatewaysPageStory theme="dark" />,
-};
-
-function AIGatewayPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
-  return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
-      <WindowFrame
-        title="AI Gateway"
-        accent="gateways"
-        focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
-        onMinimize={() => undefined}
-        onMaximize={() => undefined}
-        onClose={() => undefined}
-      >
-        <WindowedPageShell layout="standard">
-          <WindowedPageMain
-            title="AI Gateway"
-            actions={
-              <>
-                <WindowedBadge tone="positive">Running</WindowedBadge>
-                <WindowedPageButton>Refresh</WindowedPageButton>
-                <WindowedPageButton tone="accent">Save port</WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedPageSection title="Loopback endpoint" meta="Running">
-              <WindowedKeyValueGrid
-                columns={4}
-                items={[
-                  { label: 'Status', value: <WindowedBadge tone="positive">Running</WindowedBadge> },
-                  { label: 'Endpoint', value: 'http://127.0.0.1:8766/v1' },
-                  { label: 'Models', value: 42 },
-                  { label: 'Default', value: 'auto' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Listener" meta="Local port">
-              <WindowedFormGrid>
-                <WindowedField label="Port">
-                  <WindowedNumberStepper aria-label="Gateway port" value={8766} onChange={() => undefined} min={1024} max={65535} />
-                </WindowedField>
-                <WindowedField label="Host">
-                  <WindowedTextInput aria-label="Gateway host" defaultValue="127.0.0.1" />
-                </WindowedField>
-                <WindowedField label="Default model">
-                  <WindowedSelect aria-label="Default gateway model" defaultValue="auto">
-                    <option value="auto">auto</option>
-                    <option value="gpt-5">gpt-5</option>
-                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
-                  </WindowedSelect>
-                </WindowedField>
-              </WindowedFormGrid>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Codex client setup" meta="Responses compatible">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Base URL', value: 'http://127.0.0.1:8766/v1' },
-                  { label: 'Auth token', value: '••••••••••••••••' },
-                  { label: 'Model catalog', value: '/Users/patrick/.local/share/neon-pilot/models.json' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Recent activity" meta="4 retained">
-              <WindowedDataTable columns={[{ label: 'Event' }, { label: 'Status' }, { label: 'Time', align: 'right' }]}>
-                <WindowedDataRow
-                  name="GET /v1/models"
-                  meta="Codex client"
-                  status={<WindowedBadge tone="positive">200</WindowedBadge>}
-                  cells={[{ value: '12:04:19', align: 'right' }]}
-                />
-                <WindowedDataRow
-                  name="POST /v1/responses"
-                  meta="deepseek-v4-flash"
-                  status={<WindowedBadge tone="positive">streaming</WindowedBadge>}
-                  cells={[{ value: '12:03:42', align: 'right' }]}
-                />
-                <WindowedDataRow
-                  name="Model catalog refresh"
-                  meta="42 models indexed"
-                  status={<WindowedBadge tone="neutral">ready</WindowedBadge>}
-                  cells={[{ value: '12:01:07', align: 'right' }]}
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-          </WindowedPageMain>
-        </WindowedPageShell>
-      </WindowFrame>
-    </div>
-  );
-}
-
-export const AIGatewayPage: Story = {
-  render: () => <AIGatewayPageStory />,
-};
-
-export const DarkAIGatewayPage: Story = {
-  render: () => <AIGatewayPageStory theme="dark" />,
-};
-
-function WorkflowsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
-  return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
-      <WindowFrame
-        title="Workflows"
-        accent="workflows"
-        focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 612 }}
-        onMinimize={() => undefined}
-        onMaximize={() => undefined}
-        onClose={() => undefined}
-      >
-        <WindowedPageShell layout="standard">
-          <WindowedPageMain
-            title="Workflows"
-            actions={
-              <>
-                <WindowedPageButton>Refresh</WindowedPageButton>
-                <WindowedPageButton tone="accent">New saved workflow</WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedPageSection title="Overview" meta="4 runs · 3 saved">
-              <WindowedKeyValueGrid
-                columns={4}
-                items={[
-                  { label: 'Runs', value: 4 },
-                  { label: 'Saved', value: 3 },
-                  { label: 'Templates', value: 5 },
-                  { label: 'Active', value: 'Repo audit' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Runs" meta="4 total">
-              <WindowedList>
-                <WindowedListItem
-                  title="Repo audit"
-                  meta="review"
-                  detail="Updated 2m ago"
-                  active
-                  accent="workflows"
-                  status={<WindowedBadge tone="warning">running</WindowedBadge>}
-                />
-                <WindowedListItem
-                  title="Visual regression sweep"
-                  meta="/Users/patrick/workingdir/neon-pilot"
-                  detail="Completed today"
-                  accent="workflows"
-                  status={<WindowedBadge tone="positive">completed</WindowedBadge>}
-                />
-                <WindowedListItem
-                  title="App hardening"
-                  meta="verification"
-                  detail="Failed yesterday"
-                  accent="workflows"
-                  status={<WindowedBadge tone="danger">failed</WindowedBadge>}
-                />
-              </WindowedList>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Library" meta="8 workflows">
-              <WindowedList>
-                <WindowedListItem
-                  title="Code review fanout"
-                  meta="Saved workflow"
-                  detail="Review changed files in parallel"
-                  accent="workflows"
-                />
-                <WindowedListItem title="Finding validation" meta="Template" detail="Validate each reported issue" accent="workflows" />
-                <WindowedListItem title="Research synthesis" meta="Template" detail="Explore angles, then summarize" accent="workflows" />
-              </WindowedList>
-            </WindowedPageSection>
-          </WindowedPageMain>
-        </WindowedPageShell>
-      </WindowFrame>
-      <WindowedDialog
-        title="Repo audit"
-        meta="running"
-        accent="workflows"
-        parentWindowTitle="Workflows"
-        onClose={() => undefined}
-        actions={<WindowedPageButton>Cancel</WindowedPageButton>}
-      >
-        <WindowedKeyValueGrid
-          columns={3}
-          items={[
-            { label: 'Created', value: 'Today, 10:12 AM' },
-            { label: 'Updated', value: 'Today, 10:17 AM' },
-            { label: 'Active phase', value: 'review' },
-            { label: 'Models', value: 'gpt-5.4-mini' },
-            { label: 'Agents', value: '3/8 complete, 2 running' },
-            { label: 'Completed', value: 'not completed' },
-          ]}
-        />
-        <WindowedList>
-          <WindowedListItem
-            title="reviewer"
-            meta="review · gpt-5.4-mini"
-            detail="Inspect changed desktop shell files."
-            accent="workflows"
-            status={<WindowedBadge tone="warning">running</WindowedBadge>}
-          />
-          <WindowedListItem
-            title="visual-check"
-            meta="verification · gpt-5.4-mini"
-            detail="No horizontal overflow found in the Storybook target."
-            accent="workflows"
-            status={<WindowedBadge tone="positive">completed</WindowedBadge>}
-          />
-        </WindowedList>
-      </WindowedDialog>
-    </div>
-  );
-}
-
-export const WorkflowsPage: Story = {
-  render: () => <WorkflowsPageStory />,
-};
-
-export const DarkWorkflowsPage: Story = {
-  render: () => <WorkflowsPageStory theme="dark" />,
-};
-
 function ModelArenaPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
@@ -3364,7 +3025,7 @@ function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'da
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
-        title="Gateways"
+        title="Browser"
         accent="gateways"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 620 }}
@@ -3374,7 +3035,7 @@ function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'da
       >
         <WindowedPageShell layout="standard">
           <WindowedPageMain
-            title="Telegram"
+            title="Browser"
             actions={
               <>
                 <WindowedPageButton>Test</WindowedPageButton>
@@ -3385,45 +3046,45 @@ function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'da
             <WindowedPageSection title="Status" meta="Needs attention">
               <WindowedKeyValueGrid
                 items={[
-                  { label: 'Token', value: 'Configured' },
-                  { label: 'Connection', value: 'Configured' },
-                  { label: 'Runtime', value: <WindowedBadge tone="warning">Needs attention</WindowedBadge> },
-                  { label: 'Setup', value: '/gateways' },
+                  { label: 'Session', value: 'Ready' },
+                  { label: 'Address', value: 'Configured' },
+                  { label: 'Preview', value: <WindowedBadge tone="warning">Paused</WindowedBadge> },
+                  { label: 'Setup', value: '/browser' },
                 ]}
               />
             </WindowedPageSection>
 
-            <WindowedPageSection title="Bot token">
+            <WindowedPageSection title="Preview controls">
               <WindowedFormGrid columns={2}>
-                <WindowedField label="Token">
-                  <WindowedTextInput aria-label="Telegram bot token" placeholder="Token is already saved" />
+                <WindowedField label="Address">
+                  <WindowedTextInput aria-label="Browser address" placeholder="https://docs.neonpilot.local" />
                 </WindowedField>
-                <WindowedField label="Gateway">
-                  <WindowedToggle checked accent="gateways" label="Toggle Telegram gateway" />
+                <WindowedField label="Preview">
+                  <WindowedToggle checked accent="gateways" label="Toggle Browser preview" />
                 </WindowedField>
               </WindowedFormGrid>
               <WindowedFormActions>
-                <WindowedPageButton>Remove token</WindowedPageButton>
-                <WindowedPageButton tone="accent">Save token</WindowedPageButton>
+                <WindowedPageButton>Reset</WindowedPageButton>
+                <WindowedPageButton tone="accent">Open</WindowedPageButton>
               </WindowedFormActions>
             </WindowedPageSection>
 
-            <WindowedPageSection title="Telegram access" meta="Allowlist">
+            <WindowedPageSection title="Permissions" meta="Allowed">
               <WindowedKeyValueList
                 items={[
-                  { label: 'Approved users', value: '1191448898' },
-                  { label: 'Approved chats', value: 'No approved chats yet.' },
+                  { label: 'Local preview', value: 'Allowed' },
+                  { label: 'External links', value: 'Ask first' },
                 ]}
               />
             </WindowedPageSection>
 
             <WindowedPageSection title="Recent activity">
               <WindowedTimeline>
-                <WindowedTimelineItem title="Runtime check failed" meta="2m ago" tone="warning">
-                  Telegram polling appears to be handled by another process.
+                <WindowedTimelineItem title="Preview paused" meta="2m ago" tone="warning">
+                  Native browser content is hidden while another desktop window is above it.
                 </WindowedTimelineItem>
-                <WindowedTimelineItem title="Token verified" meta="Today" tone="positive">
-                  Bot token was accepted by Telegram.
+                <WindowedTimelineItem title="Page loaded" meta="Today" tone="positive">
+                  Browser preview loaded the requested documentation page.
                 </WindowedTimelineItem>
               </WindowedTimeline>
             </WindowedPageSection>

@@ -25,7 +25,6 @@ export * from './gateways.js';
 export * from './images.js';
 export * from './knowledge.js';
 export * from './mcp.js';
-export * from './modelGateway.js';
 export * from './promptAssembly.js';
 export {
   cancelDurableRun,

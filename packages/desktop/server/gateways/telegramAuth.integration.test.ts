@@ -19,13 +19,13 @@ function createTempStateRoot(): string {
   return stateRoot;
 }
 
-describe('telegramAuth external extension secret contract', () => {
-  it('uses the externally distributed system-gateways secret id', () => {
-    expect(TELEGRAM_SECRET_EXTENSION).toBe('system-gateways');
+describe('telegramAuth host secret contract', () => {
+  it('uses the host-owned gateway secret id', () => {
+    expect(TELEGRAM_SECRET_EXTENSION).toBe('host-gateways');
     expect(TELEGRAM_SECRET_ID).toBe('telegramBotToken');
   });
 
-  it('stores Telegram tokens without requiring the optional system-gateways extension secret registration', () => {
+  it('stores Telegram tokens without requiring a gateway extension secret registration', () => {
     const stateRoot = createTempStateRoot();
     const authFile = join(stateRoot, 'auth.json');
 

@@ -11,20 +11,20 @@ describe('extensionGatewayContributions', () => {
         label: 'Telegram',
         description: 'Telegram bridge',
         icon: 'message-circle',
-        setupRoute: '/gateways/telegram',
+        setupRoute: '/extensions/telegram-bridge/settings',
         docsUrl: 'https://example.com/docs',
         order: 10,
       },
     ]);
 
     const registrations = buildExtensionGatewayProviderRegistrations({
-      packageRoot: '/extensions/system-gateways',
+      packageRoot: '/extensions/telegram-bridge',
       manifest: {
-        id: 'system-gateways',
-        packageType: 'system',
+        id: 'telegram-bridge',
+        packageType: 'user',
         contributes: {
           gatewayProviders: [
-            { id: 'telegram', label: 'Telegram', setupRoute: '/gateways/telegram' },
+            { id: 'telegram', label: 'Telegram', setupRoute: '/extensions/telegram-bridge/settings' },
             { id: 'external-chat', label: 'External Chat', implemented: false, configurationLocation: 'external', order: 20 },
           ],
         },
@@ -33,17 +33,17 @@ describe('extensionGatewayContributions', () => {
 
     expect(registrations).toEqual([
       {
-        extensionId: 'system-gateways',
-        packageType: 'system',
+        extensionId: 'telegram-bridge',
+        packageType: 'user',
         id: 'telegram',
         label: 'Telegram',
         implemented: true,
         configurationLocation: 'extension',
-        setupRoute: '/gateways/telegram',
+        setupRoute: '/extensions/telegram-bridge/settings',
       },
       {
-        extensionId: 'system-gateways',
-        packageType: 'system',
+        extensionId: 'telegram-bridge',
+        packageType: 'user',
         id: 'external-chat',
         label: 'External Chat',
         implemented: false,
@@ -63,8 +63,8 @@ describe('extensionGatewayContributions', () => {
     expect(() => validateGatewayProviderContributions([{ id: 'telegram', label: 'Telegram', order: 1.5 }])).toThrow(
       'Extension manifest contributes.gatewayProviders[0].order must be an integer.',
     );
-    expect(() =>
-      validateGatewayProviderContributions([{ id: 'telegram', label: 'Telegram', configurationLocation: 'somewhere' }]),
-    ).toThrow('contributes.gatewayProviders[0].configurationLocation');
+    expect(() => validateGatewayProviderContributions([{ id: 'telegram', label: 'Telegram', configurationLocation: 'somewhere' }])).toThrow(
+      'contributes.gatewayProviders[0].configurationLocation',
+    );
   });
 });

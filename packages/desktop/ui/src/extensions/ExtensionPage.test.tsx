@@ -262,7 +262,7 @@ describe('ExtensionPage', () => {
       surfaces: [],
       routes: [
         { route: '/skills', extensionId: 'system-skills', surfaceId: 'skills-page', packageType: 'system' },
-        { route: '/gateways', extensionId: 'system-gateways', surfaceId: 'page', packageType: 'system' },
+        { route: '/apps', extensionId: 'system-extension-manager', surfaceId: 'extensions-page', packageType: 'system' },
       ],
       extensions: [
         {
@@ -276,13 +276,13 @@ describe('ExtensionPage', () => {
           },
         },
         {
-          id: 'system-gateways',
-          name: 'Gateways',
+          id: 'system-extension-manager',
+          name: 'App Manager',
           enabled: true,
           packageType: 'system',
           frontend: { entry: 'dist/frontend.js' },
           contributes: {
-            views: [{ id: 'page', title: 'Gateways', location: 'main', route: '/gateways', component: 'GatewaysPage' }],
+            views: [{ id: 'extensions-page', title: 'App Manager', location: 'main', route: '/apps', component: 'ExtensionManagerPage' }],
           },
         },
       ],
@@ -292,8 +292,8 @@ describe('ExtensionPage', () => {
       const navigate = useNavigate();
       return (
         <>
-          <button type="button" onClick={() => navigate('/gateways')}>
-            Gateways
+          <button type="button" onClick={() => navigate('/apps')}>
+            App Manager
           </button>
           <ExtensionPage />
         </>
@@ -310,11 +310,11 @@ describe('ExtensionPage', () => {
 
     expect(screen.getByTestId('surface-host').getAttribute('data-mounted-surface-id')).toBe('skills-page');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gateways' }));
+    fireEvent.click(screen.getByRole('button', { name: 'App Manager' }));
 
     const host = screen.getByTestId('surface-host');
-    expect(host.getAttribute('data-surface-id')).toBe('page');
-    expect(host.getAttribute('data-mounted-surface-id')).toBe('page');
+    expect(host.getAttribute('data-surface-id')).toBe('extensions-page');
+    expect(host.getAttribute('data-mounted-surface-id')).toBe('extensions-page');
   });
 
   it('shows a calm recovery state for unknown extension routes without warning toasts', () => {

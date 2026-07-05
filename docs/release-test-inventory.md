@@ -53,7 +53,7 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Pages/views: Settings, Provider settings, Desktop settings.
 - Settings keys: `secrets.provider` (`keychain`, `file`, `env-only`), `conversation.transcriptDisclosure` (`auto`, `expanded`), `conversation.diffDisclosure`, and `conversation.pinnedToolCalls`.
 - Test provider add/edit/remove, model/provider validation, secrets redaction, desktop preferences, keyboard shortcut preferences, persistence after restart.
-- Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image Probe, AI Gateway, Neon Pilot CLI.
+- Extension settings components hosted here: extension repositories, Knowledge Base when installed, Dictation, MCP tools, Image Probe, Neon Pilot CLI.
 
 ### `/settings/providers` — Provider settings
 
@@ -99,15 +99,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Nav item: Telemetry.
 - Test event list, filters, route timing records, extension/runtime producers, empty state, malformed log handling, export/inspection if available.
 - Backend report routes/functions: summary, model usage, cost by conversation, tool health, context, agent loop, daily tokens, tool flow, cache efficiency, system prompt, auto mode, context pointers, session integrity.
-
-### `/gateways` — Telegram Gateway (`system-gateways`, bundled first-party extension)
-
-- Nav item: Gateways.
-- Gateway provider: `telegram`.
-- Secret: `telegramBotToken`.
-- Test Telegram setup state, token save/redaction, safe bot token check, approved user/chat ID persistence, start/stop/status, invalid token, incoming command routing, gateway sidebar, empty/error states, and extension disable cleanup.
-- Test Hermes-style Telegram UX: BotFather command menu publishing, `/help`, `/whoami`, `/threads`, `/switch`, `/model` with inline keyboards, callback handling, separate streamed tool-call messages, working-message edit into final replies, failed prompt edit into error text, voice-note transcription/echo/prompt injection, HTML/rich markdown rendering, table/task-list normalization, link-preview suppression, and long-reply chunking.
-- Live smoke with real credentials: save bot token, add the tester's Telegram user ID or chat ID, run Test bot, send `/whoami`, `/threads`, tap a thread button, send `/model` and tap a model, send a text prompt that uses at least one visible tool and confirm the bot sends a separate brief tool-status message before final response, send a markdown/table/task-list prompt, send a short voice note and confirm the bot echoes the transcript before the agent reply, and confirm an unapproved chat is rejected.
 
 ### Prompt Assembly runtime inspection (`system-prompt-assembly`)
 
@@ -275,17 +266,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Skill: `neon-pilot-admin-cli`.
 - Test command discovery, doctor output, bootstrap dry-run/setup flows, provider key stdin handling, app-command list/run, heartbeat start/list/stop, and structured JSON error output.
 
-### AI Gateway (`system-model-gateway`, default disabled)
-
-- Settings component: AI Gateway.
-- Actions: `status`, `updateSettings`, `clearLogs`.
-- Test disabled default, enable/start status, Responses-compatible loopback URL, client config copy, settings persistence, log clearing, port conflict, and disable cleanup.
-
-## External gateway commands
-
-### Telegram
-
-- `/start`, `/help`, `/stop`, `/pause`, `/new`, `/model <model>`, `/rename <title>`.
 - Bot mention variants, unknown command rejection, incomplete command rejection.
 - Conversation attachment and force-new behavior.
 
@@ -401,13 +381,6 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - settings: systemFiles.transcriptPathLinkTarget
 - views: workspace-files, workspace-file-detail
 
-### system-gateways — Telegram Gateway (bundled first-party extension)
-
-- gatewayProviders: telegram
-- nav: gateways-nav (/gateways)
-- secrets: telegramBotToken
-- views: page (/gateways), gateways-sidebar
-
 ### system-git-status — Git Status
 
 - statusBarItems: composer-git-status
@@ -430,11 +403,6 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - settingsComponent: mcp-tools (settings-capabilities)
 - tools: mcp/mcp
 - backend actions: mcpTool, inspectSettings, saveExplicitConfig, testServer, authServer, logoutServer
-
-### system-model-gateway — AI Gateway (default disabled)
-
-- settingsComponent: model-gateway-settings (settings-model-gateway)
-- backend actions: status, updateSettings, clearLogs
 
 ### system-model-picker — Model Picker
 

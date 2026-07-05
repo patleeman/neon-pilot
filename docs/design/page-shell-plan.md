@@ -106,7 +106,6 @@ Current implementation work should focus on conformance and verification:
 
 - Chat: Conversation page. Threads left, Conversation main, Workbench right.
 - Automations: Table page. Blank contextual left, Automations table main. No right sidebar; create/edit/details stay in the main workflow.
-- Gateways: Setup page. Blank contextual left, setup main, docs/activity/test output context rail.
 - Model Arena: Dashboard page. Blank contextual left, arena main, duel/challenger detail right.
 - Diagnostics: Dashboard page. Blank contextual left, diagnostics main, optional metric detail right later.
 - Skills: Table page. Blank contextual left, skills table main, selected skill detail right.
@@ -117,17 +116,15 @@ Current implementation work should focus on conformance and verification:
 
 This is the working checklist for conforming existing first-party page routes to the accepted shell model and approved page types.
 
-| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar              | Status                                                  |
-| ------------------ | -------------------------- | ------------ | ----------------------------------------- | -------------------------- | ------------------------------------------------------- |
-| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench                  | Accepted shell owner                                    |
-| `/automations`     | `system-automations`       | Table        | Blank                                     | None                       | Conformed shell; main-only table workflow               |
-| `/gateways`        | `system-gateways`          | Setup        | Blank                                     | `gateway-context-rail`     | Conformed shell; main status summary flattened          |
-| `/ai-gateway`      | `system-model-gateway`     | Setup        | Blank                                     | None                       | Conformed shell; gateway runtime controls are main-only |
-| `/model-arena`     | `system-model-arena`       | Dashboard    | Blank                                     | `model-arena-context-rail` | Conformed shell; dashboard visual sweep remains         |
-| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                       | Conformed                                               |
-| `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail`      | Conformed                                               |
-| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                       | Conformed; details open inside the App Manager window   |
-| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                       | Conformed shell; settings grammar needs separate sweep  |
+| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar              | Status                                                 |
+| ------------------ | -------------------------- | ------------ | ----------------------------------------- | -------------------------- | ------------------------------------------------------ |
+| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench                  | Accepted shell owner                                   |
+| `/automations`     | `system-automations`       | Table        | Blank                                     | None                       | Conformed shell; main-only table workflow              |
+| `/model-arena`     | `system-model-arena`       | Dashboard    | Blank                                     | `model-arena-context-rail` | Conformed shell; dashboard visual sweep remains        |
+| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                       | Conformed                                              |
+| `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail`      | Conformed                                              |
+| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                       | Conformed; details open inside the App Manager window  |
+| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                       | Conformed shell; settings grammar needs separate sweep |
 
 Remaining broad sweeps:
 
@@ -161,7 +158,7 @@ Remaining broad sweeps:
    - Pass route context, active cwd, and shared selection into right-sidebar surfaces.
 
 5. Page conformance — in progress
-   - Update Automations, Skills, Extensions, Gateways, Model Arena, Diagnostics, and Settings to declare the regions they own.
+   - Update Automations, Skills, Extensions, Model Arena, Diagnostics, and Settings to declare the regions they own.
    - Move Skills/Extensions details out of modal-first flows and into selected-item context rails.
    - Keep Automations main-only with no right-sidebar toggle.
    - Use shared route selection/context for selected-object details so the main table and right sidebar stay synchronized.
@@ -194,7 +191,7 @@ Use these slices to finish conformance against the approved shell and page-type 
    - Normalize table toolbar, filters, search placement, pagination, row actions, empty/loading states.
 
 4. Setup and settings sweep
-   - Tighten Gateways and Setup Readiness around Setup-page rules.
+   - Tighten Setup Readiness around Setup-page rules.
    - Keep provider docs, recent activity, diagnostics, and test output in context rails when they need adjacent context.
    - Normalize host and extension settings under the Settings-page grammar.
 
@@ -221,4 +218,4 @@ Use these slices to finish conformance against the approved shell and page-type 
 - Done: test fixture extension routes with `sidebarView` and `rightSidebarView`.
 - Done: run UI-pattern guardrails for page-local sidebars, main-view side fields, unbound or invalid contextual-left sidebars, unbound or invalid primary right sidebars, and old right-sidebar wording.
 - Run `pnpm --dir packages/desktop run build:ui`, `pnpm run check:types`, extension static checks, and UI pattern checks.
-- Launch the desktop app and visually QA Chat, Automations, Skills, Extensions, Gateways, Diagnostics, and Settings.
+- Launch the desktop app and visually QA Chat, Automations, Skills, Extensions, Diagnostics, and Settings.

@@ -299,7 +299,7 @@ describe('Taskbar interactions', () => {
         groups={[{ id: 'chat', title: 'Chat', focused: true, count: 2, accent: 'chat', onSelect: () => undefined }]}
         items={[
           { id: 'settings', title: 'Settings', focused: false, accent: 'settings', onSelect: () => undefined },
-          { id: 'gateways', title: 'Gateways', focused: true, accent: 'gateways', meta: 'New conversation', onSelect: () => undefined },
+          { id: 'browser', title: 'Browser', focused: true, accent: 'gateways', meta: 'New conversation', onSelect: () => undefined },
         ]}
       />,
     );
@@ -312,11 +312,11 @@ describe('Taskbar interactions', () => {
     expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('data-accent')).toBe('settings');
     expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-current')).toBeNull();
     expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-pressed')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('data-focused')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('data-accent')).toBe('gateways');
-    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('title')).toBe('Gateways attached to New conversation');
+    expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('data-focused')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('data-accent')).toBe('gateways');
+    expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('title')).toBe('Browser attached to New conversation');
     expect(screen.getByText('New conversation').getAttribute('aria-hidden')).toBe('true');
   });
 

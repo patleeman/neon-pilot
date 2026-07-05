@@ -327,15 +327,15 @@ describe('WindowedSegmentedControl', () => {
 describe('WindowedPageMain', () => {
   it('keeps canonical windowed page headers title-only even when legacy callers pass descriptions', () => {
     const html = renderToStaticMarkup(
-      <WindowedPageMain title="Gateways" description="Only approved users and chats can send work into Neon Pilot.">
+      <WindowedPageMain title="Settings" description="Only approved users and chats can send work into Neon Pilot.">
         Gateway settings
       </WindowedPageMain>,
     );
 
-    expect(html).toContain('<h1>Gateways</h1>');
+    expect(html).toContain('<h1>Settings</h1>');
     expect(html).toContain('Gateway settings');
     expect(html).not.toContain('Only approved users and chats can send work into Neon Pilot.');
-    expect(html).not.toContain('wos-page-main__heading"><h1>Gateways</h1><p>');
+    expect(html).not.toContain('wos-page-main__heading"><h1>Settings</h1><p>');
   });
 });
 
@@ -831,13 +831,13 @@ describe('WindowedDialog content primitives', () => {
 
   it('keeps explicit subwindow metadata ahead of the parent fallback label', () => {
     const html = renderToStaticMarkup(
-      <WindowedDialog title="Telegram access" meta="2 approved" accent="gateways" parentWindowTitle="Gateways" onClose={() => undefined}>
+      <WindowedDialog title="Telegram access" meta="2 approved" accent="gateways" parentWindowTitle="Settings" onClose={() => undefined}>
         Access
       </WindowedDialog>,
     );
 
     expect(html).toContain('2 approved');
-    expect(html).not.toContain('Attached to Gateways');
+    expect(html).not.toContain('Attached to Settings');
   });
 
   it('supports initial modeless subwindow offsets for multiple desktop detail windows', () => {
@@ -2918,30 +2918,31 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-wos-theme={theme}');
   });
 
-  it('documents the canonical Workflows desktop page and subwindow pattern', () => {
+  it('documents the canonical App Manager desktop page and detail dialog pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
-    const workflowsSource = source.slice(source.indexOf('function WorkflowsPageStory'), source.indexOf('export const WorkflowsPage'));
+    const appManagerSource = source.slice(source.indexOf('function AppManagerPageStory'), source.indexOf('export const AppManagerPage'));
 
-    expect(source).toContain('function WorkflowsPageStory');
-    expect(source).toContain('export const WorkflowsPage');
-    expect(source).toContain('export const DarkWorkflowsPage');
-    expect(source).toContain('<WorkflowsPageStory theme="dark" />');
-    expect(source).toContain('title="Workflows"');
+    expect(source).toContain('function AppManagerPageStory');
+    expect(source).toContain('export const AppManagerPage');
+    expect(source).toContain('export const DarkAppManagerPage');
+    expect(source).toContain('<AppManagerPageStory theme="dark" />');
+    expect(source).toContain('title="App Manager"');
     expect(source).toContain('data-wos-theme={theme}');
     expect(source).not.toContain('eyebrow="Dynamic workflows"');
-    expect(workflowsSource).not.toContain('title="Inventory"');
-    expect(workflowsSource).toContain('title="Overview"');
-    expect(workflowsSource).toContain('meta="4 runs · 3 saved"');
-    expect(workflowsSource).toContain('<WindowedKeyValueGrid');
-    expect(workflowsSource).toContain('columns={4}');
-    expect(workflowsSource).toContain("value: 'Repo audit'");
-    expect(workflowsSource).toContain('title="Runs"');
-    expect(workflowsSource).toContain('title="Library"');
+    expect(appManagerSource).not.toContain('title="Inventory"');
+    expect(appManagerSource).toContain('title="Catalog"');
+    expect(appManagerSource).toContain('title="Installed"');
+    expect(appManagerSource).toContain('meta="16 installed · 14 enabled"');
+    expect(appManagerSource).toContain('<WindowedKeyValueGrid');
+    expect(appManagerSource).toContain('columns={3}');
+    expect(appManagerSource).toContain("value: '16 installed · 14 enabled'");
+    expect(appManagerSource).toContain('name="system-browser"');
+    expect(appManagerSource).toContain('name="system-terminal"');
     expect(source).toContain('<WindowedDialog');
-    expect(source).toContain('title="Repo audit"');
-    expect(source).toContain('parentWindowTitle="Workflows"');
-    expect(workflowsSource.indexOf('</WindowFrame>')).toBeLessThan(workflowsSource.indexOf('<WindowedDialog'));
+    expect(source).toContain('title="system-browser"');
+    expect(source).toContain('parentWindowTitle="App Manager"');
+    expect(appManagerSource.indexOf('</WindowFrame>')).toBeLessThan(appManagerSource.indexOf('<WindowedDialog'));
   });
 
   it('documents shared neutral empty states and error state blocks for windowed pages', () => {
@@ -3022,55 +3023,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('title="Automation context"');
     expect(source).not.toContain('title="Selected automation"');
     expect(source).not.toContain('ariaLabel="Automation filter"');
-  });
-
-  it('documents the canonical Gateways desktop page', () => {
-    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
-    const source = readFileSync(storiesPath, 'utf8');
-    const gatewaysSource = source.slice(source.indexOf('function GatewaysPageStory'), source.indexOf('export const GatewaysPage'));
-
-    expect(source).toContain('function GatewaysPageStory');
-    expect(source).toContain('export const GatewaysPage');
-    expect(source).toContain('export const DarkGatewaysPage');
-    expect(source).toContain('<GatewaysPageStory theme="dark" />');
-    expect(source).toContain('data-wos-theme={theme}');
-    expect(source).toContain('title="Gateways"');
-    expect(source).not.toContain('eyebrow="Ingress"');
-    expect(source).toContain('title="Status"');
-    expect(source).toContain('title="Gateway tools"');
-    expect(source).toContain('title="Telegram configuration"');
-    expect(source).toContain('subwindowId="gateway-configuration"');
-    expect(source).toContain('className="wos-gateway-dialog wos-gateway-dialog--configuration"');
-    expect(source).toContain('<WindowedTextInput aria-label="Telegram token" type="password"');
-    expect(gatewaysSource).toContain('action={<WindowedPageButton>Settings</WindowedPageButton>}');
-    expect(gatewaysSource).not.toContain('action="Settings"');
-    expect(source).not.toContain('<WindowedTextarea aria-label="Telegram token"');
-    expect(source).not.toContain('title="Selected gateway"');
-    expect(source).not.toContain('ariaLabel="Gateway filter"');
-  });
-
-  it('documents the canonical AI Gateway desktop page', () => {
-    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
-    const source = readFileSync(storiesPath, 'utf8');
-    const aiGatewaySource = source.slice(source.indexOf('function AIGatewayPageStory'), source.indexOf('export const AIGatewayPage'));
-
-    expect(source).toContain('function AIGatewayPageStory');
-    expect(source).toContain('export const AIGatewayPage');
-    expect(source).toContain('export const DarkAIGatewayPage');
-    expect(source).toContain('<AIGatewayPageStory theme="dark" />');
-    expect(aiGatewaySource).toContain('title="AI Gateway"');
-    expect(aiGatewaySource).toContain('data-wos-theme={theme}');
-    expect(aiGatewaySource).toContain('title="Loopback endpoint"');
-    expect(aiGatewaySource).toContain('title="Listener"');
-    expect(aiGatewaySource).toContain('title="Codex client setup"');
-    expect(aiGatewaySource).toContain('title="Recent activity"');
-    expect(aiGatewaySource).toContain('aria-label="Gateway port"');
-    expect(aiGatewaySource).toContain('aria-label="Default gateway model"');
-    expect(aiGatewaySource).toContain(
-      "<WindowedDataTable columns={[{ label: 'Event' }, { label: 'Status' }, { label: 'Time', align: 'right' }]}",
-    );
-    expect(aiGatewaySource).not.toContain('eyebrow="Loopback"');
-    expect(aiGatewaySource).not.toContain('title="Selected gateway"');
   });
 
   it('documents the canonical Model Arena desktop page', () => {
@@ -3242,15 +3194,14 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('export const EmbeddedExtensionPage');
     expect(source).toContain('export const DarkEmbeddedExtensionPage');
     expect(source).toContain('<EmbeddedExtensionPageStory theme="dark" />');
-    expect(embeddedSource).toContain('title="Gateways"');
+    expect(embeddedSource).toContain('title="Browser"');
     expect(embeddedSource).toContain('data-wos-theme={theme}');
-    expect(embeddedSource).toContain('title="Telegram"');
     expect(embeddedSource).toContain('title="Status"');
-    expect(embeddedSource).toContain('title="Bot token"');
-    expect(embeddedSource).toContain('title="Telegram access"');
+    expect(embeddedSource).toContain('title="Preview controls"');
+    expect(embeddedSource).toContain('title="Permissions"');
     expect(embeddedSource).toContain('title="Recent activity"');
-    expect(embeddedSource).toContain('aria-label="Telegram bot token"');
-    expect(embeddedSource).toContain('label="Toggle Telegram gateway"');
+    expect(embeddedSource).toContain('aria-label="Browser address"');
+    expect(embeddedSource).toContain('label="Toggle Browser preview"');
   });
 
   it('keeps the desktop composition aligned with the canonical top-level app roster', () => {
@@ -3276,11 +3227,8 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(source).toContain('CANONICAL_WINDOWED_DESKTOP_APPS');
     expect(source).toContain('const canonicalDesktopApps = CANONICAL_WINDOWED_DESKTOP_APPS');
-    expect(source.slice(source.indexOf('function WorkflowsPageStory'), source.indexOf('export const ModelArenaPage'))).toContain(
-      'accent="workflows"',
-    );
-    expect(source.slice(source.indexOf('export const GatewaysPage'), source.indexOf('export const ModelArenaPage'))).toContain(
-      'export const AIGatewayPage',
+    expect(source.slice(source.indexOf('function AppManagerPageStory'), source.indexOf('export const AppManagerPage'))).toContain(
+      'accent="apps"',
     );
     expect(source.slice(source.indexOf('function ModelArenaPageStory'), source.indexOf('export const DiagnosticsPage'))).toContain(
       'accent="model-arena"',
@@ -3308,12 +3256,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--dark-settings-page'");
     expect(source).toContain("'windowed-os-desktop-shell--automations-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-automations-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--workflows-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-workflows-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--gateways-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-gateways-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--ai-gateway-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-ai-gateway-page'");
+    expect(source).not.toContain("'windowed-os-desktop-shell--workflows-page'");
+    expect(source).not.toContain("'windowed-os-desktop-shell--dark-workflows-page'");
     expect(source).toContain("'windowed-os-desktop-shell--model-arena-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-model-arena-page'");
     expect(source).toContain("'windowed-os-desktop-shell--app-manager-page'");

@@ -1,6 +1,6 @@
 # Page Template Standards
 
-Neon Pilot pages should be assembled from shared page templates before adding local layout. The goal is for Settings, Extensions, Skills, Automations, Diagnostics, Gateways, and extension-owned pages to feel like siblings in the same workbench.
+Neon Pilot pages should be assembled from shared page templates before adding local layout. The goal is for Settings, Extensions, Skills, Automations, Diagnostics, and extension-owned pages to feel like siblings in the same workbench.
 
 Use `docs/design/page-shell-plan.md` for the shell-region implementation plan and `docs/design/page-type-vetting.md` for the recorded approval decision.
 

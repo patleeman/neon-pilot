@@ -92,7 +92,7 @@ Native system extensions include:
 
 Native extension views declare host intent with `placement`, `scope`, and `activation`.
 
-- `placement: "primary"` — stable left-sidebar destination plus main page route. Use for global app pages like Automations, Gateways, Telemetry, Settings, Extensions, and standalone Knowledge.
+- `placement: "primary"` — stable left-sidebar destination plus main page route. Use for global app pages like Automations, Telemetry, Settings, Extensions, and standalone Knowledge.
 - `placement: "workbench-tool"` — workbench tool, optionally with a tab-local right sidebar and paired detail pane. Use for side-by-side surfaces like Knowledge tree/editor and File Explorer, or single-pane tabs like Browser and Drawing.
 
 `scope` binds the view data: `global`, `workspace`, or `conversation`. `activation` controls lifecycle: `on-route` for routed pages, `on-open` for rail surfaces, `always` only for tiny host services, and `on-demand` for backend/tool-only work.

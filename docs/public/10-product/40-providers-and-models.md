@@ -26,12 +26,6 @@ Provider support follows Pi's provider layer. Depending on your local configurat
 
 Use the model picker in the composer when you want a different model for one conversation. Use Settings when you want to change defaults.
 
-## Local gateway
-
-The AI Gateway extension can expose your configured Neon Pilot models through a local API for external coding agents. This is useful when another tool expects an OpenAI-compatible endpoint but you want Neon Pilot to own provider configuration and local runtime state.
-
-The gateway is opt-in. Enable and configure it from Settings or the Extensions page before using it from another tool.
-
 ## Model-specific extension behavior
 
 Extensions can contribute model profiles. A model profile lets an enabled extension change tools, instructions, or runtime behavior for matching providers or models.

@@ -9,7 +9,7 @@ import {
 } from '../secrets/secretStore.js';
 
 const TELEGRAM_AUTH_PROVIDER = 'telegram';
-export const TELEGRAM_SECRET_EXTENSION = 'system-gateways';
+export const TELEGRAM_SECRET_EXTENSION = 'host-gateways';
 export const TELEGRAM_SECRET_ID = 'telegramBotToken';
 
 function readLegacyTelegramBotToken(authFile: string): string | null {
