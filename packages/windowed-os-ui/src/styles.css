@@ -746,6 +746,8 @@
 }
 
 .wos-app-tile[data-variant='taskbar'] {
+  width: 100%;
+  min-width: 0;
   gap: 0;
 }
 
@@ -785,6 +787,7 @@
 }
 
 .wos-app-tile[data-variant='taskbar'] .wos-app-tile__label {
+  flex: 0 1 auto;
   font: var(--wos-text-row);
 }
 
@@ -803,6 +806,22 @@
 
 .wos-app-tile[data-variant='taskbar'] .wos-app-tile__meta {
   display: block;
+  flex: 0 999 9ch;
+  max-width: 9ch;
+}
+
+.wos-app-tile[data-variant='taskbar'] .wos-app-tile__meta::before {
+  content: '/ ';
+}
+
+.wos-app-tile[data-variant='taskbar'] .wos-app-tile__copy {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .wos-app-tile__count {

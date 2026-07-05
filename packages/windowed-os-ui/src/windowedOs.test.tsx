@@ -480,6 +480,10 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('scrollbar-width: thin;');
     expect(stylesSource).toContain('.wos-taskbar__button {\n  min-width: 132px;');
     expect(stylesSource).toContain('max-width: 220px;\n  flex: 0 0 auto;');
+    expect(stylesSource).toContain(".wos-app-tile[data-variant='taskbar'] .wos-app-tile__copy {\n  display: flex;");
+    expect(stylesSource).toContain('white-space: nowrap;');
+    expect(stylesSource).toContain(".wos-app-tile[data-variant='taskbar'] .wos-app-tile__meta");
+    expect(stylesSource).toContain('max-width: 9ch;');
     expect(stylesSource).toContain('@media (max-width: 640px)');
     expect(stylesSource).toContain('flex: 1 1 max(140px, 42vw);');
   });
