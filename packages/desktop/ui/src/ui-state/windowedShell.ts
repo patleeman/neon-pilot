@@ -1,9 +1,6 @@
-export const DESKTOP_SHELL_PRESENTATION_STORAGE_KEY = 'pa:desktop-shell-presentation';
 export const WINDOWED_OS_THEME_STORAGE_KEY = 'pa:windowed-os-theme:v1';
 export const WINDOWED_OS_THEME_CHANGED_EVENT = 'pa:windowed-os-theme-changed';
-export const WINDOWED_SHELL_CHILD_PARAM = 'windowed-child';
 
-export type DesktopShellPresentation = 'stable' | 'windowed';
 export type WindowedOsResolvedTheme = 'light' | 'dark';
 export type WindowedOsTheme = WindowedOsResolvedTheme | 'auto';
 export type WindowedOsThemePhase = 'deep-night' | 'night' | 'dawn' | 'morning' | 'bright-noon' | 'afternoon' | 'dusk';
@@ -56,45 +53,6 @@ const WINDOWED_OS_THEME_PHASE_SCHEDULE: ReadonlyArray<{
   { phase: 'dusk', resolvedTheme: 'dark', startMinute: 18 * 60 },
   { phase: 'night', resolvedTheme: 'dark', startMinute: 21 * 60 },
 ];
-
-export function isWindowedShellChild(search = typeof window === 'undefined' ? '' : window.location.search): boolean {
-  return new URLSearchParams(search).get(WINDOWED_SHELL_CHILD_PARAM) === '1';
-}
-
-export function normalizeDesktopShellPresentation(value: unknown): DesktopShellPresentation | null {
-  return value === 'stable' || value === 'windowed' ? value : null;
-}
-
-export function readDesktopShellPresentation(): DesktopShellPresentation {
-  if (typeof window === 'undefined' || isWindowedShellChild()) {
-    return 'stable';
-  }
-
-  const queryMode = normalizeDesktopShellPresentation(new URLSearchParams(window.location.search).get('shell'));
-  if (queryMode) {
-    try {
-      window.localStorage.setItem(DESKTOP_SHELL_PRESENTATION_STORAGE_KEY, queryMode);
-    } catch {
-      // Ignore storage failures; the query string still selects this load.
-    }
-    return queryMode;
-  }
-
-  try {
-    return normalizeDesktopShellPresentation(window.localStorage.getItem(DESKTOP_SHELL_PRESENTATION_STORAGE_KEY)) ?? 'windowed';
-  } catch {
-    return 'windowed';
-  }
-}
-
-export function writeDesktopShellPresentation(mode: DesktopShellPresentation): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(DESKTOP_SHELL_PRESENTATION_STORAGE_KEY, mode);
-  } catch {
-    // Ignore storage failures.
-  }
-}
 
 export function normalizeWindowedOsTheme(value: unknown): WindowedOsTheme | null {
   return value === 'light' || value === 'dark' || value === 'auto' ? value : null;

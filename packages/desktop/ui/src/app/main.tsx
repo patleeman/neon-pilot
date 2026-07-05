@@ -25,7 +25,6 @@ import { createRoot } from 'react-dom/client';
 import { startRendererBlockTelemetry } from '../client/perfDiagnostics';
 import { addNotification } from '../components/notifications/notificationStore';
 import { recordRendererTelemetry } from '../telemetry/appTelemetry';
-import { DESKTOP_SHELL_PRESENTATION_STORAGE_KEY } from '../ui-state/windowedShell';
 import { App } from './App';
 import { loadDeferredFonts } from './loadDeferredFonts';
 
@@ -84,19 +83,7 @@ if (desktopShellParams.get('desktop-shell') === '1') {
   }
 }
 
-const persistedDesktopShellPresentation = (() => {
-  try {
-    return window.localStorage.getItem(DESKTOP_SHELL_PRESENTATION_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-})();
-
-if (
-  desktopShellParams.get('desktop-shell') === '1' &&
-  desktopShellParams.get('shell') !== 'stable' &&
-  (desktopShellParams.get('shell') === 'windowed' || persistedDesktopShellPresentation === 'windowed')
-) {
+if (desktopShellParams.get('desktop-shell') === '1') {
   void window.neonPilotDesktop
     ?.setWorkbenchBrowserBounds({
       visible: false,

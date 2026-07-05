@@ -6,8 +6,6 @@ import {
   boundsForRestoredDragStart,
   boundsForSnapTarget,
   constrainWindowBounds,
-  isWindowedShellChild,
-  readDesktopShellPresentation,
   readWindowedOsTheme,
   resolveSnapTarget,
   resolveWindowedOsTheme,
@@ -19,11 +17,6 @@ import {
 } from './windowedShell';
 
 describe('windowedShell', () => {
-  it('recognizes child route rendering mode', () => {
-    expect(isWindowedShellChild('?windowed-child=1')).toBe(true);
-    expect(isWindowedShellChild('?windowed-child=0')).toBe(false);
-  });
-
   it('lets windows move partly off all four desktop edges while keeping a recoverable strip visible', () => {
     const desktop = { width: 1000, height: 700 };
     expect(constrainWindowBounds({ x: -700, y: -500, width: 720, height: 420 }, desktop)).toEqual({
@@ -71,35 +64,6 @@ describe('windowedShell', () => {
         desktop,
       ),
     ).toEqual({ x: 280, y: 0, width: 640, height: 420 });
-  });
-
-  it('keeps child frames on the stable shell even when the parent preference is windowed', () => {
-    localStorage.setItem('pa:desktop-shell-presentation', 'windowed');
-    window.history.replaceState(null, '', '/conversations/new?windowed-child=1');
-    expect(readDesktopShellPresentation()).toBe('stable');
-  });
-
-  it('defaults fresh top-level launches to the windowed shell', () => {
-    localStorage.removeItem('pa:desktop-shell-presentation');
-    window.history.replaceState(null, '', '/conversations/new');
-    expect(readDesktopShellPresentation()).toBe('windowed');
-  });
-
-  it('preserves saved stable shell preference as an escape hatch', () => {
-    localStorage.setItem('pa:desktop-shell-presentation', 'stable');
-    window.history.replaceState(null, '', '/conversations/new');
-    expect(readDesktopShellPresentation()).toBe('stable');
-  });
-
-  it('lets the shell query parameter override and persist the launch mode', () => {
-    localStorage.removeItem('pa:desktop-shell-presentation');
-    window.history.replaceState(null, '', '/conversations/new?shell=stable');
-    expect(readDesktopShellPresentation()).toBe('stable');
-    expect(localStorage.getItem('pa:desktop-shell-presentation')).toBe('stable');
-
-    window.history.replaceState(null, '', '/conversations/new?shell=windowed');
-    expect(readDesktopShellPresentation()).toBe('windowed');
-    expect(localStorage.getItem('pa:desktop-shell-presentation')).toBe('windowed');
   });
 
   it('defaults the isolated windowed OS theme to light', () => {

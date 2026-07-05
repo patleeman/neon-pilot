@@ -55,7 +55,6 @@ import { useAllSessions } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
-import { isWindowedShellChild } from '../ui-state/windowedShell';
 import {
   WORKBENCH_CHAT_CLOSE_EVENT,
   WORKBENCH_CHAT_OPEN_EVENT,
@@ -1971,9 +1970,8 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false, s
     };
   }, []);
 
-  const windowedShellChild = isWindowedShellChild();
-  const hideDesktopTopBar = embeddedWindowChrome || windowedShellChild;
-  const effectiveSidebarOpen = windowedShellChild || embeddedWindowChrome ? false : sidebarOpen;
+  const hideDesktopTopBar = embeddedWindowChrome;
+  const effectiveSidebarOpen = embeddedWindowChrome ? false : sidebarOpen;
   useEffect(() => {
     const root = document.documentElement;
     const previous = root.style.getPropertyValue('--neon-pilot-sidebar-offset');
@@ -2106,13 +2104,13 @@ export function Layout({ embeddedWindowChrome = false, forceWorkbench = false, s
     [extensionRightToolPanels],
   );
   const routePrimaryRailSurface = useMemo(() => {
-    if (showWorkbench || embeddedWindowChrome || windowedShellChild) return null;
+    if (showWorkbench || embeddedWindowChrome) return null;
     return resolveRouteRightSidebarSurface({
       pathname: location.pathname,
       navItems: routeShellNavItems,
       surfaces: extensionRegistry.surfaces,
     });
-  }, [embeddedWindowChrome, extensionRegistry.surfaces, location.pathname, routeShellNavItems, showWorkbench, windowedShellChild]);
+  }, [embeddedWindowChrome, extensionRegistry.surfaces, location.pathname, routeShellNavItems, showWorkbench]);
   const showRoutePrimaryRail = routePrimaryRailSurface !== null && railOpen;
   const knowledgeRouteFileId =
     !showWorkbench && routeIsKnowledge(location.pathname, extensionRegistry.surfaces) ? (searchParams.get('file') ?? null) : null;
