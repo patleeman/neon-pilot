@@ -101,6 +101,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 validation: focused transcript renderer/chat tests and `pnpm --dir packages/desktop run build:ui` passed for the app-facing chat fallback copy.
    - 2026-07-05 progress: live App Manager windowed detail/install hooks now use the canonical `wos-app-*` design-system hooks instead of the retired `wos-extension-*` names, aligning the implementation with the Windowed OS app target stories/styles.
    - 2026-07-05 validation: focused App Manager frontend/manifest tests and `pnpm run extension:build -- extensions/system-extension-manager` passed for the App Manager hook rename.
+   - 2026-07-05 progress: App Manager tests and sidebar document-navigation helpers now use app-facing fixture copy and route naming for top-level app pages, keeping `/ext/*` language only for explicit legacy extension-route compatibility cases.
+   - 2026-07-05 validation: focused App Manager frontend tests and sidebar navigation routing tests passed for the app-facing test contract cleanup.
 
 ### Next concrete implementation backlog
 

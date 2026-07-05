@@ -69,7 +69,7 @@ function createExtension() {
   return {
     id: 'menu-test',
     name: 'Menu Test',
-    description: 'Extension menu feedback test.',
+    description: 'App menu feedback test.',
     enabled: true,
     status: 'enabled',
     packageType: 'user',
@@ -197,7 +197,7 @@ describe('ExtensionManagerPage', () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension()]);
     mocks.extensionKeybindings.mockResolvedValue([]);
     mocks.deleteExtension.mockResolvedValue({ ok: true, extensionId: 'menu-test', deleted: true });
-    mocks.reloadExtension.mockResolvedValue({ ok: true, id: 'menu-test', reloaded: true, message: 'Extension backend reloaded.' });
+    mocks.reloadExtension.mockResolvedValue({ ok: true, id: 'menu-test', reloaded: true, message: 'App backend reloaded.' });
     mocks.updateExtension.mockResolvedValue({ extension: createExtension(), actionResult: { ok: true } });
     mocks.validateExtension.mockResolvedValue({
       ok: true,
@@ -704,7 +704,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.getByText('2 installed · 2 enabled')).toBeTruthy();
   });
 
-  it('links configurable extensions to Settings', async () => {
+  it('links configurable apps to Settings', async () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension(), createConfigurableExtension()]);
     renderPage();
 
@@ -713,7 +713,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByLabelText('Configure Menu Test in Settings')).toBeNull();
   });
 
-  it('points extension details to Settings instead of rendering duplicate controls', async () => {
+  it('points app details to Settings instead of rendering duplicate controls', async () => {
     mocks.extensionInstallations.mockResolvedValue([createConfigurableExtension()]);
     const selectionSet = vi.fn();
     renderPageWithPa({
@@ -1191,7 +1191,7 @@ describe('ExtensionManagerPage', () => {
     expect(setIntervalSpy.mock.calls.some((call) => call[1] === 5_000)).toBe(false);
   });
 
-  it('ignores stale installed extension refreshes after a newer registry event', async () => {
+  it('ignores stale installed app refreshes after a newer registry event', async () => {
     const first = createDeferred<ReturnType<typeof createExtension>[]>();
     const second = createDeferred<ReturnType<typeof createExtension>[]>();
     mocks.extensionInstallations.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
@@ -1202,17 +1202,17 @@ describe('ExtensionManagerPage', () => {
     });
 
     await act(async () => {
-      second.resolve([{ ...createExtension(), id: 'fresh-extension', name: 'Fresh Extension' } as never]);
+      second.resolve([{ ...createExtension(), id: 'fresh-app', name: 'Fresh App' } as never]);
       await second.promise;
     });
-    expect(await screen.findByText('Fresh Extension')).toBeTruthy();
+    expect(await screen.findByText('Fresh App')).toBeTruthy();
 
     await act(async () => {
-      first.resolve([{ ...createExtension(), id: 'stale-extension', name: 'Stale Extension' } as never]);
+      first.resolve([{ ...createExtension(), id: 'stale-app', name: 'Stale App' } as never]);
       await first.promise;
     });
-    await waitFor(() => expect(screen.queryByText('Stale Extension')).toBeNull());
-    expect(screen.getByText('Fresh Extension')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Stale App')).toBeNull());
+    expect(screen.getByText('Fresh App')).toBeTruthy();
   });
 
   it('renders app repositories as a settings panel', async () => {
