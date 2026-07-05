@@ -36,6 +36,7 @@ import {
   type To,
   UNSAFE_LocationContext as LocationContext,
   UNSAFE_NavigationContext as NavigationContext,
+  useLocation,
 } from 'react-router-dom';
 
 import { getDesktopBridge } from '../desktop/desktopBridge';
@@ -1189,6 +1190,7 @@ function WindowedRouteLoading({ label }: { label: string }) {
 }
 
 export function WindowedLayout() {
+  const browserLocation = useLocation();
   const extensionRegistry = useExtensionRegistry();
   const conversations = useConversations({ includeArchivedSessions: false });
   const desktopRef = useRef<HTMLElement | null>(null);
@@ -1207,6 +1209,10 @@ export function WindowedLayout() {
   const [windowedThemePhase, setWindowedThemePhase] = useState<WindowedOsThemePhase>(() => resolveWindowedOsThemePhase());
 
   const windowedApps = useMemo(() => buildWindowedAppRegistry(extensionRegistry), [extensionRegistry]);
+  const browserRoute = useMemo(
+    () => createPath({ pathname: browserLocation.pathname, search: browserLocation.search, hash: browserLocation.hash }),
+    [browserLocation.hash, browserLocation.pathname, browserLocation.search],
+  );
   const chatSessions = useMemo(
     () => [...conversations.pinnedSessions, ...conversations.tabs],
     [conversations.pinnedSessions, conversations.tabs],
@@ -1232,6 +1238,7 @@ export function WindowedLayout() {
     [visibleWindows],
   );
   const windowsRef = useRef(windows);
+  const hydratedBrowserRouteRef = useRef<string | null>(null);
 
   useEffect(() => {
     document.body.setAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE, 'true');
@@ -1453,6 +1460,32 @@ export function WindowedLayout() {
     },
     [chatSessions],
   );
+
+  useEffect(() => {
+    if (hydratedBrowserRouteRef.current === browserRoute) return;
+    if (browserRoute === '/') return;
+
+    const chatSessionId = chatSessionIdForRoute(browserRoute);
+    if (chatSessionId) {
+      if (conversations.loading) return;
+      hydratedBrowserRouteRef.current = browserRoute;
+      const expectedId = chatSessionId === 'draft' ? 'chat:draft' : `chat:${chatSessionId}`;
+      const expectedRoute = chatSessionId === 'draft' ? '/conversations/new' : browserRoute;
+      const existing = windowsRef.current.find((windowModel) => windowModel.id === expectedId);
+      if (existing?.focused && !existing.minimized && existing.route === expectedRoute) return;
+      openChatWindow(browserRoute);
+      return;
+    }
+
+    if (extensionRegistry.loading) return;
+    hydratedBrowserRouteRef.current = browserRoute;
+    const app = findWindowedAppForRoute(browserRoute, windowedApps);
+    if (!app) return;
+    const id = createId(app);
+    const existing = windowsRef.current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app));
+    if (existing?.focused && !existing.minimized && existing.route === browserRoute) return;
+    openRouteWindow(browserRoute);
+  }, [browserRoute, conversations.loading, extensionRegistry.loading, openChatWindow, openRouteWindow, windowedApps]);
 
   const navigateWindow = useCallback(
     (windowId: string, to: To) => {

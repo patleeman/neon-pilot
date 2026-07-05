@@ -153,7 +153,10 @@ vi.mock('../pages/ConversationPage', async () => {
   };
 });
 
-function renderWindowedLayout() {
+function renderWindowedLayout(route?: string) {
+  if (route) {
+    window.history.pushState({}, '', route);
+  }
   return render(
     <BrowserRouter>
       <WindowedLayout />
@@ -201,6 +204,7 @@ function surfaceForChildTool(kind: ChildToolKind): Record<string, unknown> {
 describe('WindowedLayout route windows', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.history.pushState({}, '', '/');
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
     delete window.neonPilotDesktop;
@@ -271,6 +275,26 @@ describe('WindowedLayout route windows', () => {
         windowedShellActive: true,
       });
     });
+  });
+
+  it('opens the current browser URL as a focused windowed extension app on boot', async () => {
+    const { container } = renderWindowedLayout('/notes');
+
+    const notesWindow = await screen.findByRole('region', { name: 'Notes' });
+    expect(notesWindow.getAttribute('data-focused')).toBe('true');
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toMatch(/^route:/);
+    expect(within(notesWindow).getByTestId('extension-route-host').textContent).toContain('/notes:windowed');
+  });
+
+  it('opens the current browser URL as a focused saved conversation window on boot', async () => {
+    mocks.tabs = [{ id: 'session-1', title: 'Saved research thread' }];
+
+    const { container } = renderWindowedLayout('/conversations/session-1');
+
+    const chatWindow = await screen.findByRole('region', { name: 'Saved research thread' });
+    expect(chatWindow.getAttribute('data-focused')).toBe('true');
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('chat:session-1');
+    expect(within(chatWindow).getByTestId('conversation-page').getAttribute('data-pathname')).toBe('/conversations/session-1');
   });
 
   it('allows native browser views for a single focused chat window after shell settling', async () => {
