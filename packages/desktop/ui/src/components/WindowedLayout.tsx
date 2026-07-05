@@ -472,6 +472,11 @@ function sameBounds(first: WindowBounds, second: WindowBounds): boolean {
   return first.x === second.x && first.y === second.y && first.width === second.width && first.height === second.height;
 }
 
+function fallbackRestoreBounds(windowModel: DesktopWindowModel, desktop: DesktopRect): WindowBounds {
+  const kind: LauncherWindowKind = windowModel.kind === 'chat' ? 'chat' : 'route';
+  return defaultBoundsForDesktop(0, kind, desktop, windowModel.title);
+}
+
 function boundsOverlap(first: WindowBounds, second: WindowBounds): boolean {
   return (
     first.x < second.x + second.width &&
@@ -1508,28 +1513,21 @@ export function WindowedLayout() {
     return () => window.removeEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate, true);
   }, [openChatWindow, openRouteWindow]);
 
-  const closeWindow = useCallback(
-    (windowModel: DesktopWindowModel) => {
-      suspendWindowedBrowserViews();
-      dispatchParentLifecycleForWindow(windowModel, 'closed');
-      if (windowModel.kind === 'chat' && windowModel.archivedOnClose) {
-        const conversationId = windowModel.id.slice('chat:'.length);
-        conversations.archiveSession(conversationId);
-      }
-      setRestoreBounds((current) => {
-        if (!current[windowModel.id]) return current;
-        const next = { ...current };
-        delete next[windowModel.id];
-        return next;
-      });
-      setWindows((current) => {
-        const withoutClosed = current.filter((candidate) => candidate.id !== windowModel.id);
-        const withoutChildren = windowModel.kind === 'chat' ? removeChildWindowsForParent(withoutClosed, windowModel.id) : withoutClosed;
-        return ensureFocusedWindow(withoutChildren);
-      });
-    },
-    [conversations],
-  );
+  const closeWindow = useCallback((windowModel: DesktopWindowModel) => {
+    suspendWindowedBrowserViews();
+    dispatchParentLifecycleForWindow(windowModel, 'closed');
+    setRestoreBounds((current) => {
+      if (!current[windowModel.id]) return current;
+      const next = { ...current };
+      delete next[windowModel.id];
+      return next;
+    });
+    setWindows((current) => {
+      const withoutClosed = current.filter((candidate) => candidate.id !== windowModel.id);
+      const withoutChildren = windowModel.kind === 'chat' ? removeChildWindowsForParent(withoutClosed, windowModel.id) : withoutClosed;
+      return ensureFocusedWindow(withoutChildren);
+    });
+  }, []);
 
   const minimizeWindow = useCallback((windowId: string) => {
     suspendWindowedBrowserViews();
@@ -1563,14 +1561,15 @@ export function WindowedLayout() {
       const maximizedBounds = boundsForSnapTarget('maximize', rect);
       const restored = restoreBounds[windowModel.id];
 
-      if (sameBounds(windowModel.bounds, maximizedBounds) && restored) {
+      if (sameBounds(windowModel.bounds, maximizedBounds)) {
+        const restoreTarget = restored ?? fallbackRestoreBounds(windowModel, rect);
         setRestoreBounds((current) => {
           const next = { ...current };
           delete next[windowModel.id];
           return next;
         });
         setWindows((current) =>
-          current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds: restored } : candidate)),
+          current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds: restoreTarget } : candidate)),
         );
         return;
       }
@@ -1588,19 +1587,21 @@ export function WindowedLayout() {
   const toggleMaximize = useCallback(
     (windowModel: DesktopWindowModel) => {
       suspendWindowedBrowserViews();
+      const rect = desktopRect(desktopRef.current);
+      const maximizedBounds = boundsForSnapTarget('maximize', rect);
       const restored = restoreBounds[windowModel.id];
-      if (restored) {
+      if (restored || sameBounds(windowModel.bounds, maximizedBounds)) {
+        const restoreTarget = restored ?? fallbackRestoreBounds(windowModel, rect);
         setRestoreBounds((current) => {
           const next = { ...current };
           delete next[windowModel.id];
           return next;
         });
         setWindows((current) =>
-          current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds: restored } : candidate)),
+          current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds: restoreTarget } : candidate)),
         );
         return;
       }
-      const rect = desktopRect(desktopRef.current);
       setRestoreBounds((current) => ({ ...current, [windowModel.id]: windowModel.bounds }));
       setWindows((current) =>
         current.map((candidate) =>

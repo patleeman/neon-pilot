@@ -1235,6 +1235,30 @@ describe('WindowedLayout route windows', () => {
     expect(within(routinesWindow).getByText('/routines:windowed')).toBeTruthy();
   });
 
+  it('closes saved chat windows without archiving the underlying conversation', async () => {
+    mocks.tabs = [{ id: 'session-1', title: 'Planning thread', messageCount: 4 }];
+    seedWindowedWindows([
+      {
+        id: 'chat:session-1',
+        kind: 'chat',
+        title: 'Planning thread',
+        route: '/conversations/session-1',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+        archivedOnClose: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const chatWindow = await screen.findByRole('region', { name: /planning thread/i });
+    fireEvent.click(within(chatWindow).getByRole('button', { name: /close planning thread/i }));
+
+    expect(screen.queryByRole('region', { name: /planning thread/i })).toBeNull();
+    expect(mocks.archiveSession).not.toHaveBeenCalled();
+  });
+
   it('exposes the canonical top-level desktop apps without nested route duplicates', () => {
     mocks.extensions = [
       {
@@ -3083,6 +3107,34 @@ describe('WindowedLayout route windows', () => {
     const reopenedWindow = await screen.findByRole('region', { name: /^routines$/i });
     expect(within(reopenedWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
     expect(within(reopenedWindow).queryByRole('button', { name: /restore routines/i })).toBeNull();
+  });
+
+  it('restores a persisted maximized route window even when in-memory restore bounds are gone', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:system-routines:routines',
+        kind: 'route',
+        title: 'Routines',
+        route: '/routines',
+        bounds: { x: 0, y: 0, width: 1024, height: 724 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    expect(within(routinesWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
+
+    fireEvent.click(within(routinesWindow).getByRole('button', { name: /maximize routines/i }));
+
+    const restoredWindow = await screen.findByRole('region', { name: /^routines$/i });
+    expect(restoredWindow.style.width).not.toBe('1024px');
+    expect(restoredWindow.style.height).not.toBe('724px');
+    expect(within(restoredWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
+    expect(within(restoredWindow).queryByRole('button', { name: /restore routines/i })).toBeNull();
   });
 
   it('focuses the next visible window when the focused route window is closed', async () => {
