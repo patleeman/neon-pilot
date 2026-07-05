@@ -79,6 +79,29 @@ describe('windowedShell', () => {
     expect(readDesktopShellPresentation()).toBe('stable');
   });
 
+  it('defaults fresh top-level launches to the windowed shell', () => {
+    localStorage.removeItem('pa:desktop-shell-presentation');
+    window.history.replaceState(null, '', '/conversations/new');
+    expect(readDesktopShellPresentation()).toBe('windowed');
+  });
+
+  it('preserves saved stable shell preference as an escape hatch', () => {
+    localStorage.setItem('pa:desktop-shell-presentation', 'stable');
+    window.history.replaceState(null, '', '/conversations/new');
+    expect(readDesktopShellPresentation()).toBe('stable');
+  });
+
+  it('lets the shell query parameter override and persist the launch mode', () => {
+    localStorage.removeItem('pa:desktop-shell-presentation');
+    window.history.replaceState(null, '', '/conversations/new?shell=stable');
+    expect(readDesktopShellPresentation()).toBe('stable');
+    expect(localStorage.getItem('pa:desktop-shell-presentation')).toBe('stable');
+
+    window.history.replaceState(null, '', '/conversations/new?shell=windowed');
+    expect(readDesktopShellPresentation()).toBe('windowed');
+    expect(localStorage.getItem('pa:desktop-shell-presentation')).toBe('windowed');
+  });
+
   it('defaults the isolated windowed OS theme to light', () => {
     expect(readWindowedOsTheme()).toBe('light');
   });

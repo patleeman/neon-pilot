@@ -81,9 +81,9 @@ export function readDesktopShellPresentation(): DesktopShellPresentation {
   }
 
   try {
-    return normalizeDesktopShellPresentation(window.localStorage.getItem(DESKTOP_SHELL_PRESENTATION_STORAGE_KEY)) ?? 'stable';
+    return normalizeDesktopShellPresentation(window.localStorage.getItem(DESKTOP_SHELL_PRESENTATION_STORAGE_KEY)) ?? 'windowed';
   } catch {
-    return 'stable';
+    return 'windowed';
   }
 }
 
