@@ -121,7 +121,7 @@ describe('windowed app registry', () => {
         { id: 'system-browser', name: 'Browser', enabled: false, contributes: {} },
         { id: 'system-files', name: 'Files', enabled: false, contributes: {} },
         { id: 'system-terminal', name: 'Terminal', enabled: false, contributes: {} },
-        { id: 'system-skill-search', name: 'Skill Search', enabled: true, contributes: {} },
+        { id: 'system-prompt-assembly', name: 'Prompt Assembly', enabled: true, contributes: {} },
       ]),
     );
 
@@ -186,9 +186,8 @@ describe('windowed app registry', () => {
     expect(accentForTitle('Extension Manager')).toBe('apps');
     expect(accentForTitle('Terminal Runs')).toBe('telemetry');
 
-    expect(accentForTitle('Routine Builder')).toBe('settings');
-    expect(accentForTitle('Skill Search')).toBe('settings');
-    expect(accentForTitle('Gateway Tokens')).toBe('settings');
-    expect(accentForTitle('Diagnostics')).toBe('settings');
+    expect(accentForTitle('Preference Builder')).toBe('settings');
+    expect(accentForTitle('Provider Tokens')).toBe('settings');
+    expect(accentForTitle('Provider Settings')).toBe('settings');
   });
 });
