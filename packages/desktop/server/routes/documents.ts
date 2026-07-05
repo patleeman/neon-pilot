@@ -12,7 +12,7 @@
 import type { Express, Request, Response } from 'express';
 
 import { DocumentsStore, resolveDocumentsDbPath, type UpsertCollectionOptions } from '../documents/store.js';
-import { logError } from '../middleware/index.js';
+import { invalidateAppTopics, logError } from '../middleware/index.js';
 import type { ServerRouteContext } from './context.js';
 
 // ── Caller / authorization ────────────────────────────────────────────
@@ -167,6 +167,7 @@ function handleUpsertCollection(store: DocumentsStore, caller: DocumentsRouteCal
 
     const result = store.upsertCollection(owner, collection, options);
 
+    invalidateAppTopics('documents');
     res.json({ collection: result });
   } catch (error) {
     sendError(res, error);
@@ -264,6 +265,7 @@ function handlePutDocument(store: DocumentsStore, caller: DocumentsRouteCaller, 
     }
 
     const doc = store.putDocument(owner, collection, id, req.body);
+    invalidateAppTopics('documents');
     res.json({ document: doc });
   } catch (error) {
     sendError(res, error);
@@ -298,6 +300,7 @@ function handleDeleteDocument(store: DocumentsStore, caller: DocumentsRouteCalle
       res.status(404).json({ error: 'Document not found' });
       return;
     }
+    invalidateAppTopics('documents');
     res.json({ deleted: true });
   } catch (error) {
     sendError(res, error);
@@ -357,6 +360,7 @@ function handleSetGrant(store: DocumentsStore, caller: DocumentsRouteCaller, req
     const canWrite = readBoolean(body.canWrite) ?? false;
 
     const grant = store.setGrant(owner, collection, granteeAppId, canRead, canWrite);
+    invalidateAppTopics('documents');
     res.json({ grant });
   } catch (error) {
     sendError(res, error);
@@ -391,6 +395,7 @@ function handleDeleteGrant(store: DocumentsStore, caller: DocumentsRouteCaller, 
       res.status(404).json({ error: 'Grant not found' });
       return;
     }
+    invalidateAppTopics('documents');
     res.json({ deleted: true });
   } catch (error) {
     sendError(res, error);

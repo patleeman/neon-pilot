@@ -908,6 +908,7 @@ export type AppEventTopic =
   | 'artifacts'
   | 'checkpoints'
   | 'attachments'
+  | 'documents'
   | 'extensions'
   | 'tasks'
   | 'models'

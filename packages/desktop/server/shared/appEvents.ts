@@ -25,6 +25,7 @@ export type AppEventTopic =
   | 'artifacts'
   | 'checkpoints'
   | 'attachments'
+  | 'documents'
   | 'extensions'
   | 'tasks'
   | 'models'
@@ -139,6 +140,7 @@ const ALL_TOPICS: AppEventTopic[] = [
   'artifacts',
   'checkpoints',
   'attachments',
+  'documents',
   'extensions',
   'tasks',
   'models',
@@ -408,6 +410,7 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
       { path: daemonPaths.socketPath, kind: 'file' },
     ],
     workspace: [{ path: join(getPiAgentRuntimeDir(), 'settings.json'), kind: 'file' }],
+    documents: [],
     knowledgeBase: [],
     notifications: [],
     readiness: [],

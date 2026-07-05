@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api';
 import { useApi } from '../hooks/useApi';
+import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import type { CollectionListResult, DocumentCollection, DocumentRecord, ListDocumentsResult } from '../shared/types';
 import { DocumentsPage } from './DocumentsPage';
 
@@ -16,6 +17,8 @@ vi.mock('../hooks/useApi', () => ({
 vi.mock('../hooks/useInvalidateOnTopics', () => ({
   useInvalidateOnTopics: vi.fn(),
 }));
+
+const useInvalidateOnTopicsMock = vi.mocked(useInvalidateOnTopics);
 
 const mockUseApi = vi.mocked(useApi);
 
@@ -96,6 +99,43 @@ describe('DocumentsPage', () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     mockUseApi.mockReset();
+  });
+
+  it('subscribes to the documents invalidation topic', () => {
+    mockApiCalls(buildUseApiResult({ loading: true, data: null }), buildUseApiResult({ loading: true, data: null }));
+    renderDocumentsPage();
+    expect(useInvalidateOnTopicsMock).toHaveBeenCalledWith(['documents'], expect.any(Function));
+  });
+
+  it('refetches collections and selected records when documents are invalidated', async () => {
+    const refetchCollections = vi.fn().mockResolvedValue(undefined);
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = {
+      records: [makeRecord({ id: 'doc-1', collection: 'test-collection' })],
+      total: 1,
+    };
+    let invalidate: ((options?: { resetLoading?: boolean }) => Promise<unknown>) | undefined;
+
+    useInvalidateOnTopicsMock.mockImplementation((_topics, refetch) => {
+      invalidate = refetch;
+    });
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult, refetch: refetchCollections });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    await invalidate?.({ resetLoading: false });
+
+    expect(refetchCollections).toHaveBeenCalledWith({ resetLoading: false });
+    expect(refetchRecords).toHaveBeenCalledWith({ resetLoading: false });
   });
 
   it('shows loading state for collections', () => {
@@ -213,6 +253,59 @@ describe('DocumentsPage', () => {
     expect(screen.getByText('Record Detail')).toBeTruthy();
     expect(screen.getByText('Hello')).toBeTruthy();
     expect(screen.getByText((content) => content.includes('"value"') && content.includes('42'))).toBeTruthy();
+  });
+
+  it('keeps selected record detail in sync with refreshed records', async () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    let recordsResult: ListDocumentsResult = {
+      records: [
+        makeRecord({
+          id: 'doc-1',
+          owner: 'host',
+          collection: 'test-collection',
+          body: { title: 'Old title' },
+        }),
+      ],
+      total: 1,
+    };
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, error: null, data: collectionsResult });
+      }
+      return buildUseApiResult({ loading: false, error: null, data: recordsResult });
+    }) as typeof useApi);
+
+    const view = renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('doc-1'));
+
+    expect(screen.getAllByText((content) => content.includes('Old title')).length).toBeGreaterThan(0);
+
+    recordsResult = {
+      records: [
+        makeRecord({
+          id: 'doc-1',
+          owner: 'host',
+          collection: 'test-collection',
+          body: { title: 'Updated title' },
+        }),
+      ],
+      total: 1,
+    };
+    view.rerender(
+      <MemoryRouter initialEntries={['/documents']}>
+        <Routes>
+          <Route path="/documents" element={<DocumentsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText((content) => content.includes('Updated title')).length).toBeGreaterThan(0);
+    });
   });
 
   it('calls refetch when Refresh button is clicked', () => {

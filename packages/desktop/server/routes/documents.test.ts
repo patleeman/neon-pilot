@@ -8,11 +8,13 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { logErrorMock } = vi.hoisted(() => ({
+const { invalidateAppTopicsMock, logErrorMock } = vi.hoisted(() => ({
+  invalidateAppTopicsMock: vi.fn(),
   logErrorMock: vi.fn(),
 }));
 
 vi.mock('../middleware/index.js', () => ({
+  invalidateAppTopics: invalidateAppTopicsMock,
   logError: logErrorMock,
 }));
 
@@ -27,6 +29,7 @@ describe('registerDocumentsRoutes', () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'documents-route-test-'));
     caller = { kind: 'host' };
+    invalidateAppTopicsMock.mockReset();
     logErrorMock.mockReset();
   });
 
@@ -456,6 +459,136 @@ describe('registerDocumentsRoutes', () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({ error: 'Document collection access denied' });
+    });
+  });
+
+  describe('invalidation', () => {
+    it('invalidates after collection upsert', () => {
+      const handlers = createHarness();
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection'];
+
+      handler({ params: { owner: 'app', collection: 'col' }, body: { description: 'test' } }, createRes());
+
+      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
+      expect(invalidateAppTopicsMock).toHaveBeenCalledWith('documents');
+    });
+
+    it('invalidates after document put', () => {
+      const handlers = createHarness();
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection/:id'];
+
+      handler({ params: { owner: 'app', collection: 'col', id: 'doc-1' }, body: { data: 1 } }, createRes());
+
+      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
+      expect(invalidateAppTopicsMock).toHaveBeenCalledWith('documents');
+    });
+
+    it('invalidates after document delete', () => {
+      const handlers = createHarness();
+      const putHandler = handlers['PUT /api/documents/collections/:owner/:collection/:id'];
+      putHandler({ params: { owner: 'app', collection: 'col', id: 'delete-me' }, body: {} }, createRes());
+
+      invalidateAppTopicsMock.mockReset();
+
+      const delHandler = handlers['DELETE /api/documents/collections/:owner/:collection/:id'];
+      delHandler({ params: { owner: 'app', collection: 'col', id: 'delete-me' } }, createRes());
+
+      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
+      expect(invalidateAppTopicsMock).toHaveBeenCalledWith('documents');
+    });
+
+    it('invalidates after grant set', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app', collection: 'shared' }, body: {} },
+        createRes(),
+      );
+
+      invalidateAppTopicsMock.mockReset();
+
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection/grants/:granteeAppId'];
+      handler(
+        { params: { owner: 'app', collection: 'shared', granteeAppId: 'other' }, body: { canRead: true, canWrite: false } },
+        createRes(),
+      );
+
+      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
+      expect(invalidateAppTopicsMock).toHaveBeenCalledWith('documents');
+    });
+
+    it('invalidates after grant delete', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app', collection: 'shared' }, body: {} },
+        createRes(),
+      );
+      handlers['PUT /api/documents/collections/:owner/:collection/grants/:granteeAppId'](
+        { params: { owner: 'app', collection: 'shared', granteeAppId: 'other' }, body: { canRead: true, canWrite: true } },
+        createRes(),
+      );
+
+      invalidateAppTopicsMock.mockReset();
+
+      const handler = handlers['DELETE /api/documents/collections/:owner/:collection/grants/:granteeAppId'];
+      handler({ params: { owner: 'app', collection: 'shared', granteeAppId: 'other' } }, createRes());
+
+      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
+      expect(invalidateAppTopicsMock).toHaveBeenCalledWith('documents');
+    });
+
+    it('does NOT invalidate on validation failure', () => {
+      const handlers = createHarness();
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection'];
+
+      handler({ params: { owner: '', collection: '' }, body: {} }, createRes());
+
+      expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT invalidate on forbidden write', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app-a', collection: 'private' }, body: {} },
+        createRes(),
+      );
+
+      invalidateAppTopicsMock.mockReset();
+
+      caller = { appId: 'app-b', kind: 'app' };
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection/:id'];
+      handler({ params: { owner: 'app-a', collection: 'private', id: 'doc-1' }, body: { x: 1 } }, createRes());
+
+      expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT invalidate on document delete 404', () => {
+      const handlers = createHarness();
+      const handler = handlers['DELETE /api/documents/collections/:owner/:collection/:id'];
+
+      handler({ params: { owner: 'app', collection: 'col', id: 'ghost' } }, createRes());
+
+      expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT invalidate on grant delete 404', () => {
+      const handlers = createHarness();
+      const handler = handlers['DELETE /api/documents/collections/:owner/:collection/grants/:granteeAppId'];
+
+      handler({ params: { owner: 'app', collection: 'col', granteeAppId: 'nobody' } }, createRes());
+
+      expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT invalidate on read-only routes', () => {
+      const handlers = createHarness();
+
+      handlers['GET /api/documents/collections']({ query: {} }, createRes());
+      handlers['GET /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app', collection: 'col' }, query: {} },
+        createRes(),
+      );
+
+      expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
     });
   });
 

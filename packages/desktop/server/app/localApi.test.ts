@@ -62,7 +62,13 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
 
 import { saveConversationArtifact } from '@neon-pilot/core';
 
-import { dispatchDesktopLocalApiRequest, normalizeDesktopLocalApiTailBlocks, rollbackDesktopConversation } from './localApi.js';
+import { subscribeAppEvents } from '../shared/appEvents.js';
+import {
+  dispatchDesktopLocalApiRequest,
+  normalizeDesktopLocalApiTailBlocks,
+  publishDesktopAppEventFromExtensionHost,
+  rollbackDesktopConversation,
+} from './localApi.js';
 
 function readJsonBody(response: Awaited<ReturnType<typeof dispatchDesktopLocalApiRequest>>) {
   return JSON.parse(Buffer.from(response.body).toString('utf-8')) as Record<string, unknown>;
@@ -128,6 +134,21 @@ describe('desktop local API conversation actions', () => {
       executions: expect.any(Array),
     });
     expect(response.headers['X-PA-Perf']).toContain('"fastPath":"product"');
+  });
+
+  it('accepts documents invalidation from the extension host desktop app bridge', async () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    try {
+      await publishDesktopAppEventFromExtensionHost({ type: 'invalidate', topics: ['documents', 'unknown-topic'] });
+    } finally {
+      unsubscribe();
+    }
+
+    expect(events).toContainEqual({ type: 'invalidate', topics: ['documents'] });
   });
 
   it('serves conversation summaries through the desktop product fast path', async () => {

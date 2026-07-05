@@ -16,9 +16,13 @@ const ALL_TOPICS = [
   'sessions',
   'sessionFiles',
   'artifacts',
-  'models',
+  'checkpoints',
   'attachments',
+  'documents',
+  'extensions',
   'tasks',
+  'models',
+  'gateways',
   'runs',
   'executions',
   'automation',
@@ -26,6 +30,7 @@ const ALL_TOPICS = [
   'workspace',
   'knowledgeBase',
   'notifications',
+  'readiness',
 ] as const;
 
 function createTempDir(prefix: string): string {

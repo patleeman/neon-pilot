@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../client/api';
 import {
@@ -22,6 +22,7 @@ import {
   ToolbarButton,
 } from '../components/ui';
 import { useApi } from '../hooks/useApi';
+import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import type { DocumentCollection, DocumentRecord, ListDocumentsResult } from '../shared/types';
 
 const PAGE_SIZE = 50;
@@ -107,11 +108,26 @@ export function DocumentsPage() {
   };
 
   const handleRefresh = () => {
-    refetchCollections({ resetLoading: false });
-    if (collection) {
-      refetchRecords({ resetLoading: false });
-    }
+    void refetchData();
   };
+
+  const refetchData = useCallback(async () => {
+    await refetchCollections({ resetLoading: false });
+    if (collection) {
+      await refetchRecords({ resetLoading: false });
+    }
+  }, [refetchCollections, refetchRecords, collection]);
+
+  useInvalidateOnTopics(['documents'], refetchData);
+
+  useEffect(() => {
+    if (!selectedDoc || !recordsData) return;
+
+    const nextSelectedDoc = recordsData.records.find(
+      (record) => record.owner === selectedDoc.owner && record.collection === selectedDoc.collection && record.id === selectedDoc.id,
+    );
+    setSelectedDoc(nextSelectedDoc ?? null);
+  }, [recordsData, selectedDoc]);
 
   const isRefreshing = collectionsLoading || recordsRefreshing;
 
