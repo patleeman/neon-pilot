@@ -576,7 +576,6 @@
 
 .wos-taskbar__button[data-focused='true'][data-accent='chat'],
 .wos-taskbar__button[data-focused='true'][data-accent='automations'],
-.wos-taskbar__button[data-focused='true'][data-accent='gateways'],
 .wos-taskbar__button[data-focused='true'][data-accent='drawing'],
 .wos-taskbar__button[data-focused='true'][data-accent='apps'],
 .wos-taskbar__button[data-focused='true'][data-accent='telemetry'],
@@ -586,10 +585,6 @@
 
 .wos-taskbar__button[data-focused='true'][data-accent='automations'] {
   background: var(--wos-automations);
-}
-
-.wos-taskbar__button[data-focused='true'][data-accent='gateways'] {
-  background: var(--wos-gateways);
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='drawing'] {
@@ -642,11 +637,6 @@
   background: var(--wos-automations);
 }
 
-.wos-app-monogram[data-accent='gateways'],
-.wos-window__titlebar[data-accent='gateways'] {
-  background: var(--wos-gateways);
-}
-
 .wos-app-monogram[data-accent='drawing'],
 .wos-window__titlebar[data-accent='drawing'] {
   background: var(--wos-drawing);
@@ -674,14 +664,12 @@
 
 .wos-app-monogram[data-accent='chat'],
 .wos-app-monogram[data-accent='automations'],
-.wos-app-monogram[data-accent='gateways'],
 .wos-app-monogram[data-accent='drawing'],
 .wos-app-monogram[data-accent='apps'],
 .wos-app-monogram[data-accent='telemetry'],
 .wos-app-monogram[data-accent='diagnostics'],
 .wos-window__titlebar[data-accent='chat'],
 .wos-window__titlebar[data-accent='automations'],
-.wos-window__titlebar[data-accent='gateways'],
 .wos-window__titlebar[data-accent='drawing'],
 .wos-window__titlebar[data-accent='apps'],
 .wos-window__titlebar[data-accent='telemetry'],
@@ -979,7 +967,6 @@
 
 .wos-window__titlebar[data-accent='chat'] .wos-window__meta,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta,
-.wos-window__titlebar[data-accent='gateways'] .wos-window__meta,
 .wos-window__titlebar[data-accent='drawing'] .wos-window__meta,
 .wos-window__titlebar[data-accent='apps'] .wos-window__meta,
 .wos-window__titlebar[data-accent='telemetry'] .wos-window__meta,
@@ -989,7 +976,6 @@
 
 .wos-window__titlebar[data-accent='chat'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta::before,
-.wos-window__titlebar[data-accent='gateways'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='drawing'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='apps'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='telemetry'] .wos-window__meta::before,
@@ -1350,7 +1336,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__titlebar[data-accent='chat'],
 .wos-dialog__titlebar[data-accent='automations'],
-.wos-dialog__titlebar[data-accent='gateways'],
 .wos-dialog__titlebar[data-accent='drawing'],
 .wos-dialog__titlebar[data-accent='apps'],
 .wos-dialog__titlebar[data-accent='telemetry'],
@@ -1360,10 +1345,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__titlebar[data-accent='automations'] {
   background: var(--wos-automations);
-}
-
-.wos-dialog__titlebar[data-accent='gateways'] {
-  background: var(--wos-gateways);
 }
 
 .wos-dialog__titlebar[data-accent='drawing'] {
@@ -1413,7 +1394,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta,
-.wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='apps'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta,
@@ -1423,7 +1403,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta::before,
-.wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='drawing'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='apps'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta::before,
@@ -3222,10 +3201,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   box-shadow: none;
 }
 
-.wos-window-route-body .ui-switch-checked .ui-switch-track {
-  background: var(--wos-gateways);
-}
-
 .wos-window-route-body .ui-switch-checked .ui-switch-thumb {
   transform: translateX(16px);
 }
@@ -3733,11 +3708,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-segmented-control[data-accent='automations'] {
   --wos-segmented-active: var(--wos-automations);
-  --wos-segmented-active-ink: var(--wos-accent-ink);
-}
-
-.wos-segmented-control[data-accent='gateways'] {
-  --wos-segmented-active: var(--wos-gateways);
   --wos-segmented-active-ink: var(--wos-accent-ink);
 }
 
@@ -4697,10 +4667,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   background: var(--wos-automations);
 }
 
-.wos-toggle[data-checked='true'][data-accent='gateways'] {
-  background: var(--wos-gateways);
-}
-
 .wos-toggle[data-checked='true'][data-accent='drawing'] {
   background: var(--wos-drawing);
 }
@@ -4831,11 +4797,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 .wos-data-row[data-accent='automations'] {
   --wos-data-row-active: var(--wos-automations);
   --wos-data-row-active-ink: white;
-}
-
-.wos-data-row[data-accent='gateways'] {
-  --wos-data-row-active: var(--wos-gateways);
-  --wos-data-row-active-ink: var(--wos-ink-900);
 }
 
 .wos-data-row[data-accent='drawing'] {
@@ -5105,11 +5066,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-list-item[data-accent='automations'] {
   --wos-list-active: var(--wos-automations);
-  --wos-list-active-ink: var(--wos-accent-ink);
-}
-
-.wos-list-item[data-accent='gateways'] {
-  --wos-list-active: var(--wos-gateways);
   --wos-list-active-ink: var(--wos-accent-ink);
 }
 

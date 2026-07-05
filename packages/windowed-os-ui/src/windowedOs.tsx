@@ -20,7 +20,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-export type AppAccent = 'chat' | 'automations' | 'gateways' | 'drawing' | 'apps' | 'telemetry' | 'diagnostics' | 'settings';
+export type AppAccent = 'chat' | 'automations' | 'drawing' | 'apps' | 'telemetry' | 'diagnostics' | 'settings';
 
 export interface WindowedDesktopAppDefinition {
   id: string;
@@ -38,7 +38,7 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'chat', title: 'Chat', accent: 'chat', aliases: ['conversation', 'thread', 'new conversation'] },
   { id: 'files', title: 'Files', accent: 'settings', aliases: ['workspace', 'file explorer', 'finder'] },
   { id: 'documents', title: 'Documents', accent: 'settings', aliases: ['collections', 'records', 'shared data'] },
-  { id: 'browser', title: 'Browser', accent: 'gateways', aliases: ['web', 'internet', 'browser window'] },
+  { id: 'browser', title: 'Browser', accent: 'apps', aliases: ['web', 'internet', 'browser window'] },
   { id: 'terminal', title: 'Terminal', accent: 'telemetry', aliases: ['shell', 'command line', 'terminal window'] },
   { id: 'automations', title: 'Automations', accent: 'automations', aliases: ['tasks', 'scheduled runs', 'background runs'] },
   { id: 'inbox', title: 'Inbox', accent: 'chat', aliases: ['messages', 'questions', 'worker results'] },

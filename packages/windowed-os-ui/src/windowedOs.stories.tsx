@@ -230,7 +230,7 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
         </WindowFrame>
         <WindowFrame
           title="Browser"
-          accent="gateways"
+          accent="apps"
           style={{ left: 'clamp(128px, 58vw, 640px)', top: 164, width: 'min(520px, calc(100vw - 64px))', height: 360 }}
           onMinimize={() => undefined}
           onMaximize={() => undefined}
@@ -255,7 +255,7 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
         items={[
           { id: 'chat-release-notes', title: 'Release notes', accent: 'chat', focused: true, onSelect: () => undefined },
           { id: 'chat-bug-triage', title: 'Bug triage', accent: 'chat', onSelect: () => undefined },
-          { id: 'browser', title: 'Browser', accent: 'gateways', onSelect: () => undefined },
+          { id: 'browser', title: 'Browser', accent: 'apps', onSelect: () => undefined },
         ]}
       />
     </div>
@@ -314,7 +314,7 @@ export const TaskbarMenuPlacement: Story = {
             ),
           },
         ]}
-        items={[{ id: 'browser', title: 'Browser', accent: 'gateways', onSelect: () => undefined }]}
+        items={[{ id: 'browser', title: 'Browser', accent: 'apps', onSelect: () => undefined }]}
       />
     </div>
   ),
@@ -378,7 +378,7 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
               <WindowedPageSection title="Files" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
-                  <WindowedListItem title="apps/system-browser" meta="Built" detail="Frontend bundle" accent="gateways" />
+                  <WindowedListItem title="apps/system-browser" meta="Built" detail="Frontend bundle" accent="apps" />
                   <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="apps" />
                 </WindowedList>
               </WindowedPageSection>
@@ -989,7 +989,7 @@ export const NavigationPrimitives: Story = {
             <div style={{ display: 'grid', gap: 6, padding: 10 }}>
               <WindowedAppTile label="Chat" accent="chat" />
               <WindowedAppTile label="Automations" accent="automations" />
-              <WindowedAppTile label="Browser" accent="gateways" />
+              <WindowedAppTile label="Browser" accent="apps" />
             </div>
           </WindowedPageSection>
           <WindowedPageSection title="Taskbar apps">
@@ -998,7 +998,7 @@ export const NavigationPrimitives: Story = {
                 <WindowedAppTile label="Chat" accent="chat" count={3} variant="taskbar" />
               </span>
               <span className="wos-taskbar__button">
-                <WindowedAppTile label="Browser" accent="gateways" variant="taskbar" />
+                <WindowedAppTile label="Browser" accent="apps" variant="taskbar" />
               </span>
               <span className="wos-taskbar__button">
                 <WindowedAppTile label="Terminal" meta="New conversation" accent="chat" variant="taskbar" />
@@ -1220,7 +1220,7 @@ function DenseAppPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
       <WindowFrame
         title="Browser"
-        accent="gateways"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 560 }}
         onMinimize={() => undefined}
@@ -1254,7 +1254,7 @@ function DenseAppPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
                   { label: 'Configuration', value: 'Browser page' },
                   {
                     label: 'Enabled',
-                    value: <WindowedToggle checked accent="gateways" label="Toggle Browser preview" />,
+                    value: <WindowedToggle checked accent="apps" label="Toggle Browser preview" />,
                   },
                 ]}
               />
@@ -1642,7 +1642,7 @@ export const CanonicalDensity: Story = {
                     title={app.title}
                     meta={app.meta}
                     detail={app.detail}
-                    active={app.id === 'gateways'}
+                    active={app.id === 'browser'}
                     accent={app.accent}
                   />
                 ))}
@@ -1662,7 +1662,7 @@ export const CanonicalDensity: Story = {
                 <WindowedField label="Status">
                   <WindowedSegmentedControl
                     ariaLabel="Status"
-                    accent="gateways"
+                    accent="apps"
                     value="ready"
                     options={[
                       { id: 'ready', label: 'Ready' },
@@ -2268,7 +2268,7 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
                   <WindowedListItem title="packages/desktop/ui/src/components" meta="Directory" detail="source" active accent="chat" />
                   <WindowedListItem title="packages/windowed-os-ui/src" meta="Directory" detail="design system" accent="apps" />
                   <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="backlog" accent="apps" />
-                  <WindowedListItem title="apps/system-browser" meta="App package" detail="child tool" accent="gateways" />
+                  <WindowedListItem title="apps/system-browser" meta="App package" detail="child tool" accent="apps" />
                   <WindowedListItem title="apps/system-terminal" meta="App package" detail="child tool" accent="automations" />
                 </WindowedList>
               </WindowedPageSection>
@@ -2515,7 +2515,7 @@ function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'da
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
         title="Browser"
-        accent="gateways"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 620 }}
         onMinimize={() => undefined}
@@ -2549,7 +2549,7 @@ function EmbeddedExtensionPageStory({ theme = 'light' }: { theme?: 'light' | 'da
                   <WindowedTextInput aria-label="Browser address" placeholder="https://docs.neonpilot.local" />
                 </WindowedField>
                 <WindowedField label="Preview">
-                  <WindowedToggle checked accent="gateways" label="Toggle Browser preview" />
+                  <WindowedToggle checked accent="apps" label="Toggle Browser preview" />
                 </WindowedField>
               </WindowedFormGrid>
               <WindowedFormActions>

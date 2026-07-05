@@ -438,8 +438,8 @@ describe('Taskbar', () => {
 
     expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='chat']");
     expect(stylesSource).toContain('background: var(--wos-chat);');
-    expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='gateways']");
-    expect(stylesSource).toContain('background: var(--wos-gateways);');
+    expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='apps']");
+    expect(stylesSource).toContain('background: var(--wos-apps);');
     expect(stylesSource).toContain('inset 0 -4px 0 var(--wos-ink-900)');
     expect(stylesSource).toContain('transform: translateY(-1px);');
   });
@@ -773,14 +773,14 @@ describe('WindowedListItem', () => {
 describe('WindowedDialog content primitives', () => {
   it('renders modeless subwindows by default for windowed desktop detail panels', () => {
     const html = renderToStaticMarkup(
-      <WindowedDialog title="Telegram configuration" accent="gateways" onClose={() => undefined}>
+      <WindowedDialog title="Browser configuration" accent="apps" onClose={() => undefined}>
         Details
       </WindowedDialog>,
     );
 
     expect(html).toContain('class="wos-dialog-layer"');
     expect(html).toContain('role="dialog"');
-    expect(html).toContain('aria-label="Telegram configuration"');
+    expect(html).toContain('aria-label="Browser configuration"');
     expect(html).not.toContain('aria-modal');
     expect(html).not.toContain('data-modal="true"');
   });
@@ -808,7 +808,7 @@ describe('WindowedDialog content primitives', () => {
 
   it('keeps explicit subwindow metadata ahead of the parent fallback label', () => {
     const html = renderToStaticMarkup(
-      <WindowedDialog title="Telegram access" meta="2 approved" accent="gateways" parentWindowTitle="Settings" onClose={() => undefined}>
+      <WindowedDialog title="Browser access" meta="2 approved" accent="apps" parentWindowTitle="Settings" onClose={() => undefined}>
         Access
       </WindowedDialog>,
     );
@@ -2049,7 +2049,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('pointer-events: auto;');
     expect(stylesSource).toContain('max-width: none !important;');
     expect(stylesSource).toContain('--wos-drawing-accent: var(--wos-drawing);');
-    expect(stylesSource).not.toContain('--wos-drawing-accent: var(--wos-gateways);');
+    expect(stylesSource).not.toContain('--wos-drawing-accent: var(--wos-apps);');
     expect(stylesSource).toContain('--wos-drawing-canvas: color-mix(in srgb, var(--wos-surface-1) 76%, var(--wos-surface-0));');
     expect(stylesSource).toContain('.ui-windowed-drawings-picker .ui-dialog-header[data-parent-window-title]::after');
     expect(stylesSource).toContain('max-width: min(34ch, 42%);');

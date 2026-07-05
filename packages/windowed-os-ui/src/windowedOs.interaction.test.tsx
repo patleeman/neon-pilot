@@ -61,13 +61,13 @@ describe('WindowedDialog interactions', () => {
 
   it('lets modeless subwindows drag by their titlebar', () => {
     render(
-      <WindowedDialog title="Gateway activity" accent="gateways" onClose={() => undefined}>
+      <WindowedDialog title="Browser activity" accent="apps" onClose={() => undefined}>
         Activity
       </WindowedDialog>,
     );
 
-    const dialog = screen.getByRole('dialog', { name: 'Gateway activity' });
-    fireEvent.mouseDown(screen.getByText('Gateway activity'), { button: 0, clientX: 120, clientY: 80 });
+    const dialog = screen.getByRole('dialog', { name: 'Browser activity' });
+    fireEvent.mouseDown(screen.getByText('Browser activity'), { button: 0, clientX: 120, clientY: 80 });
     fireEvent.mouseMove(window, { clientX: 168, clientY: 116 });
 
     expect(dialog.getAttribute('data-dragging')).toBe('true');
@@ -123,12 +123,12 @@ describe('WindowedDialog interactions', () => {
   it('focuses newly opened subwindows and closes them with Escape', () => {
     const onClose = vi.fn();
     render(
-      <WindowedDialog title="Telegram access" accent="gateways" onClose={onClose}>
+      <WindowedDialog title="Browser access" accent="apps" onClose={onClose}>
         <button type="button">Approve user</button>
       </WindowedDialog>,
     );
 
-    const dialog = screen.getByRole('dialog', { name: 'Telegram access' });
+    const dialog = screen.getByRole('dialog', { name: 'Browser access' });
 
     expect(document.activeElement).toBe(dialog);
 
@@ -299,7 +299,7 @@ describe('Taskbar interactions', () => {
         groups={[{ id: 'chat', title: 'Chat', focused: true, count: 2, accent: 'chat', onSelect: () => undefined }]}
         items={[
           { id: 'settings', title: 'Settings', focused: false, accent: 'settings', onSelect: () => undefined },
-          { id: 'browser', title: 'Browser', focused: true, accent: 'gateways', meta: 'New conversation', onSelect: () => undefined },
+          { id: 'browser', title: 'Browser', focused: true, accent: 'apps', meta: 'New conversation', onSelect: () => undefined },
         ]}
       />,
     );
@@ -313,7 +313,7 @@ describe('Taskbar interactions', () => {
     expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-current')).toBeNull();
     expect(screen.getByRole('button', { name: 'Settings' }).getAttribute('aria-pressed')).toBeNull();
     expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('data-focused')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('data-accent')).toBe('gateways');
+    expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('data-accent')).toBe('apps');
     expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Browser' }).getAttribute('title')).toBe('Browser attached to New conversation');
