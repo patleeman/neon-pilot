@@ -180,14 +180,10 @@ export function accentForTitle(title: string): AppAccent {
 
   const normalized = title.toLowerCase();
   if (normalized.includes('chat') || normalized.includes('conversation')) return 'chat';
-  if (normalized.includes('workflow')) return 'workflows';
-  if (normalized.includes('routine')) return 'routines';
+  if (normalized.includes('drawing') || normalized.includes('sketch')) return 'drawing';
   if (normalized.includes('automation')) return 'automations';
-  if (normalized.includes('gateway')) return 'gateways';
-  if (normalized.includes('skill')) return 'skills';
-  if (normalized.includes('extension') || normalized.includes('app manager')) return 'apps';
-  if (normalized.includes('diagnostic')) return 'diagnostics';
-  if (normalized.includes('telemetry') || normalized.includes('run')) return 'telemetry';
+  if (normalized.includes('extension') || normalized.includes('app manager') || normalized.includes('plugin')) return 'apps';
+  if (normalized.includes('terminal') || normalized.includes('telemetry') || normalized.includes('run')) return 'telemetry';
   return 'settings';
 }
 

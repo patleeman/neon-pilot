@@ -1306,7 +1306,7 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    for (const accent of ['workflows', 'automations', 'diagnostics']) {
+    for (const accent of ['workflows', 'automations', 'drawing', 'diagnostics']) {
       expect(stylesSource).toContain(`.wos-window__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-dialog__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-segmented-control[data-accent='${accent}']`);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ExtensionRegistryState } from '../extensions/useExtensionRegistry';
-import { buildWindowedAppRegistry } from './windowedAppRegistry';
+import { accentForTitle, buildWindowedAppRegistry } from './windowedAppRegistry';
 
 function registry(extensions: ExtensionRegistryState['extensions']): ExtensionRegistryState {
   return {
@@ -148,5 +148,18 @@ describe('windowed app registry', () => {
       owner: { packageId: 'custom-package', packageType: 'extension' },
     });
     expect(apps.some((app) => app.title === 'Board details')).toBe(false);
+  });
+
+  it('uses product-safe accents for dynamic app package titles', () => {
+    expect(accentForTitle('Drawing Board')).toBe('drawing');
+    expect(accentForTitle('Sketches')).toBe('drawing');
+    expect(accentForTitle('Automation Lab')).toBe('automations');
+    expect(accentForTitle('Extension Manager')).toBe('apps');
+    expect(accentForTitle('Terminal Runs')).toBe('telemetry');
+
+    expect(accentForTitle('Routine Builder')).toBe('settings');
+    expect(accentForTitle('Skill Search')).toBe('settings');
+    expect(accentForTitle('Gateway Tokens')).toBe('settings');
+    expect(accentForTitle('Diagnostics')).toBe('settings');
   });
 });

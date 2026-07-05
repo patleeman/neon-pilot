@@ -20,7 +20,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-export type AppAccent = 'chat' | 'workflows' | 'automations' | 'gateways' | 'apps' | 'telemetry' | 'diagnostics' | 'settings';
+export type AppAccent = 'chat' | 'workflows' | 'automations' | 'gateways' | 'drawing' | 'apps' | 'telemetry' | 'diagnostics' | 'settings';
 
 export interface WindowedDesktopAppDefinition {
   id: string;
