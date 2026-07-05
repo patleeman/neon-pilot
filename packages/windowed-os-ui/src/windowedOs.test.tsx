@@ -2474,6 +2474,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('@container (max-width: 720px)');
     expect(stylesSource).toContain('.wos-model-usage__grid,\n  .wos-cache-system__grid');
     expect(stylesSource).toContain('.wos-data-table:not(.wos-automation-queue) .wos-data-table__header');
+    expect(stylesSource).toContain(
+      '.wos-data-table__header,\n.wos-data-row {\n  display: grid;\n  min-width: 0;\n  max-width: 100%;\n  overflow: hidden;',
+    );
   });
 
   it('defines compact windowed telemetry tool health primitives', () => {

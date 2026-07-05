@@ -4923,6 +4923,9 @@ button.wos-chat-window-toolbar__status:focus-visible {
 .wos-data-table__header,
 .wos-data-row {
   display: grid;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   grid-template-columns: var(--wos-data-column-template, 2fr 1.4fr 0.7fr);
   gap: 8px;
   align-items: center;
