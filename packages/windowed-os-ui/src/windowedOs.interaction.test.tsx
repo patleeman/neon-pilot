@@ -107,7 +107,7 @@ describe('WindowedDialog interactions', () => {
 
   it('keeps modal subwindows fixed for blocking flows', () => {
     render(
-      <WindowedDialog title="Confirm install" accent="extensions" modal onClose={() => undefined}>
+      <WindowedDialog title="Confirm install" accent="apps" modal onClose={() => undefined}>
         Install app
       </WindowedDialog>,
     );
@@ -159,12 +159,12 @@ describe('WindowedDataRow interactions', () => {
   it('selects the row by click and keyboard without treating itself as a nested control', () => {
     const onSelect = vi.fn();
 
-    render(<WindowedDataRow name="system-browser" meta="Browser app" selected accent="extensions" onSelect={onSelect} />);
+    render(<WindowedDataRow name="system-browser" meta="Browser app" selected accent="apps" onSelect={onSelect} />);
 
     const row = screen.getByRole('button', { name: /system-browser/i });
     expect(row.getAttribute('data-selected')).toBe('true');
     expect(row.getAttribute('data-selectable')).toBe('true');
-    expect(row.getAttribute('data-accent')).toBe('extensions');
+    expect(row.getAttribute('data-accent')).toBe('apps');
 
     fireEvent.click(row);
     fireEvent.keyDown(row, { key: 'Enter' });

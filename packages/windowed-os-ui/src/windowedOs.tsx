@@ -28,7 +28,7 @@ export type AppAccent =
   | 'gateways'
   | 'drawing'
   | 'model-arena'
-  | 'extensions'
+  | 'apps'
   | 'skills'
   | 'telemetry'
   | 'diagnostics'
@@ -57,7 +57,7 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways', aliases: ['models', 'routing', 'providers'] },
   { id: 'model-arena', title: 'Model Arena', accent: 'model-arena', aliases: ['arena', 'duels', 'model comparison'] },
   { id: 'routines', title: 'Routines', accent: 'routines', aliases: ['hooks', 'agent hooks', 'before agent start'] },
-  { id: 'extensions', title: 'App Manager', accent: 'extensions', aliases: ['extensions', 'extension manager', 'apps', 'plugins'] },
+  { id: 'extensions', title: 'App Manager', accent: 'apps', aliases: ['extensions', 'extension manager', 'apps', 'plugins'] },
   { id: 'skills', title: 'Skills', accent: 'skills', aliases: ['skill manager', 'agent skills'] },
   { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics', aliases: ['logs', 'telemetry', 'health'] },
   { id: 'settings', title: 'Settings', accent: 'settings', aliases: ['preferences', 'providers', 'desktop', 'shortcuts'] },
@@ -1751,7 +1751,7 @@ export function Taskbar({
     <>
       <footer className="wos-taskbar">
         <button type="button" className="wos-taskbar__start" aria-haspopup="dialog" aria-expanded={startOpen} onClick={onToggleStart}>
-          <WindowedAppTile label="Neon Pilot" accent="extensions" variant="taskbar" />
+          <WindowedAppTile label="Neon Pilot" accent="apps" variant="taskbar" />
         </button>
         <nav ref={taskbarItemsRef} className="wos-taskbar__items" aria-label="Open windows">
           {groups.map((group) => (

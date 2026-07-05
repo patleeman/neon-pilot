@@ -383,7 +383,7 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
                 <WindowedList>
                   <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
                   <WindowedListItem title="apps/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
-                  <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="extensions" />
+                  <WindowedListItem title="packages/windowed-os-ui" meta="Storybook" detail="Design target" accent="apps" />
                 </WindowedList>
               </WindowedPageSection>
               <WindowedStateBlock tone="positive" title="Validation passed">
@@ -981,7 +981,7 @@ export const NavigationPrimitives: Story = {
     <div className="windowed-os-shell" style={{ minHeight: 760, padding: 24 }}>
       <WindowFrame
         title="Navigation"
-        accent="extensions"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(560px, 100%)', height: 620 }}
         onMinimize={() => undefined}
@@ -1621,7 +1621,7 @@ export const CanonicalDensity: Story = {
     <div className="windowed-os-shell" style={{ minHeight: 740, padding: 24 }}>
       <WindowFrame
         title="Canonical density"
-        accent="extensions"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1080px, 100%)', height: 660 }}
         onMinimize={() => undefined}
@@ -2788,7 +2788,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
       <WindowFrame
         title="App Manager"
-        accent="extensions"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
         onMinimize={() => undefined}
@@ -2812,7 +2812,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                 end={
                   <WindowedSegmentedControl
                     ariaLabel="App view"
-                    accent="extensions"
+                    accent="apps"
                     value="all"
                     options={[
                       { id: 'all', label: 'Installed 16' },
@@ -2853,7 +2853,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                   }
                   action={
                     <span className="wos-inline-actions">
-                      <WindowedToggle checked accent="extensions" label="Disable system-browser" />
+                      <WindowedToggle checked accent="apps" label="Disable system-browser" />
                       <WindowedPageButton>Details</WindowedPageButton>
                       <WindowedPageButton>Open</WindowedPageButton>
                     </span>
@@ -2865,7 +2865,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                   status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
                   action={
                     <span className="wos-inline-actions">
-                      <WindowedToggle checked accent="extensions" label="Disable system-terminal" />
+                      <WindowedToggle checked accent="apps" label="Disable system-terminal" />
                       <WindowedPageButton>Details</WindowedPageButton>
                       <WindowedPageButton>Open</WindowedPageButton>
                     </span>
@@ -2877,7 +2877,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                   status={<WindowedBadge tone="neutral">Disabled</WindowedBadge>}
                   action={
                     <span className="wos-inline-actions">
-                      <WindowedToggle accent="extensions" label="Enable system-model-arena" />
+                      <WindowedToggle accent="apps" label="Enable system-model-arena" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
                   }
@@ -2895,7 +2895,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                   }
                   action={
                     <span className="wos-inline-actions">
-                      <WindowedToggle disabled accent="extensions" label="Enable workflow-reports" />
+                      <WindowedToggle disabled accent="apps" label="Enable workflow-reports" />
                       <WindowedPageButton>Details</WindowedPageButton>
                     </span>
                   }
@@ -2908,7 +2908,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
       <WindowedDialog
         title="system-browser"
         meta="update available"
-        accent="extensions"
+        accent="apps"
         parentWindowTitle="App Manager"
         onClose={() => undefined}
         actions={
@@ -2955,7 +2955,7 @@ function AppInstallDialogStory({ theme = 'light' }: { theme?: 'light' | 'dark' }
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 560, padding: 24 }}>
       <WindowFrame
         title="App Manager"
-        accent="extensions"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(920px, 100%)', height: 540 }}
         onMinimize={() => undefined}
@@ -2980,7 +2980,7 @@ function AppInstallDialogStory({ theme = 'light' }: { theme?: 'light' | 'dark' }
         <WindowedDialog
           title="Install app"
           meta="3 available · 2 sources"
-          accent="extensions"
+          accent="apps"
           parentWindowTitle="App Manager"
           className="wos-app-install-dialog"
           onClose={() => undefined}
@@ -3221,7 +3221,7 @@ export const CoreDataPrimitives: Story = {
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
       <WindowFrame
         title="App Manager"
-        accent="extensions"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(760px, 100%)', height: 430 }}
         onMinimize={() => undefined}
@@ -3247,7 +3247,7 @@ function TerminalWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 520, padding: 24 }}>
       <WindowFrame
         title="Terminal"
-        accent="extensions"
+        accent="apps"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(760px, 100%)', height: 430 }}
         onMinimize={() => undefined}
@@ -3305,7 +3305,7 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
               <WindowedPageSection title="Files" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="packages/desktop/ui/src/components" meta="Directory" detail="source" active accent="chat" />
-                  <WindowedListItem title="packages/windowed-os-ui/src" meta="Directory" detail="design system" accent="extensions" />
+                  <WindowedListItem title="packages/windowed-os-ui/src" meta="Directory" detail="design system" accent="apps" />
                   <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="backlog" accent="skills" />
                   <WindowedListItem title="apps/system-browser" meta="App package" detail="child tool" accent="gateways" />
                   <WindowedListItem title="apps/system-terminal" meta="App package" detail="child tool" accent="automations" />

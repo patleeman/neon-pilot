@@ -860,7 +860,7 @@ describe('WindowedDialog content primitives', () => {
 
   it('supports explicit modal subwindows for blocking flows', () => {
     const html = renderToStaticMarkup(
-      <WindowedDialog title="Confirm install" accent="extensions" modal onClose={() => undefined}>
+      <WindowedDialog title="Confirm install" accent="apps" modal onClose={() => undefined}>
         Install app
       </WindowedDialog>,
     );
@@ -1118,7 +1118,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('.windowed-os-shell');
     expect(tokensSource).toContain('--wos-surface-0: oklch(95% 0.022 75);');
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
-    expect(tokensSource).toContain('--wos-extensions: oklch(70% 0.15 60);');
+    expect(tokensSource).toContain('--wos-apps: oklch(70% 0.15 60);');
     expect(tokensSource).toContain('--wos-workflows:');
     expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
@@ -3249,7 +3249,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(appManagerSource.indexOf('ariaLabel="App view"')).toBeGreaterThan(
       appManagerSource.indexOf('<WindowedPageSection variant="toolbar">'),
     );
-    expect(appManagerSource).toContain('WindowedToggle checked accent="extensions" label="Disable system-browser"');
+    expect(appManagerSource).toContain('WindowedToggle checked accent="apps" label="Disable system-browser"');
     expect(appManagerSource).toContain('<WindowedDialog');
     expect(appManagerSource).toContain('title="system-browser"');
     expect(appManagerSource).toContain('parentWindowTitle="App Manager"');
