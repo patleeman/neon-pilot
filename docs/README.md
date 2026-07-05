@@ -75,6 +75,7 @@ The public website docs are built by scanning [`docs/public`](public). Put human
 - [Daemon](daemon.md) — background process and runtime lifecycle
 - [Sandboxing](public/10-product/50-sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy
 - [Filesystem Authority](filesystem-authority.md) — shared scoped filesystem boundary, backend seam, policy hooks, and command-sandbox root grants
+- [Windowed OS filesystem inventory](windowed-os-filesystem-inventory.md) — Phase 1 current-state inventory and single-root migration map for the agentic desktop fork
 - [Renderer isolation](renderer-isolation.md) — process ownership, critical lanes, and transcript projection boundaries
 - [Product runtime and extension host split](product-extension-process-split.md) — architecture and validation for the product/extension process boundary
 - [System extensions](../extensions) — feature-owned docs and implementation packages
