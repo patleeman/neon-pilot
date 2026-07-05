@@ -245,7 +245,7 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    expect(document.body.getAttribute('data-neon-pilot-windowed-shell-active')).toBe('true');
+    expect(document.body.getAttribute('data-neon-pilot-desktop-shell-active')).toBe('true');
     await waitFor(() => {
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,

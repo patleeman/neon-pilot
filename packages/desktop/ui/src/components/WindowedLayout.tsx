@@ -122,7 +122,7 @@ const WINDOWED_BROWSER_SETTLE_MS = 1200;
 const FALLBACK_TASKBAR_HEIGHT = 44;
 const DEFAULT_WINDOW_BOTTOM_GUTTER = 56;
 const DEFAULT_CHAT_WORKBENCH_COLLAPSED = true;
-const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
+const DESKTOP_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-desktop-shell-active';
 
 const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
@@ -1241,10 +1241,10 @@ export function WindowedLayout() {
   const hydratedBrowserRouteRef = useRef<string | null>(null);
 
   useEffect(() => {
-    document.body.setAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE, 'true');
+    document.body.setAttribute(DESKTOP_SHELL_ACTIVE_ATTRIBUTE, 'true');
     suspendWindowedBrowserViews(3000);
     return () => {
-      document.body.removeAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE);
+      document.body.removeAttribute(DESKTOP_SHELL_ACTIVE_ATTRIBUTE);
     };
   }, []);
 

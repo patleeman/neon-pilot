@@ -22,7 +22,7 @@ const WORKBENCH_BROWSER_SHORTCUT_COMMANDS = new Set(['browser.newTab', 'browser.
 const WINDOWED_SHELL_BROWSER_SUSPEND_MS = 1500;
 const BROWSER_BOUNDS_SYNC_INTERVAL_MS = 1000;
 const WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS = 160;
-const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
+const DESKTOP_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-desktop-shell-active';
 const TRANSIENT_RENDERER_BLOCKER_SELECTOR = [
   '[aria-modal="true"]',
   '[role="dialog"]',
@@ -91,18 +91,18 @@ function hasWindowedShellOverlay(): boolean {
   );
 }
 
-function isWindowedShellActiveOutsideHost(host: HTMLElement | null): boolean {
+function isDesktopShellActiveOutsideHost(host: HTMLElement | null): boolean {
   if (!host || !isInsideWindowedShell(host)) {
-    return isWindowedShellActive();
+    return isDesktopShellActive();
   }
   return false;
 }
 
-function isWindowedShellActive(): boolean {
+function isDesktopShellActive(): boolean {
   if (typeof document === 'undefined') {
     return false;
   }
-  return document.body.hasAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE) || Boolean(document.querySelector('.windowed-os-shell'));
+  return document.body.hasAttribute(DESKTOP_SHELL_ACTIVE_ATTRIBUTE) || Boolean(document.querySelector('.windowed-os-shell'));
 }
 
 function isConnectedVisibleElement(element: Element): element is HTMLElement {
@@ -682,7 +682,7 @@ export function WorkbenchBrowserTab({
   onCloseCurrentTab: () => void;
 }) {
   const browserHostRef = useRef<HTMLDivElement | null>(null);
-  const [hostedByWindowedShell, setHostedByWindowedShell] = useState(() => isWindowedShellActive());
+  const [hostedByDesktopShell, setHostedByDesktopShell] = useState(() => isDesktopShellActive());
   const [windowedBrowserPaused, setWindowedBrowserPaused] = useState(false);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const closedRef = useRef(false);
@@ -794,9 +794,7 @@ export function WorkbenchBrowserTab({
           sessionKey: browserSessionKey,
           ...(options?.force ? { deactivate: true } : {}),
           ...(options?.destroy ? { destroy: true } : {}),
-          ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
-            ? { desktopShellActive: true }
-            : {}),
+          ...(isDesktopShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell')) ? { desktopShellActive: true } : {}),
         })
         .then((nextState) => {
           if (nextState) {
@@ -818,7 +816,7 @@ export function WorkbenchBrowserTab({
             sessionKey,
             deactivate: true,
             ...(options?.destroy ? { destroy: true } : {}),
-            ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
+            ...(isDesktopShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
               ? { desktopShellActive: true }
               : {}),
           })
@@ -840,7 +838,7 @@ export function WorkbenchBrowserTab({
                 sessionKey: browserSessionKey,
                 deactivate: true,
                 ...(options?.destroy ? { destroy: true } : {}),
-                ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
+                ...(isDesktopShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
                   ? { desktopShellActive: true }
                   : {}),
               })
@@ -857,7 +855,7 @@ export function WorkbenchBrowserTab({
                   sessionKey,
                   deactivate: true,
                   ...(options?.destroy ? { destroy: true } : {}),
-                  ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
+                  ...(isDesktopShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
                     ? { desktopShellActive: true }
                     : {}),
                 })
@@ -879,7 +877,7 @@ export function WorkbenchBrowserTab({
       return;
     }
 
-    if (isWindowedShellActiveOutsideHost(host)) {
+    if (isDesktopShellActiveOutsideHost(host)) {
       setWindowedBrowserPaused(false);
       hideBrowserView({ force: true, destroy: true });
       return;
@@ -981,7 +979,7 @@ export function WorkbenchBrowserTab({
 
   useLayoutEffect(() => {
     closedRef.current = false;
-    setHostedByWindowedShell(Boolean(browserHostRef.current?.closest('.windowed-os-shell')));
+    setHostedByDesktopShell(Boolean(browserHostRef.current?.closest('.windowed-os-shell')));
     syncBounds();
     const observer = typeof ResizeObserver !== 'undefined' && browserHostRef.current ? new ResizeObserver(syncBounds) : null;
     if (browserHostRef.current) {
@@ -999,7 +997,7 @@ export function WorkbenchBrowserTab({
       attributeFilter: [
         'aria-modal',
         'class',
-        WINDOWED_SHELL_ACTIVE_ATTRIBUTE,
+        DESKTOP_SHELL_ACTIVE_ATTRIBUTE,
         'data-focused',
         'data-focused-window-id',
         'data-frame-paint-blocked',
@@ -1012,7 +1010,7 @@ export function WorkbenchBrowserTab({
       subtree: true,
     });
     const syncInterval =
-      browserHostRef.current?.closest('.windowed-os-shell') || isWindowedShellActive()
+      browserHostRef.current?.closest('.windowed-os-shell') || isDesktopShellActive()
         ? WINDOWED_BROWSER_BOUNDS_SYNC_INTERVAL_MS
         : BROWSER_BOUNDS_SYNC_INTERVAL_MS;
     const timer = window.setInterval(syncBounds, syncInterval);
@@ -1273,7 +1271,7 @@ export function WorkbenchBrowserTab({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {hostedByWindowedShell ? (
+      {hostedByDesktopShell ? (
         <WindowedBrowserToolbar
           address={urlDraft}
           actions={windowedBrowserToolbarActions}
@@ -1341,15 +1339,15 @@ export function WorkbenchBrowserTab({
       )}
       <div
         ref={browserHostRef}
-        className={`relative min-h-[220px] flex-1 overflow-hidden bg-base${hostedByWindowedShell ? ' ui-windowed-browser-host' : ''}`}
-        data-windowed-browser-host={hostedByWindowedShell ? 'true' : undefined}
+        className={`relative min-h-[220px] flex-1 overflow-hidden bg-base${hostedByDesktopShell ? ' ui-windowed-browser-host' : ''}`}
+        data-windowed-browser-host={hostedByDesktopShell ? 'true' : undefined}
       >
         {!bridge ? (
           <div className="flex h-full items-center justify-center px-4 text-center text-[12px] leading-5 text-dim">
             Browser embedding is only available in the Electron desktop app.
           </div>
         ) : null}
-        {hostedByWindowedShell && windowedBrowserPaused ? (
+        {hostedByDesktopShell && windowedBrowserPaused ? (
           <div className="ui-windowed-browser-host__blocker" role="status">
             <WindowedStateBlock
               title="Browser preview is paused in desktop mode"

@@ -30,7 +30,7 @@ describe('WorkbenchBrowserTab', () => {
       root = null;
     }
     delete window.neonPilotDesktop;
-    document.body.removeAttribute('data-neon-pilot-windowed-shell-active');
+    document.body.removeAttribute('data-neon-pilot-desktop-shell-active');
     vi.restoreAllMocks();
   });
 
@@ -1162,7 +1162,7 @@ describe('WorkbenchBrowserTab', () => {
       browserTabsState.tabs.find((tab) => tab.id === browserTabsState.activeTabId) ?? browserTabsState.tabs[0]!;
     window.neonPilotDesktop = { setWorkbenchBrowserBounds, navigateWorkbenchBrowser } as unknown as typeof window.neonPilotDesktop;
     document.body.replaceChildren();
-    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+    document.body.setAttribute('data-neon-pilot-desktop-shell-active', 'true');
 
     Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
       configurable: true,

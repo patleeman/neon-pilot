@@ -103,7 +103,7 @@ describe('ExtensionModalHost confirm bridge', () => {
 describe('ExtensionModalHost modal bridge', () => {
   afterEach(() => {
     document.body.innerHTML = '';
-    document.body.removeAttribute('data-neon-pilot-windowed-shell-active');
+    document.body.removeAttribute('data-neon-pilot-desktop-shell-active');
     systemExtensionModules.delete('test-extension');
     systemExtensionModules.delete('system-excalidraw-input');
     vi.mocked(setExtensionCommandContext).mockClear();
@@ -173,7 +173,7 @@ describe('ExtensionModalHost modal bridge', () => {
   });
 
   it('marks Excalidraw editor modals for windowed OS sub-window styling', async () => {
-    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+    document.body.setAttribute('data-neon-pilot-desktop-shell-active', 'true');
     systemExtensionModules.set('system-excalidraw-input', async () => ({
       ExcalidrawEditorModal: () => <div>Drawing editor</div>,
     }));
@@ -214,7 +214,7 @@ describe('ExtensionModalHost modal bridge', () => {
   });
 
   it('hides and restores a windowed Excalidraw sub-window with its chat parent lifecycle', async () => {
-    document.body.setAttribute('data-neon-pilot-windowed-shell-active', 'true');
+    document.body.setAttribute('data-neon-pilot-desktop-shell-active', 'true');
     systemExtensionModules.set('system-excalidraw-input', async () => ({
       ExcalidrawEditorModal: () => <div>Drawing editor</div>,
     }));

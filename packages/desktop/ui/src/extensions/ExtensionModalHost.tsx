@@ -21,7 +21,7 @@ interface ModalState {
 
 type ExtensionModalSize = 'default' | 'large' | 'fullscreen';
 const EXTENSION_MODAL_ERROR_MESSAGE = 'This app dialog could not be loaded.';
-const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
+const DESKTOP_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-desktop-shell-active';
 
 function FailedExtensionModalBody() {
   return (
@@ -54,8 +54,8 @@ export function resolveExtensionModalSizeClasses(size: ExtensionModalSize | unde
   }
 }
 
-function isWindowedShellActive(): boolean {
-  return typeof document !== 'undefined' && document.body.getAttribute(WINDOWED_SHELL_ACTIVE_ATTRIBUTE) === 'true';
+function isDesktopShellActive(): boolean {
+  return typeof document !== 'undefined' && document.body.getAttribute(DESKTOP_SHELL_ACTIVE_ATTRIBUTE) === 'true';
 }
 
 function readWindowedParentWindowTitle(props: Record<string, unknown>): string {
@@ -70,7 +70,7 @@ function readWindowedParentWindowId(props: Record<string, unknown>): string | nu
 
 function isWindowedExcalidrawModal(modal: ModalState | null): modal is ModalState {
   return Boolean(
-    modal && isWindowedShellActive() && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal',
+    modal && isDesktopShellActive() && modal.extensionId === 'system-excalidraw-input' && modal.component === 'ExcalidrawEditorModal',
   );
 }
 
@@ -285,7 +285,7 @@ export function ExtensionModalHost() {
   if (!modal || !Component) return <>{confirmDialog}</>;
 
   const pa = createNativeExtensionClient(modal.extensionId);
-  const windowedShellActive = isWindowedShellActive();
+  const desktopShellActive = isDesktopShellActive();
   const windowedExcalidrawModal = isWindowedExcalidrawModal(modal);
   const modalSizeClasses = resolveExtensionModalSizeClasses(windowedExcalidrawModal ? 'default' : modal.size);
   const parentWindowTitle = windowedExcalidrawModal ? readWindowedParentWindowTitle(modal.props) : undefined;
@@ -303,7 +303,7 @@ export function ExtensionModalHost() {
         aria-modal={windowedExcalidrawModal ? false : undefined}
         backdropClassName={cx(
           modalSizeClasses.backdropClassName,
-          windowedShellActive && 'ui-windowed-extension-modal-backdrop',
+          desktopShellActive && 'ui-windowed-extension-modal-backdrop',
           windowedExcalidrawModal && 'ui-windowed-excalidraw-backdrop',
         )}
         onKeyDown={(e) => {
@@ -311,7 +311,7 @@ export function ExtensionModalHost() {
         }}
         className={cx(
           modalSizeClasses.dialogClassName,
-          windowedShellActive && 'ui-windowed-extension-modal',
+          desktopShellActive && 'ui-windowed-extension-modal',
           windowedExcalidrawModal && 'ui-windowed-excalidraw-modal',
         )}
         data-windowed-subwindow={windowedExcalidrawModal ? 'drawing-editor' : undefined}
