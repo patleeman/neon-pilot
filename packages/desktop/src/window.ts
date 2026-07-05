@@ -111,7 +111,7 @@ export function toDesktopShellRoute(url: string): string {
   return route || '/';
 }
 
-export function isWindowedDesktopShellUrl(url: string): boolean {
+export function isDesktopShellUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     return parsed.searchParams.get('desktop-shell') === '1';
@@ -968,21 +968,21 @@ export class DesktopWindowController {
   private registerWindow(window: BrowserWindow, hostId: string, role: ManagedWindowRole, metadata?: { conversationId?: string }): void {
     const webContentsId = window.webContents.id;
     this.trackedWindows.set(webContentsId, { hostId, role, window });
-    const suppressNativeBrowserViewsIfWindowed = (url = window.webContents.getURL()) => {
-      if (!isWindowedDesktopShellUrl(url)) {
+    const suppressNativeBrowserViews = (url = window.webContents.getURL()) => {
+      if (!isDesktopShellUrl(url)) {
         return;
       }
       this.workbenchBrowser.setBounds(window.webContents, false, null, null, true, true);
     };
 
     window.webContents.on('did-navigate', (_event, url) => {
-      suppressNativeBrowserViewsIfWindowed(url);
+      suppressNativeBrowserViews(url);
     });
     window.webContents.on('did-navigate-in-page', (_event, url) => {
-      suppressNativeBrowserViewsIfWindowed(url);
+      suppressNativeBrowserViews(url);
     });
     window.webContents.on('did-finish-load', () => {
-      suppressNativeBrowserViewsIfWindowed();
+      suppressNativeBrowserViews();
     });
 
     const popoutConversationId = role === 'popout' ? metadata?.conversationId?.trim() : '';

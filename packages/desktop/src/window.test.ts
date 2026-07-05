@@ -26,7 +26,7 @@ import {
   canNavigateWindowInApp,
   constrainDesktopWindowBounds,
   getDesktopWindowChromeOptions,
-  isWindowedDesktopShellUrl,
+  isDesktopShellUrl,
   shouldGrantDesktopMediaPermission,
   shouldOpenNavigationExternally,
   shouldOpenWindowExternally,
@@ -70,26 +70,26 @@ describe('toDesktopShellRoute', () => {
   });
 });
 
-describe('isWindowedDesktopShellUrl', () => {
-  it('detects the windowed desktop shell route', () => {
-    expect(isWindowedDesktopShellUrl('neon-pilot://app/?desktop-shell=1')).toBe(true);
-    expect(isWindowedDesktopShellUrl('https://app.neon-pilot.dev/?desktop-shell=1')).toBe(true);
-    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings?desktop-shell=1')).toBe(true);
+describe('isDesktopShellUrl', () => {
+  it('detects the desktop shell route', () => {
+    expect(isDesktopShellUrl('neon-pilot://app/?desktop-shell=1')).toBe(true);
+    expect(isDesktopShellUrl('https://app.neon-pilot.dev/?desktop-shell=1')).toBe(true);
+    expect(isDesktopShellUrl('neon-pilot://app/settings?desktop-shell=1')).toBe(true);
   });
 
   it('leaves ordinary app URLs and invalid URLs alone', () => {
-    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings')).toBe(false);
-    expect(isWindowedDesktopShellUrl('neon-pilot://app/settings?mode=desktop')).toBe(false);
-    expect(isWindowedDesktopShellUrl('not a url')).toBe(false);
+    expect(isDesktopShellUrl('neon-pilot://app/settings')).toBe(false);
+    expect(isDesktopShellUrl('neon-pilot://app/settings?mode=desktop')).toBe(false);
+    expect(isDesktopShellUrl('not a url')).toBe(false);
   });
 });
 
-describe('windowed shell native browser suppression', () => {
-  it('suppresses native workbench browser views when a window navigates into the windowed shell', () => {
+describe('desktop shell native browser suppression', () => {
+  it('suppresses native workbench browser views when a window navigates into the desktop shell', () => {
     const source = readFileSync(fileURLToPath(new URL('./window.ts', import.meta.url)), 'utf-8');
 
-    expect(source).toContain('const suppressNativeBrowserViewsIfWindowed =');
-    expect(source).toContain('isWindowedDesktopShellUrl(url)');
+    expect(source).toContain('const suppressNativeBrowserViews =');
+    expect(source).toContain('isDesktopShellUrl(url)');
     expect(source).toContain('this.workbenchBrowser.setBounds(window.webContents, false, null, null, true, true);');
     expect(source).toContain("window.webContents.on('did-navigate'");
     expect(source).toContain("window.webContents.on('did-navigate-in-page'");
