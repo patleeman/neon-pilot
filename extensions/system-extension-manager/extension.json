@@ -143,7 +143,7 @@
       {
         "id": "manageExtension",
         "handler": "manageExtension",
-        "title": "Manage extension",
+        "title": "Manage app package",
         "worker": {
           "enabled": true,
           "inputActions": [
@@ -267,7 +267,7 @@
       {
         "id": "extensions-list",
         "command": "extensions list",
-        "description": "List installed Neon Pilot extensions.",
+        "description": "List installed Neon Pilot app packages.",
         "action": "manageExtension",
         "jsonDefault": true,
         "usage": "extensions list [--json]",
@@ -304,11 +304,11 @@
       {
         "id": "extensions-create",
         "command": "extensions create",
-        "description": "Create an installed extension: extensions create <id> --name <name> [--template <template>]",
+        "description": "Create an installed app package: extensions create <id> --name <name> [--template <template>]",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "create",
-        "usage": "extensions create <extensionId> [--json]",
+        "usage": "extensions create <appPackageId> [--json]",
         "examples": ["neon-pilot extensions create system-settings", "neon-pilot extensions create system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -316,7 +316,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -343,11 +343,11 @@
       {
         "id": "extensions-snapshot",
         "command": "extensions snapshot",
-        "description": "Snapshot an installed extension by id.",
+        "description": "Snapshot an installed app package by id.",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "snapshot",
-        "usage": "extensions snapshot <extensionId> [--json]",
+        "usage": "extensions snapshot <appPackageId> [--json]",
         "examples": ["neon-pilot extensions snapshot system-settings", "neon-pilot extensions snapshot system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -355,7 +355,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -382,7 +382,7 @@
       {
         "id": "extensions-delete",
         "command": "extensions delete",
-        "description": "Delete a runtime extension by id. System extensions cannot be deleted.",
+        "description": "Delete an installed app package by id. System apps cannot be deleted.",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "delete",
@@ -422,7 +422,7 @@
       {
         "id": "extensions-catalog",
         "command": "extensions catalog",
-        "description": "List installable extension catalog entries.",
+        "description": "List installable app catalog entries.",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "listInstallable",
@@ -460,11 +460,11 @@
       {
         "id": "extensions-install",
         "command": "extensions install",
-        "description": "Install an extension from the catalog: extensions install <id>",
+        "description": "Install an app package from the catalog: extensions install <id>",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "installCatalog",
-        "usage": "extensions install <extensionId> [--json]",
+        "usage": "extensions install <appPackageId> [--json]",
         "examples": ["neon-pilot extensions install system-settings", "neon-pilot extensions install system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -472,7 +472,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -499,11 +499,11 @@
       {
         "id": "extensions-update",
         "command": "extensions update",
-        "description": "Update a catalog-installed extension: extensions update <id>",
+        "description": "Update a catalog-installed app package: extensions update <id>",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "updateCatalog",
-        "usage": "extensions update <extensionId> [--json]",
+        "usage": "extensions update <appPackageId> [--json]",
         "examples": ["neon-pilot extensions update system-settings", "neon-pilot extensions update system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -511,7 +511,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -538,7 +538,7 @@
       {
         "id": "extensions-install-url",
         "command": "extensions install-url",
-        "description": "Install an extension bundle from URL: extensions install-url <url> [--expected-id <id>]",
+        "description": "Install an app package bundle from URL: extensions install-url <url> [--expected-id <id>]",
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "installFromUrl",
@@ -569,7 +569,7 @@
             },
             "expected-id": {
               "type": "string",
-              "description": "Expected extension id in the downloaded bundle."
+              "description": "Expected app package id in the downloaded bundle."
             }
           },
           "additionalProperties": true
@@ -585,10 +585,10 @@
       {
         "id": "extensions-validate",
         "command": "extensions validate",
-        "description": "Validate an installed extension by id.",
+        "description": "Validate an installed app package by id.",
         "action": "manageExtension",
         "inputAction": "validate",
-        "usage": "extensions validate <extensionId> [--json]",
+        "usage": "extensions validate <appPackageId> [--json]",
         "examples": ["neon-pilot extensions validate system-settings", "neon-pilot extensions validate system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -596,7 +596,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -619,10 +619,10 @@
       {
         "id": "extensions-reload",
         "command": "extensions reload",
-        "description": "Reload an extension by id, or refresh extension state.",
+        "description": "Reload an app package by id, or refresh app package state.",
         "action": "manageExtension",
         "inputAction": "reload",
-        "usage": "extensions reload [extensionId] [--json]",
+        "usage": "extensions reload [appPackageId] [--json]",
         "examples": ["neon-pilot extensions reload", "neon-pilot extensions reload system-settings", "neon-pilot extensions reload --json"],
         "argsSchema": {
           "type": "array",
@@ -630,7 +630,7 @@
             "type": "string"
           },
           "maxItems": 1,
-          "description": "Optional positional args: extensionId."
+          "description": "Optional positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -657,10 +657,10 @@
       {
         "id": "extensions-smoke",
         "command": "extensions smoke",
-        "description": "Run smoke checks for an installed extension.",
+        "description": "Run smoke checks for an installed app package.",
         "action": "manageExtension",
         "inputAction": "smoke",
-        "usage": "extensions smoke <extensionId> [--json]",
+        "usage": "extensions smoke <appPackageId> [--json]",
         "examples": ["neon-pilot extensions smoke system-settings", "neon-pilot extensions smoke system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -668,7 +668,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -695,10 +695,10 @@
       {
         "id": "extensions-enable",
         "command": "extensions enable",
-        "description": "Enable an installed extension.",
+        "description": "Enable an installed app package.",
         "action": "manageExtension",
         "inputAction": "enable",
-        "usage": "extensions enable <extensionId> [--json]",
+        "usage": "extensions enable <appPackageId> [--json]",
         "examples": ["neon-pilot extensions enable system-settings", "neon-pilot extensions enable system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -706,7 +706,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -733,10 +733,10 @@
       {
         "id": "extensions-disable",
         "command": "extensions disable",
-        "description": "Disable an installed extension.",
+        "description": "Disable an installed app package.",
         "action": "manageExtension",
         "inputAction": "disable",
-        "usage": "extensions disable <extensionId> [--json]",
+        "usage": "extensions disable <appPackageId> [--json]",
         "examples": ["neon-pilot extensions disable system-settings", "neon-pilot extensions disable system-settings --json"],
         "argsSchema": {
           "type": "array",
@@ -744,7 +744,7 @@
             "type": "string"
           },
           "minItems": 1,
-          "description": "Positional args: extensionId."
+          "description": "Positional args: appPackageId."
         },
         "flagsSchema": {
           "type": "object",
@@ -771,7 +771,7 @@
       {
         "id": "extensions-paths",
         "command": "extensions paths",
-        "description": "Read extension search paths.",
+        "description": "Read app package search paths.",
         "action": "manageExtension",
         "inputAction": "readSearchPaths",
         "jsonDefault": true,
@@ -809,7 +809,7 @@
       {
         "id": "extensions-sources",
         "command": "extensions sources",
-        "description": "Read extension catalog sources.",
+        "description": "Read app catalog sources.",
         "action": "manageExtension",
         "inputAction": "readExtensionSources",
         "jsonDefault": true,

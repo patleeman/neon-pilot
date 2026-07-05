@@ -16,18 +16,15 @@ type SettingsSectionId =
   | 'settings-desktop';
 
 function SettingsSectionPage({ sectionIds, context }: ExtensionSurfaceProps & { sectionIds: SettingsSectionId[] }) {
-  if (context.shellPresentation === 'windowed') {
-    return <SettingsPage sectionIds={sectionIds} context={context} />;
-  }
-
   useEffect(() => {
+    if (context?.shellPresentation === 'windowed') return;
     window.requestAnimationFrame(() => {
       const section = document.getElementById(sectionIds[0]);
       if (typeof section?.scrollIntoView === 'function') {
         section.scrollIntoView({ block: 'start' });
       }
     });
-  }, [sectionIds]);
+  }, [context?.shellPresentation, sectionIds]);
 
   return <SettingsPage sectionIds={sectionIds} context={context} />;
 }

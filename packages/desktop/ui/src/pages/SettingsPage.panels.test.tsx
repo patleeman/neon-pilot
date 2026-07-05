@@ -129,7 +129,7 @@ describe('SettingsPage — untested panel rendering', () => {
 
   it('does not render extension manager management UI in settings', () => {
     const html = renderPage('/settings', ['settings-extensions']);
-    expect(html).toContain('Extensions');
+    expect(html).toContain('Apps');
     expect(html).not.toContain('AGENTS.md files');
   });
 
@@ -161,7 +161,7 @@ describe('SettingsPage — untested panel rendering', () => {
   it.each([
     ['/settings/commands', 'Commands'],
     ['/settings/security', 'Security'],
-    ['/settings/extensions', 'Extensions'],
+    ['/settings/extensions', 'Apps'],
   ])('renders %s without tripping the extension error boundary', (pathname, expectedHeading) => {
     const html = renderDirectSettingsRoute(pathname);
     expect(html).toContain(expectedHeading);

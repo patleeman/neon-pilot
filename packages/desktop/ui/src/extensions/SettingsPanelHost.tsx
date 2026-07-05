@@ -30,7 +30,7 @@ type ExtensionSettingsPanelComponent = ComponentType<{
 
 function renderSettingsPanelError(body: string) {
   return {
-    default: () => <ErrorState title="Extension settings failed to render." body={body} className="p-4" />,
+    default: () => <ErrorState title="App settings failed to render." body={body} className="p-4" />,
   };
 }
 
@@ -77,7 +77,7 @@ export function SettingsPanelHost({
 
   return (
     <SettingsPanelErrorBoundary extensionId={registration.extensionId} componentId={registration.id} errorBody={friendlyErrorBody}>
-      <Suspense fallback={<QuietLoadingState label="Loading extension settings" />}>
+      <Suspense fallback={<QuietLoadingState label="Loading app settings" />}>
         <Component
           pa={pa}
           settingsContext={{ sectionId: registration.sectionId, extensionId: registration.extensionId, shellPresentation }}
@@ -103,6 +103,6 @@ class SettingsPanelErrorBoundary extends React.Component<
 
   render() {
     if (!this.state.failed) return this.props.children;
-    return <ErrorState title="Extension settings failed to render." body={this.props.errorBody} className="p-4" />;
+    return <ErrorState title="App settings failed to render." body={this.props.errorBody} className="p-4" />;
   }
 }

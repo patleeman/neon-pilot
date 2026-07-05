@@ -3,7 +3,7 @@
   "id": "system-settings",
   "name": "Settings panels",
   "packageType": "system",
-  "description": "Native extension routes for first-party settings panels.",
+  "description": "Native app routes for first-party settings panels.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",

@@ -684,7 +684,7 @@ async function readExtensionSources(extensions: ExtensionActionBridge): Promise<
 }
 
 async function writeExtensionSources(extensions: ExtensionActionBridge, sources: ExtensionCatalogSource[]): Promise<void> {
-  if (!extensions?.callAction) throw new Error('Extension source management is unavailable.');
+  if (!extensions?.callAction) throw new Error('App repository management is unavailable.');
   await extensions.callAction('system-extension-manager', 'updateExtensionSources', { sources });
 }
 
@@ -806,7 +806,7 @@ export function ExtensionRepositoriesSettingsPanel({ pa }: ExtensionSurfaceProps
       setNotice(`Added ${parsed.owner}/${parsed.repo}.`);
       await loadSources();
     } catch (err) {
-      showError('Failed to add extension repository', err instanceof Error ? err.message : String(err));
+      showError('Failed to add app repository', err instanceof Error ? err.message : String(err));
     } finally {
       setBusyId(null);
     }
@@ -826,7 +826,7 @@ export function ExtensionRepositoriesSettingsPanel({ pa }: ExtensionSurfaceProps
         setNotice(`Removed ${source.owner}/${source.repo}.`);
         await loadSources();
       } catch (err) {
-        showError('Failed to remove extension repository', err instanceof Error ? err.message : String(err));
+        showError('Failed to remove app repository', err instanceof Error ? err.message : String(err));
       } finally {
         setBusyId(null);
       }
@@ -1044,7 +1044,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       setNotice({ type: 'success', message: `Added ${parsed.owner}/${parsed.repo} to extension repositories.` });
       loadCatalog();
     } catch (err) {
-      showActionError('Failed to add extension repository', err instanceof Error ? err.message : String(err));
+      showActionError('Failed to add app repository', err instanceof Error ? err.message : String(err));
     } finally {
       setBusyId(null);
     }
@@ -1060,7 +1060,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
         setNotice({ type: 'success', message: `Removed ${source.owner}/${source.repo} from extension repositories.` });
         loadCatalog();
       } catch (err) {
-        showActionError('Failed to remove extension repository', err instanceof Error ? err.message : String(err));
+        showActionError('Failed to remove app repository', err instanceof Error ? err.message : String(err));
       } finally {
         setBusyId(null);
       }
@@ -1072,7 +1072,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     (extension: ExtensionInstallSummary) => {
       setNotice(null);
       if (extension.status === 'invalid') {
-        showActionError('Extension manifest is invalid.', extension.errors?.[0]);
+        showActionError('App package manifest is invalid.', extension.errors?.[0]);
         return;
       }
       setBusyId(extension.id);
@@ -1456,12 +1456,12 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
               {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
                 <div className="mt-1 text-[12px] text-danger">
                   {extension.status === 'invalid'
-                    ? (extension.errors?.[0] ?? 'Invalid extension manifest.')
+                    ? (extension.errors?.[0] ?? 'Invalid app package manifest.')
                     : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0])}
                 </div>
               ) : null}
               {unavailableCatalogItem ? (
-                <div className="mt-1 text-[12px] text-warning">No longer available from the installable extension catalog.</div>
+                <div className="mt-1 text-[12px] text-warning">No longer available from the app catalog.</div>
               ) : null}
               {catalogItem?.updateAvailable ? (
                 <div className="mt-1 text-[12px] text-accent">
@@ -1527,13 +1527,11 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
               <div className="text-[12px] text-danger">
                 {extension.status === 'invalid'
-                  ? (extension.errors?.[0] ?? 'Invalid extension manifest.')
+                  ? (extension.errors?.[0] ?? 'Invalid app package manifest.')
                   : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0])}
               </div>
             ) : null}
-            {unavailableCatalogItem ? (
-              <div className="text-[12px] text-warning">No longer available from the installable extension catalog.</div>
-            ) : null}
+            {unavailableCatalogItem ? <div className="text-[12px] text-warning">No longer available from the app catalog.</div> : null}
             {catalogItem?.updateAvailable ? (
               <div className="text-[12px] text-accent">
                 Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}
@@ -1582,7 +1580,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
         </colgroup>
         <DataTableHead>
           <DataTableRow>
-            <DataTableHeaderCell className="pl-0">Extension</DataTableHeaderCell>
+            <DataTableHeaderCell className="pl-0">App</DataTableHeaderCell>
             <DataTableHeaderCell>Status</DataTableHeaderCell>
             <DataTableHeaderCell className="whitespace-nowrap">Appears in</DataTableHeaderCell>
             {showEnablement ? <DataTableHeaderCell>Enabled</DataTableHeaderCell> : null}

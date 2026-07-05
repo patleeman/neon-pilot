@@ -76,6 +76,7 @@ The deeper app/extension product model remains important, but the current goal i
 3. Clean remaining normal-user "Extensions" copy in Settings, App Manager, command/action metadata, and smoke tests.
    - Keep internal ids and developer/debug wording only where the implementation concept is still genuinely extension-specific.
    - Validate command/search aliases can still find App Manager, but visible labels read as Apps/App Manager.
+   - 2026-07-05 progress: swept App Manager, Settings, command palette/slash-command categories, fallback route chrome, CLI help descriptions, and related tests so normal visible copy says Apps/App Manager/app package while preserving internal extension ids/routes/API names. Live Windowed OS smoke confirmed App Manager renders `Apps` and `APP / STATUS / CONTROLS` with no visible `Extensions` body copy.
 4. Add narrow/dark Settings route coverage for Providers and App settings.
    - Validate long rows, provider editor controls, app setting rows, and action groups at narrow widths.
 5. Convert remaining stable-shell right-rail detail surfaces into windowed detail/subwindow flows.

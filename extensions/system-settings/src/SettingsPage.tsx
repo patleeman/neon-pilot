@@ -477,7 +477,7 @@ function buildDesktopShortcutItems(
   }));
   const extensionItems = extensionKeybindings.map((keybinding) => ({
     id: `${keybinding.extensionId}:${keybinding.surfaceId}`,
-    owner: keybinding.packageType === 'system' ? 'Built-in extension' : 'Extension',
+    owner: keybinding.packageType === 'system' ? 'Built-in app' : 'App',
     label: keybinding.title,
     description: keybinding.scope === 'surface' ? 'Surface shortcut' : 'Global shortcut',
     shortcuts: keybinding.enabled ? keybinding.keys : [],
@@ -1603,7 +1603,7 @@ function commandShortcutDescription(command: CommandWithKeybindings): string {
   if (command.extensionId === 'host') {
     return `${category} · Built-in`;
   }
-  return `${category} · ${command.packageType === 'system' ? 'Built-in extension' : 'Extension'}`;
+  return `${category} · ${command.packageType === 'system' ? 'Built-in app' : 'App'}`;
 }
 
 function commandKeybindingConflictScope(keybinding: Pick<CommandKeybindingSettingsEntry, 'extensionId' | 'scope'>): string {
@@ -2605,8 +2605,8 @@ function ExtensionSecretsSection() {
       </SettingsGroup>
 
       {grouped.size === 0 ? (
-        <SettingsGroup title="Extension secrets">
-          <p className="settings-page-panel-message ui-card-meta">No installed extensions declare secrets.</p>
+        <SettingsGroup title="App secrets">
+          <p className="settings-page-panel-message ui-card-meta">No installed apps declare secrets.</p>
         </SettingsGroup>
       ) : (
         [...grouped.entries()].map(([extensionId, secrets]) => (

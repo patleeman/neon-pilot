@@ -105,8 +105,8 @@ describe('system-extension-manager manifest', () => {
       });
     }
     expect(commands.get('extensions reload')).toMatchObject({
-      usage: 'extensions reload [extensionId] [--json]',
-      argsSchema: { maxItems: 1, description: 'Optional positional args: extensionId.' },
+      usage: 'extensions reload [appPackageId] [--json]',
+      argsSchema: { maxItems: 1, description: 'Optional positional args: appPackageId.' },
     });
   });
 });

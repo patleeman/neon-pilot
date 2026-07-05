@@ -165,9 +165,9 @@ describe('CommandPalette', () => {
       {
         extensionId: 'system-extension-manager',
         surfaceId: 'open',
-        title: 'Open Extensions',
+        title: 'Open App Manager',
         action: 'open',
-        description: 'Manage installed extensions.',
+        description: 'Manage installed apps.',
       },
     ]);
     vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
@@ -194,9 +194,9 @@ describe('CommandPalette', () => {
       );
     });
 
-    expect(await screen.findByText('Open Extensions')).toBeTruthy();
+    expect(await screen.findByText('Open App Manager')).toBeTruthy();
     dialog = screen.getByRole('dialog', { name: 'Command palette' });
-    expect(dialog.textContent).toContain('Manage installed extensions.');
+    expect(dialog.textContent).toContain('Manage installed apps.');
     expect(dialog.textContent).not.toContain('system-extension-manager');
     expect(dialog.textContent).not.toContain('system-extension-manager.open');
   });

@@ -1211,7 +1211,7 @@ describe('Sidebar', () => {
     expect(html).toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
   });
 
-  it('orders bottom utility nav as Skills, Extensions, then Settings', () => {
+  it('orders bottom utility nav as Skills, App Manager, then Settings', () => {
     extensionRegistryMock.state.extensions = [
       {
         id: 'system-settings',
@@ -1223,10 +1223,10 @@ describe('Sidebar', () => {
       },
       {
         id: 'system-extension-manager',
-        name: 'Extensions',
+        name: 'App Manager',
         enabled: true,
         contributes: {
-          nav: [{ id: 'extensions-nav', label: 'Extensions', route: '/extensions', icon: 'sparkle', section: 'settings' }],
+          nav: [{ id: 'extensions-nav', label: 'App Manager', route: '/extensions', icon: 'sparkle', section: 'settings' }],
         },
       },
       {

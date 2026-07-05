@@ -12,7 +12,7 @@ const STALE_EXTENSION_ROUTES = new Set(['/gateways']);
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
   {
     id: 'extensions-page',
-    title: 'Extensions',
+    title: 'App Manager',
     location: 'main',
     route: '/extensions',
     component: 'ExtensionManagerPage',
@@ -93,12 +93,12 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
   if (registry.error && !nativeSurface) {
     if (shellPresentation === 'windowed') {
       return (
-        <WindowedExtensionPageState tone="danger" title="Extensions unavailable">
+        <WindowedExtensionPageState tone="danger" title="Apps unavailable">
           {registry.error}
         </WindowedExtensionPageState>
       );
     }
-    return <ErrorState message={`Extensions unavailable: ${registry.error}`} />;
+    return <ErrorState message={`Apps unavailable: ${registry.error}`} />;
   }
 
   if (nativeSurface) {
@@ -121,7 +121,7 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
   if (shellPresentation === 'windowed') {
     return (
       <WindowedExtensionPageState title="No page is registered here">
-        This address does not match a conversation, setting, or installed extension page.
+        This address does not match a conversation, setting, or installed app page.
       </WindowedExtensionPageState>
     );
   }
@@ -130,7 +130,7 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
     <CenteredMessage
       eyebrow="Route unavailable"
       title="No page is registered here"
-      body="This address does not match a conversation, setting, or installed extension page."
+      body="This address does not match a conversation, setting, or installed app page."
       actions={
         <ButtonLink href="/conversations/new" variant="action">
           Go to Chat

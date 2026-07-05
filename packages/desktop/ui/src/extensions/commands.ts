@@ -349,7 +349,7 @@ export function listHostCommands(): Array<{ id: string; title: string; category?
     { id: 'draftWorkspacePicker.toggle', title: 'Toggle Draft Workspace Picker', category: 'Conversation' },
     { id: 'draftWorkspacePicker.close', title: 'Close Draft Workspace Picker', category: 'Conversation' },
     { id: 'workspaceQuickSelect.close', title: 'Close Workspace Picker', category: 'Conversation' },
-    { id: 'extensionModal.close', title: 'Close Extension Modal', category: 'Extensions' },
+    { id: 'extensionModal.close', title: 'Close App Window', category: 'Apps' },
     {
       id: 'conversation.newAndFocus',
       title: 'New Conversation and Focus Composer',
@@ -1705,8 +1705,8 @@ export function createHostCommands(options: ExtensionCommandExecutorOptions): Ho
     },
     {
       id: 'extensionModal.close',
-      title: 'Close Extension Modal',
-      category: 'Extensions',
+      title: 'Close App Window',
+      category: 'Apps',
       execute() {
         return options.closeExtensionModal?.() ?? false;
       },

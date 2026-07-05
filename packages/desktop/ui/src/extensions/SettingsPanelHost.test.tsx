@@ -81,7 +81,7 @@ describe('SettingsPanelHost', () => {
       />,
     );
 
-    expect(await screen.findByText('Extension settings failed to render.')).toBeTruthy();
+    expect(await screen.findByText('App settings failed to render.')).toBeTruthy();
     expect(screen.getByText(/The settings panel for Test Panel could not load/)).toBeTruthy();
     expect(screen.queryByText(/system-test-panel:test-panel/)).toBeNull();
     expect(screen.queryByText(/MissingPanel/)).toBeNull();
@@ -100,8 +100,8 @@ describe('SettingsPanelHost', () => {
       />,
     );
 
-    expect(screen.getByRole('status', { name: 'Loading extension settings' })).toBeTruthy();
-    expect(screen.queryByText('Loading extension settings…')).toBeNull();
+    expect(screen.getByRole('status', { name: 'Loading app settings' })).toBeTruthy();
+    expect(screen.queryByText('Loading app settings…')).toBeNull();
   });
 
   it('does not expose raw import or module details when a settings panel fails to load', async () => {
@@ -117,7 +117,7 @@ describe('SettingsPanelHost', () => {
       />,
     );
 
-    expect(await screen.findByText('Extension settings failed to render.')).toBeTruthy();
+    expect(await screen.findByText('App settings failed to render.')).toBeTruthy();
     expect(screen.getByText(/The settings panel for Error Panel could not load/)).toBeTruthy();
     expect(screen.queryByText(/\/api\/extensions/)).toBeNull();
     expect(screen.queryByText(/localApi/)).toBeNull();

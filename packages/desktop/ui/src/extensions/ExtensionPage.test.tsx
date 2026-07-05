@@ -195,7 +195,7 @@ describe('ExtensionPage', () => {
 
     expect(screen.getByRole('status', { name: 'No page is registered here' })).toBeTruthy();
     expect(screen.getByText('No page is registered here')).toBeTruthy();
-    expect(screen.getByText('This address does not match a conversation, setting, or installed extension page.')).toBeTruthy();
+    expect(screen.getByText('This address does not match a conversation, setting, or installed app page.')).toBeTruthy();
     expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
     expect(container.querySelector('.wos-state-block')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Go to Chat' })).toBeNull();
@@ -218,7 +218,7 @@ describe('ExtensionPage', () => {
       extensions: [
         {
           id: 'system-extension-manager',
-          name: 'Extension Manager',
+          name: 'App Manager',
           enabled: true,
           packageType: 'system',
           frontend: { entry: 'dist/frontend.js' },
@@ -226,7 +226,7 @@ describe('ExtensionPage', () => {
             views: [
               {
                 id: 'extensions-page',
-                title: 'Extensions',
+                title: 'App Manager',
                 location: 'main',
                 route: '/extensions',
                 component: 'ExtensionManagerPage',
@@ -325,7 +325,7 @@ describe('ExtensionPage', () => {
     );
 
     expect(screen.getByText('No page is registered here')).toBeTruthy();
-    expect(screen.getByText('This address does not match a conversation, setting, or installed extension page.')).toBeTruthy();
+    expect(screen.getByText('This address does not match a conversation, setting, or installed app page.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Go to Chat' }).getAttribute('href')).toBe('/conversations/new');
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
     expect(addNotification).not.toHaveBeenCalled();

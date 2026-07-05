@@ -21,7 +21,7 @@ export interface SlashMenuItem {
   displayCmd: string;
   icon: string;
   desc: string;
-  section: 'Commands' | 'Skills' | 'Extensions';
+  section: 'Commands' | 'Skills' | 'Apps';
   source?: string;
   kind: 'command' | 'skill' | 'extensionSlashCommand';
   extensionId?: string;
@@ -254,7 +254,7 @@ function buildExtensionSlashItems(query: string, extensionCommands: ExtensionSla
       displayCmd: `/${command.name}`,
       icon: '◇',
       desc: command.description,
-      section: 'Extensions',
+      section: 'Apps',
       source: formatExtensionSourceLabel(command.extensionId),
       kind: 'extensionSlashCommand',
       extensionId: command.extensionId,

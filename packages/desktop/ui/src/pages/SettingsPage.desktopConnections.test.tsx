@@ -326,7 +326,7 @@ describe('DesktopKeyboardShortcutsSettingsSection', () => {
     const row = Array.from(container.querySelectorAll('.settings-page-control-row')).find((candidate) =>
       candidate.textContent?.includes('Open browser'),
     );
-    expect(row?.textContent).toContain('Built-in extension · Global shortcut');
+    expect(row?.textContent).toContain('Built-in app · Global shortcut');
     expect(row?.textContent).not.toContain('system-browser');
     expect(row?.textContent).not.toContain('browser-tabs');
   });
@@ -759,7 +759,7 @@ describe('CommandsSettingsSection', () => {
 
     expect(toggleSidebarRow?.textContent).toContain('App · Built-in');
     expect(toggleSidebarRow?.textContent).not.toContain('layout.toggleSidebar');
-    expect(openSettingsRow?.textContent).toContain('Settings · Built-in extension');
+    expect(openSettingsRow?.textContent).toContain('Settings · Built-in app');
     expect(openSettingsRow?.textContent).not.toContain('system-settings.open-settings');
   });
 
