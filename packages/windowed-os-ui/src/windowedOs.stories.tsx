@@ -209,7 +209,7 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
           open
           items={canonicalDesktopApps.map((app) => ({
             ...app,
-            open: app.id === 'chat' || app.id === 'gateways',
+            open: app.id === 'chat' || app.id === 'browser',
             focused: app.id === 'chat',
             onSelect: () => undefined,
           }))}
@@ -233,14 +233,14 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
           </WindowedChatSurface>
         </WindowFrame>
         <WindowFrame
-          title="Gateways"
+          title="Browser"
           accent="gateways"
           style={{ left: 'clamp(128px, 58vw, 640px)', top: 164, width: 'min(520px, calc(100vw - 64px))', height: 360 }}
           onMinimize={() => undefined}
           onMaximize={() => undefined}
           onClose={() => undefined}
         >
-          <div style={{ padding: 14, fontFamily: 'system-ui', fontSize: 13 }}>Dense product content lives inside the frame.</div>
+          <div style={{ padding: 14, fontFamily: 'system-ui', fontSize: 13 }}>Shared browser sessions live inside the frame.</div>
         </WindowFrame>
       </main>
       <Taskbar
@@ -259,7 +259,7 @@ function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark'
         items={[
           { id: 'chat-release-notes', title: 'Release notes', accent: 'chat', focused: true, onSelect: () => undefined },
           { id: 'chat-bug-triage', title: 'Bug triage', accent: 'chat', onSelect: () => undefined },
-          { id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined },
+          { id: 'browser', title: 'Browser', accent: 'gateways', onSelect: () => undefined },
         ]}
       />
     </div>
@@ -318,7 +318,7 @@ export const TaskbarMenuPlacement: Story = {
             ),
           },
         ]}
-        items={[{ id: 'gateways', title: 'Gateways', accent: 'gateways', onSelect: () => undefined }]}
+        items={[{ id: 'browser', title: 'Browser', accent: 'gateways', onSelect: () => undefined }]}
       />
     </div>
   ),
