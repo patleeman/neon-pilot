@@ -99,6 +99,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 validation: focused App Manager manifest/frontend tests, ExtensionPage route tests, Sidebar tests, app-registry tests, WindowedLayout tests, route-shell manifest tests, `pnpm run extension:build -- extensions/system-extension-manager`, and `pnpm --dir packages/desktop run build:ui` passed for the `/apps` canonical route migration.
    - 2026-07-05 progress: chat/transcript extension-host fallback copy now presents missing renderers, app action failures, and module-load failures as app/app-package failures instead of normal-user Extension failures while preserving raw extension-host matching at the runtime boundary.
    - 2026-07-05 validation: focused transcript renderer/chat tests and `pnpm --dir packages/desktop run build:ui` passed for the app-facing chat fallback copy.
+   - 2026-07-05 progress: live App Manager windowed detail/install hooks now use the canonical `wos-app-*` design-system hooks instead of the retired `wos-extension-*` names, aligning the implementation with the Windowed OS app target stories/styles.
+   - 2026-07-05 validation: focused App Manager frontend/manifest tests and `pnpm run extension:build -- extensions/system-extension-manager` passed for the App Manager hook rename.
 
 ### Next concrete implementation backlog
 

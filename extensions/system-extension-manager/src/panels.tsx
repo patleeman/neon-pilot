@@ -1804,7 +1804,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             onClose={() => setDetailsExtensionId(null)}
             actions={
               <>
-                {selectedExtensionBusy ? <span className="wos-extension-dialog-busy">Working</span> : null}
+                {selectedExtensionBusy ? <span className="wos-app-detail-busy">Working</span> : null}
                 {firstRoute(selectedExtension) && selectedExtension.enabled ? (
                   <WindowedPageButton
                     disabled={selectedExtensionBusy}
@@ -1854,7 +1854,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
               </>
             }
           >
-            <div className="wos-extension-detail-grid">
+            <div className="wos-app-detail-grid">
               <WindowedKeyValueList
                 items={[
                   { label: 'State', value: extensionStatusLabel(selectedExtension) },
@@ -1870,7 +1870,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                   { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
                 ]}
               />
-              {selectedExtension.description ? <p className="wos-extension-detail-description">{selectedExtension.description}</p> : null}
+              {selectedExtension.description ? <p className="wos-app-detail-description">{selectedExtension.description}</p> : null}
             </div>
           </WindowedDialog>
         ) : null}
@@ -2182,10 +2182,10 @@ function WindowedInstallExtensionDialog({
       meta={`${catalogItems.length} available · ${catalogSources.length} sources`}
       accent="extensions"
       parentWindowTitle="App Manager"
-      className="wos-extension-install-dialog"
+      className="wos-app-install-dialog"
       onClose={onClose}
     >
-      <div className="wos-extension-install">
+      <div className="wos-app-install">
         <WindowedPageSection title="Repositories" meta={`${catalogSources.length}`}>
           <WindowedToolbar>
             <WindowedTextInput
@@ -2230,7 +2230,7 @@ function WindowedInstallExtensionDialog({
             <PanelMessage className="py-2">No repositories configured.</PanelMessage>
           )}
           {catalogSourceErrors.length ? (
-            <div className="wos-extension-install__errors">
+            <div className="wos-app-install__errors">
               {catalogSourceErrors.map((error) => (
                 <p key={`${error.sourceId}:${error.message}`}>
                   {error.sourceId}: {error.message}

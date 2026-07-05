@@ -323,7 +323,7 @@ describe('ExtensionManagerPage', () => {
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(container.querySelector('.wos-page-rail')).toBeNull();
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
-    expect(container.querySelector('.wos-extension-detail-grid')).toBeNull();
+    expect(container.querySelector('.wos-app-detail-grid')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
     expect(screen.getByPlaceholderText('Search apps')).toBeTruthy();
     expect(screen.getByRole('radiogroup', { name: 'App view' })).toBeTruthy();
@@ -336,7 +336,7 @@ describe('ExtensionManagerPage', () => {
     );
     expect(container.querySelector('.wos-inline-actions')).toBeTruthy();
     expect(container.querySelector('.wos-status-stack')).toBeTruthy();
-    expect(screen.queryByText('Selected extension')).toBeNull();
+    expect(screen.queryByText('Selected app')).toBeNull();
     expect(screen.queryByText('Selection')).toBeNull();
     expect(container.querySelector('.wos-page-eyebrow')).toBeNull();
 
@@ -347,7 +347,7 @@ describe('ExtensionManagerPage', () => {
     expect(detailsDialog.getAttribute('data-parent-window-title')).toBe('App Manager');
     expect(within(detailsDialog).getByText('Appears in')).toBeTruthy();
     expect(within(detailsDialog).getByText('Folder')).toBeTruthy();
-    expect(container.querySelector('.wos-extension-detail-grid')).toBeTruthy();
+    expect(container.querySelector('.wos-app-detail-grid')).toBeTruthy();
 
     fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Close Menu Test' }));
     expect(screen.queryByRole('dialog', { name: 'Menu Test' })).toBeNull();
@@ -358,7 +358,7 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('switch', { name: /Disable Settings panels/ })).toBeNull();
   });
 
-  it('restores manager actions inside the windowed extension details dialog', async () => {
+  it('restores manager actions inside the windowed app details dialog', async () => {
     const confirm = vi.fn().mockResolvedValue(true);
     const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
       if (action === 'listInstallableExtensions') {
@@ -502,8 +502,8 @@ describe('ExtensionManagerPage', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Install app' });
     expect(dialog.className).toContain('wos-dialog');
-    expect(dialog.className).toContain('wos-extension-install-dialog');
-    expect(container.querySelector('.wos-extension-install')).toBeTruthy();
+    expect(dialog.className).toContain('wos-app-install-dialog');
+    expect(container.querySelector('.wos-app-install')).toBeTruthy();
     expect(container.querySelector('.ui-dialog')).toBeNull();
     expect(container.querySelector('.ui-resource-list')).toBeNull();
     expect(within(dialog).getByText('Repositories')).toBeTruthy();
