@@ -1950,6 +1950,37 @@ describe('WindowedLayout route windows', () => {
     expect(planningWindow.getAttribute('data-focused')).toBe('true');
   });
 
+  it('drops stored child windows that no longer have a parent window', () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:missing:browser',
+        kind: 'browser',
+        title: 'Browser',
+        route: '/conversations/missing',
+        bounds: { x: 100, y: 80, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        parentWindowId: 'chat:missing',
+        parentWindowTitle: 'Missing thread',
+      },
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+        archivedOnClose: false,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    expect(screen.queryByRole('region', { name: /^browser$/i })).toBeNull();
+    expect(screen.getByRole('region', { name: /new conversation/i })).toBeTruthy();
+  });
+
   it('does not drop stored chat windows while the conversation list is still loading', () => {
     mocks.conversationsLoading = true;
     seedWindowedWindows([
@@ -3295,6 +3326,8 @@ describe('WindowedLayout route windows', () => {
     fireEvent.click(screen.getByRole('button', { name: /minimize saved planning thread/i }));
     expect(childWindow.getAttribute('data-minimized')).toBe('true');
     expect((childWindow as HTMLElement).style.display).toBe('none');
+    expect(childWindow.getAttribute('data-focused')).toBe('false');
+    expect(chatWindow?.getAttribute('data-focused')).toBe('true');
 
     fireEvent.click(screen.getByRole('button', { name: /saved planning thread/i }));
     expect(childWindow.getAttribute('data-minimized')).toBeNull();

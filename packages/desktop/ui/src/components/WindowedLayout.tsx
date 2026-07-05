@@ -272,12 +272,17 @@ function defaultDraftWindow(): DesktopWindowModel {
   };
 }
 
+function pruneOrphanedChildWindows(windows: DesktopWindowModel[]): DesktopWindowModel[] {
+  const parentIds = new Set(windows.filter((windowModel) => !isChildWindowKind(windowModel.kind)).map((windowModel) => windowModel.id));
+  return windows.filter((windowModel) => !isChildWindowKind(windowModel.kind) || parentIds.has(windowModel.parentWindowId ?? ''));
+}
+
 function readStoredWindows(): DesktopWindowModel[] {
   if (typeof window === 'undefined') return [];
   try {
     const parsed = JSON.parse(window.localStorage.getItem(WINDOW_STATE_STORAGE_KEY) ?? '[]') as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((item): DesktopWindowModel[] => {
+    const windows = parsed.flatMap((item): DesktopWindowModel[] => {
       if (!item || typeof item !== 'object') return [];
       const record = item as Partial<DesktopWindowModel>;
       if (
@@ -316,6 +321,7 @@ function readStoredWindows(): DesktopWindowModel[] {
         },
       ];
     });
+    return pruneOrphanedChildWindows(windows);
   } catch {
     return [];
   }
@@ -748,12 +754,14 @@ function isTopLevelRoute(route: string): boolean {
 }
 
 function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[] {
-  if (windows.length === 0 || windows.some((windowModel) => windowModel.focused)) return windows;
+  if (windows.length === 0 || windows.some((windowModel) => windowModel.focused && !windowModel.minimized)) return windows;
   let lastVisibleIndex = -1;
+  let lastTopLevelIndex = -1;
   windows.forEach((windowModel, index) => {
     if (!windowModel.minimized) lastVisibleIndex = index;
+    if (!isChildWindowKind(windowModel.kind)) lastTopLevelIndex = index;
   });
-  const index = lastVisibleIndex >= 0 ? lastVisibleIndex : windows.length - 1;
+  const index = lastVisibleIndex >= 0 ? lastVisibleIndex : lastTopLevelIndex >= 0 ? lastTopLevelIndex : windows.length - 1;
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
 }
 
