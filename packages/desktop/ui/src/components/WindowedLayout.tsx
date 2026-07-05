@@ -1847,6 +1847,7 @@ export function WindowedLayout() {
       (windowModel): TaskbarItem => ({
         id: windowModel.id,
         title: windowModel.title,
+        meta: isChildWindowKind(windowModel.kind) ? windowModel.parentWindowTitle : undefined,
         focused: windowModel.focused,
         minimized: windowModel.minimized,
         accent: accentForWindow(windowModel),

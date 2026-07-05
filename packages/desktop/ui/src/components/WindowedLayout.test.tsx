@@ -2776,6 +2776,9 @@ describe('WindowedLayout route windows', () => {
       name: /^terminal$/i,
     });
     expect(terminalTaskbarButton.querySelector('.wos-app-tile')?.getAttribute('data-accent')).toBe('chat');
+    expect(terminalTaskbarButton.getAttribute('title')).toBe('Terminal attached to New conversation');
+    expect(terminalTaskbarButton.querySelector('.wos-app-tile__meta')?.textContent).toBe('New conversation');
+    expect(terminalTaskbarButton.querySelector('.wos-app-tile__meta')?.getAttribute('aria-hidden')).toBe('true');
 
     const terminalHost = screen.getByTestId('native-extension-surface');
     expect(terminalHost.getAttribute('data-extension-id')).toBe('system-terminal');
@@ -2925,6 +2928,9 @@ describe('WindowedLayout route windows', () => {
       name: /^browser$/i,
     });
     expect(browserTaskbarButton.querySelector('.wos-app-tile')?.getAttribute('data-accent')).toBe('chat');
+    expect(browserTaskbarButton.getAttribute('title')).toBe('Browser attached to New conversation');
+    expect(browserTaskbarButton.querySelector('.wos-app-tile__meta')?.textContent).toBe('New conversation');
+    expect(browserTaskbarButton.querySelector('.wos-app-tile__meta')?.getAttribute('aria-hidden')).toBe('true');
 
     const browserHost = screen.getByTestId('native-extension-surface');
     expect(browserHost.getAttribute('data-extension-id')).toBe('system-browser');

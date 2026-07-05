@@ -95,6 +95,7 @@ export function AppMonogram({ label, accent = 'settings', className }: AppMonogr
 
 export interface WindowedAppTileProps {
   label: string;
+  meta?: string;
   accent?: AppAccent;
   variant?: 'menu' | 'taskbar';
   count?: number;
@@ -104,6 +105,7 @@ export interface WindowedAppTileProps {
 
 export function WindowedAppTile({
   label,
+  meta,
   accent = 'settings',
   variant = 'menu',
   count,
@@ -118,6 +120,11 @@ export function WindowedAppTile({
           {label}
           {count ? <span className="wos-app-tile__count">{count}</span> : null}
         </span>
+        {meta ? (
+          <span className="wos-app-tile__meta" aria-hidden="true">
+            {meta}
+          </span>
+        ) : null}
       </span>
     </span>
   );
@@ -1598,6 +1605,7 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
 export interface TaskbarItem {
   id: string;
   title: string;
+  meta?: string;
   focused?: boolean;
   minimized?: boolean;
   accent?: AppAccent;
@@ -1750,9 +1758,10 @@ export function Taskbar({
               data-accent={item.accent}
               aria-current={item.focused ? 'page' : undefined}
               aria-pressed={item.focused ? true : undefined}
+              title={item.meta ? `${item.title} attached to ${item.meta}` : item.title}
               onClick={item.onSelect}
             >
-              <WindowedAppTile label={item.title} accent={item.accent} count={item.count} variant="taskbar" />
+              <WindowedAppTile label={item.title} meta={item.meta} accent={item.accent} count={item.count} variant="taskbar" />
             </button>
           ))}
         </nav>

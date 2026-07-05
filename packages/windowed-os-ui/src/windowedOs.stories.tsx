@@ -1004,6 +1004,9 @@ export const NavigationPrimitives: Story = {
               <span className="wos-taskbar__button">
                 <WindowedAppTile label="Gateways" accent="gateways" variant="taskbar" />
               </span>
+              <span className="wos-taskbar__button">
+                <WindowedAppTile label="Terminal" meta="New conversation" accent="chat" variant="taskbar" />
+              </span>
             </div>
           </WindowedPageSection>
           <WindowedPageSection title="Taskbar menu">

@@ -775,12 +775,33 @@
   font: var(--wos-text-row);
 }
 
+.wos-app-tile__meta {
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, currentColor 62%, transparent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--wos-font-body);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.wos-app-tile[data-variant='taskbar'] .wos-app-tile__meta {
+  display: block;
+}
+
 .wos-app-tile__count {
   margin-left: 5px;
   color: var(--wos-ink-500);
 }
 
 .wos-taskbar__button[data-minimized='true'] .wos-app-tile__label {
+  color: var(--wos-ink-500);
+}
+
+.wos-taskbar__button[data-minimized='true'] .wos-app-tile__meta {
   color: var(--wos-ink-500);
 }
 

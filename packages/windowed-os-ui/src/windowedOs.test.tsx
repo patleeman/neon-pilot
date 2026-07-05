@@ -8,6 +8,7 @@ import {
   CANONICAL_WINDOWED_APP_SIZES,
   CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
+  Taskbar,
   WindowedActionRow,
   WindowedBrowserToolbar,
   WindowedChartPanel,
@@ -481,6 +482,19 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('max-width: 220px;\n  flex: 0 0 auto;');
     expect(stylesSource).toContain('@media (max-width: 640px)');
     expect(stylesSource).toContain('flex: 1 1 max(140px, 42vw);');
+  });
+
+  it('supports compact taskbar context metadata without changing accessible names', () => {
+    const html = renderToStaticMarkup(
+      <Taskbar
+        startOpen={false}
+        onToggleStart={() => undefined}
+        items={[{ id: 'terminal', title: 'Terminal', meta: 'New conversation', accent: 'chat', onSelect: () => undefined }]}
+      />,
+    );
+
+    expect(html).toContain('title="Terminal attached to New conversation"');
+    expect(html).toContain('class="wos-app-tile__meta" aria-hidden="true">New conversation</span>');
   });
 });
 

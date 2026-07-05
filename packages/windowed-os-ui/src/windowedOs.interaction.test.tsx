@@ -275,7 +275,7 @@ describe('Taskbar interactions', () => {
         groups={[{ id: 'chat', title: 'Chat', focused: true, count: 2, accent: 'chat', onSelect: () => undefined }]}
         items={[
           { id: 'settings', title: 'Settings', focused: false, accent: 'settings', onSelect: () => undefined },
-          { id: 'gateways', title: 'Gateways', focused: true, accent: 'gateways', onSelect: () => undefined },
+          { id: 'gateways', title: 'Gateways', focused: true, accent: 'gateways', meta: 'New conversation', onSelect: () => undefined },
         ]}
       />,
     );
@@ -292,6 +292,8 @@ describe('Taskbar interactions', () => {
     expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('data-accent')).toBe('gateways');
     expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Gateways' }).getAttribute('title')).toBe('Gateways attached to New conversation');
+    expect(screen.getByText('New conversation').getAttribute('aria-hidden')).toBe('true');
   });
 
   it('renders menu item status chips for window state', () => {
