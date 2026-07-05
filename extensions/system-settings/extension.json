@@ -320,7 +320,7 @@
       },
       {
         "id": "extensions",
-        "title": "Extension settings",
+        "title": "App settings",
         "location": "main",
         "route": "/settings/extensions",
         "component": "ExtensionsSettingsPage",

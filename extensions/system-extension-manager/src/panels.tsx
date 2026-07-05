@@ -5,12 +5,6 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
-  CardBody,
-  CodeBlock,
-  CompactCard,
-  ContextRail,
-  ContextRailBody,
-  ContextRailHeader,
   cx,
   DataTable,
   DataTableActionGroup,
@@ -23,13 +17,10 @@ import {
   Dialog,
   DialogBody,
   DialogHeader,
-  Disclosure,
   EmptyState,
   ErrorState,
   IconButton,
   IconLink,
-  KeyValueItem,
-  KeyValueList,
   MenuItem,
   MenuShell,
   Notice,
@@ -39,9 +30,6 @@ import {
   ResourceListRow,
   SearchInput,
   SectionLabel,
-  Stat,
-  StatGrid,
-  StatusDot,
   Switch,
   TabButton,
   TabList,
@@ -67,7 +55,6 @@ import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
 import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -76,23 +63,9 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 type NativeViewContribution = NonNullable<NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['views']>[number];
-
-function ExtensionDetailIcon({ name }: { name: 'copy' | 'open' }) {
-  const paths = {
-    copy: ['M8 8h10v10H8z', 'M6 14H4V4h10v2'],
-    open: ['M14 5h5v5', 'M10 14 19 5', 'M19 14v5H5V5h5'],
-  } satisfies Record<string, string[]>;
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      {paths[name].map((d) => (
-        <path key={d} d={d} />
-      ))}
-    </svg>
-  );
-}
 
 interface InstallableExtensionCatalogItem {
   id: string;
@@ -602,68 +575,8 @@ function firstRoute(extension: ExtensionInstallSummary): string | null {
   return extension.routes[0]?.route ?? extension.manifest?.contributes?.views?.find((view) => view.location === 'main')?.route ?? null;
 }
 
-function formatPermissionSummary(extension: ExtensionInstallSummary): string {
-  return extension.permissions?.length ? extension.permissions.join(', ') : '';
-}
-
-function formatBackendActionSummary(extension: ExtensionInstallSummary): string {
-  return extension.backendActions?.length ? extension.backendActions.map((action) => `${action.id} → ${action.handler}`).join(', ') : '';
-}
-
-function formatServiceSummary(extension: ExtensionInstallSummary): string {
-  return extension.services?.length
-    ? extension.services
-        .map((service) => {
-          const status = extension.serviceStatuses?.find((candidate) => candidate.id === service.id);
-          const state = status
-            ? status.running
-              ? `running${status.startedAt ? ` since ${status.startedAt}` : ''}`
-              : 'stopped'
-            : 'declared';
-          return `${service.id} → ${service.handler}${service.restart ? ` (${service.restart})` : ''} · ${state}`;
-        })
-        .join(', ')
-    : '';
-}
-
-function formatProtocolSummary(extension: ExtensionInstallSummary): string {
-  const protocolEntrypoints = extension.manifest?.backend?.protocolEntrypoints ?? [];
-  return protocolEntrypoints.length ? protocolEntrypoints.map((entrypoint) => `${entrypoint.id} → ${entrypoint.handler}`).join(', ') : '';
-}
-
-function formatSubscriptionSummary(extension: ExtensionInstallSummary): string {
-  return extension.subscriptions?.length
-    ? extension.subscriptions
-        .map((subscription) => `${subscription.id}: ${subscription.source}${subscription.pattern ? `:${subscription.pattern}` : ''}`)
-        .join(', ')
-    : '';
-}
-
-function formatDependencySummary(extension: ExtensionInstallSummary): string {
-  return extension.dependsOn?.length
-    ? extension.dependsOn
-        .map((dependency) => (typeof dependency === 'string' ? dependency : `${dependency.id}${dependency.optional ? ' (optional)' : ''}`))
-        .join(', ')
-    : '';
-}
-
-function formatAgentHookSummary(extension: ExtensionInstallSummary): string {
-  return extension.manifest?.backend?.agentExtension ?? '';
-}
-
 function formatToolSummary(extension: ExtensionInstallSummary): string {
   return extension.tools?.length ? extension.tools.map((tool) => tool.name).join(', ') : '';
-}
-
-function formatModelProfileSummary(extension: ExtensionInstallSummary): string {
-  return extension.modelProfiles?.length
-    ? extension.modelProfiles.map((profile) => `${profile.id} (${profile.match.join(', ')})`).join('; ')
-    : '';
-}
-
-function formatKeybindingSummary(extension: ExtensionInstallSummary): string {
-  const keybindings = extension.manifest?.contributes?.keybindings ?? [];
-  return keybindings.length ? keybindings.map((keybinding) => `${keybinding.title}: ${keybinding.keys.join(' / ')}`).join(', ') : '';
 }
 
 function formatSkillSummary(extension: ExtensionInstallSummary): string {
@@ -726,17 +639,6 @@ function extensionStatusTone(extension: ExtensionInstallSummary, unavailableCata
   if (label === 'Invalid' || label === 'Quarantined') return 'danger';
   if (label === 'Unavailable') return 'warning';
   return 'neutral';
-}
-
-function formatFrontendSummary(extension: ExtensionInstallSummary): string {
-  return extension.manifest?.frontend?.entry ?? '';
-}
-
-function formatLabeledSummary(parts: Array<[string, string]>): string {
-  return parts
-    .filter(([, value]) => Boolean(value))
-    .map(([label, value]) => `${label}: ${value}`)
-    .join(' · ');
 }
 
 function parseGithubCatalogSource(value: string): ExtensionCatalogSource | null {
@@ -891,7 +793,7 @@ export function ExtensionRepositoriesSettingsPanel({ pa }: ExtensionSurfaceProps
   const addSource = useCallback(async () => {
     const parsed = parseGithubCatalogSource(input);
     if (!parsed) {
-      showError('Extension source must be a GitHub URL or owner/name.');
+      showError('App repository source must be a GitHub URL or owner/name.');
       return;
     }
     const nextSources = [...sources.filter((source) => repoKey(source) !== repoKey(parsed)), parsed];
@@ -979,25 +881,6 @@ function installedCatalogItemToSummary(item: InstallableExtensionCatalogItem): E
     modelProfiles: [],
     routes: [],
   } as ExtensionInstallSummary;
-}
-
-function formatExtensionDiagnostics(extension: ExtensionInstallSummary): string {
-  return JSON.stringify(
-    {
-      id: extension.id,
-      name: extension.name,
-      status: extension.status ?? (extension.enabled ? 'enabled' : 'disabled'),
-      packageType: extension.packageType ?? 'user',
-      packageRoot: extension.packageRoot ?? null,
-      errors: extension.errors ?? [],
-      diagnostics: extension.diagnostics ?? [],
-      buildError: extension.buildError ?? null,
-      skills: extension.skills ?? [],
-      manifest: extension.manifest,
-    },
-    null,
-    2,
-  );
 }
 
 export function ExtensionManagerPage({ pa, context, embedded = false }: ExtensionSurfaceProps & { embedded?: boolean }) {
@@ -1150,7 +1033,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
   const addCatalogSource = useCallback(async () => {
     const parsed = parseGithubCatalogSource(catalogSourceInput);
     if (!parsed) {
-      showActionError('Extension source must be a GitHub URL or owner/name.');
+      showActionError('App repository source must be a GitHub URL or owner/name.');
       return;
     }
     const nextSources = [...catalogSources.filter((source) => repoKey(source) !== repoKey(parsed)), parsed];
@@ -1230,8 +1113,8 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     async (extension: ExtensionInstallSummary) => {
       if (extension.uninstallable !== true && extension.packageType === 'system') return;
       const confirmed = await pa.ui.confirm({
-        title: 'Delete extension',
-        message: `Delete ${extension.name}? This removes the extension package from disk.`,
+        title: 'Delete app',
+        message: `Delete ${extension.name}? This removes the app package from disk.`,
       });
       if (!confirmed) return;
       setBusyId(extension.id);
@@ -1268,8 +1151,8 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
       if (!catalogItem) return;
       const confirmed = await pa.ui.confirm({
-        title: 'Reinstall extension',
-        message: `Reinstall ${extension.name}? This removes the current package and installs it again from ${catalogItem.tag}.`,
+        title: 'Reinstall app',
+        message: `Reinstall ${extension.name}? This removes the current app package and installs it again from ${catalogItem.tag}.`,
       });
       if (!confirmed) return;
       setBusyId(extension.id);
@@ -1295,7 +1178,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       if (!catalogItem?.updateAvailable) return;
       const targetVersion = catalogItem.availableVersion ?? catalogItem.version;
       const confirmed = await pa.ui.confirm({
-        title: 'Update extension',
+        title: 'Update app',
         message: `Update ${extension.name} from ${extension.version ?? 'installed'} to ${targetVersion} using ${catalogItem.tag}?`,
       });
       if (!confirmed) return;
@@ -2413,315 +2296,5 @@ function WindowedInstallExtensionDialog({
         </WindowedPageSection>
       </div>
     </WindowedDialog>
-  );
-}
-
-function extensionSettingsEntries(extension: ExtensionInstallSummary): Array<{ key: string; order: number }> {
-  const contributes = extension.manifest?.contributes?.settings;
-  const rawSettings = contributes && typeof contributes === 'object' && !Array.isArray(contributes) ? contributes : {};
-  return Object.entries(rawSettings).map(([key, value]) => {
-    const s = value as Record<string, unknown>;
-    return {
-      key,
-      order: (s.order as number) ?? 0,
-    };
-  });
-}
-
-function ExtensionSettingsPointer({ extension }: { extension: ExtensionInstallSummary }) {
-  const entries = extensionSettingsEntries(extension).sort((a, b) => a.order - b.order);
-  const settingsComponent = extension.manifest?.contributes?.settingsComponent;
-  const target = extensionSettingsTarget(extension);
-  return (
-    <CompactCard className="py-3" tone="surface">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <CardBody as="span">
-          Configure {extension.name} from Settings{settingsComponent ? ` (${settingsComponent.label})` : ''}.
-        </CardBody>
-        <Link className="text-accent transition-colors hover:text-primary" to={target}>
-          Open settings
-        </Link>
-      </div>
-      {entries.length ? <div className="mt-2 font-mono text-[11px] text-dim">{entries.map((entry) => entry.key).join(', ')}</div> : null}
-    </CompactCard>
-  );
-}
-
-export function ExtensionDetailsRail({ pa }: ExtensionSurfaceProps) {
-  const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [extensionId, setExtensionId] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    api
-      .extensionInstallations()
-      .then((items) => {
-        setExtensions(items);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        setLoading(false);
-        window.dispatchEvent(
-          new CustomEvent('neon-pilot-notification', {
-            detail: {
-              type: 'error',
-              message: 'Failed to load extensions',
-              details: err instanceof Error ? err.message : String(err),
-              source: 'system-extension-manager',
-            },
-          }),
-        );
-      });
-  }, []);
-
-  useEffect(() => {
-    load();
-    window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
-    return () => window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, load);
-  }, [load]);
-
-  useEffect(() => {
-    if (!pa.selection) return;
-    const subscription = pa.selection.subscribe((selection) => {
-      if (!isExtensionSelection(selection)) {
-        setExtensionId(null);
-        return;
-      }
-      setExtensionId(selection.resource.data?.extensionId ?? selection.resource.id.replace(/^extension:/, ''));
-    });
-    return () => subscription.unsubscribe();
-  }, [pa]);
-
-  const openPath = useCallback((path: string) => {
-    const bridge = getDesktopBridge();
-    if (!bridge) {
-      setNotice(path);
-      return;
-    }
-    void bridge.openPath(path).then((result) => {
-      if (!result.opened) {
-        setNotice(result.error ?? path);
-      }
-    });
-  }, []);
-
-  const copyExtensionDiagnostics = useCallback(async (extension: ExtensionInstallSummary) => {
-    const diagnostics = formatExtensionDiagnostics(extension);
-    try {
-      await navigator.clipboard.writeText(diagnostics);
-      setNotice(`Copied diagnostics for ${extension.name}.`);
-    } catch {
-      setNotice(diagnostics);
-    }
-  }, []);
-
-  const extension = extensionId ? (extensions.find((e) => e.id === extensionId) ?? null) : null;
-
-  return (
-    <ContextRail>
-      <ContextRailHeader
-        eyebrow="Extension details"
-        title={extension?.name ?? (!extensionId ? 'Select an extension' : 'Extension not found')}
-        subtitle={extension ? extension.id : undefined}
-      />
-      <ContextRailBody>
-        {loading ? (
-          <QuietLoadingState label="Loading extension details" className="min-h-12" />
-        ) : !extensionId ? (
-          <EmptyState
-            title="Pick a row to inspect"
-            body="Select an extension to inspect its surfaces, enabled state, diagnostics, and install details."
-            steps={[
-              'Pick an extension from the table.',
-              'Review its details here.',
-              'Use row actions for settings, diagnostics, or install work.',
-            ]}
-            align="start"
-          />
-        ) : !extension ? (
-          <PanelMessage className="py-2">Extension not found.</PanelMessage>
-        ) : (
-          <ExtensionDetailsContent
-            extension={extension}
-            notice={notice}
-            compact
-            onCopyDiagnostics={copyExtensionDiagnostics}
-            onOpenPath={openPath}
-          />
-        )}
-      </ContextRailBody>
-    </ContextRail>
-  );
-}
-
-function ExtensionDetailsContent({
-  extension,
-  notice,
-  compact = false,
-  onCopyDiagnostics,
-  onOpenPath,
-}: {
-  extension: ExtensionInstallSummary;
-  notice: string | null;
-  compact?: boolean;
-  onCopyDiagnostics: (extension: ExtensionInstallSummary) => Promise<void>;
-  onOpenPath: (path: string) => void;
-}) {
-  const surfaces = getLogicalSurfaces(extension);
-  const hasSettings = hasExtensionSettings(extension);
-  const healthLabel = isLocked(extension)
-    ? 'Required'
-    : isQuarantined(extension)
-      ? 'Quarantined'
-      : extension.status === 'invalid'
-        ? 'Invalid'
-        : extension.enabled
-          ? 'Enabled'
-          : 'Disabled';
-  const includeRows = [
-    ['Skills', formatSkillSummary(extension)],
-    ['Tools', formatToolSummary(extension)],
-    [
-      'UI',
-      surfaces.length
-        ? surfaces.map((surface) => `${surface.title} (${surface.kind})`).join(', ')
-        : formatLabeledSummary([['Frontend', formatFrontendSummary(extension)]]),
-    ],
-    [
-      'Backend',
-      formatLabeledSummary([
-        ['Actions', formatBackendActionSummary(extension)],
-        ['Services', formatServiceSummary(extension)],
-        ['Protocols', formatProtocolSummary(extension)],
-      ]),
-    ],
-    [
-      'Agent',
-      formatLabeledSummary([
-        ['Model profiles', formatModelProfileSummary(extension)],
-        ['Hook', formatAgentHookSummary(extension)],
-      ]),
-    ],
-    ['Shortcuts', formatKeybindingSummary(extension)],
-  ].filter(([, value]) => Boolean(value)) as Array<[string, string]>;
-  const informationRows = [
-    ['Permissions', formatPermissionSummary(extension)],
-    ['Subscriptions', formatSubscriptionSummary(extension)],
-    ['Dependencies', formatDependencySummary(extension)],
-  ].filter(([, value]) => Boolean(value)) as Array<[string, string]>;
-
-  return (
-    <div className="space-y-6 pb-4">
-      {notice ? <CardBody>{notice}</CardBody> : null}
-
-      <header className="space-y-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="truncate text-[20px] font-semibold tracking-tight text-primary">{extension.name}</h3>
-              <StatusDot tone={extension.status === 'invalid' ? 'danger' : extension.enabled ? 'success' : 'muted'} size="xs" />
-            </div>
-            <p className="mt-1 font-mono text-[11px] text-dim">{extension.id}</p>
-          </div>
-        </div>
-        {extension.description ? <p className="text-[13px] leading-6 text-secondary">{extension.description}</p> : null}
-        <StatGrid compact={compact}>
-          <Stat label="Source" value={extensionSourceLabel(extension)} />
-          <Stat label="Status" value={healthLabel} />
-          <Stat label="Version" value={extension.version ? `v${extension.version}` : 'Unknown'} />
-          <Stat label="Settings" value={hasSettings ? 'Configurable' : 'None'} />
-        </StatGrid>
-      </header>
-
-      {hasSettings ? (
-        <DetailBlock title="Settings">
-          <ExtensionSettingsPointer extension={extension} />
-        </DetailBlock>
-      ) : null}
-
-      {extension.status === 'invalid' || extension.diagnostics?.length || extension.buildError ? (
-        <DetailBlock
-          title="Diagnostics"
-          action={
-            <IconButton
-              compact
-              type="button"
-              aria-label="Copy diagnostics"
-              title="Copy diagnostics"
-              onClick={() => void onCopyDiagnostics(extension)}
-            >
-              <ExtensionDetailIcon name="copy" />
-            </IconButton>
-          }
-        >
-          <div className="space-y-2">
-            {[...(extension.errors ?? []), ...(extension.diagnostics ?? []), extension.buildError ?? null]
-              .filter(Boolean)
-              .map((message) => (
-                <Notice key={message} tone="danger" className="py-2">
-                  {message}
-                </Notice>
-              ))}
-          </div>
-        </DetailBlock>
-      ) : null}
-
-      {includeRows.length ? (
-        <DetailBlock title="Includes">
-          <KeyValueList>
-            {includeRows.map(([label, value]) => (
-              <KeyValueItem key={label} label={label} value={value} />
-            ))}
-          </KeyValueList>
-        </DetailBlock>
-      ) : null}
-
-      {informationRows.length || extension.packageRoot ? (
-        <DetailBlock title="Information">
-          <KeyValueList>
-            {informationRows.map(([label, value]) => (
-              <KeyValueItem key={label} label={label} value={value} />
-            ))}
-            {extension.packageRoot ? (
-              <KeyValueItem
-                label="Package"
-                value={extension.packageRoot}
-                action={
-                  <IconButton
-                    compact
-                    type="button"
-                    aria-label="Open package folder"
-                    title="Open package folder"
-                    onClick={() => onOpenPath(extension.packageRoot!)}
-                  >
-                    <ExtensionDetailIcon name="open" />
-                  </IconButton>
-                }
-              />
-            ) : null}
-          </KeyValueList>
-        </DetailBlock>
-      ) : null}
-
-      <Disclosure summary="Raw manifest">
-        <CodeBlock compact className="max-h-[22rem] overflow-auto">
-          {JSON.stringify(extension.manifest, null, 2)}
-        </CodeBlock>
-      </Disclosure>
-    </div>
-  );
-}
-
-function DetailBlock({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <SectionLabel>{title}</SectionLabel>
-        {action}
-      </div>
-      {children}
-    </section>
   );
 }

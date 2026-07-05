@@ -15,7 +15,7 @@
       {
         "id": "listExtensions",
         "handler": "listExtensions",
-        "title": "List extensions",
+        "title": "List app packages",
         "worker": {
           "enabled": true
         }
@@ -23,7 +23,7 @@
       {
         "id": "createExtension",
         "handler": "createExtension",
-        "title": "Create extension",
+        "title": "Create app package",
         "worker": {
           "enabled": true
         }
@@ -31,7 +31,7 @@
       {
         "id": "snapshotExtension",
         "handler": "snapshotExtension",
-        "title": "Snapshot extension",
+        "title": "Snapshot app package",
         "worker": {
           "enabled": true
         }
@@ -39,7 +39,7 @@
       {
         "id": "reloadExtension",
         "handler": "reloadExtension",
-        "title": "Reload extension",
+        "title": "Reload app package",
         "worker": {
           "enabled": true
         }
@@ -47,7 +47,7 @@
       {
         "id": "smokeExtension",
         "handler": "smokeExtension",
-        "title": "Smoke test extension",
+        "title": "Smoke test app package",
         "worker": {
           "enabled": true
         }
@@ -55,7 +55,7 @@
       {
         "id": "validateExtension",
         "handler": "validateExtension",
-        "title": "Validate extension",
+        "title": "Validate app package",
         "worker": {
           "enabled": true
         }
@@ -63,7 +63,7 @@
       {
         "id": "listInstallableExtensions",
         "handler": "listInstallableExtensions",
-        "title": "List installable extensions",
+        "title": "List installable app packages",
         "worker": {
           "enabled": true
         }
@@ -71,7 +71,7 @@
       {
         "id": "installCatalogExtension",
         "handler": "installCatalogExtension",
-        "title": "Install catalog extension",
+        "title": "Install catalog app package",
         "worker": {
           "enabled": true
         }
@@ -87,7 +87,7 @@
       {
         "id": "updateCatalogExtension",
         "handler": "updateCatalogExtension",
-        "title": "Update catalog extension",
+        "title": "Update catalog app package",
         "worker": {
           "enabled": true
         }
@@ -103,7 +103,7 @@
       {
         "id": "readSearchPaths",
         "handler": "readSearchPaths",
-        "title": "Read extension search paths",
+        "title": "Read app package search paths",
         "worker": {
           "enabled": true
         }
@@ -111,7 +111,7 @@
       {
         "id": "updateSearchPaths",
         "handler": "updateSearchPaths",
-        "title": "Update extension search paths",
+        "title": "Update app package search paths",
         "worker": {
           "enabled": true
         }
@@ -119,7 +119,7 @@
       {
         "id": "readExtensionSources",
         "handler": "readExtensionSources",
-        "title": "Read extension catalog sources",
+        "title": "Read app catalog sources",
         "worker": {
           "enabled": true
         }
@@ -127,7 +127,7 @@
       {
         "id": "updateExtensionSources",
         "handler": "updateExtensionSources",
-        "title": "Update extension catalog sources",
+        "title": "Update app catalog sources",
         "worker": {
           "enabled": true
         }
@@ -135,7 +135,7 @@
       {
         "id": "reloadExtensions",
         "handler": "reloadExtensions",
-        "title": "Refresh extensions",
+        "title": "Refresh app packages",
         "worker": {
           "enabled": true
         }
@@ -179,8 +179,7 @@
         "route": "/extensions",
         "icon": "sparkle",
         "pageType": "table",
-        "section": "settings",
-        "rightSidebarView": "extension-details-rail"
+        "section": "settings"
       }
     ],
     "views": [
@@ -191,16 +190,6 @@
         "route": "/extensions",
         "component": "ExtensionManagerPage",
         "activation": "on-route"
-      },
-      {
-        "id": "extension-details-rail",
-        "title": "App package details",
-        "location": "rightRail",
-        "route": "/extensions",
-        "component": "ExtensionDetailsRail",
-        "placement": "primary",
-        "scope": "global",
-        "activation": "on-open"
       }
     ],
     "settingsComponent": {

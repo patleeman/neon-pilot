@@ -125,12 +125,13 @@ This is the working checklist for conforming existing first-party page routes to
 | `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench                  | Accepted shell owner                                                  |
 | `/automations`     | `system-automations`       | Table        | Blank                                     | None                       | Conformed shell; main-only table workflow                             |
 | `/gateways`        | `system-gateways`          | Setup        | Blank                                     | `gateway-context-rail`     | Conformed shell; main status summary flattened                        |
+| `/ai-gateway`      | `system-model-gateway`     | Setup        | Blank                                     | None                       | Conformed shell; gateway runtime controls are main-only               |
 | `/model-arena`     | `system-model-arena`       | Dashboard    | Blank                                     | `model-arena-context-rail` | Conformed shell; dashboard visual sweep remains                       |
 | `/routines`        | `system-routines`          | Editor       | `routines-sidebar`                        | `routines-context-rail`    | Conformed                                                             |
 | `/workflows`       | `system-dynamic-workflows` | Editor       | `workflows-sidebar`                       | None                       | Conformed shell; consider a context rail if workflow inspection grows |
 | `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                       | Conformed                                                             |
 | `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail`      | Conformed                                                             |
-| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | `extension-details-rail`   | Conformed                                                             |
+| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                       | Conformed; details open inside the App Manager window                 |
 | `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                       | Conformed shell; settings grammar needs separate sweep                |
 
 Remaining broad sweeps:

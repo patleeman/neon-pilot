@@ -167,7 +167,6 @@ describe('first-party extension route shell manifests', () => {
       ['system-model-arena', '/model-arena', 'model-arena-context-rail'],
       ['system-routines', '/routines', 'routines-context-rail'],
       ['system-skills', '/skills', 'skills-context-rail'],
-      ['system-extension-manager', '/extensions', 'extension-details-rail'],
     ] as const;
 
     for (const [extensionId, route, rightSidebarView] of routes) {
@@ -176,6 +175,13 @@ describe('first-party extension route shell manifests', () => {
       expect(nav.rightSidebarView).toBe(rightSidebarView);
       expect(viewById(manifest, rightSidebarView)).toMatchObject({ location: 'rightRail', placement: 'primary' });
     }
+  });
+
+  it('keeps App Manager main-only so details use the route-owned dialog flow', () => {
+    const manifest = readManifest('system-extension-manager');
+    const nav = routeNav(manifest, '/extensions');
+    expect(nav.rightSidebarView).toBeUndefined();
+    expect(manifest.contributes?.views?.some((view) => view.location === 'rightRail' && view.route === '/extensions')).toBe(false);
   });
 
   it('keeps every first-party primary right sidebar view bound from a nav route', () => {

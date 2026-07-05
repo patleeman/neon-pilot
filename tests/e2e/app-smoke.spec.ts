@@ -9,7 +9,7 @@ test('desktop app routes and API endpoints are healthy @desktop-smoke', async ({
     await assertDesktopApiEndpoints(testApp.page);
 
     await navigateApp(testApp.page, '/extensions');
-    await expect(testApp.page.locator('body')).toContainText(/Extensions|Installed/i);
+    await expect(testApp.page.locator('body')).toContainText(/App Manager|Installed/i);
     await assertDesktopApiEndpoints(testApp.page);
 
     await testApp.page.getByRole('button', { name: /New chat/i }).click();

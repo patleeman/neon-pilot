@@ -21,12 +21,12 @@ test('app shell routes, command palette, and settings surfaces work in one launc
     const palette = page.getByRole('dialog', { name: 'Command palette' });
     await expect(palette).toBeVisible({ timeout: 15_000 });
     await palette.getByLabel('Search command palette').fill('extensions');
-    await expect(palette).toContainText(/Extensions|Manage extensions/i);
+    await expect(palette).toContainText(/App Manager|Apps/i);
     await page.keyboard.press('Escape');
     await expect(palette).toHaveCount(0);
 
     await clickRouteButton(page, '/extensions');
-    await expect(page.locator('body')).toContainText(/Extensions|Installed/i, { timeout: 30_000 });
+    await expect(page.locator('body')).toContainText(/App Manager|Installed/i, { timeout: 30_000 });
     await assertDesktopApiEndpoints(page);
     await expectCleanViewport(page);
 

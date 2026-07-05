@@ -426,7 +426,7 @@ describe('ExtensionManagerPage', () => {
     await waitFor(() => expect(mocks.deleteExtension).toHaveBeenCalledWith('system-browser'));
     expect(confirm).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Delete extension',
+        title: 'Delete app',
         message: expect.stringContaining('Browser'),
       }),
     );

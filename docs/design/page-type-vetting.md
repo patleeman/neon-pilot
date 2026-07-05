@@ -29,18 +29,19 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 
 ## Route Mapping
 
-| Route              | Page type    | Left area          | Right sidebar    | Notes                                                                                                   |
-| ------------------ | ------------ | ------------------ | ---------------- | ------------------------------------------------------------------------------------------------------- |
-| `/conversations/*` | Conversation | Threads            | Workbench        | Core-owned for now; extensions contribute into Chat rather than defining separate transcript routes.    |
-| `/automations`     | Table        | Blank              | None             | Main-only table workflow. Details/create/edit can remain dialog-backed when they are short-lived flows. |
-| `/gateways`        | Setup        | Blank              | Gateway context  | Provider onboarding, readiness, docs, activity, and test output use Setup grammar.                      |
-| `/model-arena`     | Dashboard    | Blank              | Arena context    | Monitors challenger state, eligibility, settings, and history.                                          |
-| `/routines`        | Editor       | Routine navigator  | Routine context  | Structured routine editing with optional inspector/history context.                                     |
-| `/workflows`       | Editor       | Workflow navigator | None             | Add a context rail only when workflow inspection grows.                                                 |
-| `/telemetry`       | Dashboard    | Blank              | None             | Metrics/status view.                                                                                    |
-| `/skills`          | Table        | Blank              | Skill detail     | Selected skill details belong in the right sidebar.                                                     |
-| `/extensions`      | Table        | Blank              | Extension detail | Selected extension details belong in the right sidebar.                                                 |
-| `/settings/*`      | Settings     | Settings navigator | None             | Settings grammar applies to host and extension settings surfaces.                                       |
+| Route              | Page type    | Left area          | Right sidebar   | Notes                                                                                                   |
+| ------------------ | ------------ | ------------------ | --------------- | ------------------------------------------------------------------------------------------------------- |
+| `/conversations/*` | Conversation | Threads            | Workbench       | Core-owned for now; extensions contribute into Chat rather than defining separate transcript routes.    |
+| `/automations`     | Table        | Blank              | None            | Main-only table workflow. Details/create/edit can remain dialog-backed when they are short-lived flows. |
+| `/gateways`        | Setup        | Blank              | Gateway context | Provider onboarding, readiness, docs, activity, and test output use Setup grammar.                      |
+| `/model-arena`     | Dashboard    | Blank              | Arena context   | Monitors challenger state, eligibility, settings, and history.                                          |
+| `/routines`        | Editor       | Routine navigator  | Routine context | Structured routine editing with optional inspector/history context.                                     |
+| `/workflows`       | Editor       | Workflow navigator | None            | Add a context rail only when workflow inspection grows.                                                 |
+| `/telemetry`       | Dashboard    | Blank              | None            | Metrics/status view.                                                                                    |
+| `/ai-gateway`      | Setup        | Blank              | None            | Gateway runtime controls are main-only in the windowed shell.                                           |
+| `/skills`          | Table        | Blank              | Skill detail    | Selected skill details belong in the right sidebar.                                                     |
+| `/extensions`      | Table        | Blank              | None            | App details open inside App Manager instead of a route-level right sidebar.                             |
+| `/settings/*`      | Settings     | Settings navigator | None            | Settings grammar applies to host and extension settings surfaces.                                       |
 
 ## Manifest Audit
 
@@ -50,9 +51,10 @@ Every first-party extension route with a `main` view must declare one approved p
 | -------------------------- | -------------- | ----------- | ------------------- | -------------------------- |
 | `system-automations`       | `/automations` | `table`     | None                | None                       |
 | `system-dynamic-workflows` | `/workflows`   | `editor`    | `workflows-sidebar` | None                       |
-| `system-extension-manager` | `/extensions`  | `table`     | None                | `extension-details-rail`   |
+| `system-extension-manager` | `/extensions`  | `table`     | None                | None                       |
 | `system-gateways`          | `/gateways`    | `setup`     | None                | `gateway-context-rail`     |
 | `system-model-arena`       | `/model-arena` | `dashboard` | None                | `model-arena-context-rail` |
+| `system-model-gateway`     | `/ai-gateway`  | `setup`     | None                | None                       |
 | `system-routines`          | `/routines`    | `editor`    | `routines-sidebar`  | `routines-context-rail`    |
 | `system-settings`          | `/settings`    | `settings`  | `settings-sidebar`  | None                       |
 | `system-skills`            | `/skills`      | `table`     | None                | `skills-context-rail`      |
