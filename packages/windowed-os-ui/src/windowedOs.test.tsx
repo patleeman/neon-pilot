@@ -233,7 +233,7 @@ describe('WindowedPageShell', () => {
 });
 
 describe('WindowedChartPanel', () => {
-  it('provides shared chart frame chrome for dense diagnostics panels', () => {
+  it('provides shared chart frame chrome for dense activity panels', () => {
     const html = renderToStaticMarkup(
       <WindowedChartPanel title="Token Activity" meta="24H · 1.4M total" className="wos-heatmap">
         <div className="chart-content">chart</div>
@@ -304,14 +304,14 @@ describe('WindowedSegmentedControl', () => {
 describe('WindowedPageMain', () => {
   it('keeps canonical windowed page headers title-only even when legacy callers pass descriptions', () => {
     const html = renderToStaticMarkup(
-      <WindowedPageMain title="Settings" description="Only approved users and chats can send work into Neon Pilot.">
-        Gateway settings
+      <WindowedPageMain title="Settings" description="Only approved apps and workers can send background work into Neon Pilot.">
+        Runtime settings
       </WindowedPageMain>,
     );
 
     expect(html).toContain('<h1>Settings</h1>');
-    expect(html).toContain('Gateway settings');
-    expect(html).not.toContain('Only approved users and chats can send work into Neon Pilot.');
+    expect(html).toContain('Runtime settings');
+    expect(html).not.toContain('Only approved apps and workers can send background work into Neon Pilot.');
     expect(html).not.toContain('wos-page-main__heading"><h1>Settings</h1><p>');
   });
 });
@@ -360,26 +360,26 @@ describe('WindowedEmptyState', () => {
 
   it('renders compact empty content with an optional action', () => {
     const html = renderToStaticMarkup(
-      <WindowedEmptyState title="No workflow runs" action={<button type="button">Create</button>}>
-        Run history appears after workflows execute.
+      <WindowedEmptyState title="No background runs" action={<button type="button">Create</button>}>
+        Run history appears after automations execute.
       </WindowedEmptyState>,
     );
 
     expect(html).toContain('class="wos-empty-state"');
     expect(html).toContain('wos-empty-state__title');
-    expect(html).toContain('No workflow runs');
+    expect(html).toContain('No background runs');
     expect(html).toContain('wos-empty-state__copy');
-    expect(html).toContain('Run history appears after workflows execute.');
+    expect(html).toContain('Run history appears after automations execute.');
     expect(html).toContain('wos-empty-state__action');
     expect(html).toContain('Create');
   });
 
   it('keeps empty states neutral so errors use state blocks instead', () => {
-    const html = renderToStaticMarkup(<WindowedEmptyState>No workflow runs yet.</WindowedEmptyState>);
+    const html = renderToStaticMarkup(<WindowedEmptyState>No background runs yet.</WindowedEmptyState>);
 
     expect(html).toContain('data-tone="neutral"');
     expect(html).not.toContain('data-tone="danger"');
-    expect(html).toContain('No workflow runs yet.');
+    expect(html).toContain('No background runs yet.');
   });
 });
 
@@ -537,7 +537,7 @@ describe('WindowedNumberStepper', () => {
 
   it('keeps unitless steppers on stable button tracks', () => {
     const html = renderToStaticMarkup(
-      <WindowedNumberStepper aria-label="Gateway port" value={8766} onChange={() => undefined} min={1024} max={65535} />,
+      <WindowedNumberStepper aria-label="Runtime port" value={8766} onChange={() => undefined} min={1024} max={65535} />,
     );
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
@@ -2441,7 +2441,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-tool-flow__error {');
   });
 
-  it('collapses dense diagnostics tables at compact window widths', () => {
+  it('collapses dense activity tables at compact window widths', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
@@ -2925,12 +2925,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<WindowedEmptyState action=');
     expect(source).not.toContain('<WindowedEmptyState tone="danger"');
     expect(source).toContain('<WindowedStateBlock tone="danger"');
-    expect(source).toContain('No workflow runs yet.');
+    expect(source).toContain('No background runs yet.');
     expect(source).toContain('Trace data could not be loaded');
     expect(source).toContain('Try again');
   });
 
-  it('documents shared chart panel primitives for windowed diagnostics', () => {
+  it('documents shared chart panel primitives for windowed activity', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
 

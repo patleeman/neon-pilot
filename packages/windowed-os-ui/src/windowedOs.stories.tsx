@@ -1231,8 +1231,13 @@ function DenseAppPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
           <WindowedPageMain title="Browser" actions={<WindowedPageButton tone="accent">Refresh</WindowedPageButton>}>
             <WindowedPageSection title="Providers" meta="2 enabled">
               <WindowedDataTable columns={[{ label: 'Provider' }, { label: 'Status' }, { label: 'Enabled', align: 'right' }]}>
-                <WindowedDataRow name="Telegram" meta="Gateway" enabled status={<WindowedBadge tone="positive">Enabled</WindowedBadge>} />
-                <WindowedDataRow name="Local tools" meta="Runtime" enabled={false} />
+                <WindowedDataRow
+                  name="Browser preview"
+                  meta="Built-in app"
+                  enabled
+                  status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
+                />
+                <WindowedDataRow name="Local tools" meta="Worker runtime" enabled={false} />
               </WindowedDataTable>
             </WindowedPageSection>
             <WindowedPageSection title="Runtime" meta="Needs attention">
@@ -1290,12 +1295,11 @@ export const StatePrimitives: Story = {
           <WindowedPageMain title="Windowed States">
             <WindowedPageSection title="Empty states" meta="Compact">
               <div style={{ display: 'grid', gap: 8 }}>
-                <WindowedEmptyState action={<WindowedPageButton tone="accent">Create workflow</WindowedPageButton>}>
-                  No workflow runs yet.
+                <WindowedEmptyState action={<WindowedPageButton tone="accent">Create automation</WindowedPageButton>}>
+                  No background runs yet.
                 </WindowedEmptyState>
                 <WindowedEmptyState>
-                  <strong>No diagnostics yet.</strong> Diagnostics fill in after conversations produce retained usage, tool, and context
-                  data.
+                  <strong>No activity yet.</strong> Activity fills in after apps and workers start producing retained run data.
                 </WindowedEmptyState>
                 <WindowedEmptyState>Marketplace results appear after the first source sync.</WindowedEmptyState>
               </div>
@@ -1304,20 +1308,20 @@ export const StatePrimitives: Story = {
             <WindowedPageSection title="Status blocks" meta="Inline">
               <div style={{ display: 'grid', gap: 8 }}>
                 <WindowedStateBlock tone="positive" title="Ready">
-                  Gateway runtime is accepting work from approved chats.
+                  Worker runtime is accepting background tasks.
                 </WindowedStateBlock>
                 <WindowedStateBlock tone="warning" title="Needs attention" action={<WindowedPageButton>Retry</WindowedPageButton>}>
-                  Telegram polling failed. Check whether another bot process is active.
+                  A worker stream stalled. Check whether another runtime process is active.
                 </WindowedStateBlock>
                 <WindowedStateBlock tone="danger" title="Unavailable">
-                  Gateway settings could not be loaded.
+                  Activity settings could not be loaded.
                 </WindowedStateBlock>
                 <WindowedStateBlock
                   tone="danger"
                   title="Trace data could not be loaded"
                   action={<WindowedPageButton>Try again</WindowedPageButton>}
                 >
-                  Check diagnostics storage, then retry the load.
+                  Check activity storage, then retry the load.
                 </WindowedStateBlock>
               </div>
             </WindowedPageSection>
@@ -1332,7 +1336,7 @@ export const ChartPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
       <WindowFrame
-        title="Diagnostics"
+        title="Activity"
         accent="settings"
         focused
         style={{ position: 'relative', left: 0, top: 0, width: 'min(960px, 100%)', height: 460 }}
@@ -1341,7 +1345,7 @@ export const ChartPrimitives: Story = {
         onClose={() => undefined}
       >
         <WindowedPageShell layout="standard">
-          <WindowedPageMain title="Diagnostics">
+          <WindowedPageMain title="Activity">
             <WindowedPageSection title="Usage" meta="Shared chart chrome">
               <StoryTokenActivityChart />
               <StoryTimeSeriesChart />
@@ -1696,13 +1700,13 @@ export const CanonicalDensity: Story = {
             <WindowedPageSection title="States">
               <div style={{ display: 'grid', gap: 8 }}>
                 <WindowedStateBlock tone="positive" title="Ready">
-                  Gateway runtime is accepting work from approved chats.
+                  Worker runtime is accepting background tasks.
                 </WindowedStateBlock>
                 <WindowedStateBlock tone="warning" title="Needs attention" action={<WindowedPageButton>Retry</WindowedPageButton>}>
-                  Telegram polling failed. Check whether another bot process is active.
+                  Browser preview stalled. Check whether another runtime process is active.
                 </WindowedStateBlock>
                 <WindowedStateBlock tone="danger" title="Unavailable">
-                  Gateway settings could not be loaded.
+                  Browser settings could not be loaded.
                 </WindowedStateBlock>
               </div>
             </WindowedPageSection>
@@ -2414,7 +2418,7 @@ function DrawingsPickerSubwindowStory({ theme = 'light' }: { theme?: 'light' | '
                 <article className="ui-panel">
                   <div className="ui-windowed-drawing-card__row">
                     <div className="ui-windowed-drawing-card__main">
-                      <h3 className="ui-card-title">Gateway flow</h3>
+                      <h3 className="ui-card-title">Worker flow</h3>
                       <p className="ui-card-meta">drawing-1120 · rev 2 · updated yesterday</p>
                     </div>
                     <div className="ui-windowed-drawing-card__actions">
