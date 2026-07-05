@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -199,6 +199,41 @@ describe('ExtensionPage', () => {
     expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
     expect(container.querySelector('.wos-state-block')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Go to Chat' })).toBeNull();
+  });
+
+  it('renders honest pending states for core roster apps before their stores land', () => {
+    render(
+      <MemoryRouter initialEntries={['/documents']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status', { name: 'Documents store pending' })).toBeTruthy();
+    expect(screen.getByText('Shared app collections will appear here after the documents store lands.')).toBeTruthy();
+
+    cleanup();
+    render(
+      <MemoryRouter initialEntries={['/inbox']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status', { name: 'Inbox pending' })).toBeTruthy();
+    expect(
+      screen.getByText('Worker results, persona messages, and questions will arrive here after Inbox is wired to the documents store.'),
+    ).toBeTruthy();
+
+    cleanup();
+    render(
+      <MemoryRouter initialEntries={['/activity']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status', { name: 'Activity pending' })).toBeTruthy();
+    expect(
+      screen.getByText('Worker runs, background tasks, and app activity will appear here after the Activity runtime is wired.'),
+    ).toBeTruthy();
   });
 
   it('renders the most specific extension route when parent and child routes both match', () => {

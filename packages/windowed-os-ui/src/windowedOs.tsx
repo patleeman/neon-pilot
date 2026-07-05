@@ -36,19 +36,25 @@ export interface WindowedDesktopAppSize {
 
 export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'chat', title: 'Chat', accent: 'chat', aliases: ['conversation', 'thread', 'new conversation'] },
-  { id: 'browser', title: 'Browser', accent: 'gateways', aliases: ['web', 'internet', 'browser window'] },
   { id: 'files', title: 'Files', accent: 'settings', aliases: ['workspace', 'file explorer', 'finder'] },
+  { id: 'documents', title: 'Documents', accent: 'settings', aliases: ['collections', 'records', 'shared data'] },
+  { id: 'browser', title: 'Browser', accent: 'gateways', aliases: ['web', 'internet', 'browser window'] },
   { id: 'terminal', title: 'Terminal', accent: 'telemetry', aliases: ['shell', 'command line', 'terminal window'] },
   { id: 'automations', title: 'Automations', accent: 'automations', aliases: ['tasks', 'scheduled runs', 'background runs'] },
-  { id: 'app-manager', title: 'App Manager', accent: 'apps', aliases: ['extensions', 'extension manager', 'apps', 'plugins'] },
+  { id: 'inbox', title: 'Inbox', accent: 'chat', aliases: ['messages', 'questions', 'worker results'] },
+  { id: 'activity', title: 'Activity', accent: 'telemetry', aliases: ['workers', 'runs', 'background work'] },
   { id: 'settings', title: 'Settings', accent: 'settings', aliases: ['preferences', 'providers', 'desktop', 'shortcuts'] },
+  { id: 'app-manager', title: 'App Manager', accent: 'apps', aliases: ['extensions', 'extension manager', 'apps', 'plugins'] },
 ] as const satisfies readonly WindowedDesktopAppDefinition[];
 
 export const CANONICAL_WINDOWED_APP_SIZES: Partial<Record<string, WindowedDesktopAppSize>> = {
-  Browser: { width: 900, height: 620 },
   Files: { width: 820, height: 560 },
+  Documents: { width: 980, height: 620 },
+  Browser: { width: 900, height: 620 },
   Terminal: { width: 820, height: 500 },
   Automations: { width: 1040, height: 660 },
+  Inbox: { width: 820, height: 560 },
+  Activity: { width: 1040, height: 660 },
   Settings: { width: 980, height: 560 },
   'App Manager': { width: 1040, height: 660 },
 };

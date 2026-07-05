@@ -3071,10 +3071,24 @@ describe('Windowed OS Storybook examples', () => {
     const source = readFileSync(storiesPath, 'utf8');
     const canonicalTitles = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
 
-    expect(canonicalTitles).toEqual(['Chat', 'Browser', 'Files', 'Terminal', 'Automations', 'App Manager', 'Settings']);
+    expect(canonicalTitles).toEqual([
+      'Chat',
+      'Files',
+      'Documents',
+      'Browser',
+      'Terminal',
+      'Automations',
+      'Inbox',
+      'Activity',
+      'Settings',
+      'App Manager',
+    ]);
 
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Browser')?.aliases).toContain('browser window');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Files')?.aliases).toContain('file explorer');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Documents')?.aliases).toContain('shared data');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Inbox')?.aliases).toContain('worker results');
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Activity')?.aliases).toContain('background work');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Terminal')?.aliases).toContain('terminal window');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Settings')?.aliases).toContain('preferences');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'App Manager')?.aliases).toContain('extension manager');

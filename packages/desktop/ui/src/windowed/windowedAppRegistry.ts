@@ -27,7 +27,7 @@ export interface WindowedAppRegistration {
   };
 }
 
-const CORE_WINDOWED_APP_IDS = new Set(['chat', 'settings']);
+const CORE_WINDOWED_APP_IDS = new Set(['chat', 'documents', 'inbox', 'activity', 'settings']);
 const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, WindowedDesktopAppDefinition> = new Map(
   CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]),
 );
@@ -35,12 +35,15 @@ const CANONICAL_LAUNCHER_ORDER: readonly string[] = CANONICAL_WINDOWED_DESKTOP_A
 
 const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>> = {
   chat: '/conversations/new',
-  browser: '/browser',
   files: '/files',
+  documents: '/documents',
+  browser: '/browser',
   terminal: '/terminal',
   automations: '/automations',
-  'app-manager': '/apps',
+  inbox: '/inbox',
+  activity: '/activity',
   settings: '/settings',
+  'app-manager': '/apps',
 };
 
 const CANONICAL_WINDOWED_APP_ROUTE_ALIASES: Readonly<

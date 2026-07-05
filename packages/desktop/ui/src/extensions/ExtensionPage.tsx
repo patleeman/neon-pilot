@@ -9,6 +9,35 @@ import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from '.
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
 
 const STALE_EXTENSION_ROUTES = new Set<string>();
+const CORE_WINDOWED_PLACEHOLDER_PAGES = new Map<
+  string,
+  {
+    body: string;
+    title: string;
+  }
+>([
+  [
+    '/documents',
+    {
+      title: 'Documents store pending',
+      body: 'Shared app collections will appear here after the documents store lands.',
+    },
+  ],
+  [
+    '/inbox',
+    {
+      title: 'Inbox pending',
+      body: 'Worker results, persona messages, and questions will arrive here after Inbox is wired to the documents store.',
+    },
+  ],
+  [
+    '/activity',
+    {
+      title: 'Activity pending',
+      body: 'Worker runs, background tasks, and app activity will appear here after the Activity runtime is wired.',
+    },
+  ],
+]);
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
   {
     id: 'extensions-page',
@@ -92,6 +121,7 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
     );
   }, [location.pathname, registry.extensions, registry.surfaces]);
   const staleExtensionRoute = STALE_EXTENSION_ROUTES.has(location.pathname);
+  const placeholderPage = CORE_WINDOWED_PLACEHOLDER_PAGES.get(location.pathname);
 
   useEffect(() => {
     if (registry.error) {
@@ -125,6 +155,13 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
         shellPresentation={shellPresentation}
       />
     );
+  }
+
+  if (placeholderPage) {
+    if (shellPresentation === 'windowed') {
+      return <WindowedExtensionPageState title={placeholderPage.title}>{placeholderPage.body}</WindowedExtensionPageState>;
+    }
+    return <CenteredMessage eyebrow="Core app pending" title={placeholderPage.title} body={placeholderPage.body} />;
   }
 
   if (staleExtensionRoute) {

@@ -48,7 +48,24 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Browser', 'Files', 'Terminal', 'Automations', 'App Manager', 'Settings']);
+    expect(apps.map((app) => app.title)).toEqual([
+      'Chat',
+      'Files',
+      'Documents',
+      'Browser',
+      'Terminal',
+      'Automations',
+      'Inbox',
+      'Activity',
+      'Settings',
+      'App Manager',
+    ]);
+    expect(apps.find((app) => app.title === 'Documents')).toMatchObject({
+      id: 'documents',
+      route: '/documents',
+      source: 'core',
+      owner: { packageType: 'core' },
+    });
     expect(apps.find((app) => app.title === 'Browser')).toMatchObject({
       id: 'browser',
       kind: 'browser',
@@ -83,6 +100,18 @@ describe('windowed app registry', () => {
       owner: { packageType: 'core' },
       window: { allowMultiple: true, singleton: false },
     });
+    expect(apps.find((app) => app.title === 'Inbox')).toMatchObject({
+      id: 'inbox',
+      route: '/inbox',
+      source: 'core',
+      owner: { packageType: 'core' },
+    });
+    expect(apps.find((app) => app.title === 'Activity')).toMatchObject({
+      id: 'activity',
+      route: '/activity',
+      source: 'core',
+      owner: { packageType: 'core' },
+    });
   });
 
   it('keeps disabled app packages out of the launcher registry', () => {
@@ -96,7 +125,7 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Settings']);
+    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Documents', 'Inbox', 'Activity', 'Settings']);
   });
 
   it('lets canonical app metadata win over duplicate package nav and view contributions', () => {
@@ -114,7 +143,7 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'App Manager', 'Settings']);
+    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Documents', 'Inbox', 'Activity', 'Settings', 'App Manager']);
     expect(apps.find((app) => app.route === '/apps')).toMatchObject({
       id: 'app-manager',
       title: 'App Manager',
@@ -141,7 +170,7 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Boards', 'Reports', 'Settings']);
+    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Documents', 'Inbox', 'Activity', 'Settings', 'Boards', 'Reports']);
     expect(apps.find((app) => app.title === 'Boards')).toMatchObject({
       source: 'app-package',
       sourcePackageId: 'custom-package',
