@@ -121,7 +121,6 @@ describe('registerExtensionRoutes', () => {
     expect(listRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ id: 'system-automations', packageType: 'system' }),
-        expect.objectContaining({ id: 'system-telemetry', packageType: 'system' }),
         expect.objectContaining({ id: 'system-files', packageType: 'system' }),
         expect.objectContaining({ id: 'system-diffs', packageType: 'system' }),
         expect.objectContaining({ id: 'system-runs', packageType: 'system' }),
@@ -133,7 +132,6 @@ describe('registerExtensionRoutes', () => {
     expect(installedRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ id: 'system-automations', enabled: true }),
-        expect.objectContaining({ id: 'system-telemetry', enabled: true }),
         expect.objectContaining({ id: 'system-files', enabled: true }),
         expect.objectContaining({ id: 'system-diffs', enabled: true }),
         expect.objectContaining({ id: 'system-runs', enabled: true }),
@@ -173,10 +171,7 @@ describe('registerExtensionRoutes', () => {
     const routesRes = createResponse();
     await harness.getHandler('/api/extensions/routes')({}, routesRes);
     expect(routesRes.json).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        { route: '/automations', extensionId: 'system-automations', surfaceId: 'page', packageType: 'system' },
-        { route: '/telemetry', extensionId: 'system-telemetry', surfaceId: 'page', packageType: 'system' },
-      ]),
+      expect.arrayContaining([{ route: '/automations', extensionId: 'system-automations', surfaceId: 'page', packageType: 'system' }]),
     );
 
     const surfacesRes = createResponse();
@@ -184,7 +179,6 @@ describe('registerExtensionRoutes', () => {
     expect(surfacesRes.json).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ extensionId: 'system-automations', location: 'main', component: 'AutomationsPage' }),
-        expect.objectContaining({ extensionId: 'system-telemetry', location: 'main', component: 'TelemetryPage' }),
         expect.objectContaining({ extensionId: 'system-files', location: 'rightRail', component: 'WorkspaceFilesPanel' }),
         expect.objectContaining({ extensionId: 'system-files', location: 'workbench', component: 'WorkspaceFileDetailPanel' }),
       ]),

@@ -9,7 +9,6 @@
     "system-conversation-tools",
     "system-diffs",
     "system-mcp",
-    "system-telemetry",
     "system-todo",
     "system-runs"
   ],
@@ -51,11 +50,6 @@
       "extensionId": "system-automations",
       "path": "/automations",
       "text": ["Automations"]
-    },
-    {
-      "extensionId": "system-telemetry",
-      "path": "/telemetry",
-      "text": ["Diagnostics"]
     }
   ],
   "actions": [

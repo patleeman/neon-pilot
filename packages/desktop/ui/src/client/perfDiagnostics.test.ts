@@ -164,7 +164,7 @@ describe('perfDiagnostics', () => {
   it('records renderer interactions with useful target attribution', async () => {
     const { recordRendererInteraction } = await import('./perfDiagnostics');
     const button = document.createElement('button');
-    button.setAttribute('data-route', '/telemetry');
+    button.setAttribute('data-route', '/apps');
     button.textContent = 'Telemetry';
     document.body.appendChild(button);
 
@@ -179,7 +179,7 @@ describe('perfDiagnostics', () => {
       expect.objectContaining({
         type: 'click',
         route: '/',
-        target: expect.stringContaining('route=/telemetry'),
+        target: expect.stringContaining('route=/apps'),
       }),
     ]);
   });

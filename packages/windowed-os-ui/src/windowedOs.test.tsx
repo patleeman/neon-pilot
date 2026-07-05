@@ -2412,7 +2412,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.wos-chart-panel {');
     expect(stylesSource).toContain('.wos-chart-panel__header {');
     expect(stylesSource).toContain('.wos-chart-panel__body {');
-    expect(stylesSource).toContain('.wos-diagnostics-overview__charts {');
     expect(stylesSource).toContain('.wos-heatmap .wos-chart-panel__body {');
     expect(stylesSource).toContain('.wos-heatmap-grid {');
     expect(stylesSource).toContain('width: max-content;');
@@ -3000,52 +2999,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('ariaLabel="Automation filter"');
   });
 
-  it('documents the canonical Diagnostics desktop page', () => {
-    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
-    const source = readFileSync(storiesPath, 'utf8');
-    const diagnosticsSource = source.slice(source.indexOf('function DiagnosticsPageStory'), source.indexOf('export const DiagnosticsPage'));
-
-    expect(source).toContain('function DiagnosticsPageStory');
-    expect(source).toContain('export const DiagnosticsPage');
-    expect(source).toContain('export const DarkDiagnosticsPage');
-    expect(source).toContain('<DiagnosticsPageStory theme="dark" />');
-    expect(source).toContain('title="Diagnostics"');
-    expect(source).toContain('data-wos-theme={theme}');
-    expect(source).not.toContain('eyebrow="Telemetry"');
-    expect(source).toContain('ariaLabel="Diagnostics range"');
-    expect(source).toContain('title="Overview"');
-    expect(source).toContain('meta="24H · Loaded"');
-    expect(source).toContain('className="wos-diagnostics-overview"');
-    expect(source).toContain('className="wos-diagnostics-overview__charts"');
-    expect(source).toContain('<StoryTokenActivityChart />');
-    expect(source).toContain('<StoryTimeSeriesChart />');
-    expect(source).toContain('title="Status"');
-    expect(source).toContain('title="Health"');
-    expect(source).toContain('title="Usage"');
-    expect(source).toContain('title="Tools"');
-    expect(diagnosticsSource).toContain(
-      "cells={[{ value: <WindowedBadge tone=\"positive\">1.1M</WindowedBadge> }, { value: '71%', align: 'right' }]}",
-    );
-    expect(diagnosticsSource).toContain(
-      "cells={[{ value: <WindowedBadge tone=\"neutral\">412K</WindowedBadge> }, { value: '63%', align: 'right' }]}",
-    );
-    expect(diagnosticsSource).toContain(
-      "cells={[{ value: <WindowedBadge tone=\"positive\">128</WindowedBadge> }, { value: '0', align: 'right' }]}",
-    );
-    expect(diagnosticsSource).toContain(
-      "cells={[{ value: <WindowedBadge tone=\"warning\">18</WindowedBadge> }, { value: '2', align: 'right' }]}",
-    );
-    expect(diagnosticsSource).not.toContain('action="71%"');
-    expect(diagnosticsSource).not.toContain('action="63%"');
-    expect(diagnosticsSource).not.toContain('action="0"');
-    expect(diagnosticsSource).not.toContain('action="2"');
-    expect(source).toContain('meta="Browser app"');
-    expect(source).not.toContain('meta="workbench browser"');
-    expect(source).toContain('title="App activity"');
-    expect(source).not.toContain('title="Traces"');
-    expect(source).not.toContain('Export trace');
-  });
-
   it('documents the canonical App Manager desktop page and detail subwindow pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
@@ -3169,8 +3122,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--dark-app-install-dialog'");
     expect(source).not.toContain("'windowed-os-desktop-shell--skills-page'");
     expect(source).not.toContain("'windowed-os-desktop-shell--dark-skills-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--diagnostics-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-diagnostics-page'");
     expect(source).toContain("'windowed-os-desktop-shell--terminal-window'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-terminal-window'");
     expect(source).toContain("'windowed-os-desktop-shell--workspace-window'");

@@ -69,7 +69,7 @@ describe('app telemetry routes', () => {
     const json = vi.fn();
     routes['/api/telemetry/event'](
       {
-        body: { category: 'navigation', name: 'route_view', route: '/telemetry', durationMs: 14, metadata: { referrerRoute: '/' } },
+        body: { category: 'navigation', name: 'route_view', route: '/apps', durationMs: 14, metadata: { referrerRoute: '/' } },
         headers: { 'user-agent': 'test-agent' },
       },
       { status: vi.fn().mockReturnThis(), json },
@@ -80,7 +80,7 @@ describe('app telemetry routes', () => {
         source: 'renderer',
         category: 'navigation',
         name: 'route_view',
-        route: '/telemetry',
+        route: '/apps',
         durationMs: 14,
         metadata: expect.objectContaining({ referrerRoute: '/', userAgent: 'test-agent' }),
       }),

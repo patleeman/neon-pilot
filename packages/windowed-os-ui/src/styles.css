@@ -4390,19 +4390,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   color: var(--wos-ink-700);
 }
 
-.wos-diagnostics-overview {
-  display: grid;
-  min-width: 0;
-  gap: var(--wos-space-4);
-}
-
-.wos-diagnostics-overview__charts {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: var(--wos-space-4);
-}
-
 .wos-tool-flow {
   display: grid;
   min-width: 0;
@@ -4718,7 +4705,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 }
 
 @media (max-width: 900px) {
-  .wos-diagnostics-overview__charts,
   .wos-tool-flow__grid,
   .wos-tool-health__bash,
   .wos-model-usage__grid,
@@ -4730,7 +4716,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 }
 
 @container (max-width: 760px) {
-  .wos-diagnostics-overview__charts,
   .wos-tool-flow__grid,
   .wos-tool-health__bash,
   .wos-model-usage__grid,

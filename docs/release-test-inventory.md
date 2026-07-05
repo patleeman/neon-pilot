@@ -94,12 +94,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Catch-up windows, timeouts, cwd/model/profile fields, missed schedule behavior.
 - Skills: `async-attention`, `scheduled-tasks`.
 
-### `/telemetry` — Telemetry (`system-telemetry`)
-
-- Nav item: Telemetry.
-- Test event list, filters, route timing records, extension/runtime producers, empty state, malformed log handling, export/inspection if available.
-- Backend report routes/functions: summary, model usage, cost by conversation, tool health, context, agent loop, daily tokens, tool flow, cache efficiency, system prompt, auto mode, context pointers, session integrity.
-
 ### Prompt Assembly runtime inspection (`system-prompt-assembly`)
 
 - Product surface: Settings -> Extensions and Extension Manager details. Prompt Assembly does not contribute a standalone nav item or `/prompt-assembly` route.
@@ -441,12 +435,6 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - settings: secrets.provider, conversation.transcriptDisclosure, conversation.diffDisclosure, conversation.pinnedToolCalls
 - views: settings (/settings), providers (/settings/providers), desktop (/settings/desktop), settings-sidebar
 - backend actions: manageSettings, manageCli
-
-### system-telemetry — Telemetry
-
-- nav: telemetry-nav (/telemetry)
-- views: page (/telemetry)
-- backend actions: getTelemetryData
 
 ### system-terminal — Terminal
 

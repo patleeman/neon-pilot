@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 
 describe('shouldUseDocumentNavigationForSidebarRoute', () => {
-  const documentNavigationRoutes = ['/automations', '/extensions', '/telemetry'];
+  const documentNavigationRoutes = ['/automations', '/extensions', '/apps'];
 
   it('uses document navigation when switching between legacy extension pages', () => {
     expect(shouldUseDocumentNavigationForSidebarRoute('/ext/writing-studio', '/ext/hermes')).toBe(true);

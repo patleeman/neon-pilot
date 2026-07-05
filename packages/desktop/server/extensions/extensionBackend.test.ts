@@ -1995,52 +1995,6 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
-  it('runs worker-safe telemetry aggregate actions through the worker runner', async () => {
-    const backendRunner = {
-      loadModule: vi.fn(),
-      clearModule: vi.fn(),
-      hasExport: vi.fn(),
-      loadAgentFactory: vi.fn(),
-      runExport: vi.fn(),
-      run: vi.fn(),
-    };
-    const workerRunner = {
-      loadModule: vi.fn(async () => ({})),
-      clearModule: vi.fn(),
-      hasExport: vi.fn(async () => true),
-      loadAgentFactory: vi.fn(),
-      runExport: vi.fn(),
-      runWorkerExport: vi.fn(async () => ({ ok: true, summary: { activeSessions: 0 } })),
-      run: vi.fn(),
-    };
-    setExtensionBackendRunnerForTests(backendRunner);
-    setWorkerImportBackendRunnerForTests(workerRunner);
-
-    await expect(invokeExtensionAction('system-telemetry', 'getTelemetryData', { range: '1h' })).resolves.toEqual({
-      ok: true,
-      result: { ok: true, summary: { activeSessions: 0 } },
-    });
-
-    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
-      'system-telemetry',
-      expect.objectContaining({
-        path: expect.stringContaining(join('extensions', 'system-telemetry', 'dist', 'backend.mjs')),
-      }),
-      'getTelemetryData',
-      { type: 'action', label: 'action getTelemetryData', target: 'getTelemetryData' },
-      [{ range: '1h' }],
-      expect.objectContaining({
-        context: expect.objectContaining({
-          type: 'backend',
-          runtimeScope: 'shared',
-          runtimeDir: expect.any(String),
-          runtimeSettingsFilePath: expect.any(String),
-        }),
-      }),
-    );
-    expect(backendRunner.runExport).not.toHaveBeenCalled();
-  });
-
   it('runs worker-safe background work actions through the worker runner', async () => {
     const backendRunner = {
       loadModule: vi.fn(),
@@ -3487,54 +3441,6 @@ describe('extension backend action invocation', () => {
       'ping',
       { type: 'route', label: 'route POST /ping', target: '/ping' },
       [{ method: 'POST', path: '/ping', query: { q: '1' }, params: {}, body: { ok: true } }],
-      expect.objectContaining({
-        context: expect.objectContaining({
-          type: 'backend',
-          runtimeScope: 'shared',
-          runtimeDir: expect.any(String),
-          runtimeSettingsFilePath: expect.any(String),
-        }),
-      }),
-    );
-    expect(backendRunner.runExport).not.toHaveBeenCalled();
-  });
-
-  it('runs worker-safe system telemetry routes through the worker runner', async () => {
-    const backendRunner = {
-      loadModule: vi.fn(),
-      clearModule: vi.fn(),
-      hasExport: vi.fn(),
-      loadAgentFactory: vi.fn(),
-      runExport: vi.fn(),
-      run: vi.fn(),
-    };
-    const workerRunner = {
-      loadModule: vi.fn(async () => ({})),
-      clearModule: vi.fn(),
-      hasExport: vi.fn(async () => true),
-      loadAgentFactory: vi.fn(),
-      runExport: vi.fn(),
-      runWorkerExport: vi.fn(async () => ({ status: 200, body: { activeSessions: 0, runsToday: 0 } })),
-      run: vi.fn(),
-    };
-    setExtensionBackendRunnerForTests(backendRunner);
-    setWorkerImportBackendRunnerForTests(workerRunner);
-
-    await expect(
-      invokeExtensionRoute('system-telemetry', 'GET', '/traces/summary', {
-        method: 'GET',
-        path: '/traces/summary',
-        query: { range: '1h' },
-        params: {},
-      }),
-    ).resolves.toEqual({ status: 200, body: { activeSessions: 0, runsToday: 0 } });
-
-    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
-      'system-telemetry',
-      expect.objectContaining({ path: expect.stringContaining(join('extensions', 'system-telemetry', 'dist', 'backend.mjs')) }),
-      'summary',
-      { type: 'route', label: 'route GET /traces/summary', target: '/traces/summary' },
-      [{ method: 'GET', path: '/traces/summary', query: { range: '1h' }, params: {} }],
       expect.objectContaining({
         context: expect.objectContaining({
           type: 'backend',

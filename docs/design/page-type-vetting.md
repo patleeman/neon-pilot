@@ -16,14 +16,14 @@ Approved shell rules:
 
 ## Approved Types
 
-| Type         | Primary job                               | Default left area                 | Default right sidebar         | Current examples             |
-| ------------ | ----------------------------------------- | --------------------------------- | ----------------------------- | ---------------------------- |
-| Conversation | Transcript-first agent work               | Threads or conversation navigator | Workbench/context rail        | Chat                         |
-| Table        | Durable object management                 | Blank                             | Selected-item details         | Automations, Extensions      |
-| Editor       | Structured object editing                 | Optional object/step navigator    | Inspector/history/preview     | Structured editors           |
-| Settings     | Preferences and configuration             | Optional settings navigation      | Help/details only when useful | Settings, extension settings |
-| Dashboard    | Metrics, diagnostics, status              | Blank                             | Metric/log/detail context     | Diagnostics                  |
-| Setup        | Credential, provider, install, onboarding | Optional selector                 | Docs/activity/test output     | Setup Readiness              |
+| Type         | Primary job                               | Default left area                 | Default right sidebar         | Current examples              |
+| ------------ | ----------------------------------------- | --------------------------------- | ----------------------------- | ----------------------------- |
+| Conversation | Transcript-first agent work               | Threads or conversation navigator | Workbench/context rail        | Chat                          |
+| Table        | Durable object management                 | Blank                             | Selected-item details         | Automations, Extensions       |
+| Editor       | Structured object editing                 | Optional object/step navigator    | Inspector/history/preview     | Structured editors            |
+| Settings     | Preferences and configuration             | Optional settings navigation      | Help/details only when useful | Settings, extension settings  |
+| Dashboard    | Metrics, diagnostics, status              | Blank                             | Metric/log/detail context     | Future Activity/observability |
+| Setup        | Credential, provider, install, onboarding | Optional selector                 | Docs/activity/test output     | Setup Readiness               |
 
 No seventh type is approved. If a workflow does not fit these six, document the missing behavior and update the design-system guidance before introducing a new recurring page type.
 
@@ -33,7 +33,6 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 | ------------------ | ------------ | ------------------ | ------------- | ------------------------------------------------------------------------------------------------------- |
 | `/conversations/*` | Conversation | Threads            | Workbench     | Core-owned for now; extensions contribute into Chat rather than defining separate transcript routes.    |
 | `/automations`     | Table        | Blank              | None          | Main-only table workflow. Details/create/edit can remain dialog-backed when they are short-lived flows. |
-| `/telemetry`       | Dashboard    | Blank              | None          | Metrics/status view.                                                                                    |
 | `/apps`            | Table        | Blank              | None          | App details open inside App Manager instead of a route-level right sidebar.                             |
 | `/settings/*`      | Settings     | Settings navigator | None          | Settings grammar applies to host and extension settings surfaces.                                       |
 
@@ -41,12 +40,11 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 
 Every first-party extension route with a `main` view must declare one approved page type on its nav item.
 
-| Extension                  | Route          | Page type   | Contextual left    | Right sidebar |
-| -------------------------- | -------------- | ----------- | ------------------ | ------------- |
-| `system-automations`       | `/automations` | `table`     | None               | None          |
-| `system-extension-manager` | `/apps`        | `table`     | None               | None          |
-| `system-settings`          | `/settings`    | `settings`  | `settings-sidebar` | None          |
-| `system-telemetry`         | `/telemetry`   | `dashboard` | None               | None          |
+| Extension                  | Route          | Page type  | Contextual left    | Right sidebar |
+| -------------------------- | -------------- | ---------- | ------------------ | ------------- |
+| `system-automations`       | `/automations` | `table`    | None               | None          |
+| `system-extension-manager` | `/apps`        | `table`    | None               | None          |
+| `system-settings`          | `/settings`    | `settings` | `settings-sidebar` | None          |
 
 The manifest shape keeps side-region fields off `main` views. Side-region metadata belongs only on `sidebar` and `rightRail` views; the nav item binds those views to a route with `sidebarView` and `rightSidebarView`.
 

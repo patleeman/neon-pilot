@@ -37,8 +37,8 @@ function RouteHarness() {
       <button type="button" onClick={() => navigate('/knowledge')}>
         Knowledge
       </button>
-      <button type="button" onClick={() => navigate('/telemetry?range=24h')}>
-        Telemetry
+      <button type="button" onClick={() => navigate('/apps?filter=enabled')}>
+        App Manager
       </button>
       <ExtensionRouteHost />
     </>
@@ -47,7 +47,7 @@ function RouteHarness() {
 
 describe('ExtensionRouteHost', () => {
   it('builds route keys from path and search', () => {
-    expect(buildExtensionRouteKey('/telemetry', '?range=24h')).toBe('/telemetry?range=24h');
+    expect(buildExtensionRouteKey('/apps', '?filter=enabled')).toBe('/apps?filter=enabled');
   });
 
   it('uses a quiet accessible loading fallback for app routes', () => {
@@ -86,6 +86,6 @@ describe('ExtensionRouteHost', () => {
       container.querySelectorAll('button')[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
 
-    expect(container.querySelector('[data-mounted-route]')?.textContent).toBe('/telemetry?range=24h');
+    expect(container.querySelector('[data-mounted-route]')?.textContent).toBe('/apps?filter=enabled');
   });
 });

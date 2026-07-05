@@ -82,7 +82,7 @@ Preferred split: core records and serves cross-cutting state; native extensions 
 Native system extensions include:
 
 - `system-automations` owns `/automations` and scheduled/conversation-bound automation UI.
-- `system-telemetry` owns `/telemetry` while telemetry collection remains core infrastructure.
+- Telemetry collection remains core infrastructure; user-facing observability should be exposed through Activity-era app surfaces.
 - `system-files` owns the workspace File Explorer rail and paired workbench file detail view while workspace filesystem APIs remain core infrastructure.
 - `system-diffs` owns the checkpoint tool and inline transcript diff rendering while checkpoint persistence remains core infrastructure.
 - `system-runs` owns background command/subagent tools, the activity shelf, and inline transcript run cards while durable run execution remains core infrastructure.

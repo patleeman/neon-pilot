@@ -644,10 +644,6 @@ const smokes = {
   async 'system-suggested-context'() {
     assert(typeof module.warmPointers === 'function', 'warmPointers action missing');
   },
-  async 'system-telemetry'() {
-    const result = await module.summary({ query: {} });
-    assert(result.status === 200 && result.body, 'telemetry summary failed');
-  },
   async 'system-terminal'() {
     const terminal = await module.createTerminal({ cwd }, ctx);
     assert(terminal.id && terminal.pid === 12345, 'terminal create failed');

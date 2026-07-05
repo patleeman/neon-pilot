@@ -261,18 +261,20 @@ describe('ExtensionPage', () => {
       error: null,
       surfaces: [],
       routes: [
-        { route: '/telemetry', extensionId: 'system-telemetry', surfaceId: 'telemetry-page', packageType: 'system' },
+        { route: '/automations', extensionId: 'system-automations', surfaceId: 'automations-page', packageType: 'system' },
         { route: '/apps', extensionId: 'system-extension-manager', surfaceId: 'extensions-page', packageType: 'system' },
       ],
       extensions: [
         {
-          id: 'system-telemetry',
-          name: 'Diagnostics',
+          id: 'system-automations',
+          name: 'Automations',
           enabled: true,
           packageType: 'system',
           frontend: { entry: 'dist/frontend.js' },
           contributes: {
-            views: [{ id: 'telemetry-page', title: 'Diagnostics', location: 'main', route: '/telemetry', component: 'TelemetryPage' }],
+            views: [
+              { id: 'automations-page', title: 'Automations', location: 'main', route: '/automations', component: 'AutomationsPage' },
+            ],
           },
         },
         {
@@ -301,14 +303,14 @@ describe('ExtensionPage', () => {
     }
 
     render(
-      <MemoryRouter initialEntries={['/telemetry']}>
+      <MemoryRouter initialEntries={['/automations']}>
         <Routes>
           <Route path="*" element={<Harness />} />
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('surface-host').getAttribute('data-mounted-surface-id')).toBe('telemetry-page');
+    expect(screen.getByTestId('surface-host').getAttribute('data-mounted-surface-id')).toBe('automations-page');
 
     fireEvent.click(screen.getByRole('button', { name: 'App Manager' }));
 

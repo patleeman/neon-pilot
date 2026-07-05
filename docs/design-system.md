@@ -156,7 +156,6 @@ Each tranche should include documentation, Storybook coverage, and at least one 
 Use these as reference implementations when migrating similar surfaces:
 
 - `extensions/system-settings/src/SettingsPage.tsx`: settings provider advanced sections use `Disclosure`.
-- `extensions/system-telemetry/src/traces/TracesToolHealth.tsx`: telemetry tool cards use `SurfacePanel`, `StatusDot`, `Pill`, `MetricTile`, and `ProgressBar`.
 - `extensions/system-extension-manager/src/panels.tsx`: manifest inspection uses `Disclosure` and `CodeBlock`.
 - `packages/desktop/ui/src/components/ConversationArtifactWorkbench.tsx` and `ConversationCheckpointWorkbench.tsx`: full-height workbench panes use `WorkbenchShell`.
 - `packages/desktop/ui/src/components/conversation/ConversationActivityShelf.tsx` and `ConversationQueueShelf.tsx`: compact conversation shelves use `ShelfSection`.

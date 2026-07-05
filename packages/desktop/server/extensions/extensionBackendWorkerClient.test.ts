@@ -303,7 +303,7 @@ describe('ExtensionBackendWorkerClient', () => {
     worker.emit('message', {
       id: 99,
       kind: 'capabilityRequest',
-      extensionId: 'system-telemetry',
+      extensionId: 'system-runs',
       capability: 'telemetry',
       operation: 'readTrace',
       input: { since: '2026-05-22T00:00:00.000Z' },
