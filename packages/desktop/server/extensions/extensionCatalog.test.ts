@@ -133,10 +133,41 @@ describe('extension catalog', () => {
     );
   });
 
+  it('hides fork-excluded first-party packages from remote and local catalogs', async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), 'np-fork-excluded-bundles-'));
+    const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
+    mkdirSync(bundleDir, { recursive: true });
+    writeFileSync(join(bundleDir, 'system-dynamic-workflows.neon-extension.zip'), new Uint8Array([1, 2, 3, 4]));
+    process.env.NEON_PILOT_REPO_ROOT = repoRoot;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          packages: [
+            {
+              id: 'system-dynamic-workflows',
+              tag: 'v0.11.14',
+              artifact: 'system-dynamic-workflows.neon-extension.zip',
+            },
+          ],
+        }),
+      })),
+    );
+
+    const { installCatalogExtension, listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
+    const catalog = await listInstallableExtensionCatalog();
+
+    expect(catalog.extensions.some((extension) => extension.id === 'system-dynamic-workflows')).toBe(false);
+    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).rejects.toThrow('Unknown installable extension');
+
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
   it('keeps locally packaged installable bundles when the release catalog omits them', async () => {
     const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-release-bundles-'));
     const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
-    const bundlePath = join(bundleDir, 'system-dynamic-workflows.neon-extension.zip');
+    const bundlePath = join(bundleDir, 'system-suggested-context.neon-extension.zip');
     mkdirSync(bundleDir, { recursive: true });
     writeFileSync(bundlePath, new Uint8Array([1, 2, 3, 4]));
     process.env.NEON_PILOT_REPO_ROOT = repoRoot;
@@ -149,19 +180,19 @@ describe('extension catalog', () => {
         }),
       })),
     );
-    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-dynamic-workflows', name: 'Dynamic Workflows' });
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-suggested-context', name: 'Suggested Context' });
     importRuntimeExtensionBundle.mockReturnValue({
       ok: true,
-      extension: { id: 'system-dynamic-workflows', enabled: false },
+      extension: { id: 'system-suggested-context', enabled: false },
       packageRoot: '/tmp/ext',
     });
 
     const { installCatalogExtension, listInstallableExtensionCatalog } = await import('./extensionCatalog.js');
     const catalog = await listInstallableExtensionCatalog();
-    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-dynamic-workflows' })]));
+    expect(catalog.extensions).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'system-suggested-context' })]));
 
-    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).resolves.toMatchObject({
-      extension: { id: 'system-dynamic-workflows', enabled: false },
+    await expect(installCatalogExtension({ id: 'system-suggested-context' })).resolves.toMatchObject({
+      extension: { id: 'system-suggested-context', enabled: false },
     });
 
     expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
@@ -267,7 +298,7 @@ describe('extension catalog', () => {
   it('installs stale baked first-party catalog entries from local packaged bundles', async () => {
     const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-stale-bundles-'));
     const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
-    const bundlePath = join(bundleDir, 'system-dynamic-workflows.neon-extension.zip');
+    const bundlePath = join(bundleDir, 'system-suggested-context.neon-extension.zip');
     mkdirSync(bundleDir, { recursive: true });
     writeFileSync(bundlePath, new Uint8Array([1, 2, 3, 4]));
     process.env.NEON_PILOT_REPO_ROOT = repoRoot;
@@ -280,25 +311,25 @@ describe('extension catalog', () => {
     );
     importRuntimeExtensionBundle.mockReturnValue({
       ok: true,
-      extension: { id: 'system-dynamic-workflows', enabled: true },
+      extension: { id: 'system-suggested-context', enabled: true },
       packageRoot: '/tmp/ext',
     });
-    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-dynamic-workflows', name: 'Dynamic Workflows' });
-    summaries.mockReturnValue([{ id: 'system-dynamic-workflows', name: 'Dynamic Workflows', enabled: false, version: '0.1.0' }]);
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-suggested-context', name: 'Suggested Context' });
+    summaries.mockReturnValue([{ id: 'system-suggested-context', name: 'Suggested Context', enabled: false, version: '0.1.0' }]);
 
     const { installCatalogExtension } = await import('./extensionCatalog.js');
-    const result = await installCatalogExtension({ id: 'system-dynamic-workflows' });
+    const result = await installCatalogExtension({ id: 'system-suggested-context' });
 
     expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(result.extension).toMatchObject({ id: 'system-dynamic-workflows', enabled: false });
+    expect(result.extension).toMatchObject({ id: 'system-suggested-context', enabled: false });
     rmSync(repoRoot, { recursive: true, force: true });
   });
 
   it('rejects local catalog bundles with mismatched ids before importing', async () => {
     const repoRoot = mkdtempSync(join(tmpdir(), 'np-local-mismatched-bundles-'));
     const bundleDir = join(repoRoot, 'dist', 'installable-extensions');
-    const bundlePath = join(bundleDir, 'system-dynamic-workflows.neon-extension.zip');
+    const bundlePath = join(bundleDir, 'system-suggested-context.neon-extension.zip');
     mkdirSync(bundleDir, { recursive: true });
     writeFileSync(bundlePath, new Uint8Array([1, 2, 3, 4]));
     process.env.NEON_PILOT_REPO_ROOT = repoRoot;
@@ -312,8 +343,8 @@ describe('extension catalog', () => {
     inspectRuntimeExtensionBundle.mockReturnValue({ id: 'wrong-extension', name: 'Wrong Extension' });
 
     const { installCatalogExtension } = await import('./extensionCatalog.js');
-    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).rejects.toThrow(
-      'Extension id wrong-extension did not match expected id system-dynamic-workflows.',
+    await expect(installCatalogExtension({ id: 'system-suggested-context' })).rejects.toThrow(
+      'Extension id wrong-extension did not match expected id system-suggested-context.',
     );
 
     expect(inspectRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath });
@@ -412,9 +443,9 @@ describe('extension catalog', () => {
   });
 
   it('refuses to install a catalog item that is already installed', async () => {
-    findExtensionEntry.mockReturnValue({ manifest: { id: 'system-dynamic-workflows' } });
+    findExtensionEntry.mockReturnValue({ manifest: { id: 'system-agent-browser' } });
     const { installCatalogExtension } = await import('./extensionCatalog.js');
-    await expect(installCatalogExtension({ id: 'system-dynamic-workflows' })).rejects.toThrow('already installed');
+    await expect(installCatalogExtension({ id: 'system-agent-browser' })).rejects.toThrow('already installed');
   });
 
   it('installs fresh remote catalog extensions from URL instead of stale repo-built bundles', async () => {

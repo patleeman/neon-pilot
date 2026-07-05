@@ -100,15 +100,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Test event list, filters, route timing records, extension/runtime producers, empty state, malformed log handling, export/inspection if available.
 - Backend report routes/functions: summary, model usage, cost by conversation, tool health, context, agent loop, daily tokens, tool flow, cache efficiency, system prompt, auto mode, context pointers, session integrity.
 
-### `/workflows` — Dynamic Workflows (`system-dynamic-workflows`, default disabled)
-
-- Nav item: Workflows when enabled.
-- Agent tool/action: `workflow`.
-- Actions: `workflow`, `listWorkflows`, `getWorkflow`, `cancelWorkflow`, `listWorkflowTemplates`, `saveWorkflow`, `listSavedWorkflows`, `deleteSavedWorkflow`, `runSavedWorkflow`.
-- Settings keys: default agent model, default allowed tools, max concurrent agents, max total agents, node timeout, workflow timeout.
-- Test workflow template list, run/cancel, saved workflow create/delete/run, transcript block rendering, concurrent subagent limits, invalid JavaScript, timeout, and persisted run history.
-- Skill: `dynamic-workflows`.
-
 ### `/gateways` — Telegram Gateway (`system-gateways`, bundled first-party extension)
 
 - Nav item: Gateways.
@@ -385,16 +376,6 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - transcriptRenderers: checkpoint-tool-block for checkpoint
 - backend actions: checkpoint
 
-### system-dynamic-workflows — Dynamic Workflows (default disabled)
-
-- nav: workflows-nav (/workflows)
-- settings: dynamicWorkflows.defaultAgentModel, dynamicWorkflows.defaultAgentAllowedTools, dynamicWorkflows.maxConcurrentAgents, dynamicWorkflows.maxTotalAgents, dynamicWorkflows.nodeTimeoutMinutes, dynamicWorkflows.workflowTimeoutMinutes
-- skills: dynamic-workflows
-- tools: workflow/workflow
-- transcriptBlocks: dynamic_workflow
-- views: page (/workflows)
-- backend actions: workflow, listWorkflows, getWorkflow, cancelWorkflow, listWorkflowTemplates, saveWorkflow, listSavedWorkflows, deleteSavedWorkflow, runSavedWorkflow
-
 ### system-excalidraw-input — Excalidraw input
 
 - composerInputTools: excalidraw
@@ -534,7 +515,6 @@ Validate these by installing from the catalog or release artifact and reading th
 - system-auto-router — Auto Router
 - system-ds4 — DS4
 - system-duckduckgo-search — DuckDuckGo Search
-- system-dynamic-workflows — Dynamic Workflows
 - system-exa-search — Exa Search
 - system-knowledge — Knowledge
 - system-suggested-context — Suggested Context

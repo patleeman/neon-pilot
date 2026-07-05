@@ -50,7 +50,7 @@ describe('extension package paths', () => {
     }
   });
 
-  it('does not auto-load default installable extensions from bundled extension roots', () => {
+  it('does not auto-load fork-excluded extensions from bundled extension roots', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const bundledRoot = join(tempRoot, 'extensions');
     const installablePackageRoot = writeExtension(bundledRoot, 'system-dynamic-workflows');

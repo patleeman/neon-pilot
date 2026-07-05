@@ -33,13 +33,6 @@ export const INSTALLABLE_EXTENSION_CATALOG: CatalogSeed[] = [
     tag: 'v0.10.2',
   },
   {
-    id: 'system-dynamic-workflows',
-    name: 'Dynamic Workflows',
-    description: 'Run model-authored JavaScript workflow coordinators that fan out daemon-backed subagents.',
-    version: '0.1.0',
-    tag: 'v0.11.14',
-  },
-  {
     id: 'system-exa-search',
     name: 'Exa Search',
     description: 'Agent tool for Exa web search.',

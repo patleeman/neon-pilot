@@ -106,7 +106,6 @@ Bundled system extensions:
 - [Conversation Tools](../extensions/system-conversation-tools/README.md) — conversation inspection, titles, working directories, and CLI commands
 - [Computer Use](../extensions/system-computer-use/README.md) — Cua Driver-backed native desktop app capture and control
 - [Diffs](../extensions/system-diffs/README.md) — checkpoint and workspace diff inspection
-- [Dynamic Workflows](../extensions/system-dynamic-workflows/README.md) — model-authored workflow coordinators that fan out daemon-backed subagents
 - [Excalidraw Input](../extensions/system-excalidraw-input/README.md) — composer drawing input
 - [Extension Manager](../extensions/system-extension-manager/README.md) — extension registry, validation, import/export, and diagnostics
 - [File Explorer](../extensions/system-files/README.md) — workspace file browsing
@@ -139,7 +138,6 @@ Optional first-party extensions from [`patleeman/neon-pilot-extensions`](https:/
 - [Agent Browser](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-agent-browser) — agent-browser CLI integration
 - [Auto Router](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-auto-router) — judge-based model routing controls
 - [DuckDuckGo Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-duckduckgo-search) — web search using DuckDuckGo's HTML page
-- [Dynamic Workflows](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-dynamic-workflows) — workflow coordinators that fan out daemon-backed subagents
 - [DS4](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-ds4) — local DeepSeek V4 Flash provider/profile for antirez/ds4
 - [Exa Search](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-exa-search) — Exa web search
 - [Knowledge](https://github.com/patleeman/neon-pilot-extensions/tree/main/system-knowledge) — legacy knowledge/reference browsing and editing

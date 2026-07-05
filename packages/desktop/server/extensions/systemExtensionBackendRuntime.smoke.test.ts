@@ -829,10 +829,10 @@ describe('system extension backend runtime smoke tests', () => {
     ).toEqual([]);
   });
 
-  it('does not pre-install default installable extensions', () => {
+  it('does not pre-install fork-excluded extensions', () => {
     const summary = listExtensionInstallSummaries().find((item) => item.id === 'system-dynamic-workflows');
 
-    expect(summary, 'system-dynamic-workflows should be available from the catalog, not pre-installed').toBeUndefined();
+    expect(summary, 'system-dynamic-workflows is fork-excluded and should not be pre-installed').toBeUndefined();
   });
 
   it('imports each prebuilt backend and exercises one safe runtime path', () => {

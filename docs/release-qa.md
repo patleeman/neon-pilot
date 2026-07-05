@@ -62,7 +62,7 @@ Record pass/fail notes, the commit SHA, and the app build used.
 7. **Extension registry and routes**
    - Open Extensions.
    - Confirm installed extensions render without diagnostics.
-   - Open release-critical routes such as Knowledge, Automations, Workflows, Settings, and any route changed in this release.
+   - Open release-critical routes such as Knowledge, Automations, Settings, and any route changed in this release.
 
 ## Release rule
 

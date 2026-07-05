@@ -2,14 +2,13 @@ import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isForkExcludedExtensionId } from './extensionForkExclusions.js';
 import { readConfiguredExtensionPaths, readEnvironmentExtensionPaths } from './extensionSearchPaths.js';
 
 export interface ExtensionPackagePath {
   packageRoot: string;
   source: 'bundled' | 'external';
 }
-
-const DEFAULT_INSTALLABLE_EXTENSION_IDS = new Set(['system-dynamic-workflows']);
 
 function resolveExplicitRepoRoot(): string | null {
   const repoRoot = process.env.NEON_PILOT_REPO_ROOT?.trim();
@@ -32,7 +31,7 @@ function candidateBundledExtensionRoots(): string[] {
 
 function shouldLoadBundledExtension(packageRoot: string, source: ExtensionPackagePath['source']): boolean {
   if (source !== 'bundled') return true;
-  return !DEFAULT_INSTALLABLE_EXTENSION_IDS.has(basename(packageRoot));
+  return !isForkExcludedExtensionId(basename(packageRoot));
 }
 
 function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath['source']): ExtensionPackagePath[] {
