@@ -6,31 +6,17 @@ import { addNotification } from '../components/notifications/notificationStore';
 import { ButtonLink, CenteredMessage, ErrorState, QuietLoadingState } from '../components/ui';
 import { ActivityPage } from '../pages/ActivityPage';
 import { DocumentsPage } from '../pages/DocumentsPage';
+import { InboxPage } from '../pages/InboxPage';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
 
 const STALE_EXTENSION_ROUTES = new Set<string>();
-const CORE_WINDOWED_PLACEHOLDER_PAGES = new Map<
-  string,
-  {
-    body: string;
-    title: string;
-  }
->([
-  // '/documents' is now handled by CORE_WINDOWED_FEATURE_PAGES; keep placeholder for '/inbox'
-  [
-    '/inbox',
-    {
-      title: 'Inbox pending',
-      body: 'Worker results, persona messages, and questions will arrive here after Inbox is wired to the documents store.',
-    },
-  ],
-]);
 
 const CORE_WINDOWED_FEATURE_PAGES = new Map<string, () => JSX.Element>([
   ['/activity', () => <ActivityPage />],
   ['/documents', () => <DocumentsPage />],
+  ['/inbox', () => <InboxPage />],
 ]);
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
   {
@@ -115,7 +101,6 @@ export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresent
     );
   }, [location.pathname, registry.extensions, registry.surfaces]);
   const staleExtensionRoute = STALE_EXTENSION_ROUTES.has(location.pathname);
-  const placeholderPage = CORE_WINDOWED_PLACEHOLDER_PAGES.get(location.pathname);
   const featurePage = CORE_WINDOWED_FEATURE_PAGES.get(location.pathname);
 
   useEffect(() => {
@@ -154,13 +139,6 @@ export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresent
       );
     }
     return <ErrorState message={`Apps unavailable: ${registry.error}`} />;
-  }
-
-  if (placeholderPage) {
-    if (shellPresentation === 'windowed') {
-      return <WindowedExtensionPageState title={placeholderPage.title}>{placeholderPage.body}</WindowedExtensionPageState>;
-    }
-    return <CenteredMessage eyebrow="Core app pending" title={placeholderPage.title} body={placeholderPage.body} />;
   }
 
   if (staleExtensionRoute) {

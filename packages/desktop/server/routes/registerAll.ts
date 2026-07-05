@@ -9,6 +9,7 @@ import { registerExtensionRoutes } from './extensions.js';
 import { registerFilePickerRoutes } from './filePicker.js';
 import { registerGatewayRoutes } from './gateways.js';
 import { registerGlobalActivityRoutes } from './globalActivity.js';
+import { registerInboxRoutes } from './inbox.js';
 import { registerLiveSessionRoutes } from './liveSessions.js';
 import { registerModelRoutes } from './models.js';
 import { registerRunAppRoutes } from './runsApp.js';
@@ -51,6 +52,8 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
   registerExecutionRoutes(app);
 
   registerGlobalActivityRoutes(app);
+
+  registerInboxRoutes(app, context);
 
   registerRunAppRoutes(app, context);
 

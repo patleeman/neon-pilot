@@ -1456,6 +1456,32 @@ export const api = {
     },
   },
 
+  // ── Inbox ───────────────────────────────────────────────────────
+
+  inbox: {
+    list: async (options?: { archived?: boolean; unreadOnly?: boolean; limit?: number; offset?: number }) => {
+      const params = new URLSearchParams();
+      if (options?.archived !== undefined) params.set('archived', String(options.archived));
+      if (options?.unreadOnly) params.set('unreadOnly', '1');
+      if (options?.limit !== undefined) params.set('limit', String(options.limit));
+      if (options?.offset !== undefined) params.set('offset', String(options.offset));
+      const qs = params.toString();
+      return get<import('../shared/types').InboxListResult>(`/api/inbox${qs ? `?${qs}` : ''}`);
+    },
+    get: async (id: string) => {
+      return get<import('../shared/types').DocumentResult>(`/api/inbox/${encodeURIComponent(id)}`);
+    },
+    create: async (input: import('../shared/types').InboxCreateInput) => {
+      return post<import('../shared/types').DocumentResult>('/api/inbox', input);
+    },
+    patch: async (id: string, input: import('../shared/types').InboxPatchInput) => {
+      return patch<import('../shared/types').DocumentResult>(`/api/inbox/${encodeURIComponent(id)}`, input);
+    },
+    delete: async (id: string) => {
+      return del<{ deleted: boolean }>(`/api/inbox/${encodeURIComponent(id)}`);
+    },
+  },
+
   // ── Setup readiness ─────────────────────────────────────────────
 
   setupReadiness: async () => get<SetupReadinessSnapshot>('/setup/readiness'),

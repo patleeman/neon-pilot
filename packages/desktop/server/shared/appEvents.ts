@@ -37,6 +37,7 @@ export type AppEventTopic =
   | 'workspace'
   | 'knowledgeBase'
   | 'notifications'
+  | 'inbox'
   | 'readiness';
 
 export type AppEvent =
@@ -152,6 +153,7 @@ const ALL_TOPICS: AppEventTopic[] = [
   'workspace',
   'knowledgeBase',
   'notifications',
+  'inbox',
   'readiness',
 ];
 const listeners = new Set<AppEventListener>();
@@ -413,6 +415,7 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     documents: [],
     knowledgeBase: [],
     notifications: [],
+    inbox: [],
     readiness: [],
   };
 }

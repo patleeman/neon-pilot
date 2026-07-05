@@ -30,6 +30,7 @@ const ALL_TOPICS = [
   'workspace',
   'knowledgeBase',
   'notifications',
+  'inbox',
   'readiness',
 ] as const;
 

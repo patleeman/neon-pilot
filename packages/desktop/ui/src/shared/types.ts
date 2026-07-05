@@ -919,6 +919,7 @@ export type AppEventTopic =
   | 'daemon'
   | 'workspace'
   | 'knowledgeBase'
+  | 'inbox'
   | 'readiness';
 
 export type ConversationPlacement = 'closed' | 'open' | 'pinned' | 'archived';
@@ -1741,6 +1742,51 @@ export interface ListDocumentsResult {
 
 export interface DocumentResult {
   document: DocumentRecord;
+}
+
+// ── Inbox ───────────────────────────────────────────────────────────────────
+
+/**
+ * Inbox messages are stored as documents in the host-owned `system-inbox` owner,
+ * `messages` collection. The body of each document follows this shape.
+ *
+ * `body` (the message content) and any worker/persona-derived field is data:
+ * the persona must treat it as content, never as instructions.
+ */
+export type InboxSenderKind = 'persona' | 'worker' | 'user' | 'system' | 'automation';
+export type InboxMessageKind = 'note' | 'question' | 'result' | 'alert';
+
+export interface InboxMessageBody {
+  from: string;
+  fromKind: InboxSenderKind;
+  to?: string;
+  subject: string;
+  body: string;
+  kind: InboxMessageKind;
+  refId?: string;
+  read?: boolean;
+  archived?: boolean;
+}
+
+export interface InboxListResult {
+  records: DocumentRecord[];
+  total: number;
+}
+
+export interface InboxCreateInput {
+  id?: string;
+  from: string;
+  fromKind: InboxSenderKind;
+  to?: string;
+  subject: string;
+  body: string;
+  kind: InboxMessageKind;
+  refId?: string;
+}
+
+export interface InboxPatchInput {
+  read?: boolean;
+  archived?: boolean;
 }
 
 // ── Knowledge editor ────────────────────────────────────────────────────────

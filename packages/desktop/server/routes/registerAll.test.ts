@@ -10,6 +10,7 @@ const routeModules = vi.hoisted(() => ({
   registerFilePickerRoutes: vi.fn(),
   registerGatewayRoutes: vi.fn(),
   registerGlobalActivityRoutes: vi.fn(),
+  registerInboxRoutes: vi.fn(),
   registerLiveSessionRoutes: vi.fn(),
   registerModelRoutes: vi.fn(),
   registerRunAppRoutes: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('./extensions.js', () => ({ registerExtensionRoutes: routeModules.regist
 vi.mock('./filePicker.js', () => ({ registerFilePickerRoutes: routeModules.registerFilePickerRoutes }));
 vi.mock('./globalActivity.js', () => ({ registerGlobalActivityRoutes: routeModules.registerGlobalActivityRoutes }));
 vi.mock('./gateways.js', () => ({ registerGatewayRoutes: routeModules.registerGatewayRoutes }));
+vi.mock('./inbox.js', () => ({ registerInboxRoutes: routeModules.registerInboxRoutes }));
 vi.mock('./liveSessions.js', () => ({ registerLiveSessionRoutes: routeModules.registerLiveSessionRoutes }));
 vi.mock('./models.js', () => ({ registerModelRoutes: routeModules.registerModelRoutes }));
 vi.mock('./runsApp.js', () => ({ registerRunAppRoutes: routeModules.registerRunAppRoutes }));
@@ -55,6 +57,7 @@ describe('registerServerRoutes', () => {
     expect(routeModules.registerDocumentsRoutes).toHaveBeenCalledWith(app, context);
     expect(routeModules.registerExecutionRoutes).toHaveBeenCalledWith(app);
     expect(routeModules.registerGlobalActivityRoutes).toHaveBeenCalledWith(app);
+    expect(routeModules.registerInboxRoutes).toHaveBeenCalledWith(app, context);
 
     for (const register of [
       routeModules.registerDocumentsRoutes,
@@ -71,6 +74,7 @@ describe('registerServerRoutes', () => {
       routeModules.registerRunAppRoutes,
       routeModules.registerFilePickerRoutes,
       routeModules.registerWorkspaceExplorerRoutes,
+      routeModules.registerInboxRoutes,
     ]) {
       expect(register).toHaveBeenCalledWith(app, context);
     }
@@ -90,6 +94,7 @@ describe('registerServerRoutes', () => {
       routeModules.registerLiveSessionRoutes,
       routeModules.registerExecutionRoutes,
       routeModules.registerGlobalActivityRoutes,
+      routeModules.registerInboxRoutes,
       routeModules.registerRunAppRoutes,
       routeModules.registerFilePickerRoutes,
       routeModules.registerWorkspaceExplorerRoutes,

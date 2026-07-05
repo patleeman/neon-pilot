@@ -228,7 +228,7 @@ describe('ExtensionPage', () => {
     expect(screen.queryByRole('link', { name: 'Go to Chat' })).toBeNull();
   });
 
-  it('renders core feature pages including DocumentsPage for /documents, pending state for /inbox, and ActivityPage for /activity', () => {
+  it('renders core feature pages including DocumentsPage for /documents, InboxPage for /inbox, and ActivityPage for /activity', () => {
     vi.mocked(useApi).mockReturnValue({
       data: { collections: [] },
       loading: false,
@@ -250,8 +250,8 @@ describe('ExtensionPage', () => {
     cleanup();
     vi.mocked(useApi).mockReset();
     vi.mocked(useApi).mockReturnValue({
-      data: null,
-      loading: true,
+      data: { records: [], total: 0 },
+      loading: false,
       refreshing: false,
       error: null,
       refetch: vi.fn(),
@@ -263,10 +263,8 @@ describe('ExtensionPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('status', { name: 'Inbox pending' })).toBeTruthy();
-    expect(
-      screen.getByText('Worker results, persona messages, and questions will arrive here after Inbox is wired to the documents store.'),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Inbox' })).toBeTruthy();
+    expect(screen.getByText('No messages yet')).toBeTruthy();
 
     cleanup();
     vi.mocked(useApi).mockReset();

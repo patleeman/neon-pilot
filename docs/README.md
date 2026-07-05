@@ -49,6 +49,7 @@ Pick the shortest path for what you are doing:
 - [Neon Pilot CLI](cli.md) — local control plane; extensions add administration commands with `contributes.cliCommands`
 - [CLI reference](cli-reference.md) — generated command contract reference for automation and scripts
 - [Telemetry](telemetry.md) — local JSONL telemetry logs, SQLite observability indexes, exports, and runtime producers
+- [Inbox](inbox.md) — host-owned attention queue backed by the shared documents store
 - [Activity tree](activity-tree.md) — shared model for conversations, executions, and future sidebar sub-items
 - [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
 - [SQLite migrations](sqlite-migrations.md) — shared versioned schema migration framework
