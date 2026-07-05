@@ -6463,7 +6463,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {
   border-top: var(--wos-border-strong) solid var(--wos-ink-900);
-  border-left: 0 !important;
   background: var(--wos-surface-1) !important;
   padding: var(--wos-space-4) var(--wos-space-5) !important;
   box-shadow: none !important;
@@ -6488,9 +6487,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   align-items: center;
   justify-content: flex-start;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
-  border-left: 0 !important;
-  border-left-width: 0 !important;
-  border-left-color: transparent !important;
   border-radius: 8px;
   background: var(--wos-surface-2);
   padding: 4px 9px;
@@ -6515,9 +6511,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .windowed-os-shell .wos-window-route-body--chat .ui-input-shell {
   border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
-  border-left: 0 !important;
-  border-left-width: 0 !important;
-  border-left-color: transparent !important;
   border-radius: 8px;
   background: var(--wos-surface-1) !important;
   box-shadow: none;

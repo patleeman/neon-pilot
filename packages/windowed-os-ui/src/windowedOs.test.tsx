@@ -1251,9 +1251,7 @@ describe('Windowed OS Storybook examples', () => {
     const inputShellRule =
       composerStyles.match(/\.windowed-os-shell \.wos-window-route-body--chat \.ui-input-shell \{[\s\S]*?\n\}/)?.[0] ?? '';
     expect(inputShellRule).toContain('border: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
-    expect(inputShellRule).toContain('border-left: 0 !important;');
-    expect(inputShellRule).toContain('border-left-width: 0 !important;');
-    expect(inputShellRule).toContain('border-left-color: transparent !important;');
+    expect(inputShellRule).not.toContain('border-left');
     expect(inputShellRule).toContain('border-radius: 8px;');
     expect(inputShellRule).not.toContain('border-top-left-radius: 0;');
     expect(inputShellRule).not.toContain('border-bottom-left-radius: 0;');
@@ -1447,7 +1445,7 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;\n  background: var(--wos-surface-1) !important;',
+      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: var(--wos-border-strong) solid var(--wos-ink-900);\n  background: var(--wos-surface-1) !important;',
     );
     expect(stylesSource).toContain('.wos-window-route-body--chat .conversation-composer-region');
     expect(stylesSource).toContain('z-index: 30;');
@@ -1464,7 +1462,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('overflow: visible;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;\n  border-left: 0 !important;',
+      '.windowed-os-shell .wos-window-route-body--chat .ui-input-shell {\n  border: var(--wos-border-strong) solid var(--wos-ink-900) !important;\n  border-radius: 8px;',
     );
     expect(stylesSource).toContain('.windowed-os-shell\n  .wos-window-route-body--chat\n  .conversation-composer-inner');
     expect(stylesSource).toContain(":where(input, textarea, button, select, [contenteditable='true'])");
@@ -1482,7 +1480,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-notice__pill');
     expect(stylesSource).toContain('display: inline-flex;\n  width: auto;\n  max-width: 100%;');
     expect(stylesSource).toContain(
-      'justify-content: flex-start;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
+      'justify-content: flex-start;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-radius: 8px;',
     );
     expect(stylesSource).toContain('border-radius: 8px;\n  background: var(--wos-surface-2);');
     expect(stylesSource).not.toContain('display: flex;\n  width: 100%;\n  min-height: 28px;');
@@ -1490,7 +1488,13 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(".windowed-os-shell .wos-window-route-body--chat .ui-composer-notice[data-tone='warning']");
     expect(stylesSource).toContain('background: color-mix(in srgb, var(--wos-warning) 14%, var(--wos-surface-2));');
     expect(stylesSource).toContain(
-      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: var(--wos-border-strong) solid var(--wos-ink-900);\n  border-left: 0 !important;',
+      '.windowed-os-shell .wos-window-route-body--chat .conversation-composer-region {\n  border-top: var(--wos-border-strong) solid var(--wos-ink-900);\n  background: var(--wos-surface-1) !important;',
+    );
+    expect(
+      stylesSource.match(/\.windowed-os-shell \.wos-window-route-body--chat \.ui-composer-notice__pill \{[^}]+}/)?.[0] ?? '',
+    ).not.toContain('border-left');
+    expect(stylesSource.match(/\.windowed-os-shell \.wos-window-route-body--chat \.ui-input-shell \{[^}]+}/)?.[0] ?? '').not.toContain(
+      'border-left',
     );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .border-l,');
     expect(stylesSource).not.toContain('box-shadow: inset 5px 0 0 var(--wos-warning);');
