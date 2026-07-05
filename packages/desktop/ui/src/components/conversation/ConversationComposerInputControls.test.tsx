@@ -223,6 +223,15 @@ describe('ConversationComposerInputControls', () => {
     expect(html).toContain('ui-composer-preferences-row');
   });
 
+  it('can render the composer control row above the editor for windowed chat chrome', () => {
+    const html = renderControls({ controlRowPlacement: 'top' });
+
+    expect(html).toContain('ui-composer-input-controls__control-row--top');
+    expect(html.indexOf('ui-composer-input-controls__control-row')).toBeLessThan(html.indexOf('ui-composer-input-controls__editor'));
+    expect(html).toContain('extension-model-preferences:');
+    expect(html).toContain('aria-label="Send"');
+  });
+
   it('accepts multimedia probe file types from the hidden composer input', () => {
     const rendered = renderInteractive(
       <ConversationComposerInputControls

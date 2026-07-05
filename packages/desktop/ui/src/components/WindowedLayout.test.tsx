@@ -7,7 +7,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WINDOWED_PARENT_WINDOW_LIFECYCLE_EVENT, type WindowedParentWindowLifecycleDetail } from '../windowed/windowedChildWindowEvents';
-import { DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
 import { WindowedLayout } from './WindowedLayout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
 
@@ -433,30 +432,9 @@ describe('WindowedLayout route windows', () => {
     ).toBe('icon');
     expect((within(chatWindow).getByRole('button', { name: /open terminal window/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')).toBeNull();
-    expect(chatWindow.querySelector('.wos-chat-window-toolbar__status-label')?.textContent?.trim()).toBe('Chat');
-    expect(chatWindow.querySelector('.wos-chat-window-toolbar__status-detail')?.textContent?.trim()).toBe('No workspace');
-    expect(
-      within(chatWindow)
-        .getByRole('button', { name: /chat no workspace/i })
-        .getAttribute('title'),
-    ).toBe('Choose workspace');
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__status')).toBeNull();
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(3);
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
-  });
-
-  it('opens the draft workspace picker from the top chat context control', () => {
-    const toggleHandler = vi.fn();
-    window.addEventListener(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT, toggleHandler);
-    try {
-      renderWindowedLayout();
-
-      const chatWindow = screen.getByRole('region', { name: /new conversation/i });
-      fireEvent.click(within(chatWindow).getByRole('button', { name: /chat no workspace/i }));
-
-      expect(toggleHandler).toHaveBeenCalledTimes(1);
-    } finally {
-      window.removeEventListener(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT, toggleHandler);
-    }
   });
 
   it('suppresses the legacy attached workbench even when stored state requested it open', () => {

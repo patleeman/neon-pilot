@@ -19,6 +19,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { ComposerDrawingAttachment } from '../../conversation/promptAttachments';
 import { setExtensionCommandContext } from '../../extensions/commands';
@@ -266,7 +267,9 @@ function inputControlsPropsAreEqual(prev: ConversationComposerInputControlsProps
     prev.onAbortStream === next.onAbortStream &&
     prev.conversationId === next.conversationId &&
     prev.parentWindowId === next.parentWindowId &&
-    prev.parentWindowTitle === next.parentWindowTitle
+    prev.parentWindowTitle === next.parentWindowTitle &&
+    prev.controlRowPlacement === next.controlRowPlacement &&
+    prev.controlRowPortalTarget === next.controlRowPortalTarget
   );
 }
 
@@ -310,6 +313,8 @@ interface ConversationComposerInputControlsProps {
   onSubmitComposerQuestion: () => void;
   onSubmitComposerActionForModifiers: (altKeyHeld: boolean) => void;
   onAbortStream: () => void;
+  controlRowPlacement?: 'top' | 'bottom';
+  controlRowPortalTarget?: Element | null;
 }
 
 export const ConversationComposerInputControls = memo(function ConversationComposerInputControls({
@@ -352,6 +357,8 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   conversationId,
   parentWindowId,
   parentWindowTitle,
+  controlRowPlacement = 'bottom',
+  controlRowPortalTarget,
 }: ConversationComposerInputControlsProps) {
   const { composerControls = [], composerInputTools = [] } = useExtensionRegistry();
   const composerControlId = useId();
@@ -508,151 +515,162 @@ export const ConversationComposerInputControls = memo(function ConversationCompo
   const shouldKeepControlRowInline = composerShellWidth === null || composerShellWidth >= 420;
   const shouldCollapseCorePreferences = !shouldKeepControlRowInline;
   const shouldRenderCoreModelPreferences = !hasExtensionModelPreferencesControl;
-
-  return (
-    <div className="ui-composer-input-controls px-3 pt-2.5 pb-2.5">
-      {/* ui-pattern-ok raw-control reason="Hidden native file input is required to open the browser file picker and is triggered by shared composer controls." */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*,audio/*,.pdf,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.html,.htm,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.log,.excalidraw,application/json,application/pdf"
-        multiple
-        className="hidden"
-        onChange={(event) => {
-          const files = Array.from(event.target.files ?? []);
-          if (files.length > 0) {
-            onFilesSelected(files);
-          }
-          event.target.value = '';
-        }}
-      />
-
-      <div className="ui-composer-input-controls__body flex flex-col gap-0">
-        <div className="ui-composer-input-controls__editor px-1 pt-1">
-          <Textarea
-            ref={textareaRef}
-            value={localInput}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              const target = event.target;
-              activateComposer();
-              setLocalInput(nextValue);
-              requestAnimationFrame(() => onRememberComposerSelection(target));
-              onInputChange(nextValue, target);
-            }}
-            onSelect={(event) => {
-              activateComposer();
-              onRememberComposerSelection(event.currentTarget);
-            }}
-            onClick={(event) => {
-              activateComposer();
-              onRememberComposerSelection(event.currentTarget);
-            }}
-            onKeyUp={(event) => {
-              activateComposer();
-              onRememberComposerSelection(event.currentTarget);
-            }}
-            onFocus={(event) => {
-              activateComposer();
-              setComposerFocusedCommandContext(true);
-              onRememberComposerSelection(event.currentTarget);
-            }}
-            onBlur={() => {
-              setComposerFocusedCommandContext(false);
-            }}
-            onKeyDown={onKeyDown}
-            onPaste={onPaste}
-            rows={1}
-            disabled={composerDisabled}
-            className="w-full resize-none overscroll-contain !border-0 !bg-transparent !p-0 text-sm leading-relaxed text-primary outline-none placeholder:text-dim hover:!bg-transparent focus:!border-0 focus:!bg-transparent disabled:cursor-default disabled:text-dim"
-            placeholder={
-              pendingAskUserQuestion
-                ? 'Answer 1-9, or type to skip…'
-                : (composerPlaceholder ?? 'Message Neon Pilot…   /  commands · ⇧↵ newline')
-            }
-            title={
-              pendingAskUserQuestion
-                ? '1-9 selects the current answer. Tab/Shift+Tab or ←/→ moves between questions. Enter selects or submits. Ctrl+C clears the composer.'
-                : 'Ctrl+C clears the composer. Alt+Enter queues a follow up while the conversation is busy. ↑/↓ recalls recent prompts.'
-            }
-            style={{ minHeight: '44px', maxHeight: '160px', WebkitOverflowScrolling: 'touch' }}
+  const shouldPortalControlRow = controlRowPlacement === 'top' && controlRowPortalTarget;
+  const controlRow = (
+    <div
+      className={cx(
+        'ui-composer-input-controls__control-row flex min-w-0 flex-wrap items-center gap-1.5',
+        controlRowPlacement === 'top'
+          ? 'ui-composer-input-controls__control-row--top border-b border-dashed border-border-subtle px-1 py-2 pt-0'
+          : 'border-t border-dashed border-border-subtle px-1 py-2 pb-0',
+        shouldKeepControlRowInline && 'flex-nowrap',
+      )}
+    >
+      <div
+        className={cx(
+          'ui-composer-input-controls__leading flex min-w-0 flex-1 flex-wrap items-center gap-1.5',
+          shouldKeepControlRowInline && 'flex-nowrap',
+        )}
+      >
+        <CoreAttachControl disabled={composerDisabled} onOpenFilePicker={onOpenFilePicker} />
+        {visibleLeadingControls.map((control) => (
+          <ComposerButtonHost
+            key={`${control.extensionId}:${control.id}`}
+            registration={control}
+            controlContext={{ ...composerControlContext, renderMode: 'inline' }}
           />
-        </div>
+        ))}
+        <CoreDrawingControl
+          conversationId={conversationId}
+          parentWindowId={parentWindowId}
+          parentWindowTitle={parentWindowTitle}
+          disabled={composerDisabled}
+          onUpsertDrawingAttachment={onUpsertDrawingAttachment}
+        />
+        {visibleComposerInputTools.map((tool) => (
+          <ComposerInputToolHost
+            key={`${tool.extensionId}:${tool.id}`}
+            registration={tool}
+            toolContext={{
+              conversationId,
+              composerDisabled,
+              streamIsStreaming,
+              composerHasContent,
+              addFiles: onFilesSelected,
+              upsertDrawingAttachment: onUpsertDrawingAttachment,
+            }}
+          />
+        ))}
+        {shouldRenderCoreModelPreferences ? (
+          <CoreModelPreferenceFallback disabled={composerDisabled} onInsertCommand={insertComposerTextFromExtension} />
+        ) : null}
+        <ConversationPreferencesRow
+          composerControls={visiblePreferenceControls}
+          composerControlContext={composerControlContext}
+          inlineLimit={getComposerPreferenceInlineLimit(composerShellWidth)}
+          respondToSettingsCommands={hasExtensionModelPreferencesControl && shouldCollapseCorePreferences}
+        />
+      </div>
 
-        <div
-          className={cx(
-            'ui-composer-input-controls__control-row flex min-w-0 flex-wrap items-center gap-1.5 border-t border-dashed border-border-subtle px-1 py-2 pb-0',
-            shouldKeepControlRowInline && 'flex-nowrap',
-          )}
-        >
-          <div
-            className={cx(
-              'ui-composer-input-controls__leading flex min-w-0 flex-1 flex-wrap items-center gap-1.5',
-              shouldKeepControlRowInline && 'flex-nowrap',
-            )}
-          >
-            <CoreAttachControl disabled={composerDisabled} onOpenFilePicker={onOpenFilePicker} />
-            {visibleLeadingControls.map((control) => (
-              <ComposerButtonHost
-                key={`${control.extensionId}:${control.id}`}
-                registration={control}
-                controlContext={{ ...composerControlContext, renderMode: 'inline' }}
-              />
-            ))}
-            <CoreDrawingControl
-              conversationId={conversationId}
-              parentWindowId={parentWindowId}
-              parentWindowTitle={parentWindowTitle}
-              disabled={composerDisabled}
-              onUpsertDrawingAttachment={onUpsertDrawingAttachment}
-            />
-            {visibleComposerInputTools.map((tool) => (
-              <ComposerInputToolHost
-                key={`${tool.extensionId}:${tool.id}`}
-                registration={tool}
-                toolContext={{
-                  conversationId,
-                  composerDisabled,
-                  streamIsStreaming,
-                  composerHasContent,
-                  addFiles: onFilesSelected,
-                  upsertDrawingAttachment: onUpsertDrawingAttachment,
-                }}
-              />
-            ))}
-            {shouldRenderCoreModelPreferences ? (
-              <CoreModelPreferenceFallback disabled={composerDisabled} onInsertCommand={insertComposerTextFromExtension} />
-            ) : null}
-            <ConversationPreferencesRow
-              composerControls={visiblePreferenceControls}
-              composerControlContext={composerControlContext}
-              inlineLimit={getComposerPreferenceInlineLimit(composerShellWidth)}
-              respondToSettingsCommands={hasExtensionModelPreferencesControl && shouldCollapseCorePreferences}
-            />
-          </div>
-
-          <div className="ui-composer-input-controls__actions ml-auto shrink-0">
-            <ConversationComposerActions
-              composerDisabled={composerDisabled}
-              streamIsStreaming={streamIsStreaming}
-              conversationNeedsTakeover={conversationNeedsTakeover}
-              composerHasContent={composerHasContent}
-              composerShowsQuestionSubmit={composerShowsQuestionSubmit}
-              composerQuestionCanSubmit={composerQuestionCanSubmit}
-              composerQuestionRemainingCount={composerQuestionRemainingCount}
-              composerQuestionSubmitting={composerQuestionSubmitting}
-              composerSubmitLabel={composerSubmitLabel}
-              composerAltHeld={composerAltHeld}
-              currentServiceTier={currentServiceTier}
-              onInsertComposerText={insertComposerTextFromExtension}
-              onAppendComposerText={appendComposerTextFromExtension}
-              onSubmitComposerQuestion={onSubmitComposerQuestion}
-              onSubmitComposerActionForModifiers={onSubmitComposerActionForModifiers}
-              onAbortStream={onAbortStream}
-            />
-          </div>
-        </div>
+      <div className="ui-composer-input-controls__actions ml-auto shrink-0">
+        <ConversationComposerActions
+          composerDisabled={composerDisabled}
+          streamIsStreaming={streamIsStreaming}
+          conversationNeedsTakeover={conversationNeedsTakeover}
+          composerHasContent={composerHasContent}
+          composerShowsQuestionSubmit={composerShowsQuestionSubmit}
+          composerQuestionCanSubmit={composerQuestionCanSubmit}
+          composerQuestionRemainingCount={composerQuestionRemainingCount}
+          composerQuestionSubmitting={composerQuestionSubmitting}
+          composerSubmitLabel={composerSubmitLabel}
+          composerAltHeld={composerAltHeld}
+          currentServiceTier={currentServiceTier}
+          onInsertComposerText={insertComposerTextFromExtension}
+          onAppendComposerText={appendComposerTextFromExtension}
+          onSubmitComposerQuestion={onSubmitComposerQuestion}
+          onSubmitComposerActionForModifiers={onSubmitComposerActionForModifiers}
+          onAbortStream={onAbortStream}
+        />
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {shouldPortalControlRow ? createPortal(controlRow, controlRowPortalTarget) : null}
+      <div className="ui-composer-input-controls px-3 pt-2.5 pb-2.5">
+        {/* ui-pattern-ok raw-control reason="Hidden native file input is required to open the browser file picker and is triggered by shared composer controls." */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,audio/*,.pdf,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.html,.htm,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.log,.excalidraw,application/json,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            if (files.length > 0) {
+              onFilesSelected(files);
+            }
+            event.target.value = '';
+          }}
+        />
+
+        <div className="ui-composer-input-controls__body flex flex-col gap-0">
+          {controlRowPlacement === 'top' && !shouldPortalControlRow ? controlRow : null}
+          <div className="ui-composer-input-controls__editor px-1 pt-1">
+            <Textarea
+              ref={textareaRef}
+              value={localInput}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                const target = event.target;
+                activateComposer();
+                setLocalInput(nextValue);
+                requestAnimationFrame(() => onRememberComposerSelection(target));
+                onInputChange(nextValue, target);
+              }}
+              onSelect={(event) => {
+                activateComposer();
+                onRememberComposerSelection(event.currentTarget);
+              }}
+              onClick={(event) => {
+                activateComposer();
+                onRememberComposerSelection(event.currentTarget);
+              }}
+              onKeyUp={(event) => {
+                activateComposer();
+                onRememberComposerSelection(event.currentTarget);
+              }}
+              onFocus={(event) => {
+                activateComposer();
+                setComposerFocusedCommandContext(true);
+                onRememberComposerSelection(event.currentTarget);
+              }}
+              onBlur={() => {
+                setComposerFocusedCommandContext(false);
+              }}
+              onKeyDown={onKeyDown}
+              onPaste={onPaste}
+              rows={1}
+              disabled={composerDisabled}
+              className="w-full resize-none overscroll-contain !border-0 !bg-transparent !p-0 text-sm leading-relaxed text-primary outline-none placeholder:text-dim hover:!bg-transparent focus:!border-0 focus:!bg-transparent disabled:cursor-default disabled:text-dim"
+              placeholder={
+                pendingAskUserQuestion
+                  ? 'Answer 1-9, or type to skip…'
+                  : (composerPlaceholder ?? 'Message Neon Pilot…   /  commands · ⇧↵ newline')
+              }
+              title={
+                pendingAskUserQuestion
+                  ? '1-9 selects the current answer. Tab/Shift+Tab or ←/→ moves between questions. Enter selects or submits. Ctrl+C clears the composer.'
+                  : 'Ctrl+C clears the composer. Alt+Enter queues a follow up while the conversation is busy. ↑/↓ recalls recent prompts.'
+              }
+              style={{ minHeight: '44px', maxHeight: '160px', WebkitOverflowScrolling: 'touch' }}
+            />
+          </div>
+
+          {controlRowPlacement === 'bottom' ? controlRow : null}
+        </div>
+      </div>
+    </>
   );
 }, inputControlsPropsAreEqual);

@@ -1160,7 +1160,9 @@ describe('ConversationPage', () => {
 
     expect(html).not.toContain('conversation-header');
     expect(html).not.toContain('ui-conversation-title-display');
-    expect(html).toContain('Saved workspace');
+    expect(html).toContain('conversation-windowed-composer-toolbar');
+    expect(html).not.toContain('Saved workspace');
+    expect(html).not.toContain('Chat — no workspace');
   });
 
   it('keeps the conversation title header in the stable draft route', () => {

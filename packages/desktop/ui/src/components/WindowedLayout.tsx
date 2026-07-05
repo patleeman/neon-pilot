@@ -69,7 +69,6 @@ import {
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
 import { dispatchWindowedParentWindowLifecycle } from '../windowed/windowedChildWindowEvents';
-import { DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
 import { Layout } from './Layout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
@@ -1212,7 +1211,6 @@ function WindowedChatToolbarIcon({ name }: { name: WindowedChatToolbarIconName }
 
 function WindowRouteBody({
   compact = false,
-  workspaceCwd,
   onOpenBrowserWindow,
   onOpenFilesWindow,
   onNavigate,
@@ -1220,7 +1218,6 @@ function WindowRouteBody({
   route,
 }: {
   compact?: boolean;
-  workspaceCwd?: string | null;
   onOpenBrowserWindow: () => void;
   onOpenFilesWindow: () => void;
   onNavigate: WindowNavigate;
@@ -1235,11 +1232,6 @@ function WindowRouteBody({
   const browserUnavailable = extensionRegistry.loading || !browserSurface;
   const filesUnavailable = extensionRegistry.loading || !filesSurface;
   const terminalUnavailable = extensionRegistry.loading || !terminalSurface;
-  const workspaceStatusDetail = workspaceCwd?.trim() ? workspaceCwd : 'No workspace';
-  const handleWorkspaceStatusSelect = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    window.dispatchEvent(new Event(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
-  }, []);
   const toolLauncherItems = useMemo<WindowedChatToolLauncherItem[]>(
     () => [
       {
@@ -1311,13 +1303,7 @@ function WindowRouteBody({
       data-compact={compact ? 'true' : undefined}
       data-workbench-collapsed="true"
     >
-      <WindowedChatToolLauncher
-        items={toolLauncherItems}
-        statusLabel="Chat"
-        statusDetail={workspaceStatusDetail}
-        statusTitle={workspaceCwd?.trim() ? 'Change workspace' : 'Choose workspace'}
-        onStatusSelect={handleWorkspaceStatusSelect}
-      />
+      <WindowedChatToolLauncher items={toolLauncherItems} />
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
           <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench={false} suppressWorkbench />}>
@@ -2177,7 +2163,6 @@ export function WindowedLayout() {
               ) : (
                 <WindowRouteBody
                   compact={windowModel.kind === 'chat' && windowModel.bounds.width < 720}
-                  workspaceCwd={windowModel.kind === 'chat' ? windowModel.workspaceCwd : null}
                   route={windowModel.route}
                   onNavigate={(to) => navigateWindow(windowModel.id, to)}
                   onOpenBrowserWindow={() => openBrowserWindow(windowModel.id)}

@@ -199,7 +199,7 @@ export function WindowedChatToolLauncher({
     </>
   ) : null;
   return (
-    <div className={cx('wos-chat-window-toolbar', className)} aria-label={ariaLabel}>
+    <div className={cx('wos-chat-window-toolbar', className)} data-has-status={statusLabel ? 'true' : 'false'} aria-label={ariaLabel}>
       {statusLabel && onStatusSelect ? (
         <button type="button" className="wos-chat-window-toolbar__status" title={statusTitle} onClick={onStatusSelect}>
           {statusContent}

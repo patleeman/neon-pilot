@@ -1818,12 +1818,14 @@ export function ConversationPage({
   });
   const showConversationLoadingState =
     showBootstrapLoadingState || (!hasRenderableMessages && (sessionLoading || hydratingLiveConversation));
-  const showNewConversationSetup = shouldShowNewConversationSetup({
-    draft,
-    hasRenderableMessages,
-    showConversationLoadingState,
-    hasSessionError: Boolean(sessionError),
-  });
+  const showNewConversationSetup =
+    !embeddedWindowChrome &&
+    shouldShowNewConversationSetup({
+      draft,
+      hasRenderableMessages,
+      showConversationLoadingState,
+      hasSessionError: Boolean(sessionError),
+    });
   const scrollBinding = resolveConversationVisibleScrollBinding({
     draft,
     routeConversationId: id,
@@ -3457,6 +3459,7 @@ export function ConversationPage({
     branchLabel,
     hasGitSummary,
   });
+  const [windowedComposerToolbarElement, setWindowedComposerToolbarElement] = useState<HTMLDivElement | null>(null);
 
   const lastUpsertedSessionRef = useRef<string>('');
 
@@ -8586,6 +8589,11 @@ export function ConversationPage({
 
   return (
     <div className="conversation-page-shell flex h-full flex-col overflow-hidden">
+      {embeddedWindowChrome ? (
+        <div className="conversation-windowed-composer-toolbar px-4 py-3 sm:px-6 lg:px-10">
+          <div ref={setWindowedComposerToolbarElement} className="conversation-windowed-composer-toolbar__inner mx-auto w-full max-w-6xl" />
+        </div>
+      ) : null}
       {transcriptPane}
       {/* Input area */}
       {!keyboardOpen && (
@@ -8881,10 +8889,12 @@ export function ConversationPage({
               onAbortStream={() => {
                 void stopStreamAndRestoreQueuedPrompts();
               }}
+              controlRowPlacement={embeddedWindowChrome ? 'top' : 'bottom'}
+              controlRowPortalTarget={embeddedWindowChrome ? windowedComposerToolbarElement : null}
             />
           }
           composerMeta={
-            showComposerMeta ? (
+            !embeddedWindowChrome && showComposerMeta ? (
               <ConversationComposerMeta
                 draft={draft}
                 hasDraftCwd={hasDraftCwd}

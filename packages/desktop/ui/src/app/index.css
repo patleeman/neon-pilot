@@ -1580,6 +1580,18 @@ body {
   container-type: inline-size;
 }
 
+.conversation-page-shell .conversation-windowed-composer-toolbar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--base);
+}
+
+.conversation-page-shell .conversation-windowed-composer-toolbar .ui-composer-input-controls__control-row {
+  border-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 @container (max-width: 520px) {
   .conversation-page-shell .conversation-header {
     padding-left: 1rem;
