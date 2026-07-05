@@ -661,6 +661,11 @@ describe('WindowedLayout route windows', () => {
           nav: [{ id: 'diagnostics', label: 'Diagnostics', route: '/telemetry' }],
         },
       },
+      {
+        id: 'system-model-gateway',
+        enabled: true,
+        contributes: {},
+      },
     ];
     renderWindowedLayout();
 
@@ -777,14 +782,17 @@ describe('WindowedLayout route windows', () => {
     }
   });
 
-  it('keeps canonical beta apps available when extension nav contributions are missing', async () => {
+  it('keeps enabled canonical beta apps available when extension nav contributions are missing', async () => {
     mocks.extensions = [
       {
         id: 'system-automations',
+        enabled: true,
+        contributes: {},
+      },
+      {
+        id: 'system-dynamic-workflows',
         enabled: false,
-        contributes: {
-          nav: [{ id: 'automations', label: 'Automations', route: '/automations' }],
-        },
+        contributes: {},
       },
       {
         id: 'system-routines',
@@ -802,7 +810,8 @@ describe('WindowedLayout route windows', () => {
     const menuTitles = Array.from(container.querySelectorAll('.wos-start-menu__item .wos-app-tile__label')).map(
       (element) => element.textContent,
     );
-    expect(menuTitles).toEqual(CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title));
+    expect(menuTitles).toEqual(['Chat', 'Automations', 'Routines', 'Settings']);
+    expect(menuTitles).not.toContain('Workflows');
 
     fireEvent.mouseDown(within(startMenu).getByRole('button', { name: /^automations$/i }), { button: 0 });
 
@@ -1401,6 +1410,14 @@ describe('WindowedLayout route windows', () => {
         contributes: {
           nav: [{ id: 'gateways-nav', label: 'Gateways', route: '/gateways' }],
           views: [{ id: 'gateways-page', title: 'Gateways', location: 'main', route: '/gateways' }],
+        },
+      },
+      {
+        id: 'system-model-gateway',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'ai-gateway-nav', label: 'AI Gateway', route: '/ai-gateway' }],
+          views: [{ id: 'ai-gateway-page', title: 'AI Gateway', location: 'main', route: '/ai-gateway' }],
         },
       },
       {

@@ -171,6 +171,17 @@ const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_
   diagnostics: '/telemetry',
   settings: '/settings',
 };
+const CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS: Readonly<Partial<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>>> = {
+  automations: 'system-automations',
+  workflows: 'system-dynamic-workflows',
+  gateways: 'system-gateways',
+  'ai-gateway': 'system-model-gateway',
+  'model-arena': 'system-model-arena',
+  routines: 'system-routines',
+  extensions: 'system-extension-manager',
+  skills: 'system-skills',
+  diagnostics: 'system-telemetry',
+};
 const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
 function createId(input: Pick<WindowedAppRegistration, 'kind' | 'route' | 'id'>, suffix?: string): string {
@@ -428,6 +439,9 @@ function buildWindowedAppRegistry(extensionRegistry: ReturnType<typeof useExtens
   const [chatApp, settingsApp] = CORE_WINDOWED_APPS;
   const seen = new Set(CORE_WINDOWED_APPS.map((item) => item.route));
   const seenTitles = new Set(CORE_WINDOWED_APPS.map((item) => item.title));
+  const enabledExtensionIds = new Set(
+    extensionRegistry.extensions.filter((extension) => extension.enabled).map((extension) => extension.id),
+  );
   const dynamic = extensionRegistry.extensions
     .filter((extension) => extension.enabled)
     .flatMap((extension) => {
@@ -451,6 +465,8 @@ function buildWindowedAppRegistry(extensionRegistry: ReturnType<typeof useExtens
 
   const canonicalFallbacks = CANONICAL_WINDOWED_DESKTOP_APPS.flatMap((app): WindowedAppRegistration[] => {
     if (app.id === 'chat' || app.id === 'settings') return [];
+    const ownerExtensionId = CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS[app.id];
+    if (ownerExtensionId && !enabledExtensionIds.has(ownerExtensionId)) return [];
     const route = CANONICAL_WINDOWED_APP_ROUTES[app.id];
     if (seen.has(route) || seenTitles.has(app.title)) return [];
     seen.add(route);
