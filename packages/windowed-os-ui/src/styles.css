@@ -2412,28 +2412,28 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-chat-window-toolbar {
   display: flex;
-  min-height: 42px;
+  min-height: 48px;
   min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 6px 8px;
+  gap: 8px 10px;
   border-bottom: 2px solid var(--wos-ink-900);
   background: var(--wos-surface-1);
-  padding: 5px 8px;
+  padding: 6px 10px;
   box-shadow: inset 0 -2px 0 var(--wos-surface-3);
 }
 
 .wos-chat-window-toolbar__label {
   display: inline-flex;
-  min-height: 28px;
+  min-height: 32px;
   min-width: 0;
   align-items: center;
   overflow: hidden;
   border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);
   border-radius: 7px;
   background: var(--wos-surface-2);
-  padding: 0 8px;
+  padding: 0 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--wos-ink-900);
@@ -2453,8 +2453,8 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 
 .wos-chat-window-toolbar__button {
   display: inline-flex;
-  height: 28px;
-  min-width: 28px;
+  height: 32px;
+  min-width: 32px;
   align-items: center;
   justify-content: center;
   border: 2px solid var(--wos-ink-900);
@@ -2467,14 +2467,14 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 }
 
 .wos-chat-window-toolbar__button[data-density='icon'] {
-  width: 30px;
-  flex: 0 0 30px;
+  width: 34px;
+  flex: 0 0 34px;
   padding: 0;
 }
 
 .wos-chat-window-toolbar__button svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   stroke-width: 2;
 }
 
@@ -7484,10 +7484,10 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > button,
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > div > button:not(.ui-context-menu-item),
 .windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
   border: var(--wos-border-strong) solid var(--wos-ink-900) !important;
   border-radius: 7px;
   background: var(--wos-surface-1) !important;
@@ -7519,7 +7519,7 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker 
   display: inline-flex;
   min-width: 0;
   max-width: 128px;
-  min-height: 28px;
+  min-height: 30px;
   align-items: center;
   border: var(--wos-border-strong) solid var(--wos-ink-900);
   border-radius: 7px;

@@ -1976,7 +1976,7 @@ function GatewaysPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
                   name="Telegram"
                   meta="Bot token saved"
                   status={<WindowedBadge tone="positive">polling</WindowedBadge>}
-                  action="Settings"
+                  action={<WindowedPageButton>Settings</WindowedPageButton>}
                 />
               </WindowedDataTable>
             </WindowedPageSection>
@@ -2730,14 +2730,12 @@ function DiagnosticsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
                 <WindowedDataRow
                   name="gpt-5.4"
                   meta="primary chat"
-                  status={<WindowedBadge tone="positive">1.1M</WindowedBadge>}
-                  action="71%"
+                  cells={[{ value: <WindowedBadge tone="positive">1.1M</WindowedBadge> }, { value: '71%', align: 'right' }]}
                 />
                 <WindowedDataRow
                   name="gpt-5.4-mini"
                   meta="subagents and checks"
-                  status={<WindowedBadge tone="neutral">412K</WindowedBadge>}
-                  action="63%"
+                  cells={[{ value: <WindowedBadge tone="neutral">412K</WindowedBadge> }, { value: '63%', align: 'right' }]}
                 />
               </WindowedDataTable>
             </WindowedPageSection>
@@ -2747,14 +2745,12 @@ function DiagnosticsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
                 <WindowedDataRow
                   name="exec_command"
                   meta="local validation"
-                  status={<WindowedBadge tone="positive">128</WindowedBadge>}
-                  action="0"
+                  cells={[{ value: <WindowedBadge tone="positive">128</WindowedBadge> }, { value: '0', align: 'right' }]}
                 />
                 <WindowedDataRow
                   name="browser_snapshot"
                   meta="Browser app"
-                  status={<WindowedBadge tone="warning">18</WindowedBadge>}
-                  action="2"
+                  cells={[{ value: <WindowedBadge tone="warning">18</WindowedBadge> }, { value: '2', align: 'right' }]}
                 />
               </WindowedDataTable>
             </WindowedPageSection>

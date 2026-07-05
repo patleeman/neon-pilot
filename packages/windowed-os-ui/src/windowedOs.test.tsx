@@ -1422,19 +1422,22 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-window-route-body--chat {\n  display: grid;\n  grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar {\n  display: flex;');
-    expect(stylesSource).toContain('min-height: 42px;');
+    expect(stylesSource).toContain('min-height: 48px;');
     expect(stylesSource).toContain('flex-wrap: wrap;');
     expect(stylesSource).toContain('justify-content: space-between;');
-    expect(stylesSource).toContain('gap: 6px 8px;');
+    expect(stylesSource).toContain('gap: 8px 10px;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900);');
+    expect(stylesSource).toContain('padding: 6px 10px;');
     expect(stylesSource).toContain('box-shadow: inset 0 -2px 0 var(--wos-surface-3);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__label');
+    expect(stylesSource).toContain('min-height: 32px;');
     expect(stylesSource).toContain('border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__actions');
     expect(stylesSource).toContain('flex: 0 1 auto;');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[data-density='icon']");
-    expect(stylesSource).toContain('flex: 0 0 30px;');
+    expect(stylesSource).toContain('flex: 0 0 34px;');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button svg');
+    expect(stylesSource).toContain('width: 16px;');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
     expect(stylesSource).toContain('color: var(--wos-accent-ink);');
   });
@@ -1564,7 +1567,9 @@ describe('Windowed OS Storybook examples', () => {
       '.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row > div > button:not(.ui-context-menu-item)',
     );
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-actions > button.ui-icon-button');
+    expect(stylesSource).toContain('width: 30px;\n  min-width: 30px;\n  height: 30px;\n  min-height: 30px;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-composer-preferences-row .ui-menu-trigger-inline');
+    expect(stylesSource).toContain('min-height: 30px;\n  align-items: center;');
     expect(stylesSource).toContain('border-radius: 7px;\n  background: var(--wos-surface-1);\n  padding: 0 8px;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static');
     expect(stylesSource).toContain('width: fit-content;');
@@ -2993,6 +2998,7 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical Gateways desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const gatewaysSource = source.slice(source.indexOf('function GatewaysPageStory'), source.indexOf('export const GatewaysPage'));
 
     expect(source).toContain('function GatewaysPageStory');
     expect(source).toContain('export const GatewaysPage');
@@ -3007,6 +3013,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('subwindowId="gateway-configuration"');
     expect(source).toContain('className="wos-gateway-dialog wos-gateway-dialog--configuration"');
     expect(source).toContain('<WindowedTextInput aria-label="Telegram token" type="password"');
+    expect(gatewaysSource).toContain('action={<WindowedPageButton>Settings</WindowedPageButton>}');
+    expect(gatewaysSource).not.toContain('action="Settings"');
     expect(source).not.toContain('<WindowedTextarea aria-label="Telegram token"');
     expect(source).not.toContain('title="Selected gateway"');
     expect(source).not.toContain('ariaLabel="Gateway filter"');
@@ -3115,6 +3123,7 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical Diagnostics desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
+    const diagnosticsSource = source.slice(source.indexOf('function DiagnosticsPageStory'), source.indexOf('export const DiagnosticsPage'));
 
     expect(source).toContain('function DiagnosticsPageStory');
     expect(source).toContain('export const DiagnosticsPage');
@@ -3134,6 +3143,22 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('title="Health"');
     expect(source).toContain('title="Usage"');
     expect(source).toContain('title="Tools"');
+    expect(diagnosticsSource).toContain(
+      "cells={[{ value: <WindowedBadge tone=\"positive\">1.1M</WindowedBadge> }, { value: '71%', align: 'right' }]}",
+    );
+    expect(diagnosticsSource).toContain(
+      "cells={[{ value: <WindowedBadge tone=\"neutral\">412K</WindowedBadge> }, { value: '63%', align: 'right' }]}",
+    );
+    expect(diagnosticsSource).toContain(
+      "cells={[{ value: <WindowedBadge tone=\"positive\">128</WindowedBadge> }, { value: '0', align: 'right' }]}",
+    );
+    expect(diagnosticsSource).toContain(
+      "cells={[{ value: <WindowedBadge tone=\"warning\">18</WindowedBadge> }, { value: '2', align: 'right' }]}",
+    );
+    expect(diagnosticsSource).not.toContain('action="71%"');
+    expect(diagnosticsSource).not.toContain('action="63%"');
+    expect(diagnosticsSource).not.toContain('action="0"');
+    expect(diagnosticsSource).not.toContain('action="2"');
     expect(source).toContain('meta="Browser app"');
     expect(source).not.toContain('meta="workbench browser"');
     expect(source).toContain('title="App activity"');
