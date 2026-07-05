@@ -20,6 +20,7 @@ export interface WindowedAppRegistration {
   owner: WindowedAppRuntimeOwner;
   accent: AppAccent;
   aliases?: readonly string[];
+  routeAliases?: readonly string[];
   window: {
     allowMultiple: boolean;
     singleton: boolean;
@@ -43,10 +44,16 @@ const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_
   'ai-gateway': '/ai-gateway',
   'model-arena': '/model-arena',
   routines: '/routines',
-  'app-manager': '/extensions',
+  'app-manager': '/apps',
   skills: '/skills',
   diagnostics: '/telemetry',
   settings: '/settings',
+};
+
+const CANONICAL_WINDOWED_APP_ROUTE_ALIASES: Readonly<
+  Partial<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], readonly string[]>>
+> = {
+  'app-manager': ['/extensions'],
 };
 
 const CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS: Readonly<Partial<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>>> = {
@@ -88,6 +95,9 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
     if (ownerExtensionId && !enabledExtensionIds.has(ownerExtensionId)) return [];
     const registration = createCanonicalWindowedAppRegistration(app, ownerExtensionId);
     seenRoutes.add(registration.route);
+    for (const alias of registration.routeAliases ?? []) {
+      seenRoutes.add(alias);
+    }
     seenTitles.add(registration.title);
     return [registration];
   });
@@ -145,6 +155,7 @@ function createCanonicalWindowedAppRegistration(
     owner: ownerExtensionId ? { packageId: ownerExtensionId, packageType: 'extension' } : { packageType: 'core' },
     accent: app.accent,
     aliases: app.aliases,
+    routeAliases: CANONICAL_WINDOWED_APP_ROUTE_ALIASES[app.id],
     window: { allowMultiple: app.id === 'chat', singleton: app.id !== 'chat' },
   };
 }

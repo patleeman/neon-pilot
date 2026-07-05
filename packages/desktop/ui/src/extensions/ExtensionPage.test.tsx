@@ -57,14 +57,14 @@ describe('ExtensionPage', () => {
 
   it('falls back to the bundled extension manager page when the registry route is missing', () => {
     render(
-      <MemoryRouter initialEntries={['/extensions']}>
+      <MemoryRouter initialEntries={['/apps']}>
         <ExtensionPage />
       </MemoryRouter>,
     );
 
     const host = screen.getByTestId('surface-host');
     expect(host.getAttribute('data-extension-id')).toBe('system-extension-manager');
-    expect(host.getAttribute('data-surface-id')).toBe('extensions-page');
+    expect(host.getAttribute('data-surface-id')).toBe('app-manager-page');
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
   });
 
@@ -207,9 +207,9 @@ describe('ExtensionPage', () => {
       error: null,
       surfaces: [],
       routes: [
-        { route: '/extensions', extensionId: 'system-extension-manager', surfaceId: 'extensions-page', packageType: 'system' },
+        { route: '/apps', extensionId: 'system-extension-manager', surfaceId: 'extensions-page', packageType: 'system' },
         {
-          route: '/extensions/search-paths',
+          route: '/apps/search-paths',
           extensionId: 'system-extension-manager',
           surfaceId: 'extension-search-paths',
           packageType: 'system',
@@ -228,14 +228,14 @@ describe('ExtensionPage', () => {
                 id: 'extensions-page',
                 title: 'App Manager',
                 location: 'main',
-                route: '/extensions',
+                route: '/apps',
                 component: 'ExtensionManagerPage',
               },
               {
                 id: 'extension-search-paths',
                 title: 'Extension search paths',
                 location: 'main',
-                route: '/extensions/search-paths',
+                route: '/apps/search-paths',
                 component: 'ExtensionSearchPathsPage',
               },
             ],
@@ -245,7 +245,7 @@ describe('ExtensionPage', () => {
     } as never);
 
     render(
-      <MemoryRouter initialEntries={['/extensions/search-paths']}>
+      <MemoryRouter initialEntries={['/apps/search-paths']}>
         <ExtensionPage />
       </MemoryRouter>,
     );

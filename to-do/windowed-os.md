@@ -91,6 +91,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 validation: focused windowed design-system, interaction, app-registry, and WindowedLayout tests passed, and `pnpm --dir packages/windowed-os-ui run build` passed for the app-facing accent rename.
    - 2026-07-05 progress: App Manager's canonical Windowed OS app id is now `app-manager`; the `/extensions` route and `extension manager` search alias remain compatibility affordances, but taskbar/start-menu/window identity now uses app-facing metadata.
    - 2026-07-05 validation: focused app-registry, WindowedLayout, and windowed design-system tests plus `pnpm --dir packages/windowed-os-ui run build` passed for the `app-manager` canonical id rename.
+   - 2026-07-05 progress: App Manager now uses `/apps` as its canonical nav/view/command route. `/extensions` remains a legacy view and Windowed OS route alias, so old links still focus the App Manager app without adding a duplicate launcher item.
+   - 2026-07-05 validation: focused App Manager manifest/frontend tests, ExtensionPage route tests, Sidebar tests, app-registry tests, WindowedLayout tests, route-shell manifest tests, `pnpm run extension:build -- extensions/system-extension-manager`, and `pnpm --dir packages/desktop run build:ui` passed for the `/apps` canonical route migration.
 
 ### Next concrete implementation backlog
 

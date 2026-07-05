@@ -23,6 +23,19 @@ const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
     packageType: 'system',
     frontend: { entry: 'dist/frontend.js' },
   },
+  {
+    id: 'app-manager-page',
+    title: 'App Manager',
+    location: 'main',
+    route: '/apps',
+    component: 'ExtensionManagerPage',
+    placement: 'primary',
+    scope: 'global',
+    activation: 'on-route',
+    extensionId: 'system-extension-manager',
+    packageType: 'system',
+    frontend: { entry: 'dist/frontend.js' },
+  },
 ];
 
 function routeMatches(route: string, pathname: string): boolean {

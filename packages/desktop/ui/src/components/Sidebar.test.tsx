@@ -1226,7 +1226,7 @@ describe('Sidebar', () => {
         name: 'App Manager',
         enabled: true,
         contributes: {
-          nav: [{ id: 'extensions-nav', label: 'App Manager', route: '/extensions', icon: 'sparkle', section: 'settings' }],
+          nav: [{ id: 'extensions-nav', label: 'App Manager', route: '/apps', icon: 'sparkle', section: 'settings' }],
         },
       },
       {
@@ -1238,12 +1238,12 @@ describe('Sidebar', () => {
         },
       },
     ];
-    extensionRegistryMock.state.routes = [{ route: '/settings' }, { route: '/extensions' }, { route: '/skills' }];
+    extensionRegistryMock.state.routes = [{ route: '/settings' }, { route: '/apps' }, { route: '/skills' }];
 
     const html = renderSidebar('/settings');
 
-    expect(html.indexOf('data-route="/skills"')).toBeLessThan(html.indexOf('data-route="/extensions"'));
-    expect(html.indexOf('data-route="/extensions"')).toBeLessThan(html.indexOf('data-route="/settings"'));
+    expect(html.indexOf('data-route="/skills"')).toBeLessThan(html.indexOf('data-route="/apps"'));
+    expect(html.indexOf('data-route="/apps"')).toBeLessThan(html.indexOf('data-route="/settings"'));
   });
 
   describe('visual state indicators', () => {

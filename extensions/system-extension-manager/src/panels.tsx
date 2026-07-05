@@ -1097,7 +1097,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
             !nextEnabled &&
             extension.routes.some((route) => location.pathname === route.route || location.pathname.startsWith(`${route.route}/`))
           ) {
-            navigate('/extensions', { replace: true });
+            navigate('/apps', { replace: true });
           }
         })
         .catch((err: Error) => {
@@ -1134,7 +1134,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
         });
         notifyExtensionRegistryChanged();
         if (extension.routes.some((route) => location.pathname === route.route || location.pathname.startsWith(`${route.route}/`))) {
-          navigate('/extensions', { replace: true });
+          navigate('/apps', { replace: true });
         }
       } catch (err) {
         showActionError(`Failed to delete ${extension.name}`, err instanceof Error ? err.message : String(err));

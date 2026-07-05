@@ -25,10 +25,18 @@ describe('system-extension-manager manifest', () => {
     expect(manifest.frontend.entry).toBe('dist/frontend.js');
   });
 
-  it('contributes the canonical extension page', () => {
-    expect(manifest.contributes.nav).toContainEqual(expect.objectContaining({ label: 'App Manager', route: '/extensions' }));
+  it('contributes the canonical app manager page', () => {
+    expect(manifest.contributes.nav).toContainEqual(expect.objectContaining({ label: 'App Manager', route: '/apps' }));
     expect(manifest.contributes.views).toContainEqual(
       expect.objectContaining({
+        id: 'app-manager-page',
+        route: '/apps',
+        component: 'ExtensionManagerPage',
+      }),
+    );
+    expect(manifest.contributes.views).toContainEqual(
+      expect.objectContaining({
+        id: 'extensions-page',
         route: '/extensions',
         component: 'ExtensionManagerPage',
       }),
@@ -49,7 +57,7 @@ describe('system-extension-manager manifest', () => {
     expect(commands.get('open')).toMatchObject({
       title: 'Open App Manager',
       action: 'app.navigate',
-      args: { to: '/extensions' },
+      args: { to: '/apps' },
     });
     expect(commands.get('reload-registry')).toMatchObject({
       title: 'Reload Apps',

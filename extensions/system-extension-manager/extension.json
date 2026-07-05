@@ -174,15 +174,23 @@
   "contributes": {
     "nav": [
       {
-        "id": "extensions-nav",
+        "id": "app-manager-nav",
         "label": "App Manager",
-        "route": "/extensions",
+        "route": "/apps",
         "icon": "sparkle",
         "pageType": "table",
         "section": "settings"
       }
     ],
     "views": [
+      {
+        "id": "app-manager-page",
+        "title": "App Manager",
+        "location": "main",
+        "route": "/apps",
+        "component": "ExtensionManagerPage",
+        "activation": "on-route"
+      },
       {
         "id": "extensions-page",
         "title": "App Manager",
@@ -208,7 +216,7 @@
         "description": "Open the App Manager.",
         "action": "app.navigate",
         "args": {
-          "to": "/extensions"
+          "to": "/apps"
         },
         "icon": "sparkle"
       },

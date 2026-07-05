@@ -565,8 +565,11 @@ function routePathname(route: string): string {
 function routeMatchesWindowedApp(route: string, app: WindowedAppRegistration): boolean {
   if (app.kind !== 'route') return false;
   const pathname = routePathname(route);
-  const appPathname = routePathname(app.route);
-  return pathname === appPathname || pathname.startsWith(`${appPathname.replace(/\/$/, '')}/`);
+  const routeCandidates = [app.route, ...(app.routeAliases ?? [])];
+  return routeCandidates.some((candidate) => {
+    const appPathname = routePathname(candidate);
+    return pathname === appPathname || pathname.startsWith(`${appPathname.replace(/\/$/, '')}/`);
+  });
 }
 
 function findWindowedAppForRoute(route: string, apps: WindowedAppRegistration[]): WindowedAppRegistration | null {

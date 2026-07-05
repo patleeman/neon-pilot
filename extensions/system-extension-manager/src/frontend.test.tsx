@@ -175,7 +175,7 @@ function renderPageWithPa(pa: Record<string, unknown>) {
 
 function renderWindowedPage(options?: { pa?: Record<string, unknown>; locationProbe?: boolean }) {
   return render(
-    <MemoryRouter initialEntries={['/extensions']}>
+    <MemoryRouter initialEntries={['/apps']}>
       <ExtensionManagerPage
         pa={(options?.pa ?? { ui: { toast: vi.fn(), notify: vi.fn() }, commands: { list: vi.fn().mockResolvedValue([]) } }) as never}
         context={{ shellPresentation: 'windowed' } as never}
@@ -541,7 +541,7 @@ describe('ExtensionManagerPage', () => {
     window.addEventListener('neon-pilot:composer-focus', focusListener);
 
     render(
-      <MemoryRouter initialEntries={['/extensions']}>
+      <MemoryRouter initialEntries={['/apps']}>
         <ExtensionManagerPage
           pa={{ ui: { toast: vi.fn(), notify: vi.fn() }, commands: { list: vi.fn().mockResolvedValue([]) } } as never}
           context={{} as never}

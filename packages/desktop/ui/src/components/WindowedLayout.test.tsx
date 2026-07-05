@@ -697,7 +697,7 @@ describe('WindowedLayout route windows', () => {
         id: 'system-extension-manager',
         enabled: true,
         contributes: {
-          nav: [{ id: 'extensions', label: 'App Manager', route: '/extensions' }],
+          nav: [{ id: 'extensions', label: 'App Manager', route: '/apps' }],
         },
       },
       {
@@ -1433,8 +1433,8 @@ describe('WindowedLayout route windows', () => {
         id: 'system-extension-manager',
         enabled: true,
         contributes: {
-          nav: [{ id: 'extensions-nav', label: 'App Manager', route: '/extensions' }],
-          views: [{ id: 'extensions-page', title: 'App Manager', location: 'main', route: '/extensions' }],
+          nav: [{ id: 'extensions-nav', label: 'App Manager', route: '/apps' }],
+          views: [{ id: 'extensions-page', title: 'App Manager', location: 'main', route: '/apps' }],
         },
       },
       {

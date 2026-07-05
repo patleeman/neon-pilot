@@ -55,7 +55,7 @@ describe('first-party extension route shell manifests', () => {
       ['system-dynamic-workflows', '/workflows', 'editor'],
       ['system-telemetry', '/telemetry', 'dashboard'],
       ['system-skills', '/skills', 'table'],
-      ['system-extension-manager', '/extensions', 'table'],
+      ['system-extension-manager', '/apps', 'table'],
       ['system-settings', '/settings', 'settings'],
     ] as const;
 
@@ -91,7 +91,7 @@ describe('first-party extension route shell manifests', () => {
       ['system-model-arena', '/model-arena'],
       ['system-telemetry', '/telemetry'],
       ['system-skills', '/skills'],
-      ['system-extension-manager', '/extensions'],
+      ['system-extension-manager', '/apps'],
     ] as const;
 
     for (const [extensionId, route] of routes) {
@@ -166,7 +166,7 @@ describe('first-party extension route shell manifests', () => {
 
   it('keeps dialog-driven detail routes free of route-owned right rails', () => {
     const routes = [
-      ['system-extension-manager', '/extensions'],
+      ['system-extension-manager', '/apps'],
       ['system-gateways', '/gateways'],
       ['system-model-arena', '/model-arena'],
       ['system-routines', '/routines'],
