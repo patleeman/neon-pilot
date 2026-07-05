@@ -463,8 +463,6 @@ describe('Taskbar', () => {
     expect(stylesSource).toContain('background: var(--wos-chat);');
     expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='gateways']");
     expect(stylesSource).toContain('background: var(--wos-gateways);');
-    expect(stylesSource).toContain(".wos-taskbar__button[data-focused='true'][data-accent='drawing']");
-    expect(stylesSource).toContain('background: var(--wos-drawing);');
     expect(stylesSource).toContain('inset 0 -4px 0 var(--wos-ink-900)');
     expect(stylesSource).toContain('transform: translateY(-1px);');
   });
@@ -1333,7 +1331,7 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    for (const accent of ['workflows', 'drawing', 'model-arena', 'skills', 'diagnostics']) {
+    for (const accent of ['workflows', 'model-arena', 'skills', 'diagnostics']) {
       expect(stylesSource).toContain(`.wos-window__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-dialog__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-segmented-control[data-accent='${accent}']`);

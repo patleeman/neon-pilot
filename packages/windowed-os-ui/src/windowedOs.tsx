@@ -26,7 +26,6 @@ export type AppAccent =
   | 'workflows'
   | 'automations'
   | 'gateways'
-  | 'drawing'
   | 'model-arena'
   | 'apps'
   | 'skills'
