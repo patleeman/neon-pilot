@@ -198,7 +198,7 @@ function StoryChatWindowToolbar({ activeTool }: { activeTool?: 'browser' | 'file
     },
   ];
 
-  return <WindowedChatToolLauncher items={items} />;
+  return <WindowedChatToolLauncher items={items} statusLabel="Chat" statusDetail="/Users/patrick/workingdir/neon-pilot" />;
 }
 
 function DesktopCompositionStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {

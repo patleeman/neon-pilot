@@ -35,6 +35,30 @@ function setElementRect(element: Element, nextRect: DOMRect): void {
 }
 
 describe('WindowedDialog interactions', () => {
+  it('ports attached modeless subwindows to the desktop layer', () => {
+    render(
+      <div className="windowed-os-shell">
+        <main className="wos-desktop" />
+        <div className="wos-window__body">
+          <WindowedDialog
+            title="Automation details"
+            accent="automations"
+            parentWindowId="route:system-automations:nav"
+            parentWindowTitle="Automations"
+            onClose={() => undefined}
+          >
+            Details
+          </WindowedDialog>
+        </div>
+      </div>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Automation details' });
+    const layer = dialog.parentElement;
+    expect(layer?.classList.contains('wos-dialog-layer')).toBe(true);
+    expect(layer?.parentElement?.classList.contains('wos-desktop')).toBe(true);
+  });
+
   it('lets modeless subwindows drag by their titlebar', () => {
     render(
       <WindowedDialog title="Gateway activity" accent="gateways" onClose={() => undefined}>

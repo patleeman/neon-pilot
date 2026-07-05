@@ -18,6 +18,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 export type AppAccent =
   | 'chat'
@@ -174,20 +175,27 @@ export interface WindowedChatToolLauncherItem {
 
 export interface WindowedChatToolLauncherProps {
   items: ReadonlyArray<WindowedChatToolLauncherItem>;
-  label?: string;
+  statusLabel?: string;
+  statusDetail?: string | null;
   ariaLabel?: string;
   className?: string;
 }
 
 export function WindowedChatToolLauncher({
   items,
-  label = 'Tools',
+  statusLabel,
+  statusDetail,
   ariaLabel = 'Chat window controls',
   className,
 }: WindowedChatToolLauncherProps) {
   return (
     <div className={cx('wos-chat-window-toolbar', className)} aria-label={ariaLabel}>
-      <div className="wos-chat-window-toolbar__label">{label}</div>
+      {statusLabel ? (
+        <div className="wos-chat-window-toolbar__status">
+          <div className="wos-chat-window-toolbar__status-label">{statusLabel}</div>
+          {statusDetail ? <div className="wos-chat-window-toolbar__status-detail">{statusDetail}</div> : null}
+        </div>
+      ) : null}
       <div className="wos-chat-window-toolbar__actions">
         {items.map((item) => (
           <button
@@ -669,8 +677,18 @@ export function WindowedDialog({
 }: WindowedDialogProps) {
   const [offset, setOffset] = useState(initialOffset);
   const [dragging, setDragging] = useState(false);
+  const [desktopPortalHost, setDesktopPortalHost] = useState<HTMLElement | null>(null);
   const cleanupDragRef = useRef<(() => void) | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
+  const shouldPortalToDesktop = !modal && Boolean(parentWindowTitle || parentWindowId);
+
+  useIsomorphicLayoutEffect(() => {
+    if (!shouldPortalToDesktop || typeof document === 'undefined') {
+      setDesktopPortalHost(null);
+      return;
+    }
+    setDesktopPortalHost(document.querySelector<HTMLElement>('.windowed-os-shell .wos-desktop'));
+  }, [shouldPortalToDesktop]);
 
   useEffect(() => {
     dialogRef.current?.focus({ preventScroll: true });
@@ -737,7 +755,7 @@ export function WindowedDialog({
     !modal && (offset.x !== 0 || offset.y !== 0) ? { transform: `translate(${offset.x}px, ${offset.y}px)` } : undefined;
   const displayMeta = meta ?? (parentWindowTitle ? `Attached to ${parentWindowTitle}` : undefined);
 
-  return (
+  const dialogLayer = (
     <div
       className="wos-dialog-layer"
       role="presentation"
@@ -775,6 +793,8 @@ export function WindowedDialog({
       </section>
     </div>
   );
+
+  return shouldPortalToDesktop && desktopPortalHost ? createPortal(dialogLayer, desktopPortalHost) : dialogLayer;
 }
 
 export interface WindowedDialogStackProps {

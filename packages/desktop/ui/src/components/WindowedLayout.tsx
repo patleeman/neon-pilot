@@ -1051,6 +1051,7 @@ function WindowedChatToolbarIcon({ name }: { name: WindowedChatToolbarIconName }
 
 function WindowRouteBody({
   compact = false,
+  workspaceCwd,
   onOpenBrowserWindow,
   onOpenFilesWindow,
   onNavigate,
@@ -1058,6 +1059,7 @@ function WindowRouteBody({
   route,
 }: {
   compact?: boolean;
+  workspaceCwd?: string | null;
   onOpenBrowserWindow: () => void;
   onOpenFilesWindow: () => void;
   onNavigate: WindowNavigate;
@@ -1143,7 +1145,11 @@ function WindowRouteBody({
       data-compact={compact ? 'true' : undefined}
       data-workbench-collapsed="true"
     >
-      <WindowedChatToolLauncher items={toolLauncherItems} />
+      <WindowedChatToolLauncher
+        items={toolLauncherItems}
+        statusLabel="Chat"
+        statusDetail={workspaceCwd?.trim() ? workspaceCwd : 'No workspace'}
+      />
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
           <Route path="/" element={<Layout embeddedWindowChrome forceWorkbench={false} suppressWorkbench />}>
@@ -1884,7 +1890,7 @@ export function WindowedLayout() {
               items={chatTaskItems.map((item) => ({
                 id: item.id,
                 label: item.title,
-                status: item.focused ? 'Focused' : item.minimized ? 'Minimized' : undefined,
+                status: item.minimized ? 'Minimized' : undefined,
                 onSelect: () => focusWindow(item.id),
               }))}
             />
@@ -2008,6 +2014,7 @@ export function WindowedLayout() {
               ) : (
                 <WindowRouteBody
                   compact={windowModel.kind === 'chat' && windowModel.bounds.width < 720}
+                  workspaceCwd={windowModel.kind === 'chat' ? windowModel.workspaceCwd : null}
                   route={windowModel.route}
                   onNavigate={(to) => navigateWindow(windowModel.id, to)}
                   onOpenBrowserWindow={() => openBrowserWindow(windowModel)}

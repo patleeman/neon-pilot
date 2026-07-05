@@ -1037,7 +1037,8 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(html).toContain('class="wos-chat-window-toolbar"');
     expect(html).toContain('aria-label="Chat window controls"');
-    expect(html).toContain('class="wos-chat-window-toolbar__label">Tools</div>');
+    expect(html).not.toContain('wos-chat-window-toolbar__label');
+    expect(html).not.toContain('>Tools</div>');
     expect(html).toContain('class="wos-chat-window-toolbar__actions"');
     expect(html).toContain('class="wos-chat-window-toolbar__button"');
     expect(html).toContain('data-density="icon"');
@@ -1112,7 +1113,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
-    expect(tokensSource).toContain('--wos-titlebar-h: 20px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 24px;');
     expect(tokensSource).toContain('--wos-window-control-size: 18px;');
     expect(stylesSource).toContain('--wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 32px);');
     expect(stylesSource).toContain('grid-template-rows: var(--wos-titlebar-h) minmax(0, 1fr);');
@@ -1136,7 +1137,7 @@ describe('Windowed OS Storybook examples', () => {
     const tokensSource = readFileSync(tokensPath, 'utf8');
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    expect(tokensSource).toContain('--wos-titlebar-h: 20px;');
+    expect(tokensSource).toContain('--wos-titlebar-h: 24px;');
     expect(tokensSource).toContain('--wos-window-control-size: 18px;');
     expect(stylesSource).toContain('width: var(--wos-window-control-size);');
     expect(stylesSource).toContain('height: var(--wos-window-control-size);');
@@ -1422,20 +1423,22 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-window-route-body--chat {\n  display: grid;\n  grid-template-rows: auto minmax(0, 1fr);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar {\n  display: flex;');
-    expect(stylesSource).toContain('min-height: 48px;');
-    expect(stylesSource).toContain('flex-wrap: wrap;');
+    expect(stylesSource).toContain('min-height: 42px;');
+    expect(stylesSource).toContain('flex-wrap: nowrap;');
     expect(stylesSource).toContain('justify-content: space-between;');
-    expect(stylesSource).toContain('gap: 8px 10px;');
+    expect(stylesSource).toContain('gap: 10px;');
     expect(stylesSource).toContain('border-bottom: 2px solid var(--wos-ink-900);');
-    expect(stylesSource).toContain('padding: 6px 10px;');
+    expect(stylesSource).toContain('padding: 5px 10px;');
     expect(stylesSource).toContain('box-shadow: inset 0 -2px 0 var(--wos-surface-3);');
-    expect(stylesSource).toContain('.wos-chat-window-toolbar__label');
-    expect(stylesSource).toContain('min-height: 32px;');
+    expect(stylesSource).toContain('.wos-chat-window-toolbar__status');
+    expect(stylesSource).toContain('min-height: 30px;');
+    expect(stylesSource).toContain('.wos-chat-window-toolbar__status-label');
+    expect(stylesSource).toContain('.wos-chat-window-toolbar__status-detail');
     expect(stylesSource).toContain('border: var(--wos-border-strong) solid color-mix(in srgb, var(--wos-ink-900) 72%, transparent);');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__actions');
     expect(stylesSource).toContain('flex: 0 1 auto;');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[data-density='icon']");
-    expect(stylesSource).toContain('flex: 0 0 34px;');
+    expect(stylesSource).toContain('flex: 0 0 32px;');
     expect(stylesSource).toContain('.wos-chat-window-toolbar__button svg');
     expect(stylesSource).toContain('width: 16px;');
     expect(stylesSource).toContain(".wos-chat-window-toolbar__button[aria-pressed='true']");
@@ -2374,7 +2377,9 @@ describe('Windowed OS Storybook examples', () => {
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
     expect(stylesSource).toContain('.wos-dialog-layer[data-parent-window-title],\n.wos-dialog-layer[data-parent-window-id]');
-    expect(stylesSource).toContain('padding-block-start: 136px;');
+    expect(stylesSource).toContain('.wos-desktop > .wos-dialog-layer');
+    expect(stylesSource).toContain('position: fixed;');
+    expect(stylesSource).toContain('padding-block-start: 96px;');
     expect(stylesSource).toContain('.wos-dialog-layer[data-parent-window-title],\n  .wos-dialog-layer[data-parent-window-id]');
     expect(stylesSource).toContain('padding-block-start: 16px;');
     expect(stylesSource).toContain(".wos-dialog[data-parent-window-attached='true']");
@@ -2581,7 +2586,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-workbench-collapsed="true"');
     expect(source).toContain('<WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">');
     expect(source).toContain('function StoryChatWindowToolbar');
-    expect(source).toContain('<WindowedChatToolLauncher items={items} />');
+    expect(source).toContain(
+      '<WindowedChatToolLauncher items={items} statusLabel="Chat" statusDetail="/Users/patrick/workingdir/neon-pilot" />',
+    );
     expect(source).toContain('type WindowedChatToolLauncherItem');
     expect(source).not.toContain('<div className="wos-chat-window-toolbar__label">Tools</div>');
     expect(source).not.toContain('<div className="wos-chat-window-toolbar__label">Workbench</div>');

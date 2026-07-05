@@ -65,7 +65,7 @@
   --wos-text-meta: 600 11px/1.4 var(--wos-font-display);
   --wos-text-body: 400 12px/1.5 var(--wos-font-body);
   --wos-text-eyebrow: 700 10px/1.4 var(--wos-font-mono);
-  --wos-titlebar-h: 20px;
+  --wos-titlebar-h: 24px;
   --wos-taskbar-h: 42px;
   --wos-window-control-size: 18px;
   --wos-page-rail-width: 150px;

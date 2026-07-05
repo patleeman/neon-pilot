@@ -398,7 +398,9 @@ describe('WindowedLayout route windows', () => {
         .getAttribute('data-density'),
     ).toBe('icon');
     expect((within(chatWindow).getByRole('button', { name: /open terminal window/i }) as HTMLButtonElement).disabled).toBe(true);
-    expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')?.textContent?.trim()).toBe('Tools');
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__label')).toBeNull();
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__status-label')?.textContent?.trim()).toBe('Chat');
+    expect(chatWindow.querySelector('.wos-chat-window-toolbar__status-detail')?.textContent?.trim()).toBe('No workspace');
     expect(chatWindow.querySelector('.wos-chat-window-toolbar__actions')?.children).toHaveLength(3);
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
   });
@@ -2334,7 +2336,8 @@ describe('WindowedLayout route windows', () => {
 
       const chatMenu = screen.getByRole('menu', { name: /open chat windows/i });
       expect(within(chatMenu).getByRole('menuitem', { name: /planning thread/i })).toBeTruthy();
-      expect(within(chatMenu).getByRole('menuitem', { name: /new conversation focused/i })).toBeTruthy();
+      expect(within(chatMenu).getByRole('menuitem', { name: /^new conversation$/i })).toBeTruthy();
+      expect(within(chatMenu).queryByText('Focused')).toBeNull();
       expect(suspendListener).toHaveBeenCalled();
       const event = suspendListener.mock.calls.at(-1)?.[0] as CustomEvent<{ durationMs?: number }> | undefined;
       expect(event?.detail?.durationMs).toBeGreaterThanOrEqual(1500);
@@ -2386,7 +2389,8 @@ describe('WindowedLayout route windows', () => {
     fireEvent.click(within(taskbar).getByRole('button', { name: /chat \(3 windows\)/i }));
 
     const chatMenu = await screen.findByRole('menu', { name: /open chat windows/i });
-    expect(within(chatMenu).getByRole('menuitem', { name: /review thread focused/i })).toBeTruthy();
+    expect(within(chatMenu).getByRole('menuitem', { name: /^review thread$/i })).toBeTruthy();
+    expect(within(chatMenu).queryByText('Focused')).toBeNull();
     expect(within(chatMenu).getByRole('menuitem', { name: /planning thread minimized/i })).toBeTruthy();
   });
 
