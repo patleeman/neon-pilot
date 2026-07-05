@@ -11,7 +11,7 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 | `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.                   |
 | `skill_install` | Install a chosen candidate id, then vet, approve when required, and save.                                      |
 
-The user-facing marketplace is owned by `system-skills` at `/skills` and calls `browseSkills`/`installSkill` through the extension boundary. `system-skill-search` intentionally does not contribute a Settings panel so users have one place to browse, install, and manage skills.
+`system-skill-search` is an agent-internal service, not a user-facing marketplace. Agents search, preview, and install skills through its tools and slash commands, while enablement state is managed through Prompt Assembly.
 
 `browseSkills` caches marketplace inventory per source, query, and limit for about a day by default. A page visit returns cached results immediately when available; stale cache entries refresh in the background and invalidate the Skills page when new inventory is stored. Passing `refresh: "force"` bypasses the cache for explicit refresh actions while the UI can keep the current table visible.
 

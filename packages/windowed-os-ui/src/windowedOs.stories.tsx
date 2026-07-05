@@ -19,8 +19,6 @@ import {
   WindowedDataRow,
   WindowedDataTable,
   WindowedDialog,
-  WindowedDialogCopy,
-  WindowedDialogStack,
   WindowedEmptyState,
   WindowedField,
   WindowedFormActions,
@@ -2143,7 +2141,7 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                 />
                 <WindowedDataRow
                   name="workflow-reports"
-                  meta="Personal marketplace · Main route, skills"
+                  meta="Personal marketplace · Main route, tools"
                   status={
                     <span className="wos-status-stack">
                       <WindowedBadge tone="danger">Invalid</WindowedBadge>
@@ -2300,181 +2298,6 @@ export const DarkAppInstallDialog: Story = {
   render: () => <AppInstallDialogStory theme="dark" />,
 };
 
-function SkillsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
-  return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
-      <WindowFrame
-        title="Skills"
-        accent="skills"
-        focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
-        onMinimize={() => undefined}
-        onMaximize={() => undefined}
-        onClose={() => undefined}
-      >
-        <WindowedPageShell layout="standard">
-          <WindowedPageMain
-            title="Browse skills"
-            actions={
-              <>
-                <WindowedSegmentedControl
-                  ariaLabel="Skills view"
-                  accent="skills"
-                  value="marketplace"
-                  options={[
-                    { id: 'marketplace', label: 'Browse 27' },
-                    { id: 'installed', label: 'Installed 12' },
-                  ]}
-                  onChange={() => undefined}
-                />
-                <WindowedPageButton>Refresh</WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedPageSection title="Sources" meta="3 sources">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Trusted', value: '2' },
-                  { label: 'Community', value: '1' },
-                  { label: 'Refresh', value: 'Ready' },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection variant="toolbar">
-              <WindowedToolbar as="form" formProps={{ onSubmit: (event) => event.preventDefault() }}>
-                <WindowedTextInput aria-label="Search marketplace skills" placeholder="Search marketplace skills" />
-                <WindowedPageButton>Clear</WindowedPageButton>
-                <WindowedPageButton tone="accent" type="submit">
-                  Search
-                </WindowedPageButton>
-              </WindowedToolbar>
-            </WindowedPageSection>
-
-            <WindowedPageSection variant="toolbar">
-              <WindowedFormGrid columns={3}>
-                <WindowedField label="Capability">
-                  <WindowedSelect aria-label="Filter by capability" defaultValue="all">
-                    <option value="all">All</option>
-                    <option value="coding">Coding</option>
-                    <option value="qa">QA</option>
-                    <option value="research">Research</option>
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedField label="Source">
-                  <WindowedSelect aria-label="Filter by source" defaultValue="openai">
-                    <option value="all">All</option>
-                    <option value="openai">OpenAI Skills</option>
-                    <option value="curated">Curated</option>
-                    <option value="community">Community</option>
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedField label="State">
-                  <WindowedSelect aria-label="Filter by state" defaultValue="all">
-                    <option value="all">All</option>
-                    <option value="available">Available</option>
-                    <option value="approval-required">Approval required</option>
-                    <option value="installed">Installed</option>
-                  </WindowedSelect>
-                </WindowedField>
-              </WindowedFormGrid>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Marketplace" meta="27 skills">
-              <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Action', align: 'right' }]}>
-                <WindowedDataRow
-                  name="code-review"
-                  meta="Review · OpenAI Skills · Trusted"
-                  status={<WindowedBadge tone="positive">Installed</WindowedBadge>}
-                  action={
-                    <span className="wos-inline-actions">
-                      <WindowedPageButton disabled>Installed</WindowedPageButton>
-                      <WindowedPageButton>Details</WindowedPageButton>
-                    </span>
-                  }
-                />
-                <WindowedDataRow
-                  name="local-qa"
-                  meta="QA · Agent plugin · Trusted"
-                  status={<WindowedBadge tone="neutral">Available</WindowedBadge>}
-                  action={
-                    <span className="wos-inline-actions">
-                      <WindowedPageButton tone="accent">Install</WindowedPageButton>
-                      <WindowedPageButton>Details</WindowedPageButton>
-                    </span>
-                  }
-                />
-                <WindowedDataRow
-                  name="ios-debugger-agent"
-                  meta="iOS · Curated · Trusted"
-                  status={<WindowedBadge tone="warning">Approval required</WindowedBadge>}
-                  action={
-                    <span className="wos-inline-actions">
-                      <WindowedPageButton tone="accent">Install</WindowedPageButton>
-                      <WindowedPageButton>Details</WindowedPageButton>
-                    </span>
-                  }
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Installed" meta="9 enabled · 3 disabled">
-              <WindowedDataTable columns={[{ label: 'Skill' }, { label: 'State' }, { label: 'Controls', align: 'right' }]}>
-                <WindowedDataRow
-                  name="design"
-                  meta="Frontend polish and product UI review"
-                  enabled
-                  status={<WindowedBadge tone="positive">Enabled</WindowedBadge>}
-                  action={
-                    <span className="wos-inline-actions">
-                      <WindowedToggle checked accent="skills" label="Disable design" />
-                      <WindowedPageButton>Details</WindowedPageButton>
-                    </span>
-                  }
-                />
-                <WindowedDataRow
-                  name="zotero"
-                  meta="Connector · citation workflow"
-                  enabled={false}
-                  status={<WindowedBadge tone="neutral">Disabled</WindowedBadge>}
-                  action={
-                    <span className="wos-inline-actions">
-                      <WindowedToggle accent="skills" label="Enable zotero" />
-                      <WindowedPageButton>Details</WindowedPageButton>
-                    </span>
-                  }
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-          </WindowedPageMain>
-        </WindowedPageShell>
-      </WindowFrame>
-      <WindowedDialog title="local-qa" meta="Marketplace skill" accent="skills" parentWindowTitle="Skills" onClose={() => undefined}>
-        <WindowedDialogStack>
-          <WindowedDialogCopy>Browser and app checks for local product QA.</WindowedDialogCopy>
-          <WindowedKeyValueList
-            items={[
-              { label: 'Capability', value: 'QA' },
-              { label: 'Source', value: 'Agent plugin' },
-              { label: 'Trust', value: 'Trusted' },
-              { label: 'State', value: 'Available' },
-              { label: 'Identifier', value: 'agent-plugin:local-qa' },
-            ]}
-          />
-        </WindowedDialogStack>
-      </WindowedDialog>
-    </div>
-  );
-}
-
-export const SkillsPage: Story = {
-  render: () => <SkillsPageStory />,
-};
-
-export const DarkSkillsPage: Story = {
-  render: () => <SkillsPageStory theme="dark" />,
-};
-
 export const CoreDataPrimitives: Story = {
   render: () => (
     <div className="windowed-os-shell" style={{ minHeight: 520, padding: 24 }}>
@@ -2565,7 +2388,7 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
                 <WindowedList>
                   <WindowedListItem title="packages/desktop/ui/src/components" meta="Directory" detail="source" active accent="chat" />
                   <WindowedListItem title="packages/windowed-os-ui/src" meta="Directory" detail="design system" accent="apps" />
-                  <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="backlog" accent="skills" />
+                  <WindowedListItem title="to-do/windowed-os.md" meta="Markdown" detail="backlog" accent="apps" />
                   <WindowedListItem title="apps/system-browser" meta="App package" detail="child tool" accent="gateways" />
                   <WindowedListItem title="apps/system-terminal" meta="App package" detail="child tool" accent="automations" />
                 </WindowedList>

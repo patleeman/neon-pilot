@@ -139,7 +139,7 @@ Reach for the smallest primitive that covers the interaction before composing a 
 
 These production areas already use the shared package and are useful examples for agents:
 
-- Extension page shell and states: `system-telemetry`, `system-skills`, `system-extension-manager`
+- Extension page shell and states: `system-telemetry`, `system-extension-manager`
 - Forms and settings: `system-automations`, `system-knowledge`, desktop `SettingsField`, workbench browser comment forms
 - Search and filters: `system-extension-manager`, `system-automations`
 - Menus and tabs: `system-extension-manager`, `system-prompt-assembly`, `system-model-picker`

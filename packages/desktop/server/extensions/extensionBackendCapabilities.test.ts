@@ -2362,7 +2362,7 @@ describe('extension backend capability dispatcher', () => {
         dispatch({
           id: 1,
           kind: 'capabilityRequest',
-          extensionId: 'system-skills',
+          extensionId: 'system-prompt-assembly',
           capability: 'runtime',
           operation: 'refreshSkillMcpConfig',
           input: { runtimeScope: 'shared', repoRoot: '/repo', runtimeDir: '/runtime' },
@@ -2386,7 +2386,7 @@ describe('extension backend capability dispatcher', () => {
       dispatch({
         id: 1,
         kind: 'capabilityRequest',
-        extensionId: 'system-skills',
+        extensionId: 'system-prompt-assembly',
         capability: 'runtime',
         operation: 'refreshSkillMcpConfig',
         input: { runtimeScope: 'shared', repoRoot: '/repo', runtimeDir: '/runtime' },

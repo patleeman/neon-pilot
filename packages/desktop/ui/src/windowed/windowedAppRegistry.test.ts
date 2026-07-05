@@ -92,7 +92,7 @@ describe('windowed app registry', () => {
         { id: 'system-browser', name: 'Browser', enabled: false, contributes: {} },
         { id: 'system-files', name: 'Files', enabled: false, contributes: {} },
         { id: 'system-terminal', name: 'Terminal', enabled: false, contributes: {} },
-        { id: 'system-skills', name: 'Skills', enabled: true, contributes: {} },
+        { id: 'system-skill-search', name: 'Skill Search', enabled: true, contributes: {} },
       ]),
     );
 

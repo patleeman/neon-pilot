@@ -63,7 +63,7 @@ describe('system-prompt-assembly backend', () => {
         id: 'skill-a',
         title: 'Skill A',
         description: 'Useful skill',
-        source: { kind: 'configured-folder', extensionId: 'system-skills' },
+        source: { kind: 'configured-folder', extensionId: 'system-skill-search' },
         enabled: true,
         priority: 20,
         providerId: 'skills',

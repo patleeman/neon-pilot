@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { listExtensionInstallSummaries } from './extensionRegistry.js';
 
-const HOST_BACKED_EXTENSION_IDS = new Set(['system-prompt-assembly', 'system-skills']);
+const HOST_BACKED_EXTENSION_IDS = new Set(['system-prompt-assembly']);
 
 const BACKEND_ACTION_SMOKE_SCRIPT = String.raw`
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -633,10 +633,6 @@ const smokes = {
     assert(typeof handler === 'function', 'self preservation tool_call hook missing');
     const result = await handler({ toolName: 'bash', input: { command: 'kill ' + process.pid } });
     assert(result?.block === true, 'self preservation did not block agent PID kill');
-  },
-  async 'system-skills'() {
-    const result = await module.listSkills({}, ctx);
-    assert(result.ok === true && Array.isArray(result.skills), 'skills list failed');
   },
   async 'system-skill-search'() {
     const state = await module.listState({}, ctx);

@@ -123,7 +123,6 @@ Bundled system extensions:
 - [Reply Actions](../extensions/system-reply-actions/README.md) — transcript selection actions and draft starters
 - [Settings](../extensions/system-settings/README.md) — native first-party settings routes
 - [Skill Search](../extensions/system-skill-search/README.md) — trusted skill discovery, quarantine preview, vetting, and installation
-- [Skills](../extensions/system-skills/README.md) — backend compatibility actions for agent skills
 - [Telemetry extension](../extensions/system-telemetry/README.md) — app traces, model usage, tool health, and performance
 - [Terminal](../extensions/system-terminal/README.md) — PTY-backed terminal panel
 - [Todos](../extensions/system-todo/README.md) — conversation-scoped execution todos

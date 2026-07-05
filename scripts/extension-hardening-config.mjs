@@ -21,7 +21,6 @@ export const BACKEND_BUNDLE_BYTE_LIMITS = new Map([
   ['system-mcp', 2 * 1024 * 1024],
   ['system-prompt-assembly', 25 * 1024 * 1024],
   ['system-runs', 1 * 1024 * 1024],
-  ['system-skills', 25 * 1024 * 1024],
   ['system-suggested-context', 1 * 1024 * 1024],
   ['system-web-tools', 1 * 1024 * 1024],
 ]);

@@ -253,11 +253,6 @@ Use this as an inventory, not a test script. Each row implies happy path, error 
 - Image tool: generate/edit, size, quality, background, source selection/count, transparent/opaque, failures.
 - Test patch success, patch failure, write new file, overwrite file, invalid path, permissions, transcript output.
 
-### Skills (`system-skills`)
-
-- Actions: `listSkills`, `updateSkillEnabled`.
-- Skills page/surface: list skills, enable/disable, search/filter if present, persistence, prompt assembly integration.
-
 ### Neon Pilot CLI (`system-neon-pilot-admin-cli`)
 
 - Agent tool: `neon_pilot`.
@@ -446,10 +441,6 @@ Bundled system-extension entries are derived from local `extensions/*/extension.
 - settings: secrets.provider, conversation.transcriptDisclosure, conversation.diffDisclosure, conversation.pinnedToolCalls
 - views: settings (/settings), providers (/settings/providers), desktop (/settings/desktop), settings-sidebar
 - backend actions: manageSettings, manageCli
-
-### system-skills — Skills
-
-- backend actions: listSkills, updateSkillEnabled
 
 ### system-telemetry — Telemetry
 

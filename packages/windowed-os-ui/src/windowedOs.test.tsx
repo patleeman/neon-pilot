@@ -1095,7 +1095,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-apps: oklch(70% 0.15 60);');
     expect(tokensSource).toContain('--wos-workflows:');
-    expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
     expect(tokensSource).toContain('--wos-titlebar-h: 24px;');
     expect(tokensSource).toContain('--wos-window-control-size: 18px;');
@@ -1307,7 +1306,7 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    for (const accent of ['workflows', 'skills', 'diagnostics']) {
+    for (const accent of ['workflows', 'automations', 'diagnostics']) {
       expect(stylesSource).toContain(`.wos-window__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-dialog__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-segmented-control[data-accent='${accent}']`);
@@ -3047,31 +3046,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('Export trace');
   });
 
-  it('documents the canonical Skills desktop page', () => {
-    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
-    const source = readFileSync(storiesPath, 'utf8');
-    const skillsSource = source.slice(source.indexOf('function SkillsPageStory'), source.indexOf('export const CoreDataPrimitives'));
-
-    expect(source).toContain('function SkillsPageStory');
-    expect(source).toContain('export const SkillsPage');
-    expect(source).toContain('export const DarkSkillsPage');
-    expect(source).toContain('<SkillsPageStory theme="dark" />');
-    expect(skillsSource).toContain('title="Skills"');
-    expect(skillsSource).toContain('data-wos-theme={theme}');
-    expect(skillsSource).toContain('title="Browse skills"');
-    expect(skillsSource).not.toContain('eyebrow="Skill library"');
-    expect(skillsSource).toContain('title="Sources"');
-    expect(skillsSource).toContain('<WindowedPageSection variant="toolbar">');
-    expect(skillsSource).toContain('Search marketplace skills');
-    expect(skillsSource).toContain('title="Marketplace"');
-    expect(skillsSource).toContain('title="Installed"');
-    expect(skillsSource).toContain('ariaLabel="Skills view"');
-    expect(skillsSource).toContain('<WindowedDialog title="local-qa"');
-    expect(skillsSource.indexOf('</WindowFrame>')).toBeLessThan(skillsSource.indexOf('<WindowedDialog title="local-qa"'));
-    expect(skillsSource).not.toContain('title="Inventory"');
-    expect(skillsSource).not.toContain('title="Installed skills"');
-  });
-
   it('documents the canonical App Manager desktop page and detail subwindow pattern', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
@@ -3166,9 +3140,7 @@ describe('Windowed OS Storybook examples', () => {
       'accent="apps"',
     );
     expect(source).not.toContain('function ModelArenaPageStory');
-    expect(source.slice(source.indexOf('function SkillsPageStory'), source.indexOf('export const CoreDataPrimitives'))).toContain(
-      'title="Skills"\n        accent="skills"',
-    );
+    expect(source).not.toContain('function SkillsPageStory');
     expect(source).not.toContain("title: 'Prompt Assembly'");
   });
 
@@ -3195,8 +3167,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--dark-app-manager-page'");
     expect(source).toContain("'windowed-os-desktop-shell--app-install-dialog'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-app-install-dialog'");
-    expect(source).toContain("'windowed-os-desktop-shell--skills-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-skills-page'");
+    expect(source).not.toContain("'windowed-os-desktop-shell--skills-page'");
+    expect(source).not.toContain("'windowed-os-desktop-shell--dark-skills-page'");
     expect(source).toContain("'windowed-os-desktop-shell--diagnostics-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-diagnostics-page'");
     expect(source).toContain("'windowed-os-desktop-shell--terminal-window'");

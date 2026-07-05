@@ -1211,7 +1211,7 @@ describe('Sidebar', () => {
     expect(html).toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
   });
 
-  it('orders bottom utility nav as Skills, App Manager, then Settings', () => {
+  it('orders bottom utility nav as App Manager then Settings', () => {
     extensionRegistryMock.state.extensions = [
       {
         id: 'system-settings',
@@ -1229,20 +1229,11 @@ describe('Sidebar', () => {
           nav: [{ id: 'extensions-nav', label: 'App Manager', route: '/apps', icon: 'sparkle', section: 'settings' }],
         },
       },
-      {
-        id: 'system-skills',
-        name: 'Skills',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'skills-nav', label: 'Skills', route: '/skills', icon: 'sparkle', section: 'settings' }],
-        },
-      },
     ];
-    extensionRegistryMock.state.routes = [{ route: '/settings' }, { route: '/apps' }, { route: '/skills' }];
+    extensionRegistryMock.state.routes = [{ route: '/settings' }, { route: '/apps' }];
 
     const html = renderSidebar('/settings');
 
-    expect(html.indexOf('data-route="/skills"')).toBeLessThan(html.indexOf('data-route="/apps"'));
     expect(html.indexOf('data-route="/apps"')).toBeLessThan(html.indexOf('data-route="/settings"'));
   });
 

@@ -18,7 +18,7 @@ describe('native extension transcript client', () => {
         type: 'skill',
         id: 'skill:demo',
         label: 'Demo Skill',
-        source: 'system-skills',
+        source: 'system-skill-search',
         data: { path: 'demo' },
       },
       cwd: '/repo',

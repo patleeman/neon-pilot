@@ -2,7 +2,7 @@
 
 This extension owns internal prompt assembly actions for editing the system prompt template and inspecting non-skill capabilities that shape an agent run: instruction layers, prompt templates, runtime context blocks, tools, MCP servers, and diagnostics.
 
-The product surface is **Settings → Prompt Assembly**. Prompt assembly should not contribute its own left-navigation item or standalone route; expose user-facing controls through its Settings panel. Skill browsing, installation, and enablement belong only in **Skills** at `/skills`.
+The product surface is **Settings → Prompt Assembly**. Prompt assembly should not contribute its own left-navigation item or standalone route; expose user-facing controls through its Settings panel. Skill enablement belongs here, while skill search and installation stay agent-internal through `system-skill-search`.
 
 App-control configuration does not belong here. Commands, keyboard shortcuts, and apps live in **Settings → Commands** and **Settings → Apps**.
 

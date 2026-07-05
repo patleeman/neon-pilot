@@ -39,7 +39,7 @@ Implementation should continue tightening the accepted shell behavior:
 - Do not show disabled right-sidebar chrome for unavailable routes.
 - Remember right-sidebar open/closed state per route.
 - Let main pages publish selection/context that right-sidebar views can consume.
-- Move Skills and Extensions details into right-sidebar detail views instead of modal-first details.
+- Move Extensions details into right-sidebar detail views instead of modal-first details.
 - Keep Automations as a main table page with no Threads sidebar and no route-owned right sidebar.
 
 ## Recommended Defaults
@@ -107,7 +107,6 @@ Current implementation work should focus on conformance and verification:
 - Chat: Conversation page. Threads left, Conversation main, Workbench right.
 - Automations: Table page. Blank contextual left, Automations table main. No right sidebar; create/edit/details stay in the main workflow.
 - Diagnostics: Dashboard page. Blank contextual left, diagnostics main, optional metric detail right later.
-- Skills: Table page. Blank contextual left, skills table main, selected skill detail right.
 - Extensions: Table page. Blank contextual left, extensions table main, selected extension detail right.
 - Settings: Settings page. Settings navigation left, settings group main, no right sidebar by default.
 
@@ -115,14 +114,13 @@ Current implementation work should focus on conformance and verification:
 
 This is the working checklist for conforming existing first-party page routes to the accepted shell model and approved page types.
 
-| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar         | Status                                                 |
-| ------------------ | -------------------------- | ------------ | ----------------------------------------- | --------------------- | ------------------------------------------------------ |
-| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench             | Accepted shell owner                                   |
-| `/automations`     | `system-automations`       | Table        | Blank                                     | None                  | Conformed shell; main-only table workflow              |
-| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                  | Conformed                                              |
-| `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail` | Conformed                                              |
-| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                  | Conformed; details open inside the App Manager window  |
-| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                  | Conformed shell; settings grammar needs separate sweep |
+| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar | Status                                                 |
+| ------------------ | -------------------------- | ------------ | ----------------------------------------- | ------------- | ------------------------------------------------------ |
+| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench     | Accepted shell owner                                   |
+| `/automations`     | `system-automations`       | Table        | Blank                                     | None          | Conformed shell; main-only table workflow              |
+| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None          | Conformed                                              |
+| `/apps`            | `system-extension-manager` | Table        | Blank                                     | None          | Conformed; details open inside the App Manager window  |
+| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None          | Conformed shell; settings grammar needs separate sweep |
 
 Remaining broad sweeps:
 
@@ -156,8 +154,8 @@ Remaining broad sweeps:
    - Pass route context, active cwd, and shared selection into right-sidebar surfaces.
 
 5. Page conformance — in progress
-   - Update Automations, Skills, Extensions, Diagnostics, and Settings to declare the regions they own.
-   - Move Skills/Extensions details out of modal-first flows and into selected-item context rails.
+   - Update Automations, Extensions, Diagnostics, and Settings to declare the regions they own.
+   - Move Extensions details out of modal-first flows and into selected-item context rails.
    - Keep Automations main-only with no right-sidebar toggle.
    - Use shared route selection/context for selected-object details so the main table and right sidebar stay synchronized.
    - Remove custom in-page second columns where the right sidebar is the correct surface.
@@ -185,7 +183,7 @@ Use these slices to finish conformance against the approved shell and page-type 
 
 3. Table/detail route sweep
    - Keep Automations main-only.
-   - Keep Skills and Extensions details in context rails, not modal-first detail inspection.
+   - Keep Extensions details in context rails, not modal-first detail inspection.
    - Normalize table toolbar, filters, search placement, pagination, row actions, empty/loading states.
 
 4. Setup and settings sweep
@@ -201,7 +199,7 @@ Use these slices to finish conformance against the approved shell and page-type 
 - Non-chat pages no longer show Threads unless they explicitly declare Threads-like content.
 - Automations shows global nav, blank contextual middle-left area, main table, and no right-sidebar toggle.
 - Chat shows Threads, conversation, and Workbench with the right-sidebar toggle visible.
-- Skills and Extensions can show selected-item details in the right sidebar.
+- Extensions can show selected-item details in the right sidebar.
 - The right-sidebar toggle is hidden, not disabled, on routes without right-sidebar content.
 - Right-sidebar open/closed state is remembered per route.
 - Extension docs explain how to declare main, contextual-left, and right-sidebar route regions.
@@ -215,4 +213,4 @@ Use these slices to finish conformance against the approved shell and page-type 
 - Done: test fixture extension routes with `sidebarView` and `rightSidebarView`.
 - Done: run UI-pattern guardrails for page-local sidebars, main-view side fields, unbound or invalid contextual-left sidebars, unbound or invalid primary right sidebars, and old right-sidebar wording.
 - Run `pnpm --dir packages/desktop run build:ui`, `pnpm run check:types`, extension static checks, and UI pattern checks.
-- Launch the desktop app and visually QA Chat, Automations, Skills, Extensions, Diagnostics, and Settings.
+- Launch the desktop app and visually QA Chat, Automations, Extensions, Diagnostics, and Settings.

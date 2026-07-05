@@ -602,7 +602,7 @@ describe('Layout workbench toggle', () => {
     ];
     setExtensionSelection({
       kind: 'resource',
-      resource: { type: 'skill', id: 'skill:demo', label: 'Demo Skill', source: 'system-skills' },
+      resource: { type: 'skill', id: 'skill:demo', label: 'Demo Skill', source: 'system-skill-search' },
     });
 
     renderLayout('/route-a');

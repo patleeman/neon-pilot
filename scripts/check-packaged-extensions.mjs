@@ -62,7 +62,7 @@ const forbiddenBackendPrefixes = [
   '@sinclair/typebox',
   'jsdom',
 ];
-const allowedHostBackedExtensionIds = new Set(['system-knowledge', 'system-prompt-assembly', 'system-skills']);
+const allowedHostBackedExtensionIds = new Set(['system-knowledge', 'system-prompt-assembly']);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));

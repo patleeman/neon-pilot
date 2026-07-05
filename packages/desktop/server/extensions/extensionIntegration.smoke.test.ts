@@ -37,7 +37,7 @@ import {
 } from './extensionRegistry.js';
 import { isKnownHostCommand } from './hostCommands.js';
 
-const HOST_BACKED_EXTENSION_IDS = new Set(['system-prompt-assembly', 'system-skills']);
+const HOST_BACKED_EXTENSION_IDS = new Set(['system-prompt-assembly']);
 const CLI_USAGE_HIDDEN_SCHEMA_FLAGS = new Map<string, Set<string>>([
   ['ask', new Set(['timeout'])],
   ['background-commands start', new Set(['task-slug'])],

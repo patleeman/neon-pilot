@@ -306,10 +306,9 @@ type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
 };
 
 const SETTINGS_NAV_ROUTE_ORDER = new Map([
-  ['/skills', 0],
-  ['/apps', 1],
-  ['/extensions', 1],
-  ['/settings', 2],
+  ['/apps', 0],
+  ['/extensions', 0],
+  ['/settings', 1],
 ]);
 
 function settingsNavItemOrder(item: SidebarExtensionNavItem): number {

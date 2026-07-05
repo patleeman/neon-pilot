@@ -200,7 +200,7 @@ describe('PromptAssemblyPage', () => {
           description: 'Useful skill',
           enabled: true,
           status: 'active',
-          source: { label: 'system-skills' },
+          source: { label: 'system-skill-search' },
         },
         {
           id: 'tool-a',
