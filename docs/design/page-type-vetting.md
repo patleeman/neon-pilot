@@ -20,7 +20,7 @@ Approved shell rules:
 | ------------ | ----------------------------------------- | --------------------------------- | ----------------------------- | ------------------------------- |
 | Conversation | Transcript-first agent work               | Threads or conversation navigator | Workbench/context rail        | Chat                            |
 | Table        | Durable object management                 | Blank                             | Selected-item details         | Automations, Skills, Extensions |
-| Editor       | Structured object editing                 | Optional object/step navigator    | Inspector/history/preview     | Routines                        |
+| Editor       | Structured object editing                 | Optional object/step navigator    | Inspector/history/preview     | Structured editors              |
 | Settings     | Preferences and configuration             | Optional settings navigation      | Help/details only when useful | Settings, extension settings    |
 | Dashboard    | Metrics, diagnostics, status              | Blank                             | Metric/log/detail context     | Diagnostics, Model Arena        |
 | Setup        | Credential, provider, install, onboarding | Optional selector                 | Docs/activity/test output     | Gateways, Setup Readiness       |
@@ -35,7 +35,6 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 | `/automations`     | Table        | Blank              | None            | Main-only table workflow. Details/create/edit can remain dialog-backed when they are short-lived flows. |
 | `/gateways`        | Setup        | Blank              | Gateway context | Provider onboarding, readiness, docs, activity, and test output use Setup grammar.                      |
 | `/model-arena`     | Dashboard    | Blank              | Arena context   | Monitors challenger state, eligibility, settings, and history.                                          |
-| `/routines`        | Editor       | Routine navigator  | Routine context | Structured routine editing with optional inspector/history context.                                     |
 | `/telemetry`       | Dashboard    | Blank              | None            | Metrics/status view.                                                                                    |
 | `/ai-gateway`      | Setup        | Blank              | None            | Gateway runtime controls are main-only in the windowed shell.                                           |
 | `/skills`          | Table        | Blank              | Skill detail    | Selected skill details belong in the right sidebar.                                                     |
@@ -53,7 +52,6 @@ Every first-party extension route with a `main` view must declare one approved p
 | `system-gateways`          | `/gateways`    | `setup`     | None               | `gateway-context-rail`     |
 | `system-model-arena`       | `/model-arena` | `dashboard` | None               | `model-arena-context-rail` |
 | `system-model-gateway`     | `/ai-gateway`  | `setup`     | None               | None                       |
-| `system-routines`          | `/routines`    | `editor`    | `routines-sidebar` | `routines-context-rail`    |
 | `system-settings`          | `/settings`    | `settings`  | `settings-sidebar` | None                       |
 | `system-skills`            | `/skills`      | `table`     | None               | `skills-context-rail`      |
 | `system-telemetry`         | `/telemetry`   | `dashboard` | None               | None                       |
@@ -92,18 +90,16 @@ The manifest-level shell contract:
   "contributes": {
     "nav": [
       {
-        "id": "routines-nav",
-        "label": "Routines",
-        "route": "/routines",
-        "pageType": "editor",
-        "sidebarView": "routines-sidebar",
-        "rightSidebarView": "routines-context-rail"
+        "id": "settings-nav",
+        "label": "Settings",
+        "route": "/settings",
+        "pageType": "settings",
+        "sidebarView": "settings-sidebar"
       }
     ],
     "views": [
-      { "id": "page", "route": "/routines", "location": "main", "component": "RoutinesPage" },
-      { "id": "routines-sidebar", "location": "sidebar", "component": "RoutinesSidebar" },
-      { "id": "routines-context-rail", "location": "rightRail", "placement": "primary", "component": "RoutinesContextRail" }
+      { "id": "page", "route": "/settings", "location": "main", "component": "SettingsPage" },
+      { "id": "settings-sidebar", "location": "sidebar", "component": "SettingsSidebar" }
     ]
   }
 }

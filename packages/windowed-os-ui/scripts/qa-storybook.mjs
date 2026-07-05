@@ -54,8 +54,6 @@ const requiredCanonicalStoryIds = [
   'windowed-os-desktop-shell--dark-ai-gateway-page',
   'windowed-os-desktop-shell--model-arena-page',
   'windowed-os-desktop-shell--dark-model-arena-page',
-  'windowed-os-desktop-shell--routines-page',
-  'windowed-os-desktop-shell--dark-routines-page',
   'windowed-os-desktop-shell--app-manager-page',
   'windowed-os-desktop-shell--dark-app-manager-page',
   'windowed-os-desktop-shell--app-install-dialog',

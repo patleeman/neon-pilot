@@ -8,7 +8,6 @@
     "system-automations",
     "system-conversation-tools",
     "system-diffs",
-    "system-routines",
     "system-mcp",
     "system-telemetry",
     "system-todo",
@@ -54,11 +53,6 @@
       "text": ["Automations"]
     },
     {
-      "extensionId": "system-routines",
-      "path": "/routines",
-      "text": ["Routines", "How Routines work", "Check before checkpoint"]
-    },
-    {
       "extensionId": "system-telemetry",
       "path": "/telemetry",
       "text": ["Diagnostics"]
@@ -82,12 +76,6 @@
       "actionId": "getState",
       "input": { "conversationId": "release-golden-smoke" },
       "text": ["items"]
-    },
-    {
-      "extensionId": "system-routines",
-      "actionId": "getState",
-      "input": {},
-      "text": ["hooks", "routines", "checkpoint"]
     }
   ],
   "agentTools": {

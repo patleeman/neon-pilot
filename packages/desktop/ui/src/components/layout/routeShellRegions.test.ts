@@ -54,7 +54,7 @@ describe('route shell regions', () => {
     const items = buildRouteShellNavItems([
       extension({
         contributes: {
-          nav: [{ id: 'routines', label: 'Routines', route: '/routines', sidebarView: 'left', rightSidebarView: 'right' }],
+          nav: [{ id: 'example', label: 'Example', route: '/example', sidebarView: 'left', rightSidebarView: 'right' }],
         },
       }),
       extension({
@@ -66,51 +66,51 @@ describe('route shell regions', () => {
       }),
     ]);
 
-    expect(items).toEqual([{ extensionId: 'ext', route: '/routines', sidebarView: 'left', rightSidebarView: 'right' }]);
+    expect(items).toEqual([{ extensionId: 'ext', route: '/example', sidebarView: 'left', rightSidebarView: 'right' }]);
   });
 
   it('uses the most specific matching route declaration', () => {
-    const active = resolveActiveRouteShellNavItem('/routines/checkpoint', [
-      { extensionId: 'ext', route: '/routines', sidebarView: 'broad' },
-      { extensionId: 'ext', route: '/routines/checkpoint', sidebarView: 'specific' },
+    const active = resolveActiveRouteShellNavItem('/example/detail', [
+      { extensionId: 'ext', route: '/example', sidebarView: 'broad' },
+      { extensionId: 'ext', route: '/example/detail', sidebarView: 'specific' },
     ]);
 
     expect(active?.sidebarView).toBe('specific');
   });
 
   it('does not match sibling route prefixes', () => {
-    expect(resolveActiveRouteShellNavItem('/routines-extra', [{ extensionId: 'ext', route: '/routines', sidebarView: 'left' }])).toBeNull();
+    expect(resolveActiveRouteShellNavItem('/example-extra', [{ extensionId: 'ext', route: '/example', sidebarView: 'left' }])).toBeNull();
   });
 
   it('resolves declared left and right route surfaces', () => {
-    const navItems = [{ extensionId: 'ext', route: '/routines', sidebarView: 'left', rightSidebarView: 'right' }];
+    const navItems = [{ extensionId: 'ext', route: '/example', sidebarView: 'left', rightSidebarView: 'right' }];
 
-    expect(resolveRouteSidebarSurface({ pathname: '/routines', navItems, surfaces })?.id).toBe('left');
-    expect(resolveRouteRightSidebarSurface({ pathname: '/routines', navItems, surfaces })?.id).toBe('right');
+    expect(resolveRouteSidebarSurface({ pathname: '/example', navItems, surfaces })?.id).toBe('left');
+    expect(resolveRouteRightSidebarSurface({ pathname: '/example', navItems, surfaces })?.id).toBe('right');
   });
 
   it('does not invent a route rail without an explicit rightSidebarView declaration', () => {
     expect(
       resolveRouteRightSidebarSurface({
-        pathname: '/routines',
-        navItems: [{ extensionId: 'ext', route: '/routines', sidebarView: 'left' }],
+        pathname: '/example',
+        navItems: [{ extensionId: 'ext', route: '/example', sidebarView: 'left' }],
         surfaces,
       }),
     ).toBeNull();
   });
 
   it('does not resolve contextual shell surfaces from another extension', () => {
-    const navItems = [{ extensionId: 'other-ext', route: '/routines', sidebarView: 'left', rightSidebarView: 'right' }];
+    const navItems = [{ extensionId: 'other-ext', route: '/example', sidebarView: 'left', rightSidebarView: 'right' }];
 
-    expect(resolveRouteSidebarSurface({ pathname: '/routines', navItems, surfaces })).toBeNull();
-    expect(resolveRouteRightSidebarSurface({ pathname: '/routines', navItems, surfaces })).toBeNull();
+    expect(resolveRouteSidebarSurface({ pathname: '/example', navItems, surfaces })).toBeNull();
+    expect(resolveRouteRightSidebarSurface({ pathname: '/example', navItems, surfaces })).toBeNull();
   });
 
   it('requires sidebar declarations to reference sidebar surfaces', () => {
     expect(
       resolveRouteSidebarSurface({
-        pathname: '/routines',
-        navItems: [{ extensionId: 'ext', route: '/routines', sidebarView: 'right' }],
+        pathname: '/example',
+        navItems: [{ extensionId: 'ext', route: '/example', sidebarView: 'right' }],
         surfaces,
       }),
     ).toBeNull();
@@ -130,16 +130,16 @@ describe('route shell regions', () => {
 
     expect(
       resolveRouteRightSidebarSurface({
-        pathname: '/routines',
-        navItems: [{ extensionId: 'ext', route: '/routines', rightSidebarView: 'left' }],
+        pathname: '/example',
+        navItems: [{ extensionId: 'ext', route: '/example', rightSidebarView: 'left' }],
         surfaces,
       }),
     ).toBeNull();
 
     expect(
       resolveRouteRightSidebarSurface({
-        pathname: '/routines',
-        navItems: [{ extensionId: 'ext', route: '/routines', rightSidebarView: 'workbench-tool-right' }],
+        pathname: '/example',
+        navItems: [{ extensionId: 'ext', route: '/example', rightSidebarView: 'workbench-tool-right' }],
         surfaces: [...surfaces, workbenchToolRail],
       }),
     ).toBeNull();
@@ -158,8 +158,8 @@ describe('route shell regions', () => {
 
     expect(
       resolveRouteRightSidebarSurface({
-        pathname: '/routines',
-        navItems: [{ extensionId: 'ext', route: '/routines', rightSidebarView: 'right-without-scope' }],
+        pathname: '/example',
+        navItems: [{ extensionId: 'ext', route: '/example', rightSidebarView: 'right-without-scope' }],
         surfaces: [...surfaces, primaryRailWithoutScope],
       })?.id,
     ).toBe('right-without-scope');

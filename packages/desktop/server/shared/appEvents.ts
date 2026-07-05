@@ -32,7 +32,6 @@ export type AppEventTopic =
   | 'runs'
   | 'executions'
   | 'automation'
-  | 'routines'
   | 'daemon'
   | 'workspace'
   | 'knowledgeBase'
@@ -147,7 +146,6 @@ const ALL_TOPICS: AppEventTopic[] = [
   'runs',
   'executions',
   'automation',
-  'routines',
   'daemon',
   'workspace',
   'knowledgeBase',
@@ -375,7 +373,6 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
   const tasksDir = getDurableTasksDir();
   const daemonStateDir = dirname(options.taskStateFile);
   const runtimeDbFile = join(daemonStateDir, 'runtime.db');
-  const appStateDbFile = join(getStateRoot(), 'app-state', 'app-state.sqlite');
   const runsRoot = resolveDurableRunsRoot(daemonStateDir);
   const conversationAttentionStateFile = resolveConversationAttentionStatePath({ profile });
   const deferredResumeStateFile = resolveDeferredResumeStateFile();
@@ -402,11 +399,6 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     ],
     runs: [{ path: runsRoot, kind: 'directory' }],
     executions: [],
-    routines: [
-      { path: appStateDbFile, kind: 'file' },
-      { path: `${appStateDbFile}-wal`, kind: 'file' },
-      { path: `${appStateDbFile}-shm`, kind: 'file' },
-    ],
     extensions: [{ path: join(getStateRoot(), 'extensions'), kind: 'directory', eventKinds: ['change', 'rename'] }],
     automation: [],
     models: [],

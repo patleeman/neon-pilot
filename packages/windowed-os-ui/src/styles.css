@@ -575,7 +575,6 @@
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='chat'],
-.wos-taskbar__button[data-focused='true'][data-accent='routines'],
 .wos-taskbar__button[data-focused='true'][data-accent='workflows'],
 .wos-taskbar__button[data-focused='true'][data-accent='automations'],
 .wos-taskbar__button[data-focused='true'][data-accent='gateways'],
@@ -585,10 +584,6 @@
 .wos-taskbar__button[data-focused='true'][data-accent='telemetry'],
 .wos-taskbar__button[data-focused='true'][data-accent='diagnostics'] {
   color: var(--wos-accent-ink);
-}
-
-.wos-taskbar__button[data-focused='true'][data-accent='routines'] {
-  background: var(--wos-routines);
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='workflows'] {
@@ -652,11 +647,6 @@
   background: var(--wos-chat);
 }
 
-.wos-app-monogram[data-accent='routines'],
-.wos-window__titlebar[data-accent='routines'] {
-  background: var(--wos-routines);
-}
-
 .wos-app-monogram[data-accent='workflows'],
 .wos-window__titlebar[data-accent='workflows'] {
   background: var(--wos-workflows);
@@ -703,7 +693,6 @@
 }
 
 .wos-app-monogram[data-accent='chat'],
-.wos-app-monogram[data-accent='routines'],
 .wos-app-monogram[data-accent='workflows'],
 .wos-app-monogram[data-accent='automations'],
 .wos-app-monogram[data-accent='gateways'],
@@ -713,7 +702,6 @@
 .wos-app-monogram[data-accent='telemetry'],
 .wos-app-monogram[data-accent='diagnostics'],
 .wos-window__titlebar[data-accent='chat'],
-.wos-window__titlebar[data-accent='routines'],
 .wos-window__titlebar[data-accent='workflows'],
 .wos-window__titlebar[data-accent='automations'],
 .wos-window__titlebar[data-accent='gateways'],
@@ -1014,7 +1002,6 @@
 }
 
 .wos-window__titlebar[data-accent='chat'] .wos-window__meta,
-.wos-window__titlebar[data-accent='routines'] .wos-window__meta,
 .wos-window__titlebar[data-accent='workflows'] .wos-window__meta,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta,
@@ -1027,7 +1014,6 @@
 }
 
 .wos-window__titlebar[data-accent='chat'] .wos-window__meta::before,
-.wos-window__titlebar[data-accent='routines'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='workflows'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta::before,
@@ -1391,7 +1377,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog__titlebar[data-accent='chat'],
-.wos-dialog__titlebar[data-accent='routines'],
 .wos-dialog__titlebar[data-accent='workflows'],
 .wos-dialog__titlebar[data-accent='automations'],
 .wos-dialog__titlebar[data-accent='gateways'],
@@ -1401,10 +1386,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='telemetry'],
 .wos-dialog__titlebar[data-accent='diagnostics'] {
   color: var(--wos-accent-ink);
-}
-
-.wos-dialog__titlebar[data-accent='routines'] {
-  background: var(--wos-routines);
 }
 
 .wos-dialog__titlebar[data-accent='workflows'] {
@@ -1469,7 +1450,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta,
-.wos-dialog__titlebar[data-accent='routines'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta,
@@ -1482,7 +1462,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 }
 
 .wos-dialog__titlebar[data-accent='chat'] .wos-dialog__meta::before,
-.wos-dialog__titlebar[data-accent='routines'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta::before,
@@ -3318,7 +3297,7 @@ button.wos-chat-window-toolbar__status:focus-visible {
 }
 
 .wos-window-route-body .ui-status-dot-success {
-  background: var(--wos-routines);
+  background: var(--wos-automations);
 }
 
 .wos-window-route-body .ui-status-dot-warning {
@@ -3791,11 +3770,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-segmented-control[data-accent='chat'] {
   --wos-segmented-active: var(--wos-chat);
-  --wos-segmented-active-ink: var(--wos-accent-ink);
-}
-
-.wos-segmented-control[data-accent='routines'] {
-  --wos-segmented-active: var(--wos-routines);
   --wos-segmented-active-ink: var(--wos-accent-ink);
 }
 
@@ -4839,10 +4813,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   background: var(--wos-chat);
 }
 
-.wos-toggle[data-checked='true'][data-accent='routines'] {
-  background: var(--wos-routines);
-}
-
 .wos-toggle[data-checked='true'][data-accent='workflows'] {
   background: var(--wos-workflows);
 }
@@ -4983,11 +4953,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-data-row[data-accent='chat'] {
   --wos-data-row-active: var(--wos-chat);
-  --wos-data-row-active-ink: white;
-}
-
-.wos-data-row[data-accent='routines'] {
-  --wos-data-row-active: var(--wos-routines);
   --wos-data-row-active-ink: white;
 }
 
@@ -5276,11 +5241,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   --wos-list-active-ink: var(--wos-accent-ink);
 }
 
-.wos-list-item[data-accent='routines'] {
-  --wos-list-active: var(--wos-routines);
-  --wos-list-active-ink: var(--wos-accent-ink);
-}
-
 .wos-list-item[data-accent='workflows'] {
   --wos-list-active: var(--wos-workflows);
   --wos-list-active-ink: var(--wos-accent-ink);
@@ -5497,43 +5457,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
     justify-content: flex-start;
     gap: 4px 8px;
   }
-}
-
-.wos-routine-empty,
-.wos-routine-error {
-  color: var(--wos-ink-500);
-  font-family: system-ui, sans-serif;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.wos-routine-path-list {
-  border: 1.5px solid var(--wos-ink-900);
-  border-radius: 8px;
-  background: var(--wos-surface-1);
-  margin-top: 8px;
-}
-
-.wos-routine-summary-row .wos-data-row__name,
-.wos-routine-summary-row .wos-data-row__meta {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.wos-routine-editor-bridge {
-  overflow: hidden;
-  border: 1.5px solid var(--wos-ink-900);
-  border-radius: 8px;
-  background: var(--wos-surface-1);
-  margin-top: 10px;
-}
-
-.wos-routine-editor-bridge > * {
-  border-top: 0;
-}
-
-.wos-routine-error {
-  color: var(--wos-telemetry);
 }
 
 .wos-gateway-status-message,
@@ -8232,7 +8155,6 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;
 }
 
-.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine,
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs,
 .windowed-os-shell .wos-window-route-body--chat .ui-tool-block__mentioned-runs {
   background: color-mix(in srgb, var(--wos-surface-2) 70%, var(--wos-surface-3)) !important;

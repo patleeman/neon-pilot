@@ -843,9 +843,9 @@ describe('WindowedDialog content primitives', () => {
   it('supports initial modeless subwindow offsets for multiple desktop detail windows', () => {
     const html = renderToStaticMarkup(
       <WindowedDialog
-        title="Routine runs"
-        accent="routines"
-        parentWindowTitle="Routines"
+        title="Settings detail"
+        accent="settings"
+        parentWindowTitle="Settings"
         initialOffset={{ x: 0, y: 390 }}
         onClose={() => undefined}
       >
@@ -1758,7 +1758,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('min-width: 0;\n  max-width: 100%;\n  border-color: var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('padding: 7px 9px;');
     expect(stylesSource).toContain('font-weight: 700;');
-    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__routine');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs');
     expect(stylesSource).toContain('border-top: var(--wos-border-strong) solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-tool-block__linked-runs-summary');
@@ -3053,7 +3052,7 @@ describe('Windowed OS Storybook examples', () => {
   it('documents the canonical AI Gateway desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
-    const aiGatewaySource = source.slice(source.indexOf('function AIGatewayPageStory'), source.indexOf('export const RoutinesPage'));
+    const aiGatewaySource = source.slice(source.indexOf('function AIGatewayPageStory'), source.indexOf('export const AIGatewayPage'));
 
     expect(source).toContain('function AIGatewayPageStory');
     expect(source).toContain('export const AIGatewayPage');
@@ -3072,41 +3071,6 @@ describe('Windowed OS Storybook examples', () => {
     );
     expect(aiGatewaySource).not.toContain('eyebrow="Loopback"');
     expect(aiGatewaySource).not.toContain('title="Selected gateway"');
-  });
-
-  it('documents the canonical Routines desktop page', () => {
-    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
-    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
-    const source = readFileSync(storiesPath, 'utf8');
-    const stylesSource = readFileSync(stylesPath, 'utf8');
-    const routinesSource = source.slice(source.indexOf('function RoutinesPageStory'), source.indexOf('export const RoutinesPage'));
-
-    expect(source).toContain('function RoutinesPageStory');
-    expect(source).toContain('export const RoutinesPage');
-    expect(source).toContain('export const DarkRoutinesPage');
-    expect(source).toContain('<RoutinesPageStory theme="dark" />');
-    expect(source).toContain('title="Routines"');
-    expect(source).toContain('data-wos-theme={theme}');
-    expect(source).not.toContain('eyebrow="Agent hooks"');
-    expect(routinesSource).not.toContain('wos-page-eyebrow');
-    expect(source).toContain('title="Events"');
-    expect(routinesSource).toContain('meta="4 available"');
-    expect(routinesSource).toContain('meta="Agent lifecycle"');
-    expect(routinesSource).toContain('meta="Tool calls"');
-    expect(routinesSource).toContain('title="After tool call"');
-    expect(source).toContain('title="Before"');
-    expect(source).toContain('title="After"');
-    expect(source).toContain('title="Status"');
-    expect(source).toContain('<WindowedDialog');
-    expect(source).toContain('title="Routine runs"');
-    expect(routinesSource.indexOf('</WindowFrame>')).toBeLessThan(routinesSource.indexOf('<WindowedDialog'));
-    expect(routinesSource).toContain('initialOffset={{ x: 0, y: 390 }}');
-    expect(source).not.toContain('title="Selected routine"');
-    expect(source).not.toContain('ariaLabel="Routine scope"');
-    expect(routinesSource.match(/className="wos-routine-summary-row"/g)).toHaveLength(3);
-    expect(stylesSource).toContain('.wos-routine-summary-row .wos-data-row__name,\n.wos-routine-summary-row .wos-data-row__meta');
-    expect(stylesSource).toContain('.wos-routine-summary-row .wos-data-row__meta');
-    expect(stylesSource).toContain('overflow-wrap: anywhere;');
   });
 
   it('documents the canonical Model Arena desktop page', () => {
@@ -3352,8 +3316,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--dark-ai-gateway-page'");
     expect(source).toContain("'windowed-os-desktop-shell--model-arena-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-model-arena-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--routines-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-routines-page'");
     expect(source).toContain("'windowed-os-desktop-shell--app-manager-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-app-manager-page'");
     expect(source).toContain("'windowed-os-desktop-shell--app-install-dialog'");

@@ -66,7 +66,6 @@
     "test:extensions": "vitest run packages/desktop/server/extensions/extensionIntegration.smoke.test.ts packages/desktop/server/extensions/systemExtensionBackendRuntime.smoke.test.ts packages/desktop/server/routes/registerAll.smoke.test.ts",
     "test:release-hardening": "vitest run scripts/release-extension-golden-smoke.test.mjs scripts/release-smoke-args.test.mjs scripts/release-reliability-doctor.test.mjs",
     "smoke:release-extensions": "node scripts/release-extension-golden-smoke.mjs",
-    "smoke:routines-ui": "pnpm run desktop:build && pnpm run test:e2e:runner --grep @routines",
     "smoke:extension-webapps": "node scripts/smoke-extension-webapps.mjs",
     "test:smoke": "pnpm run test:extensions && pnpm run smoke:startup-idle",
     "smoke:model-gateway": "node scripts/model-gateway-smoke.mjs",

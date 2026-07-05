@@ -26,75 +26,6 @@ function formatCheckpointFailure(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-interface RoutineHookResult {
-  ok?: boolean;
-  blocked?: boolean;
-  status?: string;
-  message?: string;
-  run?: RoutineActivityRun;
-}
-
-function formatAfterRoutineNotice(result: RoutineHookResult | null): string {
-  if (!result?.status || result.status === 'passed' || result.status === 'skipped') return '';
-  const label = result.status === 'warned' ? 'warning' : result.status;
-  return ` Routine ${label}: ${result.message ?? 'A post-checkpoint routine needs attention.'}`;
-}
-
-interface RoutineActivityStep {
-  routineId: string;
-  routineName: string;
-  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
-  outcome?: string;
-  message?: string;
-  skillRefs?: string[];
-  model?: string;
-  provider?: string;
-  fallbackUsed?: boolean;
-}
-
-interface RoutineActivityRun {
-  id: string;
-  hookId: string;
-  position: 'before' | 'after';
-  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
-  startedAt?: string;
-  completedAt?: string;
-  steps: RoutineActivityStep[];
-}
-
-function readRoutineActivityRun(result: RoutineHookResult | null): RoutineActivityRun | null {
-  if (!result?.run || !Array.isArray(result.run.steps) || result.run.steps.length === 0) return null;
-  return result.run;
-}
-
-function routineActivityRuns(...results: Array<RoutineHookResult | null>): RoutineActivityRun[] {
-  return results.map(readRoutineActivityRun).filter((run): run is RoutineActivityRun => Boolean(run));
-}
-
-async function runCheckpointRoutineHook(
-  ctx: CheckpointBackendContext,
-  input: { position: 'before' | 'after'; cwd: string; conversationId: string; message: string; paths: string[]; result?: unknown },
-): Promise<RoutineHookResult | null> {
-  if (!ctx.extensions?.callAction) return null;
-  try {
-    return (await ctx.extensions.callAction('system-routines', 'runHook', {
-      hookId: 'checkpoint',
-      position: input.position,
-      context: {
-        cwd: input.cwd,
-        conversationId: input.conversationId,
-        changedFiles: input.paths,
-        checkpointMessage: input.message,
-        result: input.result,
-      },
-    })) as RoutineHookResult;
-  } catch (error) {
-    const message = formatCheckpointFailure(error);
-    if (/not found|disabled|requires permission/i.test(message)) return null;
-    throw error;
-  }
-}
-
 interface ParsedCommitMetadata {
   commitSha: string;
   shortSha: string;
@@ -351,20 +282,6 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
       const cwd = readRequiredString(ctx.toolContext?.cwd, 'cwd');
       const message = readRequiredString(input.message, 'message');
       const paths = readPathInputs(cwd, input.paths);
-      const beforeRoutine = await runCheckpointRoutineHook(ctx, { position: 'before', cwd, conversationId, message, paths });
-      if (beforeRoutine?.blocked) {
-        const routineHooks = routineActivityRuns(beforeRoutine);
-        return {
-          text: beforeRoutine.message ?? 'Checkpoint blocked by a routine.',
-          isError: true,
-          action: 'save',
-          conversationId,
-          cwd,
-          paths,
-          routineStatus: beforeRoutine.status,
-          ...(routineHooks.length > 0 ? { routineHooks } : {}),
-        };
-      }
       const created = await createCheckpointCommit(ctx, { cwd, message, paths }).catch((error: unknown) => ({
         error: formatCheckpointFailure(error),
       }));
@@ -399,26 +316,8 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
         linesDeleted,
       });
       ctx.ui?.invalidate?.(['checkpoints', 'sessions']);
-      const afterRoutine = await runCheckpointRoutineHook(ctx, {
-        position: 'after',
-        cwd,
-        conversationId,
-        message,
-        paths,
-        result: {
-          checkpointId: record.id,
-          commitSha: record.commitSha,
-          shortSha: record.shortSha,
-          subject: record.subject,
-          fileCount: record.fileCount,
-          linesAdded: record.linesAdded,
-          linesDeleted: record.linesDeleted,
-        },
-      });
-      const afterRoutineNotice = formatAfterRoutineNotice(afterRoutine);
-      const routineHooks = routineActivityRuns(beforeRoutine, afterRoutine);
       return {
-        text: `Saved checkpoint ${record.shortSha} ${record.subject} (${record.fileCount} files, +${record.linesAdded} -${record.linesDeleted}).${afterRoutineNotice}`,
+        text: `Saved checkpoint ${record.shortSha} ${record.subject} (${record.fileCount} files, +${record.linesAdded} -${record.linesDeleted}).`,
         action: 'save',
         conversationId,
         checkpointId: record.id,
@@ -432,8 +331,6 @@ export async function checkpoint(input: CheckpointInput, ctx: CheckpointBackendC
         cwd: record.cwd,
         updatedAt: record.updatedAt,
         paths,
-        ...(afterRoutineNotice ? { routineStatus: afterRoutine?.status } : {}),
-        ...(routineHooks.length > 0 ? { routineHooks } : {}),
       };
     }
     default:

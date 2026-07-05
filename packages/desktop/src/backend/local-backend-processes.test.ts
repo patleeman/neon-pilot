@@ -394,7 +394,7 @@ describe('LocalBackendProcesses', () => {
     const backend = new LocalBackendProcesses();
     await backend.ensureStarted();
 
-    extensionHost.emit('message', { type: 'desktop-app-event', event: { type: 'invalidate', topics: ['tasks', 'sessions', 'routines'] } });
+    extensionHost.emit('message', { type: 'desktop-app-event', event: { type: 'invalidate', topics: ['tasks', 'sessions', 'runs'] } });
 
     let request: { type?: string; event?: unknown } | undefined;
     for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -407,7 +407,7 @@ describe('LocalBackendProcesses', () => {
 
     expect(request).toMatchObject({
       type: 'desktop-app-event',
-      event: { type: 'invalidate', topics: ['tasks', 'sessions', 'routines'] },
+      event: { type: 'invalidate', topics: ['tasks', 'sessions', 'runs'] },
     });
   });
 

@@ -60,35 +60,6 @@ interface ToolExecutionResult {
   isError?: boolean;
 }
 
-interface RoutineHookResult {
-  blocked?: boolean;
-  message?: string;
-  status?: string;
-  run?: RoutineActivityRun;
-}
-
-interface RoutineActivityStep {
-  routineId: string;
-  routineName: string;
-  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
-  outcome?: string;
-  message?: string;
-  skillRefs?: string[];
-  model?: string;
-  provider?: string;
-  fallbackUsed?: boolean;
-}
-
-interface RoutineActivityRun {
-  id: string;
-  hookId: string;
-  position: 'before' | 'after';
-  status: 'passed' | 'warned' | 'blocked' | 'failed' | 'skipped';
-  startedAt?: string;
-  completedAt?: string;
-  steps: RoutineActivityStep[];
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -433,50 +404,6 @@ function deriveBackgroundCommandTaskSlug(command: string): string {
   );
 }
 
-function isRoutineHookUnavailable(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /not found|disabled|requires permission/i.test(message);
-}
-
-function readRoutineActivityRun(result: RoutineHookResult | null): RoutineActivityRun | null {
-  if (!result?.run || !Array.isArray(result.run.steps) || result.run.steps.length === 0) return null;
-  return result.run;
-}
-
-async function runBackgroundCommandRoutineHook(
-  ctx: NativeBackendContext,
-  input: { command: string; cwd: string; taskSlug: string },
-): Promise<RoutineHookResult | null> {
-  if (!ctx.extensions?.callAction && !ctx.extensions?.invokeAction) return null;
-  const hookInput = {
-    hookId: 'background.command',
-    position: 'before',
-    context: {
-      command: input.command,
-      cwd: input.cwd,
-      taskSlug: input.taskSlug,
-      status: 'starting',
-    },
-  };
-  try {
-    if (ctx.extensions.callAction) {
-      return (await ctx.extensions.callAction('system-routines', 'runHook', hookInput)) as RoutineHookResult;
-    }
-    const result = await ctx.extensions.invokeAction?.({
-      extensionId: 'system-routines',
-      actionId: 'runHook',
-      input: hookInput,
-    });
-    if (isRecord(result) && result.ok === true && 'result' in result) {
-      return result.result as RoutineHookResult;
-    }
-    return result as RoutineHookResult;
-  } catch (error) {
-    if (isRoutineHookUnavailable(error)) return null;
-    throw error;
-  }
-}
-
 async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext) {
   const params = isRecord(input) ? input : {};
   const command = readRequiredString(params.command, 'command');
@@ -492,12 +419,6 @@ async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext)
   if (!(await pingDaemon())) {
     throw new Error('Daemon is not responding. Ensure the desktop app is running.');
   }
-
-  const routineHook = await runBackgroundCommandRoutineHook(ctx, { command, cwd, taskSlug });
-  if (routineHook?.blocked) {
-    throw new Error(routineHook.message ?? 'A routine blocked this background command.');
-  }
-  const routineActivityRun = readRoutineActivityRun(routineHook);
 
   const result = await startBackgroundRun({
     taskSlug,
@@ -540,7 +461,6 @@ async function startBackgroundCommand(input: unknown, ctx: NativeBackendContext)
       cwd,
       logPath: result.logPath,
       deliverResultToConversation,
-      ...(routineActivityRun ? { routineHooks: [routineActivityRun] } : {}),
     },
   };
 }

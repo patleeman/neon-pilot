@@ -22,7 +22,6 @@ import { createPortal } from 'react-dom';
 
 export type AppAccent =
   | 'chat'
-  | 'routines'
   | 'workflows'
   | 'automations'
   | 'gateways'
@@ -1081,7 +1080,7 @@ export interface WindowedToggleProps {
 
 export function WindowedToggle({
   checked = false,
-  accent = 'routines',
+  accent = 'settings',
   onChange,
   label = 'Toggle',
   disabled = false,

@@ -124,7 +124,6 @@ Bundled system extensions:
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run guided tour over real app pages
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md) — transcript selection actions and draft starters
-- [Routines](../extensions/system-routines/README.md) — prompt-based lifecycle workflow blocks
 - [Settings](../extensions/system-settings/README.md) — native first-party settings routes
 - [Skill Search](../extensions/system-skill-search/README.md) — trusted skill discovery, quarantine preview, vetting, and installation
 - [Skills](../extensions/system-skills/README.md) — backend compatibility actions for agent skills

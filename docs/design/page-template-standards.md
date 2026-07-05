@@ -1,6 +1,6 @@
 # Page Template Standards
 
-Neon Pilot pages should be assembled from shared page templates before adding local layout. The goal is for Settings, Extensions, Skills, Automations, Diagnostics, Gateways, Routines, and extension-owned pages to feel like siblings in the same workbench.
+Neon Pilot pages should be assembled from shared page templates before adding local layout. The goal is for Settings, Extensions, Skills, Automations, Diagnostics, Gateways, and extension-owned pages to feel like siblings in the same workbench.
 
 Use `docs/design/page-shell-plan.md` for the shell-region implementation plan and `docs/design/page-type-vetting.md` for the recorded approval decision.
 
@@ -31,7 +31,7 @@ Most routes should be able to fit one of these types before local layout is adde
 | ----------------- | --------------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------- |
 | Conversation page | Chat, transcript-first agent work                                           | Threads or route-owned conversation navigator | Transcript, composer, run state                             | Workbench/context rail                        |
 | Table page        | Durable object management: automations, skills, extensions, providers, logs | Blank by default                              | Table/list with shared toolbar, filters, search, pagination | Optional selected-object details or inspector |
-| Editor page       | Routines, canvases, workflows, structured object editing                    | Optional object/step navigator                | Editor, timeline, canvas, or detail surface                 | Inspector, validation, history, preview       |
+| Editor page       | Canvases, workflows, structured object editing                              | Optional object/step navigator                | Editor, timeline, canvas, or detail surface                 | Inspector, validation, history, preview       |
 | Settings page     | Preferences, provider settings, extension settings                          | Optional settings navigation                  | Grouped settings rows                                       | Optional help/details rail only when useful   |
 | Dashboard page    | Diagnostics, metrics, status views                                          | Blank by default                              | Metrics, charts, log summaries                              | Optional metric/log details                   |
 | Setup page        | Connection, credential, provider, onboarding, install flows                 | Optional provider/object selector             | Linear setup path                                           | Docs, activity, test output, metadata         |

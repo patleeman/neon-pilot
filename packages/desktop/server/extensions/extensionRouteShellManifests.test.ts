@@ -51,7 +51,6 @@ describe('first-party extension route shell manifests', () => {
       ['system-automations', '/automations', 'table'],
       ['system-gateways', '/gateways', 'setup'],
       ['system-model-arena', '/model-arena', 'dashboard'],
-      ['system-routines', '/routines', 'editor'],
       ['system-telemetry', '/telemetry', 'dashboard'],
       ['system-skills', '/skills', 'table'],
       ['system-extension-manager', '/apps', 'table'],
@@ -105,7 +104,6 @@ describe('first-party extension route shell manifests', () => {
       'system-automations',
       'system-gateways',
       'system-model-arena',
-      'system-routines',
       'system-telemetry',
       'system-skills',
       'system-extension-manager',
@@ -124,10 +122,7 @@ describe('first-party extension route shell manifests', () => {
   });
 
   it('keeps routes with contextual navigation bound to sidebar views', () => {
-    const routes = [
-      ['system-routines', '/routines', 'routines-sidebar'],
-      ['system-settings', '/settings', 'settings-sidebar'],
-    ] as const;
+    const routes = [['system-settings', '/settings', 'settings-sidebar']] as const;
 
     for (const [extensionId, route, sidebarView] of routes) {
       const manifest = readManifest(extensionId);
@@ -142,7 +137,6 @@ describe('first-party extension route shell manifests', () => {
       'system-automations',
       'system-gateways',
       'system-model-arena',
-      'system-routines',
       'system-telemetry',
       'system-skills',
       'system-extension-manager',
@@ -165,7 +159,6 @@ describe('first-party extension route shell manifests', () => {
       ['system-extension-manager', '/apps'],
       ['system-gateways', '/gateways'],
       ['system-model-arena', '/model-arena'],
-      ['system-routines', '/routines'],
       ['system-skills', '/skills'],
     ] as const;
 
@@ -182,7 +175,6 @@ describe('first-party extension route shell manifests', () => {
       'system-automations',
       'system-gateways',
       'system-model-arena',
-      'system-routines',
       'system-telemetry',
       'system-skills',
       'system-extension-manager',

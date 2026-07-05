@@ -1,9 +1,4 @@
-import type {
-  ConversationCheckpointToolDetails,
-  ConversationRoutineActivityRun,
-  ConversationRoutineActivityStep,
-  MessageBlock,
-} from '../shared/types';
+import type { ConversationCheckpointToolDetails, MessageBlock } from '../shared/types';
 
 const CONVERSATION_CHECKPOINT_QUERY_PARAM = 'checkpoint';
 const CONVERSATION_CHECKPOINT_FILE_QUERY_PARAM = 'checkpointFile';
@@ -20,7 +15,6 @@ interface ConversationCheckpointPresentation {
   linesAdded?: number;
   linesDeleted?: number;
   updatedAt?: string;
-  routineHooks: ConversationRoutineActivityRun[];
 }
 
 function isCheckpointAction(value: unknown): value is ConversationCheckpointPresentation['action'] {
@@ -41,63 +35,6 @@ function normalizeToolDetails(value: unknown): ConversationCheckpointToolDetails
   }
 
   return candidate as ConversationCheckpointToolDetails;
-}
-
-function isRoutineActivityStatus(value: unknown): value is ConversationRoutineActivityStep['status'] {
-  return value === 'passed' || value === 'warned' || value === 'blocked' || value === 'failed' || value === 'skipped';
-}
-
-function normalizeRoutineActivityStep(value: unknown): ConversationRoutineActivityStep | null {
-  if (!value || typeof value !== 'object') return null;
-  const source = value as Record<string, unknown>;
-  const routineId = typeof source.routineId === 'string' ? source.routineId.trim() : '';
-  const routineName = typeof source.routineName === 'string' ? source.routineName.trim() : '';
-  if (!routineId || !routineName || !isRoutineActivityStatus(source.status)) return null;
-
-  const skillRefs = Array.isArray(source.skillRefs)
-    ? source.skillRefs.filter((skillRef): skillRef is string => typeof skillRef === 'string' && skillRef.trim().length > 0)
-    : undefined;
-
-  return {
-    routineId,
-    routineName,
-    status: source.status,
-    ...(typeof source.outcome === 'string' && source.outcome.trim().length > 0 ? { outcome: source.outcome.trim() } : {}),
-    ...(typeof source.message === 'string' && source.message.trim().length > 0 ? { message: source.message.trim() } : {}),
-    ...(skillRefs && skillRefs.length > 0 ? { skillRefs } : {}),
-    ...(typeof source.model === 'string' && source.model.trim().length > 0 ? { model: source.model.trim() } : {}),
-    ...(typeof source.provider === 'string' && source.provider.trim().length > 0 ? { provider: source.provider.trim() } : {}),
-    ...(typeof source.fallbackUsed === 'boolean' ? { fallbackUsed: source.fallbackUsed } : {}),
-  };
-}
-
-function normalizeRoutineActivityRun(value: unknown): ConversationRoutineActivityRun | null {
-  if (!value || typeof value !== 'object') return null;
-  const source = value as Record<string, unknown>;
-  const id = typeof source.id === 'string' ? source.id.trim() : '';
-  const hookId = typeof source.hookId === 'string' ? source.hookId.trim() : '';
-  const position = source.position === 'before' || source.position === 'after' ? source.position : null;
-  const steps = Array.isArray(source.steps)
-    ? source.steps.map(normalizeRoutineActivityStep).filter((step): step is ConversationRoutineActivityStep => Boolean(step))
-    : [];
-  if (!id || !hookId || !position || !isRoutineActivityStatus(source.status) || steps.length === 0) return null;
-
-  return {
-    id,
-    hookId,
-    position,
-    status: source.status,
-    ...(typeof source.message === 'string' && source.message.trim().length > 0 ? { message: source.message.trim() } : {}),
-    ...(typeof source.startedAt === 'string' && source.startedAt.trim().length > 0 ? { startedAt: source.startedAt.trim() } : {}),
-    ...(typeof source.completedAt === 'string' && source.completedAt.trim().length > 0 ? { completedAt: source.completedAt.trim() } : {}),
-    steps,
-  };
-}
-
-function normalizeRoutineActivityRuns(value: unknown): ConversationRoutineActivityRun[] {
-  return Array.isArray(value)
-    ? value.map(normalizeRoutineActivityRun).filter((run): run is ConversationRoutineActivityRun => Boolean(run))
-    : [];
 }
 
 function parseSavedCheckpointOutput(output: unknown): Partial<ConversationCheckpointPresentation> | null {
@@ -231,6 +168,5 @@ export function readCheckpointPresentation(block: Extract<MessageBlock, { type: 
     linesAdded: typeof details?.linesAdded === 'number' ? details.linesAdded : outputPresentation?.linesAdded,
     linesDeleted: typeof details?.linesDeleted === 'number' ? details.linesDeleted : outputPresentation?.linesDeleted,
     updatedAt: typeof details?.updatedAt === 'string' ? details.updatedAt : undefined,
-    routineHooks: normalizeRoutineActivityRuns(details?.routineHooks),
   };
 }

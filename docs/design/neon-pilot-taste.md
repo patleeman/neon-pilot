@@ -61,7 +61,7 @@ Active page-shell rules:
 - `AppPageIntro` owns the page title scale and top-right actions. Main page titles should be title-only by default: no local eyebrow, no subtitle line, no divider directly under the title. Put counts, explanations, and metadata in the body, toolbar, or first section instead of making every title block different.
 - Page sections should use shared page/section/list/table primitives before local wrappers. A page can be solo, list/detail, table, editor, or split-pane, but its outer shell should still feel like the same product.
 - Full-height split workflows may use `h-full` inside the canonical shell, but they should not invent separate top bars, padding systems, or title treatments.
-- Settings, Extension Manager, Diagnostics, Automations, Routines, and installed extension pages should look like siblings: same title rhythm, toolbar density, spacing scale, and edge alignment.
+- Settings, Extension Manager, Diagnostics, Automations, and installed extension pages should look like siblings: same title rhythm, toolbar density, spacing scale, and edge alignment.
 - Lazy route, contextual-left, and right-sidebar fallbacks should use `QuietLoadingState`: keep accessible status semantics without visible page-level loading copy. Visible loading belongs inside the table, list, editor, setting group, tool output, or object that is actually waiting.
 
 ### Chat + Workbench

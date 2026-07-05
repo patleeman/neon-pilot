@@ -278,13 +278,13 @@ describe('StartMenu interactions', () => {
   it('launches apps on primary press without double-selecting on click', () => {
     const onSelect = vi.fn();
 
-    render(<StartMenu open items={[{ id: 'routines', title: 'Routines', accent: 'routines', onSelect }]} onClose={() => undefined} />);
+    render(<StartMenu open items={[{ id: 'settings', title: 'Settings', accent: 'settings', onSelect }]} onClose={() => undefined} />);
 
-    const routines = screen.getByRole('button', { name: 'Routines' });
-    fireEvent.mouseDown(routines, { button: 0 });
+    const settings = screen.getByRole('button', { name: 'Settings' });
+    fireEvent.mouseDown(settings, { button: 0 });
     expect(onSelect).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(routines);
+    fireEvent.click(settings);
 
     expect(onSelect).toHaveBeenCalledTimes(1);
   });

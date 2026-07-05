@@ -34,10 +34,6 @@ test('app shell routes, command palette, and settings surfaces work in one launc
     await expect(page.locator('body')).toContainText(/Automations|automation/i, { timeout: 30_000 });
     await expectCleanViewport(page);
 
-    await clickRouteButton(page, '/routines');
-    await expect(page.locator('body')).toContainText('Checkpoint timeline', { timeout: 45_000 });
-    await expectCleanViewport(page);
-
     await clickRouteButton(page, '/settings');
     await expect(page.locator('body')).toContainText(/Settings|Providers|Commands/i, { timeout: 45_000 });
     await expectCleanViewport(page);

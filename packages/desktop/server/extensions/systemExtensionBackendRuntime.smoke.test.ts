@@ -644,44 +644,6 @@ const smokes = {
     const result = await module.inspectPromptAssembly({}, ctx);
     assert(result.ok === true && result.plan && Array.isArray(result.skills), 'prompt assembly inspect failed');
   },
-  async 'system-routines'() {
-    const initial = await module.getState({}, ctx);
-    assert(Array.isArray(initial.hooks) && initial.hooks.some((hook) => hook.id === 'checkpoint'), 'routines getState missing hooks');
-    assert(Array.isArray(initial.routines), 'routines getState missing routines list');
-    const registered = await module.registerHookPoint(
-      { id: 'smoke.lifecycle', title: 'Smoke lifecycle', group: 'Smoke', ownerExtensionId: extensionId },
-      ctx,
-    );
-    assert(registered.hooks.some((hook) => hook.id === 'smoke.lifecycle'), 'routines registerHookPoint failed');
-    const saved = await module.saveRoutine(
-      {
-        id: 'smoke-routine',
-        hookId: 'smoke.lifecycle',
-        position: 'before',
-        type: 'stop',
-        name: 'Smoke stop',
-        instruction: 'Stop smoke lifecycle.',
-        enabled: true,
-        order: 0,
-        failureBehavior: 'block',
-        outcomes: [],
-      },
-      ctx,
-    );
-    assert(saved.routines.some((routine) => routine.id === 'smoke-routine'), 'routines saveRoutine failed');
-    const moved = await module.moveRoutine({ routineId: 'smoke-routine', position: 'after' }, ctx);
-    assert(
-      moved.routines.find((routine) => routine.id === 'smoke-routine')?.position === 'after',
-      'routines moveRoutine failed',
-    );
-    const run = await module.runHook({ hookId: 'smoke.lifecycle', position: 'after', context: { cwd } }, ctx);
-    assert(
-      run.status === 'blocked' && run.run?.steps?.[0]?.routineId === 'smoke-routine',
-      'routines runHook stop routine failed',
-    );
-    const deleted = await module.deleteRoutine({ routineId: 'smoke-routine' }, ctx);
-    assert(!deleted.routines.some((routine) => routine.id === 'smoke-routine'), 'routines deleteRoutine failed');
-  },
   async 'system-runs'() {
     const result = await module.bash({ command: 'echo smoke' }, ctx);
     assert(result.text.includes('echo smoke'), 'bash smoke did not execute shell stub');

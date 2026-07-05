@@ -3,16 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 
 describe('shouldUseDocumentNavigationForSidebarRoute', () => {
-  const documentNavigationRoutes = ['/automations', '/gateways', '/routines', '/telemetry'];
+  const documentNavigationRoutes = ['/automations', '/gateways', '/extensions', '/telemetry'];
 
   it('uses document navigation when switching between legacy extension pages', () => {
     expect(shouldUseDocumentNavigationForSidebarRoute('/ext/writing-studio', '/ext/hermes')).toBe(true);
   });
 
   it('uses document navigation when switching between registered top-level app pages', () => {
-    expect(shouldUseDocumentNavigationForSidebarRoute('/gateways', '/routines', documentNavigationRoutes)).toBe(true);
-    expect(shouldUseDocumentNavigationForSidebarRoute('/routines', '/gateways', documentNavigationRoutes)).toBe(true);
-    expect(shouldUseDocumentNavigationForSidebarRoute('/gateways/setup', '/routines', documentNavigationRoutes)).toBe(true);
+    expect(shouldUseDocumentNavigationForSidebarRoute('/gateways', '/extensions', documentNavigationRoutes)).toBe(true);
+    expect(shouldUseDocumentNavigationForSidebarRoute('/extensions', '/gateways', documentNavigationRoutes)).toBe(true);
+    expect(shouldUseDocumentNavigationForSidebarRoute('/gateways/setup', '/extensions', documentNavigationRoutes)).toBe(true);
   });
 
   it('keeps router navigation for core routes and same-app clicks', () => {

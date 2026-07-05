@@ -59,10 +59,9 @@ A route composition looks like this at the shell level:
 
 ```ts
 {
-  route: "/routines",
-  mainView: "routines.page",
-  leftContextView: "routines.sidebar",
-  rightSidebarView: "routines.inspector"
+  route: "/settings",
+  mainView: "settings.page",
+  leftContextView: "settings.sidebar"
 }
 ```
 
@@ -108,7 +107,6 @@ Current implementation work should focus on conformance and verification:
 - Chat: Conversation page. Threads left, Conversation main, Workbench right.
 - Automations: Table page. Blank contextual left, Automations table main. No right sidebar; create/edit/details stay in the main workflow.
 - Gateways: Setup page. Blank contextual left, setup main, docs/activity/test output context rail.
-- Routines: Editor page. Routine selector left, routine editor main, inspector/run history right.
 - Model Arena: Dashboard page. Blank contextual left, arena main, duel/challenger detail right.
 - Diagnostics: Dashboard page. Blank contextual left, diagnostics main, optional metric detail right later.
 - Skills: Table page. Blank contextual left, skills table main, selected skill detail right.
@@ -126,7 +124,6 @@ This is the working checklist for conforming existing first-party page routes to
 | `/gateways`        | `system-gateways`          | Setup        | Blank                                     | `gateway-context-rail`     | Conformed shell; main status summary flattened          |
 | `/ai-gateway`      | `system-model-gateway`     | Setup        | Blank                                     | None                       | Conformed shell; gateway runtime controls are main-only |
 | `/model-arena`     | `system-model-arena`       | Dashboard    | Blank                                     | `model-arena-context-rail` | Conformed shell; dashboard visual sweep remains         |
-| `/routines`        | `system-routines`          | Editor       | `routines-sidebar`                        | `routines-context-rail`    | Conformed                                               |
 | `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                       | Conformed                                               |
 | `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail`      | Conformed                                               |
 | `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                       | Conformed; details open inside the App Manager window   |
@@ -164,7 +161,7 @@ Remaining broad sweeps:
    - Pass route context, active cwd, and shared selection into right-sidebar surfaces.
 
 5. Page conformance — in progress
-   - Update Automations, Skills, Extensions, Gateways, Routines, Model Arena, Diagnostics, and Settings to declare the regions they own.
+   - Update Automations, Skills, Extensions, Gateways, Model Arena, Diagnostics, and Settings to declare the regions they own.
    - Move Skills/Extensions details out of modal-first flows and into selected-item context rails.
    - Keep Automations main-only with no right-sidebar toggle.
    - Use shared route selection/context for selected-object details so the main table and right sidebar stay synchronized.
@@ -202,7 +199,6 @@ Use these slices to finish conformance against the approved shell and page-type 
    - Normalize host and extension settings under the Settings-page grammar.
 
 5. Editor/dashboard sweep
-   - Keep Routines as an Editor page with contextual-left navigation.
    - Treat Model Arena as Dashboard unless repeated evaluation routes justify a separate Evaluation type later.
    - Keep Diagnostics as Dashboard and avoid page-local second-column reinvention.
 
@@ -211,7 +207,6 @@ Use these slices to finish conformance against the approved shell and page-type 
 - Non-chat pages no longer show Threads unless they explicitly declare Threads-like content.
 - Automations shows global nav, blank contextual middle-left area, main table, and no right-sidebar toggle.
 - Chat shows Threads, conversation, and Workbench with the right-sidebar toggle visible.
-- Routines can declare contextual left content and, when implemented, optional right-sidebar content.
 - Skills and Extensions can show selected-item details in the right sidebar.
 - The right-sidebar toggle is hidden, not disabled, on routes without right-sidebar content.
 - Right-sidebar open/closed state is remembered per route.
@@ -226,4 +221,4 @@ Use these slices to finish conformance against the approved shell and page-type 
 - Done: test fixture extension routes with `sidebarView` and `rightSidebarView`.
 - Done: run UI-pattern guardrails for page-local sidebars, main-view side fields, unbound or invalid contextual-left sidebars, unbound or invalid primary right sidebars, and old right-sidebar wording.
 - Run `pnpm --dir packages/desktop run build:ui`, `pnpm run check:types`, extension static checks, and UI pattern checks.
-- Launch the desktop app and visually QA Chat, Automations, Routines, Skills, Extensions, Gateways, Diagnostics, and Settings.
+- Launch the desktop app and visually QA Chat, Automations, Skills, Extensions, Gateways, Diagnostics, and Settings.
