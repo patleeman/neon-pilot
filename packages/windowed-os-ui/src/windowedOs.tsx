@@ -48,6 +48,9 @@ export interface WindowedDesktopAppSize {
 
 export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'chat', title: 'Chat', accent: 'chat', aliases: ['conversation', 'thread', 'new conversation'] },
+  { id: 'browser', title: 'Browser', accent: 'gateways', aliases: ['web', 'internet', 'browser window'] },
+  { id: 'files', title: 'Files', accent: 'settings', aliases: ['workspace', 'file explorer', 'finder'] },
+  { id: 'terminal', title: 'Terminal', accent: 'telemetry', aliases: ['shell', 'command line', 'terminal window'] },
   { id: 'automations', title: 'Automations', accent: 'automations', aliases: ['tasks', 'scheduled runs', 'background runs'] },
   { id: 'workflows', title: 'Workflows', accent: 'workflows', aliases: ['saved workflows', 'runs', 'workflow runs'] },
   { id: 'gateways', title: 'Gateways', accent: 'gateways', aliases: ['gateway', 'connectors', 'messaging'] },
@@ -61,6 +64,9 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
 ] as const satisfies readonly WindowedDesktopAppDefinition[];
 
 export const CANONICAL_WINDOWED_APP_SIZES: Partial<Record<string, WindowedDesktopAppSize>> = {
+  Browser: { width: 900, height: 620 },
+  Files: { width: 820, height: 560 },
+  Terminal: { width: 820, height: 500 },
   Automations: { width: 1040, height: 660 },
   Gateways: { width: 1040, height: 660 },
   'AI Gateway': { width: 1040, height: 660 },

@@ -3,7 +3,7 @@ import { type AppAccent, CANONICAL_WINDOWED_DESKTOP_APPS, type WindowedDesktopAp
 import type { ExtensionRegistryState } from '../extensions/useExtensionRegistry';
 
 export type WindowedAppSource = 'core' | 'app-package';
-export type WindowedLauncherKind = 'chat' | 'route';
+export type WindowedLauncherKind = 'chat' | 'route' | 'browser' | 'files' | 'terminal';
 
 export interface WindowedAppRuntimeOwner {
   packageId?: string;
@@ -34,6 +34,9 @@ const CANONICAL_LAUNCHER_ORDER: readonly string[] = CANONICAL_WINDOWED_DESKTOP_A
 
 const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>> = {
   chat: '/conversations/new',
+  browser: '/browser',
+  files: '/files',
+  terminal: '/terminal',
   automations: '/automations',
   workflows: '/workflows',
   gateways: '/gateways',
@@ -47,6 +50,9 @@ const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_
 };
 
 const CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS: Readonly<Partial<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>>> = {
+  browser: 'system-browser',
+  files: 'system-files',
+  terminal: 'system-terminal',
   automations: 'system-automations',
   workflows: 'system-dynamic-workflows',
   gateways: 'system-gateways',
@@ -133,7 +139,7 @@ function createCanonicalWindowedAppRegistration(
     id: app.id,
     title: app.title,
     route: CANONICAL_WINDOWED_APP_ROUTES[app.id],
-    kind: app.id === 'chat' ? 'chat' : 'route',
+    kind: app.id === 'chat' ? 'chat' : app.id === 'browser' || app.id === 'files' || app.id === 'terminal' ? app.id : 'route',
     source: isCore ? 'core' : 'app-package',
     ...(ownerExtensionId ? { sourceExtensionId: ownerExtensionId } : {}),
     owner: ownerExtensionId ? { packageId: ownerExtensionId, packageType: 'extension' } : { packageType: 'core' },

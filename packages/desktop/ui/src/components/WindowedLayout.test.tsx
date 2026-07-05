@@ -672,6 +672,21 @@ describe('WindowedLayout route windows', () => {
   it('orders and accents launcher apps from the canonical windowed desktop roster', () => {
     mocks.extensions = [
       {
+        id: 'system-browser',
+        enabled: true,
+        contributes: {},
+      },
+      {
+        id: 'system-files',
+        enabled: true,
+        contributes: {},
+      },
+      {
+        id: 'system-terminal',
+        enabled: true,
+        contributes: {},
+      },
+      {
         id: 'system-settings',
         enabled: true,
         contributes: {
@@ -813,6 +828,62 @@ describe('WindowedLayout route windows', () => {
 
     expect(await screen.findByRole('region', { name: /^settings$/i })).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
+  it.each([
+    ['browser' as const, 'Browser', 'system-browser', 'browser-workbench'],
+    ['files' as const, 'Files', 'system-files', 'files-panel'],
+    ['terminal' as const, 'Terminal', 'system-terminal', 'terminal-panel'],
+  ])('opens the %s app as a standalone desktop window from the Start menu', async (kind, title, extensionId, surfaceId) => {
+    mocks.extensions = [{ id: extensionId, enabled: true, contributes: {} }];
+    mocks.surfaces = [surfaceForChildTool(kind)];
+
+    renderWindowedLayout();
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: title }), { button: 0 });
+
+    const appWindow = await screen.findByRole('region', { name: title });
+    expect(appWindow.getAttribute('data-window-id')).toBe(`app:${kind}`);
+    expect(appWindow.getAttribute('data-parent-window-attached')).toBeNull();
+    expect(appWindow.className).toContain(`wos-window--${kind}`);
+
+    const body = appWindow.querySelector(`[data-windowed-subwindow="${kind}"]`);
+    expect(body?.getAttribute('data-parent-window-attached')).toBeNull();
+    expect(body?.getAttribute('data-parent-window-id')).toBeNull();
+
+    const host = within(appWindow).getByTestId('native-extension-surface');
+    expect(host.getAttribute('data-extension-id')).toBe(extensionId);
+    expect(host.getAttribute('data-surface-id')).toBe(surfaceId);
+    expect(host.getAttribute('data-shell-presentation')).toBe('windowed');
+    expect(host.getAttribute('data-instance-id')).toBe(`app:${kind}`);
+  });
+
+  it('keeps standalone tool apps open together when launched from the Start menu', async () => {
+    mocks.extensions = [
+      { id: 'system-browser', enabled: true, contributes: {} },
+      { id: 'system-files', enabled: true, contributes: {} },
+      { id: 'system-terminal', enabled: true, contributes: {} },
+    ];
+    mocks.surfaces = [surfaceForChildTool('browser'), surfaceForChildTool('files'), surfaceForChildTool('terminal')];
+
+    renderWindowedLayout();
+
+    for (const title of ['Browser', 'Files', 'Terminal']) {
+      fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+      fireEvent.mouseDown(screen.getByRole('button', { name: title }), { button: 0 });
+      await screen.findByRole('region', { name: title });
+    }
+
+    for (const [kind, title] of [
+      ['browser', 'Browser'],
+      ['files', 'Files'],
+      ['terminal', 'Terminal'],
+    ] as const) {
+      const appWindow = screen.getByRole('region', { name: title });
+      expect(appWindow.getAttribute('data-window-id')).toBe(`app:${kind}`);
+      expect(appWindow.getAttribute('data-parent-window-attached')).toBeNull();
+      expect(appWindow.querySelector(`[data-windowed-subwindow="${kind}"]`)).toBeTruthy();
+    }
   });
 
   it('closes the start menu when the desktop is clicked outside it', () => {

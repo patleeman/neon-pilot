@@ -79,7 +79,7 @@ import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendD
 
 type WindowKind = 'chat' | 'route' | 'terminal' | 'browser' | 'files';
 type ChildWindowKind = 'terminal' | 'browser' | 'files';
-type LauncherWindowKind = 'chat' | 'route';
+type LauncherWindowKind = WindowKind;
 
 interface DesktopWindowModel {
   id: string;
@@ -127,6 +127,7 @@ const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboardin
 
 function createId(input: Pick<WindowedAppRegistration, 'kind' | 'route' | 'id'>, suffix?: string): string {
   if (input.kind === 'chat') return `chat:${suffix ?? 'draft'}`;
+  if (isChildWindowKind(input.kind)) return `app:${input.id}`;
   return `route:${input.id}`;
 }
 
@@ -214,8 +215,8 @@ function defaultDraftWindow(): DesktopWindowModel {
 }
 
 function pruneOrphanedChildWindows(windows: DesktopWindowModel[]): DesktopWindowModel[] {
-  const parentIds = new Set(windows.filter((windowModel) => !isChildWindowKind(windowModel.kind)).map((windowModel) => windowModel.id));
-  return windows.filter((windowModel) => !isChildWindowKind(windowModel.kind) || parentIds.has(windowModel.parentWindowId ?? ''));
+  const parentIds = new Set(windows.filter((windowModel) => !isAttachedChildWindow(windowModel)).map((windowModel) => windowModel.id));
+  return windows.filter((windowModel) => !isAttachedChildWindow(windowModel) || parentIds.has(windowModel.parentWindowId ?? ''));
 }
 
 function readStoredWindows(): DesktopWindowModel[] {
@@ -273,12 +274,7 @@ function writeStoredWindows(windows: DesktopWindowModel[]): void {
     window.localStorage.setItem(
       WINDOW_STATE_STORAGE_KEY,
       JSON.stringify(
-        windows.filter(
-          (windowModel) =>
-            windowModel.kind === 'chat' ||
-            windowModel.kind === 'route' ||
-            (isChildWindowKind(windowModel.kind) && typeof windowModel.parentWindowId === 'string'),
-        ),
+        windows.filter((windowModel) => windowModel.kind === 'chat' || windowModel.kind === 'route' || isChildWindowKind(windowModel.kind)),
       ),
     );
   } catch {
@@ -299,8 +295,12 @@ function isChildWindowKind(kind: WindowKind): kind is ChildWindowKind {
   return kind === 'terminal' || kind === 'browser' || kind === 'files';
 }
 
+function isAttachedChildWindow(windowModel: Pick<DesktopWindowModel, 'kind' | 'parentWindowId'>): boolean {
+  return isChildWindowKind(windowModel.kind) && typeof windowModel.parentWindowId === 'string';
+}
+
 function isChildWindowForParent(windowModel: DesktopWindowModel, parentWindowId: string): boolean {
-  return isChildWindowKind(windowModel.kind) && windowModel.parentWindowId === parentWindowId;
+  return isAttachedChildWindow(windowModel) && windowModel.parentWindowId === parentWindowId;
 }
 
 function restoreChildWindowsForParent(windows: DesktopWindowModel[], parentWindowId: string): DesktopWindowModel[] {
@@ -574,6 +574,7 @@ function findWindowedAppForRoute(route: string, apps: WindowedAppRegistration[])
 }
 
 function routeWindowMatchesWindowedApp(windowModel: DesktopWindowModel, id: string, app: WindowedAppRegistration): boolean {
+  if (isChildWindowKind(app.kind)) return windowModel.id === id || (!windowModel.parentWindowId && windowModel.kind === app.kind);
   return windowModel.kind === 'route' && (windowModel.id === id || routeMatchesWindowedApp(windowModel.route, app));
 }
 
@@ -595,7 +596,7 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
   let lastTopLevelIndex = -1;
   windows.forEach((windowModel, index) => {
     if (!windowModel.minimized) lastVisibleIndex = index;
-    if (!isChildWindowKind(windowModel.kind)) lastTopLevelIndex = index;
+    if (!isAttachedChildWindow(windowModel)) lastTopLevelIndex = index;
   });
   const index = lastVisibleIndex >= 0 ? lastVisibleIndex : lastTopLevelIndex >= 0 ? lastTopLevelIndex : windows.length - 1;
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
@@ -743,7 +744,7 @@ function reconcileChatWindows(windows: DesktopWindowModel[], chatSessions: Sessi
   let changed = false;
 
   const next = windows.flatMap((windowModel): DesktopWindowModel[] => {
-    if (isChildWindowKind(windowModel.kind)) {
+    if (isAttachedChildWindow(windowModel)) {
       const parent = windowModel.parentWindowId ? windows.find((candidate) => candidate.id === windowModel.parentWindowId) : null;
       if (!parent || parent.kind !== 'chat') {
         changed = true;
@@ -860,8 +861,8 @@ function WindowedChatTerminalWindowBody({
   route,
 }: {
   cwd?: string | null;
-  parentWindowId: string;
-  parentWindowTitle: string;
+  parentWindowId?: string;
+  parentWindowTitle?: string;
   route: string;
 }) {
   const extensionRegistry = useExtensionRegistry();
@@ -872,7 +873,7 @@ function WindowedChatTerminalWindowBody({
     <div
       className="wos-chat-terminal-dialog__body"
       data-windowed-subwindow="terminal"
-      data-parent-window-attached="chat"
+      data-parent-window-attached={parentWindowId ? 'chat' : undefined}
       data-parent-window-id={parentWindowId}
       data-parent-window-title={parentWindowTitle}
     >
@@ -884,7 +885,7 @@ function WindowedChatTerminalWindowBody({
           hash={routeLocationValue.hash}
           shellPresentation="windowed"
           cwd={cwd}
-          instanceId={`${parentWindowId}:terminal`}
+          instanceId={parentWindowId ? `${parentWindowId}:terminal` : 'app:terminal'}
         />
       ) : (
         <WindowedChildWindowEmptyState title="Terminal unavailable">The Terminal app is not registered.</WindowedChildWindowEmptyState>
@@ -943,8 +944,8 @@ function WindowedChatFilesWindowBody({
   route,
 }: {
   cwd?: string | null;
-  parentWindowId: string;
-  parentWindowTitle: string;
+  parentWindowId?: string;
+  parentWindowTitle?: string;
   route: string;
 }) {
   const extensionRegistry = useExtensionRegistry();
@@ -955,7 +956,7 @@ function WindowedChatFilesWindowBody({
     <div
       className="wos-chat-files-dialog__body"
       data-windowed-subwindow="files"
-      data-parent-window-attached="chat"
+      data-parent-window-attached={parentWindowId ? 'chat' : undefined}
       data-parent-window-id={parentWindowId}
       data-parent-window-title={parentWindowTitle}
     >
@@ -967,7 +968,7 @@ function WindowedChatFilesWindowBody({
           hash={routeLocationValue.hash}
           shellPresentation="windowed"
           cwd={cwd}
-          instanceId={`${parentWindowId}:files`}
+          instanceId={parentWindowId ? `${parentWindowId}:files` : 'app:files'}
         />
       ) : (
         <WindowedChildWindowEmptyState title="Files unavailable">The Files app is not registered.</WindowedChildWindowEmptyState>
@@ -981,8 +982,8 @@ function WindowedChatBrowserWindowBody({
   parentWindowTitle,
   route,
 }: {
-  parentWindowId: string;
-  parentWindowTitle: string;
+  parentWindowId?: string;
+  parentWindowTitle?: string;
   route: string;
 }) {
   const extensionRegistry = useExtensionRegistry();
@@ -993,7 +994,7 @@ function WindowedChatBrowserWindowBody({
     <div
       className="wos-chat-browser-dialog__body"
       data-windowed-subwindow="browser"
-      data-parent-window-attached="chat"
+      data-parent-window-attached={parentWindowId ? 'chat' : undefined}
       data-parent-window-id={parentWindowId}
       data-parent-window-title={parentWindowTitle}
     >
@@ -1004,7 +1005,7 @@ function WindowedChatBrowserWindowBody({
           search={routeLocationValue.search}
           hash={routeLocationValue.hash}
           shellPresentation="windowed"
-          instanceId={`${parentWindowId}:browser`}
+          instanceId={parentWindowId ? `${parentWindowId}:browser` : 'app:browser'}
         />
       ) : (
         <WindowedChildWindowEmptyState title="Browser unavailable">The Browser app is not registered.</WindowedChildWindowEmptyState>
@@ -1839,7 +1840,7 @@ export function WindowedLayout() {
       (windowModel): TaskbarItem => ({
         id: windowModel.id,
         title: windowModel.title,
-        meta: isChildWindowKind(windowModel.kind) ? windowModel.parentWindowTitle : undefined,
+        meta: isAttachedChildWindow(windowModel) ? windowModel.parentWindowTitle : undefined,
         focused: windowModel.focused,
         minimized: windowModel.minimized,
         accent: accentForWindow(windowModel),
@@ -1944,7 +1945,8 @@ export function WindowedLayout() {
           const isTerminalWindow = windowModel.kind === 'terminal';
           const isBrowserWindow = windowModel.kind === 'browser';
           const isFilesWindow = windowModel.kind === 'files';
-          const isChildWindow = isChildWindowKind(windowModel.kind);
+          const isToolWindow = isChildWindowKind(windowModel.kind);
+          const isChildWindow = isAttachedChildWindow(windowModel);
           return (
             <WindowFrame
               key={windowModel.id}
@@ -1955,7 +1957,7 @@ export function WindowedLayout() {
               parentWindowTitle={windowModel.parentWindowTitle}
               focused={windowModel.focused}
               minimized={windowModel.minimized}
-              className={isChildWindow ? `wos-window--child wos-window--${windowModel.kind}` : undefined}
+              className={isToolWindow ? `${isChildWindow ? 'wos-window--child ' : ''}wos-window--${windowModel.kind}` : undefined}
               style={windowFrameStyle(windowModel, visibleWindows)}
               iframeBlocked={
                 !windowModel.minimized &&
@@ -1975,8 +1977,8 @@ export function WindowedLayout() {
                 <div className="wos-window-route-body wos-window-route-body--terminal">
                   <WindowedChatTerminalWindowBody
                     cwd={windowModel.workspaceCwd ?? null}
-                    parentWindowId={windowModel.parentWindowId ?? ''}
-                    parentWindowTitle={windowModel.parentWindowTitle ?? 'Chat'}
+                    parentWindowId={windowModel.parentWindowId}
+                    parentWindowTitle={windowModel.parentWindowTitle}
                     route={windowModel.route}
                   />
                 </div>
@@ -1984,16 +1986,16 @@ export function WindowedLayout() {
                 <div className="wos-window-route-body wos-window-route-body--files">
                   <WindowedChatFilesWindowBody
                     cwd={windowModel.workspaceCwd ?? null}
-                    parentWindowId={windowModel.parentWindowId ?? ''}
-                    parentWindowTitle={windowModel.parentWindowTitle ?? 'Chat'}
+                    parentWindowId={windowModel.parentWindowId}
+                    parentWindowTitle={windowModel.parentWindowTitle}
                     route={windowModel.route}
                   />
                 </div>
               ) : isBrowserWindow ? (
                 <div className="wos-window-route-body wos-window-route-body--browser">
                   <WindowedChatBrowserWindowBody
-                    parentWindowId={windowModel.parentWindowId ?? ''}
-                    parentWindowTitle={windowModel.parentWindowTitle ?? 'Chat'}
+                    parentWindowId={windowModel.parentWindowId}
+                    parentWindowTitle={windowModel.parentWindowTitle}
                     route={windowModel.route}
                   />
                 </div>

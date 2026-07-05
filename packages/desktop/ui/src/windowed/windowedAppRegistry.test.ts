@@ -40,12 +40,35 @@ describe('windowed app registry', () => {
   it('projects canonical Windowed OS apps as app-facing registrations', () => {
     const apps = buildWindowedAppRegistry(
       registry([
+        { id: 'system-browser', name: 'Browser', enabled: true, contributes: {} },
+        { id: 'system-files', name: 'Files', enabled: true, contributes: {} },
+        { id: 'system-terminal', name: 'Terminal', enabled: true, contributes: {} },
         { id: 'system-automations', name: 'Automations', enabled: true, contributes: {} },
         { id: 'system-extension-manager', name: 'App Manager', enabled: true, contributes: {} },
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Automations', 'App Manager', 'Settings']);
+    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Browser', 'Files', 'Terminal', 'Automations', 'App Manager', 'Settings']);
+    expect(apps.find((app) => app.title === 'Browser')).toMatchObject({
+      id: 'browser',
+      kind: 'browser',
+      route: '/browser',
+      source: 'app-package',
+      sourceExtensionId: 'system-browser',
+      owner: { packageId: 'system-browser', packageType: 'extension' },
+    });
+    expect(apps.find((app) => app.title === 'Files')).toMatchObject({
+      id: 'files',
+      kind: 'files',
+      route: '/files',
+      sourceExtensionId: 'system-files',
+    });
+    expect(apps.find((app) => app.title === 'Terminal')).toMatchObject({
+      id: 'terminal',
+      kind: 'terminal',
+      route: '/terminal',
+      sourceExtensionId: 'system-terminal',
+    });
     expect(apps.find((app) => app.title === 'Automations')).toMatchObject({
       id: 'automations',
       route: '/automations',
@@ -66,6 +89,9 @@ describe('windowed app registry', () => {
     const apps = buildWindowedAppRegistry(
       registry([
         { id: 'system-automations', name: 'Automations', enabled: false, contributes: {} },
+        { id: 'system-browser', name: 'Browser', enabled: false, contributes: {} },
+        { id: 'system-files', name: 'Files', enabled: false, contributes: {} },
+        { id: 'system-terminal', name: 'Terminal', enabled: false, contributes: {} },
         { id: 'system-skills', name: 'Skills', enabled: true, contributes: {} },
       ]),
     );
