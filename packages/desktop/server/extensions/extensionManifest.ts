@@ -89,6 +89,8 @@ export const EXTENSION_PERMISSIONS = [
   'videos:read',
   'audio:read',
   'documents:read',
+  'documents:write',
+  'documents:readwrite',
   'knowledge:read',
   'knowledge:write',
   'knowledge:readwrite',

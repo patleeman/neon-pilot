@@ -29,6 +29,10 @@ export default defineConfig({
       '@neon-pilot/extensions/backend/cli': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/cli.ts'),
       '@neon-pilot/extensions/backend/compaction': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/compaction.ts'),
       '@neon-pilot/extensions/backend/conversations': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/conversations.ts'),
+      '@neon-pilot/extensions/backend/documents-store': resolve(
+        repoRoot,
+        'packages/desktop/server/extensions/backendApi/documents-store.ts',
+      ),
       '@neon-pilot/extensions/backend/documents': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/documents.ts'),
       '@neon-pilot/extensions/backend/events': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/events.ts'),
       '@neon-pilot/extensions/backend/extensions': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/extensions.ts'),

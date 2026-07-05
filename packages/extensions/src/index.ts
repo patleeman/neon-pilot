@@ -247,6 +247,8 @@ export type ExtensionPermission =
   | 'videos:read'
   | 'audio:read'
   | 'documents:read'
+  | 'documents:write'
+  | 'documents:readwrite'
   | 'knowledge:read'
   | 'knowledge:write'
   | 'knowledge:readwrite'

@@ -99,6 +99,10 @@
       "types": "./dist/backend/documents.d.ts",
       "default": "./dist/backend/documents.js"
     },
+    "./backend/documents-store": {
+      "types": "./dist/backend/documents-store.d.ts",
+      "default": "./dist/backend/documents-store.js"
+    },
     "./backend/compaction": {
       "types": "./dist/backend/compaction.d.ts",
       "default": "./dist/backend/compaction.js"

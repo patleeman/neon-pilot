@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 2,
+  "id": "system-data-tools",
+  "name": "Data Tools",
+  "packageType": "system",
+  "defaultEnabled": true,
+  "description": "Agent-facing tools over the host-owned documents store: list collections, read/write documents, and watch for changes.",
+  "version": "0.1.0",
+  "permissions": ["documents:readwrite"],
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      { "id": "dataList", "handler": "dataList", "title": "List collections", "worker": { "enabled": true } },
+      { "id": "dataRead", "handler": "dataRead", "title": "Read documents", "worker": { "enabled": true } },
+      { "id": "dataWrite", "handler": "dataWrite", "title": "Write document", "worker": { "enabled": true } },
+      {
+        "id": "dataWatch",
+        "handler": "dataWatch",
+        "title": "Watch document changes",
+        "worker": { "enabled": true, "timeoutMs": 305000 }
+      },
+      { "id": "onDocumentEvent", "handler": "onDocumentEvent", "title": "Document event handler", "worker": { "enabled": true } }
+    ]
+  },
+  "contributes": {
+    "subscriptions": [
+      {
+        "id": "documents",
+        "source": "documents",
+        "handler": "onDocumentEvent"
+      }
+    ],
+    "tools": [
+      {
+        "id": "data-list",
+        "name": "data_list",
+        "title": "List Document Collections",
+        "description": "List all document collections visible to the calling app. Use this to discover existing collections before creating new ones, so two apps do not invent incompatible schemas for the same data.",
+        "action": "dataList",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string",
+              "description": "Filter by owning app ID. Omit to list all visible collections."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "data-read",
+        "name": "data_read",
+        "title": "Read Documents",
+        "description": "Read documents from a collection. Supports listing all documents or getting a single document by ID, with pagination.",
+        "action": "dataRead",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string",
+              "description": "Owning app ID of the collection."
+            },
+            "collection": {
+              "type": "string",
+              "description": "Collection name."
+            },
+            "id": {
+              "type": "string",
+              "description": "Optional document ID. Omit to list all documents."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Max results (default 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Pagination offset (default 0)."
+            }
+          },
+          "required": ["owner", "collection"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "data-write",
+        "name": "data_write",
+        "title": "Write Document",
+        "description": "Create or update a document in a collection. The collection is auto-created with owner-only grants if it does not exist.",
+        "action": "dataWrite",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string",
+              "description": "Owning app ID. Must match the calling extension ID or the caller must have a write grant."
+            },
+            "collection": {
+              "type": "string",
+              "description": "Collection name."
+            },
+            "id": {
+              "type": "string",
+              "description": "Document ID. Creates if new, updates if exists."
+            },
+            "body": {
+              "type": "object",
+              "description": "JSON body to store."
+            }
+          },
+          "required": ["owner", "collection", "id", "body"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "data-watch",
+        "name": "data_watch",
+        "title": "Watch Document Changes",
+        "description": "Subscribe to document changes in a collection. Blocks until a change is detected or timeout expires. Returns the changed document metadata.",
+        "action": "dataWatch",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string",
+              "description": "Owning app ID to watch."
+            },
+            "collection": {
+              "type": "string",
+              "description": "Collection name to watch. Omit to watch all collections for that owner."
+            },
+            "timeout": {
+              "type": "integer",
+              "description": "Max wait in seconds (default 60, max 300)."
+            }
+          },
+          "required": ["owner"],
+          "additionalProperties": false
+        }
+      }
+    ]
+  }
+}

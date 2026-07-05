@@ -8,14 +8,21 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { invalidateAppTopicsMock, logErrorMock } = vi.hoisted(() => ({
+const { invalidateAppTopicsMock, logErrorMock, publishExtensionHostEventMock } = vi.hoisted(() => ({
   invalidateAppTopicsMock: vi.fn(),
   logErrorMock: vi.fn(),
+  publishExtensionHostEventMock: vi.fn(),
 }));
 
 vi.mock('../middleware/index.js', () => ({
   invalidateAppTopics: invalidateAppTopicsMock,
   logError: logErrorMock,
+}));
+
+vi.mock('../extensions/extensionHostClient.js', () => ({
+  getExtensionHostClient: () => ({
+    publishEvent: publishExtensionHostEventMock,
+  }),
 }));
 
 import type { DocumentsRouteCaller } from './documents.js';
@@ -31,6 +38,8 @@ describe('registerDocumentsRoutes', () => {
     caller = { kind: 'host' };
     invalidateAppTopicsMock.mockReset();
     logErrorMock.mockReset();
+    publishExtensionHostEventMock.mockReset();
+    publishExtensionHostEventMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -589,6 +598,161 @@ describe('registerDocumentsRoutes', () => {
       );
 
       expect(invalidateAppTopicsMock).not.toHaveBeenCalled();
+    });
+
+    // ── Extension host event publication ────────────────────────────
+
+    it('publishes host event after collection upsert', () => {
+      const handlers = createHarness();
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection'];
+
+      handler({ params: { owner: 'test-app', collection: 'test-col' }, body: { description: 'test' } }, createRes());
+
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
+        type: 'collection.updated',
+        owner: 'test-app',
+        collection: 'test-col',
+      });
+    });
+
+    it('publishes host event after document put', () => {
+      const handlers = createHarness();
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection/:id'];
+
+      handler({ params: { owner: 'app', collection: 'col', id: 'doc-1' }, body: { data: 1 } }, createRes());
+
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
+        type: 'document.updated',
+        owner: 'app',
+        collection: 'col',
+        id: 'doc-1',
+        body: { data: 1 },
+      });
+    });
+
+    it('publishes host event after document delete', () => {
+      const handlers = createHarness();
+      const putHandler = handlers['PUT /api/documents/collections/:owner/:collection/:id'];
+      putHandler({ params: { owner: 'app', collection: 'col', id: 'del-doc' }, body: {} }, createRes());
+
+      publishExtensionHostEventMock.mockReset();
+
+      const delHandler = handlers['DELETE /api/documents/collections/:owner/:collection/:id'];
+      delHandler({ params: { owner: 'app', collection: 'col', id: 'del-doc' } }, createRes());
+
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
+        type: 'document.deleted',
+        owner: 'app',
+        collection: 'col',
+        id: 'del-doc',
+      });
+    });
+
+    it('publishes host event after grant set', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app', collection: 'shared' }, body: {} },
+        createRes(),
+      );
+
+      publishExtensionHostEventMock.mockReset();
+
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection/grants/:granteeAppId'];
+      handler(
+        { params: { owner: 'app', collection: 'shared', granteeAppId: 'other' }, body: { canRead: true, canWrite: false } },
+        createRes(),
+      );
+
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
+        type: 'grant.updated',
+        owner: 'app',
+        collection: 'shared',
+        granteeAppId: 'other',
+      });
+    });
+
+    it('publishes host event after grant delete', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app', collection: 'shared' }, body: {} },
+        createRes(),
+      );
+      handlers['PUT /api/documents/collections/:owner/:collection/grants/:granteeAppId'](
+        { params: { owner: 'app', collection: 'shared', granteeAppId: 'other' }, body: { canRead: true, canWrite: true } },
+        createRes(),
+      );
+
+      publishExtensionHostEventMock.mockReset();
+
+      const handler = handlers['DELETE /api/documents/collections/:owner/:collection/grants/:granteeAppId'];
+      handler({ params: { owner: 'app', collection: 'shared', granteeAppId: 'other' } }, createRes());
+
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
+        type: 'grant.deleted',
+        owner: 'app',
+        collection: 'shared',
+        granteeAppId: 'other',
+      });
+    });
+
+    it('does NOT publish host event on validation failure', () => {
+      const handlers = createHarness();
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection'];
+
+      handler({ params: { owner: '', collection: '' }, body: {} }, createRes());
+
+      expect(publishExtensionHostEventMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT publish host event on forbidden write', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app-a', collection: 'private' }, body: {} },
+        createRes(),
+      );
+
+      publishExtensionHostEventMock.mockReset();
+
+      caller = { appId: 'app-b', kind: 'app' };
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection/:id'];
+      handler({ params: { owner: 'app-a', collection: 'private', id: 'doc-1' }, body: { x: 1 } }, createRes());
+
+      expect(publishExtensionHostEventMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT publish host event on document delete 404', () => {
+      const handlers = createHarness();
+      const handler = handlers['DELETE /api/documents/collections/:owner/:collection/:id'];
+
+      handler({ params: { owner: 'app', collection: 'col', id: 'ghost' } }, createRes());
+
+      expect(publishExtensionHostEventMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT publish host event on grant delete 404', () => {
+      const handlers = createHarness();
+      const handler = handlers['DELETE /api/documents/collections/:owner/:collection/grants/:granteeAppId'];
+
+      handler({ params: { owner: 'app', collection: 'col', granteeAppId: 'nobody' } }, createRes());
+
+      expect(publishExtensionHostEventMock).not.toHaveBeenCalled();
+    });
+
+    it('does NOT publish host event on read-only routes', () => {
+      const handlers = createHarness();
+
+      handlers['GET /api/documents/collections']({ query: {} }, createRes());
+      handlers['GET /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app', collection: 'col' }, query: {} },
+        createRes(),
+      );
+
+      expect(publishExtensionHostEventMock).not.toHaveBeenCalled();
     });
   });
 

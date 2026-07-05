@@ -365,3 +365,33 @@ export class DocumentsStore {
     return result.changes > 0;
   }
 }
+
+// ── Singleton accessor (for backend API and other non-route callers) ──
+
+let _singletonStore: DocumentsStore | null = null;
+let _singletonDbPath: string | null = null;
+
+/**
+ * Get or create the singleton DocumentsStore for the given state root.
+ * Preserves the same singleton semantics as routes/documents.ts.
+ * The store is kept alive for the lifetime of the process.
+ */
+export function getDocumentsStore(stateRoot: string): DocumentsStore {
+  const dbPath = resolveDocumentsDbPath(stateRoot);
+  if (_singletonStore && _singletonDbPath === dbPath) {
+    return _singletonStore;
+  }
+  _singletonStore?.close();
+  _singletonStore = new DocumentsStore(dbPath);
+  _singletonDbPath = dbPath;
+  return _singletonStore;
+}
+
+/**
+ * Close and reset the singleton (for tests).
+ */
+export function resetDocumentsStoreSingleton(): void {
+  _singletonStore?.close();
+  _singletonStore = null;
+  _singletonDbPath = null;
+}

@@ -7,6 +7,7 @@ export * from './checkpoints.js';
 export * from './cli.js';
 export * from './conversations.js';
 export * from './documents.js';
+export * from './documents-store.js';
 export {
   cancelDelayedEvent,
   delayEvent,

@@ -73,6 +73,7 @@ const backendApiLazyModuleEntries = [
   ['skills/skillInventory.js', 'server/skills/skillInventory.ts'],
   ['settings/settingsStore.js', 'server/settings/settingsStore.ts'],
   ['shared/appEvents.js', 'server/shared/appEvents.ts'],
+  ['documents/store.js', 'server/documents/store.ts'],
   ['tools/toolGateway.js', 'server/tools/toolGateway.ts'],
   ['tools/toolInventory.js', 'server/tools/toolInventory.ts'],
   ['transcription/transcriptionService.js', 'server/transcription/transcriptionService.ts'],
@@ -89,6 +90,7 @@ const backendApiLazyModuleEntries = [
   ['extensions/extensionLifecycle.js', 'server/extensions/extensionLifecycle.ts'],
   ['extensions/extensionPermissions.js', 'server/extensions/extensionPermissions.ts'],
   ['extensions/extensionRegistry.js', 'server/extensions/extensionRegistry.ts'],
+  ['extensions/extensionSubscriptions.js', 'server/extensions/extensionSubscriptions.ts'],
   ['extensions/runtimeAgentHooks.js', 'server/extensions/runtimeAgentHooks.ts'],
   ['extensions/videoProbeAttachmentStore.js', 'server/extensions/videoProbeAttachmentStore.ts'],
 ];

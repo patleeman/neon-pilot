@@ -11,7 +11,8 @@
 
 import type { Express, Request, Response } from 'express';
 
-import { DocumentsStore, resolveDocumentsDbPath, type UpsertCollectionOptions } from '../documents/store.js';
+import { DocumentsStore, getDocumentsStore, resetDocumentsStoreSingleton, type UpsertCollectionOptions } from '../documents/store.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { invalidateAppTopics, logError } from '../middleware/index.js';
 import type { ServerRouteContext } from './context.js';
 
@@ -82,24 +83,8 @@ function readBoolean(value: unknown): boolean | undefined {
 
 // ── Store lifecycle ────────────────────────────────────────────────────
 
-let storeSingleton: DocumentsStore | null = null;
-
-function openStore(stateRoot: string): DocumentsStore {
-  if (storeSingleton) return storeSingleton;
-  const dbPath = resolveDocumentsDbPath(stateRoot);
-  storeSingleton = new DocumentsStore(dbPath);
-  return storeSingleton;
-}
-
-function closeStore(): void {
-  if (storeSingleton) {
-    storeSingleton.close();
-    storeSingleton = null;
-  }
-}
-
 export function resetDocumentsStoreForTests(): void {
-  closeStore();
+  resetDocumentsStoreSingleton();
 }
 
 function getStore(context?: Pick<ServerRouteContext, 'getStateRoot'>): DocumentsStore {
@@ -107,7 +92,7 @@ function getStore(context?: Pick<ServerRouteContext, 'getStateRoot'>): Documents
   if (!stateRoot) {
     throw new Error('getStateRoot not available on route context');
   }
-  return openStore(stateRoot);
+  return getDocumentsStore(stateRoot);
 }
 
 // ── Handlers ───────────────────────────────────────────────────────────
@@ -119,6 +104,19 @@ function sendError(res: Response, error: unknown, statusCode = 500): void {
   // Treat validation errors as 400
   const status = /invalid|required|must be/i.test(message) ? 400 : statusCode;
   res.status(status).json({ error: message });
+}
+
+function publishDocumentsEvent(payload: unknown): void {
+  let extensionHostClient: ReturnType<typeof getExtensionHostClient>;
+  try {
+    extensionHostClient = getExtensionHostClient();
+  } catch (error) {
+    logError('documents event publish skipped', { message: error instanceof Error ? error.message : String(error) });
+    return;
+  }
+  void extensionHostClient.publishEvent('documents', payload).catch((error) => {
+    logError('documents event publish failed', { message: error instanceof Error ? error.message : String(error) });
+  });
 }
 
 // GET /api/documents/collections
@@ -168,6 +166,11 @@ function handleUpsertCollection(store: DocumentsStore, caller: DocumentsRouteCal
     const result = store.upsertCollection(owner, collection, options);
 
     invalidateAppTopics('documents');
+    publishDocumentsEvent({
+      type: 'collection.updated',
+      owner,
+      collection,
+    });
     res.json({ collection: result });
   } catch (error) {
     sendError(res, error);
@@ -266,6 +269,13 @@ function handlePutDocument(store: DocumentsStore, caller: DocumentsRouteCaller, 
 
     const doc = store.putDocument(owner, collection, id, req.body);
     invalidateAppTopics('documents');
+    publishDocumentsEvent({
+      type: 'document.updated',
+      owner,
+      collection,
+      id,
+      body: req.body,
+    });
     res.json({ document: doc });
   } catch (error) {
     sendError(res, error);
@@ -301,6 +311,12 @@ function handleDeleteDocument(store: DocumentsStore, caller: DocumentsRouteCalle
       return;
     }
     invalidateAppTopics('documents');
+    publishDocumentsEvent({
+      type: 'document.deleted',
+      owner,
+      collection,
+      id,
+    });
     res.json({ deleted: true });
   } catch (error) {
     sendError(res, error);
@@ -361,6 +377,12 @@ function handleSetGrant(store: DocumentsStore, caller: DocumentsRouteCaller, req
 
     const grant = store.setGrant(owner, collection, granteeAppId, canRead, canWrite);
     invalidateAppTopics('documents');
+    publishDocumentsEvent({
+      type: 'grant.updated',
+      owner,
+      collection,
+      granteeAppId,
+    });
     res.json({ grant });
   } catch (error) {
     sendError(res, error);
@@ -396,6 +418,12 @@ function handleDeleteGrant(store: DocumentsStore, caller: DocumentsRouteCaller, 
       return;
     }
     invalidateAppTopics('documents');
+    publishDocumentsEvent({
+      type: 'grant.deleted',
+      owner,
+      collection,
+      granteeAppId,
+    });
     res.json({ deleted: true });
   } catch (error) {
     sendError(res, error);
