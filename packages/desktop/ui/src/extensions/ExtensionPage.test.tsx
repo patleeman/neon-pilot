@@ -228,7 +228,44 @@ describe('ExtensionPage', () => {
     expect(screen.queryByRole('link', { name: 'Go to Chat' })).toBeNull();
   });
 
-  it('renders core feature pages including DocumentsPage for /documents, InboxPage for /inbox, and ActivityPage for /activity', () => {
+  it('renders core feature pages including Home, Documents, Inbox, and Activity', () => {
+    vi.mocked(useApi)
+      .mockReturnValueOnce({
+        data: { collections: [] },
+        loading: false,
+        refreshing: false,
+        error: null,
+        refetch: vi.fn(),
+        replaceData: vi.fn(),
+      })
+      .mockReturnValueOnce({
+        data: { records: [], total: 0 },
+        loading: false,
+        refreshing: false,
+        error: null,
+        refetch: vi.fn(),
+        replaceData: vi.fn(),
+      })
+      .mockReturnValueOnce({
+        data: { items: [], total: 0 },
+        loading: false,
+        refreshing: false,
+        error: null,
+        refetch: vi.fn(),
+        replaceData: vi.fn(),
+      });
+
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <ExtensionPage shellPresentation="windowed" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Home' })).toBeTruthy();
+    expect(screen.getByText('No collections yet')).toBeTruthy();
+
+    cleanup();
+    vi.mocked(useApi).mockReset();
     vi.mocked(useApi).mockReturnValue({
       data: { collections: [] },
       loading: false,

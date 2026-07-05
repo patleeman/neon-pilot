@@ -3070,6 +3070,7 @@ describe('Windowed OS Storybook examples', () => {
     const canonicalTitles = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
 
     expect(canonicalTitles).toEqual([
+      'Home',
       'Chat',
       'Files',
       'Documents',
@@ -3081,6 +3082,8 @@ describe('Windowed OS Storybook examples', () => {
       'Settings',
       'App Manager',
     ]);
+    expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Home')?.aliases).toContain('dashboard');
+    expect(CANONICAL_WINDOWED_APP_SIZES.Home).toEqual({ width: 1040, height: 660 });
 
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Browser')?.aliases).toContain('browser window');
     expect(CANONICAL_WINDOWED_DESKTOP_APPS.find((app) => app.title === 'Files')?.aliases).toContain('file explorer');

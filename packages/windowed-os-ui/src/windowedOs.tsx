@@ -35,6 +35,12 @@ export interface WindowedDesktopAppSize {
 }
 
 export const CANONICAL_WINDOWED_DESKTOP_APPS = [
+  {
+    id: 'home',
+    title: 'Home',
+    accent: 'settings',
+    aliases: ['dashboard', 'overview', 'start', 'home screen'],
+  },
   { id: 'chat', title: 'Chat', accent: 'chat', aliases: ['conversation', 'thread', 'new conversation'] },
   { id: 'files', title: 'Files', accent: 'settings', aliases: ['workspace', 'file explorer', 'finder'] },
   { id: 'documents', title: 'Documents', accent: 'settings', aliases: ['collections', 'records', 'shared data'] },
@@ -48,6 +54,7 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
 ] as const satisfies readonly WindowedDesktopAppDefinition[];
 
 export const CANONICAL_WINDOWED_APP_SIZES: Partial<Record<string, WindowedDesktopAppSize>> = {
+  Home: { width: 1040, height: 660 },
   Files: { width: 820, height: 560 },
   Documents: { width: 980, height: 620 },
   Browser: { width: 900, height: 620 },

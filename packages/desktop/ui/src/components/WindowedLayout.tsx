@@ -48,6 +48,7 @@ import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import { getTabSessionKey, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { ConversationPage } from '../pages/ConversationPage';
+import { HomePage } from '../pages/HomePage';
 import type { SessionMeta } from '../shared/types';
 import {
   boundsForRestoredDragStart,
@@ -1132,6 +1133,7 @@ function WindowRouteBody({
       <div className="wos-window-route-body wos-window-route-body--extension">
         <WindowRouteScope route={route} onNavigate={onNavigate}>
           <Routes>
+            <Route path="home" element={<HomePage />} />
             <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
           </Routes>
         </WindowRouteScope>

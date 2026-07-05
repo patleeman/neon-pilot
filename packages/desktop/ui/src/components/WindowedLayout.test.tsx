@@ -766,7 +766,7 @@ describe('WindowedLayout route windows', () => {
     const menuTitles = Array.from(container.querySelectorAll('.wos-start-menu__item .wos-app-tile__label')).map(
       (element) => element.textContent,
     );
-    expect(menuTitles).toEqual(['Chat', 'Documents', 'Automations', 'Inbox', 'Activity', 'Settings']);
+    expect(menuTitles).toEqual(['Home', 'Chat', 'Documents', 'Automations', 'Inbox', 'Activity', 'Settings']);
     expect(menuTitles).not.toContain('Notes');
 
     fireEvent.mouseDown(within(startMenu).getByRole('button', { name: /^automations$/i }), { button: 0 });
@@ -1390,9 +1390,9 @@ describe('WindowedLayout route windows', () => {
       .getAllByRole('button')
       .map((button) => button.textContent?.trim());
 
-    expect(appButtons).toEqual(['Chat', 'Documents', 'Automations', 'Inbox', 'Activity', 'Settings', 'App Manager', 'Notes']);
+    expect(appButtons).toEqual(['Home', 'Chat', 'Documents', 'Automations', 'Inbox', 'Activity', 'Settings', 'App Manager', 'Notes']);
 
-    for (const label of ['Chat', 'Documents', 'Automations', 'Inbox', 'Activity', 'Settings', 'App Manager', 'Notes']) {
+    for (const label of ['Home', 'Chat', 'Documents', 'Automations', 'Inbox', 'Activity', 'Settings', 'App Manager', 'Notes']) {
       expect(within(startMenu).getAllByRole('button', { name: new RegExp(`^${label}$`, 'i') })).toHaveLength(1);
     }
 

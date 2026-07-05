@@ -6,6 +6,7 @@ import { addNotification } from '../components/notifications/notificationStore';
 import { ButtonLink, CenteredMessage, ErrorState, QuietLoadingState } from '../components/ui';
 import { ActivityPage } from '../pages/ActivityPage';
 import { DocumentsPage } from '../pages/DocumentsPage';
+import { HomePage } from '../pages/HomePage';
 import { InboxPage } from '../pages/InboxPage';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
@@ -14,6 +15,7 @@ import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensio
 const STALE_EXTENSION_ROUTES = new Set<string>();
 
 const CORE_WINDOWED_FEATURE_PAGES = new Map<string, () => JSX.Element>([
+  ['/home', () => <HomePage />],
   ['/activity', () => <ActivityPage />],
   ['/documents', () => <DocumentsPage />],
   ['/inbox', () => <InboxPage />],

@@ -49,6 +49,7 @@ describe('windowed app registry', () => {
     );
 
     expect(apps.map((app) => app.title)).toEqual([
+      'Home',
       'Chat',
       'Files',
       'Documents',
@@ -60,6 +61,14 @@ describe('windowed app registry', () => {
       'Settings',
       'App Manager',
     ]);
+    expect(apps.find((app) => app.title === 'Home')).toMatchObject({
+      id: 'home',
+      route: '/home',
+      kind: 'route',
+      source: 'core',
+      owner: { packageType: 'core' },
+      window: { allowMultiple: false, singleton: true },
+    });
     expect(apps.find((app) => app.title === 'Documents')).toMatchObject({
       id: 'documents',
       route: '/documents',
@@ -125,7 +134,7 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Documents', 'Inbox', 'Activity', 'Settings']);
+    expect(apps.map((app) => app.title)).toEqual(['Home', 'Chat', 'Documents', 'Inbox', 'Activity', 'Settings']);
   });
 
   it('lets canonical app metadata win over duplicate package nav and view contributions', () => {
@@ -143,7 +152,7 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Documents', 'Inbox', 'Activity', 'Settings', 'App Manager']);
+    expect(apps.map((app) => app.title)).toEqual(['Home', 'Chat', 'Documents', 'Inbox', 'Activity', 'Settings', 'App Manager']);
     expect(apps.find((app) => app.route === '/apps')).toMatchObject({
       id: 'app-manager',
       title: 'App Manager',
@@ -170,7 +179,7 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Documents', 'Inbox', 'Activity', 'Settings', 'Boards', 'Reports']);
+    expect(apps.map((app) => app.title)).toEqual(['Home', 'Chat', 'Documents', 'Inbox', 'Activity', 'Settings', 'Boards', 'Reports']);
     expect(apps.find((app) => app.title === 'Boards')).toMatchObject({
       source: 'app-package',
       sourcePackageId: 'custom-package',

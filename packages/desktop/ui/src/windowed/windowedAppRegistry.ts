@@ -27,13 +27,14 @@ export interface WindowedAppRegistration {
   };
 }
 
-const CORE_WINDOWED_APP_IDS = new Set(['chat', 'documents', 'inbox', 'activity', 'settings']);
+const CORE_WINDOWED_APP_IDS = new Set(['home', 'chat', 'documents', 'inbox', 'activity', 'settings']);
 const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, WindowedDesktopAppDefinition> = new Map(
   CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]),
 );
 const CANONICAL_LAUNCHER_ORDER: readonly string[] = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
 
 const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>> = {
+  home: '/home',
   chat: '/conversations/new',
   files: '/files',
   documents: '/documents',
