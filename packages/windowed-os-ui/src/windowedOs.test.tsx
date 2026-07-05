@@ -987,7 +987,9 @@ describe('Windowed OS tokens', () => {
     expect(stylesSource).toContain('border-radius: var(--wos-radius-pill);');
     expect(stylesSource).toContain('.wos-extension-dialog-busy');
     expect(stylesSource).toContain('.wos-extension-detail-grid .wos-key-value-list');
+    expect(stylesSource).toContain('.wos-extension-detail-grid > * {\n  min-width: 0;');
     expect(stylesSource).toContain('.wos-extension-detail-description {\n  grid-column: 1 / -1;\n  margin: 0;\n  border: 1.5px solid');
+    expect(stylesSource).toContain('overflow-wrap: anywhere;');
     expect(stylesSource).toContain(".wos-dialog-layer[data-modal='true']");
     expect(stylesSource).toContain('pointer-events: none;');
     expect(stylesSource).toContain('pointer-events: auto;');
