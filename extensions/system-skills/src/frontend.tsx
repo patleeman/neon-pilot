@@ -3,7 +3,6 @@ import { QuietLoadingState, WindowedLoadingState } from '@neon-pilot/extensions/
 import React, { lazy, type ReactNode, Suspense } from 'react';
 
 const LazySkillsPage = lazy(async () => ({ default: (await import('./SkillsPage.js')).SkillsPage }));
-const LazySkillsContextRail = lazy(async () => ({ default: (await import('./SkillsPage.js')).SkillsContextRail }));
 
 function loadingFallback(props: ExtensionSurfaceProps, label: string): ReactNode {
   if (props.context?.shellPresentation === 'windowed') {
@@ -16,14 +15,6 @@ export function SkillsPage(props: ExtensionSurfaceProps) {
   return (
     <Suspense fallback={loadingFallback(props, 'Loading skills page')}>
       <LazySkillsPage {...props} />
-    </Suspense>
-  );
-}
-
-export function SkillsContextRail(props: ExtensionSurfaceProps) {
-  return (
-    <Suspense fallback={loadingFallback(props, 'Loading skill details')}>
-      <LazySkillsContextRail {...props} />
     </Suspense>
   );
 }

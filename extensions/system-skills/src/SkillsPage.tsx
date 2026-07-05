@@ -3,9 +3,6 @@ import {
   AppPageIntro,
   AppPageLayout,
   Button,
-  ContextRail,
-  ContextRailBody,
-  ContextRailHeader,
   DataTable,
   DataTableActionGroup,
   DataTableBody,
@@ -19,8 +16,6 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  KeyValueItem,
-  KeyValueList,
   Notice,
   QuietLoadingState,
   ResourceList,
@@ -79,10 +74,9 @@ function SkillsToolbarIcon({ name }: { name: 'clear' | 'refresh' | 'search' }) {
   );
 }
 
-function SkillDetailIcon({ name }: { name: 'details' | 'open' }) {
+function SkillDetailIcon({ name }: { name: 'details' }) {
   const paths = {
     details: ['M4 7h16', 'M4 12h16', 'M4 17h10'],
-    open: ['M14 5h5v5', 'M10 14 19 5', 'M19 14v5H5V5h5'],
   } satisfies Record<string, string[]>;
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -1000,7 +994,7 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
                     { label: 'State', value: selectedWindowedSelection.skill.enabled ? 'Enabled' : 'Disabled' },
                     { label: 'Path', value: selectedWindowedSelection.skill.path },
                     ...(selectedWindowedSelection.skill.extensionId
-                      ? [{ label: 'Extension', value: selectedWindowedSelection.skill.extensionId }]
+                      ? [{ label: 'App package', value: selectedWindowedSelection.skill.extensionId }]
                       : []),
                   ]}
                 />
@@ -1324,113 +1318,5 @@ export function SkillsPage({ pa, context }: ExtensionSurfaceProps) {
         </TabPanel>
       )}
     </AppPageLayout>
-  );
-}
-
-export function SkillsContextRail({ pa }: ExtensionSurfaceProps) {
-  const [selection, setSelection] = useState<SkillSelectionData | null>(null);
-
-  useEffect(() => {
-    if (!pa.selection) return;
-    const subscription = pa.selection.subscribe((nextSelection) => {
-      if (!isSkillSelection(nextSelection)) {
-        setSelection(null);
-        return;
-      }
-      const data = nextSelection.resource.data;
-      setSelection(isSkillSelectionData(data) ? data : null);
-    });
-    return () => subscription.unsubscribe();
-  }, [pa]);
-
-  return (
-    <ContextRail>
-      <ContextRailHeader
-        eyebrow="Skill details"
-        title={selection ? (selection.kind === 'marketplace' ? selection.candidate.title : selection.skill.name) : 'Select a skill'}
-      />
-      <ContextRailBody>
-        {!selection ? (
-          <EmptyState
-            title="Pick a row to inspect"
-            body="Select a skill to inspect its source, trust level, install state, and local path."
-            steps={['Pick a skill from the table.', 'Review its details here.', 'Install or manage it from the row actions.']}
-            align="start"
-          />
-        ) : selection.kind === 'marketplace' ? (
-          <MarketplaceSkillDetails selection={selection} />
-        ) : (
-          <InstalledSkillDetails skill={selection.skill} />
-        )}
-      </ContextRailBody>
-    </ContextRail>
-  );
-}
-
-function isSkillSelectionData(value: unknown): value is SkillSelectionData {
-  if (!value || typeof value !== 'object') return false;
-  const kind = (value as { kind?: unknown }).kind;
-  if (kind === 'marketplace') {
-    const candidate = (value as { candidate?: unknown }).candidate;
-    return Boolean(candidate && typeof candidate === 'object' && typeof (candidate as { candidateId?: unknown }).candidateId === 'string');
-  }
-  if (kind === 'installed') {
-    const skill = (value as { skill?: unknown }).skill;
-    return Boolean(skill && typeof skill === 'object' && typeof (skill as { id?: unknown }).id === 'string');
-  }
-  return false;
-}
-
-function MarketplaceSkillDetails({ selection }: { selection: Extract<SkillSelectionData, { kind: 'marketplace' }> }) {
-  const { candidate, installed, capability, state } = selection;
-  return (
-    <div className="space-y-5">
-      <header className="space-y-2">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="truncate text-[16px] font-semibold text-primary">{candidate.title}</h3>
-            <div className={`mt-1 text-[12px] ${state.className}`}>{state.label}</div>
-          </div>
-          {candidate.url ? (
-            <IconButton
-              compact
-              type="button"
-              aria-label="Open skill source"
-              title="Open skill source"
-              onClick={() => window.open(candidate.url, '_blank', 'noopener,noreferrer')}
-            >
-              <SkillDetailIcon name="open" />
-            </IconButton>
-          ) : null}
-        </div>
-        {candidate.description ? <p className="text-[12px] leading-5 text-secondary">{candidate.description}</p> : null}
-      </header>
-
-      <KeyValueList>
-        <KeyValueItem label="Capability" value={capability} />
-        <KeyValueItem label="Source" value={candidate.sourceLabel} />
-        <KeyValueItem label="Trust" value={candidate.trustLevel === 'community' ? 'Community' : 'Trusted'} />
-        <KeyValueItem label="State" value={installed ? 'Installed' : candidate.requiresApproval ? 'Approval required' : 'Available'} />
-        <KeyValueItem label="Identifier" value={candidate.identifier} />
-      </KeyValueList>
-    </div>
-  );
-}
-
-function InstalledSkillDetails({ skill }: { skill: SkillItem }) {
-  return (
-    <div className="space-y-5">
-      <header className="space-y-2">
-        <h3 className="truncate text-[16px] font-semibold text-primary">{skill.name}</h3>
-        {skill.description ? <p className="text-[12px] leading-5 text-secondary">{skill.description}</p> : null}
-      </header>
-
-      <KeyValueList>
-        <KeyValueItem label="Source" value={sourceLabel(skill)} />
-        <KeyValueItem label="State" value={skill.enabled ? 'Enabled' : 'Disabled'} />
-        <KeyValueItem label="Path" value={skill.path} />
-        {skill.extensionId ? <KeyValueItem label="Extension" value={skill.extensionId} /> : null}
-      </KeyValueList>
-    </div>
   );
 }

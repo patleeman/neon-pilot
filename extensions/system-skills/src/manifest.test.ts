@@ -29,11 +29,10 @@ describe('system-skills manifest', () => {
     );
   });
 
-  it('keeps Skills management on the page plus the route context rail', () => {
+  it('keeps Skills management on the page without a route context rail', () => {
     expect(manifest.contributes.settingsComponent).toBeUndefined();
     expect(manifest.contributes.views).toContainEqual(expect.objectContaining({ id: 'skills-page', route: '/skills', location: 'main' }));
-    expect(manifest.contributes.views).toContainEqual(
-      expect.objectContaining({ id: 'skills-context-rail', route: '/skills', location: 'rightRail' }),
-    );
+    expect(manifest.contributes.nav.every((item) => !('rightSidebarView' in item))).toBe(true);
+    expect(manifest.contributes.views).toEqual(expect.not.arrayContaining([expect.objectContaining({ location: 'rightRail' })]));
   });
 });

@@ -82,6 +82,7 @@ The deeper app/extension product model remains important, but the current goal i
    - 2026-07-05 progress: persisted Settings windows now shrink restored bounds to the current desktop width instead of reopening mostly offscreen on narrow viewports, while exact maximized windows remain maximized. Windowed Settings also gained a narrow route-container collapse fix, a scroll-pane min-width guard, and dark-mode route-body status color remapping for inherited `text-danger`/`text-success` rows.
 5. Convert remaining stable-shell right-rail detail surfaces into windowed detail/subwindow flows.
    - Parallel candidates: Model Arena, Skills, App Manager.
+   - 2026-07-05 progress: Skills no longer contributes a route-owned right sidebar. Skill details now stay on the page/windowed dialog path, the stale `SkillsContextRail` entrypoint and component were removed, and the shared route-shell manifest guardrail now treats Skills as a main-only detail-dialog route alongside App Manager.
 6. Run the live light/dark route matrix and file per-surface fixes.
    - Toggle Light/Dark/Time and inspect Chat, Settings, App Manager, Skills, Gateways, Model Arena, Routines, Automations, Terminal, Browser, Files, Diagnostics, and Workflows at normal and narrow sizes.
 

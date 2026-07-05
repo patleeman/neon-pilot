@@ -179,10 +179,17 @@ describe('SkillsPage', () => {
     expect(await screen.findByText('Build iOS Apps')).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'Enable Build iOS Apps' })).toBeTruthy();
     expect(container.querySelector('.wos-toggle[data-accent="skills"]')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Details for Build iOS Apps' }).getAttribute('data-density')).toBe('icon');
+    const installedDetailsButton = screen.getByRole('button', { name: 'Details for Build iOS Apps' });
+    expect(installedDetailsButton.getAttribute('data-density')).toBe('icon');
     expect(container.querySelector<HTMLElement>('.wos-data-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
       'minmax(15rem, 1fr) minmax(7rem, 0.38fr) minmax(14rem, 0.74fr)',
     );
+
+    fireEvent.click(installedDetailsButton);
+    const installedDialog = await screen.findByRole('dialog', { name: 'Build iOS Apps' });
+    expect(installedDialog).toBeTruthy();
+    expect(screen.getByText('App package')).toBeTruthy();
+    expect(screen.queryByText('Extension')).toBeNull();
   });
 
   it('uses windowed empty and status primitives for empty desktop skill views', async () => {
@@ -394,7 +401,7 @@ describe('SkillsPage', () => {
     expect(pa.extension.invoke).toHaveBeenCalledWith('listSkills', {});
   });
 
-  it('opens marketplace skill details through the route right sidebar selection', async () => {
+  it('publishes marketplace skill details as a selected resource', async () => {
     const selectionSet = vi.fn();
     const pa = createPa({
       selection: {
