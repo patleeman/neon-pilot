@@ -569,15 +569,6 @@ const smokes = {
     const result = await module.inspectMcpSettings({}, ctx);
     assert(Array.isArray(result.servers) && Array.isArray(result.searchedPaths), 'inspectMcpSettings failed');
   },
-  async 'system-model-arena'() {
-    const saved = await module.saveArenaSettings({ automaticDuels: false, challengerModels: ['smoke-provider/smoke-model'] }, ctx);
-    assert(saved.settings?.automaticDuels === false, 'Model Arena settings save failed');
-    assert(saved.settings?.challengerModels?.[0] === 'smoke-provider/smoke-model', 'Model Arena challenger model missing');
-    const state = await module.getArenaState({}, ctx);
-    assert(state.settings?.automaticDuels === false, 'Model Arena state did not preserve settings');
-    assert(Array.isArray(state.duels) && state.duels.length === 0, 'Model Arena state should start with no duels');
-    assert(state.models?.some((model) => model.id === 'smoke-model'), 'Model Arena model list failed');
-  },
   async 'system-neon-pilot-admin-cli'() {
     const list = await module.manageAppCommands({ action: 'list' }, ctx);
     assert(list.ok === true && list.commands.length === 1, 'app command list failed');

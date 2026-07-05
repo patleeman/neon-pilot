@@ -108,11 +108,11 @@ describe('NativeExtensionSurfaceHost', () => {
 
   it('uses transparent chrome for right rail extension surfaces', async () => {
     const surface: NativeExtensionViewSummary = {
-      extensionId: 'system-model-arena',
-      id: 'model-arena-context-rail',
-      title: 'Model Arena Context',
+      extensionId: 'system-automations',
+      id: 'automations-context-rail',
+      title: 'Automations Context',
       location: 'rightRail',
-      component: 'ModelArenaContextRail',
+      component: 'AutomationsContextRail',
       frontend: { entry: 'dist/frontend.js' },
     };
     const container = document.createElement('div');
@@ -121,10 +121,10 @@ describe('NativeExtensionSurfaceHost', () => {
     mountedRoots.push(root);
 
     await act(async () => {
-      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/model-arena" search="" hash="" />);
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/automations" search="" hash="" />);
     });
 
-    const host = container.querySelector('[data-extension-surface-id="model-arena-context-rail"]');
+    const host = container.querySelector('[data-extension-surface-id="automations-context-rail"]');
     expect(host?.className).toContain('bg-transparent');
     expect(host?.className).not.toContain('bg-base');
   });

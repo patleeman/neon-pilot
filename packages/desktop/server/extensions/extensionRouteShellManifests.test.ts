@@ -49,7 +49,6 @@ describe('first-party extension route shell manifests', () => {
   it('annotates bundled route pages with the pending page-type inventory', () => {
     const routes = [
       ['system-automations', '/automations', 'table'],
-      ['system-model-arena', '/model-arena', 'dashboard'],
       ['system-telemetry', '/telemetry', 'dashboard'],
       ['system-skills', '/skills', 'table'],
       ['system-extension-manager', '/apps', 'table'],
@@ -66,7 +65,6 @@ describe('first-party extension route shell manifests', () => {
   it('keeps main-only routes free of contextual-left and right-sidebar declarations', () => {
     const routes = [
       ['system-automations', '/automations'],
-      ['system-model-arena', '/model-arena'],
       ['system-telemetry', '/telemetry'],
       ['system-skills', '/skills'],
     ] as const;
@@ -83,7 +81,6 @@ describe('first-party extension route shell manifests', () => {
   it('keeps non-chat route pages that do not own contextual navigation blank on the left', () => {
     const routes = [
       ['system-automations', '/automations'],
-      ['system-model-arena', '/model-arena'],
       ['system-telemetry', '/telemetry'],
       ['system-skills', '/skills'],
       ['system-extension-manager', '/apps'],
@@ -97,14 +94,7 @@ describe('first-party extension route shell manifests', () => {
   });
 
   it('keeps main route views free of side-region placement and scope fields', () => {
-    const extensionIds = [
-      'system-automations',
-      'system-model-arena',
-      'system-telemetry',
-      'system-skills',
-      'system-extension-manager',
-      'system-settings',
-    ];
+    const extensionIds = ['system-automations', 'system-telemetry', 'system-skills', 'system-extension-manager', 'system-settings'];
 
     for (const extensionId of extensionIds) {
       const manifest = readManifest(extensionId);
@@ -129,14 +119,7 @@ describe('first-party extension route shell manifests', () => {
   });
 
   it('keeps every first-party sidebar view bound from a nav route', () => {
-    const extensionIds = [
-      'system-automations',
-      'system-model-arena',
-      'system-telemetry',
-      'system-skills',
-      'system-extension-manager',
-      'system-settings',
-    ];
+    const extensionIds = ['system-automations', 'system-telemetry', 'system-skills', 'system-extension-manager', 'system-settings'];
 
     for (const extensionId of extensionIds) {
       const manifest = readManifest(extensionId);
@@ -152,7 +135,6 @@ describe('first-party extension route shell manifests', () => {
   it('keeps dialog-driven detail routes free of route-owned right rails', () => {
     const routes = [
       ['system-extension-manager', '/apps'],
-      ['system-model-arena', '/model-arena'],
       ['system-skills', '/skills'],
     ] as const;
 
@@ -165,14 +147,7 @@ describe('first-party extension route shell manifests', () => {
   });
 
   it('keeps every first-party primary right sidebar view bound from a nav route', () => {
-    const extensionIds = [
-      'system-automations',
-      'system-model-arena',
-      'system-telemetry',
-      'system-skills',
-      'system-extension-manager',
-      'system-settings',
-    ];
+    const extensionIds = ['system-automations', 'system-telemetry', 'system-skills', 'system-extension-manager', 'system-settings'];
 
     for (const extensionId of extensionIds) {
       const manifest = readManifest(extensionId);

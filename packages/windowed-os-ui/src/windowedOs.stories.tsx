@@ -6,7 +6,6 @@ import {
   CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
   Taskbar,
-  WindowedActionRow,
   WindowedAppTile,
   WindowedBadge,
   WindowedBrowserToolbar,
@@ -34,7 +33,6 @@ import {
   WindowedMessageBubble,
   WindowedNumberStepper,
   WindowedPageButton,
-  WindowedPageGrid,
   WindowedPageMain,
   WindowedPageRail,
   WindowedPageSection,
@@ -1934,206 +1932,6 @@ export const AutomationsPage: Story = {
 export const DarkAutomationsPage: Story = {
   render: () => <AutomationsPageStory theme="dark" />,
 };
-function ModelArenaPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
-  return (
-    <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
-      <WindowFrame
-        title="Model Arena"
-        accent="model-arena"
-        focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(1040px, 100%)', height: 660 }}
-        onMinimize={() => undefined}
-        onMaximize={() => undefined}
-        onClose={() => undefined}
-      >
-        <WindowedPageShell layout="standard">
-          <WindowedPageMain
-            title="Model Arena"
-            actions={
-              <>
-                <WindowedSelect aria-label="Task type" defaultValue="all">
-                  <option value="all">All task types</option>
-                  <option value="coding">coding</option>
-                  <option value="review">review</option>
-                </WindowedSelect>
-                <WindowedBadge tone="positive">Running</WindowedBadge>
-                <WindowedPageButton>Settings</WindowedPageButton>
-                <WindowedPageButton>Refresh</WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedPageSection title="Overview" meta="All task types">
-              <WindowedKeyValueGrid
-                columns={4}
-                items={[
-                  { label: 'Recent duels', value: 42 },
-                  { label: 'Votes', value: 128 },
-                  { label: 'Sample rate', value: '20%' },
-                  { label: 'Challengers', value: 3 },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Active duel" meta="Voting open">
-              <WindowedPageGrid columns={2}>
-                <WindowedKeyValueList
-                  items={[
-                    { label: 'Primary', value: 'openai:gpt-5.4' },
-                    { label: 'Challenger', value: 'anthropic:claude-sonnet-4.5' },
-                    { label: 'Task', value: 'coding' },
-                    { label: 'Started', value: '12:03:42' },
-                  ]}
-                />
-                <WindowedActionRow align="start">
-                  <WindowedPageButton tone="accent">Vote primary</WindowedPageButton>
-                  <WindowedPageButton>Vote challenger</WindowedPageButton>
-                  <WindowedPageButton>Cancel duel</WindowedPageButton>
-                </WindowedActionRow>
-              </WindowedPageGrid>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Rankings" meta="4 models">
-              <WindowedDataTable
-                className="wos-arena-ranking-table"
-                columns={[
-                  { label: 'Model' },
-                  { label: 'Rating', align: 'right' },
-                  { label: 'Votes', align: 'right' },
-                  { label: 'Confidence', align: 'right' },
-                ]}
-              >
-                <WindowedDataRow
-                  name="openai:gpt-5.4"
-                  meta="42 wins / 61 votes"
-                  cells={[
-                    { value: 1684, align: 'right' },
-                    { value: 61, align: 'right' },
-                    { value: 'High', align: 'right' },
-                  ]}
-                />
-                <WindowedDataRow
-                  name="anthropic:claude-sonnet-4.5"
-                  meta="31 wins / 52 votes"
-                  cells={[
-                    { value: 1612, align: 'right' },
-                    { value: 52, align: 'right' },
-                    { value: 'Medium', align: 'right' },
-                  ]}
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Recent duels" meta="42 retained">
-              <WindowedDataTable columns={[{ label: 'Duel' }, { label: 'Result' }, { label: 'Time', align: 'right' }]}>
-                <WindowedDataRow
-                  name="openai:gpt-5.4 vs anthropic:claude-sonnet-4.5"
-                  meta="coding · prompt 1,284 chars"
-                  status={<WindowedBadge tone="warning">Voting</WindowedBadge>}
-                  cells={[{ value: 'now', align: 'right' }]}
-                />
-                <WindowedDataRow
-                  name="openai:gpt-5.4 vs openai:gpt-5.4-mini"
-                  meta="review · selected primary"
-                  status={<WindowedBadge tone="positive">Primary won</WindowedBadge>}
-                  cells={[{ value: '12:01', align: 'right' }]}
-                />
-                <WindowedDataRow
-                  name="anthropic:claude-sonnet-4.5 vs openai:gpt-5.4-mini"
-                  meta="coding · cancelled"
-                  status={<WindowedBadge tone="neutral">Cancelled</WindowedBadge>}
-                  cells={[{ value: '11:58', align: 'right' }]}
-                />
-              </WindowedDataTable>
-            </WindowedPageSection>
-          </WindowedPageMain>
-        </WindowedPageShell>
-      </WindowFrame>
-      <WindowedDialog
-        title="Arena settings"
-        meta="Automatic duels on"
-        accent="model-arena"
-        parentWindowTitle="Model Arena"
-        className="wos-arena-settings-dialog"
-        onClose={() => undefined}
-      >
-        <WindowedDialogStack>
-          <WindowedPageSection title="Status" meta="Automatic duels on">
-            <div className="wos-arena-status-row">
-              <span className="wos-arena-status-row__copy">Comparing challenger runs against conversation models.</span>
-              <WindowedToggle checked accent="model-arena" label="Disable Model Arena" />
-            </div>
-          </WindowedPageSection>
-
-          <WindowedPageSection title="Challengers" meta="3 selected">
-            <div className="wos-arena-add-row">
-              <WindowedField label="Model" span="full">
-                <WindowedSelect aria-label="Challenger model" defaultValue="openai:gpt-5.4-mini">
-                  <optgroup label="OpenAI">
-                    <option value="openai:gpt-5.4-mini">gpt-5.4-mini</option>
-                    <option value="openai:gpt-5.4">gpt-5.4</option>
-                  </optgroup>
-                  <optgroup label="Anthropic">
-                    <option value="anthropic:claude-sonnet-4.5">claude-sonnet-4.5</option>
-                  </optgroup>
-                </WindowedSelect>
-              </WindowedField>
-              <WindowedPageButton tone="accent">Add</WindowedPageButton>
-            </div>
-            <WindowedDataTable
-              className="wos-arena-challenger-table"
-              columns={[{ label: 'Model' }, { label: 'Reference' }, { label: 'Action', align: 'right' }]}
-            >
-              <WindowedDataRow
-                name="gpt-5.4-mini"
-                cells={['openai:gpt-5.4-mini']}
-                action={<WindowedPageButton>Remove</WindowedPageButton>}
-              />
-              <WindowedDataRow
-                name="claude-sonnet-4.5"
-                cells={['anthropic:claude-sonnet-4.5']}
-                action={<WindowedPageButton>Remove</WindowedPageButton>}
-              />
-            </WindowedDataTable>
-          </WindowedPageSection>
-
-          <WindowedPageSection title="Sampling">
-            <div className="wos-arena-settings-grid">
-              <WindowedField label="Initial rate">
-                <WindowedNumberStepper aria-label="Initial rate" value={20} onChange={() => undefined} min={0} max={100} unit="%" />
-              </WindowedField>
-              <WindowedField label="Later rate">
-                <WindowedNumberStepper aria-label="Later rate" value={5} onChange={() => undefined} min={0} max={100} unit="%" />
-              </WindowedField>
-              <WindowedField label="Ramp after">
-                <WindowedNumberStepper aria-label="Ramp after" value={120} onChange={() => undefined} min={0} max={5000} unit="votes" />
-              </WindowedField>
-              <WindowedField label="Minimum prompt">
-                <WindowedNumberStepper
-                  aria-label="Minimum prompt"
-                  value={280}
-                  onChange={() => undefined}
-                  min={0}
-                  max={2000}
-                  step={10}
-                  unit="chars"
-                />
-              </WindowedField>
-            </div>
-          </WindowedPageSection>
-        </WindowedDialogStack>
-      </WindowedDialog>
-    </div>
-  );
-}
-
-export const ModelArenaPage: Story = {
-  render: () => <ModelArenaPageStory />,
-};
-
-export const DarkModelArenaPage: Story = {
-  render: () => <ModelArenaPageStory theme="dark" />,
-};
-
 function DiagnosticsPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) {
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: '100vh', padding: 24 }}>
@@ -2340,17 +2138,6 @@ function AppManagerPageStory({ theme = 'light' }: { theme?: 'light' | 'dark' }) 
                       <WindowedToggle checked accent="apps" label="Disable system-terminal" />
                       <WindowedPageButton>Details</WindowedPageButton>
                       <WindowedPageButton>Open</WindowedPageButton>
-                    </span>
-                  }
-                />
-                <WindowedDataRow
-                  name="system-model-arena"
-                  meta="Built-in · Main route"
-                  status={<WindowedBadge tone="neutral">Disabled</WindowedBadge>}
-                  action={
-                    <span className="wos-inline-actions">
-                      <WindowedToggle accent="apps" label="Enable system-model-arena" />
-                      <WindowedPageButton>Details</WindowedPageButton>
                     </span>
                   }
                 />

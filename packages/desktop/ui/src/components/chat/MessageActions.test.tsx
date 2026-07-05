@@ -73,49 +73,49 @@ describe('MessageActions commands', () => {
   it('renders extension message actions as icon-only controls with shared tooltip labels', () => {
     mockRegistry.messageActions = [
       {
-        extensionId: 'system-model-arena',
-        id: 'compare-message',
-        title: 'Compare models',
-        action: 'startManualDuel',
+        extensionId: 'system-conversation-tools',
+        id: 'summarize-message',
+        title: 'Summarize message',
+        action: 'summarizeMessage',
         when: 'role:assistant && hasText',
       },
     ];
 
     render(<MessageActions blockText="Assistant response" copyText="Assistant response" />);
 
-    const compareButton = document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]');
-    expect(compareButton).not.toBeNull();
-    expect(compareButton?.getAttribute('title')).toBeNull();
-    expect(compareButton?.textContent).toBe('⇄');
-    expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain('Compare models');
+    const summarizeButton = document.querySelector<HTMLButtonElement>('button[aria-label="Summarize message"]');
+    expect(summarizeButton).not.toBeNull();
+    expect(summarizeButton?.getAttribute('title')).toBeNull();
+    expect(summarizeButton?.textContent).toBe('S');
+    expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain('Summarize message');
   });
 
   it('surfaces extension action result text in the shared tooltip', async () => {
-    const invoke = vi.fn(async () => ({ text: 'Model duel duel-1 already exists for this answer.', duelId: 'duel-1', existing: true }));
+    const invoke = vi.fn(async () => ({ text: 'Summary already exists for this answer.', summaryId: 'summary-1', existing: true }));
     vi.mocked(createNativeExtensionClient).mockReturnValue({ extension: { invoke } } as never);
     mockRegistry.messageActions = [
       {
-        extensionId: 'system-model-arena',
-        id: 'compare-message',
-        title: 'Compare models',
-        action: 'startManualDuel',
+        extensionId: 'system-conversation-tools',
+        id: 'summarize-message',
+        title: 'Summarize message',
+        action: 'summarizeMessage',
         when: 'role:assistant && hasText',
       },
     ];
 
     render(<MessageActions blockText="Assistant response" blockId="assistant-1" conversationId="conv-1" copyText="Assistant response" />);
 
-    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]')!);
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Summarize message"]')!);
 
     await waitFor(() =>
-      expect(document.querySelector<HTMLButtonElement>('button[aria-label^="Compare models:"]')?.getAttribute('aria-label')).toContain(
+      expect(document.querySelector<HTMLButtonElement>('button[aria-label^="Summarize message:"]')?.getAttribute('aria-label')).toContain(
         'already exists',
       ),
     );
     expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain(
-      'Compare models: Model duel duel-1 already exists for this answer.',
+      'Summarize message: Summary already exists for this answer.',
     );
-    expect(invoke).toHaveBeenCalledWith('startManualDuel', {
+    expect(invoke).toHaveBeenCalledWith('summarizeMessage', {
       messageText: 'Assistant response',
       messageRole: 'assistant',
       blockId: 'assistant-1',
@@ -125,24 +125,24 @@ describe('MessageActions commands', () => {
 
   it('refreshes the active conversation when an extension action asks for it', async () => {
     const invoke = vi.fn(async () => ({
-      text: 'Started model duel duel-1.',
-      duelId: 'duel-1',
+      text: 'Started summary summary-1.',
+      summaryId: 'summary-1',
       refreshConversationId: 'conv-1',
     }));
     vi.mocked(createNativeExtensionClient).mockReturnValue({ extension: { invoke } } as never);
     mockRegistry.messageActions = [
       {
-        extensionId: 'system-model-arena',
-        id: 'compare-message',
-        title: 'Compare models',
-        action: 'startManualDuel',
+        extensionId: 'system-conversation-tools',
+        id: 'summarize-message',
+        title: 'Summarize message',
+        action: 'summarizeMessage',
         when: 'role:assistant && hasText',
       },
     ];
 
     render(<MessageActions blockText="Assistant response" blockId="assistant-1" conversationId="conv-1" copyText="Assistant response" />);
 
-    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]')!);
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Summarize message"]')!);
 
     await waitFor(() => expect(notifyDesktopConversationStateRefresh).toHaveBeenCalledWith('conv-1'));
   });
@@ -150,35 +150,35 @@ describe('MessageActions commands', () => {
   it('shows extension action failures as notifications instead of long gutter tooltips', async () => {
     const invoke = vi.fn(async () => {
       throw new Error(
-        'Extension "system-model-arena" action "startManualDuel" failed: Extension backend action failed: Add a challenger model different from the current conversation model before starting a duel.',
+        'Extension "system-conversation-tools" action "summarizeMessage" failed: Extension backend action failed: Summary service is unavailable.',
       );
     });
     vi.mocked(createNativeExtensionClient).mockReturnValue({ extension: { invoke } } as never);
     mockRegistry.messageActions = [
       {
-        extensionId: 'system-model-arena',
-        id: 'compare-message',
-        title: 'Compare models',
-        action: 'startManualDuel',
+        extensionId: 'system-conversation-tools',
+        id: 'summarize-message',
+        title: 'Summarize message',
+        action: 'summarizeMessage',
         when: 'role:assistant && hasText',
       },
     ];
 
     render(<MessageActions blockText="Assistant response" blockId="assistant-1" conversationId="conv-1" copyText="Assistant response" />);
 
-    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models"]')!);
+    fireEvent.click(document.querySelector<HTMLButtonElement>('button[aria-label="Summarize message"]')!);
 
     await waitFor(() =>
       expect(addNotification).toHaveBeenCalledWith({
         type: 'error',
-        message: 'Compare models failed.',
-        details: 'Add a challenger model different from the current conversation model before starting a duel.',
-        source: 'Model Arena',
+        message: 'Summarize message failed.',
+        details: 'Summary service is unavailable.',
+        source: 'Conversation Tools',
       }),
     );
-    expect(document.querySelector<HTMLButtonElement>('button[aria-label="Compare models failed. See notification."]')).not.toBeNull();
+    expect(document.querySelector<HTMLButtonElement>('button[aria-label="Summarize message failed. See notification."]')).not.toBeNull();
     expect([...document.querySelectorAll('.ui-tooltip')].map((tooltip) => tooltip.textContent)).toContain(
-      'Compare models failed. See notification.',
+      'Summarize message failed. See notification.',
     );
   });
 

@@ -808,7 +808,7 @@ describe('design-system primitives', () => {
       createElement(
         ContextRail,
         null,
-        createElement(ContextRailHeader, { eyebrow: 'Context rail', title: 'Model Arena', subtitle: 'Automatic duels on' }),
+        createElement(ContextRailHeader, { eyebrow: 'Context rail', title: 'Activity', subtitle: 'Recent events' }),
         createElement(ContextRailBody, null, createElement(ContextRailSection, { title: 'Status' }, 'Ready')),
       ),
     );

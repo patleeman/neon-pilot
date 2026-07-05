@@ -191,29 +191,6 @@ describe('WindowedDataTable', () => {
       '.windowed-os-shell .wos-window-route-body--chat .ui-positioned-menu-static .ui-context-menu-item {\n    min-height: 26px;',
     );
   });
-
-  it('stacks Model Arena status controls in compact window containers', () => {
-    const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
-    const stylesSource = readFileSync(stylesPath, 'utf8');
-
-    expect(stylesSource).toContain('.wos-arena-status-row__copy');
-    expect(stylesSource).toContain('.wos-arena-status-row__copy {\n  min-width: 0;');
-    expect(stylesSource).toContain('overflow-wrap: anywhere;');
-    expect(stylesSource).toContain('.wos-arena-settings-dialog {');
-    expect(stylesSource).toContain('container: wos-arena-settings / inline-size;');
-    expect(stylesSource).toContain('width: min(540px, calc(100% - 8px));');
-    expect(stylesSource).toContain('.wos-arena-challenger-table {');
-    expect(stylesSource).toContain('--wos-data-column-template: minmax(112px, 0.9fr) minmax(180px, 1.35fr) auto;');
-    expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-row__cell');
-    expect(stylesSource).toContain('font-family: var(--wos-font-mono);');
-    expect(stylesSource).toContain('@container wos-arena-settings (max-width: 420px)');
-    expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-table__header {\n    display: none;');
-    expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-row {\n    grid-template-columns: minmax(0, 1fr);');
-    expect(stylesSource).toContain('.wos-arena-challenger-table .wos-data-row__action {\n    justify-content: flex-start;');
-    expect(stylesSource).toContain('@container (max-width: 640px)');
-    expect(stylesSource).toContain('.wos-arena-status-row,\n  .wos-arena-settings-dialog .wos-arena-settings-grid {');
-    expect(stylesSource).toContain('justify-items: start;');
-  });
 });
 
 describe('WindowedPageShell', () => {
@@ -1118,7 +1095,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(tokensSource).toContain('--wos-surface-0: oklch(18% 0.025 260);');
     expect(tokensSource).toContain('--wos-apps: oklch(70% 0.15 60);');
     expect(tokensSource).toContain('--wos-workflows:');
-    expect(tokensSource).toContain('--wos-model-arena:');
     expect(tokensSource).toContain('--wos-skills:');
     expect(tokensSource).toContain('--wos-diagnostics:');
     expect(tokensSource).toContain('--wos-titlebar-h: 24px;');
@@ -1331,7 +1307,7 @@ describe('Windowed OS Storybook examples', () => {
     const stylesPath = fileURLToPath(new URL('./styles.css', import.meta.url));
     const stylesSource = readFileSync(stylesPath, 'utf8');
 
-    for (const accent of ['workflows', 'model-arena', 'skills', 'diagnostics']) {
+    for (const accent of ['workflows', 'skills', 'diagnostics']) {
       expect(stylesSource).toContain(`.wos-window__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-dialog__titlebar[data-accent='${accent}']`);
       expect(stylesSource).toContain(`.wos-segmented-control[data-accent='${accent}']`);
@@ -3025,47 +3001,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('ariaLabel="Automation filter"');
   });
 
-  it('documents the canonical Model Arena desktop page', () => {
-    const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
-    const source = readFileSync(storiesPath, 'utf8');
-    const arenaSource = source.slice(source.indexOf('function ModelArenaPageStory'), source.indexOf('export const ModelArenaPage'));
-    const arenaMainSource = arenaSource.slice(arenaSource.indexOf('<WindowFrame'), arenaSource.indexOf('</WindowFrame>'));
-
-    expect(source).toContain('function ModelArenaPageStory');
-    expect(source).toContain('export const ModelArenaPage');
-    expect(source).toContain('export const DarkModelArenaPage');
-    expect(source).toContain('<ModelArenaPageStory theme="dark" />');
-    expect(source).toContain('title="Model Arena"');
-    expect(source).toContain('data-wos-theme={theme}');
-    expect(source).not.toContain('eyebrow="Model duels"');
-    expect(source).toContain('title="Overview"');
-    expect(source).toContain('title="Status"');
-    expect(source).toContain('title="Challengers"');
-    expect(source).toContain('title="Sampling"');
-    expect(source).toContain('title="Arena settings"');
-    expect(source).toContain('parentWindowTitle="Model Arena"');
-    expect(source).toContain('className="wos-arena-settings-dialog"');
-    expect(source).toContain('<WindowedNumberStepper');
-    expect(source).toContain('unit="%"');
-    expect(source).toContain('unit="votes"');
-    expect(source).toContain('unit="chars"');
-    expect(source).toContain('title="Active duel"');
-    expect(source).toContain('title="Rankings"');
-    expect(source).toContain('title="Recent duels"');
-    expect(source).toContain('aria-label="Task type"');
-    expect(source).toContain('<WindowedPageButton>Settings</WindowedPageButton>');
-    expect(source).toContain('Vote primary');
-    expect(source).toContain('Vote challenger');
-    expect(source).toContain('Disable Model Arena');
-    expect(source).toContain('<WindowedDataRow');
-    expect(source).toContain('cells={[');
-    expect(arenaMainSource).not.toContain('title="Challengers"');
-    expect(arenaMainSource).not.toContain('title="Sampling"');
-    expect(arenaMainSource.indexOf('title="Active duel"')).toBeLessThan(arenaMainSource.indexOf('title="Rankings"'));
-    expect(source).not.toContain('wos-arena-ranking-row');
-    expect(source).not.toContain('title="Leader"');
-  });
-
   it('documents the canonical Diagnostics desktop page', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const source = readFileSync(storiesPath, 'utf8');
@@ -3230,9 +3165,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source.slice(source.indexOf('function AppManagerPageStory'), source.indexOf('export const AppManagerPage'))).toContain(
       'accent="apps"',
     );
-    expect(source.slice(source.indexOf('function ModelArenaPageStory'), source.indexOf('export const DiagnosticsPage'))).toContain(
-      'accent="model-arena"',
-    );
+    expect(source).not.toContain('function ModelArenaPageStory');
     expect(source.slice(source.indexOf('function SkillsPageStory'), source.indexOf('export const CoreDataPrimitives'))).toContain(
       'title="Skills"\n        accent="skills"',
     );
@@ -3258,8 +3191,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain("'windowed-os-desktop-shell--dark-automations-page'");
     expect(source).not.toContain("'windowed-os-desktop-shell--workflows-page'");
     expect(source).not.toContain("'windowed-os-desktop-shell--dark-workflows-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--model-arena-page'");
-    expect(source).toContain("'windowed-os-desktop-shell--dark-model-arena-page'");
     expect(source).toContain("'windowed-os-desktop-shell--app-manager-page'");
     expect(source).toContain("'windowed-os-desktop-shell--dark-app-manager-page'");
     expect(source).toContain("'windowed-os-desktop-shell--app-install-dialog'");

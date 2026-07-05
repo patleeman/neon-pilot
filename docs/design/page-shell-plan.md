@@ -106,7 +106,6 @@ Current implementation work should focus on conformance and verification:
 
 - Chat: Conversation page. Threads left, Conversation main, Workbench right.
 - Automations: Table page. Blank contextual left, Automations table main. No right sidebar; create/edit/details stay in the main workflow.
-- Model Arena: Dashboard page. Blank contextual left, arena main, duel/challenger detail right.
 - Diagnostics: Dashboard page. Blank contextual left, diagnostics main, optional metric detail right later.
 - Skills: Table page. Blank contextual left, skills table main, selected skill detail right.
 - Extensions: Table page. Blank contextual left, extensions table main, selected extension detail right.
@@ -116,20 +115,19 @@ Current implementation work should focus on conformance and verification:
 
 This is the working checklist for conforming existing first-party page routes to the accepted shell model and approved page types.
 
-| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar              | Status                                                 |
-| ------------------ | -------------------------- | ------------ | ----------------------------------------- | -------------------------- | ------------------------------------------------------ |
-| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench                  | Accepted shell owner                                   |
-| `/automations`     | `system-automations`       | Table        | Blank                                     | None                       | Conformed shell; main-only table workflow              |
-| `/model-arena`     | `system-model-arena`       | Dashboard    | Blank                                     | `model-arena-context-rail` | Conformed shell; dashboard visual sweep remains        |
-| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                       | Conformed                                              |
-| `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail`      | Conformed                                              |
-| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                       | Conformed; details open inside the App Manager window  |
-| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                       | Conformed shell; settings grammar needs separate sweep |
+| Route              | Extension                  | Page type    | Contextual left                           | Right sidebar         | Status                                                 |
+| ------------------ | -------------------------- | ------------ | ----------------------------------------- | --------------------- | ------------------------------------------------------ |
+| `/conversations/*` | desktop shell              | Conversation | Threads                                   | Workbench             | Accepted shell owner                                   |
+| `/automations`     | `system-automations`       | Table        | Blank                                     | None                  | Conformed shell; main-only table workflow              |
+| `/telemetry`       | `system-telemetry`         | Dashboard    | Blank                                     | None                  | Conformed                                              |
+| `/skills`          | `system-skills`            | Table        | Blank                                     | `skills-context-rail` | Conformed                                              |
+| `/extensions`      | `system-extension-manager` | Table        | Blank                                     | None                  | Conformed; details open inside the App Manager window  |
+| `/settings/*`      | `system-settings`          | Settings     | `settings-sidebar` via `/settings` prefix | None                  | Conformed shell; settings grammar needs separate sweep |
 
 Remaining broad sweeps:
 
 - Apply the vetted page taxonomy to any new or optional extension pages outside the bundled first-party route set.
-- Tighten Model Arena, Settings, and setup/readiness surfaces against the chosen page type.
+- Tighten Settings and setup/readiness surfaces against the chosen page type.
 - Replace any remaining page-local second columns, loading chrome, or modal CRUD flows that duplicate the accepted shell regions.
 - Keep generic route/extension loading visually quiet; visible loading belongs inside the object or working surface that is actually waiting.
 - Keep the UI-pattern guardrail aligned so future pages cannot reintroduce route-local sidebar or right-sidebar lookalikes.
@@ -158,7 +156,7 @@ Remaining broad sweeps:
    - Pass route context, active cwd, and shared selection into right-sidebar surfaces.
 
 5. Page conformance — in progress
-   - Update Automations, Skills, Extensions, Model Arena, Diagnostics, and Settings to declare the regions they own.
+   - Update Automations, Skills, Extensions, Diagnostics, and Settings to declare the regions they own.
    - Move Skills/Extensions details out of modal-first flows and into selected-item context rails.
    - Keep Automations main-only with no right-sidebar toggle.
    - Use shared route selection/context for selected-object details so the main table and right sidebar stay synchronized.
@@ -196,7 +194,6 @@ Use these slices to finish conformance against the approved shell and page-type 
    - Normalize host and extension settings under the Settings-page grammar.
 
 5. Editor/dashboard sweep
-   - Treat Model Arena as Dashboard unless repeated evaluation routes justify a separate Evaluation type later.
    - Keep Diagnostics as Dashboard and avoid page-local second-column reinvention.
 
 ## Acceptance Criteria

@@ -1603,13 +1603,13 @@ describe('sessions', () => {
         JSON.stringify({ type: 'model_change', modelId: 'test-model' }),
         JSON.stringify({
           type: 'custom_message',
-          id: 'session-extension-block-duel-1',
+          id: 'session-extension-block-status-1',
           parentId: null,
           timestamp: '2026-03-11T12:00:01.000Z',
-          customType: 'model_arena_duel',
-          content: 'Model Arena duel',
+          customType: 'custom_status',
+          content: 'Custom status',
           display: true,
-          details: { duelId: 'duel-1', status: 'ready', extensionBlockId: 'model_arena_duel:duel-1' },
+          details: { statusId: 'status-1', status: 'ready', extensionBlockId: 'custom_status:status-1' },
         }),
       ].join('\n') + '\n',
     );
@@ -1618,9 +1618,9 @@ describe('sessions', () => {
     expect(detail?.blocks).toEqual([
       expect.objectContaining({
         type: 'context',
-        customType: 'model_arena_duel',
-        text: 'Model Arena duel',
-        details: expect.objectContaining({ duelId: 'duel-1', extensionBlockId: 'model_arena_duel:duel-1' }),
+        customType: 'custom_status',
+        text: 'Custom status',
+        details: expect.objectContaining({ statusId: 'status-1', extensionBlockId: 'custom_status:status-1' }),
       }),
     ]);
     expect(detail?.renderItems).toEqual([
@@ -1628,8 +1628,8 @@ describe('sessions', () => {
         type: 'context_cluster',
         blocks: [
           expect.objectContaining({
-            customType: 'model_arena_duel',
-            details: expect.objectContaining({ duelId: 'duel-1', extensionBlockId: 'model_arena_duel:duel-1' }),
+            customType: 'custom_status',
+            details: expect.objectContaining({ statusId: 'status-1', extensionBlockId: 'custom_status:status-1' }),
           }),
         ],
       }),
@@ -1644,27 +1644,27 @@ describe('sessions', () => {
     expect(
       appendStoredVisibleCustomMessage({
         sessionFile,
-        customType: 'model_arena_duel',
-        content: 'Model Arena duel',
+        customType: 'custom_status',
+        content: 'Custom status',
         details: { status: 'running' },
-        blockId: 'duel-1',
+        blockId: 'status-1',
         display: false,
       }),
-    ).toBe('duel-1');
+    ).toBe('status-1');
     expect(
       updateStoredVisibleCustomMessage({
         sessionFile,
-        customType: 'model_arena_duel',
-        content: 'Model Arena duel',
+        customType: 'custom_status',
+        content: 'Custom status',
         details: { status: 'voted' },
-        blockId: 'duel-1',
+        blockId: 'status-1',
       }),
     ).toBe(true);
 
     const block = readSessionBlocks('session-custom-update')?.blocks.find(
-      (candidate) => candidate.type === 'context' && candidate.customType === 'model_arena_duel',
+      (candidate) => candidate.type === 'context' && candidate.customType === 'custom_status',
     );
-    expect(block).toMatchObject({ details: { status: 'voted', extensionBlockId: 'duel-1' } });
+    expect(block).toMatchObject({ details: { status: 'voted', extensionBlockId: 'status-1' } });
   });
 
   it('parents stored visible custom messages to the visible branch when hidden metadata is the latest entry', () => {
@@ -1710,10 +1710,10 @@ describe('sessions', () => {
 
     appendStoredVisibleCustomMessage({
       sessionFile,
-      customType: 'model_arena_duel',
-      content: 'Model Arena duel',
+      customType: 'custom_status',
+      content: 'Custom status',
       details: { status: 'ready' },
-      blockId: 'duel-1',
+      blockId: 'status-1',
       display: true,
     });
 
@@ -1721,11 +1721,11 @@ describe('sessions', () => {
       .split(/\r?\n/)
       .filter(Boolean)
       .map((line) => JSON.parse(line))
-      .find((line) => line.customType === 'model_arena_duel');
+      .find((line) => line.customType === 'custom_status');
     expect(appended).toMatchObject({
       type: 'custom_message',
       parentId: 'assistant-1',
-      details: { status: 'ready', extensionBlockId: 'duel-1' },
+      details: { status: 'ready', extensionBlockId: 'status-1' },
     });
     expect(readSessionBlocks('session-custom-visible-parent')?.blocks.map((block) => block.type)).toContain('context');
   });

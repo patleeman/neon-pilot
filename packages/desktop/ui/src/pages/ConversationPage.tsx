@@ -1629,11 +1629,7 @@ export function ConversationPage({
             return [];
           }
 
-          const hasModelArenaBlocks = visibleSessionDetail.blocks.some(
-            (block) => block.type === 'context' && block.customType === 'model_arena_duel',
-          );
-
-          if (visibleSessionDetail.renderItems?.length && !hasModelArenaBlocks) {
+          if (visibleSessionDetail.renderItems?.length) {
             return transcriptRenderItemsToMessageBlocks(
               visibleSessionDetail.renderItems,
               hydratedHistoricalBlocks,

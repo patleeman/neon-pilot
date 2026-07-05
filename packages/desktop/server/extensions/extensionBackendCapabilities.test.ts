@@ -127,7 +127,7 @@ describe('extension backend capability dispatcher', () => {
         dispatch({
           id: 17,
           kind: 'capabilityRequest',
-          extensionId: 'system-model-arena',
+          extensionId: 'system-conversation-tools',
           capability: 'conversations',
           operation: 'getMeta',
           input: { conversationId: 'conv-1' },
@@ -139,7 +139,7 @@ describe('extension backend capability dispatcher', () => {
         dispatch({
           id: 18,
           kind: 'capabilityRequest',
-          extensionId: 'system-model-arena',
+          extensionId: 'system-conversation-tools',
           capability: 'conversations',
           operation: 'getBlocks',
           input: { conversationId: 'conv-1', tailBlocks: 120 },
@@ -359,8 +359,8 @@ describe('extension backend capability dispatcher', () => {
     ).resolves.toEqual({ ok: true, deleted: [{ id: 'conv-old' }] });
 
     expect(conversations.get).toHaveBeenCalledWith('system-conversation-tools', 'conv-1');
-    expect(conversations.getMeta).toHaveBeenCalledWith('system-model-arena', 'conv-1');
-    expect(conversations.getBlocks).toHaveBeenCalledWith('system-model-arena', 'conv-1', { tailBlocks: 120 });
+    expect(conversations.getMeta).toHaveBeenCalledWith('system-conversation-tools', 'conv-1');
+    expect(conversations.getBlocks).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', { tailBlocks: 120 });
     expect(conversations.setActiveTools).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', ['read']);
     expect(conversations.appendCustomEntry).toHaveBeenCalledWith('system-conversation-tools', 'conv-1', 'conversation-tools-state', {
       enabled: true,

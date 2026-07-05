@@ -479,21 +479,21 @@ describe('extensionConversations', () => {
   });
 
   it('rejects transcript blocks the extension does not contribute', async () => {
-    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'arena-ext', {
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'custom-ext', {
       enforceManifestPermissions: true,
     });
 
     await expect(
       capability.appendTranscriptBlock({
         conversationId: 'stored-1',
-        blockType: 'model_arena_duel',
+        blockType: 'custom_status',
         data: {},
       }),
-    ).rejects.toThrow('requires arena-ext to contribute transcript block "model_arena_duel"');
+    ).rejects.toThrow('requires custom-ext to contribute transcript block "custom_status"');
   });
 
   it('passes the extension owner through parallel job management', async () => {
-    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'arena-ext');
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'parallel-ext');
 
     await expect(capability.manageParallelJob({ conversationId: 'conv-1', jobId: 'job-1', action: 'skip' })).resolves.toEqual({
       ok: true,
@@ -504,7 +504,7 @@ describe('extensionConversations', () => {
       conversationId: 'conv-1',
       jobId: 'job-1',
       action: 'skip',
-      callerExtensionId: 'arena-ext',
+      callerExtensionId: 'parallel-ext',
     });
   });
 
@@ -548,7 +548,7 @@ describe('extensionConversations', () => {
   });
 
   it('forwards multimodal and context fields through the parallel prompt capability', async () => {
-    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'arena-ext');
+    const capability = createExtensionConversationsCapability({ getRuntimeScope: () => 'shared' }, 'parallel-ext');
 
     await expect(
       capability.startParallelPrompt('conv-1', {
@@ -563,8 +563,8 @@ describe('extensionConversations', () => {
         model: 'provider/model',
         thinkingLevel: 'high',
         serviceTier: 'priority',
-        purpose: 'model_arena_duel',
-        metadata: { duelId: 'duel-1' },
+        purpose: 'parallel_comparison',
+        metadata: { comparisonId: 'comparison-1' },
         autoImport: true,
       }),
     ).resolves.toEqual({ ok: true, accepted: true, jobId: 'job-1', childConversationId: 'child-1' });
@@ -583,9 +583,9 @@ describe('extensionConversations', () => {
         model: 'provider/model',
         thinkingLevel: 'high',
         serviceTier: 'priority',
-        ownerExtensionId: 'arena-ext',
-        purpose: 'model_arena_duel',
-        metadata: { duelId: 'duel-1' },
+        ownerExtensionId: 'parallel-ext',
+        purpose: 'parallel_comparison',
+        metadata: { comparisonId: 'comparison-1' },
         autoImport: true,
       }),
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),

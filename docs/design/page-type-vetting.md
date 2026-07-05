@@ -22,7 +22,7 @@ Approved shell rules:
 | Table        | Durable object management                 | Blank                             | Selected-item details         | Automations, Skills, Extensions |
 | Editor       | Structured object editing                 | Optional object/step navigator    | Inspector/history/preview     | Structured editors              |
 | Settings     | Preferences and configuration             | Optional settings navigation      | Help/details only when useful | Settings, extension settings    |
-| Dashboard    | Metrics, diagnostics, status              | Blank                             | Metric/log/detail context     | Diagnostics, Model Arena        |
+| Dashboard    | Metrics, diagnostics, status              | Blank                             | Metric/log/detail context     | Diagnostics                     |
 | Setup        | Credential, provider, install, onboarding | Optional selector                 | Docs/activity/test output     | Setup Readiness                 |
 
 No seventh type is approved. If a workflow does not fit these six, document the missing behavior and update the design-system guidance before introducing a new recurring page type.
@@ -33,7 +33,6 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 | ------------------ | ------------ | ------------------ | ------------- | ------------------------------------------------------------------------------------------------------- |
 | `/conversations/*` | Conversation | Threads            | Workbench     | Core-owned for now; extensions contribute into Chat rather than defining separate transcript routes.    |
 | `/automations`     | Table        | Blank              | None          | Main-only table workflow. Details/create/edit can remain dialog-backed when they are short-lived flows. |
-| `/model-arena`     | Dashboard    | Blank              | Arena context | Monitors challenger state, eligibility, settings, and history.                                          |
 | `/telemetry`       | Dashboard    | Blank              | None          | Metrics/status view.                                                                                    |
 | `/skills`          | Table        | Blank              | Skill detail  | Selected skill details belong in the right sidebar.                                                     |
 | `/extensions`      | Table        | Blank              | None          | App details open inside App Manager instead of a route-level right sidebar.                             |
@@ -43,24 +42,22 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 
 Every first-party extension route with a `main` view must declare one approved page type on its nav item.
 
-| Extension                  | Route          | Page type   | Contextual left    | Right sidebar              |
-| -------------------------- | -------------- | ----------- | ------------------ | -------------------------- |
-| `system-automations`       | `/automations` | `table`     | None               | None                       |
-| `system-extension-manager` | `/extensions`  | `table`     | None               | None                       |
-| `system-model-arena`       | `/model-arena` | `dashboard` | None               | `model-arena-context-rail` |
-| `system-settings`          | `/settings`    | `settings`  | `settings-sidebar` | None                       |
-| `system-skills`            | `/skills`      | `table`     | None               | `skills-context-rail`      |
-| `system-telemetry`         | `/telemetry`   | `dashboard` | None               | None                       |
+| Extension                  | Route          | Page type   | Contextual left    | Right sidebar         |
+| -------------------------- | -------------- | ----------- | ------------------ | --------------------- |
+| `system-automations`       | `/automations` | `table`     | None               | None                  |
+| `system-extension-manager` | `/extensions`  | `table`     | None               | None                  |
+| `system-settings`          | `/settings`    | `settings`  | `settings-sidebar` | None                  |
+| `system-skills`            | `/skills`      | `table`     | None               | `skills-context-rail` |
+| `system-telemetry`         | `/telemetry`   | `dashboard` | None               | None                  |
 
 The manifest shape keeps side-region fields off `main` views. Side-region metadata belongs only on `sidebar` and `rightRail` views; the nav item binds those views to a route with `sidebarView` and `rightSidebarView`.
 
-This audit proves shell declaration conformance, not full visual conformance. Remaining visual sweeps include Model Arena dashboard shape, Settings grammar, Setup Readiness popover, and Automations' dialog-backed detail workflow.
+This audit proves shell declaration conformance, not full visual conformance. Remaining visual sweeps include Settings grammar, Setup Readiness popover, and Automations' dialog-backed detail workflow.
 
 ## Resolved Decisions
 
 | Decision                   | Resolution                  | Consequence                                                                                                                                                                             |
 | -------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Model Arena type           | Dashboard                   | Do not add an Evaluation type yet. Revisit only if multiple evaluation surfaces appear.                                                                                                 |
 | Setup type                 | Standalone type             | Setup Readiness tightens around one setup surface plus right-sidebar docs/activity/test output when useful.                                                                             |
 | Conversation extensibility | Core-owned for now          | Extensions can add transcript blocks, shelves, tools, and context rails, but should not define new conversation-like pages until the shell exposes a deliberate conversation route API. |
 | Settings scope             | Settings grammar everywhere | Extension-owned settings panels use grouped settings rows and avoid bespoke form chrome.                                                                                                |

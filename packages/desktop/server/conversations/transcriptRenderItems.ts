@@ -65,22 +65,8 @@ type ContextTranscriptBlock = Extract<TranscriptMessageBlock, { type: 'context' 
 // precompute cannot silently claim support for blocks it will never receive.
 type TraceTranscriptBlock = Extract<TranscriptMessageBlock, { type: 'thinking' | 'tool_use' | 'error' }> | ContextTranscriptBlock;
 
-export interface AssistantMessageVariation {
-  id: string;
-  label: string;
-  text: string;
-  modelRef?: string;
-}
-
-export interface AssistantMessageVariationSet {
-  sourceBlockId: string;
-  duelBlockId: string;
-  vote?: string | null;
-  variations: AssistantMessageVariation[];
-}
-
 export type TranscriptRenderItem =
-  | { type: 'message'; block: TranscriptMessageBlock; index: number; arenaVariationSet?: AssistantMessageVariationSet }
+  | { type: 'message'; block: TranscriptMessageBlock; index: number }
   | { type: 'context_cluster'; blocks: ContextTranscriptBlock[]; startIndex: number; endIndex: number }
   | {
       type: 'trace_cluster';
@@ -93,7 +79,6 @@ export type TranscriptRenderItem =
     };
 
 const TOPOLOGY_CUSTOM_TYPES = new Set(['child_conversation_topology', 'parent_conversation_backlink']);
-const STANDALONE_CONTEXT_CUSTOM_TYPES = new Set(['model_arena_duel']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -179,224 +164,6 @@ function isTopologyBlock(block: TranscriptMessageBlock): boolean {
 
 function isContextTranscriptBlock(block: TranscriptMessageBlock): block is ContextTranscriptBlock {
   return (block.type === 'context' || (block.type === 'summary' && block.kind !== 'compaction')) && !isTopologyBlock(block);
-}
-
-function isStandaloneContextBlock(block: TranscriptMessageBlock): block is ContextTranscriptBlock {
-  return block.type === 'context' && STANDALONE_CONTEXT_CUSTOM_TYPES.has(block.customType ?? '');
-}
-
-function readModelArenaDuelDetails(block: TranscriptMessageBlock): {
-  sourceBlockId: string;
-  status: string;
-  sideA: { role: string; text: string };
-  sideB: { role: string; text: string };
-  models: { primary?: string; challenger?: string } | null;
-  vote?: string | null;
-} | null {
-  if (block.type !== 'context' || block.customType !== 'model_arena_duel' || !isRecord(block.details)) return null;
-  const sourceBlockId = readTrimmedString(block.details, 'sourceBlockId') ?? '';
-  const sideA = isRecord(block.details.sideA) ? block.details.sideA : {};
-  const sideB = isRecord(block.details.sideB) ? block.details.sideB : {};
-  const models = isRecord(block.details.models) ? block.details.models : null;
-  return {
-    sourceBlockId,
-    status: readTrimmedString(block.details, 'status') ?? '',
-    sideA: { role: readTrimmedString(sideA, 'role') ?? '', text: readTrimmedString(sideA, 'text') ?? '' },
-    sideB: { role: readTrimmedString(sideB, 'role') ?? '', text: readTrimmedString(sideB, 'text') ?? '' },
-    models: models
-      ? {
-          primary: readTrimmedString(models, 'primary'),
-          challenger: readTrimmedString(models, 'challenger'),
-        }
-      : null,
-    vote: typeof block.details.vote === 'string' ? block.details.vote : null,
-  };
-}
-
-function buildModelArenaVariationSet(
-  sourceBlock: Extract<TranscriptMessageBlock, { type: 'text' }>,
-  duelBlock: Extract<TranscriptMessageBlock, { type: 'context' }>,
-): AssistantMessageVariationSet | null {
-  const details = readModelArenaDuelDetails(duelBlock);
-  if (!details || details.status !== 'voted') return null;
-  const sourceBlockId = sourceBlock.id?.trim();
-  if (
-    !sourceBlockId ||
-    (details.sourceBlockId &&
-      !sourceBlockIdAliases(details.sourceBlockId).some((alias) => sourceBlockIdAliases(sourceBlockId).includes(alias)))
-  ) {
-    return null;
-  }
-  const challengerSide =
-    details.sideA.role === 'challenger'
-      ? details.sideA
-      : details.sideB.role === 'challenger'
-        ? details.sideB
-        : details.sideA.text === sourceBlock.text
-          ? details.sideB
-          : details.sideB.text === sourceBlock.text
-            ? details.sideA
-            : null;
-  const challengerText = challengerSide?.text.trim();
-  if (!challengerText) return null;
-  return {
-    sourceBlockId,
-    duelBlockId: duelBlock.id ?? `model-arena:${sourceBlockId}`,
-    vote: details.vote,
-    variations: [
-      {
-        id: `${sourceBlockId}:original`,
-        label: details.models?.primary ? `Current model · ${details.models.primary}` : 'Current model',
-        text: sourceBlock.text,
-        modelRef: details.models?.primary,
-      },
-      {
-        id: `${duelBlock.id ?? sourceBlockId}:challenger`,
-        label: details.models?.challenger ? `Challenger · ${details.models.challenger}` : 'Challenger',
-        text: challengerText,
-        modelRef: details.models?.challenger,
-      },
-    ],
-  };
-}
-
-function findLegacyModelArenaSourceBlockId(
-  messages: TranscriptMessageBlock[],
-  duelIndex: number,
-  details: NonNullable<ReturnType<typeof readModelArenaDuelDetails>>,
-): string {
-  for (let index = duelIndex - 1; index >= 0; index -= 1) {
-    const block = messages[index];
-    if (block?.type !== 'text' || !block.id) continue;
-    if (block.text === details.sideA.text || block.text === details.sideB.text) return block.id;
-  }
-  for (let index = duelIndex + 1; index < messages.length; index += 1) {
-    const block = messages[index];
-    if (block?.type !== 'text' || !block.id) continue;
-    if (block.text === details.sideA.text || block.text === details.sideB.text) return block.id;
-  }
-  for (let index = duelIndex - 1; index >= 0; index -= 1) {
-    const block = messages[index];
-    if (block?.type === 'text' && block.id) return block.id;
-  }
-  return '';
-}
-
-function sourceBlockIdAliases(sourceBlockId: string): string[] {
-  const normalized = sourceBlockId.trim();
-  if (!normalized) return [];
-  const aliases = [normalized];
-  const entryId = normalized.replace(/-x\d+$/, '');
-  if (entryId && entryId !== normalized) aliases.push(entryId);
-  return aliases;
-}
-
-function canonicalArenaSourceBlockId(sourceBlockId: string): string {
-  return sourceBlockId.trim().replace(/-x\d+$/, '');
-}
-
-function arenaStatusIsActive(status: string): boolean {
-  return status !== 'cancelled' && status !== 'voted';
-}
-
-function modelArenaDuelHasBothAnswers(details: { sideA: { text: string }; sideB: { text: string } }): boolean {
-  return Boolean(details.sideA.text.trim() && details.sideB.text.trim());
-}
-
-function findAssistantBlockByArenaSourceId(
-  assistantById: Map<string, Extract<TranscriptMessageBlock, { type: 'text' }>>,
-  sourceBlockId: string,
-): Extract<TranscriptMessageBlock, { type: 'text' }> | undefined {
-  for (const alias of sourceBlockIdAliases(sourceBlockId)) {
-    const exact = assistantById.get(alias);
-    if (exact) return exact;
-  }
-  for (const alias of sourceBlockIdAliases(sourceBlockId)) {
-    const prefixed = assistantById.get(`${alias}-x0`) ?? [...assistantById.values()].find((block) => block.id?.startsWith(`${alias}-x`));
-    if (prefixed) return prefixed;
-  }
-  return undefined;
-}
-
-function addArenaSourceHiddenId(hiddenAssistantBlockIds: Set<string>, sourceBlockId: string) {
-  for (const alias of sourceBlockIdAliases(sourceBlockId)) {
-    hiddenAssistantBlockIds.add(alias);
-  }
-}
-
-function deleteArenaSourceHiddenId(hiddenAssistantBlockIds: Set<string>, sourceBlockId: string) {
-  for (const alias of sourceBlockIdAliases(sourceBlockId)) {
-    hiddenAssistantBlockIds.delete(alias);
-  }
-}
-
-function collectModelArenaPresentation(messages: TranscriptMessageBlock[]): {
-  hiddenAssistantBlockIds: Set<string>;
-  hiddenDuelBlockIds: Set<string>;
-  variationSetsBySourceBlockId: Map<string, AssistantMessageVariationSet>;
-} {
-  const assistantById = new Map<string, Extract<TranscriptMessageBlock, { type: 'text' }>>();
-  for (const block of messages) {
-    if (block.type === 'text' && block.id) assistantById.set(block.id, block);
-  }
-
-  const hiddenAssistantBlockIds = new Set<string>();
-  const hiddenDuelBlockIds = new Set<string>();
-  const variationSetsBySourceBlockId = new Map<string, AssistantMessageVariationSet>();
-  const activeDuelBySourceBlockId = new Map<
-    string,
-    { block: Extract<TranscriptMessageBlock, { type: 'context' }>; sourceBlockId: string; replacesSource: boolean }
-  >();
-  const votedDuelBySourceBlockId = new Map<
-    string,
-    { block: Extract<TranscriptMessageBlock, { type: 'context' }>; sourceBlockId: string }
-  >();
-  for (const [index, block] of messages.entries()) {
-    if (block.type !== 'context') continue;
-    const details = readModelArenaDuelDetails(block);
-    if (!details) continue;
-    const sourceBlockId = details.sourceBlockId || findLegacyModelArenaSourceBlockId(messages, index, details);
-    if (!sourceBlockId) continue;
-    const duelBlockId = block.id ?? sourceBlockId;
-    const sourceKey = canonicalArenaSourceBlockId(sourceBlockId);
-    if (arenaStatusIsActive(details.status)) {
-      if (!modelArenaDuelHasBothAnswers(details) && votedDuelBySourceBlockId.has(sourceKey)) {
-        hiddenDuelBlockIds.add(duelBlockId);
-        continue;
-      }
-      const previousActiveDuel = activeDuelBySourceBlockId.get(sourceKey);
-      if (previousActiveDuel?.block.id) hiddenDuelBlockIds.add(previousActiveDuel.block.id);
-      activeDuelBySourceBlockId.set(sourceKey, { block, sourceBlockId, replacesSource: modelArenaDuelHasBothAnswers(details) });
-    } else {
-      hiddenDuelBlockIds.add(duelBlockId);
-      const previousActiveDuel = activeDuelBySourceBlockId.get(sourceKey);
-      if (previousActiveDuel?.block.id) hiddenDuelBlockIds.add(previousActiveDuel.block.id);
-      activeDuelBySourceBlockId.delete(sourceKey);
-      if (details.status === 'voted') {
-        votedDuelBySourceBlockId.set(sourceKey, { block, sourceBlockId });
-      }
-    }
-  }
-  for (const { block, sourceBlockId, replacesSource } of activeDuelBySourceBlockId.values()) {
-    const duelBlockId = block.id ?? sourceBlockId;
-    hiddenDuelBlockIds.delete(duelBlockId);
-    if (replacesSource) {
-      addArenaSourceHiddenId(hiddenAssistantBlockIds, sourceBlockId);
-      const source = findAssistantBlockByArenaSourceId(assistantById, sourceBlockId);
-      if (source?.id) hiddenAssistantBlockIds.add(source.id);
-    }
-  }
-  for (const [sourceKey, { block, sourceBlockId }] of votedDuelBySourceBlockId.entries()) {
-    if (activeDuelBySourceBlockId.has(sourceKey)) continue;
-    deleteArenaSourceHiddenId(hiddenAssistantBlockIds, sourceBlockId);
-    const source = findAssistantBlockByArenaSourceId(assistantById, sourceBlockId);
-    if (source?.id) {
-      hiddenAssistantBlockIds.delete(source.id);
-      const variationSet = buildModelArenaVariationSet(source, block);
-      if (variationSet) variationSetsBySourceBlockId.set(source.id, variationSet);
-    }
-  }
-  return { hiddenAssistantBlockIds, hiddenDuelBlockIds, variationSetsBySourceBlockId };
 }
 
 function isTerminalBashToolBlock(block: TranscriptMessageBlock): boolean {
@@ -493,7 +260,6 @@ function summarizeTraceCluster(blocks: TraceTranscriptBlock[]): TranscriptTraceC
 
 export function buildTranscriptRenderItemsFromDisplayBlocks(blocks: DisplayBlock[]): TranscriptRenderItem[] {
   const messages = blocks.map(displayBlockToTranscriptMessageBlock);
-  const arenaPresentation = collectModelArenaPresentation(messages);
   const items: TranscriptRenderItem[] = [];
   let pendingTraceBlocks: TraceTranscriptBlock[] = [];
   let traceStartIndex = -1;
@@ -536,23 +302,6 @@ export function buildTranscriptRenderItemsFromDisplayBlocks(blocks: DisplayBlock
   }
 
   for (const [index, block] of messages.entries()) {
-    if (block.type === 'text' && block.id && arenaPresentation.hiddenAssistantBlockIds.has(block.id)) {
-      continue;
-    }
-    if (block.type === 'context' && block.customType === 'model_arena_duel') {
-      const blockId = block.id ?? readModelArenaDuelDetails(block)?.sourceBlockId;
-      if (blockId && arenaPresentation.hiddenDuelBlockIds.has(blockId)) {
-        continue;
-      }
-    }
-
-    if (isStandaloneContextBlock(block)) {
-      flushTraceBlocks();
-      flushContextBlocks();
-      items.push({ type: 'context_cluster', blocks: [block], startIndex: index, endIndex: index });
-      continue;
-    }
-
     if (isTraceTranscriptBlock(block)) {
       if (pendingTraceBlocks.length === 0) {
         if (pendingContextBlocks.length > 0 && contextStartIndex >= 0) {
@@ -586,7 +335,6 @@ export function buildTranscriptRenderItemsFromDisplayBlocks(blocks: DisplayBlock
       type: 'message',
       block,
       index,
-      arenaVariationSet: block.type === 'text' && block.id ? arenaPresentation.variationSetsBySourceBlockId.get(block.id) : undefined,
     });
   }
 

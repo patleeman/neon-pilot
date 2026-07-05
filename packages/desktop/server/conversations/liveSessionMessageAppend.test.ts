@@ -296,16 +296,16 @@ describe('live session message append operations', () => {
     });
     const callbacks = { broadcastSnapshot: vi.fn(), publishSessionMetaChanged: vi.fn() };
 
-    await appendVisibleLiveSessionCustomMessage(e as never, 'model_arena_duel', 'Model Arena duel', {}, callbacks, {
-      blockId: 'duel-1',
+    await appendVisibleLiveSessionCustomMessage(e as never, 'custom_status', 'Custom status', {}, callbacks, {
+      blockId: 'status-1',
     });
 
     expect(branch).toHaveBeenCalledWith('assistant-1');
     expect(e.session.sendCustomMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        customType: 'model_arena_duel',
+        customType: 'custom_status',
         display: true,
-        details: expect.objectContaining({ extensionBlockId: 'duel-1' }),
+        details: expect.objectContaining({ extensionBlockId: 'status-1' }),
       }),
     );
   });

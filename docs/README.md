@@ -116,7 +116,6 @@ Bundled system extensions:
 - [Multimedia Probe](../extensions/system-image-probe/README.md) — image and video attachment inspection with a vision agent
 - [Local Dictation](../extensions/system-local-dictation/README.md) — Whisper.cpp dictation controls and settings
 - [MCP](../extensions/system-mcp/README.md) — configured MCP server inspection, auth, and calls
-- [Model Arena](../extensions/system-model-arena/README.md) — blind challenger model duels and local preference stats
 - [Model Picker](../extensions/system-model-picker/README.md) — composer model and thinking controls
 - [Neon Pilot CLI](../extensions/system-neon-pilot-admin-cli/README.md) — unified CLI control plane for internal agents and external callers
 - [Onboarding](../extensions/system-onboarding/README.md) — first-run guided tour over real app pages

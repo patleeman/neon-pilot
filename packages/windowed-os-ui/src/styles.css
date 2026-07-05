@@ -578,7 +578,6 @@
 .wos-taskbar__button[data-focused='true'][data-accent='workflows'],
 .wos-taskbar__button[data-focused='true'][data-accent='automations'],
 .wos-taskbar__button[data-focused='true'][data-accent='gateways'],
-.wos-taskbar__button[data-focused='true'][data-accent='model-arena'],
 .wos-taskbar__button[data-focused='true'][data-accent='apps'],
 .wos-taskbar__button[data-focused='true'][data-accent='skills'],
 .wos-taskbar__button[data-focused='true'][data-accent='telemetry'],
@@ -596,10 +595,6 @@
 
 .wos-taskbar__button[data-focused='true'][data-accent='gateways'] {
   background: var(--wos-gateways);
-}
-
-.wos-taskbar__button[data-focused='true'][data-accent='model-arena'] {
-  background: var(--wos-model-arena);
 }
 
 .wos-taskbar__button[data-focused='true'][data-accent='apps'] {
@@ -662,11 +657,6 @@
   background: var(--wos-gateways);
 }
 
-.wos-app-monogram[data-accent='model-arena'],
-.wos-window__titlebar[data-accent='model-arena'] {
-  background: var(--wos-model-arena);
-}
-
 .wos-app-monogram[data-accent='apps'],
 .wos-window__titlebar[data-accent='apps'] {
   background: var(--wos-apps);
@@ -696,7 +686,6 @@
 .wos-app-monogram[data-accent='workflows'],
 .wos-app-monogram[data-accent='automations'],
 .wos-app-monogram[data-accent='gateways'],
-.wos-app-monogram[data-accent='model-arena'],
 .wos-app-monogram[data-accent='apps'],
 .wos-app-monogram[data-accent='skills'],
 .wos-app-monogram[data-accent='telemetry'],
@@ -705,7 +694,6 @@
 .wos-window__titlebar[data-accent='workflows'],
 .wos-window__titlebar[data-accent='automations'],
 .wos-window__titlebar[data-accent='gateways'],
-.wos-window__titlebar[data-accent='model-arena'],
 .wos-window__titlebar[data-accent='apps'],
 .wos-window__titlebar[data-accent='skills'],
 .wos-window__titlebar[data-accent='telemetry'],
@@ -1005,7 +993,6 @@
 .wos-window__titlebar[data-accent='workflows'] .wos-window__meta,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta,
-.wos-window__titlebar[data-accent='model-arena'] .wos-window__meta,
 .wos-window__titlebar[data-accent='apps'] .wos-window__meta,
 .wos-window__titlebar[data-accent='skills'] .wos-window__meta,
 .wos-window__titlebar[data-accent='telemetry'] .wos-window__meta,
@@ -1017,7 +1004,6 @@
 .wos-window__titlebar[data-accent='workflows'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='automations'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='gateways'] .wos-window__meta::before,
-.wos-window__titlebar[data-accent='model-arena'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='apps'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='skills'] .wos-window__meta::before,
 .wos-window__titlebar[data-accent='telemetry'] .wos-window__meta::before,
@@ -1380,7 +1366,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='workflows'],
 .wos-dialog__titlebar[data-accent='automations'],
 .wos-dialog__titlebar[data-accent='gateways'],
-.wos-dialog__titlebar[data-accent='model-arena'],
 .wos-dialog__titlebar[data-accent='apps'],
 .wos-dialog__titlebar[data-accent='skills'],
 .wos-dialog__titlebar[data-accent='telemetry'],
@@ -1398,10 +1383,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 
 .wos-dialog__titlebar[data-accent='gateways'] {
   background: var(--wos-gateways);
-}
-
-.wos-dialog__titlebar[data-accent='model-arena'] {
-  background: var(--wos-model-arena);
 }
 
 .wos-dialog__titlebar[data-accent='apps'] {
@@ -1453,7 +1434,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta,
-.wos-dialog__titlebar[data-accent='model-arena'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='apps'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='skills'] .wos-dialog__meta,
 .wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta,
@@ -1465,7 +1445,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
 .wos-dialog__titlebar[data-accent='workflows'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='automations'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='gateways'] .wos-dialog__meta::before,
-.wos-dialog__titlebar[data-accent='model-arena'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='apps'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='skills'] .wos-dialog__meta::before,
 .wos-dialog__titlebar[data-accent='telemetry'] .wos-dialog__meta::before,
@@ -3788,11 +3767,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   --wos-segmented-active-ink: var(--wos-accent-ink);
 }
 
-.wos-segmented-control[data-accent='model-arena'] {
-  --wos-segmented-active: var(--wos-model-arena);
-  --wos-segmented-active-ink: var(--wos-accent-ink);
-}
-
 .wos-segmented-control[data-accent='apps'] {
   --wos-segmented-active: var(--wos-apps);
   --wos-segmented-active-ink: var(--wos-accent-ink);
@@ -4825,10 +4799,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
   background: var(--wos-gateways);
 }
 
-.wos-toggle[data-checked='true'][data-accent='model-arena'] {
-  background: var(--wos-model-arena);
-}
-
 .wos-toggle[data-checked='true'][data-accent='apps'] {
   background: var(--wos-apps);
 }
@@ -4969,11 +4939,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 .wos-data-row[data-accent='gateways'] {
   --wos-data-row-active: var(--wos-gateways);
   --wos-data-row-active-ink: var(--wos-ink-900);
-}
-
-.wos-data-row[data-accent='model-arena'] {
-  --wos-data-row-active: var(--wos-model-arena);
-  --wos-data-row-active-ink: white;
 }
 
 .wos-data-row[data-accent='apps'] {
@@ -5253,11 +5218,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
 
 .wos-list-item[data-accent='gateways'] {
   --wos-list-active: var(--wos-gateways);
-  --wos-list-active-ink: var(--wos-accent-ink);
-}
-
-.wos-list-item[data-accent='model-arena'] {
-  --wos-list-active: var(--wos-model-arena);
   --wos-list-active-ink: var(--wos-accent-ink);
 }
 
