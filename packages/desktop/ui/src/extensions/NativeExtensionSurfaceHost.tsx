@@ -151,7 +151,7 @@ export function NativeExtensionSurfaceHost({
   pathname,
   search,
   hash,
-  shellPresentation = 'stable',
+  shellPresentation = 'windowed',
   conversationId,
   cwd,
   instanceId,

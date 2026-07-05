@@ -129,7 +129,7 @@ describe('NativeExtensionSurfaceHost', () => {
     expect(host?.className).not.toContain('bg-base');
   });
 
-  it('lazy-loads a native system extension component with PA props', async () => {
+  it('lazy-loads a native system extension component with windowed PA props by default', async () => {
     const surface: NativeExtensionViewSummary = {
       extensionId: 'system-automations',
       id: 'page',
@@ -150,7 +150,7 @@ describe('NativeExtensionSurfaceHost', () => {
 
     await vi.waitFor(() => expect(container.textContent).toContain('Automations'));
     expect(container.textContent).toContain('Automations loaded');
-    expect(container.textContent).toContain('stable shell');
+    expect(container.textContent).toContain('windowed shell');
     expect(apiMocks.automations.list).toHaveBeenCalled();
   });
 

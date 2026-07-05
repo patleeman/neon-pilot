@@ -104,7 +104,7 @@ function extensionSurfaceRouteKey(surface: NativeExtensionViewSummary, pathname:
   return `${surface.extensionId}:${surface.id}:${surface.route ?? ''}:${pathname}${search}${hash}`;
 }
 
-export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentation?: 'stable' | 'windowed' }) {
+export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresentation?: 'stable' | 'windowed' }) {
   const location = useLocation();
   const registry = useExtensionRegistry();
   const nativeSurface = useMemo(() => {

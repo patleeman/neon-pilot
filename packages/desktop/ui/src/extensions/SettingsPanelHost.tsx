@@ -48,7 +48,7 @@ function loadPanelModule(registration: ExtensionSettingsPanelRegistration, revis
 
 export function SettingsPanelHost({
   registration,
-  shellPresentation = 'stable',
+  shellPresentation = 'windowed',
 }: {
   registration: ExtensionSettingsPanelRegistration;
   shellPresentation?: 'stable' | 'windowed';

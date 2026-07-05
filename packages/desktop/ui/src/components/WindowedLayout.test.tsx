@@ -87,7 +87,7 @@ vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
       data-cwd={cwd ?? ''}
       data-extension-id={surface.extensionId}
       data-instance-id={instanceId ?? ''}
-      data-shell-presentation={shellPresentation ?? 'stable'}
+      data-shell-presentation={shellPresentation ?? 'windowed'}
       data-surface-id={surface.id}
     />
   ),
@@ -96,7 +96,7 @@ vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
 vi.mock('../extensions/ExtensionRouteHost', async () => {
   const { useLocation, useNavigate } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
-    ExtensionRouteHost: ({ shellPresentation = 'stable' }: { shellPresentation?: 'stable' | 'windowed' }) => {
+    ExtensionRouteHost: ({ shellPresentation = 'windowed' }: { shellPresentation?: 'stable' | 'windowed' }) => {
       const location = useLocation();
       const navigate = useNavigate();
       return (

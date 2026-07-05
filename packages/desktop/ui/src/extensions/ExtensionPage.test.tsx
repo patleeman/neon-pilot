@@ -28,7 +28,7 @@ vi.mock('./NativeExtensionSurfaceHost', () => ({
         data-extension-id={surface.extensionId}
         data-surface-id={surface.id}
         data-mounted-surface-id={mountedSurfaceId}
-        data-shell-presentation={shellPresentation ?? 'stable'}
+        data-shell-presentation={shellPresentation ?? 'windowed'}
       />
     );
   },
@@ -144,7 +144,7 @@ describe('ExtensionPage', () => {
     expect(screen.getByTestId('surface-host').getAttribute('data-shell-presentation')).toBe('windowed');
   });
 
-  it('keeps registry loading visually quiet while preserving status semantics', () => {
+  it('shows visible registry loading chrome by default', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: true,
       error: null,
@@ -159,12 +159,14 @@ describe('ExtensionPage', () => {
       </MemoryRouter>,
     );
 
-    expect(container.textContent).toBe('');
-    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading app page');
-    expect(screen.queryByText(/Loading app/i)).toBeNull();
+    expect(screen.getByRole('status', { name: 'Loading app page' })).toBeTruthy();
+    expect(screen.getByText('Loading app page')).toBeTruthy();
+    expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
+    expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
+    expect(container.querySelector('.wos-state-block')).toBeTruthy();
   });
 
-  it('shows visible registry loading chrome in the windowed shell', () => {
+  it('shows visible registry loading chrome when windowed shell presentation is explicit', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: true,
       error: null,
@@ -363,7 +365,8 @@ describe('ExtensionPage', () => {
 
     expect(screen.getByText('No page is registered here')).toBeTruthy();
     expect(screen.getByText('This address does not match a conversation, setting, or installed app page.')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Go to Chat' }).getAttribute('href')).toBe('/conversations/new');
+    expect(screen.queryByRole('link', { name: 'Go to Chat' })).toBeNull();
+    expect(screen.getByRole('status', { name: 'No page is registered here' })).toBeTruthy();
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
     expect(addNotification).not.toHaveBeenCalled();
   });

@@ -13,7 +13,7 @@ export function buildExtensionRouteKey(pathname: string, search: string): string
   return `${pathname}${search}`;
 }
 
-export function ExtensionRouteHost({ shellPresentation = 'stable' }: { shellPresentation?: 'stable' | 'windowed' }) {
+export function ExtensionRouteHost({ shellPresentation = 'windowed' }: { shellPresentation?: 'stable' | 'windowed' }) {
   const location = useLocation();
   const routeKey = buildExtensionRouteKey(location.pathname, location.search);
 
