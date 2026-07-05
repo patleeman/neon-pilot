@@ -982,9 +982,7 @@ function WindowedChatTerminalWindowBody({
           instanceId={`${parentWindowId}:terminal`}
         />
       ) : (
-        <WindowedChildWindowEmptyState title="Terminal unavailable">
-          The Terminal extension is not registered.
-        </WindowedChildWindowEmptyState>
+        <WindowedChildWindowEmptyState title="Terminal unavailable">The Terminal app is not registered.</WindowedChildWindowEmptyState>
       )}
     </div>
   );
@@ -1067,7 +1065,7 @@ function WindowedChatFilesWindowBody({
           instanceId={`${parentWindowId}:files`}
         />
       ) : (
-        <WindowedChildWindowEmptyState title="Files unavailable">The Files extension is not registered.</WindowedChildWindowEmptyState>
+        <WindowedChildWindowEmptyState title="Files unavailable">The Files app is not registered.</WindowedChildWindowEmptyState>
       )}
     </div>
   );
@@ -1104,7 +1102,7 @@ function WindowedChatBrowserWindowBody({
           instanceId={`${parentWindowId}:browser`}
         />
       ) : (
-        <WindowedChildWindowEmptyState title="Browser unavailable">The Browser extension is not registered.</WindowedChildWindowEmptyState>
+        <WindowedChildWindowEmptyState title="Browser unavailable">The Browser app is not registered.</WindowedChildWindowEmptyState>
       )}
     </div>
   );
@@ -1184,7 +1182,7 @@ function WindowRouteBody({
           ? 'Loading tools.'
           : browserSurface
             ? 'Open Browser window'
-            : 'Enable the Browser extension to open a Browser window.',
+            : 'Enable the Browser app to open a Browser window.',
         onSelect: onOpenBrowserWindow,
       },
       {
@@ -1196,7 +1194,7 @@ function WindowRouteBody({
           ? 'Loading tools.'
           : filesSurface
             ? 'Open Files window'
-            : 'Enable the Files extension to open a Files window.',
+            : 'Enable the Files app to open a Files window.',
         onSelect: onOpenFilesWindow,
       },
       {
@@ -1208,7 +1206,7 @@ function WindowRouteBody({
           ? 'Loading tools.'
           : terminalSurface
             ? 'Open Terminal window'
-            : 'Enable the Terminal extension to open a Terminal window.',
+            : 'Enable the Terminal app to open a Terminal window.',
         onSelect: onOpenTerminalWindow,
       },
     ],

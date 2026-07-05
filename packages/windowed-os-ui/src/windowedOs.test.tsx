@@ -1034,7 +1034,7 @@ describe('Windowed OS Storybook examples', () => {
             label: 'Open Files window',
             icon: <span aria-hidden="true">F</span>,
             disabled: true,
-            title: 'Enable the Files extension to open a Files window.',
+            title: 'Enable the Files app to open a Files window.',
             onSelect: () => undefined,
           },
         ]}
@@ -1050,7 +1050,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(html).toContain('data-density="icon"');
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('disabled=""');
-    expect(html).toContain('Enable the Files extension to open a Files window.');
+    expect(html).toContain('Enable the Files app to open a Files window.');
   });
 
   it('renders browser toolbars through a reusable windowed primitive', () => {
@@ -1095,13 +1095,13 @@ describe('Windowed OS Storybook examples', () => {
 
   it('renders child window empty states through a reusable windowed primitive', () => {
     const html = renderToStaticMarkup(
-      <WindowedChildWindowEmptyState title="Browser unavailable">The Browser extension is not registered.</WindowedChildWindowEmptyState>,
+      <WindowedChildWindowEmptyState title="Browser unavailable">The Browser app is not registered.</WindowedChildWindowEmptyState>,
     );
 
     expect(html).toContain('class="wos-chat-child-window-empty"');
     expect(html).toContain('class="wos-state-block" data-tone="warning"');
     expect(html).toContain('Browser unavailable');
-    expect(html).toContain('The Browser extension is not registered.');
+    expect(html).toContain('The Browser app is not registered.');
   });
 
   it('keeps canonical design tokens in the scoped token stylesheet', () => {
