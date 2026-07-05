@@ -84,7 +84,7 @@ export interface NeonPilotDesktopBridge {
     bounds?: DesktopWorkbenchBrowserBounds;
     deactivate?: boolean;
     destroy?: boolean;
-    windowedShellActive?: boolean;
+    desktopShellActive?: boolean;
   }): Promise<DesktopWorkbenchBrowserState | null>;
   getWorkbenchBrowserState(input?: { sessionKey?: string | null }): Promise<DesktopWorkbenchBrowserState | null>;
   navigateWorkbenchBrowser(input: { url: string; sessionKey?: string | null }): Promise<DesktopWorkbenchBrowserState>;

@@ -439,7 +439,7 @@ export class DesktopWindowController {
       sessionKey?: string | null;
       deactivate?: boolean;
       destroy?: boolean;
-      windowedShellActive?: boolean;
+      desktopShellActive?: boolean;
     },
   ): unknown {
     const tracked = this.trackedWindows.get(webContentsId);
@@ -453,7 +453,7 @@ export class DesktopWindowController {
       throw new Error('Workbench browser bounds are invalid.');
     }
 
-    if (input.windowedShellActive === true) {
+    if (input.desktopShellActive === true) {
       return this.workbenchBrowser.setBounds(tracked.window.webContents, false, null, null, true, true);
     }
 

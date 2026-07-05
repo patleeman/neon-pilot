@@ -795,7 +795,7 @@ export function WorkbenchBrowserTab({
           ...(options?.force ? { deactivate: true } : {}),
           ...(options?.destroy ? { destroy: true } : {}),
           ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
-            ? { windowedShellActive: true }
+            ? { desktopShellActive: true }
             : {}),
         })
         .then((nextState) => {
@@ -819,7 +819,7 @@ export function WorkbenchBrowserTab({
             deactivate: true,
             ...(options?.destroy ? { destroy: true } : {}),
             ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
-              ? { windowedShellActive: true }
+              ? { desktopShellActive: true }
               : {}),
           })
           .catch((error) => {
@@ -841,7 +841,7 @@ export function WorkbenchBrowserTab({
                 deactivate: true,
                 ...(options?.destroy ? { destroy: true } : {}),
                 ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
-                  ? { windowedShellActive: true }
+                  ? { desktopShellActive: true }
                   : {}),
               })
               .catch((error) => {
@@ -858,7 +858,7 @@ export function WorkbenchBrowserTab({
                   deactivate: true,
                   ...(options?.destroy ? { destroy: true } : {}),
                   ...(isWindowedShellActive() || Boolean(browserHostRef.current?.closest('.windowed-os-shell'))
-                    ? { windowedShellActive: true }
+                    ? { desktopShellActive: true }
                     : {}),
                 })
                 .catch((error) => {

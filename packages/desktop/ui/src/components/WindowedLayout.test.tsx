@@ -251,28 +251,28 @@ describe('WindowedLayout route windows', () => {
         visible: false,
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,
         sessionKey: null,
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,
         sessionKey: '@global:tab-tab-a',
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,
         sessionKey: '@global:tab-tab-b',
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
     });
   });
@@ -357,7 +357,7 @@ describe('WindowedLayout route windows', () => {
       visible: false,
       deactivate: true,
       destroy: true,
-      windowedShellActive: true,
+      desktopShellActive: true,
     });
   });
 
@@ -954,21 +954,21 @@ describe('WindowedLayout route windows', () => {
         sessionKey: null,
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,
         sessionKey: '@global:tab-tab-a',
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,
         sessionKey: '@global:tab-tab-b',
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       const initialHiddenCalls = setWorkbenchBrowserBounds.mock.calls.length;
 
@@ -982,7 +982,7 @@ describe('WindowedLayout route windows', () => {
         sessionKey: '@global:tab-tab-b',
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
     } finally {
       vi.useRealTimers();
@@ -2019,21 +2019,21 @@ describe('WindowedLayout route windows', () => {
         sessionKey: null,
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,
         sessionKey: '@global:tab-tab-a',
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
       expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
         visible: false,
         sessionKey: '@global:tab-tab-b',
         deactivate: true,
         destroy: true,
-        windowedShellActive: true,
+        desktopShellActive: true,
       });
     });
   });
@@ -2083,14 +2083,14 @@ describe('WindowedLayout route windows', () => {
           sessionKey: null,
           deactivate: true,
           destroy: true,
-          windowedShellActive: true,
+          desktopShellActive: true,
         });
         expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
           visible: false,
           sessionKey: '@global:tab-tab-a',
           deactivate: true,
           destroy: true,
-          windowedShellActive: true,
+          desktopShellActive: true,
         });
       },
       { timeout: 750 },

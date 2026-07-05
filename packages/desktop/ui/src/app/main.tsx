@@ -89,7 +89,7 @@ if (desktopShellParams.get('desktop-shell') === '1') {
       visible: false,
       deactivate: true,
       destroy: true,
-      windowedShellActive: true,
+      desktopShellActive: true,
     })
     .catch(() => undefined);
 }

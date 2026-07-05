@@ -1036,19 +1036,19 @@ describe('WorkbenchBrowserTab', () => {
       visible: false,
       sessionKey: '@global:tab-tab-a',
       deactivate: true,
-      windowedShellActive: true,
+      desktopShellActive: true,
     });
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
       visible: false,
       sessionKey: '@global:tab-tab-b',
       deactivate: true,
-      windowedShellActive: true,
+      desktopShellActive: true,
     });
     expect(setWorkbenchBrowserBounds).toHaveBeenCalledWith({
       visible: false,
       sessionKey: null,
       deactivate: true,
-      windowedShellActive: true,
+      desktopShellActive: true,
     });
     expect(setWorkbenchBrowserBounds).not.toHaveBeenCalledWith(expect.objectContaining({ visible: true }));
   });

@@ -16,7 +16,7 @@ describe('renderer startup browser suppression', () => {
     expect(source).toContain('visible: false');
     expect(source).toContain('deactivate: true');
     expect(source).toContain('destroy: true');
-    expect(source).toContain('windowedShellActive: true');
+    expect(source).toContain('desktopShellActive: true');
     expect(source.indexOf('setWorkbenchBrowserBounds({')).toBeLessThan(source.indexOf('startRendererBlockTelemetry();'));
   });
 });
