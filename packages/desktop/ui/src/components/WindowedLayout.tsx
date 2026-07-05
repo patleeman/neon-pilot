@@ -226,6 +226,14 @@ function childWindowBounds(parentBounds: WindowBounds, desktop: DesktopRect, kin
   );
 }
 
+function fitWindowBoundsToDesktop(bounds: WindowBounds, desktop: DesktopRect): WindowBounds {
+  if (sameBounds(bounds, boundsForSnapTarget('maximize', desktop))) return bounds;
+  const width = Math.min(bounds.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
+  const height = Math.min(bounds.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
+  if (width === bounds.width && height === bounds.height) return bounds;
+  return { ...bounds, width, height };
+}
+
 function defaultDraftWindow(): DesktopWindowModel {
   return {
     id: 'chat:draft',
@@ -588,7 +596,7 @@ function hasClippedWindow(visibleWindows: DesktopWindowModel[], desktop: Desktop
 function constrainWindowCollectionBounds<T extends { bounds: WindowBounds }>(windows: T[], desktop: DesktopRect): T[] {
   let changed = false;
   const next = windows.map((windowModel) => {
-    const bounds = constrainWindowBounds(windowModel.bounds, desktop);
+    const bounds = constrainWindowBounds(fitWindowBoundsToDesktop(windowModel.bounds, desktop), desktop);
     if (sameBounds(windowModel.bounds, bounds)) return windowModel;
     changed = true;
     return { ...windowModel, bounds };
@@ -600,7 +608,7 @@ function constrainRestoreBounds(boundsByWindow: Record<string, WindowBounds>, de
   let changed = false;
   const next: Record<string, WindowBounds> = {};
   for (const [windowId, bounds] of Object.entries(boundsByWindow)) {
-    const constrained = constrainWindowBounds(bounds, desktop);
+    const constrained = constrainWindowBounds(fitWindowBoundsToDesktop(bounds, desktop), desktop);
     next[windowId] = constrained;
     if (!sameBounds(bounds, constrained)) {
       changed = true;

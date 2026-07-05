@@ -1614,6 +1614,32 @@ describe('WindowedLayout route windows', () => {
     expect(routinesWindow.getAttribute('style')).toContain('height: 500px');
   });
 
+  it('fits persisted window sizes to a narrower desktop during restore', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 620 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 720 });
+    seedWindowedWindows([
+      {
+        id: 'route:settings',
+        kind: 'route',
+        title: 'Settings',
+        route: '/settings',
+        bounds: { x: 180, y: 140, width: 980, height: 560 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const settingsWindow = await screen.findByRole('region', { name: /^settings$/i });
+    await waitFor(() => {
+      expect(settingsWindow.getAttribute('style')).toContain('width: 536px');
+      expect(settingsWindow.getAttribute('style')).toContain('height: 560px');
+      expect(settingsWindow.getAttribute('style')).toContain('left: 180px');
+    });
+  });
+
   it('resizes windows from the top-left corner while keeping partial offscreen movement recoverable', async () => {
     seedWindowedWindows([
       {

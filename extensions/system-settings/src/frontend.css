@@ -442,6 +442,7 @@
 
 .settings-page-windowed-scroll {
   min-height: 0;
+  min-width: 0;
 }
 
 .settings-page-windowed .settings-page-detail {
@@ -637,12 +638,14 @@
   padding: 0;
 }
 
-@container (max-width: 560px) {
+@container wos-window-route (max-width: 560px) {
   .settings-page-windowed.wos-page-shell[data-layout='two-column'] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
+}
 
+@container (max-width: 560px) {
   .settings-page-windowed-nav {
     max-height: 8.75rem;
     border-right: 0;

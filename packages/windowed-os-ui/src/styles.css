@@ -1836,6 +1836,13 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   font-family: var(--wos-font-body);
 }
 
+.windowed-os-shell[data-wos-theme='dark'] .wos-window-route-body {
+  --color-accent: 96 178 245;
+  --color-success: 105 210 145;
+  --color-warning: 232 171 76;
+  --color-danger: 247 118 101;
+}
+
 .wos-window-route-body > :not(.wos-chat-window-toolbar) {
   flex: 1 1 auto;
   min-width: 0;

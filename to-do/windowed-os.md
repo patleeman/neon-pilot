@@ -79,6 +79,7 @@ The deeper app/extension product model remains important, but the current goal i
    - 2026-07-05 progress: swept App Manager, Settings, command palette/slash-command categories, fallback route chrome, CLI help descriptions, and related tests so normal visible copy says Apps/App Manager/app package while preserving internal extension ids/routes/API names. Live Windowed OS smoke confirmed App Manager renders `Apps` and `APP / STATUS / CONTROLS` with no visible `Extensions` body copy.
 4. Add narrow/dark Settings route coverage for Providers and App settings.
    - Validate long rows, provider editor controls, app setting rows, and action groups at narrow widths.
+   - 2026-07-05 progress: persisted Settings windows now shrink restored bounds to the current desktop width instead of reopening mostly offscreen on narrow viewports, while exact maximized windows remain maximized. Windowed Settings also gained a narrow route-container collapse fix, a scroll-pane min-width guard, and dark-mode route-body status color remapping for inherited `text-danger`/`text-success` rows.
 5. Convert remaining stable-shell right-rail detail surfaces into windowed detail/subwindow flows.
    - Parallel candidates: Model Arena, Skills, App Manager.
 6. Run the live light/dark route matrix and file per-surface fixes.
