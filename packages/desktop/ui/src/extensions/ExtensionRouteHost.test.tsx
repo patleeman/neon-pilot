@@ -50,7 +50,7 @@ describe('ExtensionRouteHost', () => {
     expect(buildExtensionRouteKey('/telemetry', '?range=24h')).toBe('/telemetry?range=24h');
   });
 
-  it('uses a quiet accessible loading fallback for extension routes', () => {
+  it('uses a quiet accessible loading fallback for app routes', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -61,7 +61,7 @@ describe('ExtensionRouteHost', () => {
     });
 
     expect(container.textContent).toBe('');
-    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading extension page');
+    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading app page');
   });
 
   it('remounts extension pages when the extension route changes', async () => {

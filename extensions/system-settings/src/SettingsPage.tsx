@@ -1236,7 +1236,7 @@ export function DesktopKeyboardShortcutsSettingsSection() {
     try {
       await api.updateExtensionKeybinding(item.extensionId, item.keybindingId, input);
       setExtensionKeybindings(await api.extensionKeybindings());
-      setNotice('Saved extension shortcut.');
+      setNotice('Saved app shortcut.');
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
     } finally {
@@ -1613,7 +1613,7 @@ function commandKeybindingConflictScope(keybinding: Pick<CommandKeybindingSettin
 function formatCommandShortcutError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (/unknown command/i.test(message)) {
-    return 'Could not save shortcut because its command is no longer available. Reload extensions and try again.';
+    return 'Could not save shortcut because its command is no longer available. Reload apps and try again.';
   }
   if (
     !message.trim() ||
@@ -1624,7 +1624,7 @@ function formatCommandShortcutError(error: unknown): string {
     /\bModule\./i.test(message) ||
     /\s+at\s+\S+/i.test(message)
   ) {
-    return 'Could not save shortcut. Reload extensions and try again.';
+    return 'Could not save shortcut. Reload apps and try again.';
   }
   return message;
 }

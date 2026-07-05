@@ -1093,7 +1093,7 @@ describe('CommandsSettingsSection', () => {
     await flushAsyncWork();
 
     expect(shortcutButton.textContent).toContain('⌘/Ctrl + Shift + n');
-    expect(container.textContent).toContain('Could not save shortcut. Reload extensions and try again.');
+    expect(container.textContent).toContain('Could not save shortcut. Reload apps and try again.');
     expect(container.textContent).not.toContain('/api/extensions/keybindings');
     expect(container.textContent).not.toContain('localApi.js');
     expect(container.textContent).not.toContain('file://');

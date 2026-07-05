@@ -160,8 +160,8 @@ describe('ExtensionPage', () => {
     );
 
     expect(container.textContent).toBe('');
-    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading extension page');
-    expect(screen.queryByText(/Loading extension/i)).toBeNull();
+    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading app page');
+    expect(screen.queryByText(/Loading app/i)).toBeNull();
   });
 
   it('shows visible registry loading chrome in the windowed shell', () => {
@@ -179,8 +179,8 @@ describe('ExtensionPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('status', { name: 'Loading extension page' })).toBeTruthy();
-    expect(screen.getByText('Loading extension page')).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading app page' })).toBeTruthy();
+    expect(screen.getByText('Loading app page')).toBeTruthy();
     expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
     expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
     expect(container.querySelector('.wos-state-block')).toBeTruthy();

@@ -135,13 +135,13 @@ function isExtensionSelection(value: unknown): value is { resource: { type: 'ext
 
 const ACTIONS_MENU_VIEWPORT_MARGIN = 8;
 const ACTIONS_MENU_BUTTON_GAP = 8;
-const BUILD_EXTENSION_PROMPT = `I want to build a Neon Pilot extension. Use the local-extension-development skill to guide me through it.
+const BUILD_EXTENSION_PROMPT = `I want to build a Neon Pilot app package. Use the local-extension-development skill to guide me through the package/runtime details.
 
 Start by interviewing me before you write code. Ask focused questions until you understand the workflow I want, who it is for, what the first version should do, where it should live in Neon Pilot, and what empty, loading, error, and success states it needs.
 
-Then write a short UX brief. If the extension has UI, make a quick visual prototype or artifact using Neon Pilot's UI patterns so I can react before implementation.
+Then write a short UX brief. If the app has UI, make a quick visual prototype or artifact using Neon Pilot's UI patterns so I can react before implementation.
 
-After I approve the direction, build the extension, reload it, test the real app path, and keep iterating with me until it feels right.`;
+After I approve the direction, build the app package, reload it, test the real app path, and keep iterating with me until it feels right.`;
 const COMPOSER_DRAFT_RETRY_MS = 100;
 const COMPOSER_DRAFT_MAX_ATTEMPTS = 20;
 
@@ -474,7 +474,7 @@ function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInsta
       onClick={(event) => {
         event.stopPropagation();
       }}
-      title={locked ? 'This extension is required by the application.' : undefined}
+      title={locked ? 'This app package is required by Neon Pilot.' : undefined}
     >
       <Switch
         checked={extension.enabled}
@@ -1041,7 +1041,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     try {
       await writeExtensionSources(pa.extensions, nextSources);
       setCatalogSourceInput('');
-      setNotice({ type: 'success', message: `Added ${parsed.owner}/${parsed.repo} to extension repositories.` });
+      setNotice({ type: 'success', message: `Added ${parsed.owner}/${parsed.repo} to app repositories.` });
       loadCatalog();
     } catch (err) {
       showActionError('Failed to add app repository', err instanceof Error ? err.message : String(err));
@@ -1057,7 +1057,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       setBusyId(`extension-source:${source.id}`);
       try {
         await writeExtensionSources(pa.extensions, nextSources);
-        setNotice({ type: 'success', message: `Removed ${source.owner}/${source.repo} from extension repositories.` });
+        setNotice({ type: 'success', message: `Removed ${source.owner}/${source.repo} from app repositories.` });
         loadCatalog();
       } catch (err) {
         showActionError('Failed to remove app repository', err instanceof Error ? err.message : String(err));

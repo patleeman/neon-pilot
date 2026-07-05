@@ -560,7 +560,7 @@ describe('ExtensionManagerPage', () => {
     fireEvent.click(buildButton);
 
     await waitFor(() => {
-      expect(appendedTexts.join('\n')).toContain('I want to build a Neon Pilot extension.');
+      expect(appendedTexts.join('\n')).toContain('I want to build a Neon Pilot app package.');
     });
     expect(screen.getByTestId('location').textContent).toBe('/conversations/new');
     expect(screen.getByTestId('location').getAttribute('data-state')).toContain('suppressOnboardingAutoStart');

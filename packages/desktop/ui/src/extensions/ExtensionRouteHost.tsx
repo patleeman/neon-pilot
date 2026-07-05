@@ -25,7 +25,7 @@ export function ExtensionRouteHost({ shellPresentation = 'stable' }: { shellPres
 }
 
 export function QuietExtensionRouteLoading() {
-  return <QuietLoadingState label="Loading extension page" />;
+  return <QuietLoadingState label="Loading app page" />;
 }
 
 function ExtensionRouteLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
@@ -33,8 +33,8 @@ function ExtensionRouteLoading({ shellPresentation }: { shellPresentation: 'stab
     return <QuietExtensionRouteLoading />;
   }
   return (
-    <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading extension page">
-      <WindowedStateBlock title="Loading extension page">Preparing the window contents.</WindowedStateBlock>
+    <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading app page">
+      <WindowedStateBlock title="Loading app page">Preparing the window contents.</WindowedStateBlock>
     </div>
   );
 }

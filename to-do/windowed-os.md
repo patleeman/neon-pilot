@@ -2,11 +2,11 @@
 
 Running beta/design notes for the separate Neon Pilot windowed desktop mode.
 
-## Current Goal: Windowed OS Beta Readiness
+## Current Goal: App-First Windowed OS Migration
 
-Make Windowed OS usable as the primary Neon Pilot desktop shell while keeping this pass focused on shippable beta readiness: live route QA, child-window lifecycle, inherited surface polish, app-facing language, and real app-path validation.
+Complete the Windowed OS app-first cutover now. Apps are the user-facing product primitive; extensions/packages remain only where they are still useful implementation and runtime boundaries.
 
-The deeper app/extension product model remains important, but the current goal is not to complete the full app-registry/runtime rewrite before beta. Keep implementation slices concrete, validated, and easy to beta test.
+Keep this as a big-bang migration on the windowed branch: first-class app registry, app-facing launch/routing/settings/manager surfaces, inherited live-route polish, and real app-path validation before calling the beta branch ready.
 
 ### Product model direction
 
@@ -16,7 +16,7 @@ The deeper app/extension product model remains important, but the current goal i
 - Treat every user-openable surface as an app: Chat, Browser, Terminal, Files, Automations, Settings, App Manager, Model Arena, Gateways, Routines, Skills, Diagnostics, Workflows if still distinct.
 - Treat smaller extension-like behavior as app-owned capabilities: reply actions, prompt assembly, setup/readiness, provider integrations, MCP, dictation, settings components, commands, tool surfaces, and background services.
 
-### Architecture direction, deferred from beta-critical path
+### Active architecture direction
 
 - Create a first-class app manifest/registry shape that owns app identity, routes, windows, settings, commands, tools, services, readiness, permissions/capabilities, accent, icon, and default window behavior.
 - Replace extension-registry-driven desktop launch behavior with app-registry-driven launch behavior.
@@ -41,7 +41,7 @@ The deeper app/extension product model remains important, but the current goal i
 - reply actions, prompt assembly, conversation-specific helpers -> Chat app/runtime capability.
 - setup readiness and install/update management -> Settings/App Manager capability.
 
-### Active beta-readiness buckets
+### Active migration buckets
 
 1. Full live dark-mode QA pass.
    - Screenshot and inspect Chat, Settings, App Manager/Extensions, Skills, Gateways, Model Arena, Routines, Automations, Terminal, Browser, Files, and Diagnostics in light and dark.
@@ -68,15 +68,20 @@ The deeper app/extension product model remains important, but the current goal i
    - Sweep app surfaces for stable right panels, oversized modals, and detail drawers.
    - Convert appropriate detail/edit/inspect surfaces into parent-attached desktop subwindows with taskbar/lifecycle behavior.
 6. App-first runtime cutover.
-   - This remains the product direction, but it is deferred from the beta-critical path.
-   - For this push, make app availability and app-facing language explicit enough for beta testing without requiring the full app registry/manifest rewrite.
+   - Create and wire a first-class Windowed OS app registry instead of deriving the desktop launcher and core app identity directly from extension nav/main-view contributions.
+   - Make App Manager, Settings, command/search labels, and route chrome consume app-facing metadata where user-visible.
+   - Keep extension ids, package loading, backend actions, and contribution plumbing as implementation details behind the app model.
+   - Retire remaining normal-user "Extensions" language in favor of Apps/App Manager/app packages/developer details.
    - Keep each intermediate commit understandable and validated.
+   - 2026-07-05 progress: added a first-class `windowedAppRegistry` projection for Windowed OS app identity, owner package metadata, canonical routes, accents, aliases, and window defaults. `WindowedLayout` now consumes this app registry instead of owning extension-derived launcher logic inline, and canonical apps now win over duplicate extension nav/view labels for Start menu/taskbar/window identity.
+   - 2026-07-05 progress: App Manager build prompts and repository notices now use app-package/app-repository language, route loading fallbacks say app page, and Settings shortcut save/error copy says app shortcuts/apps instead of extension shortcuts/extensions.
+   - 2026-07-05 validation: focused registry coverage, full `WindowedLayout` suite, route loading tests, Settings route/panel/desktop shortcut tests, and App Manager frontend/manifest tests pass with the app-first copy and canonical app IDs.
 
 ### Next concrete implementation backlog
 
 1. Make core app availability explicit in the Windowed OS launcher.
    - Current launcher still derives most apps from extension nav/main-view contributions.
-   - Add explicit core app coverage where it reduces beta fragility, while leaving the full app-registry rewrite deferred.
+   - Replace this with explicit app-registry coverage for core apps so nav/view contribution gaps do not remove primary apps from the Windowed OS launcher.
    - Validate by opening every Start menu app in the live windowed shell.
    - 2026-07-05 progress: the Start menu now fills missing canonical beta apps from the Windowed OS app roster after extension contributions are collected when the owning first-party app extension is enabled, so missing nav/main-view contributions no longer remove Automations, Gateways, AI Gateway, Model Arena, Routines, App Manager, Skills, or Diagnostics from the launcher. Disabled apps stay hidden instead of opening broken unregistered routes. Focused coverage verifies complete canonical ordering, fallback launch routing, and disabled-app pruning.
    - 2026-07-05 live QA: fresh Electron Windowed OS launch with CDP confirmed the dark Start menu shows Chat, Automations, Gateways, AI Gateway, Model Arena, Routines, App Manager, Skills, Diagnostics, and Settings; Workflows stays hidden because `system-dynamic-workflows` is disabled in this profile. Pointer-launch smoke opened Automations, Gateways, AI Gateway, Model Arena, Routines, App Manager, Skills, Diagnostics, and Settings as taskbar windows.
@@ -102,6 +107,8 @@ The deeper app/extension product model remains important, but the current goal i
 ### Acceptance criteria for this push
 
 - App launches into Windowed OS by default.
+- Windowed OS has a first-class app registry/manifest shape for app identity, ownership, launch route, window defaults, accent/icon, aliases, and user-facing metadata.
+- Start menu/taskbar/window route behavior is app-registry-driven for core apps, while extension packages remain a hidden implementation boundary.
 - Start menu opens all beta-critical core apps.
 - Chat works end-to-end as an app, with threads represented as windows/taskbar entries.
 - Browser, Terminal, and Files work as first-class child windows with reload-safe lifecycle.
@@ -109,15 +116,16 @@ The deeper app/extension product model remains important, but the current goal i
 - Automations list/detail and run inspection work.
 - Model Arena and Gateways surfaces work.
 - App Manager replaces the normal Extensions experience in user-facing Windowed OS routes.
+- App Manager reads as an installed-apps/app-packages manager, with extension/package details moved to developer/advanced context only.
+- Settings is organized around app-owned sections and app-facing labels where those settings are user-visible.
 - Normal user UI avoids "Extensions" language except advanced/developer details.
 - Light, dark, and time-of-day modes are usable across primary apps.
 - Build, tests, app launch, and hands-on live QA pass before calling the branch beta-ready.
 
-### Explicit exclusions / deferred
+### Scope boundaries
 
-- Do not treat the full app-registry/runtime rewrite as required for this beta-readiness pass.
-- The app-first product model remains the intended direction, but current code still derives much of the Windowed OS app registry from enabled extension contributions.
-- Defer the broader extension/app model discussion and the old "fork Neon Pilot around the windowed OS branch" architecture item until after the beta-readiness pass.
+- Do not remove the extension/package runtime, installer, backend action bridge, or contribution loader unless the new app boundary requires a narrow change.
+- Do not break stable shell startup while this branch is beta-tested, but do not preserve old sidebar/topbar assumptions inside Windowed OS.
 - Do not remove the attached Chat workbench yet. Browser, Terminal, Files, Drawing, and related tools can continue moving toward first-class child/app windows, but removal should wait until the independent window model is proven across live workflows.
 
 ## Fixes

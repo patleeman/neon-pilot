@@ -142,9 +142,9 @@ export function ExtensionPage({ shellPresentation = 'stable' }: { shellPresentat
 
 function ExtensionPageLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
   if (shellPresentation === 'windowed') {
-    return <WindowedExtensionPageState title="Loading extension page">Preparing the window contents.</WindowedExtensionPageState>;
+    return <WindowedExtensionPageState title="Loading app page">Preparing the window contents.</WindowedExtensionPageState>;
   }
-  return <QuietLoadingState label="Loading extension page" />;
+  return <QuietLoadingState label="Loading app page" />;
 }
 
 function WindowedExtensionPageState({

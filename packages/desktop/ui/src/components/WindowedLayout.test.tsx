@@ -1285,7 +1285,7 @@ describe('WindowedLayout route windows', () => {
       expect(screen.getAllByRole('region', { name: /^routines$/i })).toHaveLength(1);
     });
     const routinesWindow = screen.getByRole('region', { name: /^routines$/i });
-    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:system-routines:routines');
+    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:routines');
     expect(within(routinesWindow).getByText('/routines:windowed')).toBeTruthy();
   });
 
@@ -2242,7 +2242,7 @@ describe('WindowedLayout route windows', () => {
     fireEvent.pointerDown(await screen.findByRole('region', { name: /routines/i }));
 
     await waitFor(() => {
-      expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('route:system-routines:routines');
+      expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('route:routines');
     });
   });
 
@@ -2388,7 +2388,7 @@ describe('WindowedLayout route windows', () => {
 
     await screen.findByRole('region', { name: /routines/i });
     const chatWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="chat:draft"]');
-    const routinesWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="route:system-routines:routines"]');
+    const routinesWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="route:routines"]');
     expect(chatWindow).toBeTruthy();
     expect(routinesWindow).toBeTruthy();
     expect(chatWindow!.getAttribute('data-iframe-blocked')).toBe('true');
@@ -2714,7 +2714,7 @@ describe('WindowedLayout route windows', () => {
     const routeHost = await screen.findByTestId('extension-route-host');
     expect(routeHost.textContent).toBe('/routines/checkpoint:windowed');
     const routinesWindow = screen.getByRole('region', { name: /^routines$/i });
-    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:system-routines:routines');
+    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:routines');
     expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /^routines$/i })).toBeTruthy();
     expect(screen.queryByRole('region', { name: /routines detail/i })).toBeNull();
   });

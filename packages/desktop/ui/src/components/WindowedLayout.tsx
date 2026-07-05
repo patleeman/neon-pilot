@@ -1,7 +1,6 @@
 import {
   type AppAccent,
   CANONICAL_WINDOWED_APP_SIZES,
-  CANONICAL_WINDOWED_DESKTOP_APPS,
   StartMenu,
   type StartMenuItem,
   Taskbar,
@@ -68,6 +67,12 @@ import {
   type WindowedOsThemePhase,
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
+import {
+  accentForTitle,
+  buildWindowedAppRegistry,
+  canonicalWindowedAppAliases,
+  type WindowedAppRegistration,
+} from '../windowed/windowedAppRegistry';
 import { dispatchWindowedParentWindowLifecycle } from '../windowed/windowedChildWindowEvents';
 import { Layout } from './Layout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
@@ -91,20 +96,6 @@ interface DesktopWindowModel {
   parentWindowId?: string;
   parentWindowTitle?: string;
   parentMinimized?: boolean;
-}
-
-interface WindowedAppRegistration {
-  id: string;
-  title: string;
-  route: string;
-  kind: LauncherWindowKind;
-  source: 'core' | 'extension';
-  sourceExtensionId?: string;
-  accent: AppAccent;
-  window: {
-    allowMultiple: boolean;
-    singleton: boolean;
-  };
 }
 
 type DragState = {
@@ -132,55 +123,6 @@ const DEFAULT_WINDOW_BOTTOM_GUTTER = 56;
 const DEFAULT_CHAT_WORKBENCH_COLLAPSED = true;
 const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 
-const CORE_WINDOWED_APPS: WindowedAppRegistration[] = [
-  {
-    id: 'chat',
-    title: 'Chat',
-    route: '/conversations/new',
-    kind: 'chat',
-    source: 'core',
-    accent: 'chat',
-    window: { allowMultiple: true, singleton: false },
-  },
-  {
-    id: 'settings',
-    title: 'Settings',
-    route: '/settings',
-    kind: 'route',
-    source: 'core',
-    accent: 'settings',
-    window: { allowMultiple: false, singleton: true },
-  },
-];
-
-const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]> = new Map(
-  CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]),
-);
-const CANONICAL_LAUNCHER_ORDER: readonly string[] = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
-const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>> = {
-  chat: '/conversations/new',
-  automations: '/automations',
-  workflows: '/workflows',
-  gateways: '/gateways',
-  'ai-gateway': '/ai-gateway',
-  'model-arena': '/model-arena',
-  routines: '/routines',
-  extensions: '/extensions',
-  skills: '/skills',
-  diagnostics: '/telemetry',
-  settings: '/settings',
-};
-const CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS: Readonly<Partial<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>>> = {
-  automations: 'system-automations',
-  workflows: 'system-dynamic-workflows',
-  gateways: 'system-gateways',
-  'ai-gateway': 'system-model-gateway',
-  'model-arena': 'system-model-arena',
-  routines: 'system-routines',
-  extensions: 'system-extension-manager',
-  skills: 'system-skills',
-  diagnostics: 'system-telemetry',
-};
 const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
 function createId(input: Pick<WindowedAppRegistration, 'kind' | 'route' | 'id'>, suffix?: string): string {
@@ -408,105 +350,6 @@ function conversationWindowTitle(session: SessionMeta): string {
 
 function conversationWorkspaceCwd(session: SessionMeta | null): string | null {
   return session?.workspaceCwd || session?.cwd || null;
-}
-
-function createExtensionWindowedAppRegistration(input: {
-  extensionId: string;
-  id: string;
-  title: string;
-  route: string;
-}): WindowedAppRegistration {
-  return {
-    id: `${input.extensionId}:${input.id}`,
-    title: input.title,
-    route: input.route,
-    kind: 'route',
-    source: 'extension',
-    sourceExtensionId: input.extensionId,
-    accent: accentForTitle(input.title),
-    window: { allowMultiple: false, singleton: true },
-  };
-}
-
-function createCoreWindowedAppRegistration(app: (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]): WindowedAppRegistration {
-  return {
-    id: app.id,
-    title: app.title,
-    route: CANONICAL_WINDOWED_APP_ROUTES[app.id],
-    kind: app.id === 'chat' ? 'chat' : 'route',
-    source: 'core',
-    accent: app.accent,
-    window: { allowMultiple: app.id === 'chat', singleton: app.id !== 'chat' },
-  };
-}
-
-function buildWindowedAppRegistry(extensionRegistry: ReturnType<typeof useExtensionRegistry>): WindowedAppRegistration[] {
-  const [chatApp, settingsApp] = CORE_WINDOWED_APPS;
-  const seen = new Set(CORE_WINDOWED_APPS.map((item) => item.route));
-  const seenTitles = new Set(CORE_WINDOWED_APPS.map((item) => item.title));
-  const enabledExtensionIds = new Set(
-    extensionRegistry.extensions.filter((extension) => extension.enabled).map((extension) => extension.id),
-  );
-  const dynamic = extensionRegistry.extensions
-    .filter((extension) => extension.enabled)
-    .flatMap((extension) => {
-      const navItems = (extension.contributes?.nav ?? []).flatMap((item): WindowedAppRegistration[] => {
-        if (!item.route || seen.has(item.route)) return [];
-        seen.add(item.route);
-        seenTitles.add(item.label);
-        return [createExtensionWindowedAppRegistration({ extensionId: extension.id, id: item.id, title: item.label, route: item.route })];
-      });
-
-      const mainViewItems = (extension.contributes?.views ?? []).flatMap((view): WindowedAppRegistration[] => {
-        if (view.location !== 'main' || !view.route || !isTopLevelRoute(view.route) || seen.has(view.route)) return [];
-        seen.add(view.route);
-        seenTitles.add(view.title);
-        return [createExtensionWindowedAppRegistration({ extensionId: extension.id, id: view.id, title: view.title, route: view.route })];
-      });
-
-      return [...navItems, ...mainViewItems];
-    })
-    .sort(compareWindowedApps);
-
-  const canonicalFallbacks = CANONICAL_WINDOWED_DESKTOP_APPS.flatMap((app): WindowedAppRegistration[] => {
-    if (app.id === 'chat' || app.id === 'settings') return [];
-    const ownerExtensionId = CANONICAL_WINDOWED_APP_OWNER_EXTENSIONS[app.id];
-    if (ownerExtensionId && !enabledExtensionIds.has(ownerExtensionId)) return [];
-    const route = CANONICAL_WINDOWED_APP_ROUTES[app.id];
-    if (seen.has(route) || seenTitles.has(app.title)) return [];
-    seen.add(route);
-    seenTitles.add(app.title);
-    return [createCoreWindowedAppRegistration(app)];
-  }).sort(compareWindowedApps);
-
-  return [chatApp!, ...[...dynamic, ...canonicalFallbacks].sort(compareWindowedApps), settingsApp!];
-}
-
-function compareWindowedApps(left: WindowedAppRegistration, right: WindowedAppRegistration): number {
-  const leftRank = CANONICAL_LAUNCHER_ORDER.indexOf(left.title);
-  const rightRank = CANONICAL_LAUNCHER_ORDER.indexOf(right.title);
-  const normalizedLeftRank = leftRank >= 0 ? leftRank : CANONICAL_LAUNCHER_ORDER.length;
-  const normalizedRightRank = rightRank >= 0 ? rightRank : CANONICAL_LAUNCHER_ORDER.length;
-  return normalizedLeftRank - normalizedRightRank || left.title.localeCompare(right.title);
-}
-
-function accentForTitle(title: string): AppAccent {
-  const canonicalApp = CANONICAL_WINDOWED_APP_BY_TITLE.get(title);
-  if (canonicalApp) return canonicalApp.accent;
-
-  const normalized = title.toLowerCase();
-  if (normalized.includes('chat') || normalized.includes('conversation')) return 'chat';
-  if (normalized.includes('workflow')) return 'workflows';
-  if (normalized.includes('routine')) return 'routines';
-  if (normalized.includes('automation')) return 'automations';
-  if (normalized.includes('model arena')) return 'model-arena';
-  if (normalized.includes('gateway')) return 'gateways';
-  if (normalized.includes('drawing') || normalized.includes('excalidraw') || normalized.includes('sketch')) return 'drawing';
-  if (normalized.includes('skill')) return 'skills';
-  if (normalized.includes('extension')) return 'extensions';
-  if (normalized.includes('diagnostic')) return 'diagnostics';
-  if (normalized.includes('telemetry') || normalized.includes('run')) return 'telemetry';
-  return 'settings';
 }
 
 function accentForWindow(windowModel: Pick<DesktopWindowModel, 'kind' | 'title' | 'parentWindowId'>): AppAccent {
@@ -744,12 +587,6 @@ function chatSessionIdForRoute(route: string): string | null {
   } catch {
     return match[1] ?? null;
   }
-}
-
-function isTopLevelRoute(route: string): boolean {
-  const pathname = routePathname(route).replace(/\/+$/, '');
-  if (!pathname || pathname === '/') return false;
-  return pathname.split('/').filter(Boolean).length === 1;
 }
 
 function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[] {
@@ -1988,7 +1825,7 @@ export function WindowedLayout() {
     return {
       id: app.id,
       title: app.title,
-      aliases: CANONICAL_WINDOWED_APP_BY_TITLE.get(app.title)?.aliases,
+      aliases: app.aliases ?? canonicalWindowedAppAliases(app.title),
       accent: app.accent,
       count: matchingWindows.length > 1 ? matchingWindows.length : undefined,
       open: matchingWindows.length > 0,
