@@ -3,6 +3,7 @@ import type { RegisterServerRoutesInput } from './context.js';
 import { registerConversationActivityRoutes } from './conversationActivity.js';
 import { registerConversationRoutes } from './conversations.js';
 import { registerConversationStateRoutes } from './conversationState.js';
+import { registerDocumentsRoutes } from './documents.js';
 import { registerExecutionRoutes } from './executions.js';
 import { registerExtensionRoutes } from './extensions.js';
 import { registerFilePickerRoutes } from './filePicker.js';
@@ -20,6 +21,8 @@ import { registerWorkspaceExplorerRoutes } from './workspaceExplorer.js';
 
 export function registerServerRoutes({ app, context }: RegisterServerRoutesInput): void {
   registerAppTelemetryRoutes(app);
+
+  registerDocumentsRoutes(app, context);
 
   registerSettingsRoutes(app, context);
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const routeModules = vi.hoisted(() => ({
   registerAppTelemetryRoutes: vi.fn(),
   registerConversationRoutes: vi.fn(),
+  registerDocumentsRoutes: vi.fn(),
   registerConversationStateRoutes: vi.fn(),
   registerExecutionRoutes: vi.fn(),
   registerExtensionRoutes: vi.fn(),
@@ -21,6 +22,7 @@ const routeModules = vi.hoisted(() => ({
 
 vi.mock('./appTelemetry.js', () => ({ registerAppTelemetryRoutes: routeModules.registerAppTelemetryRoutes }));
 vi.mock('./conversations.js', () => ({ registerConversationRoutes: routeModules.registerConversationRoutes }));
+vi.mock('./documents.js', () => ({ registerDocumentsRoutes: routeModules.registerDocumentsRoutes }));
 vi.mock('./conversationState.js', () => ({ registerConversationStateRoutes: routeModules.registerConversationStateRoutes }));
 vi.mock('./executions.js', () => ({ registerExecutionRoutes: routeModules.registerExecutionRoutes }));
 vi.mock('./extensions.js', () => ({ registerExtensionRoutes: routeModules.registerExtensionRoutes }));
@@ -50,10 +52,12 @@ describe('registerServerRoutes', () => {
     registerServerRoutes({ app: app as never, context: context as never });
 
     expect(routeModules.registerAppTelemetryRoutes).toHaveBeenCalledWith(app);
+    expect(routeModules.registerDocumentsRoutes).toHaveBeenCalledWith(app, context);
     expect(routeModules.registerExecutionRoutes).toHaveBeenCalledWith(app);
     expect(routeModules.registerGlobalActivityRoutes).toHaveBeenCalledWith(app);
 
     for (const register of [
+      routeModules.registerDocumentsRoutes,
       routeModules.registerSettingsRoutes,
       routeModules.registerSecretRoutes,
       routeModules.registerGatewayRoutes,
@@ -73,6 +77,7 @@ describe('registerServerRoutes', () => {
 
     const invocationOrder = [
       routeModules.registerAppTelemetryRoutes,
+      routeModules.registerDocumentsRoutes,
       routeModules.registerSettingsRoutes,
       routeModules.registerSecretRoutes,
       routeModules.registerGatewayRoutes,
