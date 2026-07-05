@@ -26,10 +26,10 @@ const mocks = vi.hoisted(() => ({
   surfaces: [] as Array<Record<string, unknown>>,
   extensions: [
     {
-      id: 'system-routines',
+      id: 'system-notes',
       enabled: true,
       contributes: {
-        nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
+        nav: [{ id: 'notes', label: 'Notes', route: '/notes' }],
       },
     },
   ] as Array<{
@@ -102,7 +102,7 @@ vi.mock('../extensions/ExtensionRouteHost', async () => {
       return (
         <div data-testid="extension-route-host">
           {`${location.pathname}:${shellPresentation}`}
-          <button type="button" aria-label="Navigate within extension app" onClick={() => navigate('/routines/checkpoint')} />
+          <button type="button" aria-label="Navigate within extension app" onClick={() => navigate('/notes/detail')} />
           <button type="button" aria-label="Navigate to settings app" onClick={() => navigate('/settings/providers')} />
         </div>
       );
@@ -214,10 +214,10 @@ describe('WindowedLayout route windows', () => {
     mocks.surfaces = [];
     mocks.extensions = [
       {
-        id: 'system-routines',
+        id: 'system-notes',
         enabled: true,
         contributes: {
-          nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
+          nav: [{ id: 'notes', label: 'Notes', route: '/notes' }],
         },
       },
     ];
@@ -343,15 +343,15 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByTestId('embedded-layout')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+    fireEvent.click(screen.getByRole('button', { name: /notes/i }));
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/routines:windowed');
+    expect(routeHost.textContent).toBe('/notes:windowed');
 
-    const routinesWindow = screen.getByRole('region', { name: /routines/i });
-    expect(within(routinesWindow).getByTestId('extension-route-host')).toBeTruthy();
-    expect(within(routinesWindow).queryByTestId('embedded-layout')).toBeNull();
-    expect(routinesWindow.querySelector('.wos-window-route-body--extension')?.classList.contains('wos-chat-surface')).toBe(false);
+    const notesWindow = screen.getByRole('region', { name: /notes/i });
+    expect(within(notesWindow).getByTestId('extension-route-host')).toBeTruthy();
+    expect(within(notesWindow).queryByTestId('embedded-layout')).toBeNull();
+    expect(notesWindow.querySelector('.wos-window-route-body--extension')?.classList.contains('wos-chat-surface')).toBe(false);
     expect(screen.getAllByTestId('embedded-layout')).toHaveLength(1);
   });
 
@@ -367,10 +367,10 @@ describe('WindowedLayout route windows', () => {
         focused: true,
       },
       {
-        id: 'route:system-routines:routines',
+        id: 'route:system-notes:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 72, width: 620, height: 440 },
         minimized: false,
         focused: false,
@@ -380,13 +380,13 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     const chatWindow = screen.getByRole('region', { name: /new conversation/i });
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
 
     expect(within(chatWindow).getByTestId('embedded-layout')).toBeTruthy();
     expect(within(chatWindow).getByTestId('conversation-page').dataset.pathname).toBe('/conversations/new');
     expect(chatWindow.querySelector('.wos-window-route-body--chat')?.textContent).toContain('Conversation');
-    expect(within(routinesWindow).getByTestId('extension-route-host').textContent).toBe('/routines:windowed');
-    expect(routinesWindow.querySelector('.wos-window-route-body--extension')?.textContent).toContain('/routines:windowed');
+    expect(within(notesWindow).getByTestId('extension-route-host').textContent).toBe('/notes:windowed');
+    expect(notesWindow.querySelector('.wos-window-route-body--extension')?.textContent).toContain('/notes:windowed');
   });
 
   it('renders chat windows inside the canonical windowed chat surface with child tool launchers only', () => {
@@ -615,34 +615,29 @@ describe('WindowedLayout route windows', () => {
 
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
     const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
-    fireEvent.change(search, { target: { value: 'routines' } });
+    fireEvent.change(search, { target: { value: 'notes' } });
     fireEvent.keyDown(search, { key: 'Enter' });
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/routines:windowed');
+    expect(routeHost.textContent).toBe('/notes:windowed');
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
   it('opens the highlighted filtered Start menu app with arrow navigation and Enter', async () => {
     mocks.extensions = [
       {
-        id: 'system-gateways',
+        id: 'system-notes',
         enabled: true,
         contributes: {
-          nav: [{ id: 'gateways', label: 'Gateways', route: '/gateways' }],
+          nav: [{ id: 'alpha-notes', label: 'Alpha Notes', route: '/alpha-notes' }],
         },
       },
       {
-        id: 'system-telemetry',
+        id: 'system-notebook',
         enabled: true,
         contributes: {
-          nav: [{ id: 'diagnostics', label: 'Diagnostics', route: '/telemetry' }],
+          nav: [{ id: 'beta-notes', label: 'Beta Notes', route: '/beta-notes' }],
         },
-      },
-      {
-        id: 'system-model-gateway',
-        enabled: true,
-        contributes: {},
       },
     ];
     renderWindowedLayout();
@@ -651,21 +646,21 @@ describe('WindowedLayout route windows', () => {
 
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
     const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
-    fireEvent.change(search, { target: { value: 'gateway' } });
+    fireEvent.change(search, { target: { value: 'note' } });
 
-    const gateways = within(startMenu).getByRole('button', { name: 'Gateways' });
-    const aiGateway = within(startMenu).getByRole('button', { name: 'AI Gateway' });
-    expect(gateways.getAttribute('data-active')).toBe('true');
+    const notes = within(startMenu).getByRole('button', { name: 'Alpha Notes' });
+    const notebook = within(startMenu).getByRole('button', { name: 'Beta Notes' });
+    expect(notes.getAttribute('data-active')).toBe('true');
 
     fireEvent.keyDown(search, { key: 'ArrowDown' });
 
-    expect(gateways.getAttribute('data-active')).toBe('false');
-    expect(aiGateway.getAttribute('data-active')).toBe('true');
+    expect(notes.getAttribute('data-active')).toBe('false');
+    expect(notebook.getAttribute('data-active')).toBe('true');
 
     fireEvent.keyDown(search, { key: 'Enter' });
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/ai-gateway:windowed');
+    expect(routeHost.textContent).toBe('/beta-notes:windowed');
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
@@ -701,59 +696,10 @@ describe('WindowedLayout route windows', () => {
         },
       },
       {
-        id: 'system-telemetry',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'diagnostics', label: 'Diagnostics', route: '/telemetry' }],
-        },
-      },
-      {
-        id: 'system-gateways',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'gateways', label: 'Gateways', route: '/gateways' }],
-        },
-      },
-      {
-        id: 'system-model-gateway',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'ai-gateway', label: 'AI Gateway', route: '/ai-gateway' }],
-        },
-      },
-      {
-        id: 'system-model-arena',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'model-arena', label: 'Model Arena', route: '/model-arena' }],
-        },
-      },
-      {
         id: 'system-automations',
         enabled: true,
         contributes: {
           nav: [{ id: 'automations', label: 'Automations', route: '/automations' }],
-        },
-      },
-      {
-        id: 'system-skills',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'skills', label: 'Skills', route: '/skills' }],
-        },
-      },
-      {
-        id: 'system-routines',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
-        },
-      },
-      {
-        id: 'system-dynamic-workflows',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'workflows', label: 'Workflows', route: '/workflows' }],
         },
       },
     ];
@@ -775,7 +721,7 @@ describe('WindowedLayout route windows', () => {
     }
   });
 
-  it('keeps enabled canonical beta apps available when extension nav contributions are missing', async () => {
+  it('keeps enabled canonical apps available when extension nav contributions are missing', async () => {
     mocks.extensions = [
       {
         id: 'system-automations',
@@ -783,16 +729,9 @@ describe('WindowedLayout route windows', () => {
         contributes: {},
       },
       {
-        id: 'system-dynamic-workflows',
+        id: 'system-notes',
         enabled: false,
         contributes: {},
-      },
-      {
-        id: 'system-routines',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
-        },
       },
     ];
 
@@ -803,8 +742,8 @@ describe('WindowedLayout route windows', () => {
     const menuTitles = Array.from(container.querySelectorAll('.wos-start-menu__item .wos-app-tile__label')).map(
       (element) => element.textContent,
     );
-    expect(menuTitles).toEqual(['Chat', 'Automations', 'Routines', 'Settings']);
-    expect(menuTitles).not.toContain('Workflows');
+    expect(menuTitles).toEqual(['Chat', 'Automations', 'Settings']);
+    expect(menuTitles).not.toContain('Notes');
 
     fireEvent.mouseDown(within(startMenu).getByRole('button', { name: /^automations$/i }), { button: 0 });
 
@@ -905,12 +844,12 @@ describe('WindowedLayout route windows', () => {
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
 
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
-    const routines = within(startMenu).getByRole('button', { name: /^routines$/i });
-    fireEvent.mouseDown(routines, { clientX: 2, clientY: 8 });
-    fireEvent.click(routines, { clientX: 2, clientY: 8 });
+    const notes = within(startMenu).getByRole('button', { name: /^notes$/i });
+    fireEvent.mouseDown(notes, { clientX: 2, clientY: 8 });
+    fireEvent.click(notes, { clientX: 2, clientY: 8 });
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/routines:windowed');
+    expect(routeHost.textContent).toBe('/notes:windowed');
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
@@ -929,10 +868,10 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^routines$/i }));
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^notes$/i }));
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
 
-    fireEvent.mouseDown(routinesWindow);
+    fireEvent.mouseDown(notesWindow);
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
     expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
     fireEvent.mouseDown(screen.getByLabelText(/windowed neon pilot desktop/i));
@@ -952,15 +891,15 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^routines$/i }));
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    expect(within(routinesWindow).getByTestId('extension-route-host').textContent).toBe('/routines:windowed');
+    fireEvent.click(screen.getByRole('button', { name: /^notes$/i }));
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    expect(within(notesWindow).getByTestId('extension-route-host').textContent).toBe('/notes:windowed');
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
 
     expect(screen.getByRole('dialog', { name: /start menu/i })).toBeTruthy();
-    expect(within(routinesWindow).getByTestId('extension-route-host').textContent).toBe('/routines:windowed');
-    expect(routinesWindow.querySelector('.wos-window__iframe-shield')).toBeTruthy();
+    expect(within(notesWindow).getByTestId('extension-route-host').textContent).toBe('/notes:windowed');
+    expect(notesWindow.querySelector('.wos-window__iframe-shield')).toBeTruthy();
   });
 
   it('keeps stored native browser tabs hidden while the start menu is open', async () => {
@@ -1030,10 +969,10 @@ describe('WindowedLayout route windows', () => {
     mocks.extensions = [
       ...mocks.extensions,
       {
-        id: 'system-dynamic-workflows',
+        id: 'system-notes',
         enabled: true,
         contributes: {
-          views: [{ id: 'workflows-page', title: 'Workflows', location: 'main', route: '/workflows' }],
+          views: [{ id: 'notes-page', title: 'Notes', location: 'main', route: '/notes' }],
         },
       },
     ];
@@ -1041,22 +980,22 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^workflows$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^notes$/i }));
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/workflows:windowed');
-    expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
+    expect(routeHost.textContent).toBe('/notes:windowed');
+    expect(screen.getByRole('region', { name: /notes/i })).toBeTruthy();
   });
 
-  it('opens AI Gateway as its own windowed app route', async () => {
+  it('opens a dynamic extension app as its own windowed app route', async () => {
     mocks.extensions = [
       ...mocks.extensions,
       {
-        id: 'system-model-gateway',
+        id: 'system-knowledge-base',
         enabled: true,
         contributes: {
-          nav: [{ id: 'ai-gateway-nav', label: 'AI Gateway', route: '/ai-gateway' }],
-          views: [{ id: 'ai-gateway-page', title: 'AI Gateway', location: 'main', route: '/ai-gateway' }],
+          nav: [{ id: 'knowledge-base-nav', label: 'Knowledge Base', route: '/knowledge' }],
+          views: [{ id: 'knowledge-base-page', title: 'Knowledge Base', location: 'main', route: '/knowledge' }],
         },
       },
     ];
@@ -1064,35 +1003,28 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^ai gateway$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^knowledge base$/i }));
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/ai-gateway:windowed');
-    const aiGatewayWindow = screen.getByRole('region', { name: /ai gateway/i });
-    expect(aiGatewayWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('gateways');
+    expect(routeHost.textContent).toBe('/knowledge:windowed');
+    const knowledgeWindow = screen.getByRole('region', { name: /knowledge base/i });
+    expect(knowledgeWindow.querySelector('.wos-window__titlebar')?.getAttribute('data-accent')).toBe('settings');
   });
 
-  it('uses canonical product accents for diagnostics, skills, and workflow app windows', async () => {
+  it('uses title-derived accents for dynamic extension app windows', async () => {
     mocks.extensions = [
       {
-        id: 'system-diagnostics',
+        id: 'system-automation-lab',
         enabled: true,
         contributes: {
-          nav: [{ id: 'telemetry-nav', label: 'Diagnostics', route: '/telemetry' }],
+          nav: [{ id: 'automation-lab-nav', label: 'Automation Lab', route: '/automation-lab' }],
         },
       },
       {
-        id: 'system-skills',
+        id: 'system-drawing-board',
         enabled: true,
         contributes: {
-          nav: [{ id: 'skills-nav', label: 'Skills', route: '/skills' }],
-        },
-      },
-      {
-        id: 'system-workflows',
-        enabled: true,
-        contributes: {
-          views: [{ id: 'workflows-page', title: 'Workflows', location: 'main', route: '/workflows' }],
+          nav: [{ id: 'drawing-board-nav', label: 'Drawing Board', route: '/drawing-board' }],
         },
       },
     ];
@@ -1100,32 +1032,24 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^diagnostics$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^automation lab$/i }));
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^skills$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^workflows$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^drawing board$/i }));
 
-    await screen.findByRole('region', { name: /workflows/i });
+    await screen.findByRole('region', { name: /drawing board/i });
 
     expect(
       screen
-        .getByRole('region', { name: /diagnostics/i })
+        .getByRole('region', { name: /automation lab/i })
         .querySelector('.wos-window__titlebar')
         ?.getAttribute('data-accent'),
-    ).toBe('diagnostics');
+    ).toBe('automations');
     expect(
       screen
-        .getByRole('region', { name: /skills/i })
+        .getByRole('region', { name: /drawing board/i })
         .querySelector('.wos-window__titlebar')
         ?.getAttribute('data-accent'),
-    ).toBe('skills');
-    expect(
-      screen
-        .getByRole('region', { name: /workflows/i })
-        .querySelector('.wos-window__titlebar')
-        ?.getAttribute('data-accent'),
-    ).toBe('workflows');
+    ).toBe('drawing');
   });
 
   it('uses the drawing accent for drawing and sketch app windows', async () => {
@@ -1174,11 +1098,11 @@ describe('WindowedLayout route windows', () => {
   it('deduplicates start menu routes when an extension contributes both nav and a main view', () => {
     mocks.extensions = [
       {
-        id: 'system-routines',
+        id: 'system-notes',
         enabled: true,
         contributes: {
-          nav: [{ id: 'routines-nav', label: 'Routines', route: '/routines' }],
-          views: [{ id: 'routines-page', title: 'Routines', location: 'main', route: '/routines' }],
+          nav: [{ id: 'notes-nav', label: 'Notes', route: '/notes' }],
+          views: [{ id: 'notes-page', title: 'Notes', location: 'main', route: '/notes' }],
         },
       },
     ];
@@ -1188,7 +1112,7 @@ describe('WindowedLayout route windows', () => {
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
 
-    expect(within(startMenu).getAllByRole('button', { name: /^routines$/i })).toHaveLength(1);
+    expect(within(startMenu).getAllByRole('button', { name: /^notes$/i })).toHaveLength(1);
   });
 
   it('keeps top-level app windows distinct when extensions reuse nav ids', async () => {
@@ -1302,10 +1226,10 @@ describe('WindowedLayout route windows', () => {
         archivedOnClose: true,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 120, y: 96, width: 760, height: 520 },
         minimized: false,
         focused: false,
@@ -1320,24 +1244,24 @@ describe('WindowedLayout route windows', () => {
 
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
     const chatButton = within(startMenu).getByRole('button', { name: /^chat$/i });
-    const routinesButton = within(startMenu).getByRole('button', { name: /^routines$/i });
+    const notesButton = within(startMenu).getByRole('button', { name: /^notes$/i });
 
     expect(chatButton.getAttribute('data-open')).toBe('true');
     expect(chatButton.getAttribute('data-focused')).toBe('true');
     expect(chatButton.querySelector('.wos-app-tile__count')?.textContent).toBe('2');
-    expect(routinesButton.getAttribute('data-open')).toBe('true');
-    expect(routinesButton.getAttribute('data-focused')).toBeNull();
-    expect(routinesButton.querySelector('.wos-app-tile__count')).toBeNull();
+    expect(notesButton.getAttribute('data-open')).toBe('true');
+    expect(notesButton.getAttribute('data-focused')).toBeNull();
+    expect(notesButton.querySelector('.wos-app-tile__count')).toBeNull();
     expect(container.querySelectorAll('.wos-start-menu__item[data-open="true"]')).toHaveLength(2);
   });
 
   it('reuses persisted route windows stored with legacy unqualified ids', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines/checkpoint',
+        title: 'Notes',
+        route: '/notes/detail',
         bounds: { x: 60, y: 48, width: 800, height: 500 },
         minimized: false,
         focused: true,
@@ -1347,17 +1271,17 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    expect(await screen.findByText('/routines/checkpoint:windowed')).toBeTruthy();
+    expect(await screen.findByText('/notes/detail:windowed')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^routines$/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^notes$/i }));
 
     await waitFor(() => {
-      expect(screen.getAllByRole('region', { name: /^routines$/i })).toHaveLength(1);
+      expect(screen.getAllByRole('region', { name: /^notes$/i })).toHaveLength(1);
     });
-    const routinesWindow = screen.getByRole('region', { name: /^routines$/i });
-    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:routines');
-    expect(within(routinesWindow).getByText('/routines:windowed')).toBeTruthy();
+    const notesWindow = screen.getByRole('region', { name: /^notes$/i });
+    expect(notesWindow.getAttribute('data-window-id')).toBe('route:system-notes:notes');
+    expect(within(notesWindow).getByText('/notes:windowed')).toBeTruthy();
   });
 
   it('closes saved chat windows without archiving the underlying conversation', async () => {
@@ -1387,22 +1311,6 @@ describe('WindowedLayout route windows', () => {
   it('exposes the canonical top-level desktop apps without nested route duplicates', () => {
     mocks.extensions = [
       {
-        id: 'system-skills',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'skills-nav', label: 'Skills', route: '/skills' }],
-          views: [{ id: 'skills-page', title: 'Skills', location: 'main', route: '/skills' }],
-        },
-      },
-      {
-        id: 'system-telemetry',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'telemetry-nav', label: 'Diagnostics', route: '/telemetry' }],
-          views: [{ id: 'telemetry-page', title: 'Diagnostics', location: 'main', route: '/telemetry' }],
-        },
-      },
-      {
         id: 'system-prompt-assembly',
         enabled: true,
         contributes: {
@@ -1414,19 +1322,11 @@ describe('WindowedLayout route windows', () => {
         },
       },
       {
-        id: 'system-routines',
+        id: 'system-notes',
         enabled: true,
         contributes: {
-          nav: [{ id: 'routines-nav', label: 'Routines', route: '/routines' }],
-          views: [{ id: 'routines-page', title: 'Routines', location: 'main', route: '/routines' }],
-        },
-      },
-      {
-        id: 'system-model-arena',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'model-arena-nav', label: 'Model Arena', route: '/model-arena' }],
-          views: [{ id: 'model-arena-page', title: 'Model Arena', location: 'main', route: '/model-arena' }],
+          nav: [{ id: 'notes-nav', label: 'Notes', route: '/notes' }],
+          views: [{ id: 'notes-page', title: 'Notes', location: 'main', route: '/notes' }],
         },
       },
       {
@@ -1438,35 +1338,11 @@ describe('WindowedLayout route windows', () => {
         },
       },
       {
-        id: 'system-dynamic-workflows',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'workflows-nav', label: 'Workflows', route: '/workflows' }],
-          views: [{ id: 'workflows-page', title: 'Workflows', location: 'main', route: '/workflows' }],
-        },
-      },
-      {
         id: 'system-automations',
         enabled: true,
         contributes: {
           nav: [{ id: 'automations-nav', label: 'Automations', route: '/automations' }],
           views: [{ id: 'automations-page', title: 'Automations', location: 'main', route: '/automations' }],
-        },
-      },
-      {
-        id: 'system-gateways',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'gateways-nav', label: 'Gateways', route: '/gateways' }],
-          views: [{ id: 'gateways-page', title: 'Gateways', location: 'main', route: '/gateways' }],
-        },
-      },
-      {
-        id: 'system-model-gateway',
-        enabled: true,
-        contributes: {
-          nav: [{ id: 'ai-gateway-nav', label: 'AI Gateway', route: '/ai-gateway' }],
-          views: [{ id: 'ai-gateway-page', title: 'AI Gateway', location: 'main', route: '/ai-gateway' }],
         },
       },
       {
@@ -1490,32 +1366,9 @@ describe('WindowedLayout route windows', () => {
       .getAllByRole('button')
       .map((button) => button.textContent?.trim());
 
-    expect(appButtons).toEqual([
-      'Chat',
-      'Automations',
-      'Workflows',
-      'Gateways',
-      'AI Gateway',
-      'Model Arena',
-      'Routines',
-      'App Manager',
-      'Skills',
-      'Diagnostics',
-      'Settings',
-    ]);
+    expect(appButtons).toEqual(['Chat', 'Automations', 'App Manager', 'Notes', 'Settings']);
 
-    for (const label of [
-      'Chat',
-      'Automations',
-      'Workflows',
-      'App Manager',
-      'Gateways',
-      'Model Arena',
-      'Routines',
-      'Skills',
-      'Diagnostics',
-      'Settings',
-    ]) {
+    for (const label of ['Chat', 'Automations', 'App Manager', 'Notes', 'Settings']) {
       expect(within(startMenu).getAllByRole('button', { name: new RegExp(`^${label}$`, 'i') })).toHaveLength(1);
     }
 
@@ -1576,15 +1429,15 @@ describe('WindowedLayout route windows', () => {
     expect(settingsWindow.getAttribute('style')).toContain('height: 560px');
   });
 
-  it('uses the canonical Workflows window target before desktop fitting clamps it', async () => {
+  it('uses the canonical Automations window target before desktop fitting clamps it', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 960 });
     mocks.extensions = [
       {
-        id: 'system-workflows',
+        id: 'system-automations',
         enabled: true,
         contributes: {
-          nav: [{ id: 'workflows', label: 'Workflows', route: '/workflows' }],
+          nav: [{ id: 'automations', label: 'Automations', route: '/automations' }],
         },
       },
     ];
@@ -1592,42 +1445,42 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^workflows$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^automations$/i }));
 
-    const workflowsWindow = await screen.findByRole('region', { name: /^workflows$/i });
-    expect(workflowsWindow.getAttribute('style')).toContain('width: 1040px');
-    expect(workflowsWindow.getAttribute('style')).toContain('height: 612px');
+    const automationsWindow = await screen.findByRole('region', { name: /^automations$/i });
+    expect(automationsWindow.getAttribute('style')).toContain('width: 1040px');
+    expect(automationsWindow.getAttribute('style')).toContain('height: 660px');
   });
 
   it('keeps embedded extension navigation in the current window when it stays inside the same desktop app', async () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+    fireEvent.click(screen.getByRole('button', { name: /notes/i }));
 
-    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
-    fireEvent.click(within(routinesWindow).getByRole('button', { name: /navigate within extension app/i }));
+    const notesWindow = await screen.findByRole('region', { name: /notes/i });
+    fireEvent.click(within(notesWindow).getByRole('button', { name: /navigate within extension app/i }));
 
     await waitFor(() => {
-      expect(within(routinesWindow).getByText('/routines/checkpoint:windowed')).toBeTruthy();
+      expect(within(notesWindow).getByText('/notes/detail:windowed')).toBeTruthy();
     });
-    expect(screen.getAllByRole('region', { name: /routines/i })).toHaveLength(1);
-    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getAllByRole('button', { name: /routines/i })).toHaveLength(1);
+    expect(screen.getAllByRole('region', { name: /notes/i })).toHaveLength(1);
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getAllByRole('button', { name: /notes/i })).toHaveLength(1);
   });
 
   it('opens a matching desktop app window when embedded extension navigation crosses app boundaries', async () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+    fireEvent.click(screen.getByRole('button', { name: /notes/i }));
 
-    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
-    fireEvent.click(within(routinesWindow).getByRole('button', { name: /navigate to settings app/i }));
+    const notesWindow = await screen.findByRole('region', { name: /notes/i });
+    fireEvent.click(within(notesWindow).getByRole('button', { name: /navigate to settings app/i }));
 
     const settingsWindow = await screen.findByRole('region', { name: /settings/i });
     expect(within(settingsWindow).getByText('/settings/providers:windowed')).toBeTruthy();
-    expect(within(routinesWindow).getByText('/routines:windowed')).toBeTruthy();
-    expect(routinesWindow.getAttribute('data-focused')).toBe('false');
+    expect(within(notesWindow).getByText('/notes:windowed')).toBeTruthy();
+    expect(notesWindow.getAttribute('data-focused')).toBe('false');
     expect(settingsWindow.getAttribute('data-focused')).toBe('true');
     expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /settings/i })).toBeTruthy();
   });
@@ -1652,24 +1505,24 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+    fireEvent.click(screen.getByRole('button', { name: /notes/i }));
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    fireEvent.click(within(routinesWindow).getByRole('button', { name: /maximize routines/i }));
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    fireEvent.click(within(notesWindow).getByRole('button', { name: /maximize notes/i }));
 
-    expect(routinesWindow.getAttribute('style')).toContain('left: 0px');
-    expect(routinesWindow.getAttribute('style')).toContain('top: 0px');
-    expect(routinesWindow.getAttribute('style')).toContain('width: 1024px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 724px');
+    expect(notesWindow.getAttribute('style')).toContain('left: 0px');
+    expect(notesWindow.getAttribute('style')).toContain('top: 0px');
+    expect(notesWindow.getAttribute('style')).toContain('width: 1024px');
+    expect(notesWindow.getAttribute('style')).toContain('height: 724px');
   });
 
   it('restores a maximized window to its original size when dragged from the titlebar', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -1678,23 +1531,23 @@ describe('WindowedLayout route windows', () => {
     ]);
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    fireEvent.click(within(routinesWindow).getByRole('button', { name: /maximize routines/i }));
-    expect(routinesWindow.getAttribute('style')).toContain('width: 1024px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 724px');
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    fireEvent.click(within(notesWindow).getByRole('button', { name: /maximize notes/i }));
+    expect(notesWindow.getAttribute('style')).toContain('width: 1024px');
+    expect(notesWindow.getAttribute('style')).toContain('height: 724px');
 
-    const titlebar = routinesWindow.querySelector<HTMLElement>('.wos-window__titlebar');
+    const titlebar = notesWindow.querySelector<HTMLElement>('.wos-window__titlebar');
     expect(titlebar).toBeTruthy();
 
     fireEvent.mouseDown(titlebar!, { button: 0, clientX: 512, clientY: 18 });
     fireEvent.mouseMove(window, { clientX: 560, clientY: 80 });
     fireEvent.mouseUp(window, { clientX: 560, clientY: 80 });
 
-    expect(routinesWindow.getAttribute('style')).toContain('left: 180px');
-    expect(routinesWindow.getAttribute('style')).toContain('top: 62px');
-    expect(routinesWindow.getAttribute('style')).toContain('width: 760px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 520px');
-    expect(within(routinesWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
+    expect(notesWindow.getAttribute('style')).toContain('left: 180px');
+    expect(notesWindow.getAttribute('style')).toContain('top: 62px');
+    expect(notesWindow.getAttribute('style')).toContain('width: 760px');
+    expect(notesWindow.getAttribute('style')).toContain('height: 520px');
+    expect(within(notesWindow).getByRole('button', { name: /maximize notes/i })).toBeTruthy();
   });
 
   it('fits newly opened app windows to the current desktop before first paint', async () => {
@@ -1708,11 +1561,11 @@ describe('WindowedLayout route windows', () => {
     expect(chatWindow.getAttribute('style')).toContain('height: 500px');
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(screen.getByRole('button', { name: /routines/i }));
+    fireEvent.click(screen.getByRole('button', { name: /notes/i }));
 
-    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
-    expect(routinesWindow.getAttribute('style')).toContain('width: 736px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 500px');
+    const notesWindow = await screen.findByRole('region', { name: /notes/i });
+    expect(notesWindow.getAttribute('style')).toContain('width: 736px');
+    expect(notesWindow.getAttribute('style')).toContain('height: 500px');
   });
 
   it('fits persisted window sizes to a narrower desktop during restore', async () => {
@@ -1744,10 +1597,10 @@ describe('WindowedLayout route windows', () => {
   it('resizes windows from the top-left corner while keeping partial offscreen movement recoverable', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 42, y: 34, width: 700, height: 500 },
         minimized: false,
         focused: true,
@@ -1757,27 +1610,27 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    const resizeHandle = routinesWindow.querySelector<HTMLElement>('.wos-resize-nw');
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    const resizeHandle = notesWindow.querySelector<HTMLElement>('.wos-resize-nw');
     expect(resizeHandle).toBeTruthy();
 
     fireEvent.mouseDown(resizeHandle!, { button: 0, clientX: 42, clientY: 34 });
     fireEvent.mouseMove(window, { clientX: -120, clientY: -80 });
     fireEvent.mouseUp(window);
 
-    expect(routinesWindow.getAttribute('style')).toContain('left: -120px');
-    expect(routinesWindow.getAttribute('style')).toContain('top: -80px');
-    expect(routinesWindow.getAttribute('style')).toContain('width: 862px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 614px');
+    expect(notesWindow.getAttribute('style')).toContain('left: -120px');
+    expect(notesWindow.getAttribute('style')).toContain('top: -80px');
+    expect(notesWindow.getAttribute('style')).toContain('width: 862px');
+    expect(notesWindow.getAttribute('style')).toContain('height: 614px');
   });
 
   it('resizes from the titlebar top edge while keeping titlebar controls unobstructed', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 42, y: 34, width: 700, height: 500 },
         minimized: false,
         focused: true,
@@ -1787,8 +1640,8 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    routinesWindow.getBoundingClientRect = () =>
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    notesWindow.getBoundingClientRect = () =>
       ({
         x: 42,
         y: 34,
@@ -1800,27 +1653,27 @@ describe('WindowedLayout route windows', () => {
         height: 500,
         toJSON: () => ({}),
       }) as DOMRect;
-    const titlebar = routinesWindow.querySelector<HTMLElement>('.wos-window__titlebar');
+    const titlebar = notesWindow.querySelector<HTMLElement>('.wos-window__titlebar');
     expect(titlebar).toBeTruthy();
 
     fireEvent.mouseDown(titlebar!, { button: 0, clientX: 392, clientY: 36 });
     fireEvent.mouseMove(window, { clientX: 392, clientY: -80 });
     fireEvent.mouseUp(window);
 
-    expect(routinesWindow.getAttribute('style')).toContain('left: 42px');
-    expect(routinesWindow.getAttribute('style')).toContain('top: -82px');
-    expect(routinesWindow.getAttribute('style')).toContain('width: 700px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 616px');
-    expect(within(routinesWindow).getByRole('button', { name: /close routines/i })).toBeTruthy();
+    expect(notesWindow.getAttribute('style')).toContain('left: 42px');
+    expect(notesWindow.getAttribute('style')).toContain('top: -82px');
+    expect(notesWindow.getAttribute('style')).toContain('width: 700px');
+    expect(notesWindow.getAttribute('style')).toContain('height: 616px');
+    expect(within(notesWindow).getByRole('button', { name: /close notes/i })).toBeTruthy();
   });
 
   it('does not start a top-right resize gesture from the close button hit area', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 42, y: 34, width: 700, height: 500 },
         minimized: false,
         focused: true,
@@ -1830,24 +1683,24 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    const closeButton = within(routinesWindow).getByRole('button', { name: /close routines/i });
-    const initialStyle = routinesWindow.getAttribute('style');
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    const closeButton = within(notesWindow).getByRole('button', { name: /close notes/i });
+    const initialStyle = notesWindow.getAttribute('style');
 
     fireEvent.mouseDown(closeButton, { button: 0, clientX: 736, clientY: 42 });
     fireEvent.mouseMove(window, { clientX: 790, clientY: -40 });
     fireEvent.mouseUp(window);
 
-    expect(routinesWindow.getAttribute('style')).toBe(initialStyle);
+    expect(notesWindow.getAttribute('style')).toBe(initialStyle);
   });
 
   it('does not start drag or resize gestures from the titlebar control cluster gap', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 42, y: 34, width: 700, height: 500 },
         minimized: false,
         focused: true,
@@ -1857,25 +1710,25 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    const controls = routinesWindow.querySelector<HTMLElement>('.wos-window__controls');
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    const controls = notesWindow.querySelector<HTMLElement>('.wos-window__controls');
     expect(controls).toBeTruthy();
-    const initialStyle = routinesWindow.getAttribute('style');
+    const initialStyle = notesWindow.getAttribute('style');
 
     fireEvent.mouseDown(controls!, { button: 0, clientX: 706, clientY: 36 });
     fireEvent.mouseMove(window, { clientX: 790, clientY: -40 });
     fireEvent.mouseUp(window);
 
-    expect(routinesWindow.getAttribute('style')).toBe(initialStyle);
+    expect(notesWindow.getAttribute('style')).toBe(initialStyle);
   });
 
   it('resizes windows from the bottom-right corner using visible resize handles', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 42, y: 34, width: 700, height: 500 },
         minimized: false,
         focused: true,
@@ -1885,18 +1738,18 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    const resizeHandle = routinesWindow.querySelector<HTMLElement>('.wos-resize-se');
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    const resizeHandle = notesWindow.querySelector<HTMLElement>('.wos-resize-se');
     expect(resizeHandle).toBeTruthy();
 
     fireEvent.mouseDown(resizeHandle!, { button: 0, clientX: 742, clientY: 534 });
     fireEvent.mouseMove(window, { clientX: 920, clientY: 650 });
     fireEvent.mouseUp(window);
 
-    expect(routinesWindow.getAttribute('style')).toContain('left: 42px');
-    expect(routinesWindow.getAttribute('style')).toContain('top: 34px');
-    expect(routinesWindow.getAttribute('style')).toContain('width: 878px');
-    expect(routinesWindow.getAttribute('style')).toContain('height: 616px');
+    expect(notesWindow.getAttribute('style')).toContain('left: 42px');
+    expect(notesWindow.getAttribute('style')).toContain('top: 34px');
+    expect(notesWindow.getAttribute('style')).toContain('width: 878px');
+    expect(notesWindow.getAttribute('style')).toContain('height: 616px');
   });
 
   it('groups multiple open chat windows under a taskbar chat menu', async () => {
@@ -2062,10 +1915,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -2077,7 +1930,7 @@ describe('WindowedLayout route windows', () => {
 
     try {
       renderWindowedLayout();
-      await screen.findByRole('region', { name: /routines/i });
+      await screen.findByRole('region', { name: /notes/i });
       suspendListener.mockClear();
 
       fireEvent.pointerDown(screen.getByRole('region', { name: /new conversation/i }));
@@ -2105,10 +1958,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -2131,7 +1984,7 @@ describe('WindowedLayout route windows', () => {
     window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
 
     renderWindowedLayout();
-    await screen.findByRole('region', { name: /routines/i });
+    await screen.findByRole('region', { name: /notes/i });
     setWorkbenchBrowserBounds.mockClear();
 
     fireEvent.pointerDown(screen.getByRole('region', { name: /new conversation/i }));
@@ -2173,10 +2026,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -2196,7 +2049,7 @@ describe('WindowedLayout route windows', () => {
     window.neonPilotDesktop = { setWorkbenchBrowserBounds } as unknown as typeof window.neonPilotDesktop;
 
     renderWindowedLayout();
-    await screen.findByRole('region', { name: /routines/i });
+    await screen.findByRole('region', { name: /notes/i });
     setWorkbenchBrowserBounds.mockClear();
 
     await waitFor(
@@ -2232,10 +2085,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -2244,11 +2097,11 @@ describe('WindowedLayout route windows', () => {
     ]);
 
     const { container } = renderWindowedLayout();
-    await screen.findByRole('region', { name: /routines/i });
+    await screen.findByRole('region', { name: /notes/i });
 
     expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-native-browser-blocked')).toBe('true');
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBe('true');
-    expect(screen.getByRole('region', { name: /routines/i }).getAttribute('data-iframe-blocked')).toBeNull();
+    expect(screen.getByRole('region', { name: /notes/i }).getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('keeps overlapped window contents mounted while browser-frame paint is blocked', async () => {
@@ -2263,10 +2116,10 @@ describe('WindowedLayout route windows', () => {
         focused: true,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: false,
@@ -2278,10 +2131,10 @@ describe('WindowedLayout route windows', () => {
     const shell = container.querySelector('.windowed-os-shell');
 
     expect(await screen.findByText('Conversation')).toBeTruthy();
-    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
+    expect(await screen.findByText('/notes:windowed')).toBeTruthy();
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
     expect(within(screen.getByRole('region', { name: /new conversation/i })).getByTestId('conversation-page')).toBeTruthy();
-    expect(within(screen.getByRole('region', { name: /routines/i })).getByTestId('extension-route-host')).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: /notes/i })).getByTestId('extension-route-host')).toBeTruthy();
   });
 
   it('publishes the single focused window id for native browser layering checks', async () => {
@@ -2296,10 +2149,10 @@ describe('WindowedLayout route windows', () => {
         focused: true,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: false,
@@ -2310,10 +2163,10 @@ describe('WindowedLayout route windows', () => {
     const { container } = renderWindowedLayout();
     expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('chat:draft');
 
-    fireEvent.pointerDown(await screen.findByRole('region', { name: /routines/i }));
+    fireEvent.pointerDown(await screen.findByRole('region', { name: /notes/i }));
 
     await waitFor(() => {
-      expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('route:routines');
+      expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe('route:system-notes:notes');
     });
   });
 
@@ -2345,10 +2198,10 @@ describe('WindowedLayout route windows', () => {
         focused: true,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: false,
@@ -2407,10 +2260,10 @@ describe('WindowedLayout route windows', () => {
         focused: true,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 700, y: 70, width: 300, height: 360 },
         minimized: false,
         focused: false,
@@ -2419,7 +2272,7 @@ describe('WindowedLayout route windows', () => {
     ]);
 
     const { container } = renderWindowedLayout();
-    await screen.findByRole('region', { name: /routines/i });
+    await screen.findByRole('region', { name: /notes/i });
 
     const shell = container.querySelector('.windowed-os-shell');
     expect(shell?.getAttribute('data-native-browser-blocked')).toBe('true');
@@ -2429,7 +2282,7 @@ describe('WindowedLayout route windows', () => {
     expect(shell?.getAttribute('data-window-interaction')).toBeNull();
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBeNull();
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-iframe-blocked')).toBeNull();
-    expect(screen.getByRole('region', { name: /routines/i }).getAttribute('data-iframe-blocked')).toBeNull();
+    expect(screen.getByRole('region', { name: /notes/i }).getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('marks overlapping windows so embedded iframes cannot paint over the foreground stack', async () => {
@@ -2444,10 +2297,10 @@ describe('WindowedLayout route windows', () => {
         focused: true,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: false,
@@ -2457,22 +2310,22 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    await screen.findByRole('region', { name: /routines/i });
+    await screen.findByRole('region', { name: /notes/i });
     const chatWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="chat:draft"]');
-    const routinesWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="route:routines"]');
+    const notesWindow = document.querySelector<HTMLElement>('.wos-window[data-window-id="route:system-notes:notes"]');
     expect(chatWindow).toBeTruthy();
-    expect(routinesWindow).toBeTruthy();
+    expect(notesWindow).toBeTruthy();
     expect(chatWindow!.getAttribute('data-iframe-blocked')).toBe('true');
-    expect(routinesWindow!.getAttribute('data-iframe-blocked')).toBeNull();
+    expect(notesWindow!.getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('keeps window stacks browser-blocking while multiple windows are visible', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: false,
@@ -2499,7 +2352,7 @@ describe('WindowedLayout route windows', () => {
 
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
 
-    fireEvent.pointerDown(await screen.findByRole('region', { name: /routines/i }));
+    fireEvent.pointerDown(await screen.findByRole('region', { name: /notes/i }));
 
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
   });
@@ -2507,10 +2360,10 @@ describe('WindowedLayout route windows', () => {
   it('blocks embedded iframe paint when any route window is dragged beyond the desktop edge', async () => {
     seedWindowedWindows([
       {
-        id: 'route:system-routines:routines',
+        id: 'route:system-notes:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: -72, y: 58, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -2519,12 +2372,12 @@ describe('WindowedLayout route windows', () => {
     ]);
     const { container } = renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
+    const notesWindow = await screen.findByRole('region', { name: /notes/i });
     const shell = container.querySelector('.windowed-os-shell');
 
     expect(shell?.getAttribute('data-frame-paint-blocked')).toBe('true');
     expect(shell?.getAttribute('data-window-interaction')).toBe('true');
-    expect(routinesWindow.getAttribute('data-iframe-blocked')).toBeNull();
+    expect(notesWindow.getAttribute('data-iframe-blocked')).toBeNull();
   });
 
   it('does not auto-create taskbar windows for every known chat session', () => {
@@ -2769,10 +2622,10 @@ describe('WindowedLayout route windows', () => {
   it('keeps persisted nested route windows under the canonical parent app window', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines-detail',
+        id: 'route:notes-detail',
         kind: 'route',
-        title: 'Routines detail',
-        route: '/routines/checkpoint',
+        title: 'Notes detail',
+        route: '/notes/detail',
         bounds: { x: 60, y: 48, width: 800, height: 500 },
         minimized: false,
         focused: true,
@@ -2783,30 +2636,30 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/routines/checkpoint:windowed');
-    const routinesWindow = screen.getByRole('region', { name: /^routines$/i });
-    expect(routinesWindow.getAttribute('data-window-id')).toBe('route:routines');
-    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /^routines$/i })).toBeTruthy();
-    expect(screen.queryByRole('region', { name: /routines detail/i })).toBeNull();
+    expect(routeHost.textContent).toBe('/notes/detail:windowed');
+    const notesWindow = screen.getByRole('region', { name: /^notes$/i });
+    expect(notesWindow.getAttribute('data-window-id')).toBe('route:system-notes:notes');
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', { name: /^notes$/i })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: /notes detail/i })).toBeNull();
   });
 
   it('deduplicates persisted route windows that belong to the same desktop app', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 60, y: 48, width: 800, height: 500 },
         minimized: false,
         focused: false,
         singleton: true,
       },
       {
-        id: 'route:routines-detail',
+        id: 'route:notes-detail',
         kind: 'route',
-        title: 'Routines detail',
-        route: '/routines/checkpoint',
+        title: 'Notes detail',
+        route: '/notes/detail',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -2816,22 +2669,20 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    await screen.findByText('/routines/checkpoint:windowed');
+    await screen.findByText('/notes/detail:windowed');
 
-    expect(screen.getAllByRole('region', { name: /^routines$/i })).toHaveLength(1);
-    expect(screen.queryByRole('region', { name: /routines detail/i })).toBeNull();
-    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getAllByRole('button', { name: /^routines$/i })).toHaveLength(
-      1,
-    );
+    expect(screen.getAllByRole('region', { name: /^notes$/i })).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: /notes detail/i })).toBeNull();
+    expect(within(screen.getByRole('navigation', { name: /open windows/i })).getAllByRole('button', { name: /^notes$/i })).toHaveLength(1);
   });
 
   it('recovers persisted windows that load outside the current desktop bounds', async () => {
     seedWindowedWindows([
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 5000, y: -5000, width: 720, height: 420 },
         minimized: false,
         focused: true,
@@ -2841,10 +2692,10 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /routines/i });
+    const notesWindow = await screen.findByRole('region', { name: /notes/i });
     await waitFor(() => {
-      expect(routinesWindow.getAttribute('style')).toContain('left: 928px');
-      expect(routinesWindow.getAttribute('style')).toContain('top: -386px');
+      expect(notesWindow.getAttribute('style')).toContain('left: 928px');
+      expect(notesWindow.getAttribute('style')).toContain('top: -386px');
     });
   });
 
@@ -2852,10 +2703,10 @@ describe('WindowedLayout route windows', () => {
     mocks.registryLoading = true;
     seedWindowedWindows([
       {
-        id: 'route:workflows',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Workflows',
-        route: '/workflows',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 60, y: 48, width: 800, height: 500 },
         minimized: false,
         focused: true,
@@ -2866,8 +2717,8 @@ describe('WindowedLayout route windows', () => {
     renderWindowedLayout();
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/workflows:windowed');
-    expect(screen.getByRole('region', { name: /workflows/i })).toBeTruthy();
+    expect(routeHost.textContent).toBe('/notes:windowed');
+    expect(screen.getByRole('region', { name: /notes/i })).toBeTruthy();
   });
 
   it('focuses the next visible window when the focused route window is minimized', async () => {
@@ -2882,10 +2733,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -2895,20 +2746,20 @@ describe('WindowedLayout route windows', () => {
 
     const { container } = renderWindowedLayout();
 
-    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /minimize routines/i }));
+    expect(await screen.findByText('/notes:windowed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /minimize notes/i }));
 
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
-    expect(screen.queryByRole('region', { name: /routines/i })).toBeNull();
+    expect(screen.queryByRole('region', { name: /notes/i })).toBeNull();
     const minimizedWindow = Array.from(container.querySelectorAll<HTMLElement>('.wos-window[data-minimized="true"]')).find(
-      (windowElement) => windowElement.textContent?.includes('/routines:windowed'),
+      (windowElement) => windowElement.textContent?.includes('/notes:windowed'),
     );
     expect(minimizedWindow).not.toBeNull();
     expect(minimizedWindow?.getAttribute('data-minimized')).toBe('true');
     expect(minimizedWindow?.getAttribute('aria-hidden')).toBe('true');
     expect(minimizedWindow?.style.display).toBe('none');
-    expect(minimizedWindow?.querySelector('[data-testid="extension-route-host"]')?.textContent).toBe('/routines:windowed');
-    expect(screen.getByRole('button', { name: /routines/i }).getAttribute('data-minimized')).toBe('true');
+    expect(minimizedWindow?.querySelector('[data-testid="extension-route-host"]')?.textContent).toBe('/notes:windowed');
+    expect(screen.getByRole('button', { name: /notes/i }).getAttribute('data-minimized')).toBe('true');
   });
 
   it('emits parent lifecycle events when chat windows are minimized or closed', async () => {
@@ -2923,10 +2774,10 @@ describe('WindowedLayout route windows', () => {
         focused: true,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: false,
@@ -3465,10 +3316,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -3478,20 +3329,20 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
+    expect(await screen.findByText('/notes:windowed')).toBeTruthy();
     const taskbar = screen.getByRole('navigation', { name: /open windows/i });
-    const routinesTaskbarButton = within(taskbar).getByRole('button', { name: /^routines$/i });
+    const notesTaskbarButton = within(taskbar).getByRole('button', { name: /^notes$/i });
 
-    fireEvent.click(routinesTaskbarButton);
+    fireEvent.click(notesTaskbarButton);
 
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
-    expect(screen.queryByRole('region', { name: /^routines$/i })).toBeNull();
-    expect(routinesTaskbarButton.getAttribute('data-minimized')).toBe('true');
+    expect(screen.queryByRole('region', { name: /^notes$/i })).toBeNull();
+    expect(notesTaskbarButton.getAttribute('data-minimized')).toBe('true');
 
-    fireEvent.click(routinesTaskbarButton);
+    fireEvent.click(notesTaskbarButton);
 
-    const restoredWindow = await screen.findByRole('region', { name: /^routines$/i });
-    const restoredTaskbarButton = within(taskbar).getByRole('button', { name: /^routines$/i });
+    const restoredWindow = await screen.findByRole('region', { name: /^notes$/i });
+    const restoredTaskbarButton = within(taskbar).getByRole('button', { name: /^notes$/i });
     expect(restoredWindow.getAttribute('data-focused')).toBe('true');
     expect(restoredTaskbarButton.getAttribute('data-minimized')).not.toBe('true');
   });
@@ -3508,10 +3359,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:system-routines:routines',
+        id: 'route:system-notes:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -3521,28 +3372,28 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /maximize routines/i }));
-    expect(screen.getByRole('button', { name: /restore routines/i })).toBeTruthy();
+    expect(await screen.findByText('/notes:windowed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /maximize notes/i }));
+    expect(screen.getByRole('button', { name: /restore notes/i })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /close routines/i }));
-    expect(screen.queryByRole('region', { name: /^routines$/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /close notes/i }));
+    expect(screen.queryByRole('region', { name: /^notes$/i })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^routines$/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^notes$/i }));
 
-    const reopenedWindow = await screen.findByRole('region', { name: /^routines$/i });
-    expect(within(reopenedWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
-    expect(within(reopenedWindow).queryByRole('button', { name: /restore routines/i })).toBeNull();
+    const reopenedWindow = await screen.findByRole('region', { name: /^notes$/i });
+    expect(within(reopenedWindow).getByRole('button', { name: /maximize notes/i })).toBeTruthy();
+    expect(within(reopenedWindow).queryByRole('button', { name: /restore notes/i })).toBeNull();
   });
 
   it('restores a persisted maximized route window even when in-memory restore bounds are gone', async () => {
     seedWindowedWindows([
       {
-        id: 'route:system-routines:routines',
+        id: 'route:system-notes:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 0, y: 0, width: 1024, height: 724 },
         minimized: false,
         focused: true,
@@ -3552,16 +3403,16 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    const routinesWindow = await screen.findByRole('region', { name: /^routines$/i });
-    expect(within(routinesWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    expect(within(notesWindow).getByRole('button', { name: /maximize notes/i })).toBeTruthy();
 
-    fireEvent.click(within(routinesWindow).getByRole('button', { name: /maximize routines/i }));
+    fireEvent.click(within(notesWindow).getByRole('button', { name: /maximize notes/i }));
 
-    const restoredWindow = await screen.findByRole('region', { name: /^routines$/i });
+    const restoredWindow = await screen.findByRole('region', { name: /^notes$/i });
     expect(restoredWindow.style.width).not.toBe('1024px');
     expect(restoredWindow.style.height).not.toBe('724px');
-    expect(within(restoredWindow).getByRole('button', { name: /maximize routines/i })).toBeTruthy();
-    expect(within(restoredWindow).queryByRole('button', { name: /restore routines/i })).toBeNull();
+    expect(within(restoredWindow).getByRole('button', { name: /maximize notes/i })).toBeTruthy();
+    expect(within(restoredWindow).queryByRole('button', { name: /restore notes/i })).toBeNull();
   });
 
   it('focuses the next visible window when the focused route window is closed', async () => {
@@ -3576,10 +3427,10 @@ describe('WindowedLayout route windows', () => {
         focused: false,
       },
       {
-        id: 'route:routines',
+        id: 'route:notes',
         kind: 'route',
-        title: 'Routines',
-        route: '/routines',
+        title: 'Notes',
+        route: '/notes',
         bounds: { x: 90, y: 70, width: 760, height: 520 },
         minimized: false,
         focused: true,
@@ -3589,11 +3440,11 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    expect(await screen.findByText('/routines:windowed')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /close routines/i }));
+    expect(await screen.findByText('/notes:windowed')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /close notes/i }));
 
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
-    expect(screen.queryByRole('region', { name: /routines/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /routines/i })).toBeNull();
+    expect(screen.queryByRole('region', { name: /notes/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /notes/i })).toBeNull();
   });
 });

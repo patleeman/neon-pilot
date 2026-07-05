@@ -39,14 +39,7 @@ const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_
   files: '/files',
   terminal: '/terminal',
   automations: '/automations',
-  workflows: '/workflows',
-  gateways: '/gateways',
-  'ai-gateway': '/ai-gateway',
-  'model-arena': '/model-arena',
-  routines: '/routines',
   'app-manager': '/apps',
-  skills: '/skills',
-  diagnostics: '/telemetry',
   settings: '/settings',
 };
 
@@ -61,14 +54,7 @@ const CANONICAL_WINDOWED_APP_OWNER_PACKAGES: Readonly<Partial<Record<(typeof CAN
   files: 'system-files',
   terminal: 'system-terminal',
   automations: 'system-automations',
-  workflows: 'system-dynamic-workflows',
-  gateways: 'system-gateways',
-  'ai-gateway': 'system-model-gateway',
-  'model-arena': 'system-model-arena',
-  routines: 'system-routines',
   'app-manager': 'system-extension-manager',
-  skills: 'system-skills',
-  diagnostics: 'system-telemetry',
 };
 
 export function canonicalWindowedAppForTitle(title: string): WindowedDesktopAppDefinition | undefined {

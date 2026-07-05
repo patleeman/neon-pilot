@@ -52,14 +52,7 @@ export const CANONICAL_WINDOWED_DESKTOP_APPS = [
   { id: 'files', title: 'Files', accent: 'settings', aliases: ['workspace', 'file explorer', 'finder'] },
   { id: 'terminal', title: 'Terminal', accent: 'telemetry', aliases: ['shell', 'command line', 'terminal window'] },
   { id: 'automations', title: 'Automations', accent: 'automations', aliases: ['tasks', 'scheduled runs', 'background runs'] },
-  { id: 'workflows', title: 'Workflows', accent: 'workflows', aliases: ['saved workflows', 'runs', 'workflow runs'] },
-  { id: 'gateways', title: 'Gateways', accent: 'gateways', aliases: ['gateway', 'connectors', 'messaging'] },
-  { id: 'ai-gateway', title: 'AI Gateway', accent: 'gateways', aliases: ['models', 'routing', 'providers'] },
-  { id: 'model-arena', title: 'Model Arena', accent: 'model-arena', aliases: ['arena', 'duels', 'model comparison'] },
-  { id: 'routines', title: 'Routines', accent: 'routines', aliases: ['hooks', 'agent hooks', 'before agent start'] },
   { id: 'app-manager', title: 'App Manager', accent: 'apps', aliases: ['extensions', 'extension manager', 'apps', 'plugins'] },
-  { id: 'skills', title: 'Skills', accent: 'skills', aliases: ['skill manager', 'agent skills'] },
-  { id: 'diagnostics', title: 'Diagnostics', accent: 'diagnostics', aliases: ['logs', 'telemetry', 'health'] },
   { id: 'settings', title: 'Settings', accent: 'settings', aliases: ['preferences', 'providers', 'desktop', 'shortcuts'] },
 ] as const satisfies readonly WindowedDesktopAppDefinition[];
 
@@ -68,15 +61,8 @@ export const CANONICAL_WINDOWED_APP_SIZES: Partial<Record<string, WindowedDeskto
   Files: { width: 820, height: 560 },
   Terminal: { width: 820, height: 500 },
   Automations: { width: 1040, height: 660 },
-  Gateways: { width: 1040, height: 660 },
-  'AI Gateway': { width: 1040, height: 660 },
-  'Model Arena': { width: 1040, height: 660 },
-  Routines: { width: 1040, height: 660 },
   Settings: { width: 980, height: 560 },
   'App Manager': { width: 1040, height: 660 },
-  Skills: { width: 1040, height: 660 },
-  Workflows: { width: 1040, height: 612 },
-  Diagnostics: { width: 920, height: 540 },
 };
 
 export function cx(...classes: Array<string | false | null | undefined>): string {

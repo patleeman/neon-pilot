@@ -96,7 +96,7 @@ describe('windowed app registry', () => {
       ]),
     );
 
-    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Skills', 'Settings']);
+    expect(apps.map((app) => app.title)).toEqual(['Chat', 'Settings']);
   });
 
   it('lets canonical app metadata win over duplicate package nav and view contributions', () => {
