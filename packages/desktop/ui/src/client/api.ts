@@ -1416,6 +1416,46 @@ export const api = {
     return get<GlobalActivityResult>(`/api/activity${qs ? `?${qs}` : ''}`);
   },
 
+  // ── Documents store ─────────────────────────────────────────────
+
+  documents: {
+    collections: async (owner?: string) => {
+      const params = owner ? `?owner=${encodeURIComponent(owner)}` : '';
+      return get<import('../shared/types').CollectionListResult>(`/api/documents/collections${params}`);
+    },
+    upsertCollection: async (owner: string, collection: string, options?: { description?: string }) => {
+      return put<{ collection: import('../shared/types').DocumentCollection }>(
+        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}`,
+        options ?? {},
+      );
+    },
+    list: async (owner: string, collection: string, options?: { limit?: number; offset?: number }) => {
+      const params = new URLSearchParams();
+      if (options?.limit !== undefined) params.set('limit', String(options.limit));
+      if (options?.offset !== undefined) params.set('offset', String(options.offset));
+      const qs = params.toString();
+      return get<import('../shared/types').ListDocumentsResult>(
+        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}${qs ? `?${qs}` : ''}`,
+      );
+    },
+    get: async (owner: string, collection: string, id: string) => {
+      return get<import('../shared/types').DocumentResult>(
+        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+      );
+    },
+    put: async (owner: string, collection: string, id: string, body: unknown) => {
+      return put<import('../shared/types').DocumentResult>(
+        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+        body,
+      );
+    },
+    delete: async (owner: string, collection: string, id: string) => {
+      return del<{ deleted: boolean }>(
+        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+      );
+    },
+  },
+
   // ── Setup readiness ─────────────────────────────────────────────
 
   setupReadiness: async () => get<SetupReadinessSnapshot>('/setup/readiness'),

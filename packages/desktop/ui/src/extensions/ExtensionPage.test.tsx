@@ -228,17 +228,35 @@ describe('ExtensionPage', () => {
     expect(screen.queryByRole('link', { name: 'Go to Chat' })).toBeNull();
   });
 
-  it('renders honest pending states for core roster apps before their stores land', () => {
+  it('renders core feature pages including DocumentsPage for /documents, pending state for /inbox, and ActivityPage for /activity', () => {
+    vi.mocked(useApi).mockReturnValue({
+      data: { collections: [] },
+      loading: false,
+      refreshing: false,
+      error: null,
+      refetch: vi.fn(),
+      replaceData: vi.fn(),
+    });
+
     render(
       <MemoryRouter initialEntries={['/documents']}>
         <ExtensionPage shellPresentation="windowed" />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('status', { name: 'Documents store pending' })).toBeTruthy();
-    expect(screen.getByText('Shared app collections will appear here after the documents store lands.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Documents' })).toBeTruthy();
+    expect(screen.getByText('No collections yet')).toBeTruthy();
 
     cleanup();
+    vi.mocked(useApi).mockReset();
+    vi.mocked(useApi).mockReturnValue({
+      data: null,
+      loading: true,
+      refreshing: false,
+      error: null,
+      refetch: vi.fn(),
+      replaceData: vi.fn(),
+    });
     render(
       <MemoryRouter initialEntries={['/inbox']}>
         <ExtensionPage shellPresentation="windowed" />
@@ -251,6 +269,7 @@ describe('ExtensionPage', () => {
     ).toBeTruthy();
 
     cleanup();
+    vi.mocked(useApi).mockReset();
     vi.mocked(useApi).mockReturnValue({
       data: { items: [], total: 0 },
       loading: false,

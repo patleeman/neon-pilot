@@ -5,6 +5,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { addNotification } from '../components/notifications/notificationStore';
 import { ButtonLink, CenteredMessage, ErrorState, QuietLoadingState } from '../components/ui';
 import { ActivityPage } from '../pages/ActivityPage';
+import { DocumentsPage } from '../pages/DocumentsPage';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
@@ -17,13 +18,7 @@ const CORE_WINDOWED_PLACEHOLDER_PAGES = new Map<
     title: string;
   }
 >([
-  [
-    '/documents',
-    {
-      title: 'Documents store pending',
-      body: 'Shared app collections will appear here after the documents store lands.',
-    },
-  ],
+  // '/documents' is now handled by CORE_WINDOWED_FEATURE_PAGES; keep placeholder for '/inbox'
   [
     '/inbox',
     {
@@ -33,7 +28,10 @@ const CORE_WINDOWED_PLACEHOLDER_PAGES = new Map<
   ],
 ]);
 
-const CORE_WINDOWED_FEATURE_PAGES = new Map<string, () => JSX.Element>([['/activity', () => <ActivityPage />]]);
+const CORE_WINDOWED_FEATURE_PAGES = new Map<string, () => JSX.Element>([
+  ['/activity', () => <ActivityPage />],
+  ['/documents', () => <DocumentsPage />],
+]);
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
   {
     id: 'extensions-page',

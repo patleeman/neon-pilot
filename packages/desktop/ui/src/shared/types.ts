@@ -1708,7 +1708,41 @@ export interface ToolsState {
   packageInstall: PackageInstallState;
 }
 
-// ── Knowledge editor ─────────────────────────────────────────────────────────
+// ── Documents ─────────────────────────────────────────────────────────────────
+
+export interface DocumentCollection {
+  owner: string;
+  collection: string;
+  description: string;
+  defaultGrantRead: 'owner' | 'all' | 'none';
+  defaultGrantWrite: 'owner' | 'all' | 'none';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentRecord {
+  owner: string;
+  collection: string;
+  id: string;
+  body: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CollectionListResult {
+  collections: DocumentCollection[];
+}
+
+export interface ListDocumentsResult {
+  records: DocumentRecord[];
+  total: number;
+}
+
+export interface DocumentResult {
+  document: DocumentRecord;
+}
+
+// ── Knowledge editor ────────────────────────────────────────────────────────
 
 export interface KnowledgeEntry {
   id: string;
