@@ -177,6 +177,8 @@ export interface WindowedChatToolLauncherProps {
   items: ReadonlyArray<WindowedChatToolLauncherItem>;
   statusLabel?: string;
   statusDetail?: string | null;
+  statusTitle?: string;
+  onStatusSelect?: () => void;
   ariaLabel?: string;
   className?: string;
 }
@@ -185,15 +187,27 @@ export function WindowedChatToolLauncher({
   items,
   statusLabel,
   statusDetail,
+  statusTitle,
+  onStatusSelect,
   ariaLabel = 'Chat window controls',
   className,
 }: WindowedChatToolLauncherProps) {
+  const statusContent = statusLabel ? (
+    <>
+      <div className="wos-chat-window-toolbar__status-label">{statusLabel}</div>
+      {statusDetail ? <div className="wos-chat-window-toolbar__status-detail">{statusDetail}</div> : null}
+    </>
+  ) : null;
   return (
     <div className={cx('wos-chat-window-toolbar', className)} aria-label={ariaLabel}>
-      {statusLabel ? (
-        <div className="wos-chat-window-toolbar__status">
-          <div className="wos-chat-window-toolbar__status-label">{statusLabel}</div>
-          {statusDetail ? <div className="wos-chat-window-toolbar__status-detail">{statusDetail}</div> : null}
+      {statusLabel && onStatusSelect ? (
+        <button type="button" className="wos-chat-window-toolbar__status" title={statusTitle} onClick={onStatusSelect}>
+          {statusContent}
+        </button>
+      ) : null}
+      {statusLabel && !onStatusSelect ? (
+        <div className="wos-chat-window-toolbar__status" title={statusTitle}>
+          {statusContent}
         </div>
       ) : null}
       <div className="wos-chat-window-toolbar__actions">

@@ -69,6 +69,7 @@ import {
   writeWindowedOsTheme,
 } from '../ui-state/windowedShell';
 import { dispatchWindowedParentWindowLifecycle } from '../windowed/windowedChildWindowEvents';
+import { DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT } from './conversation/draftWorkspacePickerCommands';
 import { Layout } from './Layout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT, type WindowedShellBrowserSuspendDetail } from './workbench/workbenchBrowserEvents';
 
@@ -1074,6 +1075,11 @@ function WindowRouteBody({
   const browserUnavailable = extensionRegistry.loading || !browserSurface;
   const filesUnavailable = extensionRegistry.loading || !filesSurface;
   const terminalUnavailable = extensionRegistry.loading || !terminalSurface;
+  const workspaceStatusDetail = workspaceCwd?.trim() ? workspaceCwd : 'No workspace';
+  const handleWorkspaceStatusSelect = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new Event(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
+  }, []);
   const toolLauncherItems = useMemo<WindowedChatToolLauncherItem[]>(
     () => [
       {
@@ -1148,7 +1154,9 @@ function WindowRouteBody({
       <WindowedChatToolLauncher
         items={toolLauncherItems}
         statusLabel="Chat"
-        statusDetail={workspaceCwd?.trim() ? workspaceCwd : 'No workspace'}
+        statusDetail={workspaceStatusDetail}
+        statusTitle={workspaceCwd?.trim() ? 'Change workspace' : 'Choose workspace'}
+        onStatusSelect={handleWorkspaceStatusSelect}
       />
       <WindowRouteScope route={route} onNavigate={onNavigate}>
         <Routes>
