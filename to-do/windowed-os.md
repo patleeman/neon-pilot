@@ -46,6 +46,7 @@ The deeper app/extension product model remains important, but the current goal i
 1. Full live dark-mode QA pass.
    - Screenshot and inspect Chat, Settings, App Manager/Extensions, Skills, Gateways, Model Arena, Routines, Automations, Terminal, Browser, Files, and Diagnostics in light and dark.
    - Fix contrast, spacing, typography, control treatment, hover/focus states, and clipped/overlapping content as each issue is found.
+   - 2026-07-05 progress: crowded live dark-mode taskbars now scroll the focused app button into view when a far-right window becomes active, keeping the active button out from under the trailing theme controls. Verified in Electron/CDP with Automations focused after opening the dark app matrix.
 2. Settings live route polish.
    - Verify the real `shellPresentation="windowed"` Settings route, not only Storybook targets.
    - Polish provider settings, extension/app settings components, dense rows, section navigation, narrow window behavior, and the removal of unnecessary right-side/stable-shell panels.

@@ -320,6 +320,29 @@ describe('Taskbar interactions', () => {
     expect(screen.getByText('New conversation').getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('scrolls the focused taskbar window into view', () => {
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      render(
+        <Taskbar
+          startOpen={false}
+          onToggleStart={() => undefined}
+          items={[
+            { id: 'settings', title: 'Settings', focused: false, accent: 'settings', onSelect: () => undefined },
+            { id: 'automations', title: 'Automations', focused: true, accent: 'automations', onSelect: () => undefined },
+          ]}
+        />,
+      );
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' });
+  });
+
   it('renders menu item status chips for window state', () => {
     render(
       <WindowedMenuPanel

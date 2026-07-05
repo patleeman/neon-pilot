@@ -1679,6 +1679,7 @@ export function Taskbar({
   onOpenGroupMenu,
 }: TaskbarProps) {
   const groupRefs = useRef(new Map<string, HTMLDivElement>());
+  const taskbarItemsRef = useRef<HTMLElement | null>(null);
   const [openGroupId, setOpenGroupId] = useState<string | null>(defaultOpenGroupId);
   const [menuAnchors, setMenuAnchors] = useState<Record<string, { left: number; bottom: number }>>({});
 
@@ -1734,13 +1735,19 @@ export function Taskbar({
     }
   }, [groups, openGroupId]);
 
+  useEffect(() => {
+    const focusedItem = taskbarItemsRef.current?.querySelector<HTMLElement>('.wos-taskbar__button[data-focused="true"]');
+    if (typeof focusedItem?.scrollIntoView !== 'function') return;
+    focusedItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [groups, items]);
+
   return (
     <>
       <footer className="wos-taskbar">
         <button type="button" className="wos-taskbar__start" aria-haspopup="dialog" aria-expanded={startOpen} onClick={onToggleStart}>
           <WindowedAppTile label="Neon Pilot" accent="extensions" variant="taskbar" />
         </button>
-        <nav className="wos-taskbar__items" aria-label="Open windows">
+        <nav ref={taskbarItemsRef} className="wos-taskbar__items" aria-label="Open windows">
           {groups.map((group) => (
             <div
               key={group.id}
