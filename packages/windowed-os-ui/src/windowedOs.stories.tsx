@@ -184,7 +184,7 @@ function StoryChatWindowToolbar({ activeTool }: { activeTool?: 'browser' | 'file
     },
     {
       id: 'files',
-      label: 'Open Workspace window',
+      label: 'Open Files window',
       icon: <StoryToolbarIcon name="files" />,
       active: activeTool === 'files',
       onSelect: () => undefined,
@@ -358,7 +358,7 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
       </WindowFrame>
       <WindowFrame
         windowId="workspace:release-notes"
-        title="Workspace"
+        title="Files"
         accent="chat"
         parentWindowId="chat:release-notes"
         parentWindowTitle="Release notes"
@@ -375,11 +375,11 @@ function ChatWithToolWindowsStory({ theme = 'light' }: { theme?: 'light' | 'dark
       >
         <div className="wos-window-route-body wos-window-route-body--files" data-windowed-subwindow="files">
           <div className="wos-chat-files-dialog__body">
-            <div className="wos-workspace-child-preview" aria-label="Workspace files preview">
+            <div className="wos-workspace-child-preview" aria-label="Files preview">
               <WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">
                 <WindowedBadge tone="neutral">3 open</WindowedBadge>
               </WindowedWorkspaceLocationBar>
-              <WindowedPageSection title="Workspace" meta="Open">
+              <WindowedPageSection title="Files" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="CHANGELOG.md" meta="Modified" detail="Release notes" active accent="chat" />
                   <WindowedListItem title="extensions/system-gateways" meta="Built" detail="Frontend bundle" accent="gateways" />
@@ -3281,7 +3281,7 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
   return (
     <div className="windowed-os-shell" data-wos-theme={theme} data-wos-theme-mode={theme} style={{ minHeight: 620, padding: 24 }}>
       <WindowFrame
-        title="Workspace"
+        title="Files"
         accent="chat"
         focused
         parentWindowTitle="New conversation"
@@ -3296,13 +3296,13 @@ function WorkspaceWindowStory({ theme = 'light' }: { theme?: 'light' | 'dark' })
           data-parent-window-title="New conversation"
         >
           <div className="wos-chat-files-dialog__body" data-windowed-subwindow="files">
-            <div className="wos-workspace-child-preview" aria-label="Workspace files preview">
+            <div className="wos-workspace-child-preview" aria-label="Files preview">
               <WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">
                 <WindowedBadge tone="positive">Synced</WindowedBadge>
                 <WindowedBadge>5 items</WindowedBadge>
                 <WindowedBadge>Directory</WindowedBadge>
               </WindowedWorkspaceLocationBar>
-              <WindowedPageSection title="Workspace" meta="Open">
+              <WindowedPageSection title="Files" meta="Open">
                 <WindowedList>
                   <WindowedListItem title="packages/desktop/ui/src/components" meta="Directory" detail="source" active accent="chat" />
                   <WindowedListItem title="packages/windowed-os-ui/src" meta="Directory" detail="design system" accent="extensions" />

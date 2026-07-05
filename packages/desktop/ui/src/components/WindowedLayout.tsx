@@ -1067,7 +1067,7 @@ function WindowedChatFilesWindowBody({
           instanceId={`${parentWindowId}:files`}
         />
       ) : (
-        <WindowedChildWindowEmptyState title="Workspace unavailable">The Files extension is not registered.</WindowedChildWindowEmptyState>
+        <WindowedChildWindowEmptyState title="Files unavailable">The Files extension is not registered.</WindowedChildWindowEmptyState>
       )}
     </div>
   );
@@ -1189,14 +1189,14 @@ function WindowRouteBody({
       },
       {
         id: 'files',
-        label: 'Open Workspace window',
+        label: 'Open Files window',
         icon: <WindowedChatToolbarIcon name="files" />,
         disabled: filesUnavailable,
         title: extensionRegistry.loading
           ? 'Loading tools.'
           : filesSurface
-            ? 'Open Workspace window'
-            : 'Enable the Files extension to open a Workspace window.',
+            ? 'Open Files window'
+            : 'Enable the Files extension to open a Files window.',
         onSelect: onOpenFilesWindow,
       },
       {
@@ -1471,7 +1471,7 @@ export function WindowedLayout() {
       const next: DesktopWindowModel = {
         id,
         kind,
-        title: kind === 'browser' ? 'Browser' : kind === 'files' ? 'Workspace' : 'Terminal',
+        title: kind === 'browser' ? 'Browser' : kind === 'files' ? 'Files' : 'Terminal',
         route: parent.route,
         bounds: childWindowBounds(parent.bounds, desktopRect(desktopRef.current), kind),
         minimized: false,

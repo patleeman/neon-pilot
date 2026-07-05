@@ -1031,10 +1031,10 @@ describe('Windowed OS Storybook examples', () => {
           },
           {
             id: 'files',
-            label: 'Open Workspace window',
+            label: 'Open Files window',
             icon: <span aria-hidden="true">F</span>,
             disabled: true,
-            title: 'Enable the Files extension to open a Workspace window.',
+            title: 'Enable the Files extension to open a Files window.',
             onSelect: () => undefined,
           },
         ]}
@@ -1050,7 +1050,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(html).toContain('data-density="icon"');
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('disabled=""');
-    expect(html).toContain('Enable the Files extension to open a Workspace window.');
+    expect(html).toContain('Enable the Files extension to open a Files window.');
   });
 
   it('renders browser toolbars through a reusable windowed primitive', () => {
@@ -2550,12 +2550,12 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('className="wos-chat-files-dialog__body"');
     expect(source).toContain('className="wos-workspace-child-preview"');
     expect(source).toContain('<WindowedWorkspaceLocationBar location="/Users/patrick/workingdir/neon-pilot">');
-    expect(source).toContain('aria-label="Workspace files preview"');
+    expect(source).toContain('aria-label="Files preview"');
     expect(source).not.toContain('meta="Attached child window"');
     expect(source).toContain('/Users/patrick/workingdir/neon-pilot');
     expect(source).toContain('<WindowedBadge>5 items</WindowedBadge>');
     expect(source).toContain('<WindowedBadge>Directory</WindowedBadge>');
-    expect(source).toContain('<WindowedPageSection title="Workspace" meta="Open">');
+    expect(source).toContain('<WindowedPageSection title="Files" meta="Open">');
     expect(source).not.toContain('Chat-attached child window');
     expect(source).not.toContain('<WindowedPageSection title="Selection"');
     expect(source).toContain('function BrowserWindowStory');
@@ -2606,7 +2606,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).not.toContain('workbench-hidden');
     expect(source).not.toContain('workbench-visible');
     expect(source).toContain("label: 'Open Browser window'");
-    expect(source).toContain("label: 'Open Workspace window'");
+    expect(source).toContain("label: 'Open Files window'");
     expect(source).toContain("label: 'Open Terminal window'");
     expect(source).toContain('icon: <StoryToolbarIcon name="files" />');
     expect(source).toContain('parentWindowId="chat:release-notes"');
@@ -2614,7 +2614,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('data-windowed-subwindow="files"');
     expect(source).toContain('className="wos-chat-files-dialog__body"');
     expect(source).toContain('className="wos-workspace-child-preview"');
-    expect(source).toContain('aria-label="Workspace files preview"');
+    expect(source).toContain('aria-label="Files preview"');
     expect(source).toContain('className="ui-windowed-browser-host"');
     expect(source).toContain('data-windowed-browser-host="true"');
     expect(source).toContain('className="ui-windowed-browser-host__blocker"');

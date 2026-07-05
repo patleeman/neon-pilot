@@ -384,13 +384,13 @@ describe('WindowedLayout route windows', () => {
     ).toContain('Enable the Browser');
     expect(
       within(chatWindow)
-        .getByRole('button', { name: /open workspace window/i })
+        .getByRole('button', { name: /open files window/i })
         .getAttribute('data-density'),
     ).toBe('icon');
-    expect((within(chatWindow).getByRole('button', { name: /open workspace window/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(chatWindow).getByRole('button', { name: /open files window/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(
       within(chatWindow)
-        .getByRole('button', { name: /open workspace window/i })
+        .getByRole('button', { name: /open files window/i })
         .getAttribute('title'),
     ).toContain('Enable the Files');
     expect(
@@ -2874,10 +2874,10 @@ describe('WindowedLayout route windows', () => {
 
     const { container } = renderWindowedLayout();
 
-    fireEvent.click(screen.getByRole('button', { name: /workspace window/i }));
+    fireEvent.click(screen.getByRole('button', { name: /files window/i }));
 
     const chatWindow = container.querySelector<HTMLElement>('[data-window-id="chat:draft"]');
-    const workspaceWindow = screen.getByRole('region', { name: 'Workspace' });
+    const workspaceWindow = screen.getByRole('region', { name: 'Files' });
     expect(workspaceWindow.getAttribute('data-window-id')).toBe('chat:draft:files');
     expect(workspaceWindow.getAttribute('data-parent-window-attached')).toBe('true');
     expect(workspaceWindow.getAttribute('data-parent-window-id')).toBe('chat:draft');
@@ -2890,7 +2890,7 @@ describe('WindowedLayout route windows', () => {
     expect(workspaceBody?.getAttribute('data-parent-window-id')).toBe('chat:draft');
     expect(workspaceBody?.getAttribute('data-parent-window-title')).toBe('New conversation');
     const workspaceTaskbarButton = within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', {
-      name: /^workspace$/i,
+      name: /^files$/i,
     });
     expect(workspaceTaskbarButton.querySelector('.wos-app-tile')?.getAttribute('data-accent')).toBe('chat');
 
@@ -2909,7 +2909,7 @@ describe('WindowedLayout route windows', () => {
     expect(workspaceWindow.getAttribute('data-minimized')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
-    expect(screen.queryByRole('region', { name: 'Workspace' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Files' })).toBeNull();
   });
 
   it('retargets chat child windows when a draft chat navigates into a saved conversation', async () => {
