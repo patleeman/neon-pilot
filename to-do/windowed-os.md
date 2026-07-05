@@ -83,6 +83,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 validation: focused registry/windowed-shell/windowed-design tests, desktop UI build, and live Electron/CDP QA confirmed Browser, Files, and Terminal open together from the Start menu as independent `app:*` windows, keep their native app surfaces visible without chat parent metadata, and survive reload without being pruned. Screenshot QA: `/tmp/windowed-os-standalone-browser-files-terminal-coexist-live.png` and `/tmp/windowed-os-standalone-tool-apps-after-reload-live.png`.
    - 2026-07-05 progress: renamed the canonical Windowed OS Storybook App Manager examples from Extensions/App Extension install language to App Manager/App Install, swapped visible sample copy to app/app-package wording, and moved the design-system hooks from `wos-extension-*` to `wos-app-*` for the app manager detail/install patterns.
    - 2026-07-05 validation: `@neon-pilot/windowed-os-ui` tests, TypeScript build, Storybook build, and built-Storybook Chrome QA confirmed the App Manager and App Install stories render with app-facing labels, new app hooks, and no visible `Extensions` copy. Screenshot QA: `/tmp/windowed-os-storybook-app-manager-page.png` and `/tmp/windowed-os-storybook-app-install-dialog.png`.
+   - 2026-07-05 progress: App Manager backend action results now use app-package language for smoke checks, enable/disable, and registry reload messages while preserving extension ids/actions as the runtime boundary.
+   - 2026-07-05 validation: focused App Manager backend/manifest/frontend tests and `pnpm run extension:build -- extensions/system-extension-manager` passed for the app-facing backend result copy.
 
 ### Next concrete implementation backlog
 

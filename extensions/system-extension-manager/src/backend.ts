@@ -93,7 +93,7 @@ export async function smokeExtension(input: ExtensionIdInput, _ctx: ExtensionBac
     ok: selfTest.ok,
     extensionId,
     checks: selfTest.checks,
-    text: selfTest.ok ? `Extension ${extensionId} smoke checks passed.` : `Extension ${extensionId} smoke checks failed.`,
+    text: selfTest.ok ? `App package ${extensionId} smoke checks passed.` : `App package ${extensionId} smoke checks failed.`,
   };
 }
 
@@ -137,7 +137,7 @@ export async function updateExtensionSources(input: unknown, ctx: ExtensionBacke
 
 export async function reloadExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
   await invalidateExtensionRegistryReadCaches();
-  return { ok: true, reloaded: true, message: 'Extension registry caches were invalidated; reopen contributed routes if needed.' };
+  return { ok: true, reloaded: true, message: 'App package registry caches were invalidated; reopen app pages if needed.' };
 }
 
 export async function manageExtension(input: unknown, ctx: ExtensionBackendContext) {
@@ -163,7 +163,12 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'enable' || action === 'disable') {
     const extensionId = requireExtensionId(body);
     ctx.extensions?.setEnabled?.(extensionId, action === 'enable');
-    return { ok: true, extensionId, enabled: action === 'enable', text: `${action === 'enable' ? 'Enabled' : 'Disabled'} ${extensionId}.` };
+    return {
+      ok: true,
+      extensionId,
+      enabled: action === 'enable',
+      text: `${action === 'enable' ? 'Enabled' : 'Disabled'} app package ${extensionId}.`,
+    };
   }
   throw new Error(`Unsupported extension manager action: ${action}`);
 }
