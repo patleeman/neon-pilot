@@ -70,6 +70,7 @@ The deeper app/extension product model remains important, but the current goal i
    - Current launcher still derives most apps from extension nav/main-view contributions.
    - Add explicit core app coverage where it reduces beta fragility, while leaving the full app-registry rewrite deferred.
    - Validate by opening every Start menu app in the live windowed shell.
+   - 2026-07-05 progress: the Start menu now fills missing canonical beta apps from the Windowed OS app roster after extension contributions are collected, so disabled/missing first-party nav contributions no longer remove Automations, Workflows, Gateways, AI Gateway, Model Arena, Routines, App Manager, Skills, or Diagnostics from the launcher. Focused coverage verifies complete canonical ordering and launch routing for fallback apps.
 2. Retire App Manager's live right rail in favor of the existing parent-attached detail dialog.
    - 2026-07-05 progress: removed the `/extensions` route `rightSidebarView` contribution, deleted the stale rail export/implementation, and updated route-shell guardrails so App Manager stays main-only with details owned by the page/dialog flow.
    - Validate App Manager row click/details, narrow layout, dark mode, and no right-sidebar toggle in Windowed OS.

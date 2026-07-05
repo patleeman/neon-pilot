@@ -637,7 +637,7 @@ describe('WindowedLayout route windows', () => {
 
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
     const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
-    fireEvent.change(search, { target: { value: 'rou' } });
+    fireEvent.change(search, { target: { value: 'routines' } });
     fireEvent.keyDown(search, { key: 'Enter' });
 
     const routeHost = await screen.findByTestId('extension-route-host');
@@ -668,21 +668,21 @@ describe('WindowedLayout route windows', () => {
 
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
     const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
-    fireEvent.change(search, { target: { value: 'g' } });
+    fireEvent.change(search, { target: { value: 'gateway' } });
 
     const gateways = within(startMenu).getByRole('button', { name: 'Gateways' });
-    const diagnostics = within(startMenu).getByRole('button', { name: 'Diagnostics' });
+    const aiGateway = within(startMenu).getByRole('button', { name: 'AI Gateway' });
     expect(gateways.getAttribute('data-active')).toBe('true');
 
     fireEvent.keyDown(search, { key: 'ArrowDown' });
 
     expect(gateways.getAttribute('data-active')).toBe('false');
-    expect(diagnostics.getAttribute('data-active')).toBe('true');
+    expect(aiGateway.getAttribute('data-active')).toBe('true');
 
     fireEvent.keyDown(search, { key: 'Enter' });
 
     const routeHost = await screen.findByTestId('extension-route-host');
-    expect(routeHost.textContent).toBe('/telemetry:windowed');
+    expect(routeHost.textContent).toBe('/ai-gateway:windowed');
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
@@ -775,6 +775,40 @@ describe('WindowedLayout route windows', () => {
       expect(tile?.getAttribute('data-variant')).toBe('menu');
       expect(tile?.getAttribute('data-accent')).toBe(app.accent);
     }
+  });
+
+  it('keeps canonical beta apps available when extension nav contributions are missing', async () => {
+    mocks.extensions = [
+      {
+        id: 'system-automations',
+        enabled: false,
+        contributes: {
+          nav: [{ id: 'automations', label: 'Automations', route: '/automations' }],
+        },
+      },
+      {
+        id: 'system-routines',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'routines', label: 'Routines', route: '/routines' }],
+        },
+      },
+    ];
+
+    const { container } = renderWindowedLayout();
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const menuTitles = Array.from(container.querySelectorAll('.wos-start-menu__item .wos-app-tile__label')).map(
+      (element) => element.textContent,
+    );
+    expect(menuTitles).toEqual(CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title));
+
+    fireEvent.mouseDown(within(startMenu).getByRole('button', { name: /^automations$/i }), { button: 0 });
+
+    const routeHost = await screen.findByTestId('extension-route-host');
+    expect(routeHost.textContent).toBe('/automations:windowed');
+    expect(screen.getByRole('region', { name: /^automations$/i })).toBeTruthy();
   });
 
   it('searches the Start menu by canonical app aliases', async () => {
@@ -1395,6 +1429,7 @@ describe('WindowedLayout route windows', () => {
       'Automations',
       'Workflows',
       'Gateways',
+      'AI Gateway',
       'Model Arena',
       'Routines',
       'App Manager',
@@ -2612,13 +2647,13 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
   });
 
-  it('prunes persisted route windows when their nav item is no longer available', async () => {
+  it('prunes persisted route windows when their app is no longer available', async () => {
     seedWindowedWindows([
       {
-        id: 'route:workflows',
+        id: 'route:legacy-tool',
         kind: 'route',
-        title: 'Workflows',
-        route: '/workflows',
+        title: 'Legacy Tool',
+        route: '/legacy-tool',
         bounds: { x: 60, y: 48, width: 800, height: 500 },
         minimized: false,
         focused: true,
@@ -2628,8 +2663,8 @@ describe('WindowedLayout route windows', () => {
 
     renderWindowedLayout();
 
-    await waitFor(() => expect(screen.queryByText('/workflows:windowed')).toBeNull());
-    expect(screen.queryByRole('region', { name: /workflows/i })).toBeNull();
+    await waitFor(() => expect(screen.queryByText('/legacy-tool:windowed')).toBeNull());
+    expect(screen.queryByRole('region', { name: /legacy tool/i })).toBeNull();
     expect(await screen.findByTestId('embedded-layout')).toBeTruthy();
     expect(screen.getByRole('region', { name: /new conversation/i })).toBeTruthy();
   });

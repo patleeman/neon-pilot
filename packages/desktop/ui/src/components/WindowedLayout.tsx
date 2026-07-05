@@ -158,6 +158,19 @@ const CANONICAL_WINDOWED_APP_BY_TITLE: ReadonlyMap<string, (typeof CANONICAL_WIN
   CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => [app.title, app]),
 );
 const CANONICAL_LAUNCHER_ORDER: readonly string[] = CANONICAL_WINDOWED_DESKTOP_APPS.map((app) => app.title);
+const CANONICAL_WINDOWED_APP_ROUTES: Readonly<Record<(typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]['id'], string>> = {
+  chat: '/conversations/new',
+  automations: '/automations',
+  workflows: '/workflows',
+  gateways: '/gateways',
+  'ai-gateway': '/ai-gateway',
+  'model-arena': '/model-arena',
+  routines: '/routines',
+  extensions: '/extensions',
+  skills: '/skills',
+  diagnostics: '/telemetry',
+  settings: '/settings',
+};
 const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
 function createId(input: Pick<WindowedAppRegistration, 'kind' | 'route' | 'id'>, suffix?: string): string {
@@ -399,21 +412,36 @@ function createExtensionWindowedAppRegistration(input: {
   };
 }
 
+function createCoreWindowedAppRegistration(app: (typeof CANONICAL_WINDOWED_DESKTOP_APPS)[number]): WindowedAppRegistration {
+  return {
+    id: app.id,
+    title: app.title,
+    route: CANONICAL_WINDOWED_APP_ROUTES[app.id],
+    kind: app.id === 'chat' ? 'chat' : 'route',
+    source: 'core',
+    accent: app.accent,
+    window: { allowMultiple: app.id === 'chat', singleton: app.id !== 'chat' },
+  };
+}
+
 function buildWindowedAppRegistry(extensionRegistry: ReturnType<typeof useExtensionRegistry>): WindowedAppRegistration[] {
   const [chatApp, settingsApp] = CORE_WINDOWED_APPS;
   const seen = new Set(CORE_WINDOWED_APPS.map((item) => item.route));
+  const seenTitles = new Set(CORE_WINDOWED_APPS.map((item) => item.title));
   const dynamic = extensionRegistry.extensions
     .filter((extension) => extension.enabled)
     .flatMap((extension) => {
       const navItems = (extension.contributes?.nav ?? []).flatMap((item): WindowedAppRegistration[] => {
         if (!item.route || seen.has(item.route)) return [];
         seen.add(item.route);
+        seenTitles.add(item.label);
         return [createExtensionWindowedAppRegistration({ extensionId: extension.id, id: item.id, title: item.label, route: item.route })];
       });
 
       const mainViewItems = (extension.contributes?.views ?? []).flatMap((view): WindowedAppRegistration[] => {
         if (view.location !== 'main' || !view.route || !isTopLevelRoute(view.route) || seen.has(view.route)) return [];
         seen.add(view.route);
+        seenTitles.add(view.title);
         return [createExtensionWindowedAppRegistration({ extensionId: extension.id, id: view.id, title: view.title, route: view.route })];
       });
 
@@ -421,7 +449,16 @@ function buildWindowedAppRegistry(extensionRegistry: ReturnType<typeof useExtens
     })
     .sort(compareWindowedApps);
 
-  return [chatApp!, ...dynamic, settingsApp!];
+  const canonicalFallbacks = CANONICAL_WINDOWED_DESKTOP_APPS.flatMap((app): WindowedAppRegistration[] => {
+    if (app.id === 'chat' || app.id === 'settings') return [];
+    const route = CANONICAL_WINDOWED_APP_ROUTES[app.id];
+    if (seen.has(route) || seenTitles.has(app.title)) return [];
+    seen.add(route);
+    seenTitles.add(app.title);
+    return [createCoreWindowedAppRegistration(app)];
+  }).sort(compareWindowedApps);
+
+  return [chatApp!, ...[...dynamic, ...canonicalFallbacks].sort(compareWindowedApps), settingsApp!];
 }
 
 function compareWindowedApps(left: WindowedAppRegistration, right: WindowedAppRegistration): number {
