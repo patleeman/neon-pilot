@@ -371,7 +371,7 @@
 .wos-taskbar__trailing {
   display: flex;
   min-width: 0;
-  max-width: min(52vw, 620px);
+  max-width: min(36vw, 360px);
   flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
@@ -405,7 +405,7 @@
 
 .wos-taskbar__extension-actions {
   flex: 1 1 auto;
-  max-width: min(30vw, 260px);
+  max-width: min(20vw, 160px);
   justify-content: flex-end;
   overflow-x: auto;
   overflow-y: hidden;
@@ -7023,6 +7023,14 @@ button.wos-chat-window-toolbar__status:focus-visible {
   padding: 8px var(--wos-space-5);
 }
 
+.windowed-os-shell
+  .wos-window-route-body--chat
+  :where(.ui-message-card-user, .ui-message-card-assistant)
+  :where(p, span, li, div):not(:where(.ui-message-meta, .ui-message-meta *, .ui-markdown a, .ui-markdown code, pre, pre *)) {
+  color: var(--wos-ink-900);
+  opacity: 1;
+}
+
 .windowed-os-shell .wos-window-route-body--chat .ui-message-meta {
   color: var(--wos-ink-600);
   font-family: var(--wos-font-mono);
@@ -7035,6 +7043,11 @@ button.wos-chat-window-toolbar__status:focus-visible {
   font-size: 12.5px;
   line-height: 1.55;
   overflow-wrap: anywhere;
+}
+
+.windowed-os-shell .wos-window-route-body--chat .ui-markdown :where(p, li, td, th, strong, em) {
+  color: var(--wos-ink-900);
+  opacity: 1;
 }
 
 .windowed-os-shell .wos-window-route-body--chat .ui-markdown > *:first-child {

@@ -670,6 +670,10 @@ describe('Windowed chat styling', () => {
       '.windowed-os-shell .wos-window-route-body--chat .ui-message-card-user,\n.windowed-os-shell .wos-window-route-body--chat .ui-message-card-assistant {\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
     );
     expect(stylesSource).toContain(
+      ':where(.ui-message-card-user, .ui-message-card-assistant)\n  :where(p, span, li, div):not(:where(.ui-message-meta, .ui-message-meta *, .ui-markdown a, .ui-markdown code, pre, pre *))',
+    );
+    expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body--chat .ui-markdown :where(p, li, td, th, strong, em)');
+    expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat .ui-message-action-button {\n  min-height: 24px;\n  border: var(--wos-border-strong) solid var(--wos-ink-900);',
     );
     expect(stylesSource).toContain(
@@ -1391,7 +1395,8 @@ describe('Windowed OS Storybook examples', () => {
 
     expect(stylesSource).toContain('.wos-taskbar__system-controls,\n.wos-taskbar__extension-actions {');
     expect(stylesSource).toContain('.wos-taskbar__extension-actions {\n  flex: 1 1 auto;');
-    expect(stylesSource).toContain('max-width: min(30vw, 260px);');
+    expect(stylesSource).toContain('max-width: min(20vw, 160px);');
+    expect(stylesSource).toContain('.wos-taskbar__trailing {\n  display: flex;\n  min-width: 0;\n  max-width: min(36vw, 360px);');
     expect(stylesSource).toContain('.wos-taskbar__trailing::-webkit-scrollbar');
     expect(stylesSource).toContain('overscroll-behavior-x: contain;');
     expect(stylesSource).toContain('.wos-taskbar__trailing {\n    max-width: min(34vw, 180px);');
