@@ -187,6 +187,13 @@
   box-shadow: none !important;
 }
 
+.windowed-os-shell :where(.ui-browser-entry-selected, .ui-list-row-selected)::before {
+  content: none !important;
+  display: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .windowed-os-shell
   :where(
     a[href],

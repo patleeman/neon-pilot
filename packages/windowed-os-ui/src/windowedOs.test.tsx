@@ -1284,6 +1284,8 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='w-[4px]']");
     expect(stylesSource).toContain("[class*='absolute'][class*='left-0'][class*='h-full'][class*='w-']");
     expect(stylesSource).toContain("[class*='absolute'][class*='inset-y-0'][class*='bg-border']");
+    expect(stylesSource).toContain('.windowed-os-shell :where(.ui-browser-entry-selected, .ui-list-row-selected)::before');
+    expect(stylesSource).toContain('content: none !important;\n  display: none !important;\n  background: transparent !important;');
     expect(stylesSource).toContain('border-inline-start: 0 !important;');
     expect(stylesSource).toContain(')::before,\n.windowed-os-shell');
     expect(stylesSource).toContain(

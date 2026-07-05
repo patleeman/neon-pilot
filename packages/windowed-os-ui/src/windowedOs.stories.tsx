@@ -978,12 +978,12 @@ export const DarkImageInspectDialog: Story = {
 
 export const NavigationPrimitives: Story = {
   render: () => (
-    <div className="windowed-os-shell" style={{ minHeight: 680, padding: 24 }}>
+    <div className="windowed-os-shell" style={{ minHeight: 760, padding: 24 }}>
       <WindowFrame
         title="Navigation"
         accent="extensions"
         focused
-        style={{ position: 'relative', left: 0, top: 0, width: 'min(560px, 100%)', height: 540 }}
+        style={{ position: 'relative', left: 0, top: 0, width: 'min(560px, 100%)', height: 620 }}
         onMinimize={() => undefined}
         onMaximize={() => undefined}
         onClose={() => undefined}
@@ -1020,6 +1020,35 @@ export const NavigationPrimitives: Story = {
                   { id: 'deploy', label: 'Deploy check', onSelect: () => undefined },
                 ]}
               />
+            </div>
+          </WindowedPageSection>
+          <WindowedPageSection title="Inherited selection">
+            <style>
+              {`
+                .windowed-os-shell .ui-list-row-selected {
+                  position: relative;
+                  min-height: 36px;
+                  border: var(--wos-border-strong) solid var(--wos-ink-900);
+                  border-radius: 7px;
+                  background: color-mix(in srgb, var(--wos-chat) 12%, var(--wos-surface-1));
+                  padding: 8px 10px;
+                  font: var(--wos-text-row);
+                }
+
+                .windowed-os-shell .ui-list-row-selected::before {
+                  content: '';
+                  position: absolute;
+                  left: 0.45rem;
+                  top: 0.38rem;
+                  bottom: 0.38rem;
+                  width: 2px;
+                  border-radius: 999px;
+                  background: red;
+                }
+              `}
+            </style>
+            <div style={{ display: 'grid', gap: 8, padding: 10 }}>
+              <div className="ui-list-row-selected">Selected inherited row</div>
             </div>
           </WindowedPageSection>
         </WindowedPageMain>
