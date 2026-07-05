@@ -75,7 +75,7 @@ await api.updateSettings({ 'myExt.timeout': 60 }); // updates + returns merged
 | Appearance   | Built-in (theme picker)                                                                        |
 | Conversation | Built-in (model, thinking, transcript display defaults)                                        |
 | Workspace    | Built-in (default working directory for tools and shell commands)                              |
-| Extensions   | Built-in extension enablement, imported packages, AGENTS.md files, skills, tools, and settings |
+| Apps         | Built-in extension enablement, imported packages, AGENTS.md files, skills, tools, and settings |
 | Commands     | Built-in and extension command/keybinding editor                                               |
 | Providers    | Built-in (model providers, credentials)                                                        |
 | Desktop      | Built-in (updates, launch behavior, diagnostics)                                               |

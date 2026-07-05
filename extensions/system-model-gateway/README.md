@@ -6,7 +6,7 @@ bundled but disabled by default.
 When the extension is enabled, Neon Pilot starts a local loopback gateway automatically. Users configure it from the AI Gateway app window or
 from the matching Settings section:
 
-1. Open AI Gateway from the Start menu, or open Settings → Extensions → AI Gateway.
+1. Open AI Gateway from the Start menu, or open Settings → Apps → AI Gateway.
 2. Confirm the endpoint, defaulting to `http://127.0.0.1:8766/v1`.
 3. Change the port if needed; saving the port restarts the listener.
 4. Use the Codex client setup rows to inspect endpoint/token/model/catalog values, then copy the generated config for external clients that support OpenAI Responses-compatible endpoints.

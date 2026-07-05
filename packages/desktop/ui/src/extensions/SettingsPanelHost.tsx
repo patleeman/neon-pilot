@@ -55,7 +55,7 @@ export function SettingsPanelHost({
 }) {
   const moduleKey = `${registration.extensionId}:${registration.frontendEntry ?? ''}:${getExtensionRegistryRevision()}`;
   const pa = useMemo(() => createNativeExtensionClient(registration.extensionId), [registration.extensionId]);
-  const friendlyErrorBody = `The settings panel for ${registration.label} could not load. Reload the extension or try again after updating it.`;
+  const friendlyErrorBody = `The settings panel for ${registration.label} could not load. Reload the app or try again after updating it.`;
   const Component = useMemo(
     () =>
       lazy(async () => {

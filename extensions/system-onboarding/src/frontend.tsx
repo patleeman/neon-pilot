@@ -45,8 +45,8 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: 'extensions',
     route: '/extensions',
-    title: 'Features live in Extensions',
-    body: 'Extensions are the parts of Neon Pilot you can turn on, replace, or change. They add things like Files, Terminal, Artifacts, Automations, and Settings.',
+    title: 'Features live in Apps',
+    body: 'Apps are the parts of Neon Pilot you can turn on, replace, or change. They add things like Files, Terminal, Artifacts, Automations, and Settings.',
     detail: 'This is where you manage them.',
   },
   {
@@ -54,7 +54,7 @@ const TOUR_STEPS: TourStep[] = [
     route: '/extensions',
     target: '[data-onboarding-target="build-extension"]',
     title: 'Ask for the app you want',
-    body: 'If Neon Pilot is missing something, start here. The agent will ask what you want, sketch a first version, build it as an extension, and keep changing it with you.',
+    body: 'If Neon Pilot is missing something, start here. The agent will ask what you want, sketch a first version, build it as an app package, and keep changing it with you.',
     detail: 'Try a release checklist, a PR summary button, a notes panel, or a tool for your internal API.',
   },
   {

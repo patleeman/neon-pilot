@@ -184,7 +184,7 @@ describe('OnboardingBootstrap', () => {
     await clickButton('Next');
 
     expect(screen.getByTestId('location').textContent).toBe('/extensions');
-    expect(screen.getByText('Features live in Extensions')).toBeTruthy();
+    expect(screen.getByText('Features live in Apps')).toBeTruthy();
     expect(invoke).toHaveBeenCalledWith('update', { status: 'active', stepIndex: 1 });
 
     await clickButton('Back');

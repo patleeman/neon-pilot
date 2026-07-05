@@ -127,13 +127,13 @@ function lazyHostViewSurfaceComponent(surface: NativeExtensionViewSummary, revis
   });
 }
 
-const EXTENSION_SURFACE_ERROR_MESSAGE = 'This extension surface could not be loaded.';
+const EXTENSION_SURFACE_ERROR_MESSAGE = 'This app page could not be loaded.';
 
 function ExtensionSurfaceError({ shellPresentation }: { shellPresentation?: 'stable' | 'windowed' }) {
   if (shellPresentation === 'windowed') {
     return (
-      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Extension surface failed to load">
-        <WindowedStateBlock tone="danger" title="Extension surface failed to load">
+      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="App page failed to load">
+        <WindowedStateBlock tone="danger" title="App page failed to load">
           {EXTENSION_SURFACE_ERROR_MESSAGE}
         </WindowedStateBlock>
       </div>
@@ -221,12 +221,12 @@ export function NativeExtensionSurfaceHost({
 function ExtensionSurfaceLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
   if (shellPresentation === 'windowed') {
     return (
-      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading extension surface">
-        <WindowedStateBlock title="Loading extension surface">Preparing the window contents.</WindowedStateBlock>
+      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading app page">
+        <WindowedStateBlock title="Loading app page">Preparing the window contents.</WindowedStateBlock>
       </div>
     );
   }
-  return <QuietLoadingState label="Loading extension surface" />;
+  return <QuietLoadingState label="Loading app page" />;
 }
 
 class ExtensionErrorBoundary extends React.Component<

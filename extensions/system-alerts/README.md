@@ -5,7 +5,7 @@ System extension that sends native macOS notifications and optionally plays a so
 ## Surfaces
 
 - Backend subscription: `contributes.subscriptions[{ source: "alerts", pattern: "upserted" }]`
-- Settings: `Settings -> Extensions -> Alerts`
+- Settings: `Settings -> Apps -> Alerts`
 
 ## Behavior
 

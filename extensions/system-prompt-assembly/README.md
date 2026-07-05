@@ -4,7 +4,7 @@ This extension owns internal prompt assembly actions for editing the system prom
 
 The product surface is **Settings → Prompt Assembly**. Prompt assembly should not contribute its own left-navigation item or standalone route; expose user-facing controls through its Settings panel. Skill browsing, installation, and enablement belong only in **Skills** at `/skills`.
 
-App-control configuration does not belong here. Commands, keyboard shortcuts, and extensions live in **Settings → Commands** and **Settings → Extensions**.
+App-control configuration does not belong here. Commands, keyboard shortcuts, and apps live in **Settings → Commands** and **Settings → Apps**.
 
 ## Architecture
 

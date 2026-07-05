@@ -81,7 +81,7 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
 
   useEffect(() => {
     void load().catch((error) =>
-      setMessage(formatAlertsSettingsFailure(error, 'Alert settings are unavailable. Reload the extension or restart Neon Pilot.')),
+      setMessage(formatAlertsSettingsFailure(error, 'Alert settings are unavailable. Reload the app or restart Neon Pilot.')),
     );
   }, [load]);
 
@@ -92,7 +92,7 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
       const next = (await pa.extension.invoke('updateSettings', update)) as AlertsSettingsState;
       setState(next);
     } catch (error) {
-      setMessage(formatAlertsSettingsFailure(error, 'Could not update alert settings. Reload the extension and try again.'));
+      setMessage(formatAlertsSettingsFailure(error, 'Could not update alert settings. Reload the app and try again.'));
     } finally {
       setBusy(false);
     }

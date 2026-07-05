@@ -95,6 +95,8 @@ describe('buildSlashMenuItems', () => {
         key: 'extension:agent-board:task',
         displayCmd: '/task',
         kind: 'extensionSlashCommand',
+        section: 'Apps',
+        source: 'Agent Board app',
       }),
     );
   });
@@ -165,7 +167,7 @@ describe('buildSlashMenuItems', () => {
         displayCmd: '/task',
         insertText: '/task ',
         desc: 'Create a board task',
-        source: 'Agent Board extension',
+        source: 'Agent Board app',
         kind: 'extensionSlashCommand',
         action: 'createTask',
       }),

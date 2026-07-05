@@ -167,7 +167,7 @@ describe('ExtensionModalHost modal bridge', () => {
       });
     });
 
-    expect(await screen.findByText('This extension dialog could not be loaded.')).not.toBeNull();
+    expect(await screen.findByText('This app dialog could not be loaded.')).not.toBeNull();
     expect(document.body.textContent).not.toContain('TestModal');
     await expect(result).resolves.toBeNull();
   });

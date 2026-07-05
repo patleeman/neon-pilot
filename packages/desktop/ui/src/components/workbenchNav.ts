@@ -9,7 +9,7 @@ export function shouldRenderWorkbenchToolInNav(surface: { toolSlot?: string; ext
 }
 
 export function labelForExtensionToolPanel(surface: { title?: string; label?: string }): string {
-  return surface.title ?? surface.label ?? 'Extension';
+  return surface.title ?? surface.label ?? 'Tool';
 }
 
 export function iconGlyphForExtensionSurface(icon: string | undefined): string {

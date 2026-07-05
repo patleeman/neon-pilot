@@ -265,7 +265,7 @@ describe('AlertsSettingsPanel', () => {
     expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
-    expect(container.textContent).toContain('Alert settings are unavailable. Reload the extension or restart Neon Pilot.');
+    expect(container.textContent).toContain('Alert settings are unavailable. Reload the app or restart Neon Pilot.');
     expect(container.textContent).not.toContain('Extension "system-alerts" action');
     expect(container.textContent).not.toContain('Cannot find module');
   });
@@ -278,7 +278,7 @@ describe('AlertsSettingsPanel', () => {
     const { container } = renderPanel(invoke, 'stable');
     await act(async () => flush());
 
-    expect(container.textContent).toContain('Alert settings are unavailable. Reload the extension or restart Neon Pilot.');
+    expect(container.textContent).toContain('Alert settings are unavailable. Reload the app or restart Neon Pilot.');
     expect(container.textContent).not.toContain('worker.enabled');
   });
 
@@ -309,7 +309,7 @@ describe('AlertsSettingsPanel', () => {
       await flush();
     });
 
-    expect(container.textContent).toContain('Could not update alert settings. Reload the extension and try again.');
+    expect(container.textContent).toContain('Could not update alert settings. Reload the app and try again.');
     expect(container.textContent).not.toContain('ENOENT');
   });
 

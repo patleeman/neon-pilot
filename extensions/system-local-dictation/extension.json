@@ -81,7 +81,7 @@
           {
             "id": "open-settings",
             "label": "Open Dictation Settings",
-            "route": "/settings/extensions/system-local-dictation"
+            "route": "/settings/apps/system-local-dictation"
           }
         ],
         "dismissible": true,

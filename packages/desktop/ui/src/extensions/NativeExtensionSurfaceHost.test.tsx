@@ -201,7 +201,7 @@ describe('NativeExtensionSurfaceHost', () => {
       root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/broken" search="" hash="" />);
     });
 
-    await vi.waitFor(() => expect(container.textContent).toContain('This extension surface could not be loaded.'));
+    await vi.waitFor(() => expect(container.textContent).toContain('This app page could not be loaded.'));
     expect(container.textContent).not.toContain('MissingExport');
     expect(container.textContent).not.toContain('/Users/patrick');
     expect(container.textContent).not.toContain('dist/frontend.js');
@@ -226,10 +226,10 @@ describe('NativeExtensionSurfaceHost', () => {
       root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/broken" search="" hash="" shellPresentation="windowed" />);
     });
 
-    await vi.waitFor(() => expect(container.textContent).toContain('Extension surface failed to load'));
+    await vi.waitFor(() => expect(container.textContent).toContain('App page failed to load'));
     expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
     expect(container.querySelector('.wos-state-block[data-tone="danger"]')).toBeTruthy();
-    expect(container.textContent).toContain('This extension surface could not be loaded.');
+    expect(container.textContent).toContain('This app page could not be loaded.');
     expect(container.querySelector('.ui-error-state')).toBeNull();
     expect(container.textContent).not.toContain('MissingExport');
     expect(container.textContent).not.toContain('/Users/patrick');

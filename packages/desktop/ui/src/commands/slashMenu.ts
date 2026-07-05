@@ -65,11 +65,11 @@ function formatExtensionSourceLabel(extensionId: string): string {
     .filter(Boolean);
 
   if (words.length === 0) {
-    return 'Extension';
+    return 'App';
   }
 
   const title = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  return `${title} extension`;
+  return `${title} app`;
 }
 
 export function fuzzyScore(query: string, candidate: string): number | null {

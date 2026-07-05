@@ -20,7 +20,7 @@ interface ModalState {
 }
 
 type ExtensionModalSize = 'default' | 'large' | 'fullscreen';
-const EXTENSION_MODAL_ERROR_MESSAGE = 'This extension dialog could not be loaded.';
+const EXTENSION_MODAL_ERROR_MESSAGE = 'This app dialog could not be loaded.';
 const WINDOWED_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-windowed-shell-active';
 
 function FailedExtensionModalBody() {
@@ -299,7 +299,7 @@ export function ExtensionModalHost() {
         onClose={() => handleClose()}
         closeOnBackdrop={!windowedExcalidrawModal}
         labelledBy={title ? 'extension-modal-title' : undefined}
-        aria-label={title ? undefined : 'Extension dialog'}
+        aria-label={title ? undefined : 'App dialog'}
         aria-modal={windowedExcalidrawModal ? false : undefined}
         backdropClassName={cx(
           modalSizeClasses.backdropClassName,
@@ -327,7 +327,7 @@ export function ExtensionModalHost() {
             titleId="extension-modal-title"
             data-parent-window-title={parentWindowTitle}
             actions={
-              <IconButton onClick={() => handleClose()} aria-label="Close extension modal" title="Close extension modal">
+              <IconButton onClick={() => handleClose()} aria-label="Close app dialog" title="Close app dialog">
                 <svg
                   width="14"
                   height="14"

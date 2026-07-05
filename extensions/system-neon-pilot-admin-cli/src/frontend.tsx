@@ -159,7 +159,7 @@ export function NeonPilotAgentSettingsPanel({ settingsContext }: { settingsConte
             />
             <WindowedDataRow
               name="CLI entrypoint"
-              meta="Administer Neon Pilot, start delegated tasks, inspect runs, and manage extension surfaces."
+              meta="Administer Neon Pilot, start delegated tasks, inspect runs, and manage app surfaces."
               status={
                 <WindowedBadge tone={settings.cliEnabled ? 'positive' : 'neutral'}>
                   {settings.cliEnabled ? 'Enabled' : 'Paused'}

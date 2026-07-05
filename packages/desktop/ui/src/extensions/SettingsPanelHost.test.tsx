@@ -119,6 +119,7 @@ describe('SettingsPanelHost', () => {
 
     expect(await screen.findByText('App settings failed to render.')).toBeTruthy();
     expect(screen.getByText(/The settings panel for Error Panel could not load/)).toBeTruthy();
+    expect(screen.getByText(/Reload the app or try again after updating it/)).toBeTruthy();
     expect(screen.queryByText(/\/api\/extensions/)).toBeNull();
     expect(screen.queryByText(/localApi/)).toBeNull();
     expect(screen.queryByText(/file:\/\//)).toBeNull();
