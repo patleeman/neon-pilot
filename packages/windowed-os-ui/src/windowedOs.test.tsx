@@ -1599,9 +1599,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain(
       '.windowed-os-shell .wos-window-route-body--chat button.ui-composer-action-button-danger {\n  background: var(--wos-surface-1) !important;\n  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--wos-danger) 72%, transparent);',
     );
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-menu-shell");
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item");
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item.bg-elevated");
+    expect(stylesSource).toContain("body[data-neon-pilot-desktop-shell-active='true'] .ui-menu-shell");
+    expect(stylesSource).toContain("body[data-neon-pilot-desktop-shell-active='true'] .ui-context-menu-item");
+    expect(stylesSource).toContain("body[data-neon-pilot-desktop-shell-active='true'] .ui-context-menu-item.bg-elevated");
     expect(stylesSource).toContain('background: var(--wos-chat, oklch(66% 0.14 250)) !important;');
     expect(stylesSource).toContain('color: var(--wos-accent-ink) !important;');
     expect(stylesSource).toContain('.windowed-os-shell .wos-window-route-body .ui-row-button');
@@ -2019,20 +2019,20 @@ describe('Windowed OS Storybook examples', () => {
     const storiesPath = fileURLToPath(new URL('./windowedOs.stories.tsx', import.meta.url));
     const storiesSource = readFileSync(storiesPath, 'utf8');
 
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker");
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal");
+    expect(stylesSource).toContain("body[data-neon-pilot-desktop-shell-active='true'] .ui-windowed-drawings-picker");
+    expect(stylesSource).toContain("body[data-neon-pilot-desktop-shell-active='true'] .ui-windowed-excalidraw-modal");
     expect(stylesSource).toContain('.ui-overlay-backdrop:has(.ui-windowed-drawings-picker)');
     expect(stylesSource).toContain('background: transparent !important;');
     expect(stylesSource).toContain(
-      "body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker) {\n  pointer-events: none;",
+      "body[data-neon-pilot-desktop-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker) {\n  pointer-events: none;",
     );
     expect(stylesSource).toContain('.ui-windowed-drawings-picker[data-parent-window-attached]');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal[data-parent-window-attached]');
     expect(stylesSource).toContain('display: flex !important;');
-    expect(stylesSource).toContain("body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-drawings-picker {\n  display: flex;");
+    expect(stylesSource).toContain("body[data-neon-pilot-desktop-shell-active='true'] .ui-windowed-drawings-picker {\n  display: flex;");
     expect(stylesSource).toContain('flex-direction: column;');
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 72px)) !important;');
-    expect(stylesSource).toContain('@media (max-width: 560px) {\n  body[data-neon-pilot-windowed-shell-active=');
+    expect(stylesSource).toContain('@media (max-width: 560px) {\n  body[data-neon-pilot-desktop-shell-active=');
     expect(stylesSource).toContain('width: min(640px, calc(100vw - 20px)) !important;');
     expect(stylesSource).toContain('width: min(760px, calc(100vw - 112px)) !important;');
     expect(stylesSource).toContain('height: min(500px, calc(100vh - 168px)) !important;');
@@ -2095,10 +2095,10 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('border: 2px solid var(--wos-ink-900) !important;');
     expect(stylesSource).toContain('width: 18px;');
     expect(stylesSource).toContain(
-      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal-body {\n  display: grid;\n  min-width: 0;\n  min-height: 0;\n  grid-template-columns: minmax(0, 1fr);",
+      "body[data-neon-pilot-desktop-shell-active='true'] .ui-windowed-excalidraw-modal-body {\n  display: grid;\n  min-width: 0;\n  min-height: 0;\n  grid-template-columns: minmax(0, 1fr);",
     );
     expect(stylesSource).toContain(
-      "body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {\n  display: grid;\n  min-width: 0;\n  min-height: 0;\n  height: 100%;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: auto minmax(0, 1fr);",
+      "body[data-neon-pilot-desktop-shell-active='true'] .ui-windowed-excalidraw-modal .excalidraw-editor-modal {\n  display: grid;\n  min-width: 0;\n  min-height: 0;\n  height: 100%;\n  grid-template-columns: minmax(0, 1fr);\n  grid-template-rows: auto minmax(0, 1fr);",
     );
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar');
     expect(stylesSource).toContain('.ui-windowed-excalidraw-modal .excalidraw-editor-modal__toolbar {\n  display: flex;\n  min-width: 0;');
@@ -2124,7 +2124,7 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('object-fit: contain;');
     expect(stylesSource).toContain('box-shadow: 4px 4px 0 color-mix(in srgb, var(--wos-ink-900) 12%, transparent);');
     expect(stylesSource).toContain(
-      "body[data-neon-pilot-windowed-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker),\n  body[data-neon-pilot-windowed-shell-active='true'] .ui-windowed-excalidraw-backdrop",
+      "body[data-neon-pilot-desktop-shell-active='true'] .ui-overlay-backdrop:has(.ui-windowed-drawings-picker),\n  body[data-neon-pilot-desktop-shell-active='true'] .ui-windowed-excalidraw-backdrop",
     );
     expect(stylesSource).toContain('width: min(760px, calc(100vw - 20px)) !important;');
     expect(stylesSource).toContain('height: min(500px, calc(100vh - 104px)) !important;');
@@ -2317,9 +2317,9 @@ describe('Windowed OS Storybook examples', () => {
     expect(stylesSource).toContain('body:has(.ui-setup-readiness-popover) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-notification-toaster) .windowed-os-shell .wos-composited-frame');
     expect(stylesSource).toContain('body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame');
-    expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] .wos-composited-frame");
-    expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] iframe");
-    expect(stylesSource).not.toContain("body[data-neon-pilot-windowed-shell-active='true'] webview");
+    expect(stylesSource).not.toContain("body[data-neon-pilot-desktop-shell-active='true'] .wos-composited-frame");
+    expect(stylesSource).not.toContain("body[data-neon-pilot-desktop-shell-active='true'] iframe");
+    expect(stylesSource).not.toContain("body[data-neon-pilot-desktop-shell-active='true'] webview");
     expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-taskbar) .wos-composited-frame');
     expect(stylesSource).not.toContain('.windowed-os-shell:has(.wos-start-menu) .wos-composited-frame');
     expect(stylesSource).toContain('.windowed-os-shell:has(.wos-taskbar__menu-layer) .wos-composited-frame');
