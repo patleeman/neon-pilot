@@ -709,9 +709,7 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect(await screen.findByText('Configurable Test')).toBeTruthy();
-    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe(
-      '/settings/extensions/configurable-test',
-    );
+    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings/apps/configurable-test');
     expect(screen.queryByLabelText('Configure Menu Test in Settings')).toBeNull();
   });
 
@@ -738,9 +736,7 @@ describe('ExtensionManagerPage', () => {
       }),
     );
     expect(screen.queryByRole('dialog', { name: 'Extension details' })).toBeNull();
-    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe(
-      '/settings/extensions/configurable-test',
-    );
+    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings/apps/configurable-test');
     expect(screen.queryByText('Toggle a test setting.')).toBeNull();
   });
 
@@ -754,7 +750,7 @@ describe('ExtensionManagerPage', () => {
     const detailsDialog = await screen.findByRole('dialog', { name: 'Configurable Test' });
     fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Settings' }));
 
-    expect(screen.getByTestId('location').textContent).toBe('/settings/extensions/configurable-test');
+    expect(screen.getByTestId('location').textContent).toBe('/settings/apps/configurable-test');
     expect(screen.queryByRole('dialog', { name: 'Configurable Test' })).toBeNull();
   });
 

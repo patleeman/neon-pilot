@@ -600,7 +600,7 @@ function hasExtensionSettings(extension: ExtensionInstallSummary): boolean {
 }
 
 function extensionSettingsTarget(extension: ExtensionInstallSummary): string {
-  return `/settings/extensions/${encodeURIComponent(extension.id)}`;
+  return `/settings/apps/${encodeURIComponent(extension.id)}`;
 }
 
 function formatAppearsInSummary(extension: ExtensionInstallSummary): string {

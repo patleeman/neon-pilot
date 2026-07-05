@@ -76,6 +76,8 @@ Keep this as a big-bang migration on the windowed branch: first-class app regist
    - 2026-07-05 progress: added a first-class `windowedAppRegistry` projection for Windowed OS app identity, owner package metadata, canonical routes, accents, aliases, and window defaults. `WindowedLayout` now consumes this app registry instead of owning extension-derived launcher logic inline, and canonical apps now win over duplicate extension nav/view labels for Start menu/taskbar/window identity.
    - 2026-07-05 progress: App Manager build prompts and repository notices now use app-package/app-repository language, route loading fallbacks say app page, and Settings shortcut save/error copy says app shortcuts/apps instead of extension shortcuts/extensions.
    - 2026-07-05 validation: focused registry coverage, full `WindowedLayout` suite, route loading tests, Settings route/panel/desktop shortcut tests, and App Manager frontend/manifest tests pass with the app-first copy and canonical app IDs.
+   - 2026-07-05 progress: Settings app-owned sections now use `/settings/apps` and `/settings/apps/:id` as the canonical app-facing route while preserving `/settings/extensions` as a legacy compatibility alias. App Manager settings links and readiness action tests now generate app routes, and the Settings manifest registers the app settings page at `/settings/apps`.
+   - 2026-07-05 validation: focused Settings/App Manager/readiness tests, desktop UI build, and live Electron/CDP QA confirmed App Manager generated `/settings/apps/...` links with no `/settings/extensions` links and opened `neon-pilot://app/settings/apps/system-extension-manager` in the Settings window. Screenshot QA: `/tmp/windowed-os-settings-apps-route-live.png`.
 
 ### Next concrete implementation backlog
 

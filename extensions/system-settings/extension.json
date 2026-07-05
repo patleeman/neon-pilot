@@ -322,7 +322,7 @@
         "id": "extensions",
         "title": "App settings",
         "location": "main",
-        "route": "/settings/extensions",
+        "route": "/settings/apps",
         "component": "ExtensionsSettingsPage",
         "activation": "on-route"
       },

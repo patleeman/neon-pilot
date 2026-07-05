@@ -16,7 +16,7 @@ The old iframe/HTML extension model is deprecated. New extensions render native 
 
 Extension frontends must use the native PA client/action bridge for app-internal communication. Extension HTTP routes are for external or side-channel consumers only, not for Neon Pilot renderer-to-extension calls.
 
-Settings → Extensions should make that loop boring. It should be a single scrollable management page with Settings-style section anchors rather than a tabbed catalog:
+Settings → Apps should make that loop boring. It should be a single scrollable management page with Settings-style section anchors rather than a tabbed catalog:
 
 - create a starter native extension package
 - list built-in and installed extensions together
@@ -30,7 +30,7 @@ Settings → Extensions should make that loop boring. It should be a single scro
 - export/import extension packages
 - snapshot an add-on extension before agent edits
 - open an extension folder in Finder/editor
-- expose validate/reload operations through the Settings → Extensions UI and backend actions
+- expose validate/reload operations through the Settings → Apps UI and backend actions
 - expose backend smoke checks through `neon-pilot extensions smoke <extension-id>`
 - show build/runtime errors in a way an agent can fix
 
@@ -48,9 +48,9 @@ Some bundled extensions are required platform surfaces. Extension Manager keeps 
 
 Optional first-party extensions live in the separate [`patleeman/neon-pilot-extensions`](https://github.com/patleeman/neon-pilot-extensions) repo. The loader does not auto-discover source directories. Build and install those packages into `<state-root>/extensions/{extension-id}` when you want them to behave as installed extensions during development. Normal users install GitHub release artifacts from the Available Extensions flow.
 
-Users can add more GitHub extension repositories from Settings -> Extensions -> Extension repositories, or from the same repository control in the install dialog. Repositories are stored in `settings.json` as `extensions.sources`, fetched from each repo's root `neon.extensions.json`, and merged into the installable extension catalog. The first-party Neon Pilot extension repo remains the built-in default source.
+Users can add more GitHub extension repositories from Settings -> Apps -> App repositories, or from the same repository control in the install dialog. Repositories are stored in `settings.json` as `extensions.sources`, fetched from each repo's root `neon.extensions.json`, and merged into the installable extension catalog. The first-party Neon Pilot extension repo remains the built-in default source.
 
-The Settings → Extensions surface includes an **Install** dialog for normal users. It lists native Neon Pilot extensions from configured extension repositories. First-party Neon Pilot extension bundles (`.neon-extension.zip`) install from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. Codex and Claude behavior packages are managed by the separate Agent Plugins extension from Settings -> Agent Plugins; Extension Manager should only show their generated wrappers as registry entries for enablement, diagnostics, and inspection.
+The Settings → Apps surface includes an **Install** dialog for normal users. It lists native Neon Pilot app packages from configured extension repositories. First-party Neon Pilot extension bundles (`.neon-extension.zip`) install from the GitHub release tag matching the installed app version, for example `v0.9.1-rc.0`. Codex and Claude behavior packages are managed by the separate Agent Plugins extension from Settings -> Agent Plugins; Extension Manager should only show their generated wrappers as registry entries for enablement, diagnostics, and inspection.
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 
@@ -67,7 +67,7 @@ When modifying Extension Manager itself:
 3. Inspect `packages/desktop/ui/src/extensions/*` before changing native surface hosting, registry state, or extension UI.
 4. If a first-party extension needs a new stable host primitive, add it deliberately to `packages/extensions` instead of importing app internals.
 5. Validate create/validate/reload flows after changes.
-6. Visually inspect the Settings → Extensions UI before reporting done.
+6. Visually inspect the Settings → Apps UI before reporting done.
 
 ## Migration stance
 
@@ -109,5 +109,5 @@ Target order:
 6. Wire manifest `views`, `nav`, commands, slash commands, skills, tools, and settings through registry surfaces.
 7. Migrate system product surfaces to native extensions.
 8. Remove legacy iframe extension UI runtime and starter HTML templates when no longer needed.
-9. Keep Settings → Extensions validate/reload/status flows agent-fixable.
+9. Keep Settings → Apps validate/reload/status flows agent-fixable.
 10. Backfill tests around manifest parsing, lazy loading, action invocation, CSS scoping, and system extension migrations.

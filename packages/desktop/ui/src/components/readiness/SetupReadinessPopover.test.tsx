@@ -119,7 +119,7 @@ describe('SetupReadinessPopover', () => {
         {
           ...snapshot.items[0],
           status: 'blocked' as const,
-          actions: [{ id: 'open-extension-settings', label: 'Open Settings', tone: 'default' as const, route: '/settings/extensions/ext' }],
+          actions: [{ id: 'open-extension-settings', label: 'Open Settings', tone: 'default' as const, route: '/settings/apps/ext' }],
         },
       ],
     };
@@ -129,7 +129,7 @@ describe('SetupReadinessPopover', () => {
 
     expect(props.onRunAction).not.toHaveBeenCalled();
     expect(props.onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('current-path').textContent).toBe('/settings/extensions/ext');
+    expect(screen.getByTestId('current-path').textContent).toBe('/settings/apps/ext');
   });
 
   it('shows all and dismissed filters with restore action', async () => {

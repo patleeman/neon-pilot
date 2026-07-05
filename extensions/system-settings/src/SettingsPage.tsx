@@ -106,7 +106,7 @@ const SETTINGS_ROOT_ROUTES: Record<(typeof SETTINGS_QUICK_LINKS)[number]['id'], 
   'settings-workspace': '/settings/workspace',
   'settings-commands': '/settings/commands',
   'settings-security': '/settings/security',
-  'settings-extensions': '/settings/extensions',
+  'settings-extensions': '/settings/apps',
   'settings-desktop': '/settings/desktop',
 };
 
@@ -247,7 +247,7 @@ export function readSettingsSectionIdFromHash(hash: string): string {
 
 export function readSettingsSectionIdFromPathname(pathname: string): SettingsQuickLinkId | '' {
   const normalizedPathname = pathname.replace(/\/+$/, '');
-  const extensionSettingsMatch = normalizedPathname.match(/^\/settings\/extensions\/([^/]+)$/);
+  const extensionSettingsMatch = normalizedPathname.match(/^\/settings\/(?:apps|extensions)\/([^/]+)$/);
   if (extensionSettingsMatch) {
     try {
       return settingsExtensionAnchorId(decodeURIComponent(extensionSettingsMatch[1]));
@@ -269,6 +269,7 @@ export function readSettingsSectionIdFromPathname(pathname: string): SettingsQui
       return 'settings-commands';
     case '/settings/security':
       return 'settings-security';
+    case '/settings/apps':
     case '/settings/extensions':
       return 'settings-extensions';
     case '/settings':
@@ -1006,7 +1007,7 @@ function settingsExtensionAnchorId(extensionId: string): SettingsQuickLinkId {
 }
 
 function settingsExtensionRoute(extensionId: string): string {
-  return `/settings/extensions/${encodeURIComponent(extensionId)}`;
+  return `/settings/apps/${encodeURIComponent(extensionId)}`;
 }
 
 function extensionDisplayName(extensionId: string, extensions: ReturnType<typeof useExtensionRegistry>['extensions']): string {

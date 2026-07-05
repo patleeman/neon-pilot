@@ -161,6 +161,7 @@ describe('SettingsPage — untested panel rendering', () => {
   it.each([
     ['/settings/commands', 'Commands'],
     ['/settings/security', 'Security'],
+    ['/settings/apps', 'Apps'],
     ['/settings/extensions', 'Apps'],
   ])('renders %s without tripping the extension error boundary', (pathname, expectedHeading) => {
     const html = renderDirectSettingsRoute(pathname);

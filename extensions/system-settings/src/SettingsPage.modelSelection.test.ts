@@ -77,6 +77,10 @@ describe('settings hash section parsing', () => {
     expect(readSettingsSectionIdFromPathname('/settings/commands/')).toBe('settings-commands');
     expect(readSettingsSectionIdFromPathname('/settings/security')).toBe('settings-security');
     expect(readSettingsSectionIdFromPathname('/settings/security/')).toBe('settings-security');
+    expect(readSettingsSectionIdFromPathname('/settings/apps')).toBe('settings-extensions');
+    expect(readSettingsSectionIdFromPathname('/settings/apps/')).toBe('settings-extensions');
+    expect(readSettingsSectionIdFromPathname('/settings/apps/system-reply-actions')).toBe('settings-extension-system-reply-actions');
+    expect(readSettingsSectionIdFromPathname('/settings/apps/system%3Alocal')).toBe('settings-extension-system-local');
     expect(readSettingsSectionIdFromPathname('/settings/extensions')).toBe('settings-extensions');
     expect(readSettingsSectionIdFromPathname('/settings/extensions/')).toBe('settings-extensions');
     expect(readSettingsSectionIdFromPathname('/settings/extensions/system-reply-actions')).toBe('settings-extension-system-reply-actions');
@@ -88,14 +92,14 @@ describe('settings hash section parsing', () => {
   it('prefers the concrete browser pathname over the matched extension surface route', () => {
     expect(
       readSettingsSectionIdFromContext(
-        { pathname: '/settings/extensions', hash: '', search: '' },
-        { pathname: '/settings/extensions/system-reply-actions', hash: '' },
+        { pathname: '/settings/apps', hash: '', search: '' },
+        { pathname: '/settings/apps/system-reply-actions', hash: '' },
       ),
     ).toBe('settings-extension-system-reply-actions');
     expect(
       readSettingsSectionIdFromContext(
-        { pathname: '/settings/extensions', hash: '', search: '' },
-        { pathname: '/settings/extensions/system-reply-actions', hash: '#settings-extensions' },
+        { pathname: '/settings/apps', hash: '', search: '' },
+        { pathname: '/settings/apps/system-reply-actions', hash: '#settings-extensions' },
       ),
     ).toBe('settings-extension-system-reply-actions');
   });

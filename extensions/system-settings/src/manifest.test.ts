@@ -35,7 +35,7 @@ describe('system-settings manifest', () => {
               '/settings/workspace',
               '/settings/commands',
               '/settings/security',
-              '/settings/extensions',
+              '/settings/apps',
             ].includes(v.route ?? ''),
           )
           .map((v: { route: string; component: string }) => [v.route, v.component]),
@@ -46,7 +46,7 @@ describe('system-settings manifest', () => {
       '/settings/workspace': 'WorkspaceSettingsPage',
       '/settings/commands': 'CommandsSettingsPage',
       '/settings/security': 'SecuritySettingsPage',
-      '/settings/extensions': 'ExtensionsSettingsPage',
+      '/settings/apps': 'ExtensionsSettingsPage',
     });
     expect(views.find((v: { id: string; location?: string }) => v.id === 'settings-sidebar')).toMatchObject({
       location: 'sidebar',
