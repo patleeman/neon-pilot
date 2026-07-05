@@ -27,15 +27,6 @@
         "route": "/model-arena",
         "component": "ModelArenaPage",
         "activation": "on-route"
-      },
-      {
-        "id": "model-arena-context-rail",
-        "title": "Model Arena context",
-        "location": "rightRail",
-        "component": "ModelArenaContextRail",
-        "placement": "primary",
-        "scope": "global",
-        "activation": "on-route"
       }
     ],
     "nav": [
@@ -44,8 +35,7 @@
         "label": "Model Arena",
         "route": "/model-arena",
         "icon": "graph",
-        "pageType": "dashboard",
-        "rightSidebarView": "model-arena-context-rail"
+        "pageType": "dashboard"
       }
     ],
     "messageActions": [

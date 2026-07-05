@@ -70,6 +70,7 @@ describe('first-party extension route shell manifests', () => {
     const routes = [
       ['system-automations', '/automations'],
       ['system-gateways', '/gateways'],
+      ['system-model-arena', '/model-arena'],
       ['system-telemetry', '/telemetry'],
       ['system-skills', '/skills'],
     ] as const;
@@ -164,10 +165,7 @@ describe('first-party extension route shell manifests', () => {
   });
 
   it('keeps route-owned context rails declared as primary rightRail views', () => {
-    const routes = [
-      ['system-model-arena', '/model-arena', 'model-arena-context-rail'],
-      ['system-routines', '/routines', 'routines-context-rail'],
-    ] as const;
+    const routes = [['system-routines', '/routines', 'routines-context-rail']] as const;
 
     for (const [extensionId, route, rightSidebarView] of routes) {
       const manifest = readManifest(extensionId);
@@ -181,6 +179,7 @@ describe('first-party extension route shell manifests', () => {
     const routes = [
       ['system-extension-manager', '/extensions'],
       ['system-gateways', '/gateways'],
+      ['system-model-arena', '/model-arena'],
       ['system-skills', '/skills'],
     ] as const;
 

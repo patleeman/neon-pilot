@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ModelArenaContextRail, ModelArenaDuelBlock, ModelArenaPage } from './frontend';
+import { ModelArenaDuelBlock, ModelArenaPage } from './frontend';
 
 const arenaState = {
   settings: {
@@ -83,7 +83,7 @@ describe('ModelArenaPage', () => {
       'Comparing challenger runs against conversation models.',
     );
     expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add opencode-go/zeta' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add selected challenger model' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove DeepSeek V4 Flash · opencode-go' })).toBeTruthy();
     expect(container.querySelector('.wos-arena-challenger-table .wos-data-row')).toBeTruthy();
     expect(container.querySelector<HTMLElement>('.wos-arena-challenger-table')?.style.getPropertyValue('--wos-data-column-template')).toBe(
@@ -141,20 +141,6 @@ describe('ModelArenaPage', () => {
     expect(container.querySelector('.wos-empty-state')).toBeNull();
     expect(container.querySelector('.ui-empty-state')).toBeNull();
     expect(container.querySelector('.ui-error-state')).toBeNull();
-  });
-});
-
-describe('ModelArenaContextRail', () => {
-  it('groups challenger model choices by provider', async () => {
-    const invoke = vi.fn().mockResolvedValue({ ...arenaState, stats: { models: {} }, duels: [] });
-
-    const { container } = render(<ModelArenaContextRail pa={{ extension: { invoke } } as never} />);
-
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Challenger model' })).toBeTruthy());
-
-    const groups = [...container.querySelectorAll('select[aria-label="Challenger model"] optgroup')];
-    expect(groups.map((group) => group.getAttribute('label'))).toEqual(['openai-codex', 'opencode-go']);
-    expect([...groups[1]!.querySelectorAll('option')].map((option) => option.textContent)).toEqual(['DeepSeek V4 Flash', 'Zeta']);
   });
 });
 
