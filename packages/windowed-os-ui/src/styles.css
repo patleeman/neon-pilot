@@ -2,6 +2,12 @@
 
 .windowed-os-shell {
   --wos-window-control-clearance: calc((var(--wos-window-control-size) * 3) + 32px);
+  --wos-control-compact-h: 26px;
+  --wos-control-h: 28px;
+  --wos-text-caption: var(--wos-text-meta);
+  --wos-text-row-strong: 800 12.5px/1.35 var(--wos-font-display);
+  --wos-shadow-button: 0 2px 0 color-mix(in oklab, var(--wos-ink-900) 34%, transparent);
+  --wos-danger-ink: var(--wos-accent-ink);
   min-height: 100vh;
   overflow: hidden;
   background: var(--wos-surface-0);
@@ -1772,11 +1778,17 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   padding: var(--wos-space-6);
 }
 
-.wos-chat-child-window-empty .wos-state-block {
+.wos-chat-child-window-empty .wos-state-block,
+.wos-chat-child-window-empty .wos-state-block[data-tone] {
   width: min(360px, 100%);
   border: 2px solid var(--wos-ink-900);
   border-radius: 8px;
   background: var(--wos-surface-2);
+  color: var(--wos-ink-700);
+}
+
+.wos-chat-child-window-empty .wos-state-block__title {
+  color: var(--wos-ink-900);
 }
 
 .wos-chat-terminal-dialog .wos-dialog__body {
@@ -3200,7 +3212,8 @@ button.wos-chat-window-toolbar__status:focus-visible {
 }
 
 .wos-window-route-body .ui-icon-button {
-  width: 26px;
+  width: var(--wos-control-compact-h);
+  min-width: var(--wos-control-compact-h);
   padding: 0;
 }
 
@@ -3222,7 +3235,9 @@ button.wos-chat-window-toolbar__status:focus-visible {
 .wos-window-route-body .ui-text-input,
 .wos-window-route-body .ui-search-input,
 .wos-window-route-body .ui-select {
-  min-height: 28px;
+  min-width: 0;
+  min-height: var(--wos-control-h);
+  padding-inline: var(--wos-space-4);
 }
 
 .wos-window-route-body .ui-text-input:hover,
@@ -9017,6 +9032,19 @@ body[data-neon-pilot-windowed-shell-active='true'] .ui-context-menu-item[aria-di
   color: var(--wos-ink-500);
   font: var(--wos-text-eyebrow);
   letter-spacing: 0.02em;
+}
+
+.windowed-os-shell .wos-window-route-body :where(.ui-centered-state, .ui-centered-message) {
+  color: var(--wos-ink-700);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-centered-message-title {
+  color: var(--wos-ink-900);
+  font-family: var(--wos-font-display);
+}
+
+.windowed-os-shell .wos-window-route-body .ui-centered-message-body {
+  color: var(--wos-ink-700);
 }
 
 .windowed-os-shell .wos-window-route-body h2.text-xl {

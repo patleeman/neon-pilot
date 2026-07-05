@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   archiveSession: vi.fn(),
   registryLoading: false,
   pinnedSessions: [] as Array<{ id: string; title?: string; messageCount?: number }>,
-  tabs: [] as Array<{ id: string; title?: string; messageCount?: number }>,
+  tabs: [] as Array<{ id: string; title?: string; messageCount?: number; workspaceCwd?: string | null }>,
   conversationsLoading: false,
   topBarElements: [] as Array<{ extensionId: string; id: string; component: string; label?: string; frontendEntry?: string }>,
   surfaces: [] as Array<Record<string, unknown>>,
@@ -164,6 +164,39 @@ function renderWindowedLayout() {
 
 function seedWindowedWindows(windows: unknown[]) {
   window.localStorage.setItem('pa:windowed-os-shell-windows:v1', JSON.stringify(windows));
+}
+
+type ChildToolKind = 'browser' | 'files' | 'terminal';
+
+function surfaceForChildTool(kind: ChildToolKind): Record<string, unknown> {
+  if (kind === 'browser') {
+    return {
+      extensionId: 'system-browser',
+      id: 'browser-workbench',
+      title: 'Browser',
+      location: 'workbench',
+      component: 'BrowserWorkbenchPanel',
+      toolSlot: 'browser',
+    };
+  }
+  if (kind === 'files') {
+    return {
+      extensionId: 'system-files',
+      id: 'files-panel',
+      title: 'Files',
+      location: 'rightRail',
+      component: 'WorkspaceFilesPanel',
+      toolSlot: 'files',
+    };
+  }
+  return {
+    extensionId: 'system-terminal',
+    id: 'terminal-panel',
+    title: 'Terminal',
+    location: 'rightRail',
+    component: 'TerminalPanel',
+    toolSlot: 'terminal',
+  };
 }
 
 describe('WindowedLayout route windows', () => {
@@ -2955,6 +2988,45 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByTestId('native-extension-surface').getAttribute('data-instance-id')).toBe('chat:session-2:terminal');
   });
 
+  it.each([
+    ['browser' as const, 'Browser'],
+    ['files' as const, 'Files'],
+  ])('retargets %s child windows when a draft chat navigates into a saved conversation', async (kind, title) => {
+    mocks.tabs = [{ id: 'session-2', title: 'Saved planning thread', messageCount: 1, workspaceCwd: '/Users/patrick/project' }];
+    mocks.surfaces = [surfaceForChildTool(kind)];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: true,
+        workspaceCwd: '/Users/patrick/draft',
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`${kind} window`, 'i') }));
+    expect(screen.getByRole('region', { name: title }).getAttribute('data-window-id')).toBe(`chat:draft:${kind}`);
+
+    fireEvent.click(screen.getByRole('button', { name: /navigate inside window/i }));
+
+    const childWindow = screen.getByRole('region', { name: title });
+    expect(screen.queryByRole('region', { name: /new conversation/i })).toBeNull();
+    expect(screen.getByRole('region', { name: /saved planning thread/i })).toBeTruthy();
+    expect(childWindow.getAttribute('data-window-id')).toBe(`chat:session-2:${kind}`);
+    expect(childWindow.getAttribute('data-parent-window-id')).toBe('chat:session-2');
+    expect(childWindow.getAttribute('data-parent-window-title')).toBe('Saved planning thread');
+    expect(childWindow.querySelector(`[data-windowed-subwindow="${kind}"]`)?.getAttribute('data-parent-window-id')).toBe('chat:session-2');
+    expect(screen.getByTestId('native-extension-surface').getAttribute('data-instance-id')).toBe(`chat:session-2:${kind}`);
+    if (kind === 'files') {
+      expect(screen.getByTestId('native-extension-surface').getAttribute('data-cwd')).toBe('/Users/patrick/project');
+    }
+  });
+
   it('keeps independently minimized child windows minimized when a parent chat restores', async () => {
     mocks.surfaces = [
       {
@@ -3080,6 +3152,77 @@ describe('WindowedLayout route windows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /close new conversation/i }));
     expect(screen.queryByRole('region', { name: 'Browser' })).toBeNull();
+  });
+
+  it.each([
+    ['browser' as const, 'Browser'],
+    ['files' as const, 'Files'],
+    ['terminal' as const, 'Terminal'],
+  ])('restores a persisted %s child window with parent lifecycle metadata', async (kind, title) => {
+    mocks.tabs = [{ id: 'session-2', title: 'Saved planning thread', messageCount: 1, workspaceCwd: '/Users/patrick/project' }];
+    mocks.surfaces = [surfaceForChildTool(kind)];
+    seedWindowedWindows([
+      {
+        id: 'chat:session-2',
+        kind: 'chat',
+        title: 'Saved planning thread',
+        route: '/conversations/session-2',
+        bounds: { x: 42, y: 34, width: 900, height: 560 },
+        minimized: false,
+        focused: false,
+        workspaceCwd: '/Users/patrick/project',
+      },
+      {
+        id: `chat:session-2:${kind}`,
+        kind,
+        title,
+        route: '/conversations/session-2',
+        bounds: { x: 154, y: 96, width: 680, height: 420 },
+        minimized: false,
+        focused: true,
+        workspaceCwd: '/Users/patrick/project',
+        parentWindowId: 'chat:session-2',
+        parentWindowTitle: 'Saved planning thread',
+      },
+    ]);
+
+    const { container } = renderWindowedLayout();
+
+    const childWindow = screen.getByRole('region', { name: title });
+    const chatWindow = container.querySelector<HTMLElement>('[data-window-id="chat:session-2"]');
+    const childBody = childWindow.querySelector(`[data-windowed-subwindow="${kind}"]`);
+    const taskbarButton = within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', {
+      name: new RegExp(`^${title}$`, 'i'),
+    });
+    const host = screen.getByTestId('native-extension-surface');
+
+    expect(childWindow.getAttribute('data-window-id')).toBe(`chat:session-2:${kind}`);
+    expect(childWindow.getAttribute('data-parent-window-attached')).toBe('true');
+    expect(childWindow.getAttribute('data-parent-window-id')).toBe('chat:session-2');
+    expect(childWindow.getAttribute('data-parent-window-title')).toBe('Saved planning thread');
+    expect(childWindow.getAttribute('data-focused')).toBe('true');
+    expect(chatWindow?.getAttribute('data-focused')).toBe('false');
+    expect(childBody?.getAttribute('data-parent-window-id')).toBe('chat:session-2');
+    expect(childBody?.getAttribute('data-parent-window-title')).toBe('Saved planning thread');
+    expect(taskbarButton.getAttribute('title')).toBe(`${title} attached to Saved planning thread`);
+    expect(taskbarButton.querySelector('.wos-app-tile__meta')?.textContent).toBe('Saved planning thread');
+    expect(host.getAttribute('data-extension-id')).toBe(
+      kind === 'browser' ? 'system-browser' : kind === 'files' ? 'system-files' : 'system-terminal',
+    );
+    expect(host.getAttribute('data-instance-id')).toBe(`chat:session-2:${kind}`);
+    if (kind !== 'browser') {
+      expect(host.getAttribute('data-cwd')).toBe('/Users/patrick/project');
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: /minimize saved planning thread/i }));
+    expect(childWindow.getAttribute('data-minimized')).toBe('true');
+    expect((childWindow as HTMLElement).style.display).toBe('none');
+
+    fireEvent.click(screen.getByRole('button', { name: /saved planning thread/i }));
+    expect(childWindow.getAttribute('data-minimized')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /close saved planning thread/i }));
+    expect(screen.queryByRole('region', { name: title })).toBeNull();
   });
 
   it('disables the browser child window action when the browser surface is unavailable', () => {

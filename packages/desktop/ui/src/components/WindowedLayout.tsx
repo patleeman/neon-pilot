@@ -1452,12 +1452,13 @@ export function WindowedLayout() {
     });
   }, []);
 
-  const openChildWindow = useCallback((parentWindow: DesktopWindowModel, kind: ChildWindowKind) => {
-    if (parentWindow.kind !== 'chat') return;
+  const openChildWindow = useCallback((parentWindowId: string, kind: ChildWindowKind) => {
     suspendWindowedBrowserViews();
     setLauncherOpen(false);
     setWindows((current) => {
-      const parent = current.find((candidate) => candidate.id === parentWindow.id && candidate.kind === 'chat') ?? parentWindow;
+      const parent = current.find((candidate) => candidate.id === parentWindowId);
+      if (!parent) return current;
+      if (parent.kind !== 'chat') return current;
       const id = `${parent.id}:${kind}`;
       const existing = current.find((candidate) => candidate.id === id);
       const withCollapsedParent = current.map((windowModel) =>
@@ -1482,13 +1483,13 @@ export function WindowedLayout() {
     });
   }, []);
 
-  const openBrowserWindow = useCallback((parentWindow: DesktopWindowModel) => openChildWindow(parentWindow, 'browser'), [openChildWindow]);
+  const openBrowserWindow = useCallback((parentWindowId: string) => openChildWindow(parentWindowId, 'browser'), [openChildWindow]);
 
-  const openFilesWindow = useCallback((parentWindow: DesktopWindowModel) => openChildWindow(parentWindow, 'files'), [openChildWindow]);
+  const openFilesWindow = useCallback((parentWindowId: string) => openChildWindow(parentWindowId, 'files'), [openChildWindow]);
 
   const openTerminalWindow = useCallback(
-    (parentWindow: DesktopWindowModel) => {
-      openChildWindow(parentWindow, 'terminal');
+    (parentWindowId: string) => {
+      openChildWindow(parentWindowId, 'terminal');
     },
     [openChildWindow],
   );
@@ -2110,9 +2111,9 @@ export function WindowedLayout() {
                   workspaceCwd={windowModel.kind === 'chat' ? windowModel.workspaceCwd : null}
                   route={windowModel.route}
                   onNavigate={(to) => navigateWindow(windowModel.id, to)}
-                  onOpenBrowserWindow={() => openBrowserWindow(windowModel)}
-                  onOpenFilesWindow={() => openFilesWindow(windowModel)}
-                  onOpenTerminalWindow={() => openTerminalWindow(windowModel)}
+                  onOpenBrowserWindow={() => openBrowserWindow(windowModel.id)}
+                  onOpenFilesWindow={() => openFilesWindow(windowModel.id)}
+                  onOpenTerminalWindow={() => openTerminalWindow(windowModel.id)}
                 />
               )}
             </WindowFrame>

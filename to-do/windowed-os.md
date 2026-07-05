@@ -2,11 +2,13 @@
 
 Running beta/design notes for the separate Neon Pilot windowed desktop mode.
 
-## Current Push: App-First Windowed OS Big Bang
+## Current Goal: Windowed OS Beta Readiness
 
-This branch is now the place to make Windowed OS the primary Neon Pilot direction, not a compatibility experiment. Do the big app-first cut here instead of slowly preserving the old sidebar/shell assumptions.
+Make Windowed OS usable as the primary Neon Pilot desktop shell while keeping this pass focused on shippable beta readiness: live route QA, child-window lifecycle, inherited surface polish, app-facing language, and real app-path validation.
 
-### Product model
+The deeper app/extension product model remains important, but the current goal is not to complete the full app-registry/runtime rewrite before beta. Keep implementation slices concrete, validated, and easy to beta test.
+
+### Product model direction
 
 - Make **Apps** the user-facing product primitive.
 - Keep extension/package mechanics only where they are still useful as implementation/runtime boundaries.
@@ -14,7 +16,7 @@ This branch is now the place to make Windowed OS the primary Neon Pilot directio
 - Treat every user-openable surface as an app: Chat, Browser, Terminal, Files, Automations, Settings, App Manager, Model Arena, Gateways, Routines, Skills, Diagnostics, Workflows if still distinct.
 - Treat smaller extension-like behavior as app-owned capabilities: reply actions, prompt assembly, setup/readiness, provider integrations, MCP, dictation, settings components, commands, tool surfaces, and background services.
 
-### Architecture direction
+### Architecture direction, deferred from beta-critical path
 
 - Create a first-class app manifest/registry shape that owns app identity, routes, windows, settings, commands, tools, services, readiness, permissions/capabilities, accent, icon, and default window behavior.
 - Replace extension-registry-driven desktop launch behavior with app-registry-driven launch behavior.
@@ -49,31 +51,58 @@ This branch is now the place to make Windowed OS the primary Neon Pilot directio
    - Polish provider settings, extension/app settings components, dense rows, section navigation, narrow window behavior, and the removal of unnecessary right-side/stable-shell panels.
 3. Browser and Files child-window live QA.
    - Open from Chat, reload/restart with child windows open, minimize/restore parent, minimize children independently, close parent, toggle themes, overlap windows, clip windows, and verify native BrowserView/iframe behavior does not overlay desktop chrome.
+   - 2026-07-04 progress: Browser and Files toolbar actions now resolve the parent chat by live window id before opening child windows, fixing the live no-op where enabled toolbar buttons did not spawn child windows after reload/focus changes. Verified in the running Electron app via CDP: Browser and Files opened as sibling desktop windows with chat parent metadata and taskbar entries.
+   - 2026-07-04 progress: Browser, Files, and Terminal now have focused regression coverage for persisted child-window restore, parent metadata, taskbar parent labels, host instance ids, Files/Terminal cwd restoration, parent minimize/restore, and parent-close pruning. Browser and Files also cover draft-to-saved chat retargeting.
 4. Inherited chat polish.
    - Continue the scoped windowed CSS/design-system pass for transcript rows, running/tool states, action buttons, menus, composer states, attachments, model picker, CWD/context indicator, and dark-mode readability.
+   - 2026-07-04 progress: chat-attached child-window empty states now override warning tint with normal windowed ink contrast so Files/Browser unavailable copy stays readable in dark mode. Covered with windowed OS tests/builds, desktop UI build, and live dark-mode screenshot QA.
 5. Modal/right-panel to subwindow cleanup.
    - Sweep app surfaces for stable right panels, oversized modals, and detail drawers.
    - Convert appropriate detail/edit/inspect surfaces into parent-attached desktop subwindows with taskbar/lifecycle behavior.
 6. App-first runtime cutover.
-   - Introduce app registry/manifest source of truth.
-   - Move Windowed OS launcher/taskbar/window defaults to apps.
-   - Rename or replace extension-facing UI copy.
-   - Consolidate first-party extension packages into app-owned packages where practical.
-   - Keep each intermediate commit understandable and validated, but do not optimize for preserving the old shell as a shippable path.
+   - This remains the product direction, but it is deferred from the beta-critical path.
+   - For this push, make app availability and app-facing language explicit enough for beta testing without requiring the full app registry/manifest rewrite.
+   - Keep each intermediate commit understandable and validated.
+
+### Next concrete implementation backlog
+
+1. Make core app availability explicit in the Windowed OS launcher.
+   - Current launcher still derives most apps from extension nav/main-view contributions.
+   - Add explicit core app coverage where it reduces beta fragility, while leaving the full app-registry rewrite deferred.
+   - Validate by opening every Start menu app in the live windowed shell.
+2. Retire App Manager's live right rail in favor of the existing parent-attached detail dialog.
+   - Remove or de-emphasize the `/extensions` route `rightSidebarView` contribution once row/details flows are covered by the attached dialog.
+   - Validate App Manager row click/details, narrow layout, dark mode, and no right-sidebar toggle in Windowed OS.
+3. Clean remaining normal-user "Extensions" copy in Settings, App Manager, command/action metadata, and smoke tests.
+   - Keep internal ids and developer/debug wording only where the implementation concept is still genuinely extension-specific.
+   - Validate command/search aliases can still find App Manager, but visible labels read as Apps/App Manager.
+4. Add narrow/dark Settings route coverage for Providers and App settings.
+   - Validate long rows, provider editor controls, app setting rows, and action groups at narrow widths.
+5. Convert remaining stable-shell right-rail detail surfaces into windowed detail/subwindow flows.
+   - Parallel candidates: Model Arena, Skills, App Manager.
+6. Run the live light/dark route matrix and file per-surface fixes.
+   - Toggle Light/Dark/Time and inspect Chat, Settings, App Manager, Skills, Gateways, Model Arena, Routines, Automations, Terminal, Browser, Files, Diagnostics, and Workflows at normal and narrow sizes.
 
 ### Acceptance criteria for this push
 
 - App launches into Windowed OS by default.
-- Start menu opens all core apps.
+- Start menu opens all beta-critical core apps.
 - Chat works end-to-end as an app, with threads represented as windows/taskbar entries.
-- Browser, Terminal, and Files work as first-class app/child windows with reload-safe lifecycle.
+- Browser, Terminal, and Files work as first-class child windows with reload-safe lifecycle.
 - Settings opens as an app and edits real settings.
 - Automations list/detail and run inspection work.
 - Model Arena and Gateways surfaces work.
-- App Manager replaces the normal Extensions experience.
+- App Manager replaces the normal Extensions experience in user-facing Windowed OS routes.
 - Normal user UI avoids "Extensions" language except advanced/developer details.
 - Light, dark, and time-of-day modes are usable across primary apps.
 - Build, tests, app launch, and hands-on live QA pass before calling the branch beta-ready.
+
+### Explicit exclusions / deferred
+
+- Do not treat the full app-registry/runtime rewrite as required for this beta-readiness pass.
+- The app-first product model remains the intended direction, but current code still derives much of the Windowed OS app registry from enabled extension contributions.
+- Defer the broader extension/app model discussion and the old "fork Neon Pilot around the windowed OS branch" architecture item until after the beta-readiness pass.
+- Do not remove the attached Chat workbench yet. Browser, Terminal, Files, Drawing, and related tools can continue moving toward first-class child/app windows, but removal should wait until the independent window model is proven across live workflows.
 
 ## Fixes
 
