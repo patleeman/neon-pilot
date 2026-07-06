@@ -26,9 +26,13 @@ const {
   resolveProfileActivityConversationLinksDirMock,
   resolveProfileActivityStateDirMock,
   resolveProfileAlertsStateFileMock,
+  resolveProfileAlertsStateFileFromLayoutMock,
   resolveProfileConversationArtifactsDirMock,
+  resolveProfileConversationArtifactsDirFromLayoutMock,
   resolveProfileConversationAttachmentsDirMock,
+  resolveProfileConversationAttachmentsDirFromLayoutMock,
   resolveProfileConversationCommitCheckpointsDirMock,
+  resolveProfileConversationCommitCheckpointsDirFromLayoutMock,
   statSyncMock,
   unsupportedRecursivePaths,
   watchErrorsByPath,
@@ -106,9 +110,21 @@ const {
       ({ stateRoot, profile }: { stateRoot?: string; profile: string }) => `${stateRoot ?? '/state'}/activity/${profile}`,
     ),
     resolveProfileAlertsStateFileMock: vi.fn(({ profile }: { profile: string }) => `/alerts/${profile}.json`),
+    resolveProfileAlertsStateFileFromLayoutMock: vi.fn(
+      (_layout: { systemState: string }, profile: string) => `/layout-alerts/${profile}.json`,
+    ),
     resolveProfileConversationArtifactsDirMock: vi.fn(({ profile }: { profile: string }) => `/artifacts/${profile}`),
+    resolveProfileConversationArtifactsDirFromLayoutMock: vi.fn(
+      (_layout: { systemState: string }, profile: string) => `/layout-artifacts/${profile}`,
+    ),
     resolveProfileConversationAttachmentsDirMock: vi.fn(({ profile }: { profile: string }) => `/attachments/${profile}`),
+    resolveProfileConversationAttachmentsDirFromLayoutMock: vi.fn(
+      (_layout: { systemState: string }, profile: string) => `/layout-attachments/${profile}`,
+    ),
     resolveProfileConversationCommitCheckpointsDirMock: vi.fn(({ profile }: { profile: string }) => `/commit-checkpoints/${profile}`),
+    resolveProfileConversationCommitCheckpointsDirFromLayoutMock: vi.fn(
+      (_layout: { systemState: string }, profile: string) => `/layout-commit-checkpoints/${profile}`,
+    ),
     statSyncMock,
     unsupportedRecursivePaths,
     watchErrorsByPath,
@@ -135,11 +151,15 @@ vi.mock('@neon-pilot/core', () => ({
   resolveConversationAttentionStatePath: resolveConversationAttentionStatePathMock,
   resolveDeferredResumeStateFile: resolveDeferredResumeStateFileMock,
   resolveProfileAlertsStateFile: resolveProfileAlertsStateFileMock,
+  resolveProfileAlertsStateFileFromLayout: resolveProfileAlertsStateFileFromLayoutMock,
+  resolveProfileConversationArtifactsDir: resolveProfileConversationArtifactsDirMock,
+  resolveProfileConversationArtifactsDirFromLayout: resolveProfileConversationArtifactsDirFromLayoutMock,
   resolveProfileConversationAttachmentsDir: resolveProfileConversationAttachmentsDirMock,
+  resolveProfileConversationAttachmentsDirFromLayout: resolveProfileConversationAttachmentsDirFromLayoutMock,
   resolveProfileConversationCommitCheckpointsDir: resolveProfileConversationCommitCheckpointsDirMock,
+  resolveProfileConversationCommitCheckpointsDirFromLayout: resolveProfileConversationCommitCheckpointsDirFromLayoutMock,
   resolveProfileActivityConversationLinksDir: resolveProfileActivityConversationLinksDirMock,
   resolveProfileActivityStateDir: resolveProfileActivityStateDirMock,
-  resolveProfileConversationArtifactsDir: resolveProfileConversationArtifactsDirMock,
   writeAppTelemetryEvent: writeAppTelemetryEventMock,
 }));
 
@@ -206,6 +226,10 @@ function seedBaseFs(): void {
   markFile('/machine/config.json');
   markFile('/state/web/deploy-state.json');
   markFile('/state/web/app-restart.lock.json');
+  markDirectory('/layout-artifacts/assistant');
+  markDirectory('/layout-attachments/assistant');
+  markDirectory('/layout-commit-checkpoints/assistant');
+  markFile('/layout-alerts/assistant.json');
   markFile('/config/profile.json');
 }
 
@@ -241,8 +265,13 @@ describe('appEvents mocked behavior', () => {
     resolveProfileActivityConversationLinksDirMock.mockClear();
     resolveProfileActivityStateDirMock.mockClear();
     resolveProfileAlertsStateFileMock.mockClear();
+    resolveProfileAlertsStateFileFromLayoutMock.mockClear();
     resolveProfileConversationArtifactsDirMock.mockClear();
+    resolveProfileConversationArtifactsDirFromLayoutMock.mockClear();
     resolveProfileConversationAttachmentsDirMock.mockClear();
+    resolveProfileConversationAttachmentsDirFromLayoutMock.mockClear();
+    resolveProfileConversationCommitCheckpointsDirMock.mockClear();
+    resolveProfileConversationCommitCheckpointsDirFromLayoutMock.mockClear();
     statSyncMock.mockClear();
     watchMock.mockClear();
     writeAppTelemetryEventMock.mockClear();
@@ -481,6 +510,39 @@ describe('appEvents mocked behavior', () => {
     expect(logWarnMock).toHaveBeenCalledWith('app event watch refresh failed', {
       message: 'profile lookup failed',
     });
+  });
+
+  it('uses layout-based watch paths when getDesktopRootLayout is provided', () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot: '/repo',
+      sessionsDir: '/sessions',
+      taskStateFile: '/state/daemon/task-state.json',
+      profileConfigFile: '/config/profile.json',
+      getRuntimeScope: () => 'assistant',
+      getDesktopRootLayout: () => ({ systemState: '/layout' }) as never,
+    });
+
+    expect(resolveProfileConversationArtifactsDirFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
+    expect(resolveProfileConversationAttachmentsDirFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
+    expect(resolveProfileConversationCommitCheckpointsDirFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
+    expect(resolveProfileAlertsStateFileFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
+
+    expect(resolveProfileConversationArtifactsDirMock).not.toHaveBeenCalled();
+    expect(resolveProfileConversationAttachmentsDirMock).not.toHaveBeenCalled();
+    expect(resolveProfileConversationCommitCheckpointsDirMock).not.toHaveBeenCalled();
+    expect(resolveProfileAlertsStateFileMock).not.toHaveBeenCalled();
+
+    expect(getLatestWatch('/layout-artifacts/assistant', (r) => r.options.recursive)).toBeDefined();
+    expect(getLatestWatch('/layout-artifacts', (r) => !r.options.recursive)).toBeDefined();
+    expect(getLatestWatch('/layout-commit-checkpoints/assistant', (r) => r.options.recursive)).toBeDefined();
+    expect(getLatestWatch('/layout-attachments/assistant', (r) => r.options.recursive)).toBeDefined();
+    expect(getLatestWatch('/layout-alerts', (r) => !r.options.recursive)).toBeDefined();
+    unsubscribe();
   });
 
   it('clears pending invalidation and rebuild timers when the monitor stops', () => {

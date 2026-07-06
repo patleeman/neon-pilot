@@ -39,6 +39,7 @@ export function startBootstrapMonitors(options: {
   taskStateFile: string;
   profileConfigFile: string;
   getRuntimeScope: () => string;
+  getDesktopRootLayout?: () => import('@neon-pilot/core').DesktopRootLayout;
   daemonRoot?: string;
   readDaemonState: ServiceAttentionMonitorOptions['readDaemonState'];
 }): void {
@@ -60,6 +61,7 @@ export function startBootstrapMonitors(options: {
     taskStateFile: options.taskStateFile,
     profileConfigFile: options.profileConfigFile,
     getRuntimeScope: options.getRuntimeScope,
+    ...(options.getDesktopRootLayout !== undefined ? { getDesktopRootLayout: options.getDesktopRootLayout } : {}),
   });
 
   subscribeProviderOAuthLogins((login) => {

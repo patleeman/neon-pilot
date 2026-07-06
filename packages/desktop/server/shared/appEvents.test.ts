@@ -190,4 +190,78 @@ describe('app event monitor', () => {
     expect(events.some((event) => event.type === 'invalidate' && ALL_TOPICS.every((topic) => event.topics.includes(topic)))).toBe(true);
     unsubscribe();
   }, 15_000);
+
+  it('uses layout-based watch paths when getDesktopRootLayout is provided', async () => {
+    const repoRoot = createTempDir('neon-pilot-web-app-events-layout-');
+    const layoutRoot = createTempDir('neon-pilot-web-app-events-layout-state-');
+    const sessionsDir = getDurableSessionsDir();
+    const taskStateFile = join(getStateRoot(), 'daemon', 'task-state.json');
+    const profileConfigFile = join(getConfigRoot(), 'profile.json');
+    mkdirSync(sessionsDir, { recursive: true });
+    mkdirSync(dirname(taskStateFile), { recursive: true });
+    mkdirSync(dirname(profileConfigFile), { recursive: true });
+    writeFileSync(taskStateFile, '{}\n', 'utf-8');
+    writeFileSync(profileConfigFile, '{"defaultProfile":"assistant"}\n', 'utf-8');
+
+    const artifactsDir = join(layoutRoot, 'pi-agent', 'state', 'conversation-artifacts', 'assistant');
+    const checkpointsDir = join(layoutRoot, 'pi-agent', 'state', 'conversation-commit-checkpoints', 'assistant');
+    const attachmentsDir = join(layoutRoot, 'pi-agent', 'state', 'conversation-attachments', 'assistant');
+    const alertsFile = join(layoutRoot, 'pi-agent', 'state', 'alerts', 'assistant.json');
+    mkdirSync(artifactsDir, { recursive: true });
+    mkdirSync(checkpointsDir, { recursive: true });
+    mkdirSync(attachmentsDir, { recursive: true });
+    mkdirSync(dirname(alertsFile), { recursive: true });
+    writeFileSync(alertsFile, '{"version":1,"alerts":{},"updatedAt":"2026-01-01T00:00:00.000Z"}\n', 'utf-8');
+
+    const layout = {
+      root: layoutRoot,
+      apps: layoutRoot,
+      data: layoutRoot,
+      dataApps: layoutRoot,
+      dataDocuments: layoutRoot,
+      documents: layoutRoot,
+      agents: layoutRoot,
+      logs: layoutRoot,
+      logsDesktop: layoutRoot,
+      logsDaemon: layoutRoot,
+      logsTelemetry: layoutRoot,
+      system: layoutRoot,
+      systemAgents: layoutRoot,
+      systemApps: layoutRoot,
+      systemCache: layoutRoot,
+      systemConfig: layoutRoot,
+      systemConversations: layoutRoot,
+      systemSessions: layoutRoot,
+      systemDaemon: layoutRoot,
+      systemElectron: layoutRoot,
+      systemElectronUserData: layoutRoot,
+      systemObservability: layoutRoot,
+      systemRuntime: layoutRoot,
+      systemSecrets: layoutRoot,
+      systemState: layoutRoot,
+    };
+
+    const events: AppEvent[] = [];
+    const unsubscribe = subscribeAppEvents((event) => {
+      events.push(event);
+    });
+
+    startAppEventMonitor({
+      repoRoot,
+      sessionsDir,
+      taskStateFile,
+      profileConfigFile,
+      getRuntimeScope: () => 'assistant',
+      getDesktopRootLayout: () => layout,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    events.length = 0;
+
+    writeFileSync(join(artifactsDir, 'test-artifact.json'), '{"id":"test"}\n', 'utf-8');
+
+    await waitFor(() => events.some((event) => event.type === 'invalidate' && event.topics.includes('artifacts')));
+    expect(events.some((event) => event.type === 'invalidate' && event.topics.includes('artifacts'))).toBe(true);
+    unsubscribe();
+  }, 15_000);
 });

@@ -51,6 +51,29 @@ describe('bootstrap monitor helpers', () => {
     vi.restoreAllMocks();
   });
 
+  it('forwards getDesktopRootLayout to startAppEventMonitor when provided', () => {
+    const startMonitor = vi.fn();
+    createServiceAttentionMonitorMock.mockReturnValue({ start: startMonitor });
+    const getDesktopRootLayout = () => ({ root: '/test-root' }) as never;
+
+    startBootstrapMonitors({
+      repoRoot: '/repo',
+      sessionsDir: '/repo/sessions',
+      taskStateFile: '/repo/tasks.json',
+      profileConfigFile: '/repo/profile.json',
+      daemonRoot: '/daemon',
+      getRuntimeScope: () => 'assistant',
+      getDesktopRootLayout,
+      readDaemonState: () => ({ status: 'ok' }),
+    });
+
+    expect(startAppEventMonitorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        getDesktopRootLayout,
+      }),
+    );
+  });
+
   it('defaults malformed deferred resume poll intervals', () => {
     expect(normalizeDeferredResumePollMs(1.5)).toBe(5_000);
     expect(normalizeDeferredResumePollMs(Number.MAX_SAFE_INTEGER + 1)).toBe(5_000);

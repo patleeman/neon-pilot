@@ -1,6 +1,7 @@
 import { type Dirent, existsSync, type FSWatcher, readdirSync, statSync, watch } from 'node:fs';
 import { basename, dirname, join, normalize } from 'node:path';
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import {
   getDurableTasksDir,
   getPiAgentRuntimeDir,
@@ -8,9 +9,13 @@ import {
   resolveConversationAttentionStatePath,
   resolveDeferredResumeStateFile,
   resolveProfileAlertsStateFile,
+  resolveProfileAlertsStateFileFromLayout,
   resolveProfileConversationArtifactsDir,
+  resolveProfileConversationArtifactsDirFromLayout,
   resolveProfileConversationAttachmentsDir,
+  resolveProfileConversationAttachmentsDirFromLayout,
   resolveProfileConversationCommitCheckpointsDir,
+  resolveProfileConversationCommitCheckpointsDirFromLayout,
 } from '@neon-pilot/core';
 import { getDaemonConfigFilePath, loadDaemonConfig, resolveDaemonPaths, resolveDurableRunsRoot } from '@neon-pilot/daemon';
 
@@ -112,6 +117,7 @@ export interface AppEventMonitorOptions {
   taskStateFile: string;
   profileConfigFile: string;
   getRuntimeScope: () => string;
+  getDesktopRootLayout?: () => DesktopRootLayout;
   intervalMs?: number;
 }
 
@@ -378,16 +384,23 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
   // part of the canonical conversation list, so do not wire it to the broad
   // sessions invalidation topic; refreshes here trigger expensive list reads and
   // renderer churn on the critical streaming path.
-  const conversationArtifactsDir = resolveProfileConversationArtifactsDir({ profile });
-  const conversationCommitCheckpointsDir = resolveProfileConversationCommitCheckpointsDir({ profile });
-  const conversationAttachmentsDir = resolveProfileConversationAttachmentsDir({ profile });
+  const layout = options.getDesktopRootLayout?.();
+  const conversationArtifactsDir = layout
+    ? resolveProfileConversationArtifactsDirFromLayout(layout, profile)
+    : resolveProfileConversationArtifactsDir({ profile });
+  const conversationCommitCheckpointsDir = layout
+    ? resolveProfileConversationCommitCheckpointsDirFromLayout(layout, profile)
+    : resolveProfileConversationCommitCheckpointsDir({ profile });
+  const conversationAttachmentsDir = layout
+    ? resolveProfileConversationAttachmentsDirFromLayout(layout, profile)
+    : resolveProfileConversationAttachmentsDir({ profile });
   const tasksDir = getDurableTasksDir();
   const daemonStateDir = dirname(options.taskStateFile);
   const runtimeDbFile = join(daemonStateDir, 'runtime.db');
   const runsRoot = resolveDurableRunsRoot(daemonStateDir);
   const conversationAttentionStateFile = resolveConversationAttentionStatePath({ profile });
   const deferredResumeStateFile = resolveDeferredResumeStateFile();
-  const alertsStateFile = resolveProfileAlertsStateFile({ profile });
+  const alertsStateFile = layout ? resolveProfileAlertsStateFileFromLayout(layout, profile) : resolveProfileAlertsStateFile({ profile });
 
   return {
     sessions: [
