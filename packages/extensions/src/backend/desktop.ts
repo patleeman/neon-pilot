@@ -4,6 +4,10 @@
  * This exposes semantic agent-visible access to the Windowed OS desktop:
  * read-only state and a narrow control bridge whose commands are executed by
  * the renderer's existing window actions.
+ *
+ * Control/capture helpers route through the host-owned extension capability
+ * bridge so the active extension identity can be used to enforce
+ * `desktop:control`.
  */
 
 function hostResolved(): never {
@@ -109,6 +113,6 @@ export interface DesktopScreenshotResult {
   error?: string;
 }
 
-export const captureDesktopScreenshot = (..._args: unknown[]): unknown => hostResolved();
-export const controlDesktop = (..._args: unknown[]): unknown => hostResolved();
-export const readDesktopState = (..._args: unknown[]): unknown => hostResolved();
+export const captureDesktopScreenshot = (_input?: DesktopScreenshotInput): Promise<DesktopScreenshotResult> => hostResolved();
+export const controlDesktop = (_input: DesktopControlInput): Promise<DesktopControlResult> => hostResolved();
+export const readDesktopState = (): Promise<DesktopStateListResult> => hostResolved();

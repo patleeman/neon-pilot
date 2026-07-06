@@ -118,11 +118,17 @@ async function callServerModuleExport(relativeSpecifier, name, ...args) {
 }
 
 // packages/desktop/server/extensions/backendApi/desktop.ts
+var EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for("neon-pilot.extensionHostCapabilityBridge");
+function requireDesktopCapabilityBridge() {
+  const bridge = globalThis[EXTENSION_HOST_CAPABILITY_BRIDGE];
+  if (!bridge) throw new Error("Desktop control requires an active extension host capability bridge.");
+  return bridge;
+}
 async function controlDesktop(input) {
-  return callServerModuleExport("../../desktop/desktopControl.js", "issueDesktopControlCommand", input);
+  return requireDesktopCapabilityBridge()("desktop", "control", input);
 }
 async function captureDesktopScreenshot(input) {
-  return callServerModuleExport("../../desktop/desktopScreenshot.js", "issueDesktopScreenshotRequest", input);
+  return requireDesktopCapabilityBridge()("desktop", "screenshot", input);
 }
 async function readDesktopState() {
   return callServerModuleExport("../../desktop/desktopState.js", "readDesktopStateSnapshot");

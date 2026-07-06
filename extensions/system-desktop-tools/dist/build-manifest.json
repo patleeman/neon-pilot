@@ -1,12 +1,12 @@
 {
   "extensionId": "system-desktop-tools",
-  "builtAt": "2026-07-06T01:39:26.224Z",
+  "builtAt": "2026-07-06T01:52:08.615Z",
   "frontendEntry": null,
   "backendEntry": "dist/backend.mjs",
   "sourceHashes": [
     {
       "path": "extension.json",
-      "sha256": "96780206e9cfa52bf83511a541276514d254101ee9d3bc0774ced00114db39a7"
+      "sha256": "5914d8f36a769926172e10fc6baed935c9d72d933630d928b454a274a5a0ad6a"
     },
     {
       "path": "src/backend.ts",
@@ -25,8 +25,8 @@
       "imports": []
     },
     {
-      "path": "extensions/system-desktop-tools/.dist.tmp-53668-1783301966211/backend.mjs",
-      "bytes": 8104,
+      "path": "extensions/system-desktop-tools/.dist.tmp-80295-1783302728605/backend.mjs",
+      "bytes": 8360,
       "imports": [
         "node:fs",
         "node:path",

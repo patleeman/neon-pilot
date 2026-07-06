@@ -1070,6 +1070,7 @@ Rules:
 
 - Declare permissions in `extension.json`.
 - Keep permissions aligned with what the extension can actually do.
+- Use `desktop:control` for extensions that can control or capture Neon Pilot's own Windowed OS desktop.
 - The Extension Manager displays permissions and should highlight permission expansion.
 - Do not expose raw SQLite handles, Express routers, Electron main process objects, arbitrary app internals, or the full process environment as extension APIs.
 

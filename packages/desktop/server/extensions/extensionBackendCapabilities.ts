@@ -653,6 +653,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return request.operation === 'cdp' ? ['browser:control'] : ['browser:read'];
   }
 
+  if (request.capability === 'desktop') {
+    return ['desktop:control'];
+  }
+
   if (request.capability === 'conversations') {
     return permissionForReadWriteOperation('conversations:read', 'conversations:write', 'conversations:readwrite', request.operation, [
       'activity',
@@ -2260,6 +2264,16 @@ async function dispatchBrowserCapability(request: ExtensionBackendWorkerCapabili
   throw new Error(`Unsupported browser capability operation: ${request.operation}`);
 }
 
+async function dispatchDesktopCapability(request: ExtensionBackendWorkerCapabilityRequest): Promise<unknown> {
+  if (request.operation === 'control') {
+    return callServerModuleExport('../../desktop/desktopControl.js', 'issueDesktopControlCommand', request.input);
+  }
+  if (request.operation === 'screenshot') {
+    return callServerModuleExport('../../desktop/desktopScreenshot.js', 'issueDesktopScreenshotRequest', request.input);
+  }
+  throw new Error(`Unsupported desktop capability operation: ${request.operation}`);
+}
+
 function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   const input = normalizeRecordInput(request.input, 'UI');
   if (request.operation === 'invalidate') {
@@ -2845,6 +2859,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'browser') {
       return dispatchBrowserCapability(request);
+    }
+    if (request.capability === 'desktop') {
+      return dispatchDesktopCapability(request);
     }
     if (request.capability === 'commands') {
       return dispatchCommandsCapability(commands, request);

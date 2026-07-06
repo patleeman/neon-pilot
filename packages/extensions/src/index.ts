@@ -235,6 +235,7 @@ export type ExtensionPermission =
   | 'commands:execute'
   | 'browser:read'
   | 'browser:control'
+  | 'desktop:control'
   | 'git:read'
   | 'secrets:read'
   | 'extensions:read'

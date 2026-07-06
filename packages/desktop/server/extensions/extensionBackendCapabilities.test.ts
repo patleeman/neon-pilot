@@ -773,6 +773,38 @@ describe('extension backend capability dispatcher', () => {
     expect(workbenchBrowserToolHost.cdp).not.toHaveBeenCalled();
   });
 
+  it('denies desktop control capability calls without desktop:control permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'desktop',
+        operation: 'control',
+        input: { action: 'focus', windowId: 'chat:draft' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission desktop:control to use desktop.control.');
+  });
+
+  it('denies desktop screenshot capability calls without desktop:control permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'desktop',
+        operation: 'screenshot',
+        input: { windowId: 'chat:draft' },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission desktop:control to use desktop.screenshot.');
+  });
+
   it('dispatches extension-scoped git capability calls', async () => {
     const git = {
       status: vi.fn(() => ({ porcelain: '## main' })),

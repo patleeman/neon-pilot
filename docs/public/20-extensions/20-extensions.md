@@ -1928,7 +1928,7 @@ const available = ctx.notify.isSystemAvailable();
 ## Permissions
 
 Extensions must declare the permissions they need. The system currently
-enforces permissions for storage and conversation operations.
+enforces permissions for storage, conversation, and Windowed OS desktop-control operations.
 
 ```json
 {
@@ -1946,6 +1946,7 @@ enforces permissions for storage and conversation operations.
     "executions:read",
     "executions:start",
     "executions:cancel",
+    "desktop:control",
     "ui:notify"
   ]
 }

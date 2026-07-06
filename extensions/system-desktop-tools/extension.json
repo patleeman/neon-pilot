@@ -6,6 +6,7 @@
   "defaultEnabled": true,
   "description": "Agent-facing tools over Neon Pilot's own Windowed OS desktop.",
   "version": "0.1.0",
+  "permissions": ["desktop:control"],
   "backend": {
     "entry": "dist/backend.mjs",
     "actions": [
