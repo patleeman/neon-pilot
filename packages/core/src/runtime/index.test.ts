@@ -7,8 +7,10 @@ describe('core runtime barrel', () => {
     expect(runtime).toEqual(
       expect.objectContaining({
         getConfigRoot: expect.any(Function),
+        getDefaultDesktopRoot: expect.any(Function),
         getDefaultKnowledgeRoot: expect.any(Function),
         getDefaultStateRoot: expect.any(Function),
+        getDesktopRootDir: expect.any(Function),
         getDurableAgentFilePath: expect.any(Function),
         getDurableSessionsDir: expect.any(Function),
         getDurableSkillsDir: expect.any(Function),
@@ -17,6 +19,8 @@ describe('core runtime barrel', () => {
         getSyncRoot: expect.any(Function),
         getKnowledgeRoot: expect.any(Function),
         isPathInRepo: expect.any(Function),
+        resolveDesktopAppDataDir: expect.any(Function),
+        resolveDesktopRootLayout: expect.any(Function),
         resolveNeutralChatCwd: expect.any(Function),
         resolveStatePaths: expect.any(Function),
         validateStatePathsOutsideRepo: expect.any(Function),

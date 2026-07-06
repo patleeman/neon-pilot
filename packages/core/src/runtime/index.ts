@@ -7,6 +7,14 @@
 
 // Path resolution
 export {
+  type DesktopRootLayout,
+  type DesktopRootOptions,
+  getDefaultDesktopRoot,
+  getDesktopRootDir,
+  resolveDesktopAppDataDir,
+  resolveDesktopRootLayout,
+} from './desktop-root.js';
+export {
   getConfigRoot,
   getDefaultConfigRoot,
   getDefaultKnowledgeRoot,

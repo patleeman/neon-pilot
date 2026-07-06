@@ -8,11 +8,13 @@ import {
   getDefaultMachineInstructionFiles,
   getDefaultMachineSkillDirs,
   getMachineConfigFilePath,
+  readMachineConfig,
   readMachineConfigSection,
   readMachineInstructionFiles,
   readMachineSkillDirs,
   readMachineSystemPromptTemplate,
   updateMachineConfigSection,
+  writeMachineConfig,
   writeMachineInstructionFiles,
   writeMachineSkillDirs,
   writeMachineSystemPromptTemplate,
@@ -149,6 +151,21 @@ describe('machine config', () => {
     writeMachineSkillDirs([], { configRoot: configDir });
     expect(readMachineSkillDirs({ configRoot: configDir })).toEqual(getDefaultMachineSkillDirs());
     expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toEqual({});
+  });
+
+  it('reads and writes the desktop root in config.json', () => {
+    const configDir = createTempDir('pa-machine-config-');
+
+    writeMachineConfig({ desktopRoot: '  ~/Agent Desktop  ', knowledgeRoot: '  ~/Agent Knowledge  ' }, { configRoot: configDir });
+
+    expect(readMachineConfig({ configRoot: configDir })).toMatchObject({
+      desktopRoot: '~/Agent Desktop',
+      knowledgeRoot: '~/Agent Knowledge',
+    });
+    expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf-8'))).toMatchObject({
+      desktopRoot: '~/Agent Desktop',
+      knowledgeRoot: '~/Agent Knowledge',
+    });
   });
 
   it('reads and writes the system prompt template in config.json', () => {
