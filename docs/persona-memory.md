@@ -21,6 +21,6 @@ Persona memory is queued as prompt context only when the direct user-facing chat
 - Desktop local API resumed conversation message submission.
 - HTTP live-session prompt route.
 
-The shared live-session capability defaults to no persona memory. Gateway conversations, extension conversation APIs, background/deferred resumes, parallel prompts, and other programmatic worker paths must not set the persona-memory opt-in flag.
+The shared live-session capability defaults to no persona memory. Extension conversation APIs, background/deferred resumes, parallel prompts, and other programmatic worker paths must not set the persona-memory opt-in flag.
 
 This preserves the Phase 4 rule: one persona identity, many worker executions. Workers can read ordinary referenced context when explicitly attached or mentioned, but they do not inherit the user's persona memory bundle.

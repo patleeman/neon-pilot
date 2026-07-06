@@ -85,8 +85,8 @@ pnpm run eval:extension-visual-judge -- \
   --models=opencode-go/kimi-k2.5,opencode-go/mimo-v2.5,opencode-go/qwen3.6-plus
 ```
 
-This runner reads screenshot bytes itself and sends them as `input_image` data URLs to the Neon Pilot model gateway. Use `--base-url=<url>` when the gateway is not on the default `http://127.0.0.1:8766/v1`.
-The bundled AI Gateway extension must be enabled and listening before this runner can call real judges; otherwise the runner will emit judge-runner errors instead of visual scores.
+This runner reads screenshot bytes itself and sends them as `input_image` data URLs to the configured model provider API. Use `--base-url=<url>` when the provider API is not on the default `http://127.0.0.1:8766/v1`.
+The visual judge runner must be able to reach the model provider API before it can call real judges; otherwise the runner will emit judge-runner errors instead of visual scores.
 
 ## Case Contract
 

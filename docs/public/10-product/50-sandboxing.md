@@ -27,7 +27,6 @@ Other configured tools may also use the network. For example:
 - an MCP server may call a remote service;
 - a browser tool may load a website;
 - an extension may connect to an integration you enabled;
-- a model gateway may serve local API requests to another tool.
 
 Review what you attach and which extensions you enable.
 

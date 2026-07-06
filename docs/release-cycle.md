@@ -112,7 +112,7 @@ The check verifies:
 2. The Electron renderer exposes a page over CDP
 3. The initial route renders non-empty UI without startup errors
 4. Agent-readable packaged resources exist (`docs/README.md`, bundled system extension READMEs, extension skills, and manifest-declared extension bundles)
-5. Packaged renderer API endpoints return successful responses for extensions, gateways, and models
+5. Packaged renderer API endpoints return successful responses for extensions and models
 6. Packaged extension backends import successfully with Electron-style `process.resourcesPath`
 7. The extension golden matrix in `scripts/release-extension-golden-matrix.json` passes against the packaged app: required extensions are enabled, release-critical extension routes render, representative backend actions execute through the real extension host route, expected agent tools appear in `/api/tools`, and safe action-backed tools invoke successfully
 8. A live conversation can be created and its `bash` tool returns output

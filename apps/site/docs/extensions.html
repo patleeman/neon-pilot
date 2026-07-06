@@ -281,6 +281,12 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
     ]
   },
   &quot;contributes&quot;: {
+    &quot;appearance&quot;: {
+      &quot;accent&quot;: &quot;apps&quot;,
+      &quot;aliases&quot;: [&quot;my app&quot;],
+      &quot;singleton&quot;: true,
+      &quot;window&quot;: { &quot;defaultWidth&quot;: 920, &quot;defaultHeight&quot;: 640 }
+    },
     &quot;views&quot;: [],
     &quot;nav&quot;: [],
     &quot;commands&quot;: [],
@@ -312,6 +318,11 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td><code>appearance</code></td>
+              <td>Desktop app metadata for Start menu search, app accent, and window behavior</td>
+              <td><a href="#desktop-appearance-appearance">See below</a></td>
+            </tr>
             <tr>
               <td><code>views</code></td>
               <td>UI surfaces: main pages, route sidebar bodies, route context rails, and workbench panels</td>
@@ -483,11 +494,6 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
               <td><a href="#runtime-providers-runtimeproviders">See below</a></td>
             </tr>
             <tr>
-              <td><code>gatewayProviders</code></td>
-              <td>External messaging gateway providers registered for shared gateway state</td>
-              <td><a href="#gateway-providers-gatewayproviders">See below</a></td>
-            </tr>
-            <tr>
               <td><code>settings</code></td>
               <td>Settings schema contributions</td>
               <td><a href="#settings">See below</a></td>
@@ -589,6 +595,27 @@ neon-pilot-extension pack &lt;extension-dir&gt; --out &lt;extension-id&gt;-&lt;v
             </tr>
           </tbody>
         </table>
+        <h3 id="desktop-appearance-appearance">Desktop appearance (<code>appearance</code>)</h3>
+        <p>
+          Use <code>contributes.appearance</code> for app-like route extensions that should feel first-class in the desktop shell. The
+          windowed app registry uses this metadata for Start menu search, app accent, and singleton behavior when projecting extension
+          routes into desktop apps.
+        </p>
+        <pre><code>{
+  &quot;contributes&quot;: {
+    &quot;appearance&quot;: {
+      &quot;accent&quot;: &quot;drawing&quot;,
+      &quot;aliases&quot;: [&quot;whiteboard&quot;, &quot;sketchpad&quot;],
+      &quot;singleton&quot;: false,
+      &quot;window&quot;: { &quot;defaultWidth&quot;: 920, &quot;defaultHeight&quot;: 640 }
+    }
+  }
+}</code></pre>
+        <p>
+          Supported accents are <code>chat</code>, <code>automations</code>, <code>drawing</code>, <code>apps</code>,
+          <code>telemetry</code>, and <code>settings</code>. Omit <code>appearance</code> for non-app extensions or when the default
+          title-based accent and single-window behavior are fine.
+        </p>
         <h3 id="standard-file-change-metadata">Standard file change metadata</h3>
         <p>
           File-mutating tools should return standard <code>details.fileChanges</code> metadata when they can identify the exact mutation
@@ -965,50 +992,6 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
           <code>kind</code>, <code>status</code>, optional <code>version</code>, <code>workspaceRoots</code>, <code>capabilities</code>, and
           <code>metadata</code>. Backend actions can inspect providers through <code>ctx.runtimes.list()</code>,
           <code>ctx.runtimes.get(id)</code>, and <code>ctx.runtimes.healthCheck(id)</code>.
-        </p>
-        <h3 id="gateway-providers-gatewayproviders">Gateway Providers (<code>gatewayProviders</code>)</h3>
-        <p>
-          Gateway providers advertise external messaging channels that can route messages into Neon Pilot conversations. Declaring a
-          provider registers its provider ID for shared gateway state. The extension runtime owns credentials, transport, and
-          provider-specific setup UI; do not rely on Telegram Gateway as a generic provider switcher.
-        </p>
-        <pre><code>{
-  &quot;contributes&quot;: {
-    &quot;gatewayProviders&quot;: [
-      {
-        &quot;id&quot;: &quot;discord&quot;,
-        &quot;label&quot;: &quot;Discord&quot;,
-        &quot;description&quot;: &quot;Route Discord messages into Neon Pilot.&quot;,
-        &quot;configurationLocation&quot;: &quot;extension&quot;,
-        &quot;setupRoute&quot;: &quot;/ext/discord-gateway&quot;,
-        &quot;docsUrl&quot;: &quot;https://discord.com/developers/docs/intro&quot;,
-        &quot;order&quot;: 30
-      }
-    ]
-  }
-}</code></pre>
-        <p>Gateway runtime code should import the focused backend seam:</p>
-        <pre><code>import {
-  attachGatewayConversation,
-  ensureGatewayConnection,
-  recordGatewayEvent,
-  updateGatewayConnectionStatus,
-} from '@neon-pilot/extensions/backend/gateways';</code></pre>
-        <p>
-          Use <code>ensureGatewayConnection({ provider })</code> when the runtime is created,
-          <code>updateGatewayConnectionStatus(...)</code> when credentials or transport state changes,
-          <code>attachGatewayConversation(...)</code> when an external chat is bound to a conversation,
-          <code>detachGatewayConversation(...)</code> when a binding is removed, and <code>recordGatewayEvent(...)</code> for user-visible
-          gateway activity. Extension code must use the gateway SDK seam rather than importing host gateway internals directly.
-        </p>
-        <p>Gateway runtimes or other extensions that need speech-to-text should call the host transcription seam:</p>
-        <pre><code>import { transcribeAudio } from '@neon-pilot/extensions/backend/transcription';
-
-const transcript = await transcribeAudio({ dataBase64, mimeType: 'audio/ogg', fileName: 'voice.ogg' });</code></pre>
-        <p>
-          The transcription API accepts normal audio payload metadata and currently routes through the host-owned local Whisper.cpp
-          provider. The host owns model install/status, shared model caching, native module loading, and audio decoding; extension code
-          should not import <code>whisper-cpp-node</code>, desktop server files, or the Local Dictation extension implementation.
         </p>
         <h3 id="composer-attachments">Composer Attachments</h3>
         <p>
@@ -2626,8 +2609,8 @@ ctx.notify.clearBadge(); // Clear this extension's badge
 const available = ctx.notify.isSystemAvailable();</code></pre>
         <h2 id="permissions">Permissions</h2>
         <p>
-          Extensions must declare the permissions they need. The system currently enforces permissions for storage and conversation
-          operations.
+          Extensions must declare the permissions they need. The system currently enforces permissions for storage, conversation, and
+          Windowed OS desktop-control operations.
         </p>
         <pre><code>{
   &quot;permissions&quot;: [
@@ -2644,6 +2627,7 @@ const available = ctx.notify.isSystemAvailable();</code></pre>
     &quot;executions:read&quot;,
     &quot;executions:start&quot;,
     &quot;executions:cancel&quot;,
+    &quot;desktop:control&quot;,
     &quot;ui:notify&quot;
   ]
 }</code></pre>

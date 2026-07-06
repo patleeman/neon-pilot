@@ -18,7 +18,7 @@ Examples:
 - read-only semantic desktop state for agent inspection, such as window ids, routes, focus, bounds, z-order, and app metadata
 - models, providers, provider auth, default cwd, conversation workspace layout, title settings, conversation model preferences
 - knowledge/workspace trees, files, searches, diffs, and explicit file mutations
-- extension routes, extension manager operations, OAuth callbacks, downloads, webhooks, and gateway APIs
+- extension routes, extension manager operations, OAuth callbacks, downloads, and webhooks
 
 HTTP responses must be bounded, paginated, or streamed. Large binary/text payloads should flow as bytes/streams instead of deeply nested objects.
 

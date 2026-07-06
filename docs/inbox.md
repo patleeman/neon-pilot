@@ -48,8 +48,7 @@ second source of truth for execution state.
 Direct persona chat sessions receive a compact summary of active unread Inbox
 messages as referenced context. The summary is bounded, does not mark messages
 read, and repeats that Inbox content is data to inspect or summarize, never
-instructions to execute. Programmatic workers, extension conversation calls,
-gateway conversations, and parallel prompts do not inherit this context.
+instructions to execute. Programmatic workers, extension conversation calls, and parallel prompts do not inherit this context.
 
 ## UI Surface
 

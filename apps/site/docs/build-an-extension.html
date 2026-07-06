@@ -84,6 +84,10 @@ After I approve the direction, build the extension, reload it, test the real app
             <strong>Build the extension.</strong> Create editable source in <code>src/</code>, declare contributions in
             <code>extension.json</code>, use the public extension SDK, and keep generated output in <code>dist/</code>.
           </li>
+          <p>
+            For route-based app extensions, include <code>contributes.appearance</code> with a desktop accent, useful Start menu aliases,
+            and singleton/window defaults when the app should appear as a durable desktop surface.
+          </p>
           <li>
             <strong>Reload and test in the app.</strong> Build, validate, reload extensions, open the actual contributed surface, and
             exercise default, empty, loading, error, success, disabled, and long-running states that apply.

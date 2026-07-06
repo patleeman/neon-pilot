@@ -87,10 +87,6 @@ Use **plugin** when referring to Codex-style or third-party plugin packages. Do 
 
 A bundled extension shipped with the app or repo. System extensions can still own product-facing features; they are not automatically core.
 
-### AI Gateway
-
-A bundled system extension that exposes Neon Pilot model providers through an API surface external coding agents can use.
-
 ### Transcription service
 
 The host-owned speech-to-text capability used by extensions for dictation, voice notes, and other audio-to-text workflows.
@@ -123,13 +119,13 @@ Use **agent** for the executing AI worker. Use **assistant message** for text th
 
 ### Personal agent
 
-A user-created long-lived agent identity with its own name, persona, instruction files, skills, memory scope, enabled gateways, automations, model/runtime defaults, and conversations.
+A user-created long-lived agent identity with its own name, persona, instruction files, skills, memory scope, automations, model/runtime defaults, and conversations.
 
 Use **personal agent** for the user-facing entity that can be selected, configured, contacted, and resumed across sessions. Do not use **subagent** for this durable entity.
 
 ### Agent profile
 
-The persisted configuration record for a personal agent: identity, persona, default model/runtime, permissions, connected gateways, schedule bindings, memory paths, and prompt assembly inputs.
+The persisted configuration record for a personal agent: identity, persona, default model/runtime, permissions, schedule bindings, memory paths, and prompt assembly inputs.
 
 Use **agent profile** for storage/API details. Use **personal agent** in product copy.
 

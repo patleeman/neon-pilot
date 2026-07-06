@@ -6,13 +6,13 @@ The normal path is still agent-first: ask your agent to build the extension, the
 
 ## Main imports
 
-| Import                                        | Use it for                                                                                                                                                              |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@neon-pilot/extensions`                      | Manifest types, surface props, frontend client types, backend context types, contribution types, and shared extension contracts.                                        |
-| `@neon-pilot/extensions/ui`                   | Shared UI primitives for extension pages, rails, lists, forms, empty/error/loading states, dialogs, resource pickers, chat views, and workbench chrome.                 |
-| `@neon-pilot/extensions/settings`             | Settings-page primitives such as panels, rows, switches, selects, text inputs, and settings helpers.                                                                    |
-| `@neon-pilot/extensions/backend/*`            | Backend host capabilities such as conversations, settings, storage, shell, git, browser, MCP, model gateway, prompt assembly, telemetry, and extension registry access. |
-| `@neon-pilot/extensions/host-view-components` | Catalog of host-owned UI components an extension can reference instead of bundling a custom React surface.                                                              |
+| Import                                        | Use it for                                                                                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@neon-pilot/extensions`                      | Manifest types, surface props, frontend client types, backend context types, contribution types, and shared extension contracts.                         |
+| `@neon-pilot/extensions/ui`                   | Shared UI primitives for extension pages, rails, lists, forms, empty/error/loading states, dialogs, resource pickers, chat views, and workbench chrome.  |
+| `@neon-pilot/extensions/settings`             | Settings-page primitives such as panels, rows, switches, selects, text inputs, and settings helpers.                                                     |
+| `@neon-pilot/extensions/backend/*`            | Backend host capabilities such as conversations, settings, storage, shell, git, browser, MCP, prompt assembly, telemetry, and extension registry access. |
+| `@neon-pilot/extensions/host-view-components` | Catalog of host-owned UI components an extension can reference instead of bundling a custom React surface.                                               |
 
 Extension runtime code should not import from `packages/desktop`, `packages/core`, or app internals.
 
