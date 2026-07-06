@@ -1134,13 +1134,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   );
 }
 
-export function AutomationDialogPanel({
-  pa,
-  presentation = 'stable',
-}: {
-  pa: NativeExtensionClient;
-  presentation?: 'stable' | 'windowed';
-}) {
+export function AutomationDialogPanel({ pa, presentation }: { pa: NativeExtensionClient; presentation?: 'windowed' }) {
   const [selection, setSelection] = useState<AutomationSelectionData | null>(() => {
     const current = pa.selection.get();
     return isAutomationSelection(current) && isAutomationSelectionData(current.resource.data) ? current.resource.data : null;
