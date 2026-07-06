@@ -770,6 +770,8 @@ export function createExtensionConversationsCapability(
       options?: { continuePrompt?: string },
     ): Promise<{ conversationId: string; cwd: string; queued: boolean; unchanged?: boolean }> {
       assertConversationPermission('write', 'conversations.requestWorkingDirectoryChange');
+      const ctx = buildLiveSessionCapabilityContext();
+      const resourceOptions = ctx.buildLiveSessionResourceOptions(ctx.getRuntimeScope());
       return requestConversationWorkingDirectoryChange(
         {
           conversationId,
@@ -777,8 +779,8 @@ export function createExtensionConversationsCapability(
           ...(options?.continuePrompt ? { continuePrompt: options.continuePrompt } : {}),
         },
         {
-          ...buildLiveSessionResourceOptionsForRuntime(),
-          extensionFactories: buildLiveSessionExtensionFactoriesForRuntime(),
+          ...resourceOptions,
+          extensionFactories: ctx.buildLiveSessionExtensionFactories(),
         },
       );
     },
