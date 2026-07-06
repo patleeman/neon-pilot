@@ -7,6 +7,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { AgentSession } from '@earendil-works/pi-coding-agent';
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import {
   type ConversationArtifactRecord,
   getConversationArtifact,
@@ -221,6 +222,8 @@ export type { LiveSessionStateSnapshot } from './liveSessionStateSnapshot.js';
 
 export const registry = new Map<string, LiveEntry>();
 const pendingConversationWorkingDirectoryChanges = new Map<string, PendingConversationWorkingDirectoryChange>();
+
+const getDesktopRootLayoutFn: () => DesktopRootLayout = resolveDesktopRootLayout;
 
 function escapeExportHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => {
@@ -968,7 +971,7 @@ async function publishParallelResultToInbox(
   job: ParallelPromptJob,
   details: { childConversationId: string; status: 'complete' | 'failed' },
 ): Promise<void> {
-  const store = getDocumentsStore(getStateRoot(), resolveDesktopRootLayout());
+  const store = getDocumentsStore(getStateRoot(), getDesktopRootLayoutFn());
   const id = `parallel-${sanitizeInboxIdPart(entry.sessionId)}-${sanitizeInboxIdPart(job.id)}`;
   const subjectPrefix = details.status === 'failed' ? 'Worker failed' : 'Worker finished';
   const from = job.workerName?.trim() || 'Worker';

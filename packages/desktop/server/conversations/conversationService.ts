@@ -1,6 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import {
   ensureConversationAttentionBaselines,
   getActivityConversationLink,
@@ -76,6 +77,7 @@ let getRuntimeScopeFn: () => string = () => {
 
 let getRepoRootFn: () => string = () => process.cwd();
 let getSettingsFileFn: () => string = () => getRuntimeSettingsFilePath();
+let getDesktopRootLayoutFn: () => DesktopRootLayout = resolveDesktopRootLayout;
 let readModelBackfillStarted = false;
 let readModelBackfillTimer: ReturnType<typeof setTimeout> | null = null;
 const DEFAULT_READ_MODEL_BACKFILL_DELAY_MS = 5 * 60_000;
@@ -89,10 +91,12 @@ export function setConversationServiceContext(input: {
   getRepoRoot: () => string;
   getSettingsFile?: () => string;
   getSavedUiPreferences: () => SavedUiPreferences;
+  getDesktopRootLayout?: () => DesktopRootLayout;
 }): void {
   getRuntimeScopeFn = input.getRuntimeScope;
   getRepoRootFn = input.getRepoRoot;
   getSettingsFileFn = input.getSettingsFile ?? (() => getRuntimeSettingsFilePath());
+  getDesktopRootLayoutFn = input.getDesktopRootLayout ?? resolveDesktopRootLayout;
 }
 
 function resolveDaemonRoot(): string {
@@ -654,7 +658,7 @@ export function renameStoredConversation(conversationId: string, nextName: strin
   upsertConversationCatalogSession(renamed);
 
   try {
-    const store = getDocumentsStore(getStateRoot(), resolveDesktopRootLayout());
+    const store = getDocumentsStore(getStateRoot(), getDesktopRootLayoutFn());
     writeConversationActivityEntry(store, conversationId, 'renamed', nextName, {
       ...(previousTitle ? { previousTitle } : {}),
     });
@@ -672,7 +676,7 @@ export function deleteStoredConversations(conversationIds: string[]): DeleteSess
   clearConversationSessionCaches();
 
   try {
-    const store = getDocumentsStore(getStateRoot(), resolveDesktopRootLayout());
+    const store = getDocumentsStore(getStateRoot(), getDesktopRootLayoutFn());
     for (const deleted of result.deleted) {
       writeConversationActivityEntry(store, deleted.id, 'deleted', titlesById.get(deleted.id) || 'Unknown');
     }
