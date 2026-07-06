@@ -135,6 +135,39 @@ describe('live session loader cache', () => {
     expect(options.systemPrompt).not.toContain('<project_context>');
   });
 
+  it('marks progressive parallel worker sessions in the system prompt', async () => {
+    await makeLoader('/repo', {
+      agentDir: '/agent-runtime',
+      progressiveDisclosure: true,
+      noSkills: true,
+      parallelWorker: true,
+    });
+
+    const options = agent.DefaultResourceLoader.instances[0].options as { systemPrompt: string };
+    expect(options.systemPrompt).toContain('DS4 mode');
+    expect(options.systemPrompt).toContain('Parallel worker mode:');
+    expect(options.systemPrompt).toContain("not the user's main persona");
+    expect(options.systemPrompt).toContain('Do not claim the persona');
+  });
+
+  it('marks non-progressive parallel worker sessions in the system prompt', async () => {
+    await makeLoader('/repo', { parallelWorker: true });
+
+    const options = agent.DefaultResourceLoader.instances[0].options as { systemPrompt: string };
+    expect(options.systemPrompt).toContain('Parallel worker mode:');
+    expect(options.systemPrompt).toContain("not the user's main persona");
+    expect(options.systemPrompt).toContain('Do not claim the persona');
+  });
+
+  it('does not reuse prewarmed main-persona loaders for parallel workers', async () => {
+    await prewarmLiveSessionLoader('/repo');
+    const workerLoader = await makeLoader('/repo', { parallelWorker: true });
+    const personaLoader = await makeLoader('/repo');
+
+    expect(workerLoader).toBe(agent.DefaultResourceLoader.instances[1]);
+    expect(personaLoader).toBe(agent.DefaultResourceLoader.instances[0]);
+  });
+
   it('returns a prewarmed loader once and reloads fresh after it is consumed', async () => {
     await prewarmLiveSessionLoader('/repo', { additionalExtensionPaths: ['/b', '/a'] });
     expect(agent.DefaultResourceLoader.instances).toHaveLength(1);

@@ -6,6 +6,7 @@ const git = vi.hoisted(() => ({ readGitRepoInfo: vi.fn(() => ({ root: '/repo' })
 const forking = vi.hoisted(() => ({
   buildParallelImportedContent: vi.fn((job) => `content:${job.id}`),
   resolveStableForkEntryId: vi.fn(() => 'entry-1'),
+  resolveParallelWorkerForkEntryId: vi.fn((_sessionFile: string, entryId: string | null | undefined) => entryId ?? null),
 }));
 const jobs = vi.hoisted(() => ({
   normalizeParallelPromptList: vi.fn((value) => (Array.isArray(value) ? value.slice(0, 12) : [])),
@@ -50,6 +51,9 @@ describe('live session parallel import operations', () => {
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
     fs.existsSync.mockReturnValue(true);
     forking.resolveStableForkEntryId.mockReturnValue('entry-1');
+    forking.resolveParallelWorkerForkEntryId.mockImplementation(
+      (_sessionFile: string, entryId: string | null | undefined) => entryId ?? null,
+    );
   });
 
   function entry(overrides: Record<string, unknown> = {}) {
@@ -126,6 +130,7 @@ describe('live session parallel import operations', () => {
       preserveSource: true,
       cwdOverride: '/repo',
       model: 'm1',
+      parallelWorker: true,
     });
     expect(callbacks.queuePromptContext).toHaveBeenCalledWith('child-1', 'ctx', 'context');
     expect(callbacks.submitPromptSession).toHaveBeenCalledWith('child-1', 'prompt', undefined, undefined, undefined, undefined, undefined);
@@ -167,6 +172,68 @@ describe('live session parallel import operations', () => {
       expect.objectContaining({ preserveSource: true, cwdOverride: '/tmp/speculative/source' }),
     );
     expect(reconciliation.readParallelCurrentWorktreeDirtyPaths).toHaveBeenCalledWith('/repo/source', '/repo');
+  });
+
+  it('forks parallel workers from the sanitized worker fork entry', async () => {
+    const e = entry();
+    forking.resolveStableForkEntryId.mockReturnValue('persona-context');
+    forking.resolveParallelWorkerForkEntryId.mockReturnValue('assistant-before-context');
+    const completion = new Promise<void>(() => undefined);
+    const callbacks = {
+      createJobId: vi.fn(() => 'job-1'),
+      createSession: vi.fn(),
+      forkSession: vi.fn(async () => ({ newSessionId: 'child-1', sessionFile: '/sessions/child.jsonl' })),
+      queuePromptContext: vi.fn(async () => undefined),
+      submitPromptSession: vi.fn(async () => ({ acceptedAs: 'started' as const, completion })),
+      resolveDefaultServiceTier: vi.fn(() => 'auto'),
+      hasQueuedOrActiveStaleTurn: vi.fn(() => false),
+      persistParallelJobs: vi.fn(),
+      broadcastParallelState: vi.fn(),
+      getCurrentEntry: vi.fn(() => e),
+      resolveParallelChildSession: vi.fn(),
+      tryImportReadyParallelJobs: vi.fn(async () => undefined),
+    };
+
+    await startParallelPromptSession(e as never, { text: 'prompt' }, {} as never, callbacks);
+
+    expect(forking.resolveParallelWorkerForkEntryId).toHaveBeenCalledWith('/sessions/parent.jsonl', 'persona-context');
+    expect(callbacks.forkSession).toHaveBeenCalledWith(
+      'parent',
+      'assistant-before-context',
+      expect.objectContaining({ parallelWorker: true }),
+    );
+    expect(e.parallelJobs[0]).toMatchObject({ forkEntryId: 'assistant-before-context' });
+  });
+
+  it('creates fallback parallel child sessions with worker prompt isolation', async () => {
+    forking.resolveStableForkEntryId.mockReturnValue(null);
+    const e = entry({ session: { isStreaming: true, sessionFile: '/sessions/parent.jsonl', model: { id: 'model-parent' } } });
+    const callbacks = {
+      createJobId: vi.fn(() => 'job-1'),
+      createSession: vi.fn(async () => ({ id: 'child-created', sessionFile: '/sessions/created.jsonl' })),
+      forkSession: vi.fn(),
+      queuePromptContext: vi.fn(async () => undefined),
+      submitPromptSession: vi.fn(async () => ({ acceptedAs: 'started' as const, completion: Promise.resolve() })),
+      resolveDefaultServiceTier: vi.fn(() => 'auto'),
+      hasQueuedOrActiveStaleTurn: vi.fn(() => true),
+      persistParallelJobs: vi.fn(),
+      broadcastParallelState: vi.fn(),
+      getCurrentEntry: vi.fn(() => e),
+      resolveParallelChildSession: vi.fn(),
+      tryImportReadyParallelJobs: vi.fn(async () => undefined),
+    };
+
+    await startParallelPromptSession(e as never, { text: 'prompt' }, { systemPromptSupplement: 'parent supplement' } as never, callbacks);
+
+    expect(callbacks.forkSession).not.toHaveBeenCalled();
+    expect(callbacks.createSession).toHaveBeenCalledWith(
+      '/repo',
+      expect.objectContaining({
+        systemPromptSupplement: 'parent supplement',
+        parallelWorker: true,
+        initialModel: 'model-parent',
+      }),
+    );
   });
 
   it('validates start inputs and rolls back jobs on submit failure', async () => {

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import type { ParallelPromptJob } from './liveSessionParallelJobs.js';
+import { isInjectedContextMessage } from './sessionInjectedContext.js';
 
 export function resolveLastCompletedConversationEntryId(sessionFile: string): string | null {
   const lines = readFileSync(sessionFile, 'utf-8').split(/\r?\n/);
@@ -45,6 +46,8 @@ export interface StableForkBranchEntry {
     stopReason?: string;
     errorMessage?: string;
   };
+  customType?: string;
+  display?: boolean;
 }
 
 export function getStableForkBranchEntries(sessionFile: string): StableForkBranchEntry[] {
@@ -132,6 +135,35 @@ export function resolveStableForkEntryId(sessionFile: string, options: { activeT
   }
 
   return branch[branch.length - 1]?.id?.trim() || null;
+}
+
+function isHiddenInjectedContextEntry(entry: StableForkBranchEntry | undefined): boolean {
+  if (!entry || entry.type !== 'custom_message' || entry.display === true) {
+    return false;
+  }
+
+  return isInjectedContextMessage({ role: 'custom', customType: entry.customType });
+}
+
+export function resolveParallelWorkerForkEntryId(sessionFile: string, candidateEntryId: string | null | undefined): string | null {
+  const normalizedCandidateId = candidateEntryId?.trim();
+  if (!normalizedCandidateId) {
+    return null;
+  }
+
+  const branchById = new Map(
+    getStableForkBranchEntries(sessionFile)
+      .filter((entry): entry is StableForkBranchEntry & { id: string } => typeof entry.id === 'string' && entry.id.trim().length > 0)
+      .map((entry) => [entry.id.trim(), entry]),
+  );
+
+  let current = branchById.get(normalizedCandidateId);
+  while (isHiddenInjectedContextEntry(current)) {
+    const parentId = current?.parentId?.trim();
+    current = parentId ? branchById.get(parentId) : undefined;
+  }
+
+  return current?.id?.trim() || (branchById.has(normalizedCandidateId) ? normalizedCandidateId : null);
 }
 
 export function extractTextFromMessageContent(content: unknown): string {

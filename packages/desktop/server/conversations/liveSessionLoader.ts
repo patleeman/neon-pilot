@@ -19,19 +19,28 @@ Guidelines:
 - Load only relevant knowledge: AGENTS.md for standing context, skills for procedures, notes/projects for reference.
 - When a task matches an available skill, read that SKILL.md before using the workflow.`;
 
+const PARALLEL_WORKER_SYSTEM_PROMPT = `Parallel worker mode:
+- You are a scoped worker execution, not the user's main persona.
+- Do not claim the persona's identity or personal memories.
+- Treat the parent conversation as context for the assigned task, then return focused work for import/review by the main conversation.`;
+
 function renderSystemPromptSupplement(supplement: string | undefined): string {
   const trimmed = supplement?.trim();
   return trimmed ? `\n\n${trimmed}` : '';
 }
 
-function buildNeonSystemPrompt(input: { cwd: string; agentDir: string; systemPromptSupplement?: string }): string {
-  return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}${renderSystemPromptSupplement(input.systemPromptSupplement)}${renderAgentsFiles(
-    input.cwd,
-    input.agentDir,
-  )}`;
+function buildNeonSystemPrompt(input: {
+  cwd: string;
+  agentDir: string;
+  systemPromptSupplement?: string;
+  parallelWorker?: boolean;
+}): string {
+  return `${NEON_LIVE_SESSION_SYSTEM_PROMPT}${input.parallelWorker ? `\n\n${PARALLEL_WORKER_SYSTEM_PROMPT}` : ''}${renderSystemPromptSupplement(
+    input.systemPromptSupplement,
+  )}${renderAgentsFiles(input.cwd, input.agentDir)}`;
 }
 
-function buildDs4SystemPrompt(input: { cwd: string; agentDir: string; skillPaths: string[] }): string {
+function buildDs4SystemPrompt(input: { cwd: string; agentDir: string; skillPaths: string[]; parallelWorker?: boolean }): string {
   const agentsPointers = renderAgentsPointers(input.cwd, input.agentDir);
   void input.skillPaths;
   return `You are an expert coding assistant inside Neon Pilot.
@@ -46,7 +55,7 @@ DS4 mode:
 - Only the shown tools are directly available. Use bash to explore and invoke withheld system tools through the \`ds4\` CLI; start with \`ds4 help\` and \`ds4 tools\`.
 - The read tool uses compact \`line|text\` output; line numbers are references, not file content. For large edits, the edit tool supports one \`[upto]\` marker between unique head and tail anchors.
 - DS4 bash compacts eligible shell output with RTK by default when RTK is installed. Use \`ds4 compression off\` to disable it, and \`ds4 compression rtk\` to re-enable it.
-- Skills are progressively loaded too. Use \`ds4 skills list\`, \`ds4 skills search <query>\`, and \`ds4 skills get <id-or-query>\` before applying a workflow.${agentsPointers}`;
+- Skills are progressively loaded too. Use \`ds4 skills list\`, \`ds4 skills search <query>\`, and \`ds4 skills get <id-or-query>\` before applying a workflow.${input.parallelWorker ? `\n\n${PARALLEL_WORKER_SYSTEM_PROMPT}` : ''}${agentsPointers}`;
 }
 
 function labelAgentsFile(filePath: string, agentDir: string): string {
@@ -101,6 +110,8 @@ export interface LiveSessionLoaderOptions {
   /** When set, AGENTS.md and skills are disclosed as pointers for local DS4 sessions. */
   progressiveDisclosure?: boolean;
   skillDiscoveryPaths?: string[];
+  /** When set, this session is a scoped parallel worker, not the user's main persona. */
+  parallelWorker?: boolean;
 }
 
 interface PrewarmedLiveSessionLoaderEntry {
@@ -127,6 +138,7 @@ function buildLiveSessionLoaderCacheKey(cwd: string, options: LiveSessionLoaderO
     additionalPromptTemplatePaths: normalizeLiveSessionLoaderPaths(options.additionalPromptTemplatePaths),
     additionalThemePaths: normalizeLiveSessionLoaderPaths(options.additionalThemePaths),
     systemPromptSupplement: options.systemPromptSupplement?.trim() ?? '',
+    parallelWorker: options.parallelWorker ?? false,
     noSkills: options.noSkills ?? false,
     progressiveDisclosure: options.progressiveDisclosure ?? false,
     skillDiscoveryPaths: normalizeLiveSessionLoaderPaths(options.skillDiscoveryPaths),
@@ -148,8 +160,14 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
           cwd,
           agentDir,
           skillPaths: options.skillDiscoveryPaths ?? options.additionalSkillPaths ?? [],
+          parallelWorker: options.parallelWorker,
         })
-      : buildNeonSystemPrompt({ cwd, agentDir, systemPromptSupplement: options.systemPromptSupplement }),
+      : buildNeonSystemPrompt({
+          cwd,
+          agentDir,
+          systemPromptSupplement: options.systemPromptSupplement,
+          parallelWorker: options.parallelWorker,
+        }),
     noSkills: options.noSkills,
     noThemes: true,
     noContextFiles: true,

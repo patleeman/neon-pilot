@@ -8,6 +8,7 @@ import {
   extractTextFromMessageContent,
   getStableForkBranchEntries,
   resolveLastCompletedConversationEntryId,
+  resolveParallelWorkerForkEntryId,
   resolveStableForkEntryId,
 } from './liveSessionForking.js';
 
@@ -78,6 +79,40 @@ describe('live session forking helpers', () => {
       ].join('\n'),
     );
     expect(resolveStableForkEntryId('/sessions/s2.jsonl', { activeTurnInProgress: true })).toBe('summary-1');
+  });
+
+  it('moves parallel worker fork points behind hidden injected context entries', () => {
+    fs.files.set(
+      '/sessions/s1.jsonl',
+      [
+        JSON.stringify({ id: 'assistant-1', type: 'message', message: { role: 'assistant', stopReason: 'stop' } }),
+        JSON.stringify({
+          id: 'ctx-1',
+          parentId: 'assistant-1',
+          type: 'custom_message',
+          customType: 'referenced_context',
+          display: false,
+        }),
+        JSON.stringify({
+          id: 'ctx-2',
+          parentId: 'ctx-1',
+          type: 'custom_message',
+          customType: 'goal-continuation',
+          display: false,
+        }),
+        JSON.stringify({
+          id: 'visible-context',
+          parentId: 'ctx-2',
+          type: 'custom_message',
+          customType: 'referenced_context',
+          display: true,
+        }),
+      ].join('\n'),
+    );
+
+    expect(resolveParallelWorkerForkEntryId('/sessions/s1.jsonl', 'ctx-2')).toBe('assistant-1');
+    expect(resolveParallelWorkerForkEntryId('/sessions/s1.jsonl', 'visible-context')).toBe('visible-context');
+    expect(resolveParallelWorkerForkEntryId('/sessions/s1.jsonl', 'missing')).toBeNull();
   });
 
   it('extracts text from string and structured message content', () => {

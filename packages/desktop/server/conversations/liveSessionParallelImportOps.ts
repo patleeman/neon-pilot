@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 
 import { logWarn } from '../shared/logging.js';
 import { readGitRepoInfo } from '../workspace/gitStatus.js';
-import { buildParallelImportedContent, resolveStableForkEntryId } from './liveSessionForking.js';
+import { buildParallelImportedContent, resolveParallelWorkerForkEntryId, resolveStableForkEntryId } from './liveSessionForking.js';
 import type { LiveSessionLoaderOptions } from './liveSessionLoader.js';
 import {
   generateParallelWorkerName,
@@ -128,17 +128,19 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
   const parallelRepoRoot = readGitRepoInfo(entry.cwd)?.root;
   const childCwd = input.cwd?.trim() || entry.cwd;
   const stableEntryId = resolveStableForkEntryId(sourceSessionFile, { activeTurnInProgress });
-  const forked = stableEntryId
-    ? await callbacks.forkSession(entry.sessionId, stableEntryId, {
+  const workerForkEntryId = resolveParallelWorkerForkEntryId(sourceSessionFile, stableEntryId);
+  const workerOptions = { ...options, parallelWorker: true };
+  const forked = workerForkEntryId
+    ? await callbacks.forkSession(entry.sessionId, workerForkEntryId, {
         preserveSource: true,
-        ...options,
+        ...workerOptions,
         cwdOverride: childCwd,
         ...(input.model !== undefined ? { initialModel: input.model } : {}),
         ...(input.thinkingLevel !== undefined ? { initialThinkingLevel: input.thinkingLevel } : {}),
         ...(input.serviceTier !== undefined ? { initialServiceTier: input.serviceTier } : {}),
       })
     : await callbacks.createSession(childCwd, {
-        ...options,
+        ...workerOptions,
         initialModel:
           input.model !== undefined
             ? input.model
@@ -167,7 +169,7 @@ export async function startParallelPromptSession<TEntry extends LiveSessionParal
     childSessionFile: forked.sessionFile,
     imageCount: input.images?.length ?? 0,
     attachmentRefs: input.attachmentRefs,
-    forkEntryId: stableEntryId ?? undefined,
+    forkEntryId: workerForkEntryId ?? undefined,
     repoRoot: parallelRepoRoot,
     cwd: entry.cwd,
     childCwd,
