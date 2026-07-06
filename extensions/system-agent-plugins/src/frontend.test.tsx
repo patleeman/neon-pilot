@@ -43,6 +43,11 @@ vi.mock('@neon-pilot/extensions/ui', () => ({
   Notice: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Pill: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   QuietLoadingState: ({ label }: { label?: string }) => <div role="status" aria-label={label ?? 'Loading'} />,
+  WindowedStateBlock: ({ children, tone }: { children: React.ReactNode; tone?: string }) => (
+    <div className="wos-state-block" data-tone={tone}>
+      {children}
+    </div>
+  ),
   RailSubsection: ({ title, children }: { title: React.ReactNode; children: React.ReactNode }) => (
     <section>
       <h4>{title}</h4>
@@ -211,23 +216,24 @@ beforeEach(() => {
 });
 
 describe('AgentPluginsSettingsPanel', () => {
-  it('keeps initial loading chrome visually quiet', () => {
+  it('uses windowed loading state when settings are loading', () => {
     mocks.useApi.mockReturnValue({ ...buildUseApiResult(null), loading: true });
 
     render(<AgentPluginsSettingsPanel />);
 
-    expect(screen.getByRole('status', { name: 'Loading agent plugins' })).toBeTruthy();
-    expect(screen.queryByText('Loading agent plugins...')).toBeNull();
+    expect(screen.getByText('Loading agent plugins')).toBeTruthy();
   });
 
-  it('renders installed plugin with capability summary and warnings', () => {
+  it('renders installed plugin with capability summary and opens details in a dialog', () => {
     mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [plugin] }));
 
     render(<AgentPluginsSettingsPanel />);
 
     expect(screen.getAllByText('Review Pack').length).toBeGreaterThan(0);
-    expect(screen.getByText('Plugin is on')).toBeTruthy();
     expect(screen.getByText('1 skill · 1 MCP server · 1 doc')).toBeTruthy();
+    // Details are in a dialog; click to open
+    fireEvent.click(screen.getByRole('button', { name: 'Open details for Review Pack' }));
+    expect(screen.getByText('Plugin is on')).toBeTruthy();
     expect(screen.getByText('Skills (1)')).toBeTruthy();
     expect(screen.getByText('Instructions and docs (1)')).toBeTruthy();
     expect(screen.getByText('MCP servers (1)')).toBeTruthy();
@@ -264,6 +270,9 @@ describe('AgentPluginsSettingsPanel', () => {
 
     render(<AgentPluginsSettingsPanel />);
 
+    // Dialog must be open to reach toggles
+    fireEvent.click(screen.getByRole('button', { name: 'Open details for Review Pack' }));
+
     const switches = screen.getAllByRole('switch');
     fireEvent.click(switches[0]);
 
@@ -285,10 +294,10 @@ describe('AgentPluginsSettingsPanel', () => {
     );
   });
 
-  it('renders windowed plugin details in a dialog instead of a selected settings pane', () => {
+  it('renders plugin details in a dialog as the canonical settings surface', () => {
     mocks.useApi.mockReturnValue(buildUseApiResult({ storageRoot: '/runtime/plugins', plugins: [plugin] }));
 
-    const { container } = render(<AgentPluginsSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<AgentPluginsSettingsPanel />);
 
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(container.querySelector('.agent-plugins-page-windowed')).not.toBeNull();

@@ -1,16 +1,8 @@
 import { type NativeExtensionClient } from '@neon-pilot/extensions';
 import {
   cx,
-  Field,
   IconButton,
-  LoadingState,
-  Notice,
-  QuietLoadingState,
-  Select,
-  SettingsRow,
   Spinner,
-  TextInput,
-  ToolbarButton,
   WindowedField,
   WindowedKeyValueGrid,
   WindowedLoadingState,
@@ -377,13 +369,7 @@ export function DictationButton({
   );
 }
 
-export function DictationSettingsPanel({
-  pa,
-  settingsContext,
-}: {
-  pa: NativeExtensionClient;
-  settingsContext?: { extensionId?: string; shellPresentation?: 'windowed' };
-}) {
+export function DictationSettingsPanel({ pa }: { pa: NativeExtensionClient }) {
   const [settings, setSettings] = useState<DictationSettings | null>(null);
   const [model, setModel] = useState('base.en');
   const [customModelUrl, setCustomModelUrl] = useState('');
@@ -482,199 +468,115 @@ export function DictationSettingsPanel({
       : 'Not installed yet'
     : 'Pick a model to check install status.';
 
-  if (settingsContext?.shellPresentation === 'windowed') {
-    const runtimeItems =
-      runtime?.dependencies.map((dependency) => ({
-        label: dependency.label,
-        value: dependency.available ? 'Ready' : (dependency.error ?? 'Unavailable'),
-      })) ?? [];
-
-    return (
-      <div className="local-dictation-page-windowed flex min-h-0 flex-col gap-3">
-        {!settings ? <WindowedLoadingState label="Loading dictation settings" className="min-h-12" /> : null}
-        {settings ? (
-          <>
-            {runtime && !runtime.available ? (
-              <WindowedStateBlock
-                tone="danger"
-                title="Runtime unavailable"
-                action={
-                  <WindowedPageButton type="button" disabled={Boolean(busy)} onClick={() => void checkRuntime()}>
-                    {busy === 'Checking…' ? 'Checking…' : 'Check again'}
-                  </WindowedPageButton>
-                }
-              >
-                {runtime.error ?? 'Local dictation is missing its native transcription runtime.'}
-              </WindowedStateBlock>
-            ) : null}
-            <WindowedPageSection title="Model" meta={statusLabel}>
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-                <WindowedField label="Selected model">
-                  <WindowedSelect
-                    id="settings-dictation-model"
-                    value={TRANSCRIPTION_MODEL_IDS.has(model) ? model : CUSTOM_MODEL_VALUE}
-                    onChange={(event) => {
-                      const next = event.target.value;
-                      if (next === CUSTOM_MODEL_VALUE) {
-                        const custom = customModelUrl.trim();
-                        setModel(custom);
-                        setCustomModelUrl(custom);
-                        return;
-                      }
-                      setModel(next);
-                      void saveFields(next);
-                    }}
-                  >
-                    {TRANSCRIPTION_MODEL_OPTIONS.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                    <option value={CUSTOM_MODEL_VALUE}>Custom Hugging Face URL…</option>
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedPageButton
-                  type="button"
-                  tone="accent"
-                  disabled={Boolean(busy) || !model.trim() || !runtimeAvailable}
-                  onClick={() => void install()}
-                >
-                  {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall model' : 'Install model'}
-                </WindowedPageButton>
-              </div>
-              {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
-                <WindowedField
-                  label="Custom model URL"
-                  hint={
-                    <>
-                      Direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
-                      <span className="font-mono">ggml-*.bin</span> file.
-                    </>
-                  }
-                >
-                  <WindowedTextInput
-                    id="settings-dictation-custom-model"
-                    value={customModelUrl}
-                    onChange={(event) => {
-                      setCustomModelUrl(event.target.value);
-                      setModel(event.target.value);
-                    }}
-                    onBlur={() => void saveFields(customModelUrl)}
-                    className="font-mono"
-                    placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                </WindowedField>
-              ) : null}
-            </WindowedPageSection>
-            <WindowedPageSection title="Runtime" meta={runtime?.available === false ? 'Unavailable' : 'Ready'}>
-              <WindowedKeyValueGrid
-                items={[
-                  { label: 'Provider', value: runtime?.provider ?? 'local-whisper' },
-                  { label: 'Native runtime', value: runtime?.available === false ? 'Unavailable' : 'Ready' },
-                  { label: 'Model cache', value: status?.installed ? 'Installed' : 'Missing' },
-                  ...runtimeItems,
-                ]}
-              />
-              {runtime?.available ? (
-                <WindowedPageButton type="button" disabled={Boolean(busy)} onClick={() => void checkRuntime()}>
-                  {busy === 'Checking…' ? 'Checking…' : 'Check runtime'}
-                </WindowedPageButton>
-              ) : null}
-            </WindowedPageSection>
-            {busy === 'Saving…' ? <WindowedLoadingState label="Saving dictation settings" className="min-h-10" /> : null}
-            {message ? (
-              <WindowedStateBlock
-                tone={message === 'Saved.' || message.includes('ready') || message.startsWith('Installed') ? 'positive' : 'neutral'}
-              >
-                {message}
-              </WindowedStateBlock>
-            ) : null}
-          </>
-        ) : null}
-      </div>
-    );
-  }
+  const runtimeItems =
+    runtime?.dependencies.map((dependency) => ({
+      label: dependency.label,
+      value: dependency.available ? 'Ready' : (dependency.error ?? 'Unavailable'),
+    })) ?? [];
 
   return (
-    <div className="space-y-3">
-      {!settings ? <QuietLoadingState label="Loading dictation settings" className="min-h-12" /> : null}
+    <div className="local-dictation-page-windowed flex min-h-0 flex-col gap-3">
+      {!settings ? <WindowedLoadingState label="Loading dictation settings" className="min-h-12" /> : null}
       {settings ? (
-        <div className="space-y-3">
+        <>
           {runtime && !runtime.available ? (
-            <Notice>
-              <div className="space-y-2">
-                <p>{runtime.error ?? 'Local dictation is missing its native transcription runtime.'}</p>
-                <ToolbarButton type="button" disabled={Boolean(busy)} onClick={() => void checkRuntime()}>
+            <WindowedStateBlock
+              tone="danger"
+              title="Runtime unavailable"
+              action={
+                <WindowedPageButton type="button" disabled={Boolean(busy)} onClick={() => void checkRuntime()}>
                   {busy === 'Checking…' ? 'Checking…' : 'Check again'}
-                </ToolbarButton>
-              </div>
-            </Notice>
+                </WindowedPageButton>
+              }
+            >
+              {runtime.error ?? 'Local dictation is missing its native transcription runtime.'}
+            </WindowedStateBlock>
           ) : null}
-          <SettingsRow title="Model" description={statusLabel} actionsClassName="min-w-0 max-w-none">
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-              <Select
-                id="settings-dictation-model"
-                className="min-w-0 sm:w-80"
-                value={TRANSCRIPTION_MODEL_IDS.has(model) ? model : CUSTOM_MODEL_VALUE}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (next === CUSTOM_MODEL_VALUE) {
-                    const custom = customModelUrl.trim();
-                    setModel(custom);
-                    setCustomModelUrl(custom);
-                    return;
-                  }
-                  setModel(next);
-                  void saveFields(next);
-                }}
-              >
-                {TRANSCRIPTION_MODEL_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-                <option value={CUSTOM_MODEL_VALUE}>Custom Hugging Face URL…</option>
-              </Select>
-              <ToolbarButton
+          <WindowedPageSection title="Model" meta={statusLabel}>
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <WindowedField label="Selected model">
+                <WindowedSelect
+                  id="settings-dictation-model"
+                  value={TRANSCRIPTION_MODEL_IDS.has(model) ? model : CUSTOM_MODEL_VALUE}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (next === CUSTOM_MODEL_VALUE) {
+                      const custom = customModelUrl.trim();
+                      setModel(custom);
+                      setCustomModelUrl(custom);
+                      return;
+                    }
+                    setModel(next);
+                    void saveFields(next);
+                  }}
+                >
+                  {TRANSCRIPTION_MODEL_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_MODEL_VALUE}>Custom Hugging Face URL…</option>
+                </WindowedSelect>
+              </WindowedField>
+              <WindowedPageButton
                 type="button"
-                className="whitespace-nowrap"
+                tone="accent"
                 disabled={Boolean(busy) || !model.trim() || !runtimeAvailable}
                 onClick={() => void install()}
               >
-                {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall local model' : 'Install local model'}
-              </ToolbarButton>
+                {busy === 'Installing…' ? 'Installing…' : status?.installed ? 'Reinstall model' : 'Install model'}
+              </WindowedPageButton>
             </div>
-          </SettingsRow>
-          {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
-            <Field
-              label="Custom model URL"
-              hint={
-                <>
-                  Use a direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
-                  <span className="font-mono">ggml-*.bin</span> file.
-                </>
-              }
+            {!TRANSCRIPTION_MODEL_IDS.has(model) ? (
+              <WindowedField
+                label="Custom model URL"
+                hint={
+                  <>
+                    Direct Hugging Face <span className="font-mono">/resolve/</span> URL to a Whisper.cpp-compatible{' '}
+                    <span className="font-mono">ggml-*.bin</span> file.
+                  </>
+                }
+              >
+                <WindowedTextInput
+                  id="settings-dictation-custom-model"
+                  value={customModelUrl}
+                  onChange={(event) => {
+                    setCustomModelUrl(event.target.value);
+                    setModel(event.target.value);
+                  }}
+                  onBlur={() => void saveFields(customModelUrl)}
+                  className="font-mono"
+                  placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </WindowedField>
+            ) : null}
+          </WindowedPageSection>
+          <WindowedPageSection title="Runtime" meta={runtime?.available === false ? 'Unavailable' : 'Ready'}>
+            <WindowedKeyValueGrid
+              items={[
+                { label: 'Provider', value: runtime?.provider ?? 'local-whisper' },
+                { label: 'Native runtime', value: runtime?.available === false ? 'Unavailable' : 'Ready' },
+                { label: 'Model cache', value: status?.installed ? 'Installed' : 'Missing' },
+                ...runtimeItems,
+              ]}
+            />
+            {runtime?.available ? (
+              <WindowedPageButton type="button" disabled={Boolean(busy)} onClick={() => void checkRuntime()}>
+                {busy === 'Checking…' ? 'Checking…' : 'Check runtime'}
+              </WindowedPageButton>
+            ) : null}
+          </WindowedPageSection>
+          {busy === 'Saving…' ? <WindowedLoadingState label="Saving dictation settings" className="min-h-10" /> : null}
+          {message ? (
+            <WindowedStateBlock
+              tone={message === 'Saved.' || message.includes('ready') || message.startsWith('Installed') ? 'positive' : 'neutral'}
             >
-              <TextInput
-                id="settings-dictation-custom-model"
-                value={customModelUrl}
-                onChange={(event) => {
-                  setCustomModelUrl(event.target.value);
-                  setModel(event.target.value);
-                }}
-                onBlur={() => void saveFields(customModelUrl)}
-                className="font-mono text-[13px]"
-                placeholder="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </Field>
+              {message}
+            </WindowedStateBlock>
           ) : null}
-          {busy === 'Saving…' ? <LoadingState label="Saving..." /> : null}
-          {message ? <Notice>{message}</Notice> : null}
-        </div>
+        </>
       ) : null}
     </div>
   );

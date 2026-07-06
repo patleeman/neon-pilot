@@ -98,14 +98,14 @@ async function flush() {
   await Promise.resolve();
 }
 
-function renderPanel(invoke = vi.fn(), shellPresentation?: 'windowed') {
+function renderPanel(invoke = vi.fn()) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
   roots.push(root);
 
   act(() => {
-    root.render(<AlertsSettingsPanel pa={{ extension: { invoke } } as never} settingsContext={{ shellPresentation }} />);
+    root.render(<AlertsSettingsPanel pa={{ extension: { invoke } } as never} />);
   });
 
   return { container, invoke };
@@ -210,7 +210,7 @@ describe('AlertsSettingsPanel', () => {
     expect(container.textContent).toContain('Test alert sent.');
   });
 
-  it('renders embedded windowed rows in the desktop shell', async () => {
+  it('renders windowed data rows as the canonical settings surface', async () => {
     const invoke = vi.fn(async (action: string) => {
       if (action === 'readSettings') {
         return {
@@ -227,12 +227,10 @@ describe('AlertsSettingsPanel', () => {
       return { ok: true };
     });
 
-    const { container } = renderPanel(invoke, 'windowed');
+    const { container } = renderPanel(invoke);
     await act(async () => flush());
 
-    expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
-    expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('.wos-page-section')).not.toBeNull();
     expect(container.querySelectorAll('.wos-data-row')).toHaveLength(4);
     expect(container.querySelector('.wos-toggle')).not.toBeNull();
@@ -240,14 +238,12 @@ describe('AlertsSettingsPanel', () => {
     expect(container.querySelector('[aria-label="Attention alerts"]')?.classList.contains('wos-data-row')).toBe(true);
   });
 
-  it('keeps windowed loading state inside the embedded settings panel', async () => {
+  it('keeps loading state inside the settings panel', async () => {
     const invoke = vi.fn(() => new Promise(() => undefined));
 
-    const { container } = renderPanel(invoke, 'windowed');
+    const { container } = renderPanel(invoke);
     await act(async () => flush());
 
-    expect(container.querySelector('.wos-page-shell')).toBeNull();
-    expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
     expect(container.textContent).toContain('Loading alert settings.');
     expect(container.querySelector('.wos-state-block')).not.toBeNull();
@@ -258,19 +254,17 @@ describe('AlertsSettingsPanel', () => {
       throw new Error('Extension "system-alerts" action "readSettings" failed: Cannot find module ./missing.js');
     });
 
-    const { container } = renderPanel(invoke, 'windowed');
+    const { container } = renderPanel(invoke);
     await act(async () => flush());
 
     expect(invoke).toHaveBeenCalledWith('readSettings', {});
-    expect(container.querySelector('.wos-page-shell')).toBeNull();
-    expect(container.querySelector('h1')).toBeNull();
     expect(container.querySelector('.alerts-page-windowed')).not.toBeNull();
     expect(container.textContent).toContain('Alert settings are unavailable. Reload the app or restart Neon Pilot.');
     expect(container.textContent).not.toContain('Extension "system-alerts" action');
     expect(container.textContent).not.toContain('Cannot find module');
   });
 
-  it('sanitizes stable-shell alert settings load failures', async () => {
+  it('sanitizes alert settings load failures', async () => {
     const invoke = vi.fn(async () => {
       throw new Error('Extension "system-alerts" action "readSettings" must declare worker.enabled before it can run.');
     });
@@ -299,7 +293,7 @@ describe('AlertsSettingsPanel', () => {
       throw new Error('Extension "system-alerts" action "updateSettings" failed: ENOENT: no such file or directory');
     });
 
-    const { container } = renderPanel(invoke, 'windowed');
+    const { container } = renderPanel(invoke);
     await act(async () => flush());
 
     const toggle = container.querySelector<HTMLButtonElement>('[aria-label="Disable attention alerts"]');

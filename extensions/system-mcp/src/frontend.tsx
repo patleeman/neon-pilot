@@ -1,14 +1,5 @@
-import { api, SettingsRow, useApi } from '@neon-pilot/extensions/settings';
+import { api, useApi } from '@neon-pilot/extensions/settings';
 import {
-  Field,
-  Notice,
-  Pill,
-  RailSubsection,
-  RowButton,
-  Select,
-  SupportingText,
-  TextInput,
-  ToolbarButton,
   WindowedBadge,
   WindowedDataRow,
   WindowedDataTable,
@@ -71,7 +62,6 @@ type ServerDraft = {
   url: string;
 };
 type OperationResult = { ok: boolean; message: string; toolCount?: number };
-type McpSettingsContext = { shellPresentation?: 'windowed' };
 
 const emptyDraft: ServerDraft = { name: '', transport: 'stdio', command: '', args: [''], cwd: '', url: '' };
 
@@ -183,7 +173,7 @@ function moveDraftArg(draft: ServerDraft, index: number, direction: -1 | 1): Ser
   return { ...draft, args };
 }
 
-export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSettingsContext } = {}) {
+export function McpSettingsPanel() {
   const { data: mcpState, loading: mcpLoading, error: mcpError, refetch } = useApi(inspectMcpSettings, 'system-mcp-settings');
   const [explicitConfig, setExplicitConfig] = useState<ExplicitMcpConfig>({ mcpServers: {} });
   const [selectedServerName, setSelectedServerName] = useState<string | null>(null);
@@ -196,18 +186,11 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
   const [operation, setOperation] = useState<Record<string, { busy?: boolean; message?: string; error?: string }>>({});
   const savedDraftRef = useRef<string | null>(null);
   const autosaveRequestIdRef = useRef(0);
-  const isWindowed = settingsContext?.shellPresentation === 'windowed';
-
   useEffect(() => {
     if (mcpState) {
       const nextConfig = parseExplicitConfig(mcpState.explicitConfigJson);
       const nextServerNames = Object.keys(nextConfig.mcpServers).sort((a, b) => a.localeCompare(b));
-      const nextSelectedName =
-        selectedServerName && nextServerNames.includes(selectedServerName)
-          ? selectedServerName
-          : isWindowed
-            ? null
-            : (nextServerNames[0] ?? null);
+      const nextSelectedName = selectedServerName && nextServerNames.includes(selectedServerName) ? selectedServerName : null;
       setExplicitConfig(nextConfig);
       setSelectedServerName(nextSelectedName);
       const nextDraft = nextSelectedName ? draftFromRawServer(nextSelectedName, nextConfig.mcpServers[nextSelectedName] ?? {}) : null;
@@ -215,7 +198,7 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
       savedDraftRef.current = nextDraft ? JSON.stringify(nextDraft) : null;
       setSaveState({ busy: false, error: null, message: null });
     }
-  }, [isWindowed, mcpState?.explicitConfigJson]);
+  }, [mcpState?.explicitConfigJson]);
 
   const visibleExplicitConfig = useMemo(
     () => (mcpState ? parseExplicitConfig(mcpState.explicitConfigJson) : explicitConfig),
@@ -339,573 +322,307 @@ export function McpSettingsPanel({ settingsContext }: { settingsContext?: McpSet
     setSaveState({ busy: false, error: null, message: null });
   }
 
-  if (isWindowed) {
-    return (
-      <WindowedPageShell layout="standard" className="mcp-page-windowed">
-        <WindowedPageMain title="MCP Servers">
-          <div className="space-y-5">
-            {mcpLoading && !mcpState ? (
-              <WindowedStateBlock title="Loading MCP servers">
-                Reading explicit config and skill-bundled server wrappers.
-              </WindowedStateBlock>
-            ) : null}
-            {mcpError && !mcpState ? (
-              <WindowedStateBlock tone="danger" title="MCP servers unavailable">
-                {mcpError}
-              </WindowedStateBlock>
-            ) : null}
-            {saveState.error ? (
-              <WindowedStateBlock tone="danger" title="MCP config save failed">
-                {saveState.error}
-              </WindowedStateBlock>
-            ) : null}
-            {saveState.message ? (
-              <WindowedStateBlock tone="positive" title="MCP config saved">
-                {saveState.message}
-              </WindowedStateBlock>
-            ) : null}
-
-            {mcpState ? (
-              <>
-                <WindowedPageSection
-                  title="Explicit config"
-                  meta={mcpState.configExists ? 'Config file found' : 'Config file will be created'}
-                >
-                  <WindowedKeyValueGrid
-                    columns={2}
-                    items={[
-                      { label: 'Path', value: mcpState.configPath },
-                      { label: 'Searched paths', value: String(mcpState.searchedPaths.length) },
-                    ]}
-                  />
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <WindowedPageButton disabled={mcpLoading} onClick={() => void refetch()}>
-                      Refresh
-                    </WindowedPageButton>
-                    <WindowedPageButton tone="accent" onClick={startNewServerDraft}>
-                      Add server
-                    </WindowedPageButton>
-                  </div>
-                </WindowedPageSection>
-
-                <WindowedPageSection title="Explicit servers" meta={`${explicitServers.length} managed`}>
-                  {explicitServers.length > 0 ? (
-                    <WindowedDataTable
-                      columns={[
-                        { label: 'Server' },
-                        { label: 'Transport' },
-                        { label: 'State' },
-                        { label: 'Endpoint' },
-                        { label: 'Actions', align: 'right' },
-                      ]}
-                      columnTemplate="minmax(14rem, 1fr) minmax(7rem, 0.4fr) minmax(6rem, 0.34fr) minmax(16rem, 0.82fr) minmax(6rem, 0.34fr)"
-                    >
-                      {explicitServers.map((name) => {
-                        const server = mcpState.servers.find((entry) => entry.name === name);
-                        const rawServer = visibleExplicitConfig.mcpServers[name] ?? {};
-                        const disabled = rawServer.disabled === true || rawServer.enabled === false;
-                        return (
-                          <WindowedDataRow
-                            key={name}
-                            name={name}
-                            meta={server?.sourcePath ?? mcpState.configPath}
-                            cells={[
-                              <WindowedBadge key="transport" tone={server?.transport === 'remote' ? 'positive' : 'neutral'}>
-                                {server?.transport ?? 'config'}
-                              </WindowedBadge>,
-                              <WindowedBadge key="state" tone={windowedServerTone(disabled)}>
-                                {disabled ? 'Disabled' : 'Enabled'}
-                              </WindowedBadge>,
-                              server ? formatMcpServerCommand(server) : disabled ? 'Disabled server' : 'Unparsed server config',
-                            ]}
-                            action={
-                              <WindowedPageButton
-                                aria-label={`Open MCP server details for ${name}`}
-                                onClick={() => selectServer(name, rawServer, server)}
-                              >
-                                Details
-                              </WindowedPageButton>
-                            }
-                          />
-                        );
-                      })}
-                    </WindowedDataTable>
-                  ) : (
-                    <WindowedEmptyState action={<WindowedPageButton onClick={startNewServerDraft}>Add server</WindowedPageButton>}>
-                      No explicit servers. Add one to create a managed MCP configuration.
-                    </WindowedEmptyState>
-                  )}
-                </WindowedPageSection>
-
-                <WindowedPageSection title="Skill-bundled servers" meta={`${mcpState.bundledSkills.length} skills`}>
-                  {mcpState.bundledSkills.length > 0 ? (
-                    <WindowedDataTable
-                      columns={[{ label: 'Skill' }, { label: 'Servers' }, { label: 'Overrides' }, { label: 'Manifest', align: 'right' }]}
-                      columnTemplate="minmax(14rem, 1fr) minmax(10rem, 0.55fr) minmax(10rem, 0.55fr) minmax(16rem, 0.82fr)"
-                    >
-                      {mcpState.bundledSkills.map((bundle) => (
-                        <WindowedDataRow
-                          key={bundle.manifestPath}
-                          name={bundle.skillName}
-                          meta={bundle.skillPath}
-                          cells={[
-                            bundle.serverNames.join(', ') || 'No servers',
-                            bundle.overriddenServerNames.length > 0 ? bundle.overriddenServerNames.join(', ') : 'None',
-                            { value: bundle.manifestPath, align: 'right', className: 'break-all' },
-                          ]}
-                        />
-                      ))}
-                    </WindowedDataTable>
-                  ) : (
-                    <WindowedEmptyState>No skill-local mcp.json wrappers found in the active skill set.</WindowedEmptyState>
-                  )}
-                </WindowedPageSection>
-              </>
-            ) : null}
-
-            {draft ? (
-              <WindowedDialog
-                title={draft.originalName ? `Server details: ${draft.originalName}` : 'New MCP server'}
-                meta={draft.transport === 'remote' ? 'Remote URL' : 'Local command'}
-                accent="settings"
-                parentWindowTitle="Settings"
-                subwindowId="mcp-server-details"
-                onClose={() => {
-                  setSelectedServerName(null);
-                  setDraft(null);
-                  setSaveState({ busy: false, error: null, message: null });
-                }}
-                actions={
-                  draft.originalName ? (
-                    <>
-                      <WindowedPageButton onClick={() => void toggleServer(draft.originalName!)} disabled={saveState.busy}>
-                        {selectedDisabled ? 'Enable' : 'Disable'}
-                      </WindowedPageButton>
-                      <WindowedPageButton
-                        onClick={() => void handleServerAction('testServer', draft.originalName!)}
-                        disabled={selectedStatus?.busy || selectedDisabled}
-                      >
-                        Test
-                      </WindowedPageButton>
-                      {selectedEffectiveServer?.hasOAuth ? (
-                        <>
-                          <WindowedPageButton
-                            onClick={() => void handleServerAction('authServer', draft.originalName!)}
-                            disabled={selectedStatus?.busy}
-                          >
-                            Auth
-                          </WindowedPageButton>
-                          <WindowedPageButton
-                            onClick={() => void handleServerAction('logoutServer', draft.originalName!)}
-                            disabled={selectedStatus?.busy}
-                          >
-                            Logout
-                          </WindowedPageButton>
-                        </>
-                      ) : null}
-                      <WindowedPageButton tone="danger" onClick={() => void removeServer(draft.originalName!)} disabled={saveState.busy}>
-                        Remove
-                      </WindowedPageButton>
-                    </>
-                  ) : undefined
-                }
-              >
-                <WindowedDialogStack>
-                  {selectedStatus?.message ? (
-                    <WindowedStateBlock tone="positive" title="Server action complete">
-                      {selectedStatus.message}
-                    </WindowedStateBlock>
-                  ) : null}
-                  {selectedStatus?.error ? (
-                    <WindowedStateBlock tone="danger" title="Server action failed">
-                      {selectedStatus.error}
-                    </WindowedStateBlock>
-                  ) : null}
-                  <form
-                    className="space-y-3"
-                    onSubmit={(event) => {
-                      if (draft.originalName) {
-                        event.preventDefault();
-                        return;
-                      }
-                      void handleSubmitDraft(event);
-                    }}
-                  >
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <WindowedField label="Name">
-                        <WindowedTextInput
-                          value={draft.name}
-                          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                          autoComplete="off"
-                        />
-                      </WindowedField>
-                      <WindowedField label="Transport">
-                        <WindowedSelect
-                          value={draft.transport}
-                          onChange={(event) => setDraft({ ...draft, transport: event.target.value as 'stdio' | 'remote' })}
-                        >
-                          <option value="stdio">Local command</option>
-                          <option value="remote">Remote URL</option>
-                        </WindowedSelect>
-                      </WindowedField>
-                      {draft.transport === 'remote' ? (
-                        <WindowedField label="URL" span="full">
-                          <WindowedTextInput
-                            value={draft.url}
-                            onChange={(event) => setDraft({ ...draft, url: event.target.value })}
-                            placeholder="https://example.com/mcp..."
-                            autoComplete="off"
-                          />
-                        </WindowedField>
-                      ) : (
-                        <>
-                          <WindowedField label="Command">
-                            <WindowedTextInput
-                              value={draft.command}
-                              onChange={(event) => setDraft({ ...draft, command: event.target.value })}
-                              placeholder="node, npx, uvx..."
-                              autoComplete="off"
-                              spellCheck={false}
-                            />
-                          </WindowedField>
-                          <WindowedField label="Working directory">
-                            <WindowedTextInput
-                              value={draft.cwd}
-                              onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
-                              placeholder="Optional..."
-                              autoComplete="off"
-                              spellCheck={false}
-                            />
-                          </WindowedField>
-                          <div className="space-y-2 sm:col-span-2">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-[12px] font-medium text-secondary">Arguments</span>
-                              <WindowedPageButton type="button" onClick={() => setDraft({ ...draft, args: [...draft.args, ''] })}>
-                                Add argument
-                              </WindowedPageButton>
-                            </div>
-                            <div className="space-y-1.5">
-                              {draft.args.map((arg, index) => (
-                                <div key={index} className="flex items-center gap-2">
-                                  <span className="w-6 shrink-0 text-right font-mono text-[11px] text-tertiary">{index + 1}</span>
-                                  <WindowedTextInput
-                                    className="font-mono"
-                                    aria-label={`Argument ${index + 1}`}
-                                    value={arg}
-                                    onChange={(event) => setDraft(updateDraftArg(draft, index, event.target.value))}
-                                    placeholder={index === 0 ? '--flag or value' : undefined}
-                                    autoComplete="off"
-                                    spellCheck={false}
-                                  />
-                                  <WindowedPageButton
-                                    type="button"
-                                    onClick={() => setDraft(moveDraftArg(draft, index, -1))}
-                                    disabled={index === 0}
-                                  >
-                                    Up
-                                  </WindowedPageButton>
-                                  <WindowedPageButton
-                                    type="button"
-                                    onClick={() => setDraft(moveDraftArg(draft, index, 1))}
-                                    disabled={index === draft.args.length - 1}
-                                  >
-                                    Down
-                                  </WindowedPageButton>
-                                  <WindowedPageButton type="button" onClick={() => setDraft(removeDraftArg(draft, index))}>
-                                    Remove
-                                  </WindowedPageButton>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    {!draft.originalName ? (
-                      <div className="flex flex-wrap gap-2">
-                        <WindowedPageButton type="submit" tone="accent" disabled={saveState.busy || Boolean(validateDraft(draft))}>
-                          {saveState.busy ? 'Adding...' : 'Add server'}
-                        </WindowedPageButton>
-                        <WindowedPageButton
-                          type="button"
-                          onClick={() => {
-                            setSelectedServerName(null);
-                            setDraft(null);
-                          }}
-                        >
-                          Cancel
-                        </WindowedPageButton>
-                      </div>
-                    ) : null}
-                  </form>
-                </WindowedDialogStack>
-              </WindowedDialog>
-            ) : null}
-          </div>
-        </WindowedPageMain>
-      </WindowedPageShell>
-    );
-  }
-
   return (
-    <div className="space-y-5">
-      {mcpLoading && !mcpState ? (
-        <SupportingText>Loading MCP servers…</SupportingText>
-      ) : mcpError && !mcpState ? (
-        <p className="text-[12px] text-danger">Failed to load MCP servers: {mcpError}</p>
-      ) : mcpState ? (
+    <WindowedPageShell layout="standard" className="mcp-page-windowed">
+      <WindowedPageMain title="MCP Servers">
         <div className="space-y-5">
-          <SettingsRow
-            title="Explicit config"
-            description={<span className="break-all font-mono text-[11px]">{mcpState.configPath}</span>}
-            actionsClassName="max-w-none"
-          >
-            <div className="flex items-center gap-2">
-              <ToolbarButton
-                aria-label="Refresh MCP servers"
-                title="Refresh MCP servers"
-                disabled={mcpLoading}
-                onClick={() => void refetch()}
+          {mcpLoading && !mcpState ? (
+            <WindowedStateBlock title="Loading MCP servers">Reading explicit config and skill-bundled server wrappers.</WindowedStateBlock>
+          ) : null}
+          {mcpError && !mcpState ? (
+            <WindowedStateBlock tone="danger" title="MCP servers unavailable">
+              {mcpError}
+            </WindowedStateBlock>
+          ) : null}
+          {saveState.error ? (
+            <WindowedStateBlock tone="danger" title="MCP config save failed">
+              {saveState.error}
+            </WindowedStateBlock>
+          ) : null}
+          {saveState.message ? (
+            <WindowedStateBlock tone="positive" title="MCP config saved">
+              {saveState.message}
+            </WindowedStateBlock>
+          ) : null}
+
+          {mcpState ? (
+            <>
+              <WindowedPageSection
+                title="Explicit config"
+                meta={mcpState.configExists ? 'Config file found' : 'Config file will be created'}
               >
-                <span aria-hidden="true">↻</span>
-              </ToolbarButton>
-              <ToolbarButton type="button" onClick={startNewServerDraft}>
-                Add server
-              </ToolbarButton>
-            </div>
-          </SettingsRow>
-
-          {saveState.error ? <Notice tone="danger">{saveState.error}</Notice> : null}
-          {saveState.message ? <Notice tone="success">{saveState.message}</Notice> : null}
-
-          <RailSubsection title="Explicit servers">
-            {explicitServers.length > 0 ? (
-              explicitServers.map((name) => {
-                const server = mcpState.servers.find((entry) => entry.name === name);
-                const rawServer = visibleExplicitConfig.mcpServers[name] ?? {};
-                const disabled = rawServer.disabled === true || rawServer.enabled === false;
-                const selected = selectedServerName === name;
-                return (
-                  <div key={name} className="space-y-2 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
-                    <RowButton
-                      type="button"
-                      aria-pressed={selected}
-                      selected={selected}
-                      className="block px-3 py-2"
-                      onClick={() => selectServer(name, rawServer, server)}
-                    >
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[12px] text-primary">{name}</span>
-                        <Pill tone={server?.transport === 'remote' ? 'teal' : 'muted'}>{server?.transport ?? 'config'}</Pill>
-                        {disabled ? <Pill tone="muted">disabled</Pill> : null}
-                        {server?.hasOAuth ? <Pill tone="accent">oauth</Pill> : null}
-                      </span>
-                      <span className="ui-supporting-text mt-1 block break-all">
-                        {server ? formatMcpServerCommand(server) : disabled ? 'Disabled server' : 'Unparsed server config'}
-                      </span>
-                    </RowButton>
-                  </div>
-                );
-              })
-            ) : (
-              <SupportingText>No explicit servers. Add one to create a managed MCP configuration.</SupportingText>
-            )}
-          </RailSubsection>
-
-          <RailSubsection title={draft?.originalName ? `Server details: ${draft.originalName}` : 'Server details'}>
-            {draft ? (
-              <form
-                className="space-y-3"
-                onSubmit={(event) => {
-                  if (draft.originalName) {
-                    event.preventDefault();
-                    return;
-                  }
-                  void handleSubmitDraft(event);
-                }}
-              >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Name">
-                    <TextInput
-                      value={draft.name}
-                      onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field label="Transport">
-                    <Select
-                      value={draft.transport}
-                      onChange={(event) => setDraft({ ...draft, transport: event.target.value as 'stdio' | 'remote' })}
-                    >
-                      <option value="stdio">Local command</option>
-                      <option value="remote">Remote URL</option>
-                    </Select>
-                  </Field>
-                  {draft.transport === 'remote' ? (
-                    <Field label="URL">
-                      <TextInput
-                        value={draft.url}
-                        onChange={(event) => setDraft({ ...draft, url: event.target.value })}
-                        placeholder="https://example.com/mcp…"
-                        autoComplete="off"
-                      />
-                    </Field>
-                  ) : (
-                    <>
-                      <Field label="Command">
-                        <TextInput
-                          value={draft.command}
-                          onChange={(event) => setDraft({ ...draft, command: event.target.value })}
-                          placeholder="node, npx, uvx…"
-                          autoComplete="off"
-                          spellCheck={false}
-                        />
-                      </Field>
-                      <Field label="Working directory">
-                        <TextInput
-                          value={draft.cwd}
-                          onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
-                          placeholder="Optional…"
-                          autoComplete="off"
-                          spellCheck={false}
-                        />
-                      </Field>
-                      <div className="space-y-2 sm:col-span-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[12px] font-medium text-secondary">Arguments</span>
-                          <ToolbarButton type="button" onClick={() => setDraft({ ...draft, args: [...draft.args, ''] })}>
-                            Add argument
-                          </ToolbarButton>
-                        </div>
-                        <div className="space-y-1.5">
-                          {draft.args.map((arg, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <span className="w-6 shrink-0 text-right font-mono text-[11px] text-tertiary">{index + 1}</span>
-                              <TextInput
-                                className="font-mono"
-                                aria-label={`Argument ${index + 1}`}
-                                value={arg}
-                                onChange={(event) => setDraft(updateDraftArg(draft, index, event.target.value))}
-                                placeholder={index === 0 ? '--flag or value' : undefined}
-                                autoComplete="off"
-                                spellCheck={false}
-                              />
-                              <ToolbarButton type="button" onClick={() => setDraft(moveDraftArg(draft, index, -1))} disabled={index === 0}>
-                                Up
-                              </ToolbarButton>
-                              <ToolbarButton
-                                type="button"
-                                onClick={() => setDraft(moveDraftArg(draft, index, 1))}
-                                disabled={index === draft.args.length - 1}
-                              >
-                                Down
-                              </ToolbarButton>
-                              <ToolbarButton type="button" onClick={() => setDraft(removeDraftArg(draft, index))}>
-                                <span aria-hidden="true">-</span>
-                                Remove
-                              </ToolbarButton>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                <WindowedKeyValueGrid
+                  columns={2}
+                  items={[
+                    { label: 'Path', value: mcpState.configPath },
+                    { label: 'Searched paths', value: String(mcpState.searchedPaths.length) },
+                  ]}
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <WindowedPageButton disabled={mcpLoading} onClick={() => void refetch()}>
+                    Refresh
+                  </WindowedPageButton>
+                  <WindowedPageButton tone="accent" onClick={startNewServerDraft}>
+                    Add server
+                  </WindowedPageButton>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {!draft.originalName ? (
-                    <ToolbarButton type="submit" disabled={saveState.busy || Boolean(validateDraft(draft))}>
-                      {saveState.busy ? 'Adding…' : 'Add server'}
-                    </ToolbarButton>
-                  ) : null}
-                  {draft.originalName ? (
-                    <>
-                      <ToolbarButton type="button" onClick={() => void toggleServer(draft.originalName!)} disabled={saveState.busy}>
-                        {selectedDisabled ? 'Enable' : 'Disable'}
-                      </ToolbarButton>
-                      <ToolbarButton
-                        type="button"
-                        onClick={() => void handleServerAction('testServer', draft.originalName!)}
-                        disabled={selectedStatus?.busy || selectedDisabled}
-                      >
-                        Test
-                      </ToolbarButton>
-                      {selectedEffectiveServer?.hasOAuth ? (
-                        <ToolbarButton
-                          type="button"
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Explicit servers" meta={`${explicitServers.length} managed`}>
+                {explicitServers.length > 0 ? (
+                  <WindowedDataTable
+                    columns={[
+                      { label: 'Server' },
+                      { label: 'Transport' },
+                      { label: 'State' },
+                      { label: 'Endpoint' },
+                      { label: 'Actions', align: 'right' },
+                    ]}
+                    columnTemplate="minmax(14rem, 1fr) minmax(7rem, 0.4fr) minmax(6rem, 0.34fr) minmax(16rem, 0.82fr) minmax(6rem, 0.34fr)"
+                  >
+                    {explicitServers.map((name) => {
+                      const server = mcpState.servers.find((entry) => entry.name === name);
+                      const rawServer = visibleExplicitConfig.mcpServers[name] ?? {};
+                      const disabled = rawServer.disabled === true || rawServer.enabled === false;
+                      return (
+                        <WindowedDataRow
+                          key={name}
+                          name={name}
+                          meta={server?.sourcePath ?? mcpState.configPath}
+                          cells={[
+                            <WindowedBadge key="transport" tone={server?.transport === 'remote' ? 'positive' : 'neutral'}>
+                              {server?.transport ?? 'config'}
+                            </WindowedBadge>,
+                            <WindowedBadge key="state" tone={windowedServerTone(disabled)}>
+                              {disabled ? 'Disabled' : 'Enabled'}
+                            </WindowedBadge>,
+                            server ? formatMcpServerCommand(server) : disabled ? 'Disabled server' : 'Unparsed server config',
+                          ]}
+                          action={
+                            <WindowedPageButton
+                              aria-label={`Open MCP server details for ${name}`}
+                              onClick={() => selectServer(name, rawServer, server)}
+                            >
+                              Details
+                            </WindowedPageButton>
+                          }
+                        />
+                      );
+                    })}
+                  </WindowedDataTable>
+                ) : (
+                  <WindowedEmptyState action={<WindowedPageButton onClick={startNewServerDraft}>Add server</WindowedPageButton>}>
+                    No explicit servers. Add one to create a managed MCP configuration.
+                  </WindowedEmptyState>
+                )}
+              </WindowedPageSection>
+
+              <WindowedPageSection title="Skill-bundled servers" meta={`${mcpState.bundledSkills.length} skills`}>
+                {mcpState.bundledSkills.length > 0 ? (
+                  <WindowedDataTable
+                    columns={[{ label: 'Skill' }, { label: 'Servers' }, { label: 'Overrides' }, { label: 'Manifest', align: 'right' }]}
+                    columnTemplate="minmax(14rem, 1fr) minmax(10rem, 0.55fr) minmax(10rem, 0.55fr) minmax(16rem, 0.82fr)"
+                  >
+                    {mcpState.bundledSkills.map((bundle) => (
+                      <WindowedDataRow
+                        key={bundle.manifestPath}
+                        name={bundle.skillName}
+                        meta={bundle.skillPath}
+                        cells={[
+                          bundle.serverNames.join(', ') || 'No servers',
+                          bundle.overriddenServerNames.length > 0 ? bundle.overriddenServerNames.join(', ') : 'None',
+                          { value: bundle.manifestPath, align: 'right', className: 'break-all' },
+                        ]}
+                      />
+                    ))}
+                  </WindowedDataTable>
+                ) : (
+                  <WindowedEmptyState>No skill-local mcp.json wrappers found in the active skill set.</WindowedEmptyState>
+                )}
+              </WindowedPageSection>
+            </>
+          ) : null}
+
+          {draft ? (
+            <WindowedDialog
+              title={draft.originalName ? `Server details: ${draft.originalName}` : 'New MCP server'}
+              meta={draft.transport === 'remote' ? 'Remote URL' : 'Local command'}
+              accent="settings"
+              parentWindowTitle="Settings"
+              subwindowId="mcp-server-details"
+              onClose={() => {
+                setSelectedServerName(null);
+                setDraft(null);
+                setSaveState({ busy: false, error: null, message: null });
+              }}
+              actions={
+                draft.originalName ? (
+                  <>
+                    <WindowedPageButton onClick={() => void toggleServer(draft.originalName!)} disabled={saveState.busy}>
+                      {selectedDisabled ? 'Enable' : 'Disable'}
+                    </WindowedPageButton>
+                    <WindowedPageButton
+                      onClick={() => void handleServerAction('testServer', draft.originalName!)}
+                      disabled={selectedStatus?.busy || selectedDisabled}
+                    >
+                      Test
+                    </WindowedPageButton>
+                    {selectedEffectiveServer?.hasOAuth ? (
+                      <>
+                        <WindowedPageButton
                           onClick={() => void handleServerAction('authServer', draft.originalName!)}
                           disabled={selectedStatus?.busy}
                         >
                           Auth
-                        </ToolbarButton>
-                      ) : null}
-                      {selectedEffectiveServer?.hasOAuth ? (
-                        <ToolbarButton
-                          type="button"
+                        </WindowedPageButton>
+                        <WindowedPageButton
                           onClick={() => void handleServerAction('logoutServer', draft.originalName!)}
                           disabled={selectedStatus?.busy}
                         >
                           Logout
-                        </ToolbarButton>
-                      ) : null}
-                      <ToolbarButton
-                        type="button"
-                        className="text-danger hover:text-danger"
-                        onClick={() => void removeServer(draft.originalName!)}
-                        disabled={saveState.busy}
+                        </WindowedPageButton>
+                      </>
+                    ) : null}
+                    <WindowedPageButton tone="danger" onClick={() => void removeServer(draft.originalName!)} disabled={saveState.busy}>
+                      Remove
+                    </WindowedPageButton>
+                  </>
+                ) : undefined
+              }
+            >
+              <WindowedDialogStack>
+                {selectedStatus?.message ? (
+                  <WindowedStateBlock tone="positive" title="Server action complete">
+                    {selectedStatus.message}
+                  </WindowedStateBlock>
+                ) : null}
+                {selectedStatus?.error ? (
+                  <WindowedStateBlock tone="danger" title="Server action failed">
+                    {selectedStatus.error}
+                  </WindowedStateBlock>
+                ) : null}
+                <form
+                  className="space-y-3"
+                  onSubmit={(event) => {
+                    if (draft.originalName) {
+                      event.preventDefault();
+                      return;
+                    }
+                    void handleSubmitDraft(event);
+                  }}
+                >
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <WindowedField label="Name">
+                      <WindowedTextInput
+                        value={draft.name}
+                        onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                        autoComplete="off"
+                      />
+                    </WindowedField>
+                    <WindowedField label="Transport">
+                      <WindowedSelect
+                        value={draft.transport}
+                        onChange={(event) => setDraft({ ...draft, transport: event.target.value as 'stdio' | 'remote' })}
                       >
-                        <span aria-hidden="true">-</span>
-                        Remove
-                      </ToolbarButton>
-                    </>
-                  ) : (
-                    <ToolbarButton
-                      type="button"
-                      onClick={() =>
-                        setDraft(selectedServerName && selectedRawServer ? draftFromRawServer(selectedServerName, selectedRawServer) : null)
-                      }
-                    >
-                      Cancel
-                    </ToolbarButton>
-                  )}
-                </div>
-                {selectedStatus?.message ? <Notice tone="success">{selectedStatus.message}</Notice> : null}
-                {selectedStatus?.error ? <Notice tone="danger">{selectedStatus.error}</Notice> : null}
-              </form>
-            ) : (
-              <SupportingText>Select a server or add one to edit managed MCP configuration.</SupportingText>
-            )}
-          </RailSubsection>
-
-          <RailSubsection title="Skill-bundled servers">
-            {mcpState.bundledSkills.length > 0 ? (
-              mcpState.bundledSkills.map((bundle) => (
-                <div key={bundle.manifestPath} className="space-y-1.5 border-t border-border-subtle/60 pt-3 first:border-t-0 first:pt-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-[13px] font-medium text-primary">{bundle.skillName}</span>
-                    <span className="ui-supporting-text">
-                      {bundle.serverNames.length} server{bundle.serverNames.length === 1 ? '' : 's'}
-                    </span>
+                        <option value="stdio">Local command</option>
+                        <option value="remote">Remote URL</option>
+                      </WindowedSelect>
+                    </WindowedField>
+                    {draft.transport === 'remote' ? (
+                      <WindowedField label="URL" span="full">
+                        <WindowedTextInput
+                          value={draft.url}
+                          onChange={(event) => setDraft({ ...draft, url: event.target.value })}
+                          placeholder="https://example.com/mcp..."
+                          autoComplete="off"
+                        />
+                      </WindowedField>
+                    ) : (
+                      <>
+                        <WindowedField label="Command">
+                          <WindowedTextInput
+                            value={draft.command}
+                            onChange={(event) => setDraft({ ...draft, command: event.target.value })}
+                            placeholder="node, npx, uvx..."
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                        </WindowedField>
+                        <WindowedField label="Working directory">
+                          <WindowedTextInput
+                            value={draft.cwd}
+                            onChange={(event) => setDraft({ ...draft, cwd: event.target.value })}
+                            placeholder="Optional..."
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                        </WindowedField>
+                        <div className="space-y-2 sm:col-span-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[12px] font-medium text-secondary">Arguments</span>
+                            <WindowedPageButton type="button" onClick={() => setDraft({ ...draft, args: [...draft.args, ''] })}>
+                              Add argument
+                            </WindowedPageButton>
+                          </div>
+                          <div className="space-y-1.5">
+                            {draft.args.map((arg, index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <span className="w-6 shrink-0 text-right font-mono text-[11px] text-tertiary">{index + 1}</span>
+                                <WindowedTextInput
+                                  className="font-mono"
+                                  aria-label={`Argument ${index + 1}`}
+                                  value={arg}
+                                  onChange={(event) => setDraft(updateDraftArg(draft, index, event.target.value))}
+                                  placeholder={index === 0 ? '--flag or value' : undefined}
+                                  autoComplete="off"
+                                  spellCheck={false}
+                                />
+                                <WindowedPageButton
+                                  type="button"
+                                  onClick={() => setDraft(moveDraftArg(draft, index, -1))}
+                                  disabled={index === 0}
+                                >
+                                  Up
+                                </WindowedPageButton>
+                                <WindowedPageButton
+                                  type="button"
+                                  onClick={() => setDraft(moveDraftArg(draft, index, 1))}
+                                  disabled={index === draft.args.length - 1}
+                                >
+                                  Down
+                                </WindowedPageButton>
+                                <WindowedPageButton type="button" onClick={() => setDraft(removeDraftArg(draft, index))}>
+                                  Remove
+                                </WindowedPageButton>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <SupportingText className="break-all">
-                    <span className="font-mono text-[11px]">{bundle.manifestPath}</span>
-                  </SupportingText>
-                  <SupportingText className="break-all">
-                    <span className="font-mono text-[11px]">{bundle.serverNames.join(', ')}</span>
-                  </SupportingText>
-                  {bundle.overriddenServerNames.length > 0 ? (
-                    <p className="text-[12px] text-secondary">
-                      Overridden by explicit config:{' '}
-                      <span className="font-mono text-[11px]">{bundle.overriddenServerNames.join(', ')}</span>
-                    </p>
+                  {!draft.originalName ? (
+                    <div className="flex flex-wrap gap-2">
+                      <WindowedPageButton type="submit" tone="accent" disabled={saveState.busy || Boolean(validateDraft(draft))}>
+                        {saveState.busy ? 'Adding...' : 'Add server'}
+                      </WindowedPageButton>
+                      <WindowedPageButton
+                        type="button"
+                        onClick={() => {
+                          setSelectedServerName(null);
+                          setDraft(null);
+                        }}
+                      >
+                        Cancel
+                      </WindowedPageButton>
+                    </div>
                   ) : null}
-                </div>
-              ))
-            ) : (
-              <SupportingText>No skill-local mcp.json wrappers found in the active skill set.</SupportingText>
-            )}
-          </RailSubsection>
+                </form>
+              </WindowedDialogStack>
+            </WindowedDialog>
+          ) : null}
         </div>
-      ) : null}
-    </div>
+      </WindowedPageMain>
+    </WindowedPageShell>
   );
 }

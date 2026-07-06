@@ -95,7 +95,7 @@ function renderDictationButton(input: {
   return { container, root };
 }
 
-function renderDictationSettingsPanel(input: { invoke: ReturnType<typeof vi.fn>; shellPresentation?: 'windowed' }) {
+function renderDictationSettingsPanel(input: { invoke: ReturnType<typeof vi.fn> }) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -109,7 +109,6 @@ function renderDictationSettingsPanel(input: { invoke: ReturnType<typeof vi.fn>;
             extension: { invoke: input.invoke },
           } as never
         }
-        settingsContext={{ shellPresentation: input.shellPresentation }}
       />,
     );
   });
@@ -456,7 +455,7 @@ describe('DictationSettingsPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the canonical windowed settings surface when hosted by the desktop shell', async () => {
+  it('renders the canonical windowed settings surface', async () => {
     const invoke = vi.fn(async (action: string) => {
       if (action === 'readSettings') return { settings: { model: 'base.en' } };
       if (action === 'runtimeStatus') {
@@ -470,7 +469,7 @@ describe('DictationSettingsPanel', () => {
       return {};
     });
 
-    const { container } = renderDictationSettingsPanel({ invoke, shellPresentation: 'windowed' });
+    const { container } = renderDictationSettingsPanel({ invoke });
     await act(async () => {
       await flushMicrotasks();
     });
@@ -487,7 +486,7 @@ describe('DictationSettingsPanel', () => {
     expect(container.querySelector('.settings-row')).toBeNull();
   });
 
-  it('uses windowed loading chrome while dictation settings load in the desktop shell', async () => {
+  it('uses windowed loading chrome while dictation settings load', async () => {
     const readSettings = createDeferred<{ settings: { model: string } }>();
     const invoke = vi.fn(async (action: string) => {
       if (action === 'readSettings') return readSettings.promise;
@@ -496,7 +495,7 @@ describe('DictationSettingsPanel', () => {
       return {};
     });
 
-    const { container } = renderDictationSettingsPanel({ invoke, shellPresentation: 'windowed' });
+    const { container } = renderDictationSettingsPanel({ invoke });
 
     expect(container.querySelector('.local-dictation-page-windowed')).not.toBeNull();
     expect(container.querySelector('.wos-loading-state')?.textContent).toContain('Loading dictation settings');
@@ -511,7 +510,7 @@ describe('DictationSettingsPanel', () => {
     expect(container.textContent).toContain('Runtime');
   });
 
-  it('uses windowed loading chrome while autosaving dictation settings in the desktop shell', async () => {
+  it('uses windowed loading chrome while autosaving dictation settings', async () => {
     const updateSettings = createDeferred<{ settings: { model: string } }>();
     const invoke = vi.fn(async (action: string, input?: { model?: string }) => {
       if (action === 'readSettings') return { settings: { model: 'base.en' } };
@@ -521,7 +520,7 @@ describe('DictationSettingsPanel', () => {
       return {};
     });
 
-    const { container } = renderDictationSettingsPanel({ invoke, shellPresentation: 'windowed' });
+    const { container } = renderDictationSettingsPanel({ invoke });
     await act(async () => {
       await flushMicrotasks();
     });

@@ -75,7 +75,7 @@ beforeEach(() => {
 });
 
 describe('McpSettingsPanel', () => {
-  it('renders MCP wrapper and effective server state', () => {
+  it('renders MCP wrapper and effective server state inside the windowed shell', () => {
     mocks.useApi.mockReturnValue(
       buildUseApiResult({
         configPath: '/tmp/mcp_servers.json',
@@ -130,12 +130,10 @@ describe('McpSettingsPanel', () => {
     expect(html).toContain('Explicit servers');
     expect(html).toContain('Skill-bundled servers');
     expect(html).toContain('dd-atlassian-mcp');
-    expect(html).toContain('Server details');
-    expect(html).toContain('Select a server or add one to edit managed MCP configuration.');
     expect(html).toContain('npx @mcp/github');
   });
 
-  it('edits the selected explicit server from the stable settings editor', async () => {
+  it('autosaves edits from the dialog editor', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     mocks.useApi.mockReturnValue({
       ...buildUseApiResult({
@@ -143,23 +141,13 @@ describe('McpSettingsPanel', () => {
         configExists: true,
         searchedPaths: ['/tmp/mcp_servers.json'],
         explicitConfigJson:
-          '{\n  "mcpServers": {\n    "github": {\n      "command": "npx",\n      "args": ["@mcp/github"]\n    },\n    "zap": {\n      "command": "node",\n      "args": ["server.js"]\n    }\n  }\n}\n',
+          '{\n  "mcpServers": {\n    "github": {\n      "command": "npx",\n      "args": ["@mcp/github"]\n    }\n  }\n}\n',
         servers: [
           {
             name: 'github',
             transport: 'stdio',
             command: 'npx',
             args: ['@mcp/github'],
-            source: 'config',
-            sourcePath: '/tmp/mcp_servers.json',
-            hasOAuth: false,
-            raw: {},
-          },
-          {
-            name: 'zap',
-            transport: 'stdio',
-            command: 'node',
-            args: ['server.js'],
             source: 'config',
             sourcePath: '/tmp/mcp_servers.json',
             hasOAuth: false,
@@ -174,15 +162,10 @@ describe('McpSettingsPanel', () => {
 
     render(<McpSettingsPanel />);
 
-    fireEvent.click(screen.getByRole('button', { name: /zap/ }));
-    await waitFor(() => expect(screen.getByDisplayValue('node')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Open MCP server details for github' }));
+    await waitFor(() => expect(screen.getByDisplayValue('npx')).toBeTruthy());
 
-    fireEvent.change(screen.getByDisplayValue('node'), { target: { value: 'bunx' } });
-    fireEvent.change(screen.getByDisplayValue('server.js'), { target: { value: 'serve.js' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add argument' }));
-    fireEvent.change(screen.getByLabelText('Argument 2'), { target: { value: '--stdio' } });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Up' }).at(-1)!);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[1]!);
+    fireEvent.change(screen.getByDisplayValue('npx'), { target: { value: 'bunx' } });
 
     await waitFor(
       () => expect(mocks.api.invokeExtensionAction).toHaveBeenCalledWith('system-mcp', 'saveExplicitConfig', expect.any(Object)),
@@ -192,19 +175,15 @@ describe('McpSettingsPanel', () => {
     expect(JSON.parse(payload.json)).toEqual({
       mcpServers: {
         github: {
-          command: 'npx',
-          args: ['@mcp/github'],
-        },
-        zap: {
           command: 'bunx',
-          args: ['--stdio'],
+          args: ['@mcp/github'],
         },
       },
     });
     expect(refetch).toHaveBeenCalled();
   });
 
-  it('renders windowed MCP servers as tables with details in a dialog', () => {
+  it('renders MCP servers as tables with details in a dialog', () => {
     mocks.useApi.mockReturnValue(
       buildUseApiResult({
         configPath: '/tmp/mcp_servers.json',
@@ -236,7 +215,7 @@ describe('McpSettingsPanel', () => {
       }),
     );
 
-    render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    render(<McpSettingsPanel />);
 
     expect(document.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByRole('heading', { name: 'MCP Servers' })).toBeTruthy();
@@ -265,21 +244,21 @@ describe('McpSettingsPanel', () => {
   it('keeps loading and error states inside the canonical windowed shell', () => {
     mocks.useApi.mockReturnValueOnce({ data: null, loading: true, error: null, refetch: vi.fn() });
 
-    const { container, rerender } = render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container, rerender } = render(<McpSettingsPanel />);
 
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByText('Loading MCP servers').closest('.wos-state-block__title')).toBeTruthy();
     expect(screen.getByText('Reading explicit config and skill-bundled server wrappers.').closest('.wos-state-block__body')).toBeTruthy();
 
     mocks.useApi.mockReturnValueOnce({ data: null, loading: false, error: 'load failed', refetch: vi.fn() });
-    rerender(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    rerender(<McpSettingsPanel />);
 
     expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard');
     expect(screen.getByText('MCP servers unavailable')).toBeTruthy();
     expect(screen.getByText('load failed').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
   });
 
-  it('renders structured windowed save and server action feedback', async () => {
+  it('renders structured save and server action feedback', async () => {
     mocks.useApi.mockReturnValue(
       buildUseApiResult({
         configPath: '/tmp/mcp_servers.json',
@@ -308,7 +287,7 @@ describe('McpSettingsPanel', () => {
       throw new Error(`Unexpected action ${action}`);
     });
 
-    render(<McpSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    render(<McpSettingsPanel />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open MCP server details for github' }));
     fireEvent.click(screen.getByRole('button', { name: 'Disable' }));

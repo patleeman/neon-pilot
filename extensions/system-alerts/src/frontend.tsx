@@ -1,11 +1,5 @@
 import type { NativeExtensionClient } from '@neon-pilot/extensions';
 import {
-  Notice,
-  QuietLoadingState,
-  Select,
-  SettingsRow,
-  Switch,
-  ToolbarButton,
   WindowedDataRow,
   WindowedDataTable,
   WindowedPageButton,
@@ -37,7 +31,6 @@ const SOUND_OPTIONS: Array<{ id: AlertSoundId; label: string }> = [
 
 interface AlertsSettingsPanelProps {
   pa: NativeExtensionClient;
-  settingsContext?: { extensionId?: string; shellPresentation?: 'windowed' };
 }
 
 function statusText(settings: AlertsSettings, systemNotificationsAvailable: boolean): string {
@@ -69,7 +62,7 @@ export function formatAlertsSettingsFailure(error: unknown, fallback: string): s
   return message;
 }
 
-export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanelProps) {
+export function AlertsSettingsPanel({ pa }: AlertsSettingsPanelProps) {
   const [state, setState] = useState<AlertsSettingsState | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -111,184 +104,105 @@ export function AlertsSettingsPanel({ pa, settingsContext }: AlertsSettingsPanel
     }
   }
 
-  const isWindowed = settingsContext?.shellPresentation === 'windowed';
-
   if (!state) {
-    return isWindowed ? (
+    return (
       <div className="alerts-page-windowed flex min-h-0 flex-col gap-3">
         <WindowedStateBlock tone={message ? 'danger' : 'neutral'}>{message ?? 'Loading alert settings.'}</WindowedStateBlock>
       </div>
-    ) : (
-      <>
-        <QuietLoadingState label="Loading alert settings" className="min-h-12" />
-        {message ? <Notice tone="danger">{message}</Notice> : null}
-      </>
     );
   }
 
   const settings = state.settings;
 
-  if (isWindowed) {
-    return (
-      <div className="alerts-page-windowed flex min-h-0 flex-col gap-3">
-        {!state.systemNotificationsAvailable && settings.nativeNotifications ? (
-          <WindowedStateBlock tone="warning">
-            macOS notifications are not available until the desktop app notification bridge is ready.
-          </WindowedStateBlock>
-        ) : null}
-        <WindowedPageSection title="Delivery" meta={statusText(settings, state.systemNotificationsAvailable)}>
-          <WindowedDataTable columns={[{ label: 'Alert' }, { label: 'State' }, { label: 'Control', align: 'right' }]}>
-            <WindowedDataRow
-              name="Attention alerts"
-              meta={settings.enabled ? 'On' : 'Paused'}
-              action={
-                <WindowedToggle
-                  checked={settings.enabled}
-                  disabled={busy}
-                  accent="settings"
-                  label={settings.enabled ? 'Disable attention alerts' : 'Enable attention alerts'}
-                  onChange={() => void save({ enabled: !settings.enabled })}
-                />
-              }
-            />
-            <WindowedDataRow
-              name="Native notification"
-              meta={state.systemNotificationsAvailable ? 'macOS notifications' : 'macOS notifications unavailable'}
-              action={
-                <WindowedToggle
-                  checked={settings.nativeNotifications}
-                  disabled={busy || !settings.enabled}
-                  accent="settings"
-                  label={settings.nativeNotifications ? 'Disable native notifications' : 'Enable native notifications'}
-                  onChange={() => void save({ nativeNotifications: !settings.nativeNotifications })}
-                />
-              }
-            />
-            <WindowedDataRow
-              name="Sound"
-              meta={settings.soundEnabled ? settings.sound : 'Off'}
-              cells={[
-                {
-                  value: (
-                    <WindowedSelect
-                      aria-label="Alert sound"
-                      value={settings.sound}
-                      disabled={busy || !settings.enabled || !settings.soundEnabled}
-                      onChange={(event) => void save({ sound: event.target.value as AlertSoundId })}
-                    >
-                      {SOUND_OPTIONS.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </WindowedSelect>
-                  ),
-                  className: 'wos-data-row__cell--wide',
-                },
-              ]}
-              action={
-                <WindowedToggle
-                  checked={settings.soundEnabled}
-                  disabled={busy || !settings.enabled}
-                  accent="settings"
-                  label={settings.soundEnabled ? 'Disable alert sound' : 'Enable alert sound'}
-                  onChange={() => void save({ soundEnabled: !settings.soundEnabled })}
-                />
-              }
-            />
-            <WindowedDataRow
-              name="Notify for"
-              meta={settings.severity === 'all' ? 'All active alerts' : 'Disruptive alerts'}
-              action={
-                <WindowedSelect
-                  aria-label="Alert severity"
-                  value={settings.severity}
-                  disabled={busy || !settings.enabled}
-                  onChange={(event) => void save({ severity: event.target.value as AlertSeverityFilter })}
-                >
-                  <option value="disruptive">Disruptive alerts</option>
-                  <option value="all">All active alerts</option>
-                </WindowedSelect>
-              }
-            />
-          </WindowedDataTable>
-        </WindowedPageSection>
-        <WindowedPageSection title="Test alert" meta={message ?? 'Send a notification and play the selected sound.'}>
-          <WindowedPageButton type="button" tone="accent" disabled={busy} onClick={() => void testAlert()}>
-            {busy ? 'Working...' : 'Send test'}
-          </WindowedPageButton>
-        </WindowedPageSection>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-3">
+    <div className="alerts-page-windowed flex min-h-0 flex-col gap-3">
       {!state.systemNotificationsAvailable && settings.nativeNotifications ? (
-        <Notice tone="warning">macOS notifications are not available until the desktop app notification bridge is ready.</Notice>
+        <WindowedStateBlock tone="warning">
+          macOS notifications are not available until the desktop app notification bridge is ready.
+        </WindowedStateBlock>
       ) : null}
-
-      <SettingsRow title="Attention alerts" description={statusText(settings, state.systemNotificationsAvailable)}>
-        <Switch
-          checked={settings.enabled}
-          disabled={busy}
-          aria-label={settings.enabled ? 'Disable attention alerts' : 'Enable attention alerts'}
-          label={settings.enabled ? 'On' : 'Off'}
-          onClick={() => void save({ enabled: !settings.enabled })}
-        />
-      </SettingsRow>
-
-      <SettingsRow title="Native notification" description="Show a macOS notification when an active alert is raised.">
-        <Switch
-          checked={settings.nativeNotifications}
-          disabled={busy || !settings.enabled}
-          aria-label={settings.nativeNotifications ? 'Disable native notifications' : 'Enable native notifications'}
-          label={settings.nativeNotifications ? 'On' : 'Off'}
-          onClick={() => void save({ nativeNotifications: !settings.nativeNotifications })}
-        />
-      </SettingsRow>
-
-      <SettingsRow title="Sound" description="Play a short macOS system sound when alerts arrive, coalesced during bursts.">
-        <div className="flex min-w-0 items-center gap-2">
-          <Select
-            aria-label="Alert sound"
-            value={settings.sound}
-            disabled={busy || !settings.enabled || !settings.soundEnabled}
-            onChange={(event) => void save({ sound: event.target.value as AlertSoundId })}
-          >
-            {SOUND_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-          <Switch
-            checked={settings.soundEnabled}
-            disabled={busy || !settings.enabled}
-            aria-label={settings.soundEnabled ? 'Disable alert sound' : 'Enable alert sound'}
-            label={settings.soundEnabled ? 'On' : 'Off'}
-            onClick={() => void save({ soundEnabled: !settings.soundEnabled })}
+      <WindowedPageSection title="Delivery" meta={statusText(settings, state.systemNotificationsAvailable)}>
+        <WindowedDataTable columns={[{ label: 'Alert' }, { label: 'State' }, { label: 'Control', align: 'right' }]}>
+          <WindowedDataRow
+            name="Attention alerts"
+            meta={settings.enabled ? 'On' : 'Paused'}
+            action={
+              <WindowedToggle
+                checked={settings.enabled}
+                disabled={busy}
+                accent="settings"
+                label={settings.enabled ? 'Disable attention alerts' : 'Enable attention alerts'}
+                onChange={() => void save({ enabled: !settings.enabled })}
+              />
+            }
           />
-        </div>
-      </SettingsRow>
-
-      <SettingsRow title="Notify for" description="Choose whether passive alerts should also use native delivery.">
-        <Select
-          aria-label="Alert severity"
-          value={settings.severity}
-          disabled={busy || !settings.enabled}
-          onChange={(event) => void save({ severity: event.target.value as AlertSeverityFilter })}
-        >
-          <option value="disruptive">Disruptive alerts</option>
-          <option value="all">All active alerts</option>
-        </Select>
-      </SettingsRow>
-
-      <SettingsRow title="Test alert" description={message ?? 'Send a notification and play the selected sound.'}>
-        <ToolbarButton type="button" disabled={busy} onClick={() => void testAlert()}>
+          <WindowedDataRow
+            name="Native notification"
+            meta={state.systemNotificationsAvailable ? 'macOS notifications' : 'macOS notifications unavailable'}
+            action={
+              <WindowedToggle
+                checked={settings.nativeNotifications}
+                disabled={busy || !settings.enabled}
+                accent="settings"
+                label={settings.nativeNotifications ? 'Disable native notifications' : 'Enable native notifications'}
+                onChange={() => void save({ nativeNotifications: !settings.nativeNotifications })}
+              />
+            }
+          />
+          <WindowedDataRow
+            name="Sound"
+            meta={settings.soundEnabled ? settings.sound : 'Off'}
+            cells={[
+              {
+                value: (
+                  <WindowedSelect
+                    aria-label="Alert sound"
+                    value={settings.sound}
+                    disabled={busy || !settings.enabled || !settings.soundEnabled}
+                    onChange={(event) => void save({ sound: event.target.value as AlertSoundId })}
+                  >
+                    {SOUND_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </WindowedSelect>
+                ),
+                className: 'wos-data-row__cell--wide',
+              },
+            ]}
+            action={
+              <WindowedToggle
+                checked={settings.soundEnabled}
+                disabled={busy || !settings.enabled}
+                accent="settings"
+                label={settings.soundEnabled ? 'Disable alert sound' : 'Enable alert sound'}
+                onChange={() => void save({ soundEnabled: !settings.soundEnabled })}
+              />
+            }
+          />
+          <WindowedDataRow
+            name="Notify for"
+            meta={settings.severity === 'all' ? 'All active alerts' : 'Disruptive alerts'}
+            action={
+              <WindowedSelect
+                aria-label="Alert severity"
+                value={settings.severity}
+                disabled={busy || !settings.enabled}
+                onChange={(event) => void save({ severity: event.target.value as AlertSeverityFilter })}
+              >
+                <option value="disruptive">Disruptive alerts</option>
+                <option value="all">All active alerts</option>
+              </WindowedSelect>
+            }
+          />
+        </WindowedDataTable>
+      </WindowedPageSection>
+      <WindowedPageSection title="Test alert" meta={message ?? 'Send a notification and play the selected sound.'}>
+        <WindowedPageButton type="button" tone="accent" disabled={busy} onClick={() => void testAlert()}>
           {busy ? 'Working...' : 'Send test'}
-        </ToolbarButton>
-      </SettingsRow>
+        </WindowedPageButton>
+      </WindowedPageSection>
     </div>
   );
 }

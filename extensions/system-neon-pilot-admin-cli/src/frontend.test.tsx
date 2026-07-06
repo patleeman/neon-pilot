@@ -124,11 +124,9 @@ describe('NeonPilotAgentSettingsPanel', () => {
   it('renders a windowed settings table and saves CLI toggle changes', async () => {
     mocks.api.invokeExtensionAction.mockResolvedValue({ result: { settings: { cliEnabled: false } } });
 
-    const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<NeonPilotAgentSettingsPanel />);
 
-    expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('.admin-cli-page-windowed')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Command Line' })).toBeNull();
     expect(screen.getByRole('table')).toBeTruthy();
     expect(screen.getByText('Shell command')).toBeTruthy();
     expect(screen.getByText('CLI entrypoint')).toBeTruthy();
@@ -160,7 +158,7 @@ describe('NeonPilotAgentSettingsPanel', () => {
       };
     });
 
-    const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<NeonPilotAgentSettingsPanel />);
 
     expect(screen.getByText('CLI settings unavailable.').closest('.wos-state-block')?.getAttribute('data-tone')).toBe('danger');
     expect(container.querySelector('.wos-empty-state')).toBeNull();
@@ -168,7 +166,7 @@ describe('NeonPilotAgentSettingsPanel', () => {
     expect(container.querySelector('.ui-error-state')).toBeNull();
   });
 
-  it('keeps windowed loading state inside the embedded settings panel', () => {
+  it('keeps windowed loading state inside the settings panel', () => {
     mocks.useApi.mockImplementation((_loader: unknown, key: string) => {
       if (key === 'system-neon-pilot-cli-shell-link-setup') {
         return buildUseApiResult(
@@ -185,18 +183,16 @@ describe('NeonPilotAgentSettingsPanel', () => {
       };
     });
 
-    const { container } = render(<NeonPilotAgentSettingsPanel settingsContext={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<NeonPilotAgentSettingsPanel />);
 
     expect(container.querySelector('.wos-page-shell')).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Command Line' })).toBeNull();
     expect(screen.getByText('Loading settings.').closest('.wos-state-block')).toBeTruthy();
   });
 
-  it('keeps the settings row presentation outside windowed mode', () => {
+  it('renders windowed data rows as the canonical settings surface', () => {
     render(<NeonPilotAgentSettingsPanel />);
 
-    expect(screen.queryByRole('table')).toBeNull();
     expect(screen.getByText('CLI entrypoint')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'CLI entrypoint' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Toggle CLI entrypoint' }).getAttribute('aria-pressed')).toBe('true');
   });
 });
