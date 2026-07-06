@@ -1,6 +1,6 @@
 # Page Template Standards
 
-Neon Pilot pages should be assembled from shared page templates before adding local layout. The goal is for Settings, Extensions, Skills, Automations, Diagnostics, and extension-owned pages to feel like siblings in the same workbench.
+Neon Pilot pages should be assembled from shared page templates before adding local layout. The goal is for Settings, App Manager, Automations, and extension-owned pages to feel like siblings in the same workbench.
 
 Use `docs/design/page-shell-plan.md` for the shell-region implementation plan and `docs/design/page-type-vetting.md` for the recorded approval decision.
 
@@ -27,14 +27,14 @@ New app and first-party extension routes must fit one of the approved page types
 
 Most routes should be able to fit one of these types before local layout is added:
 
-| Page type         | Use for                                                                     | Contextual left area                          | Main page                                                   | Right sidebar                                 |
-| ----------------- | --------------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------- |
-| Conversation page | Chat, transcript-first agent work                                           | Threads or route-owned conversation navigator | Transcript, composer, run state                             | Workbench/context rail                        |
-| Table page        | Durable object management: automations, skills, extensions, providers, logs | Blank by default                              | Table/list with shared toolbar, filters, search, pagination | Optional selected-object details or inspector |
-| Editor page       | Canvases, workflows, structured object editing                              | Optional object/step navigator                | Editor, timeline, canvas, or detail surface                 | Inspector, validation, history, preview       |
-| Settings page     | Preferences, provider settings, extension settings                          | Optional settings navigation                  | Grouped settings rows                                       | Optional help/details rail only when useful   |
-| Dashboard page    | Diagnostics, metrics, status views                                          | Blank by default                              | Metrics, charts, log summaries                              | Optional metric/log details                   |
-| Setup page        | Connection, credential, provider, onboarding, install flows                 | Optional provider/object selector             | Linear setup path                                           | Docs, activity, test output, metadata         |
+| Page type         | Use for                                                             | Contextual left area                          | Main page                                                   | Right sidebar                                 |
+| ----------------- | ------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------- |
+| Conversation page | Chat, transcript-first agent work                                   | Threads or route-owned conversation navigator | Transcript, composer, run state                             | Workbench/context rail                        |
+| Table page        | Durable object management: automations, extensions, providers, logs | Blank by default                              | Table/list with shared toolbar, filters, search, pagination | Optional selected-object details or inspector |
+| Editor page       | Canvases, workflows, structured object editing                      | Optional object/step navigator                | Editor, timeline, canvas, or detail surface                 | Inspector, validation, history, preview       |
+| Settings page     | Preferences, provider settings, extension settings                  | Optional settings navigation                  | Grouped settings rows                                       | Optional help/details rail only when useful   |
+| Dashboard page    | Metrics, status views, monitoring dashboards                        | Blank by default                              | Metrics, charts, log summaries                              | Optional metric/log details                   |
+| Setup page        | Connection, credential, provider, onboarding, install flows         | Optional provider/object selector             | Linear setup path                                           | Docs, activity, test output, metadata         |
 
 If a workflow does not fit these types, write down the missing behavior before creating a new type. Most mismatches mean the workflow representation needs work, not that the app needs another page shell.
 
@@ -72,7 +72,7 @@ Use the approved page types above as the route-region map. In short: Chat gets T
 
 ## Table/List Pages
 
-Use table/list pages for object management surfaces such as Automations, Skills, Extensions, providers, connections, model records, and logs.
+Use table/list pages for object management surfaces such as Automations, App Manager, providers, connections, model records, and logs.
 
 - Use `DataTableToolbar` for tabs, result counts, filters, search, refresh, and create/install actions.
 - Put filters in the toolbar, not inside column headers.
