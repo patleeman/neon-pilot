@@ -128,7 +128,11 @@ async function handleToolInvokeRequest(req: Request, res: Response): Promise<voi
           runtimeScope: getRuntimeScopeFn(),
           repoRoot: getRepoRootFn(),
           ...(Array.isArray(body.directToolNames)
-            ? { directToolNames: body.directToolNames.filter((item): item is string => typeof item === 'string') }
+            ? {
+                directToolNames: body.directToolNames
+                  .map((item) => (typeof item === 'string' ? item.trim() : ''))
+                  .filter((item) => item.length > 0),
+              }
             : {}),
         },
         toolContext: {

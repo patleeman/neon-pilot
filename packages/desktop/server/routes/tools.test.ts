@@ -189,6 +189,46 @@ describe('registerToolsRoutes', () => {
     expect(res.json).toHaveBeenCalledWith({ ok: true, result: { content: [{ type: 'text', text: 'Added todo' }] } });
   });
 
+  it('passes direct desktop tool allowlists through tool invoke requests', async () => {
+    const { postHandler } = createHarness({ repoRoot: '/repo' });
+    const handler = postHandler('/api/tools/invoke');
+    const res = createResponse();
+    invokeToolByNameMock.mockResolvedValueOnce({
+      content: [{ type: 'image', data: 'cG5n', mimeType: 'image/png' }],
+      details: { ok: true },
+    });
+
+    await handler(
+      {
+        body: {
+          name: 'desktop_screenshot',
+          input: { windowId: 'browser:main' },
+          directToolNames: [' desktop_state ', 'desktop_control', 'desktop_screenshot', 42, ''],
+          toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+        },
+      },
+      res,
+    );
+
+    expect(invokeToolByNameMock).toHaveBeenCalledWith(
+      {
+        name: 'desktop_screenshot',
+        input: { windowId: 'browser:main' },
+        runtime: {
+          runtimeScope: 'shared',
+          repoRoot: '/repo',
+          directToolNames: ['desktop_state', 'desktop_control', 'desktop_screenshot'],
+        },
+        toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+      },
+      { getRuntimeScope: expect.any(Function), getRepoRoot: expect.any(Function) },
+    );
+    expect(res.json).toHaveBeenCalledWith({
+      ok: true,
+      result: { content: [{ type: 'image', data: 'cG5n', mimeType: 'image/png' }], details: { ok: true } },
+    });
+  });
+
   it('rejects tool invoke requests without a tool name', async () => {
     const { postHandler } = createHarness();
     const handler = postHandler('/api/tools/invoke');
