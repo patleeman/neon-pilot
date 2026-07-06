@@ -21,6 +21,7 @@ const {
   applyScheduledTaskThreadBindingMock,
   buildScheduledTaskThreadDetailMock,
   resolveScheduledTaskThreadBindingMock,
+  writeAutomationActivityEntrySafeMock,
 } = vi.hoisted(() => ({
   clearTaskCallbackBindingMock: vi.fn(),
   getTaskCallbackBindingMock: vi.fn(),
@@ -44,6 +45,7 @@ const {
   applyScheduledTaskThreadBindingMock: vi.fn(),
   buildScheduledTaskThreadDetailMock: vi.fn(),
   resolveScheduledTaskThreadBindingMock: vi.fn(),
+  writeAutomationActivityEntrySafeMock: vi.fn(),
 }));
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -78,6 +80,10 @@ vi.mock('@neon-pilot/daemon', () => ({
 
 vi.mock('../shared/appEvents.js', () => ({
   invalidateAppTopics: invalidateAppTopicsMock,
+}));
+
+vi.mock('./automationActivityProducers.js', () => ({
+  writeAutomationActivityEntrySafe: writeAutomationActivityEntrySafeMock,
 }));
 
 vi.mock('./taskService.js', () => ({
@@ -204,10 +210,11 @@ describe('scheduledTaskCapability', () => {
     applyScheduledTaskThreadBindingMock.mockReset();
     buildScheduledTaskThreadDetailMock.mockReset();
     resolveScheduledTaskThreadBindingMock.mockReset();
+    writeAutomationActivityEntrySafeMock.mockReset();
     toScheduledTaskMetadataMock.mockImplementation((task: TestTask) => toMetadata(task));
     applyScheduledTaskThreadBindingMock.mockImplementation(
       (taskId: string, input: { threadMode?: string | null; threadConversationId?: string | null; threadSessionFile?: string | null }) => {
-        const sourceTask = [...updateStoredAutomationMock.mock.results, ...createStoredAutomationMock.mock.results]
+        const sourceTask = [...createStoredAutomationMock.mock.results, ...updateStoredAutomationMock.mock.results]
           .map((result) => result.value as TestTask | undefined)
           .filter((task): task is TestTask => Boolean(task) && task.id === taskId)
           .at(-1);
@@ -458,6 +465,10 @@ describe('scheduledTaskCapability', () => {
       cwd: '/tmp/work',
     });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks');
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(1, 'task-created', 'created', 'Created task', {
+      scheduleType: 'cron',
+      targetType: 'background-agent',
+    });
 
     const updatedTask = createTask({ id: 'task-created', title: 'Updated task', prompt: 'Updated prompt' });
     findTaskForProfileMock
@@ -513,6 +524,46 @@ describe('scheduledTaskCapability', () => {
       cwd: '/repo',
     });
     expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(2);
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(2, 'task-created', 'updated', 'Updated task', {
+      scheduleType: 'cron',
+      targetType: undefined,
+    });
+  });
+
+  it('records enabled and disabled activity only when the state changes', async () => {
+    const disabledTask = createTask({ id: 'task-toggle', enabled: false });
+    const enabledTask = createTask({ id: 'task-toggle', enabled: true });
+
+    findTaskForProfileMock
+      .mockReturnValueOnce({ task: disabledTask, runtime: createRuntime({ id: 'task-toggle', running: false }) })
+      .mockReturnValueOnce({ task: enabledTask, runtime: createRuntime({ id: 'task-toggle', running: false }) })
+      .mockReturnValueOnce({ task: enabledTask, runtime: createRuntime({ id: 'task-toggle', running: false }) })
+      .mockReturnValueOnce({ task: enabledTask, runtime: createRuntime({ id: 'task-toggle', running: false }) });
+    updateStoredAutomationMock.mockReturnValueOnce(enabledTask).mockReturnValueOnce(enabledTask);
+
+    await updateScheduledTaskCapability('assistant', {
+      taskId: 'task-toggle',
+      enabled: true,
+    });
+
+    await updateScheduledTaskCapability('assistant', {
+      taskId: 'task-toggle',
+      enabled: true,
+    });
+
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(1, 'task-toggle', 'updated', 'Task 1', {
+      scheduleType: 'cron',
+      targetType: undefined,
+    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(2, 'task-toggle', 'enabled', 'Task 1', {
+      scheduleType: 'cron',
+      targetType: undefined,
+    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(3, 'task-toggle', 'updated', 'Task 1', {
+      scheduleType: 'cron',
+      targetType: undefined,
+    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledTimes(3);
   });
 
   it('deletes tasks and clears callback bindings', async () => {
@@ -536,6 +587,9 @@ describe('scheduledTaskCapability', () => {
     expect(deleteStoredAutomationMock).toHaveBeenCalledWith('task-1');
     expect(clearTaskCallbackBindingMock).toHaveBeenCalledWith({ profile: 'assistant', taskId: 'task-1' });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks');
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledWith('task-1', 'deleted', 'Task 1', {
+      scheduleType: 'cron',
+    });
   });
 
   it('reads task logs and reports missing logs', async () => {
@@ -576,5 +630,9 @@ describe('scheduledTaskCapability', () => {
       runId: 'run-1',
     });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'runs', 'sessions', 'workspace');
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledWith('task-1', 'manual_run', 'Task 1', {
+      runId: 'run-1',
+      scheduleType: 'cron',
+    });
   });
 });

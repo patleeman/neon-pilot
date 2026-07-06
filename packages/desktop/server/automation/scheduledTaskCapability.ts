@@ -18,6 +18,7 @@ import { readConversationSessionMeta } from '../conversations/conversationServic
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { upsertAlertAndPublish } from './alertEvents.js';
+import { writeAutomationActivityEntrySafe } from './automationActivityProducers.js';
 import { loadScheduledTasksForProfile, type TaskRuntimeEntry, toScheduledTaskMetadata } from './scheduledTasks.js';
 import {
   applyScheduledTaskThreadBinding,
@@ -338,6 +339,11 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
   applyScheduledTaskCallbackBinding(profile, task.id, input, targetType);
   invalidateAppTopics('tasks');
 
+  writeAutomationActivityEntrySafe(task.id, 'created', task.title ?? input.title ?? '', {
+    scheduleType: task.schedule.type,
+    targetType,
+  });
+
   const savedTask = findTaskForProfile(profile, task.id);
   const callbackBinding = getTaskCallbackBinding({ profile, taskId: task.id });
   const activity = listAutomationActivityEntries(task.id);
@@ -402,6 +408,19 @@ export async function updateScheduledTaskCapability(profile: string, input: Sche
   applyScheduledTaskCallbackBinding(profile, task.id, input, targetType);
   invalidateAppTopics('tasks');
 
+  writeAutomationActivityEntrySafe(task.id, 'updated', task.title ?? '', {
+    scheduleType: task.schedule.type,
+    targetType,
+  });
+
+  if (input.enabled !== undefined && input.enabled !== resolvedTask.task.enabled) {
+    const enableEvent = input.enabled ? 'enabled' : 'disabled';
+    writeAutomationActivityEntrySafe(task.id, enableEvent, task.title ?? '', {
+      scheduleType: task.schedule.type,
+      targetType,
+    });
+  }
+
   const refreshedTask = findTaskForProfile(profile, task.id);
   const callbackBinding = getTaskCallbackBinding({ profile, taskId: task.id });
   const activity = listAutomationActivityEntries(task.id);
@@ -435,6 +454,10 @@ export async function deleteScheduledTaskCapability(profile: string, taskId: str
 
   clearTaskCallbackBinding({ profile, taskId: resolvedTask.task.id });
   invalidateAppTopics('tasks');
+
+  writeAutomationActivityEntrySafe(resolvedTask.task.id, 'deleted', resolvedTask.task.title ?? '', {
+    scheduleType: resolvedTask.task.schedule.type,
+  });
 
   persistAppTelemetryEvent({
     source: 'server',
@@ -491,6 +514,11 @@ export async function runScheduledTaskCapability(profile: string, taskId: string
   }
 
   invalidateAppTopics('tasks', 'runs', 'sessions', 'workspace');
+
+  writeAutomationActivityEntrySafe(resolvedTask.task.id, 'manual_run', resolvedTask.task.title ?? '', {
+    runId: result.runId,
+    scheduleType: resolvedTask.task.schedule.type,
+  });
 
   return {
     ok: true as const,
