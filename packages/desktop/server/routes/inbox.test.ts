@@ -26,6 +26,7 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
   }),
 }));
 
+import { ACTIVITY_COLLECTION, ACTIVITY_OWNER } from '../activity/activityEntries.js';
 import { getDocumentsStore, resetDocumentsStoreSingleton } from '../documents/store.js';
 import { registerInboxRoutes } from './inbox.js';
 
@@ -73,6 +74,12 @@ describe('registerInboxRoutes', () => {
 
   function getHarnessStore(): ReturnType<typeof getDocumentsStore> {
     return getDocumentsStore(tmpDir, resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root') }));
+  }
+
+  function listActivityBodies(): Array<{ id: string; body: Record<string, unknown> }> {
+    return getHarnessStore()
+      .listDocuments(ACTIVITY_OWNER, ACTIVITY_COLLECTION)
+      .records.map((record) => ({ id: record.id, body: record.body as Record<string, unknown> }));
   }
 
   function createRes() {
@@ -533,6 +540,82 @@ describe('registerInboxRoutes', () => {
       const res = createRes();
       handlers['DELETE /api/inbox/:id']({ params: { id: 'ghost' } }, res);
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe('activity entries', () => {
+    it('writes a durable activity entry when creating a message', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'activity-create', subject: 'Run finished', refId: 'run-123' });
+
+      expect(listActivityBodies()).toEqual([
+        {
+          id: 'inbox_created_activity-create',
+          body: expect.objectContaining({
+            type: 'inbox_created',
+            title: 'Inbox message: Run finished',
+            source: 'Inbox',
+            kind: 'activity',
+            metadata: expect.objectContaining({
+              inboxMessageId: 'activity-create',
+              messageKind: 'result',
+              refId: 'run-123',
+              fromKind: 'worker',
+            }),
+          }),
+        },
+      ]);
+    });
+
+    it('writes activity entries for actual read and archive transitions only', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'activity-transition', subject: 'Review me' });
+
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'activity-transition' }, body: { read: true } }, createRes());
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'activity-transition' }, body: { read: true } }, createRes());
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'activity-transition' }, body: { archived: true } }, createRes());
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'activity-transition' }, body: { archived: false } }, createRes());
+
+      expect(listActivityBodies().map((entry) => entry.id)).toEqual([
+        'inbox_archived_activity-transition',
+        'inbox_created_activity-transition',
+        'inbox_read_activity-transition',
+        'inbox_restored_activity-transition',
+      ]);
+    });
+
+    it('writes a milestone activity entry when answering a question', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'activity-answer', kind: 'question', subject: 'Continue?' });
+
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'activity-answer' }, body: { answer: 'Yes' } }, createRes());
+
+      const answerEntry = listActivityBodies().find((entry) => entry.id === 'inbox_answered_activity-answer');
+      expect(answerEntry?.body).toEqual(
+        expect.objectContaining({
+          type: 'inbox_answered',
+          title: 'Inbox question answered: Continue?',
+          kind: 'milestone',
+          metadata: expect.objectContaining({ inboxMessageId: 'activity-answer', messageKind: 'question' }),
+        }),
+      );
+    });
+
+    it('writes a durable activity entry when deleting a message', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'activity-delete', subject: 'Remove me', refId: 'run-456' });
+
+      handlers['DELETE /api/inbox/:id']({ params: { id: 'activity-delete' } }, createRes());
+
+      const deleteEntry = listActivityBodies().find((entry) => entry.id === 'inbox_deleted_activity-delete');
+      expect(deleteEntry?.body).toEqual(
+        expect.objectContaining({
+          type: 'inbox_deleted',
+          title: 'Inbox message deleted: Remove me',
+          kind: 'activity',
+          metadata: expect.objectContaining({ inboxMessageId: 'activity-delete', refId: 'run-456' }),
+        }),
+      );
     });
   });
 

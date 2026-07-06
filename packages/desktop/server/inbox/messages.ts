@@ -1,3 +1,4 @@
+import { type ActivityEntryBody, type ActivityEntryKind, notifyActivityMutation, writeActivityEntry } from '../activity/activityEntries.js';
 import type { DocumentRecord, DocumentsStore } from '../documents/store.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { invalidateAppTopics, logError } from '../middleware/index.js';
@@ -10,6 +11,7 @@ export const VALID_INBOX_MESSAGE_KINDS = ['note', 'question', 'result', 'alert']
 
 export type InboxSenderKind = (typeof VALID_INBOX_SENDER_KINDS)[number];
 export type InboxMessageKind = (typeof VALID_INBOX_MESSAGE_KINDS)[number];
+export type InboxActivityEventType = 'created' | 'answered' | 'read' | 'unread' | 'archived' | 'restored' | 'deleted';
 
 export interface InboxMessageAnswer {
   /** The user's answer text. */
@@ -80,6 +82,35 @@ function publishExtensionEvent(topic: 'documents' | 'inbox', payload: unknown): 
   void Promise.resolve(extensionHostClient.publishEvent(topic, payload)).catch((error) => {
     logError(`${topic} event publish failed`, { message: error instanceof Error ? error.message : String(error) });
   });
+}
+
+/**
+ * Write a durable Activity entry for an inbox lifecycle event.
+ *
+ * Uses a deterministic id (`inbox_<eventType>_<messageId>`) so
+ * repeated writes for the same lifecycle event are idempotent.
+ */
+export function writeInboxActivityEntry(
+  store: DocumentsStore,
+  eventType: InboxActivityEventType,
+  messageId: string,
+  title: string,
+  kind: ActivityEntryKind,
+  metadata?: Record<string, unknown>,
+): void {
+  const entryId = `inbox_${eventType}_${messageId}`;
+  const body: ActivityEntryBody = {
+    type: `inbox_${eventType}`,
+    title,
+    source: 'Inbox',
+    kind,
+    metadata: {
+      inboxMessageId: messageId,
+      ...metadata,
+    },
+  };
+  const doc = writeActivityEntry(store, body, entryId);
+  notifyActivityMutation('activity.created', doc.id, doc.body as ActivityEntryBody, { inboxMessageId: messageId, eventType });
 }
 
 export function notifyInboxMutation(type: string, id: string, body: InboxMessageBody | undefined, extra?: Record<string, unknown>): void {

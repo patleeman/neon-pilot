@@ -25,6 +25,7 @@ import {
   notifyInboxMutation,
   VALID_INBOX_MESSAGE_KINDS,
   VALID_INBOX_SENDER_KINDS,
+  writeInboxActivityEntry,
   writeInboxMessage,
 } from '../inbox/messages.js';
 import { logError } from '../middleware/index.js';
@@ -237,6 +238,13 @@ function handleCreate(store: DocumentsStore, req: Request, res: Response): void 
 
     const messageBody = messageBodyOf(doc);
     afterMutation('inbox.created', id, messageBody);
+
+    writeInboxActivityEntry(store, 'created', id, `Inbox message: ${messageBody.subject}`, 'activity', {
+      messageKind: messageBody.kind,
+      ...(messageBody.refId ? { refId: messageBody.refId } : {}),
+      fromKind: messageBody.fromKind,
+    });
+
     res.json({ document: doc });
   } catch (error) {
     sendError(res, error);
@@ -313,6 +321,33 @@ function handlePatch(store: DocumentsStore, req: Request, res: Response): void {
         ...(answer ? { answered: true } : {}),
       },
     });
+
+    // Durable activity entries for actual state transitions
+    if (hasAnswer) {
+      writeInboxActivityEntry(store, 'answered', id, `Inbox question answered: ${current.subject}`, 'milestone', {
+        messageKind: current.kind,
+        ...(current.refId ? { refId: current.refId } : {}),
+        fromKind: current.fromKind,
+      });
+    } else {
+      if (hasRead && current.read !== read) {
+        const transition = read ? 'read' : 'unread';
+        writeInboxActivityEntry(store, transition, id, `Inbox message ${transition}: ${current.subject}`, 'activity', {
+          messageKind: current.kind,
+          ...(current.refId ? { refId: current.refId } : {}),
+          fromKind: current.fromKind,
+        });
+      }
+      if (hasArchived && current.archived !== archived) {
+        const transition = archived ? 'archived' : 'restored';
+        writeInboxActivityEntry(store, transition, id, `Inbox message ${transition}: ${current.subject}`, 'activity', {
+          messageKind: current.kind,
+          ...(current.refId ? { refId: current.refId } : {}),
+          fromKind: current.fromKind,
+        });
+      }
+    }
+
     res.json({ document: doc });
   } catch (error) {
     sendError(res, error);
@@ -332,7 +367,15 @@ function handleDelete(store: DocumentsStore, req: Request, res: Response): void 
       res.status(404).json({ error: 'Inbox message not found' });
       return;
     }
+    const current = messageBodyOf(existing) ?? {};
     store.deleteDocument(INBOX_OWNER, INBOX_COLLECTION, id);
+
+    writeInboxActivityEntry(store, 'deleted', id, `Inbox message deleted: ${current.subject}`, 'activity', {
+      messageKind: current.kind,
+      ...(current.refId ? { refId: current.refId } : {}),
+      fromKind: current.fromKind,
+    });
+
     afterMutation('inbox.deleted', id, undefined);
     res.json({ deleted: true });
   } catch (error) {
