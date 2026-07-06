@@ -12,7 +12,6 @@ import {
   loadProfileActivityReadState,
   markConversationAttentionRead,
   markConversationAttentionUnread,
-  resolveDesktopRootLayout,
   summarizeConversationAttention,
 } from '@neon-pilot/core';
 import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
@@ -75,9 +74,15 @@ let getRuntimeScopeFn: () => string = () => {
   throw new Error('getRuntimeScope not initialized for conversation service');
 };
 
+function getUninitializedDesktopRootLayout(): DesktopRootLayout {
+  throw new Error(
+    'conversation service desktop layout context not initialized: setConversationServiceContext must receive getDesktopRootLayout',
+  );
+}
+
 let getRepoRootFn: () => string = () => process.cwd();
 let getSettingsFileFn: () => string = () => getRuntimeSettingsFilePath();
-let getDesktopRootLayoutFn: () => DesktopRootLayout = resolveDesktopRootLayout;
+let getDesktopRootLayoutFn: () => DesktopRootLayout = getUninitializedDesktopRootLayout;
 let readModelBackfillStarted = false;
 let readModelBackfillTimer: ReturnType<typeof setTimeout> | null = null;
 const DEFAULT_READ_MODEL_BACKFILL_DELAY_MS = 5 * 60_000;
@@ -96,7 +101,7 @@ export function setConversationServiceContext(input: {
   getRuntimeScopeFn = input.getRuntimeScope;
   getRepoRootFn = input.getRepoRoot;
   getSettingsFileFn = input.getSettingsFile ?? (() => getRuntimeSettingsFilePath());
-  getDesktopRootLayoutFn = input.getDesktopRootLayout ?? resolveDesktopRootLayout;
+  getDesktopRootLayoutFn = input.getDesktopRootLayout ?? getUninitializedDesktopRootLayout;
 }
 
 function resolveDaemonRoot(): string {

@@ -1,3 +1,4 @@
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -309,6 +310,7 @@ describe('conversationService', () => {
       getRuntimeScope: () => 'assistant',
       getRepoRoot: () => '/repo',
       getSavedUiPreferences: () => defaultPreferences,
+      getDesktopRootLayout: () => resolveDesktopRootLayout({ root: '/tmp/neon-pilot-test-desktop' }),
     });
   });
 
@@ -357,6 +359,36 @@ describe('conversationService', () => {
     expect(parseTailBlocksQuery('8abc')).toBeUndefined();
     expect(parseTailBlocksQuery(String(Number.MAX_SAFE_INTEGER + 1))).toBeUndefined();
     expect(parseTailBlocksQuery('50000')).toBe(10000);
+  });
+
+  it('resets desktop layout context to fail-fast when getDesktopRootLayout is omitted', () => {
+    readSessionMetaMock.mockReturnValue({ title: 'Test' });
+    renameStoredSessionMock.mockReturnValue({
+      id: 'test',
+      file: '/test.jsonl',
+      timestamp: '2026-04-09T00:00:00.000Z',
+      cwd: '/repo',
+      cwdSlug: '-repo',
+      model: 'gpt-5',
+      title: 'Test',
+      messageCount: 1,
+    });
+
+    // beforeEach provides getDesktopRootLayout, so activity entry is written
+    renameStoredConversation('test', 'Test');
+    expect(writeConversationActivityEntryMock).toHaveBeenCalled();
+    writeConversationActivityEntryMock.mockClear();
+
+    // Reset context without getDesktopRootLayout; activity should fail closed.
+    setConversationServiceContext({
+      getRuntimeScope: () => 'assistant',
+      getRepoRoot: () => '/repo',
+      getSavedUiPreferences: () => defaultPreferences,
+    });
+
+    // Without layout context, the best-effort activity write is skipped.
+    renameStoredConversation('test', 'Test2');
+    expect(writeConversationActivityEntryMock).not.toHaveBeenCalled();
   });
 
   it('publishes deduped scoped session meta change events without refreshing the sessions snapshot', () => {
