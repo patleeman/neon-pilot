@@ -118,23 +118,34 @@ async function callServerModuleExport(relativeSpecifier, name, ...args) {
 }
 
 // packages/desktop/server/extensions/backendApi/desktop.ts
+async function controlDesktop(input) {
+  return callServerModuleExport("../../desktop/desktopControl.js", "issueDesktopControlCommand", input);
+}
 async function readDesktopState() {
   return callServerModuleExport("../../desktop/desktopState.js", "readDesktopStateSnapshot");
 }
 
 // extensions/system-desktop-tools/src/backend.ts
-async function desktopState(_input, _ctx) {
-  const state = await readDesktopState();
+function toolResult(details) {
   return {
     content: [
       {
         type: "text",
-        text: JSON.stringify(state, null, 2)
+        text: JSON.stringify(details, null, 2)
       }
     ],
-    details: state
+    details
   };
 }
+async function desktopControl(input, _ctx) {
+  const result = await controlDesktop(input);
+  return toolResult(result);
+}
+async function desktopState(_input, _ctx) {
+  const state = await readDesktopState();
+  return toolResult(state);
+}
 export {
+  desktopControl,
   desktopState
 };

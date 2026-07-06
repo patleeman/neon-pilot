@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@neon-pilot/extensions/backend/desktop', () => ({
+  controlDesktop: vi.fn(),
   readDesktopState: vi.fn(),
 }));
 
-import { readDesktopState } from '@neon-pilot/extensions/backend/desktop';
+import { controlDesktop, readDesktopState } from '@neon-pilot/extensions/backend/desktop';
 
-import { desktopState } from './backend.js';
+import { desktopControl, desktopState } from './backend.js';
 
 function mockContext() {
   return {
@@ -70,5 +71,28 @@ describe('desktopState', () => {
     expect(result.details).toEqual(state);
     expect(result.content).toEqual([{ type: 'text', text: JSON.stringify(state, null, 2) }]);
     expect(result.content[0]?.text).not.toContain('screenshot');
+  });
+});
+
+describe('desktopControl', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns the host renderer acknowledgement as tool content and details', async () => {
+    const input = { action: 'focus', windowId: 'chat:draft' };
+    const result = {
+      ok: true,
+      commandId: 'desktop-control-1',
+      action: 'focus',
+      status: 'completed',
+    };
+    vi.mocked(controlDesktop).mockResolvedValue(result);
+
+    const output = await desktopControl(input, mockContext());
+
+    expect(controlDesktop).toHaveBeenCalledWith(input);
+    expect(output.details).toEqual(result);
+    expect(output.content).toEqual([{ type: 'text', text: JSON.stringify(result, null, 2) }]);
   });
 });

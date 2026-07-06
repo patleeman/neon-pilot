@@ -2341,3 +2341,38 @@ export interface DesktopStateListResult {
   revision: number | null;
   publisherId: string | null;
 }
+
+export type DesktopControlAction = 'open' | 'focus' | 'move' | 'resize' | 'snap' | 'minimize' | 'restore' | 'close';
+export type DesktopControlSnapTarget = 'left' | 'right' | 'top' | 'bottom' | 'maximize';
+
+export interface DesktopControlBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DesktopControlCommand {
+  id: string;
+  action: DesktopControlAction;
+  createdAt: string;
+  windowId?: string;
+  appId?: string;
+  route?: string;
+  bounds?: DesktopControlBounds;
+  snapTarget?: DesktopControlSnapTarget;
+}
+
+export interface DesktopControlAckInput {
+  commandId: string;
+  ok: boolean;
+  error?: string;
+}
+
+export interface DesktopControlAckResult {
+  ok: boolean;
+  commandId: string;
+  action: DesktopControlAction;
+  status: 'completed' | 'failed' | 'timeout';
+  error?: string;
+}

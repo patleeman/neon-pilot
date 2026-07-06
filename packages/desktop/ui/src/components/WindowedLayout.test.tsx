@@ -12,6 +12,17 @@ import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrows
 
 const mocks = vi.hoisted(() => ({
   publishDesktopState: vi.fn(() => Promise.resolve({ ok: true })),
+  acknowledgeDesktopControl: vi.fn(() => Promise.resolve({ ok: true })),
+  eventSources: [] as Array<{
+    path: string;
+    onopen: ((event: Event) => void) | null;
+    onmessage: ((event: MessageEvent<string>) => void) | null;
+    onerror: ((event: Event) => void) | null;
+    readyState: number;
+    close: ReturnType<typeof vi.fn>;
+    addEventListener: ReturnType<typeof vi.fn>;
+    removeEventListener: ReturnType<typeof vi.fn>;
+  }>,
   layout: vi.fn(({ children }: { children?: ReactNode }) => (
     <div data-testid="embedded-layout">
       embedded layout
@@ -129,7 +140,25 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
 
 vi.mock('../client/api', () => ({
   api: {
+    acknowledgeDesktopControl: mocks.acknowledgeDesktopControl,
     publishDesktopState: mocks.publishDesktopState,
+  },
+}));
+
+vi.mock('../desktop/desktopEventSource', () => ({
+  createDesktopAwareEventSource: (path: string) => {
+    const source = {
+      path,
+      onopen: null,
+      onmessage: null,
+      onerror: null,
+      readyState: 1,
+      close: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    mocks.eventSources.push(source);
+    return source;
   },
 }));
 
@@ -217,6 +246,8 @@ describe('WindowedLayout route windows', () => {
     delete window.neonPilotDesktop;
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
+    mocks.acknowledgeDesktopControl.mockClear();
+    mocks.eventSources = [];
     mocks.publishDesktopState.mockClear();
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
@@ -3490,6 +3521,8 @@ describe('WindowedLayout desktop state publishing', () => {
     delete window.neonPilotDesktop;
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
+    mocks.acknowledgeDesktopControl.mockClear();
+    mocks.eventSources = [];
     mocks.publishDesktopState.mockClear();
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
@@ -3614,6 +3647,60 @@ describe('WindowedLayout desktop state publishing', () => {
       const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
       expect(draft.focused).toBe(true);
       expect(draft.zIndex).toBeGreaterThan(notes.zIndex);
+    });
+  });
+
+  it('executes streamed desktop control commands through the window action path and acknowledges them', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /^notes$/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/control/events');
+    expect(source).toBeTruthy();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-control-test',
+            action: 'focus',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            windowId: 'chat:draft',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mocks.acknowledgeDesktopControl).toHaveBeenCalledWith({
+        commandId: 'desktop-control-test',
+        ok: true,
+      });
+    });
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      expect(lastSnapshot.focusedWindowId).toBe('chat:draft');
     });
   });
 

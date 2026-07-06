@@ -10,6 +10,14 @@
     "entry": "dist/backend.mjs",
     "actions": [
       {
+        "id": "desktopControl",
+        "handler": "desktopControl",
+        "title": "Control desktop",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "desktopState",
         "handler": "desktopState",
         "title": "Read desktop state",
@@ -21,6 +29,64 @@
   },
   "contributes": {
     "tools": [
+      {
+        "id": "desktop-control",
+        "name": "desktop_control",
+        "title": "Desktop Control",
+        "description": "Control Neon Pilot's own Windowed OS desktop by opening apps/routes and focusing, moving, resizing, snapping, minimizing, restoring, or closing windows by semantic id.",
+        "action": "desktopControl",
+        "promptGuidelines": [
+          "Call desktop_state first, then use window ids or app ids from the semantic state/registry rather than guessing.",
+          "Use this only for Neon Pilot's own Windowed OS desktop. It is not host-OS computer use and does not inspect pixels.",
+          "Commands are acknowledged by the renderer after it applies the same window actions available to the user."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["open", "focus", "move", "resize", "snap", "minimize", "restore", "close"]
+            },
+            "windowId": {
+              "type": "string"
+            },
+            "appId": {
+              "type": "string"
+            },
+            "route": {
+              "type": "string"
+            },
+            "bounds": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "width": {
+                  "type": "number"
+                },
+                "height": {
+                  "type": "number"
+                }
+              },
+              "required": ["x", "y", "width", "height"],
+              "additionalProperties": false
+            },
+            "snapTarget": {
+              "type": "string",
+              "enum": ["left", "right", "top", "bottom", "maximize"]
+            },
+            "timeoutMs": {
+              "type": "number"
+            }
+          },
+          "required": ["action"],
+          "additionalProperties": false
+        }
+      },
       {
         "id": "desktop-state",
         "name": "desktop_state",

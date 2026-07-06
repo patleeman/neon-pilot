@@ -1,9 +1,9 @@
 /**
  * Public extension backend seam for Neon Pilot's semantic desktop state.
  *
- * This is read-only agent-visible state about the Windowed OS desktop: window
- * ids, routes, bounds, focus, z-order, and app metadata. It intentionally does
- * not expose screenshots, DOM snapshots, pixels, or control verbs.
+ * This exposes semantic agent-visible access to the Windowed OS desktop:
+ * read-only state and a narrow control bridge whose commands are executed by
+ * the renderer's existing window actions.
  */
 
 function hostResolved(): never {
@@ -50,4 +50,33 @@ export interface DesktopStateListResult {
   publisherId: string | null;
 }
 
+export type DesktopControlAction = 'open' | 'focus' | 'move' | 'resize' | 'snap' | 'minimize' | 'restore' | 'close';
+export type DesktopControlSnapTarget = 'left' | 'right' | 'top' | 'bottom' | 'maximize';
+
+export interface DesktopControlBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DesktopControlInput {
+  action: DesktopControlAction;
+  windowId?: string;
+  appId?: string;
+  route?: string;
+  bounds?: DesktopControlBounds;
+  snapTarget?: DesktopControlSnapTarget;
+  timeoutMs?: number;
+}
+
+export interface DesktopControlResult {
+  ok: boolean;
+  commandId: string;
+  action: DesktopControlAction;
+  status: 'completed' | 'failed' | 'timeout';
+  error?: string;
+}
+
+export const controlDesktop = (..._args: unknown[]): unknown => hostResolved();
 export const readDesktopState = (..._args: unknown[]): unknown => hostResolved();

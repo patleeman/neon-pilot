@@ -15,7 +15,7 @@ import type {
   ExtensionSlashCommandRegistration,
   ExtensionSurfaceSummary,
 } from '../extensions/types';
-import type { DesktopStateListResult, DesktopStateSnapshot } from '../shared/types';
+import type { DesktopControlAckInput, DesktopControlAckResult, DesktopStateListResult, DesktopStateSnapshot } from '../shared/types';
 import type {
   AppTelemetryLogBundleExport,
   AppTelemetryLogDiagnostics,
@@ -583,6 +583,7 @@ export const api = {
   defaultCwd: async () => get<DefaultCwdState>('/default-cwd'),
   tools: async () => get<ToolsState>('/tools'),
   desktopState: async () => get<DesktopStateListResult>('/desktop/state'),
+  acknowledgeDesktopControl: async (input: DesktopControlAckInput) => post<DesktopControlAckResult>('/desktop/control/ack', input),
   publishDesktopState: async (snapshot: DesktopStateSnapshot) =>
     post<{
       ok: true;

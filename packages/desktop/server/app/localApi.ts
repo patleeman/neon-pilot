@@ -198,6 +198,7 @@ import {
   validateDesktopConversationWorkspaceUpdate,
 } from './localApiConversationWorkspace.js';
 import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation.js';
+import { acknowledgeDesktopControlCommand } from './localApiDesktopControl.js';
 import { readDesktopStateSnapshot, storeDesktopStateSnapshot } from './localApiDesktopState.js';
 import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
@@ -1255,7 +1256,7 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
     return 400;
   }
 
-  if (error.name === 'DesktopStateValidationError') {
+  if (error.name === 'DesktopControlValidationError' || error.name === 'DesktopStateValidationError') {
     return 400;
   }
 
@@ -1567,6 +1568,11 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
   if (method === 'POST' && path === '/api/desktop/state') {
     return createDesktopLocalApiJsonResponse(storeDesktopStateSnapshot(input.body as Parameters<typeof storeDesktopStateSnapshot>[0]));
+  }
+  if (method === 'POST' && path === '/api/desktop/control/ack') {
+    return createDesktopLocalApiJsonResponse(
+      acknowledgeDesktopControlCommand(input.body as Parameters<typeof acknowledgeDesktopControlCommand>[0]),
+    );
   }
   if (method === 'GET' && path === '/api/conversation-workspace') {
     return createDesktopLocalApiJsonResponse(await readDesktopConversationWorkspace());

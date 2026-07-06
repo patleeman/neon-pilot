@@ -41,6 +41,7 @@ import {
 
 import { api } from '../client/api';
 import { getDesktopBridge } from '../desktop/desktopBridge';
+import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
@@ -50,7 +51,7 @@ import { useConversations } from '../hooks/useConversations';
 import { getTabSessionKey, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { ConversationPage } from '../pages/ConversationPage';
 import { HomePage } from '../pages/HomePage';
-import type { DesktopStateSnapshot, DesktopStateWindow, SessionMeta } from '../shared/types';
+import type { DesktopControlCommand, DesktopStateSnapshot, DesktopStateWindow, SessionMeta } from '../shared/types';
 import {
   boundsForRestoredDragStart,
   boundsForSnapTarget,
@@ -613,6 +614,12 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
   });
   const index = lastVisibleIndex >= 0 ? lastVisibleIndex : lastTopLevelIndex >= 0 ? lastTopLevelIndex : windows.length - 1;
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
+}
+
+function isDesktopControlCommand(value: unknown): value is DesktopControlCommand {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Partial<DesktopControlCommand>;
+  return typeof record.id === 'string' && typeof record.action === 'string';
 }
 
 function buildDesktopStateSnapshotDraft(input: {
@@ -1716,6 +1723,134 @@ export function WindowedLayout() {
     },
     [restoreBounds],
   );
+
+  const executeDesktopControlCommand = useCallback(
+    async (command: DesktopControlCommand) => {
+      const fail = (error: string) => ({ ok: false, error });
+      const findWindow = (windowId: string | undefined) =>
+        windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
+
+      switch (command.action) {
+        case 'open': {
+          const app = command.appId ? windowedApps.find((candidate) => candidate.id === command.appId) : null;
+          if (app) {
+            openWindowedApp(app);
+            return { ok: true };
+          }
+          const route = command.route;
+          if (route && (openChatWindow(route) || openRouteWindow(route))) {
+            return { ok: true };
+          }
+          return fail('desktop_control open requires a known appId or route.');
+        }
+        case 'focus':
+        case 'restore': {
+          const windowModel = findWindow(command.windowId);
+          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+          if (command.action === 'restore' && restoreBounds[windowModel.id]) {
+            const restoreTarget = restoreBounds[windowModel.id] ?? fallbackRestoreBounds(windowModel, desktopRect(desktopRef.current));
+            setRestoreBounds((current) => {
+              const next = { ...current };
+              delete next[windowModel.id];
+              return next;
+            });
+            setWindows((current) =>
+              withFocusedWindow(
+                current.map((candidate) =>
+                  candidate.id === windowModel.id ? { ...candidate, bounds: restoreTarget, minimized: false } : candidate,
+                ),
+                windowModel.id,
+              ),
+            );
+            return { ok: true };
+          }
+          focusWindow(windowModel.id);
+          return { ok: true };
+        }
+        case 'minimize': {
+          const windowModel = findWindow(command.windowId);
+          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+          minimizeWindow(windowModel.id);
+          return { ok: true };
+        }
+        case 'close': {
+          const windowModel = findWindow(command.windowId);
+          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+          closeWindow(windowModel);
+          return { ok: true };
+        }
+        case 'move':
+        case 'resize': {
+          const windowModel = findWindow(command.windowId);
+          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+          if (!command.bounds) return fail(`desktop_control ${command.action} requires bounds.`);
+          suspendWindowedBrowserViews();
+          const bounds = constrainWindowBounds(command.bounds, desktopRect(desktopRef.current));
+          setRestoreBounds((current) => {
+            if (!current[windowModel.id]) return current;
+            const next = { ...current };
+            delete next[windowModel.id];
+            return next;
+          });
+          setWindows((current) =>
+            withFocusedWindow(
+              current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false } : candidate)),
+              windowModel.id,
+            ),
+          );
+          return { ok: true };
+        }
+        case 'snap': {
+          const windowModel = findWindow(command.windowId);
+          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+          if (!command.snapTarget) return fail('desktop_control snap requires snapTarget.');
+          suspendWindowedBrowserViews();
+          const bounds = boundsForSnapTarget(command.snapTarget, desktopRect(desktopRef.current));
+          setRestoreBounds((current) => ({ ...current, [windowModel.id]: current[windowModel.id] ?? windowModel.bounds }));
+          setWindows((current) =>
+            withFocusedWindow(
+              current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false } : candidate)),
+              windowModel.id,
+            ),
+          );
+          return { ok: true };
+        }
+        default:
+          return fail(`Unsupported desktop_control action: ${String(command.action)}`);
+      }
+    },
+    [closeWindow, focusWindow, minimizeWindow, openChatWindow, openRouteWindow, openWindowedApp, restoreBounds, windowedApps],
+  );
+
+  useEffect(() => {
+    const source = createDesktopAwareEventSource('/api/desktop/control/events');
+    source.onmessage = (event) => {
+      let command: unknown;
+      try {
+        command = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (!isDesktopControlCommand(command)) return;
+      void executeDesktopControlCommand(command)
+        .then((result) =>
+          api.acknowledgeDesktopControl({
+            commandId: command.id,
+            ok: result.ok,
+            ...(result.ok ? {} : { error: result.error }),
+          }),
+        )
+        .catch((error) =>
+          api.acknowledgeDesktopControl({
+            commandId: command.id,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        )
+        .catch(() => undefined);
+    };
+    return () => source.close();
+  }, [executeDesktopControlCommand]);
 
   const startDrag = useCallback(
     (event: MouseEvent, windowModel: DesktopWindowModel) => {

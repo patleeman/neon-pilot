@@ -7,6 +7,7 @@ import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
 import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from '../routes/system.js';
 import { subscribeAppEvents } from '../shared/appEvents.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
+import { subscribeDesktopControlCommands } from './localApiDesktopControl.js';
 import { shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 
 const DEFERRED_APP_EVENT_SNAPSHOT_DELAY_MS = 6_000;
@@ -126,6 +127,17 @@ async function subscribeDesktopExtensionRouteStream(url: URL, onEvent: (event: D
   })();
 
   return close;
+}
+
+async function subscribeDesktopControlCommandStream(onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
+  onEvent({ type: 'open' });
+  const unsubscribe = subscribeDesktopControlCommands((command) => {
+    emitStreamMessage(onEvent, command);
+  });
+  return () => {
+    unsubscribe();
+    onEvent({ type: 'close' });
+  };
 }
 
 const ACTIVE_RUN_POLL_INTERVAL_MS = 1_000;
@@ -493,6 +505,10 @@ export async function subscribeDesktopLocalApiStreamByUrl(
 
   if (url.pathname === '/api/app-events/events') {
     return subscribeDesktopAppEventsStream(url, onEvent);
+  }
+
+  if (url.pathname === '/api/desktop/control/events') {
+    return subscribeDesktopControlCommandStream(onEvent);
   }
 
   if (url.pathname === '/api/workspace/events') {
