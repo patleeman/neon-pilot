@@ -1,19 +1,24 @@
 {
   "extensionId": "system-data-tools",
-  "builtAt": "2026-07-05T22:26:51.003Z",
+  "builtAt": "2026-07-06T09:18:35.497Z",
   "frontendEntry": null,
   "backendEntry": "dist/backend.mjs",
   "sourceHashes": [
     {
       "path": "extension.json",
-      "sha256": "d9c710ea2e456d5da4343bfdd5a1556c3c07d1cece37a3151c70e450e229338c"
+      "sha256": "bb9028ce3b73d4d4679724b5ee125231e2eb95ad003721b75b7c6a104209c087"
     },
     {
       "path": "src/backend.ts",
-      "sha256": "8ca521599ebf3f6439677b9d0e8ea0dc0f7e2d12d232b217fdcc0992e00ac88d"
+      "sha256": "148a656a21694d3db8259e58ae56e42d1b89fd166f86fca5d960dd5c845c72e8"
     }
   ],
   "outputs": [
+    {
+      "path": "dist/backend.mjs",
+      "bytes": 2452,
+      "imports": []
+    },
     {
       "path": "dist/package.json",
       "bytes": 135,
@@ -23,15 +28,6 @@
       "path": "dist/xhr-sync-worker.js",
       "bytes": 1641,
       "imports": []
-    },
-    {
-      "path": "extensions/system-data-tools/.dist.tmp-85474-1783290410993/backend.mjs",
-      "bytes": 12071,
-      "imports": [
-        "node:fs",
-        "node:path",
-        "node:url"
-      ]
     }
   ]
 }

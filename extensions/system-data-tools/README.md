@@ -13,10 +13,14 @@ Agent-facing tools over the host-owned Documents store.
 
 ## How it works
 
-- All tools call the documents store through `@neon-pilot/extensions/backend/documents-store`,
-  which enforces the same caller-aware read/write grants as the HTTP route layer.
-- The calling extension's `ctx.extensionId` is passed as the caller identity for
-  authorisation.
+- All tools call the documents store through the extension host capability bridge
+  (`ctx.documents`). The bridge supplies the real extension identity, so tool
+  handlers cannot self-assert a different caller.
+- Because `system-data-tools` is the locked host-owned agent broker, the bridge
+  grants it trusted agent-level access to all collections, matching the agent tool
+  contract where agents must be able to read/write across arbitrary owners.
+- Ordinary extensions using `@neon-pilot/extensions/backend/documents-store` still pass
+  `ctx.extensionId` as `callerAppId` and are subject to ownership/grant enforcement.
 - `data_watch` uses the extension subscription system: the extension registers a
   `contributes.subscriptions` on source `documents`, and the document mutation
   route handlers or backend API seam call `publishExtensionHostEvent('documents', payload)`.
@@ -25,9 +29,15 @@ Agent-facing tools over the host-owned Documents store.
 
 ## Permission model
 
-Callers can only read collections they own or have an explicit read grant for.
-Callers can only write collections they own or have an explicit write grant for.
-The host (no callerAppId) has full access.
+- **system-data-tools (host-owned agent tooling):** has full access to all collections
+  across all owners through `ctx.documents`. This is what allows `data_write` to
+  auto-create collections and write documents for any owner.
+- **Regular extension callers** of `@neon-pilot/extensions/backend/documents-store` are
+  subject to ownership and grant enforcement via their `callerAppId`. They can only read
+  collections they own or have an explicit read grant for, and only write collections
+  they own or have an explicit write grant for.
+- Anonymous `@neon-pilot/extensions/backend/documents-store` calls are rejected.
+  Host-owned agent access is only exposed through the capability bridge.
 
 ## data_watch design decision
 

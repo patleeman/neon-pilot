@@ -11,6 +11,7 @@ import { logError, logInfo, logWarn } from '../shared/logging.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { createExtensionAttentionCapability } from './extensionAttention.js';
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
+import { createExtensionBackendCapabilityDispatcher } from './extensionBackendCapabilities.js';
 import { registerExtensionToolUpdateHandle, unregisterExtensionToolUpdateHandle } from './extensionBackendLiveHandles.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
 import {
@@ -113,6 +114,23 @@ export interface ExtensionBackendContext {
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
   database: ReturnType<typeof createExtensionDatabaseManager>;
+  documents: {
+    listCollections(input?: { owner?: string }): Promise<unknown>;
+    getCollection(input: { owner: string; collection: string }): Promise<unknown>;
+    upsertCollection(input: {
+      owner: string;
+      collection: string;
+      options?: {
+        description?: string;
+        defaultGrantRead?: 'owner' | 'all' | 'none';
+        defaultGrantWrite?: 'owner' | 'all' | 'none';
+      };
+    }): Promise<unknown>;
+    listDocuments(input: { owner: string; collection: string; limit?: number; offset?: number }): Promise<unknown>;
+    getDocument(input: { owner: string; collection: string; id: string }): Promise<unknown>;
+    putDocument(input: { owner: string; collection: string; id: string; body: unknown }): Promise<unknown>;
+    deleteDocument(input: { owner: string; collection: string; id: string }): Promise<unknown>;
+  };
   attention: ReturnType<typeof createExtensionAttentionCapability>;
   automations: ReturnType<typeof createExtensionAutomationsCapability>;
   executions: ReturnType<typeof createExtensionExecutionsCapability>;
@@ -463,6 +481,71 @@ export function createBackendContext(
     },
     storage: createStorage(extensionId, { enforceManifestPermissions: true }),
     database: createExtensionDatabaseManager(extensionId),
+    documents: {
+      listCollections: (input = {}) =>
+        createExtensionBackendCapabilityDispatcher()({
+          id: 0,
+          kind: 'capabilityRequest',
+          extensionId,
+          capability: 'documents',
+          operation: 'listCollections',
+          input,
+        }) as Promise<unknown>,
+      getCollection: (input) =>
+        createExtensionBackendCapabilityDispatcher()({
+          id: 0,
+          kind: 'capabilityRequest',
+          extensionId,
+          capability: 'documents',
+          operation: 'getCollection',
+          input,
+        }) as Promise<unknown>,
+      upsertCollection: (input) =>
+        createExtensionBackendCapabilityDispatcher()({
+          id: 0,
+          kind: 'capabilityRequest',
+          extensionId,
+          capability: 'documents',
+          operation: 'upsertCollection',
+          input,
+        }) as Promise<unknown>,
+      listDocuments: (input) =>
+        createExtensionBackendCapabilityDispatcher()({
+          id: 0,
+          kind: 'capabilityRequest',
+          extensionId,
+          capability: 'documents',
+          operation: 'listDocuments',
+          input,
+        }) as Promise<unknown>,
+      getDocument: (input) =>
+        createExtensionBackendCapabilityDispatcher()({
+          id: 0,
+          kind: 'capabilityRequest',
+          extensionId,
+          capability: 'documents',
+          operation: 'getDocument',
+          input,
+        }) as Promise<unknown>,
+      putDocument: (input) =>
+        createExtensionBackendCapabilityDispatcher()({
+          id: 0,
+          kind: 'capabilityRequest',
+          extensionId,
+          capability: 'documents',
+          operation: 'putDocument',
+          input,
+        }) as Promise<unknown>,
+      deleteDocument: (input) =>
+        createExtensionBackendCapabilityDispatcher()({
+          id: 0,
+          kind: 'capabilityRequest',
+          extensionId,
+          capability: 'documents',
+          operation: 'deleteDocument',
+          input,
+        }) as Promise<unknown>,
+    },
     attention: createExtensionAttentionCapability(extensionId, toolContext),
     automations: createExtensionAutomationsCapability(serverContext, extensionId),
     executions: createExtensionExecutionsCapability(extensionId, { enforceManifestPermissions: true }),

@@ -474,6 +474,23 @@ function createWorkerBackendContext(
       clearBadge: () => callHostCapability(extensionId, 'notify', 'clearBadge'),
       isSystemAvailable: () => callHostCapability(extensionId, 'notify', 'isSystemAvailable'),
     },
+    documents: {
+      listCollections: (input: { owner?: string } = {}) => callHostCapability(extensionId, 'documents', 'listCollections', input),
+      getCollection: (input: { owner: string; collection: string }) => callHostCapability(extensionId, 'documents', 'getCollection', input),
+      upsertCollection: (input: {
+        owner: string;
+        collection: string;
+        options?: { description?: string; defaultGrantRead?: string; defaultGrantWrite?: string };
+      }) => callHostCapability(extensionId, 'documents', 'upsertCollection', input),
+      listDocuments: (input: { owner: string; collection: string; limit?: number; offset?: number }) =>
+        callHostCapability(extensionId, 'documents', 'listDocuments', input),
+      getDocument: (input: { owner: string; collection: string; id: string }) =>
+        callHostCapability(extensionId, 'documents', 'getDocument', input),
+      putDocument: (input: { owner: string; collection: string; id: string; body: unknown }) =>
+        callHostCapability(extensionId, 'documents', 'putDocument', input),
+      deleteDocument: (input: { owner: string; collection: string; id: string }) =>
+        callHostCapability(extensionId, 'documents', 'deleteDocument', input),
+    },
     storage: {
       get: (key: string) => callHostCapability(extensionId, 'storage', 'get', { key }),
       put: (key: string, value: unknown, options?: { expectedVersion?: number }) =>

@@ -3,10 +3,12 @@
  *
  * Provides caller-aware CRUD over documents collections, enforcing the same
  * read/write grant semantics as the HTTP route layer.  Each function accepts
- * an explicit `callerAppId` so the host can authorise access when the caller
- * is an extension app rather than the host itself.
+ * an explicit `callerAppId` so the host can authorise access for the calling
+ * extension app.
  *
  * Callers (extension backend handlers) pass `ctx.extensionId` as callerAppId.
+ * Host-owned agent tools that need trusted cross-owner access should use
+ * `ctx.documents`, where the host bridge supplies the real extension identity.
  *
  * See to-do/windowed-os.md §D4 for the product intent.
  */

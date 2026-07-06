@@ -85,10 +85,16 @@ describe('documents-store backend API', () => {
   // ── listCollections ─────────────────────────────────────────────────
 
   describe('listCollections', () => {
-    it('returns all collections for host caller', async () => {
+    it('rejects anonymous callers instead of treating them as host callers', async () => {
+      await expect(listCollections()).rejects.toThrow('documents.listCollections requires callerAppId');
+      await expect(listCollections({ callerAppId: undefined })).rejects.toThrow('documents.listCollections requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('returns caller-readable collections for app caller', async () => {
       const collections = [
         {
-          owner: 'app-a',
+          owner: 'my-app',
           collection: 'col-1',
           description: '',
           defaultGrantRead: 'owner',
@@ -100,7 +106,7 @@ describe('documents-store backend API', () => {
           owner: 'app-b',
           collection: 'col-2',
           description: '',
-          defaultGrantRead: 'owner',
+          defaultGrantRead: 'all',
           defaultGrantWrite: 'owner',
           createdAt: '',
           updatedAt: '',
@@ -108,7 +114,7 @@ describe('documents-store backend API', () => {
       ];
       store.listCollections.mockReturnValue(collections);
 
-      const result = await listCollections({ callerAppId: undefined });
+      const result = await listCollections({ callerAppId: 'my-app' });
       expect(result).toEqual(collections);
     });
 
@@ -163,18 +169,23 @@ describe('documents-store backend API', () => {
   // ── getCollection ───────────────────────────────────────────────────
 
   describe('getCollection', () => {
-    it('returns collection for host caller', async () => {
+    it('rejects anonymous callers', async () => {
+      await expect(getCollection('app', 'col')).rejects.toThrow('documents.getCollection requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('returns collection for owner app caller', async () => {
       store.getCollection.mockReturnValue({ owner: 'app', collection: 'col', defaultGrantRead: 'owner', defaultGrantWrite: 'owner' });
       store.getGrant.mockReturnValue(null);
 
-      const result = await getCollection('app', 'col');
+      const result = await getCollection('app', 'col', 'app');
       expect(result).toBeTruthy();
     });
 
     it('returns null when collection not found', async () => {
       store.getCollection.mockReturnValue(null);
 
-      const result = await getCollection('app', 'nonexistent');
+      const result = await getCollection('app', 'nonexistent', 'app');
       expect(result).toBeNull();
     });
 
@@ -212,7 +223,12 @@ describe('documents-store backend API', () => {
   // ── listDocuments ───────────────────────────────────────────────────
 
   describe('listDocuments', () => {
-    it('returns documents for host caller', async () => {
+    it('rejects anonymous callers', async () => {
+      await expect(listDocuments('app', 'col')).rejects.toThrow('documents.listDocuments requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('returns documents for owner app caller', async () => {
       store.getCollection.mockReturnValue({ owner: 'app', collection: 'col', defaultGrantRead: 'owner', defaultGrantWrite: 'owner' });
       store.getGrant.mockReturnValue(null);
       store.listDocuments.mockReturnValue({
@@ -220,7 +236,7 @@ describe('documents-store backend API', () => {
         total: 1,
       });
 
-      const result = await listDocuments('app', 'col');
+      const result = await listDocuments('app', 'col', {}, 'app');
       expect(result.total).toBe(1);
     });
 
@@ -235,12 +251,17 @@ describe('documents-store backend API', () => {
   // ── getDocument ─────────────────────────────────────────────────────
 
   describe('getDocument', () => {
-    it('returns document for host caller', async () => {
+    it('rejects anonymous callers', async () => {
+      await expect(getDocument('app', 'col', 'doc-1')).rejects.toThrow('documents.getDocument requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('returns document for owner app caller', async () => {
       store.getCollection.mockReturnValue({ owner: 'app', collection: 'col', defaultGrantRead: 'owner', defaultGrantWrite: 'owner' });
       store.getGrant.mockReturnValue(null);
       store.getDocument.mockReturnValue({ owner: 'app', collection: 'col', id: 'doc-1', body: { x: 1 }, createdAt: '', updatedAt: '' });
 
-      const result = await getDocument('app', 'col', 'doc-1');
+      const result = await getDocument('app', 'col', 'doc-1', 'app');
       expect(result?.body).toEqual({ x: 1 });
     });
   });
@@ -248,6 +269,11 @@ describe('documents-store backend API', () => {
   // ── putDocument ─────────────────────────────────────────────────────
 
   describe('putDocument', () => {
+    it('rejects anonymous callers', async () => {
+      await expect(putDocument('app', 'col', 'doc-1', {})).rejects.toThrow('documents.putDocument requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
     it('allows owner to put document', async () => {
       store.getCollection.mockReturnValue({ owner: 'my-app', collection: 'col', defaultGrantRead: 'owner', defaultGrantWrite: 'owner' });
       store.getGrant.mockReturnValue(null);
@@ -288,6 +314,11 @@ describe('documents-store backend API', () => {
   // ── deleteDocument ──────────────────────────────────────────────────
 
   describe('deleteDocument', () => {
+    it('rejects anonymous callers', async () => {
+      await expect(deleteDocument('app', 'col', 'doc-1')).rejects.toThrow('documents.deleteDocument requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
     it('allows owner to delete', async () => {
       store.getCollection.mockReturnValue({ owner: 'my-app', collection: 'col', defaultGrantRead: 'owner', defaultGrantWrite: 'owner' });
       store.getGrant.mockReturnValue(null);

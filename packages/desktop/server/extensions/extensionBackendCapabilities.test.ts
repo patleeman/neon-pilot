@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -1688,6 +1692,71 @@ describe('extension backend capability dispatcher', () => {
     expect(storage.put).toHaveBeenCalledWith('ext', 'tasks/one', { done: true }, { expectedVersion: 3 });
     expect(storage.delete).toHaveBeenCalledWith('ext', 'tasks/one');
     expect(storage.list).toHaveBeenCalledWith('ext', 'tasks/');
+  });
+
+  it('routes documents capability through host-owned system-data-tools without exposing host authority to ordinary extensions', async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'extension-documents-capability-test-'));
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['documents:readwrite'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ documents: { stateRoot: tmpDir } });
+
+    try {
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 1,
+            kind: 'capabilityRequest',
+            extensionId: 'ordinary-extension',
+            capability: 'documents',
+            operation: 'putDocument',
+            input: { owner: 'other-owner', collection: 'items', id: 'doc-1', body: { hidden: true } },
+          }),
+        ),
+      ).rejects.toThrow('Collection "other-owner/items" not found');
+
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 2,
+            kind: 'capabilityRequest',
+            extensionId: 'system-data-tools',
+            capability: 'documents',
+            operation: 'putDocument',
+            input: { owner: 'other-owner', collection: 'items', id: 'doc-1', body: { hidden: true } },
+          }),
+        ),
+      ).resolves.toMatchObject({ owner: 'other-owner', collection: 'items', id: 'doc-1', body: { hidden: true } });
+
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 3,
+            kind: 'capabilityRequest',
+            extensionId: 'system-data-tools',
+            capability: 'documents',
+            operation: 'listCollections',
+            input: {},
+          }),
+        ),
+      ).resolves.toEqual([expect.objectContaining({ owner: 'other-owner', collection: 'items' })]);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('requires documents permission before dispatching documents capability calls', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    expect(() =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'documents',
+        operation: 'listCollections',
+        input: {},
+      }),
+    ).toThrow('Extension "ext" requires permission documents:read to use documents.listCollections.');
   });
 
   it('dispatches extension-scoped secrets capability calls', async () => {

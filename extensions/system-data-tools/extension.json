@@ -35,7 +35,7 @@
         "id": "data-list",
         "name": "data_list",
         "title": "List Document Collections",
-        "description": "List all document collections visible to the calling app. Use this to discover existing collections before creating new ones, so two apps do not invent incompatible schemas for the same data.",
+        "description": "List document collections visible to trusted agent data tooling. Use this to discover existing collections before creating new ones, so two apps do not invent incompatible schemas for the same data.",
         "action": "dataList",
         "inputSchema": {
           "type": "object",
@@ -93,7 +93,7 @@
           "properties": {
             "owner": {
               "type": "string",
-              "description": "Owning app ID. Must match the calling extension ID or the caller must have a write grant."
+              "description": "Owning app ID for the document. As host-owned agent tooling, system-data-tools can write to any owner."
             },
             "collection": {
               "type": "string",

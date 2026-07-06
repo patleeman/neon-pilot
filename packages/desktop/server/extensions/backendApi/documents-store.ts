@@ -5,8 +5,11 @@
  * backend API seam pattern) and enforces caller-aware read/write grants
  * mirroring routes/documents.ts.
  *
- * Extension callers pass their extensionId as `callerAppId`.  Host callers
- * (omitted callerAppId) have full access.
+ * Extension callers pass their extensionId as `callerAppId`. Host-owned
+ * agent tools that need trusted cross-owner access should go through the
+ * extension capability bridge (`ctx.documents`), where the host supplies the
+ * actual extension identity and grants only locked system brokers host-level
+ * access.
  *
  * Mutations publish the same documents invalidation/events as the HTTP
  * route layer, so route writes and extension-tool writes share one
@@ -82,12 +85,7 @@ async function getStore(): Promise<{
   return callMod('../../documents/store.js', 'getDocumentsStore', stateRoot);
 }
 
-async function assertPermission(
-  callerAppId: string | undefined,
-  permission: 'documents:read' | 'documents:write',
-  capability: string,
-): Promise<void> {
-  if (!callerAppId) return;
+async function assertPermission(callerAppId: string, permission: 'documents:read' | 'documents:write', capability: string): Promise<void> {
   const readwritePermission = 'documents:readwrite';
   const permitted = await callMod<boolean>('../../extensions/extensionPermissions.js', 'extensionHasPermission', callerAppId, permission);
   if (permitted) return;
@@ -122,7 +120,15 @@ function resolveStateRoot(): string {
 
 type Caller = { kind: 'host' } | { appId: string; kind: 'app' };
 
-function makeCaller(callerAppId?: string): Caller {
+function requireCallerAppId(callerAppId: string | undefined, capability: string): string {
+  const trimmed = callerAppId?.trim();
+  if (trimmed) return trimmed;
+  throw new Error(
+    `${capability} requires callerAppId. Extension callers must pass ctx.extensionId; host-owned agent tools should use ctx.documents.`,
+  );
+}
+
+function makeCaller(callerAppId: string): Caller {
   return callerAppId ? { kind: 'app', appId: callerAppId } : { kind: 'host' };
 }
 
@@ -173,9 +179,10 @@ function assertCanWrite(
 // ── Public API ─────────────────────────────────────────────────────────
 
 export async function listCollections(options?: { owner?: string; callerAppId?: string }): Promise<DC[]> {
-  await assertPermission(options?.callerAppId, 'documents:read', 'documents.listCollections');
+  const callerAppId = requireCallerAppId(options?.callerAppId, 'documents.listCollections');
+  await assertPermission(callerAppId, 'documents:read', 'documents.listCollections');
   const store = await getStore();
-  const c = makeCaller(options?.callerAppId);
+  const c = makeCaller(callerAppId);
   return store.listCollections(options?.owner).filter((col) => {
     if (c.kind === 'host' || c.appId === col.owner) return true;
     if (col.defaultGrantRead === 'all') return true;
@@ -185,49 +192,55 @@ export async function listCollections(options?: { owner?: string; callerAppId?: 
 }
 
 export async function getCollection(owner: string, collection: string, callerAppId?: string): Promise<DC | null> {
-  await assertPermission(callerAppId, 'documents:read', 'documents.getCollection');
+  const appId = requireCallerAppId(callerAppId, 'documents.getCollection');
+  await assertPermission(appId, 'documents:read', 'documents.getCollection');
   const store = await getStore();
   const result = store.getCollection(owner, collection);
-  if (result) assertCanRead(store, makeCaller(callerAppId), owner, collection);
+  if (result) assertCanRead(store, makeCaller(appId), owner, collection);
   return result;
 }
 
 export async function upsertCollection(owner: string, collection: string, options?: UCO, callerAppId?: string): Promise<DC> {
-  await assertPermission(callerAppId, 'documents:write', 'documents.upsertCollection');
+  const appId = requireCallerAppId(callerAppId, 'documents.upsertCollection');
+  await assertPermission(appId, 'documents:write', 'documents.upsertCollection');
   const store = await getStore();
-  assertCanManage(makeCaller(callerAppId), owner);
+  assertCanManage(makeCaller(appId), owner);
   const result = store.upsertCollection(owner, collection, options ?? {});
   await publishDocumentsMutation({ type: 'collection.updated', owner, collection });
   return result;
 }
 
 export async function listDocuments(owner: string, collection: string, options?: LDO, callerAppId?: string): Promise<LDR> {
-  await assertPermission(callerAppId, 'documents:read', 'documents.listDocuments');
+  const appId = requireCallerAppId(callerAppId, 'documents.listDocuments');
+  await assertPermission(appId, 'documents:read', 'documents.listDocuments');
   const store = await getStore();
-  assertCanRead(store, makeCaller(callerAppId), owner, collection);
+  assertCanRead(store, makeCaller(appId), owner, collection);
   return store.listDocuments(owner, collection, { limit: options?.limit, offset: options?.offset });
 }
 
 export async function getDocument(owner: string, collection: string, id: string, callerAppId?: string): Promise<DR | null> {
-  await assertPermission(callerAppId, 'documents:read', 'documents.getDocument');
+  const appId = requireCallerAppId(callerAppId, 'documents.getDocument');
+  await assertPermission(appId, 'documents:read', 'documents.getDocument');
   const store = await getStore();
-  assertCanRead(store, makeCaller(callerAppId), owner, collection);
+  assertCanRead(store, makeCaller(appId), owner, collection);
   return store.getDocument(owner, collection, id);
 }
 
 export async function putDocument(owner: string, collection: string, id: string, body: unknown, callerAppId?: string): Promise<DR> {
-  await assertPermission(callerAppId, 'documents:write', 'documents.putDocument');
+  const appId = requireCallerAppId(callerAppId, 'documents.putDocument');
+  await assertPermission(appId, 'documents:write', 'documents.putDocument');
   const store = await getStore();
-  assertCanWrite(store, makeCaller(callerAppId), owner, collection);
+  assertCanWrite(store, makeCaller(appId), owner, collection);
   const result = store.putDocument(owner, collection, id, body);
   await publishDocumentsMutation({ type: 'document.updated', owner, collection, id, body });
   return result;
 }
 
 export async function deleteDocument(owner: string, collection: string, id: string, callerAppId?: string): Promise<{ deleted: boolean }> {
-  await assertPermission(callerAppId, 'documents:write', 'documents.deleteDocument');
+  const appId = requireCallerAppId(callerAppId, 'documents.deleteDocument');
+  await assertPermission(appId, 'documents:write', 'documents.deleteDocument');
   const store = await getStore();
-  assertCanWrite(store, makeCaller(callerAppId), owner, collection);
+  assertCanWrite(store, makeCaller(appId), owner, collection);
   const deleted = store.deleteDocument(owner, collection, id);
   if (deleted) {
     await publishDocumentsMutation({ type: 'document.deleted', owner, collection, id });

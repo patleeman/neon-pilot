@@ -15,12 +15,6 @@
  */
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import {
-  getDocument as storeGetDocument,
-  listCollections as storeListCollections,
-  listDocuments as storeListDocuments,
-  putDocument as storePutDocument,
-} from '@neon-pilot/extensions/backend/documents-store';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -59,12 +53,11 @@ function cancelWatch(entry: WatchEntry): void {
 // ── Tool handlers ─────────────────────────────────────────────────────
 
 /**
- * data_list — List document collections visible to the calling app.
+ * data_list — List document collections visible to trusted agent data tooling.
  */
 export async function dataList(input: { owner?: string }, ctx: ExtensionBackendContext): Promise<{ collections: unknown[] }> {
-  const collections = await storeListCollections({
-    owner: input.owner,
-    callerAppId: ctx.extensionId,
+  const collections = await ctx.documents.listCollections({
+    ...(input.owner ? { owner: input.owner } : {}),
   });
   return { collections };
 }
@@ -78,7 +71,7 @@ export async function dataRead(
   ctx: ExtensionBackendContext,
 ): Promise<unknown> {
   if (input.id) {
-    const document = await storeGetDocument(input.owner, input.collection, input.id, ctx.extensionId);
+    const document = await ctx.documents.getDocument({ owner: input.owner, collection: input.collection, id: input.id });
     if (!document) {
       return { error: `Document "${input.owner}/${input.collection}/${input.id}" not found` };
     }
@@ -88,7 +81,7 @@ export async function dataRead(
   const limit = typeof input.limit === 'number' && input.limit > 0 ? Math.min(input.limit, 1000) : 100;
   const offset = typeof input.offset === 'number' && input.offset >= 0 ? input.offset : 0;
 
-  const result = await storeListDocuments(input.owner, input.collection, { limit, offset }, ctx.extensionId);
+  const result = await ctx.documents.listDocuments({ owner: input.owner, collection: input.collection, limit, offset });
   return result;
 }
 
@@ -99,7 +92,7 @@ export async function dataWrite(
   input: { owner: string; collection: string; id: string; body: unknown },
   ctx: ExtensionBackendContext,
 ): Promise<{ document: unknown }> {
-  const document = await storePutDocument(input.owner, input.collection, input.id, input.body, ctx.extensionId);
+  const document = await ctx.documents.putDocument({ owner: input.owner, collection: input.collection, id: input.id, body: input.body });
   return { document };
 }
 

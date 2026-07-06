@@ -1516,6 +1516,23 @@ export interface ExtensionBackendContext {
     list<T = unknown>(prefix?: string): Promise<Array<{ key: string; value: T }>>;
   };
   database: ExtensionDatabaseManager;
+  documents: {
+    listCollections(input?: { owner?: string }): Promise<unknown[]>;
+    getCollection(input: { owner: string; collection: string }): Promise<unknown>;
+    upsertCollection(input: {
+      owner: string;
+      collection: string;
+      options?: {
+        description?: string;
+        defaultGrantRead?: 'owner' | 'all' | 'none';
+        defaultGrantWrite?: 'owner' | 'all' | 'none';
+      };
+    }): Promise<unknown>;
+    listDocuments(input: { owner: string; collection: string; limit?: number; offset?: number }): Promise<unknown>;
+    getDocument(input: { owner: string; collection: string; id: string }): Promise<unknown>;
+    putDocument(input: { owner: string; collection: string; id: string; body: unknown }): Promise<unknown>;
+    deleteDocument(input: { owner: string; collection: string; id: string }): Promise<unknown>;
+  };
   attention: {
     enqueue(input: {
       conversationId?: string;

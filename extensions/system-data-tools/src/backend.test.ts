@@ -1,32 +1,23 @@
 /**
  * system-data-tools backend tests
  *
- * Tests the tool handlers and subscription handler using mocked documents-store API.
+ * Tests the tool handlers and subscription handler using mocked host document capabilities.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock the documents-store backend API
-vi.mock('@neon-pilot/extensions/backend/documents-store', () => ({
-  listCollections: vi.fn(),
-  getCollection: vi.fn(),
-  upsertCollection: vi.fn(),
-  listDocuments: vi.fn(),
-  getDocument: vi.fn(),
-  putDocument: vi.fn(),
-  deleteDocument: vi.fn(),
-}));
-
-import {
-  getDocument as storeGetDocument,
-  listCollections as storeListCollections,
-  listDocuments as storeListDocuments,
-  putDocument as storePutDocument,
-} from '@neon-pilot/extensions/backend/documents-store';
-
 import { dataList, dataRead, dataWatch, dataWrite, onDocumentEvent } from './backend.js';
 
 function mockContext(overrides: Partial<{ extensionId: string }> = {}) {
+  const documents = {
+    listCollections: vi.fn(),
+    getCollection: vi.fn(),
+    upsertCollection: vi.fn(),
+    listDocuments: vi.fn(),
+    getDocument: vi.fn(),
+    putDocument: vi.fn(),
+    deleteDocument: vi.fn(),
+  };
   return {
     extensionId: overrides.extensionId ?? 'system-data-tools',
     runtimeScope: 'shared',
@@ -49,6 +40,7 @@ function mockContext(overrides: Partial<{ extensionId: string }> = {}) {
       getRepoRoot: vi.fn(() => '/repo'),
       refreshSkillMcpConfig: vi.fn(),
     },
+    documents,
   } as never;
 }
 
@@ -69,11 +61,12 @@ describe('dataList', () => {
         updatedAt: '',
       },
     ];
-    vi.mocked(storeListCollections).mockResolvedValue(collections);
+    const ctx = mockContext({ extensionId: 'system-data-tools' });
+    vi.mocked(ctx.documents.listCollections).mockResolvedValue(collections);
 
-    const result = await dataList({ owner: 'app-a' }, mockContext({ extensionId: 'system-data-tools' }));
+    const result = await dataList({ owner: 'app-a' }, ctx);
 
-    expect(storeListCollections).toHaveBeenCalledWith({ owner: 'app-a', callerAppId: 'system-data-tools' });
+    expect(ctx.documents.listCollections).toHaveBeenCalledWith({ owner: 'app-a' });
     expect(result.collections).toEqual(collections);
   });
 
@@ -98,11 +91,12 @@ describe('dataList', () => {
         updatedAt: '',
       },
     ];
-    vi.mocked(storeListCollections).mockResolvedValue(collections);
+    const ctx = mockContext({ extensionId: 'system-data-tools' });
+    vi.mocked(ctx.documents.listCollections).mockResolvedValue(collections);
 
-    const result = await dataList({}, mockContext({ extensionId: 'system-data-tools' }));
+    const result = await dataList({}, ctx);
 
-    expect(storeListCollections).toHaveBeenCalledWith({ callerAppId: 'system-data-tools' });
+    expect(ctx.documents.listCollections).toHaveBeenCalledWith({});
     expect(result.collections).toHaveLength(2);
   });
 });
@@ -114,18 +108,20 @@ describe('dataRead', () => {
 
   it('gets a single document by id', async () => {
     const doc = { owner: 'app', collection: 'col', id: 'doc-1', body: { data: 42 }, createdAt: '', updatedAt: '' };
-    vi.mocked(storeGetDocument).mockResolvedValue(doc);
+    const ctx = mockContext();
+    vi.mocked(ctx.documents.getDocument).mockResolvedValue(doc);
 
-    const result = await dataRead({ owner: 'app', collection: 'col', id: 'doc-1' }, mockContext());
+    const result = await dataRead({ owner: 'app', collection: 'col', id: 'doc-1' }, ctx);
 
-    expect(storeGetDocument).toHaveBeenCalledWith('app', 'col', 'doc-1', 'system-data-tools');
+    expect(ctx.documents.getDocument).toHaveBeenCalledWith({ owner: 'app', collection: 'col', id: 'doc-1' });
     expect(result).toEqual({ document: doc });
   });
 
   it('returns error for not found', async () => {
-    vi.mocked(storeGetDocument).mockResolvedValue(null);
+    const ctx = mockContext();
+    vi.mocked(ctx.documents.getDocument).mockResolvedValue(null);
 
-    const result = await dataRead({ owner: 'app', collection: 'col', id: 'missing' }, mockContext());
+    const result = await dataRead({ owner: 'app', collection: 'col', id: 'missing' }, ctx);
 
     expect(result).toEqual({ error: 'Document "app/col/missing" not found' });
   });
@@ -135,20 +131,22 @@ describe('dataRead', () => {
       { owner: 'app', collection: 'col', id: 'doc-1', body: {}, createdAt: '', updatedAt: '' },
       { owner: 'app', collection: 'col', id: 'doc-2', body: {}, createdAt: '', updatedAt: '' },
     ];
-    vi.mocked(storeListDocuments).mockResolvedValue({ records, total: 2 });
+    const ctx = mockContext();
+    vi.mocked(ctx.documents.listDocuments).mockResolvedValue({ records, total: 2 });
 
-    const result = await dataRead({ owner: 'app', collection: 'col' }, mockContext());
+    const result = await dataRead({ owner: 'app', collection: 'col' }, ctx);
 
-    expect(storeListDocuments).toHaveBeenCalledWith('app', 'col', { limit: 100, offset: 0 }, 'system-data-tools');
+    expect(ctx.documents.listDocuments).toHaveBeenCalledWith({ owner: 'app', collection: 'col', limit: 100, offset: 0 });
     expect(result).toEqual({ records, total: 2 });
   });
 
   it('respects limit and offset', async () => {
-    vi.mocked(storeListDocuments).mockResolvedValue({ records: [], total: 0 });
+    const ctx = mockContext();
+    vi.mocked(ctx.documents.listDocuments).mockResolvedValue({ records: [], total: 0 });
 
-    await dataRead({ owner: 'app', collection: 'col', limit: 10, offset: 20 }, mockContext());
+    await dataRead({ owner: 'app', collection: 'col', limit: 10, offset: 20 }, ctx);
 
-    expect(storeListDocuments).toHaveBeenCalledWith('app', 'col', { limit: 10, offset: 20 }, 'system-data-tools');
+    expect(ctx.documents.listDocuments).toHaveBeenCalledWith({ owner: 'app', collection: 'col', limit: 10, offset: 20 });
   });
 });
 
@@ -159,12 +157,41 @@ describe('dataWrite', () => {
 
   it('puts a document and returns it', async () => {
     const doc = { owner: 'app', collection: 'col', id: 'doc-1', body: { hello: 'world' }, createdAt: '', updatedAt: '' };
-    vi.mocked(storePutDocument).mockResolvedValue(doc);
+    const ctx = mockContext();
+    vi.mocked(ctx.documents.putDocument).mockResolvedValue(doc);
 
-    const result = await dataWrite({ owner: 'app', collection: 'col', id: 'doc-1', body: { hello: 'world' } }, mockContext());
+    const result = await dataWrite({ owner: 'app', collection: 'col', id: 'doc-1', body: { hello: 'world' } }, ctx);
 
-    expect(storePutDocument).toHaveBeenCalledWith('app', 'col', 'doc-1', { hello: 'world' }, 'system-data-tools');
+    expect(ctx.documents.putDocument).toHaveBeenCalledWith({
+      owner: 'app',
+      collection: 'col',
+      id: 'doc-1',
+      body: { hello: 'world' },
+    });
     expect(result).toEqual({ document: doc });
+  });
+
+  it('uses ctx.documents so authority comes from the host bridge, not a caller-supplied app id', async () => {
+    const ctx = mockContext({ extensionId: 'some-other-extension' });
+    vi.mocked(ctx.documents.putDocument).mockResolvedValue({
+      owner: 'any-owner',
+      collection: 'any-collection',
+      id: 'doc-1',
+      body: {},
+      createdAt: '',
+      updatedAt: '',
+    });
+
+    const result = await dataWrite({ owner: 'any-owner', collection: 'any-collection', id: 'doc-1', body: { value: 42 } }, ctx);
+
+    expect(ctx.documents.putDocument).toHaveBeenCalledWith({
+      owner: 'any-owner',
+      collection: 'any-collection',
+      id: 'doc-1',
+      body: { value: 42 },
+    });
+    expect(ctx.documents.putDocument).toHaveBeenCalledTimes(1);
+    expect(result.document).toBeDefined();
   });
 });
 

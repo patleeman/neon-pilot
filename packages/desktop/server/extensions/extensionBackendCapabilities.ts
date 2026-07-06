@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, queryAppTelemetryEvents, readTraceTelemetryLogEvents } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getStateRoot, queryAppTelemetryEvents, readTraceTelemetryLogEvents } from '@neon-pilot/core';
 
 import {
   cancelDelayedEvent,
@@ -17,6 +17,7 @@ import {
   replayEvent,
   saveSubscription,
 } from '../automation/eventBusHost.js';
+import { getDocumentsStore } from '../documents/store.js';
 import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
 import { resolveSecret } from '../secrets/secretStore.js';
@@ -65,6 +66,7 @@ import {
 import { type ExtensionRuntimeRefreshSkillMcpConfigInput, refreshHostSkillMcpConfig } from './extensionRuntimeCapability.js';
 import { createExtensionGitCapability, createExtensionShellCapability, terminateSpawnedExtensionProcesses } from './extensionShell.js';
 import { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } from './extensionStorage.js';
+import { publishExtensionHostEvent } from './extensionSubscriptions.js';
 import { requestExtensionUiConfirm } from './extensionUiConfirmBridge.js';
 import { createExtensionWorkspaceCapability } from './extensionWorkspace.js';
 import { isKnownHostCommand } from './hostCommands.js';
@@ -116,6 +118,10 @@ interface ExtensionBackendCapabilityEvents {
   cancelDelayed(input: unknown): Promise<unknown> | unknown;
   prune(input: unknown): Promise<unknown> | unknown;
   processDue(input?: unknown): Promise<unknown> | unknown;
+}
+
+interface ExtensionBackendCapabilityDocuments {
+  stateRoot?: string;
 }
 
 interface ExtensionBackendCapabilityAutomations {
@@ -535,6 +541,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   automations?: ExtensionBackendCapabilityAutomations;
   commands?: ExtensionBackendCapabilityCommands;
   conversations?: ExtensionBackendCapabilityConversations;
+  documents?: ExtensionBackendCapabilityDocuments;
   events?: ExtensionBackendCapabilityEvents;
   extensions?: ExtensionBackendCapabilityExtensions;
   filesystem?: ExtensionBackendCapabilityFilesystem;
@@ -656,6 +663,14 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
 
   if (request.capability === 'desktop') {
     return ['desktop:control'];
+  }
+
+  if (request.capability === 'documents') {
+    return permissionForReadWriteOperation('documents:read', 'documents:write', 'documents:readwrite', request.operation, [
+      'upsertCollection',
+      'putDocument',
+      'deleteDocument',
+    ]);
   }
 
   if (request.capability === 'conversations') {
@@ -2293,6 +2308,147 @@ async function dispatchDesktopCapability(request: ExtensionBackendWorkerCapabili
   throw new Error(`Unsupported desktop capability operation: ${request.operation}`);
 }
 
+function canReadDocumentCollection(
+  store: ReturnType<typeof getDocumentsStore>,
+  callerAppId: string | undefined,
+  owner: string,
+  collection: string,
+): boolean {
+  if (!callerAppId || callerAppId === owner) return true;
+  const summary = store.getCollection(owner, collection);
+  if (!summary) return false;
+  if (summary.defaultGrantRead === 'all') return true;
+  return store.getGrant(owner, collection, callerAppId)?.canRead === true;
+}
+
+function canWriteDocumentCollection(
+  store: ReturnType<typeof getDocumentsStore>,
+  callerAppId: string | undefined,
+  owner: string,
+  collection: string,
+): boolean {
+  if (!callerAppId || callerAppId === owner) return true;
+  const summary = store.getCollection(owner, collection);
+  if (!summary) return false;
+  if (summary.defaultGrantWrite === 'all') return true;
+  return store.getGrant(owner, collection, callerAppId)?.canWrite === true;
+}
+
+function assertCanManageDocumentCollection(callerAppId: string | undefined, owner: string): void {
+  if (!callerAppId || callerAppId === owner) return;
+  throw new Error('Document collection access denied');
+}
+
+function assertCanReadDocumentCollection(
+  store: ReturnType<typeof getDocumentsStore>,
+  callerAppId: string | undefined,
+  owner: string,
+  collection: string,
+): void {
+  if (canReadDocumentCollection(store, callerAppId, owner, collection)) return;
+  const summary = store.getCollection(owner, collection);
+  if (!summary) throw new Error(`Collection "${owner}/${collection}" not found`);
+  throw new Error('Document collection access denied');
+}
+
+function assertCanWriteDocumentCollection(
+  store: ReturnType<typeof getDocumentsStore>,
+  callerAppId: string | undefined,
+  owner: string,
+  collection: string,
+): void {
+  if (canWriteDocumentCollection(store, callerAppId, owner, collection)) return;
+  const summary = store.getCollection(owner, collection);
+  if (!summary) throw new Error(`Collection "${owner}/${collection}" not found`);
+  throw new Error('Document collection access denied');
+}
+
+async function publishDocumentMutation(payload: {
+  type: 'collection.updated' | 'document.updated' | 'document.deleted';
+  owner: string;
+  collection: string;
+  id?: string;
+  body?: unknown;
+}): Promise<void> {
+  invalidateAppTopics('documents');
+  await publishExtensionHostEvent('documents', payload);
+}
+
+async function dispatchDocumentsCapability(
+  documents: ExtensionBackendCapabilityDocuments,
+  request: ExtensionBackendWorkerCapabilityRequest,
+): Promise<unknown> {
+  const input = normalizeRecordInput(request.input ?? {}, 'Documents');
+  const store = getDocumentsStore(documents.stateRoot ?? getStateRoot());
+  const callerAppId = request.extensionId === 'system-data-tools' ? undefined : request.extensionId;
+
+  if (request.operation === 'listCollections') {
+    const owner = input.owner === undefined ? undefined : optionalString(input.owner, 'Documents owner');
+    return store
+      .listCollections(owner)
+      .filter((collection) => canReadDocumentCollection(store, callerAppId, collection.owner, collection.collection));
+  }
+
+  const owner = requireString(input.owner, 'Documents owner');
+  const collection = requireString(input.collection, 'Documents collection');
+
+  if (request.operation === 'getCollection') {
+    const result = store.getCollection(owner, collection);
+    if (result) assertCanReadDocumentCollection(store, callerAppId, owner, collection);
+    return result;
+  }
+
+  if (request.operation === 'upsertCollection') {
+    assertCanManageDocumentCollection(callerAppId, owner);
+    const options = normalizeRecordInput(input.options ?? {}, 'Documents collection options');
+    const result = store.upsertCollection(owner, collection, {
+      ...(options.description !== undefined
+        ? { description: optionalString(options.description, 'Documents collection description') }
+        : {}),
+      ...(options.defaultGrantRead !== undefined
+        ? { defaultGrantRead: requireString(options.defaultGrantRead, 'Documents collection read grant') as 'owner' | 'all' | 'none' }
+        : {}),
+      ...(options.defaultGrantWrite !== undefined
+        ? { defaultGrantWrite: requireString(options.defaultGrantWrite, 'Documents collection write grant') as 'owner' | 'all' | 'none' }
+        : {}),
+    });
+    await publishDocumentMutation({ type: 'collection.updated', owner, collection });
+    return result;
+  }
+
+  if (request.operation === 'listDocuments') {
+    assertCanReadDocumentCollection(store, callerAppId, owner, collection);
+    const limit = typeof input.limit === 'number' ? input.limit : undefined;
+    const offset = typeof input.offset === 'number' ? input.offset : undefined;
+    return store.listDocuments(owner, collection, { limit, offset });
+  }
+
+  const id = requireString(input.id, 'Documents id');
+
+  if (request.operation === 'getDocument') {
+    assertCanReadDocumentCollection(store, callerAppId, owner, collection);
+    return store.getDocument(owner, collection, id);
+  }
+
+  if (request.operation === 'putDocument') {
+    assertCanWriteDocumentCollection(store, callerAppId, owner, collection);
+    const result = store.putDocument(owner, collection, id, input.body);
+    await publishDocumentMutation({ type: 'document.updated', owner, collection, id, body: input.body });
+    return result;
+  }
+
+  if (request.operation === 'deleteDocument') {
+    assertCanWriteDocumentCollection(store, callerAppId, owner, collection);
+    const deleted = store.deleteDocument(owner, collection, id);
+    if (deleted) {
+      await publishDocumentMutation({ type: 'document.deleted', owner, collection, id });
+    }
+    return { deleted };
+  }
+
+  throw new Error(`Unsupported documents capability operation: ${request.operation}`);
+}
+
 function dispatchUiCapability(ui: ExtensionBackendCapabilityUi, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   const input = normalizeRecordInput(request.input, 'UI');
   if (request.operation === 'invalidate') {
@@ -2719,6 +2875,7 @@ export function createExtensionBackendCapabilityDispatcher(
     prune: pruneEvents,
     processDue: processDueEvents,
   };
+  const documents = options.documents ?? {};
   const extensions = options.extensions ?? {
     invokeAction: async (input: { extensionId: string; actionId: string; input?: unknown }) => {
       const { invokeExtensionAction } = await import('./extensionBackend.js');
@@ -2885,6 +3042,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'desktop') {
       return dispatchDesktopCapability(request);
+    }
+    if (request.capability === 'documents') {
+      return dispatchDocumentsCapability(documents, request);
     }
     if (request.capability === 'commands') {
       return dispatchCommandsCapability(commands, request);
