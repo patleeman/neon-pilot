@@ -864,4 +864,65 @@ describe('extensionConversations', () => {
     expect(entry.session.sessionManager.branch).toHaveBeenCalledWith('root');
     expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
   });
+
+  it('creates a capability without serverContext using intentional fallback defaults', async () => {
+    sessionsCapability.readConversationSessionsCapability.mockReturnValue([{ id: 'conv-1' }]);
+
+    const capability = createExtensionConversationsCapability();
+
+    await expect(capability.list()).resolves.toEqual([{ id: 'conv-1' }]);
+    expect(sessionsCapability.readConversationSessionsCapability).toHaveBeenCalledWith({ profile: 'shared' });
+
+    await expect(capability.getWorkspace()).rejects.toThrow('Conversation workspace is unavailable.');
+
+    const result = await capability.create({ title: 'Zero-arg Default', live: false });
+    expect(result).toEqual({ id: 'reserved-1', conversationId: 'reserved-1' });
+    expect(reservation.reserveConversationSession).toHaveBeenCalledWith({
+      cwd: expect.any(String),
+      profile: undefined,
+    });
+    expect(conversationService.renameStoredConversation).toHaveBeenCalledWith('reserved-1', 'Zero-arg Default');
+    expect(activityProducers.writeConversationActivityEntry).toHaveBeenCalledWith(
+      { kind: 'documents-store' },
+      'reserved-1',
+      'created',
+      'Zero-arg Default',
+    );
+    expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
+    expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'open_session', sessionId: 'reserved-1' });
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.created',
+      conversationId: 'reserved-1',
+      cwd: expect.any(String),
+    });
+
+    live.registry.set('conv-1', liveEntry());
+    await expect(capability.getMeta('conv-1')).resolves.toEqual({
+      id: 'conv-1',
+      title: 'Conversation One',
+      cwd: '/repo',
+      running: false,
+      currentModel: 'model-1',
+      currentProvider: 'provider-1',
+    });
+
+    for (const methodName of [
+      'list',
+      'get',
+      'create',
+      'sendMessage',
+      'getMeta',
+      'getWorkspace',
+      'delete',
+      'fork',
+      'setTitle',
+      'subscribe',
+    ]) {
+      expect(capability).toHaveProperty(methodName);
+    }
+    expect(capability).toHaveProperty('metadata');
+    expect(capability.metadata).toHaveProperty('get');
+    expect(capability.metadata).toHaveProperty('set');
+    expect(capability.metadata).toHaveProperty('query');
+  });
 });
