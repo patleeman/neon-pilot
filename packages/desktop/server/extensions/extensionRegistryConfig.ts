@@ -1,4 +1,7 @@
 import type { ExtensionPackageType } from './extensionManifest.js';
+import { EXTENSION_PERMISSIONS } from './extensionManifest.js';
+
+const KNOWN_EXTENSION_PERMISSIONS = new Set<string>(EXTENSION_PERMISSIONS);
 
 export interface ExtensionRegistryConfig {
   disabledIds?: string[];
@@ -21,6 +24,7 @@ export interface ExtensionRegistryConfig {
     }
   >;
   quarantined?: Record<string, { reason: string; at: string; failures: number }>;
+  revokedPermissions?: Record<string, string[]>;
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,7 +95,26 @@ export function normalizeExtensionRegistryConfig(value: unknown): ExtensionRegis
       )
     : {};
 
-  return { disabledIds, enabledIds, removedDefaultInstalledIds, disabledKeybindings, keybindingOverrides, commandKeybindings, quarantined };
+  const revokedPermissions = isRecord(value.revokedPermissions)
+    ? Object.fromEntries(
+        Object.entries(value.revokedPermissions).flatMap(([extId, perms]) => {
+          if (typeof extId !== 'string' || !Array.isArray(perms)) return [];
+          const filtered = perms.filter((p): p is string => typeof p === 'string' && KNOWN_EXTENSION_PERMISSIONS.has(p));
+          return filtered.length > 0 ? [[extId, filtered]] : [];
+        }),
+      )
+    : {};
+
+  return {
+    disabledIds,
+    enabledIds,
+    removedDefaultInstalledIds,
+    disabledKeybindings,
+    keybindingOverrides,
+    commandKeybindings,
+    quarantined,
+    revokedPermissions,
+  };
 }
 
 export function serializeExtensionRegistryConfig(config: ExtensionRegistryConfig): string {
@@ -104,6 +127,7 @@ export function serializeExtensionRegistryConfig(config: ExtensionRegistryConfig
       keybindingOverrides: config.keybindingOverrides ?? {},
       commandKeybindings: config.commandKeybindings ?? {},
       quarantined: config.quarantined ?? {},
+      revokedPermissions: config.revokedPermissions ?? {},
     },
     null,
     2,

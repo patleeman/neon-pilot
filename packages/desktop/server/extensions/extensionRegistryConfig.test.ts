@@ -53,6 +53,7 @@ describe('extensionRegistryConfig', () => {
         fallbackFailures: { reason: 'warn', at: '2026-05-23T00:00:00.000Z', failures: 0 },
       },
       removedDefaultInstalledIds: [],
+      revokedPermissions: {},
     });
   });
 
@@ -70,6 +71,68 @@ describe('extensionRegistryConfig', () => {
       commandKeybindings: {},
       quarantined: {},
       removedDefaultInstalledIds: [],
+      revokedPermissions: {},
+    });
+  });
+
+  describe('revokedPermissions normalization', () => {
+    it('normalizes valid revoked permission entries', () => {
+      const result = normalizeExtensionRegistryConfig({
+        revokedPermissions: {
+          'ext-a': ['agent:run', 'storage:read'],
+          'ext-b': ['shell:execute'],
+        },
+      });
+      expect(result.revokedPermissions).toEqual({
+        'ext-a': ['agent:run', 'storage:read'],
+        'ext-b': ['shell:execute'],
+      });
+    });
+
+    it('drops unknown permission values from revoked lists', () => {
+      const result = normalizeExtensionRegistryConfig({
+        revokedPermissions: {
+          ext: ['agent:run', 'unknown:perm', 'storage:read', 'also:bad'],
+        },
+      });
+      expect(result.revokedPermissions).toEqual({
+        ext: ['agent:run', 'storage:read'],
+      });
+    });
+
+    it('removes extension entries whose revoked list is entirely unknown permissions', () => {
+      const result = normalizeExtensionRegistryConfig({
+        revokedPermissions: {
+          'ext-a': ['unknown:one', 'unknown:two'],
+          'ext-b': ['agent:run'],
+        },
+      });
+      expect(result.revokedPermissions).toEqual({
+        'ext-b': ['agent:run'],
+      });
+    });
+
+    it('removes non-string values from revoked arrays', () => {
+      const result = normalizeExtensionRegistryConfig({
+        revokedPermissions: {
+          ext: ['agent:run', 123 as unknown as string, null as unknown as string, 'storage:write'],
+        },
+      });
+      expect(result.revokedPermissions).toEqual({
+        ext: ['agent:run', 'storage:write'],
+      });
+    });
+
+    it('handles revokedPermissions that is not a record gracefully', () => {
+      const result = normalizeExtensionRegistryConfig({
+        revokedPermissions: 'not-a-record',
+      });
+      expect(result.revokedPermissions).toEqual({});
+
+      const result2 = normalizeExtensionRegistryConfig({
+        revokedPermissions: null,
+      });
+      expect(result2.revokedPermissions).toEqual({});
     });
   });
 });

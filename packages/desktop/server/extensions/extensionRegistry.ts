@@ -628,7 +628,7 @@ function candidateDefaultInstalledExtensionRoots(): string[] {
   return [];
 }
 
-function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): ExtensionRegistryConfig {
+export function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): ExtensionRegistryConfig {
   const cache = registryReadCache.getStore();
   const cached = cache?.configs.get(stateRoot);
   if (cached) return cached;
@@ -715,7 +715,7 @@ function buildExtensionModelProfileRegistrations(entry: ExtensionRegistryEntry):
   });
 }
 
-function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot: string = getStateRoot()): void {
+export function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot: string = getStateRoot()): void {
   const extensionsRoot = getRuntimeExtensionsRoot(stateRoot);
   mkdirSync(extensionsRoot, { recursive: true });
   writeFileSync(getExtensionRegistryConfigPath(stateRoot), serializeExtensionRegistryConfig(config));
