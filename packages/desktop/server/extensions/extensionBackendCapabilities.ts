@@ -2408,13 +2408,16 @@ async function dispatchDesktopCapability(request: ExtensionBackendWorkerCapabili
   throw new Error(`Unsupported desktop capability operation: ${request.operation}`);
 }
 
+const HOST_DOCUMENT_CALLER = Symbol('host-document-caller');
+type DocumentCallerAppId = string | typeof HOST_DOCUMENT_CALLER;
+
 function canReadDocumentCollection(
   store: ReturnType<typeof getDocumentsStore>,
-  callerAppId: string | undefined,
+  callerAppId: DocumentCallerAppId,
   owner: string,
   collection: string,
 ): boolean {
-  if (!callerAppId || callerAppId === owner) return true;
+  if (callerAppId === HOST_DOCUMENT_CALLER || callerAppId === owner) return true;
   const summary = store.getCollection(owner, collection);
   if (!summary) return false;
   if (summary.defaultGrantRead === 'all') return true;
@@ -2423,25 +2426,25 @@ function canReadDocumentCollection(
 
 function canWriteDocumentCollection(
   store: ReturnType<typeof getDocumentsStore>,
-  callerAppId: string | undefined,
+  callerAppId: DocumentCallerAppId,
   owner: string,
   collection: string,
 ): boolean {
-  if (!callerAppId || callerAppId === owner) return true;
+  if (callerAppId === HOST_DOCUMENT_CALLER || callerAppId === owner) return true;
   const summary = store.getCollection(owner, collection);
   if (!summary) return false;
   if (summary.defaultGrantWrite === 'all') return true;
   return store.getGrant(owner, collection, callerAppId)?.canWrite === true;
 }
 
-function assertCanManageDocumentCollection(callerAppId: string | undefined, owner: string): void {
-  if (!callerAppId || callerAppId === owner) return;
+function assertCanManageDocumentCollection(callerAppId: DocumentCallerAppId, owner: string): void {
+  if (callerAppId === HOST_DOCUMENT_CALLER || callerAppId === owner) return;
   throw new Error('Document collection access denied');
 }
 
 function assertCanReadDocumentCollection(
   store: ReturnType<typeof getDocumentsStore>,
-  callerAppId: string | undefined,
+  callerAppId: DocumentCallerAppId,
   owner: string,
   collection: string,
 ): void {
@@ -2453,7 +2456,7 @@ function assertCanReadDocumentCollection(
 
 function assertCanWriteDocumentCollection(
   store: ReturnType<typeof getDocumentsStore>,
-  callerAppId: string | undefined,
+  callerAppId: DocumentCallerAppId,
   owner: string,
   collection: string,
 ): void {
@@ -2483,7 +2486,7 @@ async function dispatchDocumentsCapability(
     request.context?.stateRoot ?? documents.stateRoot ?? getStateRoot(),
     request.context?.desktopRootLayout ?? documents.desktopRootLayout,
   );
-  const callerAppId = request.extensionId === 'system-data-tools' ? undefined : request.extensionId;
+  const callerAppId = request.extensionId === 'system-data-tools' ? HOST_DOCUMENT_CALLER : request.extensionId;
 
   if (request.operation === 'listCollections') {
     const owner = input.owner === undefined ? undefined : optionalString(input.owner, 'Documents owner');

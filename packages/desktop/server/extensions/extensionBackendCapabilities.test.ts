@@ -1760,6 +1760,49 @@ describe('extension backend capability dispatcher', () => {
           }),
         ),
       ).resolves.toEqual([expect.objectContaining({ owner: 'other-owner', collection: 'items' })]);
+
+      // system-data-tools can read the cross-owner document (trusted host broker)
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 4,
+            kind: 'capabilityRequest',
+            extensionId: 'system-data-tools',
+            capability: 'documents',
+            operation: 'getDocument',
+            input: { owner: 'other-owner', collection: 'items', id: 'doc-1' },
+          }),
+        ),
+      ).resolves.toMatchObject({ owner: 'other-owner', collection: 'items', id: 'doc-1' });
+
+      // ordinary extension with documents:readwrite still cannot read the
+      // cross-owner private collection (no grant, not the owner)
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 5,
+            kind: 'capabilityRequest',
+            extensionId: 'ordinary-extension',
+            capability: 'documents',
+            operation: 'listDocuments',
+            input: { owner: 'other-owner', collection: 'items' },
+          }),
+        ),
+      ).rejects.toThrow('Document collection access denied');
+
+      // ordinary extension still cannot write to the cross-owner private collection
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 6,
+            kind: 'capabilityRequest',
+            extensionId: 'ordinary-extension',
+            capability: 'documents',
+            operation: 'putDocument',
+            input: { owner: 'other-owner', collection: 'items', id: 'doc-2', body: { malicious: true } },
+          }),
+        ),
+      ).rejects.toThrow('Document collection access denied');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
