@@ -17,20 +17,6 @@ vi.mock('@neon-pilot/extensions/settings', () => ({
 }));
 
 vi.mock('@neon-pilot/extensions/ui', () => ({
-  LoadingState: ({ label }: { label: string }) => <div role="status">{label}</div>,
-  Notice: ({ children, title }: { children: React.ReactNode; title?: string }) => (
-    <div role="note">
-      {title ? <strong>{title}</strong> : null}
-      {children}
-    </div>
-  ),
-  Select: (props: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} />,
-  SettingsRow: ({ title, description, children }: { title: string; description?: React.ReactNode; children: React.ReactNode }) => (
-    <section className="settings-row" aria-label={title}>
-      <div>{description}</div>
-      {children}
-    </section>
-  ),
   WindowedField: ({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) => (
     <label className="wos-field">
       <span>{label}</span>
@@ -68,14 +54,14 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const roots: Root[] = [];
 
-function renderSettings(shellPresentation?: 'windowed') {
+function renderSettings() {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
   roots.push(root);
 
   act(() => {
-    root.render(<MultimediaProbeSettings settingsContext={{ shellPresentation }} />);
+    root.render(<MultimediaProbeSettings settingsContext={{ extensionId: 'system-image-probe' }} />);
   });
 
   return { container };
@@ -90,7 +76,7 @@ describe('MultimediaProbeSettings', () => {
     vi.clearAllMocks();
   });
 
-  it('renders embedded windowed settings content in desktop mode', () => {
+  it('renders embedded settings content in the canonical windowed surface', () => {
     modelsMock.mockReturnValue({
       loading: false,
       error: null,
@@ -103,7 +89,7 @@ describe('MultimediaProbeSettings', () => {
       },
     });
 
-    const { container } = renderSettings('windowed');
+    const { container } = renderSettings();
 
     expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('.image-probe-page-windowed')).not.toBeNull();
@@ -116,22 +102,6 @@ describe('MultimediaProbeSettings', () => {
     expect(container.textContent).toContain('openai/gpt-4.1');
   });
 
-  it('preserves the settings row outside windowed mode', () => {
-    modelsMock.mockReturnValue({
-      loading: false,
-      error: null,
-      data: {
-        currentVisionModel: '',
-        models: [{ id: 'vision', name: 'Vision', provider: 'openai', input: ['image'] }],
-      },
-    });
-
-    const { container } = renderSettings();
-
-    expect(container.querySelector('.settings-row')).not.toBeNull();
-    expect(container.querySelector('.wos-page-section')).toBeNull();
-  });
-
   it('keeps windowed loading state inside the embedded settings panel', () => {
     modelsMock.mockReturnValue({
       loading: true,
@@ -139,7 +109,7 @@ describe('MultimediaProbeSettings', () => {
       data: null,
     });
 
-    const { container } = renderSettings('windowed');
+    const { container } = renderSettings();
 
     expect(container.querySelector('.wos-page-shell')).toBeNull();
     expect(container.querySelector('h1')).toBeNull();
