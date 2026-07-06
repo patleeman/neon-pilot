@@ -2,37 +2,10 @@ import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
 import type { ExtensionInstallSummary } from '@neon-pilot/extensions/data';
 import { api, EXTENSION_REGISTRY_CHANGED_EVENT, notifyExtensionRegistryChanged } from '@neon-pilot/extensions/data';
 import {
-  AppPageIntro,
-  AppPageLayout,
   Button,
-  cx,
-  DataTable,
-  DataTableActionGroup,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-  DataTableToolbar,
-  Dialog,
-  DialogBody,
-  DialogHeader,
-  EmptyState,
-  ErrorState,
-  IconButton,
-  IconLink,
-  MenuItem,
-  MenuShell,
-  Notice,
   PanelMessage,
-  QuietLoadingState,
   ResourceList,
   ResourceListRow,
-  SearchInput,
-  SectionLabel,
-  Switch,
-  TabButton,
-  TabList,
   TextInput,
   WindowedBadge,
   WindowedDataRow,
@@ -52,17 +25,7 @@ import {
   WindowedToolbar,
 } from '@neon-pilot/extensions/ui';
 import { getDesktopBridge } from '@neon-pilot/extensions/workbench-browser';
-import {
-  type CSSProperties,
-  type MouseEvent as ReactMouseEvent,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 type NativeViewContribution = NonNullable<NonNullable<NonNullable<ExtensionInstallSummary['manifest']>['contributes']>['views']>[number];
@@ -216,8 +179,6 @@ function isExtensionSelection(value: unknown): value is { resource: { type: 'ext
   return Boolean(resource && typeof resource === 'object' && (resource as { type?: unknown }).type === 'extension');
 }
 
-const ACTIONS_MENU_VIEWPORT_MARGIN = 8;
-const ACTIONS_MENU_BUTTON_GAP = 8;
 const BUILD_EXTENSION_PROMPT = `I want to build a Neon Pilot app package. Use the local-extension-development skill to guide me through the package/runtime details.
 
 Start by interviewing me before you write code. Ask focused questions until you understand the workflow I want, who it is for, what the first version should do, where it should live in Neon Pilot, and what empty, loading, error, and success states it needs.
@@ -227,21 +188,6 @@ Then write a short UX brief. If the app has UI, make a quick visual prototype or
 After I approve the direction, build the app package, reload it, test the real app path, and keep iterating with me until it feels right.`;
 const COMPOSER_DRAFT_RETRY_MS = 100;
 const COMPOSER_DRAFT_MAX_ATTEMPTS = 20;
-
-interface ActionsMenuPosition {
-  top: number;
-  right: number;
-  maxHeight: number;
-  visibility?: CSSProperties['visibility'];
-}
-
-function ExtensionNoticeBox({ notice }: { notice: ExtensionManagerNotice }) {
-  return (
-    <Notice tone={notice.type === 'error' ? 'danger' : notice.type} title={notice.message}>
-      {notice.details}
-    </Notice>
-  );
-}
 
 function WindowedExtensionNoticeBox({ notice }: { notice: ExtensionManagerNotice }) {
   const tone = notice.type === 'error' ? 'danger' : notice.type === 'success' ? 'positive' : 'neutral';
@@ -270,32 +216,6 @@ function draftComposerTextWhenReady(text: string, attempt = 0): void {
   if (attempt + 1 < COMPOSER_DRAFT_MAX_ATTEMPTS) {
     window.setTimeout(() => draftComposerTextWhenReady(text, attempt + 1), COMPOSER_DRAFT_RETRY_MS);
   }
-}
-
-function calculateActionsMenuPosition({
-  buttonRect,
-  menuHeight,
-  viewportWidth,
-  viewportHeight,
-}: {
-  buttonRect: DOMRect;
-  menuHeight: number;
-  viewportWidth: number;
-  viewportHeight: number;
-}): ActionsMenuPosition {
-  const margin = ACTIONS_MENU_VIEWPORT_MARGIN;
-  const gap = ACTIONS_MENU_BUTTON_GAP;
-  const availableBelow = viewportHeight - buttonRect.bottom - margin - gap;
-  const availableAbove = buttonRect.top - margin - gap;
-  const openAbove = menuHeight > availableBelow && availableAbove > availableBelow;
-  const preferredTop = openAbove ? buttonRect.top - gap - menuHeight : buttonRect.bottom + gap;
-  const maxHeight = Math.max(80, Math.floor(openAbove ? availableAbove : availableBelow));
-
-  return {
-    top: Math.max(margin, Math.min(preferredTop, viewportHeight - margin - Math.min(menuHeight, maxHeight))),
-    right: Math.max(margin, viewportWidth - buttonRect.right),
-    maxHeight,
-  };
 }
 
 interface LogicalSurfaceSummary {
@@ -367,166 +287,6 @@ function getLogicalSurfaces(extension: ExtensionInstallSummary): LogicalSurfaceS
   return [...legacySurfaces, ...nativeSurfaces];
 }
 
-function ExtensionActionsMenu({
-  extension,
-  busy,
-  onOpenFolder,
-  onDelete,
-  onUpdate,
-  onReinstall,
-  onDiagnose,
-}: {
-  extension: ExtensionInstallSummary;
-  busy: boolean;
-  onOpenFolder: () => void;
-  onDelete: () => void;
-  onUpdate?: () => void;
-  onReinstall?: () => void;
-  onDiagnose?: () => void;
-}) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const [open, setOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<ActionsMenuPosition | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-      if (target instanceof Node && rootRef.current?.contains(target)) return;
-      if (target instanceof Node && menuRef.current?.contains(target)) return;
-      setOpen(false);
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setMenuPosition(null);
-      return;
-    }
-
-    function updateMenuPosition() {
-      const rect = buttonRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 0;
-      setMenuPosition({
-        ...calculateActionsMenuPosition({
-          buttonRect: rect,
-          menuHeight,
-          viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight,
-        }),
-        ...(menuHeight ? {} : { visibility: 'hidden' as const }),
-      });
-    }
-
-    updateMenuPosition();
-    window.addEventListener('resize', updateMenuPosition);
-    window.addEventListener('scroll', updateMenuPosition, true);
-    return () => {
-      window.removeEventListener('resize', updateMenuPosition);
-      window.removeEventListener('scroll', updateMenuPosition, true);
-    };
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open || menuPosition?.visibility !== 'hidden') return;
-    const rect = buttonRef.current?.getBoundingClientRect();
-    const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 0;
-    if (!rect || !menuHeight) return;
-    setMenuPosition(
-      calculateActionsMenuPosition({
-        buttonRect: rect,
-        menuHeight,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-      }),
-    );
-  }, [open, menuPosition?.visibility]);
-
-  const run = useCallback((event: ReactMouseEvent<HTMLButtonElement>, action: () => void) => {
-    event.stopPropagation();
-    setOpen(false);
-    action();
-  }, []);
-  const canDelete = canDeleteExtension(extension);
-  const hasActions = Boolean(extension.packageRoot || onDiagnose || onUpdate || onReinstall || canDelete);
-
-  if (!hasActions) {
-    return null;
-  }
-
-  return (
-    <div ref={rootRef} className="relative flex h-7 w-7 shrink-0 items-center justify-center" onClick={(event) => event.stopPropagation()}>
-      <IconButton
-        ref={buttonRef}
-        compact
-        title={busy ? 'Working…' : 'More actions'}
-        aria-label={busy ? 'Working…' : 'More actions'}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        disabled={busy}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((current) => !current);
-        }}
-      >
-        <MoreIcon />
-      </IconButton>
-      {open && menuPosition
-        ? createPortal(
-            <MenuShell
-              ref={menuRef}
-              className="fixed bottom-auto left-auto right-auto top-auto z-[70] mb-0 w-40"
-              style={{
-                top: menuPosition.top,
-                right: menuPosition.right,
-                bottom: 'auto',
-                left: 'auto',
-                maxHeight: menuPosition.maxHeight,
-                overflowY: 'auto',
-                visibility: menuPosition.visibility,
-              }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              {extension.packageRoot ? (
-                <MenuItem disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
-                  Open folder
-                </MenuItem>
-              ) : null}
-              {onDiagnose ? (
-                <MenuItem disabled={busy} onClick={(event) => run(event, onDiagnose)}>
-                  Diagnose
-                </MenuItem>
-              ) : null}
-              {onUpdate ? (
-                <MenuItem disabled={busy} onClick={(event) => run(event, onUpdate)}>
-                  Update
-                </MenuItem>
-              ) : null}
-              {onReinstall ? (
-                <MenuItem disabled={busy} onClick={(event) => run(event, onReinstall)}>
-                  Reinstall
-                </MenuItem>
-              ) : null}
-              {canDelete ? (
-                <MenuItem tone="danger" disabled={busy} onClick={(event) => run(event, onDelete)}>
-                  Delete
-                </MenuItem>
-              ) : null}
-            </MenuShell>,
-            document.body,
-          )
-        : null}
-    </div>
-  );
-}
-
 const FALLBACK_LOCKED_EXTENSION_IDS = [
   'system-extension-manager',
   'system-prompt-assembly',
@@ -556,37 +316,6 @@ function extensionSortLabel(extension: ExtensionInstallSummary): string {
   return `${extension.name || extension.id} ${extension.id}`.toLowerCase();
 }
 
-function StatusToggle({ extension, busy, onToggle }: { extension: ExtensionInstallSummary; busy: boolean; onToggle: () => void }) {
-  const locked = isLocked(extension);
-  return (
-    <span
-      className="inline-flex"
-      onClick={(event) => {
-        event.stopPropagation();
-      }}
-      title={locked ? 'This app package is required by Neon Pilot.' : undefined}
-    >
-      <Switch
-        checked={extension.enabled}
-        disabled={busy || locked}
-        onClick={onToggle}
-        aria-label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
-        label={locked ? 'Always on' : undefined}
-      />
-    </span>
-  );
-}
-
-function MoreIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="currentColor">
-      <circle cx="3" cy="8" r="1.2" />
-      <circle cx="8" cy="8" r="1.2" />
-      <circle cx="13" cy="8" r="1.2" />
-    </svg>
-  );
-}
-
 function OpenIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -603,60 +332,6 @@ function DetailsIcon() {
       <circle cx="8" cy="8" r="5.5" />
       <path d="M8 7.5v3.5" />
       <circle cx="8" cy="5.5" r=".75" fill="currentColor" />
-    </svg>
-  );
-}
-
-function GearIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <circle cx="8" cy="8" r="2.3" />
-      <path d="M8 1.8v2" />
-      <path d="M8 12.2v2" />
-      <path d="m3.6 3.6 1.4 1.4" />
-      <path d="m11 11 1.4 1.4" />
-      <path d="M1.8 8h2" />
-      <path d="M12.2 8h2" />
-      <path d="m3.6 12.4 1.4-1.4" />
-      <path d="m11 5 1.4-1.4" />
-    </svg>
-  );
-}
-
-function RefreshIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M13 7a5 5 0 0 0-8.5-3.2L3 5.3" />
-      <path d="M3 2.8v2.5h2.5" />
-      <path d="M3 9a5 5 0 0 0 8.5 3.2L13 10.7" />
-      <path d="M13 13.2v-2.5h-2.5" />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M8 1.8 9.3 5.9 13.2 8 9.3 10.1 8 14.2 6.7 10.1 2.8 8 6.7 5.9 8 1.8Z" />
-      <path d="M13 1.8v3" />
-      <path d="M11.5 3.3h3" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M8 3.5v9" />
-      <path d="M3.5 8h9" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m4 4 8 8M12 4l-8 8" />
     </svg>
   );
 }
@@ -713,14 +388,6 @@ function extensionStatusLabel(extension: ExtensionInstallSummary, unavailableCat
   if (isQuarantined(extension)) return 'Quarantined';
   if (extension.status === 'invalid') return 'Invalid';
   return extension.enabled ? 'Enabled' : 'Disabled';
-}
-
-function extensionStatusClass(extension: ExtensionInstallSummary, unavailableCatalogItem = false): string {
-  const label = extensionStatusLabel(extension, unavailableCatalogItem);
-  if (label === 'Enabled' || label === 'Required') return 'text-success';
-  if (label === 'Invalid' || label === 'Quarantined') return 'text-danger';
-  if (label === 'Unavailable') return 'text-warning';
-  return 'text-dim';
 }
 
 function extensionStatusTone(extension: ExtensionInstallSummary, unavailableCatalogItem = false): WindowedStatusTone {
@@ -973,7 +640,7 @@ function installedCatalogItemToSummary(item: InstallableExtensionCatalogItem): E
   } as ExtensionInstallSummary;
 }
 
-export function ExtensionManagerPage({ pa, context, embedded = false }: ExtensionSurfaceProps & { embedded?: boolean }) {
+export function ExtensionManagerPage({ pa }: ExtensionSurfaceProps & { embedded?: boolean }) {
   const [extensions, setExtensions] = useState<ExtensionInstallSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -985,9 +652,6 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
   const navigate = useNavigate();
   const [detailsExtensionId, setDetailsExtensionId] = useState<string | null>(null);
   const [installModalOpen, setInstallModalOpen] = useState(false);
-  const [compactExtensionsLayout, setCompactExtensionsLayout] = useState(() =>
-    typeof window === 'undefined' ? false : window.innerWidth < 1024,
-  );
   const [catalog, setCatalog] = useState<InstallableExtensionCatalogResponse | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogSources, setCatalogSources] = useState<ExtensionCatalogSource[]>([]);
@@ -1078,13 +742,6 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       window.clearInterval(catalogRefreshInterval);
     };
   }, [load, loadCatalog]);
-
-  useEffect(() => {
-    const updateLayout = () => setCompactExtensionsLayout(window.innerWidth < 1024);
-    updateLayout();
-    window.addEventListener('resize', updateLayout);
-    return () => window.removeEventListener('resize', updateLayout);
-  }, []);
 
   useEffect(() => {
     if (!pa.selection) return;
@@ -1560,7 +1217,6 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     .filter(Boolean)
     .join(' · ');
 
-  const sectionTitle = activeFilter === 'attention' ? 'Needs Attention' : activeFilter === 'platform' ? 'Platform' : 'Apps';
   const hasSearchQuery = query.trim().length > 0;
   const emptyVisibleExtensionsTitle = hasSearchQuery
     ? 'No matching apps'
@@ -1577,234 +1233,10 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
         ? 'Diagnostics, updates, invalid state, and catalog drift will appear here.'
         : 'Clear search to show all installed apps.';
 
-  const renderExtensionActions = (
-    extension: ExtensionInstallSummary,
-    busy: boolean,
-    catalogItem: InstallableExtensionCatalogItem | undefined,
-    route: string | null,
-  ) => (
-    <DataTableActionGroup className="min-w-[9rem] shrink-0">
-      {busy ? <span className="shrink-0 text-[11px] text-dim">Working…</span> : null}
-      {route && extension.enabled ? (
-        <IconLink
-          compact
-          href={route}
-          title={`Open ${extension.name}`}
-          aria-label={`Open ${extension.name}`}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            navigate(route);
-          }}
-        >
-          <OpenIcon />
-        </IconLink>
-      ) : null}
-      {hasExtensionSettings(extension) ? (
-        <IconLink
-          compact
-          href={extensionSettingsTarget(extension)}
-          title={`Configure ${extension.name} in Settings`}
-          aria-label={`Configure ${extension.name} in Settings`}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            navigate(extensionSettingsTarget(extension));
-          }}
-        >
-          <GearIcon />
-        </IconLink>
-      ) : null}
-      <IconButton
-        compact
-        title={`Details for ${extension.name}`}
-        aria-label={`Details for ${extension.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          selectExtension(extension);
-        }}
-      >
-        <DetailsIcon />
-      </IconButton>
-      <ExtensionActionsMenu
-        extension={extension}
-        busy={busy}
-        onOpenFolder={() => openFolder(extension)}
-        onDelete={() => void deleteExtension(extension)}
-        onUpdate={catalogItem?.updateAvailable && extension.packageType !== 'system' ? () => void updateExtension(extension) : undefined}
-        onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
-        onDiagnose={extension.packageType !== 'system' && pa.extensions?.callAction ? () => void diagnoseExtension(extension) : undefined}
-      />
-    </DataTableActionGroup>
-  );
-
-  const renderExtensionRows = (items: ExtensionInstallSummary[], options: { showEnablement: boolean }) =>
-    items.map((extension) => {
-      const route = firstRoute(extension);
-      const busy = busyId === extension.id;
-      const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
-      const unavailableCatalogItem =
-        extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogItem;
-      const selected = detailsExtensionId === extension.id;
-      return (
-        <DataTableRow
-          key={`installed:${extension.id}`}
-          className={cx('group cursor-default', selected && 'ui-selected-row-accent')}
-          onClick={() => selectExtension(extension)}
-        >
-          <DataTableCell className="min-w-0 py-3 pl-0 pr-6">
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-[14px] font-semibold text-primary">{extension.name}</span>
-                <span className="shrink-0 text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
-              </div>
-              {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
-                <div className="mt-1 text-[12px] text-danger">
-                  {extension.status === 'invalid'
-                    ? (extension.errors?.[0] ?? 'Invalid app package manifest.')
-                    : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0])}
-                </div>
-              ) : null}
-              {unavailableCatalogItem ? (
-                <div className="mt-1 text-[12px] text-warning">No longer available from the app catalog.</div>
-              ) : null}
-              {catalogItem?.updateAvailable ? (
-                <div className="mt-1 text-[12px] text-accent">
-                  Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}
-                  {' -> '}
-                  {catalogItem.availableVersion ?? catalogItem.version}
-                </div>
-              ) : null}
-            </div>
-          </DataTableCell>
-          <DataTableCell className="whitespace-nowrap py-3 text-[12px]">
-            <span className={extensionStatusClass(extension, unavailableCatalogItem)}>
-              {extensionStatusLabel(extension, unavailableCatalogItem)}
-            </span>
-          </DataTableCell>
-          <DataTableCell className="min-w-0 py-3 text-[12px] leading-5 text-secondary">
-            <span className="block truncate" title={formatAppearsInSummary(extension)}>
-              {formatAppearsInSummary(extension)}
-            </span>
-          </DataTableCell>
-          {options.showEnablement ? (
-            <DataTableCell className="whitespace-nowrap py-3">
-              {extension.status === 'invalid' ? (
-                <span className="text-[12px] text-danger">Invalid</span>
-              ) : (
-                <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
-              )}
-            </DataTableCell>
-          ) : null}
-          <DataTableCell className="w-40 min-w-40 py-3 pr-0 text-right">
-            {renderExtensionActions(extension, busy, catalogItem, route)}
-          </DataTableCell>
-        </DataTableRow>
-      );
-    });
-
-  const renderExtensionCards = (items: ExtensionInstallSummary[], options: { showEnablement: boolean }) => (
-    <div className="divide-y divide-border-subtle border-y border-border-subtle lg:hidden">
-      {items.map((extension) => {
-        const route = firstRoute(extension);
-        const busy = busyId === extension.id;
-        const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
-        const unavailableCatalogItem =
-          extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogItem;
-        const selected = detailsExtensionId === extension.id;
-        return (
-          <div
-            key={`installed-card:${extension.id}`}
-            className={cx('space-y-3 py-4', selected && 'ui-selected-row-accent px-3')}
-            onClick={() => selectExtension(extension)}
-          >
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-[14px] font-semibold text-primary">{extension.name}</span>
-                  <span className="text-[11px] text-dim">{extensionSourceLabel(extension)}</span>
-                </div>
-              </div>
-              <span className={cx('shrink-0 text-[12px]', extensionStatusClass(extension, unavailableCatalogItem))}>
-                {extensionStatusLabel(extension, unavailableCatalogItem)}
-              </span>
-            </div>
-            {extension.status === 'invalid' || extension.healthError || extension.buildError || extension.diagnostics?.length ? (
-              <div className="text-[12px] text-danger">
-                {extension.status === 'invalid'
-                  ? (extension.errors?.[0] ?? 'Invalid app package manifest.')
-                  : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0])}
-              </div>
-            ) : null}
-            {unavailableCatalogItem ? <div className="text-[12px] text-warning">No longer available from the app catalog.</div> : null}
-            {catalogItem?.updateAvailable ? (
-              <div className="text-[12px] text-accent">
-                Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}
-                {' -> '}
-                {catalogItem.availableVersion ?? catalogItem.version}
-              </div>
-            ) : null}
-            <div
-              className={cx(
-                'grid gap-3 sm:items-center',
-                options.showEnablement ? 'sm:grid-cols-[minmax(0,1fr)_auto_auto]' : 'sm:grid-cols-[minmax(0,1fr)_auto]',
-              )}
-            >
-              <div className="min-w-0 text-[12px] leading-5 text-secondary">{formatAppearsInSummary(extension)}</div>
-              {options.showEnablement ? (
-                <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-                  {extension.status === 'invalid' ? (
-                    <span className="text-[12px] text-danger">Invalid</span>
-                  ) : (
-                    <StatusToggle extension={extension} busy={busy} onToggle={() => toggleExtension(extension)} />
-                  )}
-                </div>
-              ) : null}
-              <div className="flex justify-start sm:justify-end" onClick={(event) => event.stopPropagation()}>
-                {renderExtensionActions(extension, busy, catalogItem, route)}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const renderExtensionTable = (items: ExtensionInstallSummary[], options: { showEnablement?: boolean } = {}) => {
-    const showEnablement = options.showEnablement !== false;
-    return compactExtensionsLayout ? (
-      renderExtensionCards(items, { showEnablement })
-    ) : (
-      <DataTable className="overflow-auto" tableClassName="min-w-full table-fixed">
-        <colgroup>
-          <col className="w-[38%]" />
-          <col className="w-[8rem]" />
-          <col className="w-[24%]" />
-          {showEnablement ? <col className="w-[7rem]" /> : null}
-          <col className="w-36" />
-        </colgroup>
-        <DataTableHead>
-          <DataTableRow>
-            <DataTableHeaderCell className="pl-0">App</DataTableHeaderCell>
-            <DataTableHeaderCell>Status</DataTableHeaderCell>
-            <DataTableHeaderCell className="whitespace-nowrap">Appears in</DataTableHeaderCell>
-            {showEnablement ? <DataTableHeaderCell>Enabled</DataTableHeaderCell> : null}
-            <DataTableHeaderCell className="pr-0 text-right">Actions</DataTableHeaderCell>
-          </DataTableRow>
-        </DataTableHead>
-        <DataTableBody>{renderExtensionRows(items, { showEnablement })}</DataTableBody>
-      </DataTable>
-    );
-  };
-
   const startExtensionBuildConversation = useCallback(() => {
     navigate('/conversations/new', { state: { suppressOnboardingAutoStart: true } });
     window.setTimeout(() => draftComposerTextWhenReady(BUILD_EXTENSION_PROMPT), 0);
   }, [navigate]);
-
-  if (error && context.shellPresentation !== 'windowed') {
-    return <ErrorState message={error} />;
-  }
 
   const selectedExtension = detailsExtensionId
     ? (visibleExtensions.find((extension) => extension.id === detailsExtensionId) ?? null)
@@ -1812,435 +1244,189 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
   const selectedExtensionCatalogItem = selectedExtension ? catalog?.extensions.find((item) => item.id === selectedExtension.id) : undefined;
   const selectedExtensionBusy = selectedExtension ? busyId === selectedExtension.id : false;
 
-  if (context.shellPresentation === 'windowed') {
-    const filterItems: Array<{ id: ExtensionFilter; label: string; meta: string }> = [
-      { id: 'all', label: 'Installed', meta: `${installedExtensions.filter((extension) => !isLocked(extension)).length}` },
-      { id: 'platform', label: 'Platform', meta: `${visiblePlatformExtensionCount}` },
-      { id: 'attention', label: 'Attention', meta: `${installedExtensions.filter(extensionHasIssue).length}` },
-    ];
-
-    return (
-      <>
-        <WindowedPageShell layout="standard" className="extension-manager-page-windowed">
-          <WindowedPageMain
-            title={sectionTitle}
-            actions={
-              <>
-                <WindowedSegmentedControl
-                  ariaLabel="App view"
-                  accent="extensions"
-                  value={activeFilter}
-                  options={filterItems.map((item) => ({ id: item.id, label: `${item.label} ${item.meta}` }))}
-                  onChange={(value) => setActiveFilter(value as ExtensionFilter)}
-                />
-                <WindowedPageButton
-                  disabled={busyId === 'update-all'}
-                  onClick={() => {
-                    notifyExtensionRegistryChanged();
-                    void load();
-                    loadCatalog();
-                  }}
-                >
-                  Reload
-                </WindowedPageButton>
-                {updatableExtensions.length ? (
-                  <WindowedPageButton disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
-                    {busyId === 'update-all' ? 'Updating' : `Update all (${updatableExtensions.length})`}
-                  </WindowedPageButton>
-                ) : null}
-                <WindowedPageButton tone="accent" disabled={busyId === 'update-all'} onClick={startExtensionBuildConversation}>
-                  Build
-                </WindowedPageButton>
-                <WindowedPageButton disabled={busyId === 'update-all'} onClick={() => setInstallModalOpen(true)}>
-                  Install
-                </WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedPageSection title="Sources" meta={`${catalogSources.length} sources`}>
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Catalog', value: catalogError ? 'Unavailable' : catalog ? 'Loaded' : 'Loading' },
-                  { label: 'Available', value: `${visibleCatalogExtensions.length}` },
-                  { label: 'Visible', value: sectionSummary },
-                ]}
-              />
-            </WindowedPageSection>
-
-            <WindowedPageSection>
-              <WindowedToolbar>
-                <WindowedTextInput
-                  value={query}
-                  onChange={(event) => setQuery(event.currentTarget.value)}
-                  placeholder="Search apps"
-                  aria-label="Search apps"
-                />
-              </WindowedToolbar>
-            </WindowedPageSection>
-
-            {notice ? (
-              <WindowedPageSection>
-                <WindowedExtensionNoticeBox notice={notice} />
-              </WindowedPageSection>
-            ) : null}
-
-            {error ? (
-              <WindowedPageSection>
-                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
-              </WindowedPageSection>
-            ) : null}
-
-            {catalogError ? (
-              <WindowedPageSection>
-                <WindowedStateBlock tone="danger" title="Could not load installable apps">
-                  {catalogError}
-                </WindowedStateBlock>
-              </WindowedPageSection>
-            ) : null}
-
-            <WindowedPageSection title="Installed" meta={sectionSummary}>
-              {loading ? (
-                <WindowedLoadingState label="Loading apps" />
-              ) : extensions.length === 0 ? (
-                <WindowedEmptyState>Add capabilities to Neon Pilot.</WindowedEmptyState>
-              ) : visibleExtensions.length === 0 ? (
-                <WindowedEmptyState>{emptyVisibleExtensionsTitle}</WindowedEmptyState>
-              ) : (
-                <WindowedDataTable
-                  columns={[{ label: 'App' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}
-                  columnTemplate="minmax(16rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.72fr)"
-                >
-                  {visibleExtensions.map((extension) => {
-                    const route = firstRoute(extension);
-                    const busy = busyId === extension.id;
-                    const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
-                    const unavailableCatalogItem =
-                      extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogItem;
-                    const showEnablement = activeFilter !== 'platform' && extension.status !== 'invalid';
-                    return (
-                      <WindowedDataRow
-                        key={extension.id}
-                        name={extension.name}
-                        meta={`${extensionSourceLabel(extension)} · ${formatAppearsInSummary(extension)}`}
-                        status={
-                          <span className="wos-status-stack">
-                            <WindowedBadge tone={extensionStatusTone(extension, unavailableCatalogItem)}>
-                              {extensionStatusLabel(extension, unavailableCatalogItem)}
-                            </WindowedBadge>
-                            {unavailableCatalogItem ? (
-                              <span className="wos-status-note" data-tone="danger">
-                                Unavailable
-                              </span>
-                            ) : catalogItem?.updateAvailable ? (
-                              <span className="wos-status-note" data-tone="accent">
-                                {catalogItem.availableVersion ?? catalogItem.version}
-                              </span>
-                            ) : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]) ? (
-                              <span className="wos-status-note" data-tone="danger">
-                                {extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]}
-                              </span>
-                            ) : null}
-                          </span>
-                        }
-                        action={
-                          <span className="wos-inline-actions">
-                            {showEnablement ? (
-                              <WindowedToggle
-                                checked={extension.enabled}
-                                disabled={busy || isLocked(extension)}
-                                label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
-                                accent="extensions"
-                                onChange={() => toggleExtension(extension)}
-                              />
-                            ) : null}
-                            <WindowedPageButton
-                              aria-label={`Details for ${extension.name}`}
-                              title={`Details for ${extension.name}`}
-                              density="icon"
-                              onClick={() => selectExtension(extension)}
-                            >
-                              <DetailsIcon />
-                            </WindowedPageButton>
-                            {route && extension.enabled ? (
-                              <WindowedPageButton
-                                aria-label={`Open ${extension.name}`}
-                                title={`Open ${extension.name}`}
-                                density="icon"
-                                onClick={() => navigate(route)}
-                              >
-                                <OpenIcon />
-                              </WindowedPageButton>
-                            ) : null}
-                          </span>
-                        }
-                        selected={selectedExtension?.id === extension.id}
-                        accent="extensions"
-                        onSelect={() => selectExtension(extension)}
-                      />
-                    );
-                  })}
-                </WindowedDataTable>
-              )}
-            </WindowedPageSection>
-          </WindowedPageMain>
-        </WindowedPageShell>
-
-        {installModalOpen ? (
-          <WindowedInstallExtensionDialog
-            catalogItems={visibleCatalogExtensions}
-            catalogSources={catalogSources}
-            catalogSourceInput={catalogSourceInput}
-            catalogSourceErrors={catalog?.sourceErrors ?? []}
-            catalogBusyId={busyId}
-            onCatalogSourceInputChange={setCatalogSourceInput}
-            onInstallCatalog={(item) => void installCatalogExtension(item)}
-            onAddCatalogSource={() => void addCatalogSource()}
-            onRemoveCatalogSource={(source) => void removeCatalogSource(source)}
-            onClose={() => setInstallModalOpen(false)}
-          />
-        ) : null}
-
-        {selectedExtension ? (
-          <WindowedDialog
-            title={selectedExtension.name}
-            meta={`${extensionStatusLabel(selectedExtension)} · ${extensionSourceLabel(selectedExtension)}`}
-            accent="extensions"
-            parentWindowTitle="App Manager"
-            onClose={() => setDetailsExtensionId(null)}
-            actions={
-              <>
-                {selectedExtensionBusy ? <span className="wos-app-detail-busy">Working</span> : null}
-                {firstRoute(selectedExtension) && selectedExtension.enabled ? (
-                  <WindowedPageButton
-                    disabled={selectedExtensionBusy}
-                    onClick={() => {
-                      navigate(firstRoute(selectedExtension)!);
-                      setDetailsExtensionId(null);
-                    }}
-                  >
-                    Open
-                  </WindowedPageButton>
-                ) : null}
-                {hasExtensionSettings(selectedExtension) ? (
-                  <WindowedPageButton
-                    disabled={selectedExtensionBusy}
-                    onClick={() => {
-                      navigate(extensionSettingsTarget(selectedExtension));
-                      setDetailsExtensionId(null);
-                    }}
-                  >
-                    Settings
-                  </WindowedPageButton>
-                ) : null}
-                {selectedExtension.packageRoot ? (
-                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => openFolder(selectedExtension)}>
-                    Folder
-                  </WindowedPageButton>
-                ) : null}
-                {selectedExtension.packageType !== 'system' && pa.extensions?.callAction ? (
-                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void diagnoseExtension(selectedExtension)}>
-                    Diagnose
-                  </WindowedPageButton>
-                ) : null}
-                {selectedExtensionCatalogItem?.updateAvailable && selectedExtension.packageType !== 'system' ? (
-                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void updateExtension(selectedExtension)}>
-                    Update
-                  </WindowedPageButton>
-                ) : null}
-                {selectedExtensionCatalogItem && selectedExtension.packageType !== 'system' ? (
-                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void reinstallExtension(selectedExtension)}>
-                    Reinstall
-                  </WindowedPageButton>
-                ) : null}
-                {canDeleteExtension(selectedExtension) ? (
-                  <WindowedPageButton
-                    tone="danger"
-                    disabled={selectedExtensionBusy}
-                    onClick={() => void deleteExtension(selectedExtension)}
-                  >
-                    Delete
-                  </WindowedPageButton>
-                ) : null}
-              </>
-            }
-          >
-            <div className="wos-app-detail-grid">
-              <WindowedKeyValueList
-                items={[
-                  { label: 'State', value: extensionStatusLabel(selectedExtension) },
-                  { label: 'Source', value: extensionSourceLabel(selectedExtension) },
-                  { label: 'Version', value: selectedExtension.version ? `v${selectedExtension.version}` : 'Unknown' },
-                  { label: 'Settings', value: hasExtensionSettings(selectedExtension) ? 'Configurable' : 'None' },
-                ]}
-              />
-              <WindowedKeyValueList
-                items={[
-                  { label: 'Appears in', value: formatAppearsInSummary(selectedExtension) },
-                  { label: 'Skills', value: formatSkillSummary(selectedExtension) || 'None' },
-                  { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
-                ]}
-              />
-              {selectedExtension.description ? <p className="wos-app-detail-description">{selectedExtension.description}</p> : null}
-              {selectedExtension.permissionState && selectedExtension.permissionState.length > 0 ? (
-                <div className="wos-app-detail-permissions">
-                  <span className="wos-field-label">Permissions</span>
-                  <WindowedDataTable
-                    columns={[{ label: 'Permission' }, { label: 'State' }, { label: '', align: 'right' }]}
-                    columnTemplate="minmax(12rem, 1fr) minmax(6rem, 0.35fr) minmax(10rem, 0.5fr)"
-                  >
-                    {selectedExtension.permissionState.map((ps) => {
-                      const busy = selectedExtensionBusy || busyId === `permission:${selectedExtension.id}`;
-                      return (
-                        <WindowedDataRow
-                          key={ps.permission}
-                          name={formatPermissionLabel(ps.permission)}
-                          meta={ps.permission}
-                          status={
-                            <WindowedBadge tone={ps.granted ? 'positive' : 'neutral'}>{ps.granted ? 'Granted' : 'Revoked'}</WindowedBadge>
-                          }
-                          action={
-                            ps.locked ? (
-                              <span className="text-dim text-[11px]">Required by system</span>
-                            ) : (
-                              <WindowedToggle
-                                checked={ps.granted}
-                                disabled={busy}
-                                accent="extensions"
-                                label={`${ps.granted ? 'Revoke' : 'Grant'} ${ps.permission}`}
-                                onChange={() => togglePermission(selectedExtension, ps.permission, !ps.granted)}
-                              />
-                            )
-                          }
-                        />
-                      );
-                    })}
-                  </WindowedDataTable>
-                </div>
-              ) : null}
-            </div>
-          </WindowedDialog>
-        ) : null}
-      </>
-    );
-  }
+  const filterItems: Array<{ id: ExtensionFilter; label: string; meta: string }> = [
+    { id: 'all', label: 'Installed', meta: `${installedExtensions.filter((extension) => !isLocked(extension)).length}` },
+    { id: 'platform', label: 'Platform', meta: `${visiblePlatformExtensionCount}` },
+    { id: 'attention', label: 'Attention', meta: `${installedExtensions.filter(extensionHasIssue).length}` },
+  ];
 
   return (
     <>
-      <div className={embedded ? 'min-w-0' : 'h-full overflow-y-auto'}>
-        <div className="min-w-0">
-          <AppPageLayout
-            shellClassName={embedded ? 'max-w-none px-0 py-0' : undefined}
-            contentClassName={embedded ? 'space-y-6' : 'flex flex-col gap-7'}
-          >
-            {!embedded ? <AppPageIntro title="App Manager" /> : null}
-
-            <DataTableToolbar
-              tabs={
-                <TabList ariaLabel="App filters" variant="underline">
-                  {(
-                    [
-                      ['all', 'All'],
-                      ['platform', 'Platform'],
-                      ['attention', 'Attention'],
-                    ] as const
-                  ).map(([id, label]) => (
-                    <TabButton key={id} active={activeFilter === id} onClick={() => setActiveFilter(id)}>
-                      {label}
-                    </TabButton>
-                  ))}
-                </TabList>
-              }
-              summary={sectionSummary}
-              search={
-                <SearchInput
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search apps…"
-                  className="max-w-full"
-                />
-              }
-              actions={
-                <>
-                  <IconButton
-                    compact
-                    type="button"
-                    aria-label="Reload apps"
-                    title="Reload apps"
-                    disabled={busyId === 'update-all'}
-                    onClick={() => {
-                      notifyExtensionRegistryChanged();
-                      void load();
-                      loadCatalog();
-                    }}
-                  >
-                    <RefreshIcon />
-                  </IconButton>
-                  {updatableExtensions.length ? (
-                    <Button title="Update all apps" disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
-                      <RefreshIcon />
-                      {busyId === 'update-all' ? 'Updating...' : `Update all (${updatableExtensions.length})`}
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="action"
-                    tone="accent"
-                    data-onboarding-target="build-extension"
-                    title="Build app with agent"
-                    disabled={busyId === 'update-all'}
-                    onClick={startExtensionBuildConversation}
-                  >
-                    <SparkIcon />
-                    Build with agent
-                  </Button>
-                  <IconButton
-                    compact
-                    aria-label="Install app"
-                    title="Install app"
-                    disabled={busyId === 'update-all'}
-                    onClick={() => setInstallModalOpen(true)}
-                  >
-                    <PlusIcon />
-                  </IconButton>
-                </>
-              }
+      <WindowedPageShell layout="standard" className="extension-manager-page-windowed">
+        <WindowedPageMain
+          title="App Manager"
+          actions={
+            <>
+              <WindowedSegmentedControl
+                ariaLabel="App view"
+                accent="extensions"
+                value={activeFilter}
+                options={filterItems.map((item) => ({ id: item.id, label: `${item.label} ${item.meta}` }))}
+                onChange={(value) => setActiveFilter(value as ExtensionFilter)}
+              />
+              <WindowedPageButton
+                disabled={busyId === 'update-all'}
+                onClick={() => {
+                  notifyExtensionRegistryChanged();
+                  void load();
+                  loadCatalog();
+                }}
+              >
+                Reload
+              </WindowedPageButton>
+              {updatableExtensions.length ? (
+                <WindowedPageButton disabled={busyId !== null} onClick={() => void updateAllExtensions()}>
+                  {busyId === 'update-all' ? 'Updating' : `Update all (${updatableExtensions.length})`}
+                </WindowedPageButton>
+              ) : null}
+              <WindowedPageButton
+                tone="accent"
+                disabled={busyId === 'update-all'}
+                data-onboarding-target="build-extension"
+                onClick={startExtensionBuildConversation}
+              >
+                Build with agent
+              </WindowedPageButton>
+              <WindowedPageButton aria-label="Install app" disabled={busyId === 'update-all'} onClick={() => setInstallModalOpen(true)}>
+                Install app
+              </WindowedPageButton>
+            </>
+          }
+        >
+          <WindowedPageSection title="Sources" meta={`${catalogSources.length} sources`}>
+            <WindowedKeyValueList
+              items={[
+                { label: 'Catalog', value: catalogError ? 'Unavailable' : catalog ? 'Loaded' : 'Loading' },
+                { label: 'Available', value: `${visibleCatalogExtensions.length}` },
+                { label: 'Visible', value: sectionSummary },
+              ]}
             />
+          </WindowedPageSection>
 
-            {notice ? (
-              <div className="sticky top-0 z-20 bg-base py-2">
-                <ExtensionNoticeBox notice={notice} />
-              </div>
-            ) : null}
+          <WindowedPageSection>
+            <WindowedToolbar>
+              <WindowedTextInput
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                placeholder="Search apps…"
+                aria-label="Search apps"
+              />
+            </WindowedToolbar>
+          </WindowedPageSection>
 
-            {catalogError ? <ErrorState title="Could not load installable apps" message={catalogError} /> : null}
+          {notice ? (
+            <WindowedPageSection>
+              <WindowedExtensionNoticeBox notice={notice} />
+            </WindowedPageSection>
+          ) : null}
 
-            <section className="space-y-5">
-              {activeFilter === 'all' ? null : <h2 className="text-[15px] font-semibold leading-tight text-primary">{sectionTitle}</h2>}
-              {loading ? (
-                <QuietLoadingState label="Loading apps" className="min-h-24" />
-              ) : extensions.length === 0 ? (
-                <EmptyState
-                  title="Add capabilities to Neon Pilot"
-                  body="Apps add native pages, tools, settings, skills, and workflow surfaces."
-                  steps={[
-                    'Install a released app from a configured source.',
-                    'Ask an agent to build a small native app.',
-                    'Use this page to validate, reload, enable, and inspect it.',
-                  ]}
-                  align="start"
-                />
-              ) : visibleExtensions.length === 0 ? (
-                <EmptyState title={emptyVisibleExtensionsTitle} body={emptyVisibleExtensionsBody} />
-              ) : (
-                renderExtensionTable(visibleExtensions, { showEnablement: activeFilter !== 'platform' })
-              )}
-            </section>
-          </AppPageLayout>
-        </div>
-      </div>
+          {error ? (
+            <WindowedPageSection>
+              <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+            </WindowedPageSection>
+          ) : null}
+
+          {catalogError ? (
+            <WindowedPageSection>
+              <WindowedStateBlock tone="danger" title="Could not load installable apps">
+                {catalogError}
+              </WindowedStateBlock>
+            </WindowedPageSection>
+          ) : null}
+
+          <WindowedPageSection title="Installed" meta={sectionSummary}>
+            {loading ? (
+              <WindowedLoadingState label="Loading apps" />
+            ) : extensions.length === 0 ? (
+              <WindowedEmptyState title="Add capabilities to Neon Pilot.">
+                Apps add native pages, tools, settings, skills, and workflow surfaces.
+              </WindowedEmptyState>
+            ) : visibleExtensions.length === 0 ? (
+              <WindowedEmptyState title={emptyVisibleExtensionsTitle}>{emptyVisibleExtensionsBody}</WindowedEmptyState>
+            ) : (
+              <WindowedDataTable
+                columns={[{ label: 'App' }, { label: 'Status' }, { label: 'Controls', align: 'right' }]}
+                columnTemplate="minmax(16rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.72fr)"
+              >
+                {visibleExtensions.map((extension) => {
+                  const route = firstRoute(extension);
+                  const busy = busyId === extension.id;
+                  const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
+                  const unavailableCatalogItem =
+                    extension.packageType !== 'system' && extension.id.startsWith('system-') && Boolean(catalog) && !catalogItem;
+                  const showEnablement = activeFilter !== 'platform' && extension.status !== 'invalid';
+                  return (
+                    <WindowedDataRow
+                      key={extension.id}
+                      name={extension.name}
+                      meta={`${extensionSourceLabel(extension)} · ${formatAppearsInSummary(extension)}`}
+                      status={
+                        <span className="wos-status-stack">
+                          <WindowedBadge tone={extensionStatusTone(extension, unavailableCatalogItem)}>
+                            {extensionStatusLabel(extension, unavailableCatalogItem)}
+                          </WindowedBadge>
+                          {unavailableCatalogItem ? (
+                            <span className="wos-status-note" data-tone="danger">
+                              Unavailable
+                            </span>
+                          ) : catalogItem?.updateAvailable ? (
+                            <span className="wos-status-note" data-tone="accent">
+                              Update available: {catalogItem.installedVersion ?? extension.version ?? 'installed'}
+                              {' -> '}
+                              {catalogItem.availableVersion ?? catalogItem.version}
+                            </span>
+                          ) : (extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]) ? (
+                            <span className="wos-status-note" data-tone="danger">
+                              {extension.healthError ?? extension.buildError ?? extension.diagnostics?.[0]}
+                            </span>
+                          ) : null}
+                        </span>
+                      }
+                      action={
+                        <span className="wos-inline-actions">
+                          {showEnablement ? (
+                            <WindowedToggle
+                              checked={extension.enabled}
+                              disabled={busy || isLocked(extension)}
+                              label={`${extension.enabled ? 'Disable' : 'Enable'} ${extension.name}`}
+                              accent="extensions"
+                              onChange={() => toggleExtension(extension)}
+                            />
+                          ) : null}
+                          <WindowedPageButton
+                            aria-label={`Details for ${extension.name}`}
+                            title={`Details for ${extension.name}`}
+                            density="icon"
+                            onClick={() => selectExtension(extension)}
+                          >
+                            <DetailsIcon />
+                          </WindowedPageButton>
+                          {route && extension.enabled ? (
+                            <WindowedPageButton
+                              aria-label={`Open ${extension.name}`}
+                              title={`Open ${extension.name}`}
+                              density="icon"
+                              onClick={() => navigate(route)}
+                            >
+                              <OpenIcon />
+                            </WindowedPageButton>
+                          ) : null}
+                        </span>
+                      }
+                      selected={selectedExtension?.id === extension.id}
+                      accent="extensions"
+                      onSelect={() => selectExtension(extension)}
+                    />
+                  );
+                })}
+              </WindowedDataTable>
+            )}
+          </WindowedPageSection>
+        </WindowedPageMain>
+      </WindowedPageShell>
 
       {installModalOpen ? (
-        <InstallExtensionModal
+        <WindowedInstallExtensionDialog
           catalogItems={visibleCatalogExtensions}
           catalogSources={catalogSources}
           catalogSourceInput={catalogSourceInput}
@@ -2253,144 +1439,126 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
           onClose={() => setInstallModalOpen(false)}
         />
       ) : null}
+
+      {selectedExtension ? (
+        <WindowedDialog
+          title={selectedExtension.name}
+          meta={`${extensionStatusLabel(selectedExtension)} · ${extensionSourceLabel(selectedExtension)}`}
+          accent="extensions"
+          parentWindowTitle="App Manager"
+          onClose={() => setDetailsExtensionId(null)}
+          actions={
+            <>
+              {selectedExtensionBusy ? <span className="wos-app-detail-busy">Working</span> : null}
+              {firstRoute(selectedExtension) && selectedExtension.enabled ? (
+                <WindowedPageButton
+                  disabled={selectedExtensionBusy}
+                  onClick={() => {
+                    navigate(firstRoute(selectedExtension)!);
+                    setDetailsExtensionId(null);
+                  }}
+                >
+                  Open
+                </WindowedPageButton>
+              ) : null}
+              {hasExtensionSettings(selectedExtension) ? (
+                <WindowedPageButton
+                  disabled={selectedExtensionBusy}
+                  onClick={() => {
+                    navigate(extensionSettingsTarget(selectedExtension));
+                    setDetailsExtensionId(null);
+                  }}
+                >
+                  Settings
+                </WindowedPageButton>
+              ) : null}
+              {selectedExtension.packageRoot ? (
+                <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => openFolder(selectedExtension)}>
+                  Folder
+                </WindowedPageButton>
+              ) : null}
+              {selectedExtension.packageType !== 'system' && pa.extensions?.callAction ? (
+                <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void diagnoseExtension(selectedExtension)}>
+                  Diagnose
+                </WindowedPageButton>
+              ) : null}
+              {selectedExtensionCatalogItem?.updateAvailable && selectedExtension.packageType !== 'system' ? (
+                <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void updateExtension(selectedExtension)}>
+                  Update
+                </WindowedPageButton>
+              ) : null}
+              {selectedExtensionCatalogItem && selectedExtension.packageType !== 'system' ? (
+                <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void reinstallExtension(selectedExtension)}>
+                  Reinstall
+                </WindowedPageButton>
+              ) : null}
+              {canDeleteExtension(selectedExtension) ? (
+                <WindowedPageButton tone="danger" disabled={selectedExtensionBusy} onClick={() => void deleteExtension(selectedExtension)}>
+                  Delete
+                </WindowedPageButton>
+              ) : null}
+            </>
+          }
+        >
+          <div className="wos-app-detail-grid">
+            <WindowedKeyValueList
+              items={[
+                { label: 'State', value: extensionStatusLabel(selectedExtension) },
+                { label: 'Source', value: extensionSourceLabel(selectedExtension) },
+                { label: 'Version', value: selectedExtension.version ? `v${selectedExtension.version}` : 'Unknown' },
+                { label: 'Settings', value: hasExtensionSettings(selectedExtension) ? 'Configurable' : 'None' },
+              ]}
+            />
+            <WindowedKeyValueList
+              items={[
+                { label: 'Appears in', value: formatAppearsInSummary(selectedExtension) },
+                { label: 'Skills', value: formatSkillSummary(selectedExtension) || 'None' },
+                { label: 'Tools', value: formatToolSummary(selectedExtension) || 'None' },
+              ]}
+            />
+            {selectedExtension.description ? <p className="wos-app-detail-description">{selectedExtension.description}</p> : null}
+            {selectedExtension.permissionState && selectedExtension.permissionState.length > 0 ? (
+              <div className="wos-app-detail-permissions">
+                <span className="wos-field-label">Permissions</span>
+                <WindowedDataTable
+                  columns={[{ label: 'Permission' }, { label: 'State' }, { label: '', align: 'right' }]}
+                  columnTemplate="minmax(12rem, 1fr) minmax(6rem, 0.35fr) minmax(10rem, 0.5fr)"
+                >
+                  {selectedExtension.permissionState.map((ps) => {
+                    const busy = selectedExtensionBusy || busyId === `permission:${selectedExtension.id}`;
+                    return (
+                      <WindowedDataRow
+                        key={ps.permission}
+                        name={formatPermissionLabel(ps.permission)}
+                        meta={ps.permission}
+                        status={
+                          <WindowedBadge tone={ps.granted ? 'positive' : 'neutral'}>{ps.granted ? 'Granted' : 'Revoked'}</WindowedBadge>
+                        }
+                        action={
+                          ps.locked ? (
+                            <span className="text-dim text-[11px]">Required by system</span>
+                          ) : (
+                            <WindowedToggle
+                              checked={ps.granted}
+                              disabled={busy}
+                              accent="extensions"
+                              label={`${ps.granted ? 'Revoke' : 'Grant'} ${ps.permission}`}
+                              onChange={() => togglePermission(selectedExtension, ps.permission, !ps.granted)}
+                            />
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </WindowedDataTable>
+              </div>
+            ) : null}
+          </div>
+        </WindowedDialog>
+      ) : null}
     </>
   );
 }
-
-function InstallExtensionModal({
-  catalogItems,
-  catalogSources,
-  catalogSourceInput,
-  catalogSourceErrors,
-  catalogBusyId,
-  onCatalogSourceInputChange,
-  onInstallCatalog,
-  onAddCatalogSource,
-  onRemoveCatalogSource,
-  onClose,
-}: {
-  catalogItems: InstallableExtensionCatalogItem[];
-  catalogSources: ExtensionCatalogSource[];
-  catalogSourceInput: string;
-  catalogSourceErrors: Array<{ sourceId: string; message: string }>;
-  catalogBusyId: string | null;
-  onCatalogSourceInputChange: (source: string) => void;
-  onInstallCatalog: (item: InstallableExtensionCatalogItem) => void;
-  onAddCatalogSource: () => void;
-  onRemoveCatalogSource: (source: ExtensionCatalogSource) => void;
-  onClose: () => void;
-}) {
-  const [marketplaceQuery, setMarketplaceQuery] = useState('');
-  const visibleCatalogItems = useMemo(() => {
-    const normalizedQuery = marketplaceQuery.trim().toLowerCase();
-    if (!normalizedQuery) return catalogItems;
-    return catalogItems.filter((item) =>
-      `${item.name} ${item.id} ${item.description ?? ''} ${item.ecosystem ?? ''} ${item.packageType ?? ''}`
-        .toLowerCase()
-        .includes(normalizedQuery),
-    );
-  }, [catalogItems, marketplaceQuery]);
-
-  return (
-    <Dialog
-      aria-label="Install app"
-      className="max-w-3xl bg-base"
-      onClose={onClose}
-      style={{
-        width: 'min(52rem, calc(100vw - var(--neon-pilot-sidebar-offset, 0px) - 2rem))',
-        maxHeight: 'min(44rem, calc(100vh - 7.5rem))',
-        marginBlock: '2rem',
-        marginInlineStart: 'var(--neon-pilot-sidebar-offset, 0px)',
-        alignSelf: 'flex-start',
-      }}
-    >
-      <DialogHeader
-        title="Install App"
-        description="Install native Neon Pilot apps from configured app repositories."
-        className="px-6 py-4"
-        actions={
-          <IconButton type="button" onClick={onClose} aria-label="Close install dialog" title="Close">
-            <CloseIcon />
-          </IconButton>
-        }
-      />
-
-      <DialogBody className="space-y-5 px-6 py-5">
-        <section className="space-y-2">
-          <SectionLabel>App repositories</SectionLabel>
-          <ExtensionRepositoriesControl
-            sources={catalogSources}
-            sourceErrors={catalogSourceErrors}
-            input={catalogSourceInput}
-            busyId={catalogBusyId}
-            onInputChange={onCatalogSourceInputChange}
-            onAdd={onAddCatalogSource}
-            onRemove={onRemoveCatalogSource}
-          />
-        </section>
-
-        {catalogItems.length ? (
-          <section className="space-y-2">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <SectionLabel>Available apps</SectionLabel>
-              <SearchInput
-                className="h-8 min-w-0 bg-base text-[12px] sm:w-72"
-                value={marketplaceQuery}
-                onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
-                placeholder="Search apps"
-              />
-            </div>
-            <ResourceList>
-              {visibleCatalogItems.map((item) => {
-                const itemBusy = catalogBusyId === item.id;
-                const plannedPackage = Boolean(item.packageType && item.packageType !== 'extension' && !item.packageSource);
-                const unavailablePackage = plannedPackage || Boolean(item.unavailableReason);
-                return (
-                  <ResourceListRow
-                    key={item.id}
-                    title={item.name}
-                    detail={
-                      <>
-                        {item.description || 'Neon Pilot app'}
-                        {item.compatibilityWarning ? <span className="block text-warning">{item.compatibilityWarning}</span> : null}
-                        {item.unavailableReason ? <span className="block text-warning">{item.unavailableReason}</span> : null}
-                        {item.permissions?.length ? (
-                          <span className="block text-accent">Capabilities: {formatPermissionsSummary(item.permissions).join(' · ')}</span>
-                        ) : null}
-                      </>
-                    }
-                    titleClassName="text-[13px]"
-                    detailClassName="text-[12px] font-sans text-secondary"
-                    actions={
-                      <Button
-                        variant="action"
-                        className="px-3 py-1.5 text-[12px]"
-                        disabled={item.installed || itemBusy || unavailablePackage}
-                        onClick={() => onInstallCatalog(item)}
-                      >
-                        {itemBusy
-                          ? 'Installing...'
-                          : item.installed
-                            ? 'Installed'
-                            : item.unavailableReason
-                              ? 'Unavailable'
-                              : plannedPackage
-                                ? 'Planned'
-                                : 'Install'}
-                      </Button>
-                    }
-                  />
-                );
-              })}
-            </ResourceList>
-            {visibleCatalogItems.length === 0 ? <PanelMessage className="py-2">No app matches.</PanelMessage> : null}
-          </section>
-        ) : null}
-      </DialogBody>
-    </Dialog>
-  );
-}
-
 function WindowedInstallExtensionDialog({
   catalogItems,
   catalogSources,
@@ -2489,7 +1657,7 @@ function WindowedInstallExtensionDialog({
           ) : null}
         </WindowedPageSection>
 
-        <WindowedPageSection title="Available" meta={`${visibleCatalogItems.length}`}>
+        <WindowedPageSection title="Available apps" meta={`${visibleCatalogItems.length}`}>
           <WindowedTextInput
             value={marketplaceQuery}
             onChange={(event) => setMarketplaceQuery(event.currentTarget.value)}
@@ -2516,22 +1684,26 @@ function WindowedInstallExtensionDialog({
                         : 'Available';
                 const tone: 'neutral' | 'positive' | 'warning' =
                   item.installed || itemBusy ? 'positive' : unavailablePackage ? 'warning' : 'neutral';
+                const itemMeta = [
+                  item.description || item.id,
+                  item.compatibilityWarning,
+                  item.unavailableReason,
+                  item.permissions?.length ? `Capabilities: ${formatPermissionsSummary(item.permissions).join(', ')}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
                 return (
                   <WindowedDataRow
                     key={item.id}
                     name={item.name}
-                    meta={
-                      item.permissions?.length
-                        ? `${item.description || item.id} · Capabilities: ${formatPermissionsSummary(item.permissions).join(', ')}`
-                        : item.description || item.id
-                    }
+                    meta={itemMeta}
                     status={<WindowedBadge tone={tone}>{state}</WindowedBadge>}
                     action={
                       <WindowedPageButton
                         disabled={item.installed || itemBusy || unavailablePackage}
                         onClick={() => onInstallCatalog(item)}
                       >
-                        Install
+                        {state === 'Available' ? 'Install' : state}
                       </WindowedPageButton>
                     }
                   />

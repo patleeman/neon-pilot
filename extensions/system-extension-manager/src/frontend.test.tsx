@@ -150,41 +150,28 @@ function createSystemExtensionWithoutRowActions() {
   } as never;
 }
 
-function renderPage(options?: { toast?: ReturnType<typeof vi.fn>; notify?: ReturnType<typeof vi.fn> }) {
+function renderPage(options?: {
+  toast?: ReturnType<typeof vi.fn>;
+  notify?: ReturnType<typeof vi.fn>;
+  pa?: Record<string, unknown>;
+  locationProbe?: boolean;
+}) {
   const toast = options?.toast ?? vi.fn();
   const notify = options?.notify ?? vi.fn();
+  const defaultPa = options?.pa ?? { ui: { toast, notify }, commands: { list: vi.fn().mockResolvedValue([]) } };
 
-  return render(
-    <MemoryRouter>
-      <ExtensionManagerPage
-        pa={{ ui: { toast, notify }, commands: { list: vi.fn().mockResolvedValue([]) } } as never}
-        context={{} as never}
-        surface={{} as never}
-        params={{}}
-      />
-    </MemoryRouter>,
-  );
-
-  return { toast, notify };
-}
-
-function renderPageWithPa(pa: Record<string, unknown>) {
-  render(
-    <MemoryRouter>
-      <ExtensionManagerPage pa={pa as never} context={{} as never} surface={{} as never} params={{}} />
-    </MemoryRouter>,
-  );
-}
-
-function renderWindowedPage(options?: { pa?: Record<string, unknown>; locationProbe?: boolean }) {
   return render(
     <MemoryRouter initialEntries={['/apps']}>
-      <ExtensionManagerPage
-        pa={(options?.pa ?? { ui: { toast: vi.fn(), notify: vi.fn() }, commands: { list: vi.fn().mockResolvedValue([]) } }) as never}
-        context={{ shellPresentation: 'windowed' } as never}
-        surface={{} as never}
-        params={{}}
-      />
+      <ExtensionManagerPage pa={defaultPa as never} context={{} as never} surface={{} as never} params={{}} />
+      {options?.locationProbe ? <LocationProbe /> : null}
+    </MemoryRouter>,
+  );
+}
+
+function renderPageWithPa(pa: Record<string, unknown>, options?: { locationProbe?: boolean }) {
+  return render(
+    <MemoryRouter initialEntries={['/apps']}>
+      <ExtensionManagerPage pa={pa as never} context={{} as never} surface={{} as never} params={{}} />
       {options?.locationProbe ? <LocationProbe /> : null}
     </MemoryRouter>,
   );
@@ -217,7 +204,8 @@ describe('ExtensionManagerPage', () => {
 
     renderPage();
 
-    expect(await screen.findByRole('status', { name: 'Loading apps' })).toBeTruthy();
+    expect(await screen.findByText('Loading apps')).toBeTruthy();
+    expect(screen.getByText('Loading apps').closest('.wos-loading-state')).toBeTruthy();
     expect(screen.queryByText('Loading apps...')).toBeNull();
   });
 
@@ -233,19 +221,12 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByLabelText('More actions'));
-
-    expect(screen.getByText('Open folder')).toBeTruthy();
-    expect(screen.queryByText('Diagnose')).toBeNull();
-    expect(screen.queryByText('Build')).toBeNull();
-    expect(screen.queryByText('Validate')).toBeNull();
-    expect(screen.queryByText('Run self-test')).toBeNull();
-    expect(screen.queryByText('Snapshot')).toBeNull();
-    expect(screen.queryByText('Export')).toBeNull();
-    expect(screen.queryByText('Copy diagnostics')).toBeNull();
+    expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for Menu Test' })).toBeTruthy();
+    expect(screen.queryByLabelText('More actions')).toBeNull();
   });
 
-  it('shows Diagnose when the extension action bridge is available', async () => {
+  it('opens the details dialog to access Diagnose when the extension action bridge is available', async () => {
     const callAction = vi.fn().mockImplementation(async (_extId: string, action: string) => {
       if (action === 'listInstallableExtensions') return { ok: true, version: '0.1.0', tag: 'v0.1.0', extensions: [] };
       if (action === 'readExtensionSources') return { sources: [] };
@@ -258,96 +239,56 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Menu Test' }));
 
-    expect(screen.getByText('Open folder')).toBeTruthy();
-    expect(screen.getByText('Diagnose')).toBeTruthy();
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
+    expect(within(detailsDialog).getByRole('button', { name: 'Diagnose' })).toBeTruthy();
   });
 
-  it('does not render an empty row actions menu for extensions with no actions', async () => {
+  it('does not render a floating actions menu for extensions without actions', async () => {
     mocks.extensionInstallations.mockResolvedValue([createSystemExtensionWithoutRowActions()]);
     renderPage();
 
     expect(await screen.findByText('System Menu Test')).toBeTruthy();
-    expect(screen.queryByLabelText('More actions')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Details for System Menu Test' })).toBeTruthy();
   });
 
-  it('keeps the row actions menu inside the viewport near the window bottom', async () => {
-    renderPage();
-
-    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    const moreButton = screen.getByLabelText('More actions');
-    vi.spyOn(moreButton, 'getBoundingClientRect').mockReturnValue({
-      x: 780,
-      y: 560,
-      width: 24,
-      height: 24,
-      top: 560,
-      right: 804,
-      bottom: 584,
-      left: 780,
-      toJSON: () => ({}),
-    } as DOMRect);
-    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(820);
-    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(600);
-
-    fireEvent.click(moreButton);
-    const menu = screen.getByRole('menu', { hidden: true });
-    vi.spyOn(menu, 'getBoundingClientRect').mockReturnValue({
-      x: 652,
-      y: 0,
-      width: 160,
-      height: 92,
-      top: 0,
-      right: 812,
-      bottom: 92,
-      left: 652,
-      toJSON: () => ({}),
-    } as DOMRect);
-
-    fireEvent.scroll(window);
-
-    expect(Number.parseFloat(menu.style.top)).toBeLessThan(560);
-    expect(Number.parseFloat(menu.style.top) + 92).toBeLessThanOrEqual(592);
-    expect(Number.parseFloat(menu.style.right)).toBeGreaterThanOrEqual(8);
-    expect(menu.style.left).toBe('auto');
-    expect(menu.style.bottom).toBe('auto');
-  });
-
-  it('keeps extension row actions in a stable right-side column', async () => {
+  it('shows the windowed data table with inline actions', async () => {
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1280);
     const { container } = renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    const actionsHeader = screen.getByText('Actions');
-    const actionsCell = actionsHeader.closest('table')?.querySelector('tbody td:last-child');
-    const moreButton = screen.getByLabelText('More actions');
-
-    expect(actionsCell?.className).toContain('w-40');
-    expect(actionsCell?.className).toContain('text-right');
-    expect(moreButton.parentElement?.className).toContain('h-7');
-    expect(moreButton.parentElement?.className).toContain('w-7');
-    expect(container.querySelector('table')?.className).toContain('table-fixed');
+    const dataTable = container.querySelector('.wos-data-table');
+    expect(dataTable).toBeTruthy();
+    expect(dataTable?.style.getPropertyValue('--wos-data-column-template')).toBe(
+      'minmax(16rem, 1fr) minmax(8rem, 0.42fr) minmax(14rem, 0.72fr)',
+    );
+    expect(container.querySelector('.wos-inline-actions')).toBeTruthy();
+    expect(screen.getByRole('switch', { name: /Disable Menu Test/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Details for Menu Test' })).toBeTruthy();
   });
 
-  it('shows a single extensions list with source labels and no catalog tab', async () => {
+  it('shows a single extensions list with windowed segmented controls and no catalog tab', async () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('tab', { name: 'All' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Platform' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Attention' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'App view' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Installed/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Platform/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Attention/ })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'All' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Platform' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Attention' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Installed' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Built-in' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Available' })).toBeNull();
     expect(screen.queryByText('USER')).toBeNull();
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByRole('button', { name: 'commands' })).toBeNull();
   });
 
   it('renders the native windowed extensions layout without the stable table chrome', async () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension(), createRequiredSystemExtension()]);
-    const { container } = renderWindowedPage();
+    const { container } = renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(container.querySelector('.wos-page-shell')).toBeTruthy();
@@ -356,7 +297,7 @@ describe('ExtensionManagerPage', () => {
     expect(container.querySelector('.wos-page-inspector')).toBeNull();
     expect(container.querySelector('.wos-app-detail-grid')).toBeNull();
     expect(container.querySelector('table')).toBeNull();
-    expect(screen.getByPlaceholderText('Search apps')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Search apps…')).toBeTruthy();
     expect(screen.getByRole('radiogroup', { name: 'App view' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Installed/ })).toBeTruthy();
     expect(screen.getByRole('radio', { name: /Platform/ })).toBeTruthy();
@@ -412,7 +353,7 @@ describe('ExtensionManagerPage', () => {
       },
     ]);
 
-    renderWindowedPage({
+    renderPage({
       pa: { ui: { toast: vi.fn(), notify: vi.fn() }, commands: { list: vi.fn().mockResolvedValue([]) }, extensions: { callAction } },
     });
 
@@ -485,7 +426,7 @@ describe('ExtensionManagerPage', () => {
     ]);
     mocks.deleteExtension.mockResolvedValue({ ok: true, extensionId: 'system-browser', deleted: true });
 
-    renderWindowedPage({
+    renderPage({
       pa: {
         ui: { toast: vi.fn(), notify: vi.fn(), confirm },
         commands: { list: vi.fn().mockResolvedValue([]) },
@@ -520,7 +461,7 @@ describe('ExtensionManagerPage', () => {
 
   it('uses windowed empty-state chrome when no extensions are installed', async () => {
     mocks.extensionInstallations.mockResolvedValue([]);
-    const { container } = renderWindowedPage();
+    const { container } = renderPage();
 
     expect(await screen.findByText('Add capabilities to Neon Pilot.')).toBeTruthy();
     expect(container.querySelector('.wos-empty-state')).toBeTruthy();
@@ -531,7 +472,7 @@ describe('ExtensionManagerPage', () => {
   it('uses native windowed loading chrome while extensions are loading', async () => {
     const deferred = createDeferred<never[]>();
     mocks.extensionInstallations.mockReturnValue(deferred.promise);
-    const { container } = renderWindowedPage();
+    const { container } = renderPage();
 
     expect(await screen.findByText('Loading apps')).toBeTruthy();
     expect(screen.getByText('Loading apps').closest('.wos-loading-state')).toBeTruthy();
@@ -543,7 +484,7 @@ describe('ExtensionManagerPage', () => {
 
   it('uses windowed error-state chrome when extensions fail to load', async () => {
     mocks.extensionInstallations.mockRejectedValue(new Error('Installations unavailable'));
-    const { container } = renderWindowedPage();
+    const { container } = renderPage();
 
     expect(await screen.findByText('Installations unavailable')).toBeTruthy();
     expect(container.querySelector('.wos-state-block[data-tone="danger"]')).toBeTruthy();
@@ -575,7 +516,7 @@ describe('ExtensionManagerPage', () => {
       return { ok: true };
     });
 
-    const { container } = renderWindowedPage({
+    const { container } = renderPage({
       pa: {
         ui: { toast: vi.fn(), notify: vi.fn() },
         commands: { list: vi.fn().mockResolvedValue([]) },
@@ -584,7 +525,7 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Install app' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Install app' });
     expect(dialog.className).toContain('wos-dialog');
@@ -668,16 +609,15 @@ describe('ExtensionManagerPage', () => {
     expect((await screen.findAllByRole('heading', { name: 'App Manager' })).length).toBeGreaterThan(0);
     expect(screen.getByText('Menu Test')).toBeTruthy();
     expect(screen.queryByText('Settings panels')).toBeNull();
-    expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
+    expect(screen.getAllByText('1 installed · 1 enabled').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Disable Menu Test')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Platform' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Platform/ }));
 
-    expect(screen.getByRole('heading', { name: 'Platform' })).toBeTruthy();
     expect(screen.getByText('Settings panels')).toBeTruthy();
     expect(screen.queryByText('Menu Test')).toBeNull();
     expect(screen.queryByLabelText('Disable Settings panels')).toBeNull();
-    expect(screen.getByText('1 installed · 1 enabled · 1 platform')).toBeTruthy();
+    expect(screen.getAllByText('1 installed · 1 enabled · 1 platform').length).toBeGreaterThan(0);
   });
 
   it('uses platform-specific empty copy when no required extensions are installed', async () => {
@@ -685,7 +625,7 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect(await screen.findByText('Menu Test')).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: 'Platform' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Platform/ }));
 
     expect(screen.getByText('No platform apps')).toBeTruthy();
     expect(screen.getByText('Required platform surfaces appear here when they are installed.')).toBeTruthy();
@@ -697,7 +637,7 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect(await screen.findByText('Menu Test')).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: 'Attention' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Attention/ }));
 
     expect(screen.getByText('No apps need attention')).toBeTruthy();
     expect(screen.getByText('Diagnostics, updates, invalid state, and catalog drift will appear here.')).toBeTruthy();
@@ -728,10 +668,7 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect(await screen.findByText('Issue M')).toBeTruthy();
-    const rows = screen
-      .getAllByRole('row')
-      .slice(1)
-      .map((row) => row.textContent ?? '');
+    const rows = Array.from(document.querySelectorAll('.wos-data-row')).map((row) => row.textContent ?? '');
     expect(rows[0]).toContain('Issue M');
     expect(rows[1]).toContain('Disabled Z');
     expect(rows[2]).toContain('Enabled A');
@@ -750,7 +687,7 @@ describe('ExtensionManagerPage', () => {
     expect(await screen.findByText('Failed to enable Menu Test')).toBeTruthy();
     expect(screen.getByText('App package "Menu Test" requires Neon Pilot >=0.10.0 <0.11.0.')).toBeTruthy();
     expect(screen.getAllByText('App Manager').length).toBeGreaterThan(0);
-    expect(screen.getByText('1 installed · 0 enabled')).toBeTruthy();
+    expect(screen.getAllByText('1 installed · 0 enabled').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Enable Menu Test')).toBeTruthy();
     expect(notify).toHaveBeenCalledWith({
       message: 'Failed to enable Menu Test',
@@ -769,12 +706,12 @@ describe('ExtensionManagerPage', () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    expect(screen.getByText('1 installed · 0 enabled')).toBeTruthy();
+    expect(screen.getAllByText('1 installed · 0 enabled').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByLabelText('Enable Menu Test'));
 
     await waitFor(() => {
-      expect(screen.getByText('1 installed · 1 enabled')).toBeTruthy();
+      expect(screen.getAllByText('1 installed · 1 enabled').length).toBeGreaterThan(0);
     });
     expect(screen.getByLabelText('Disable Menu Test')).toBeTruthy();
     expect(mocks.updateExtension).toHaveBeenCalledWith('menu-test', { enabled: true });
@@ -787,16 +724,20 @@ describe('ExtensionManagerPage', () => {
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     expect(screen.getByText('System Menu Test')).toBeTruthy();
-    expect(screen.getByText('2 installed · 2 enabled')).toBeTruthy();
+    expect(screen.getAllByText('2 installed · 2 enabled').length).toBeGreaterThan(0);
   });
 
   it('links configurable apps to Settings', async () => {
     mocks.extensionInstallations.mockResolvedValue([createExtension(), createConfigurableExtension()]);
-    renderPage();
+    renderPage({ locationProbe: true });
 
     expect(await screen.findByText('Configurable Test')).toBeTruthy();
-    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings/apps/configurable-test');
-    expect(screen.queryByLabelText('Configure Menu Test in Settings')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Configurable Test' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Configurable Test' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Settings' }));
+
+    expect(screen.getByTestId('location').textContent).toBe('/settings/apps/configurable-test');
+    expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
   });
 
   it('points app details to Settings instead of rendering duplicate controls', async () => {
@@ -821,14 +762,14 @@ describe('ExtensionManagerPage', () => {
         }),
       }),
     );
-    expect(screen.queryByRole('dialog', { name: 'App details' })).toBeNull();
-    expect(screen.getByLabelText('Configure Configurable Test in Settings').getAttribute('href')).toBe('/settings/apps/configurable-test');
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Configurable Test' });
+    expect(within(detailsDialog).getByRole('button', { name: 'Settings' })).toBeTruthy();
     expect(screen.queryByText('Toggle a test setting.')).toBeNull();
   });
 
   it('opens concrete extension settings from the windowed details dialog', async () => {
     mocks.extensionInstallations.mockResolvedValue([createConfigurableExtension()]);
-    renderWindowedPage({ locationProbe: true });
+    renderPage({ locationProbe: true });
 
     expect(await screen.findByText('Configurable Test')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Details for Configurable Test' }));
@@ -842,7 +783,7 @@ describe('ExtensionManagerPage', () => {
 
   it('opens app routes from the windowed details dialog and closes the dialog', async () => {
     mocks.extensionInstallations.mockResolvedValue([createRoutedExtension()]);
-    renderWindowedPage({ locationProbe: true });
+    renderPage({ locationProbe: true });
 
     expect(await screen.findByText('Routed Test')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Details for Routed Test' }));
@@ -952,6 +893,40 @@ describe('ExtensionManagerPage', () => {
     expect(within(screen.getByRole('dialog', { name: 'Install app' })).queryByText('Agent Browser')).toBeNull();
   });
 
+  it('shows catalog compatibility and unavailable reasons in the install dialog', async () => {
+    const callAction = vi.fn().mockResolvedValue({
+      ok: true,
+      version: '0.9.1-rc.6',
+      tag: 'v0.9.1-rc.6',
+      extensions: [
+        {
+          id: 'unavailable-app',
+          name: 'Unavailable App',
+          description: 'Catalog-only extension.',
+          version: '1.0.0',
+          tag: 'v1.0.0',
+          installed: false,
+          compatibilityWarning: 'Requires Neon Pilot 0.12 or newer.',
+          unavailableReason: 'No release artifact for this platform.',
+        },
+      ],
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install app' });
+    expect(within(dialog).getByText(/Requires Neon Pilot 0.12 or newer/)).toBeTruthy();
+    expect(within(dialog).getByText(/No release artifact for this platform/)).toBeTruthy();
+    expect((within(dialog).getByRole('button', { name: 'Unavailable' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('installs an available extension from the install modal', async () => {
     const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
       if (action === 'listInstallableExtensions') {
@@ -1036,8 +1011,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Browser')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Delete'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Browser' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Browser' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(mocks.deleteExtension).toHaveBeenCalledWith('system-browser'));
   });
@@ -1077,10 +1053,11 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Onboarding')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Delete'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Onboarding' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Onboarding' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Delete' }));
 
-    await screen.findByText('Add capabilities to Neon Pilot');
+    await screen.findByText('Add capabilities to Neon Pilot.');
     expect(screen.queryByText('Onboarding')).toBeNull();
   });
 
@@ -1122,11 +1099,12 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Update available: 0.0.1 -> 0.1.0')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Update'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Browser' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Browser' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Update' }));
 
     expect(await screen.findByText('Updated Browser to 0.1.0.')).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toContain('Updated Browser to 0.1.0.');
+    expect(screen.getByText('Updated Browser to 0.1.0.')).toBeTruthy();
     expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
     expect(mocks.notifyExtensionRegistryChanged).toHaveBeenCalled();
   });
@@ -1177,8 +1155,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Browser')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Reinstall'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Browser' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Browser' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Reinstall' }));
 
     await waitFor(() => {
       expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'updateCatalogExtension', { id: 'system-browser' });
@@ -1526,7 +1505,7 @@ describe('ExtensionManagerPage', () => {
       return { ok: true };
     });
 
-    renderWindowedPage({
+    renderPage({
       pa: {
         ui: { toast: vi.fn(), notify: vi.fn() },
         commands: { list: vi.fn().mockResolvedValue([]) },
@@ -1535,7 +1514,7 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Install app' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Install app' });
     expect(within(dialog).getByText(/Capabilities: Read file system, Control desktop/)).toBeTruthy();
@@ -1590,8 +1569,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Browser')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Reinstall'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Browser' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Browser' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Reinstall' }));
 
     await waitFor(() => {
       expect(confirm).toHaveBeenCalled();
@@ -1652,8 +1632,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Update available: 0.0.1 -> 0.1.0')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Update'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Browser' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Browser' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Update' }));
 
     await waitFor(() => {
       expect(confirm).toHaveBeenCalled();
@@ -1714,8 +1695,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect(await screen.findByText('Update available: 0.0.1 -> 0.1.0')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Update'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Browser' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Browser' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Update' }));
 
     await waitFor(() => {
       expect(confirm).toHaveBeenCalled();
@@ -1752,8 +1734,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Diagnose'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Menu Test' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Diagnose' }));
 
     expect(await screen.findByText('Menu Test is healthy.')).toBeTruthy();
     expect(screen.getByText('Validation and smoke checks passed.')).toBeTruthy();
@@ -1793,8 +1776,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Diagnose'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Menu Test' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Diagnose' }));
 
     expect(await screen.findByText('Validation failed for Menu Test')).toBeTruthy();
     expect(screen.getByText('Missing required field: version in extension.json')).toBeTruthy();
@@ -1835,8 +1819,9 @@ describe('ExtensionManagerPage', () => {
     });
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByLabelText('More actions'));
-    fireEvent.click(screen.getByText('Diagnose'));
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Menu Test' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Diagnose' }));
 
     expect(await screen.findByText('Smoke checks failed for Menu Test')).toBeTruthy();
     expect(screen.getByText('manifest: Manifest does not export expected component')).toBeTruthy();
