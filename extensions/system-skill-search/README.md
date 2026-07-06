@@ -4,16 +4,16 @@ Searches upstream skill repositories, previews fetched skills through a quaranti
 
 ## Agent tools
 
-| Tool            | Purpose                                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------------------- |
-| `skill_browse`  | Browse upstream sources by source/query for marketplace-style inventory without invoking the ranking reviewer. |
-| `skill_search`  | Search upstream catalogs and repositories, then return a ranked shortlist from a no-tool discovery reviewer.   |
-| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.                   |
-| `skill_install` | Install a chosen candidate id, then vet, approve when required, and save.                                      |
+| Tool            | Purpose                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `skill_browse`  | Browse upstream sources by source/query for raw inventory without invoking the ranking reviewer.             |
+| `skill_search`  | Search upstream catalogs and repositories, then return a ranked shortlist from a no-tool discovery reviewer. |
+| `skill_preview` | Fetch a candidate into quarantine, run deterministic checks, and run a no-tool model review.                 |
+| `skill_install` | Install a chosen candidate id, then vet, approve when required, and save.                                    |
 
 `system-skill-search` is an agent-internal service, not a user-facing marketplace. Agents search, preview, and install skills through its tools and slash commands, while enablement state is managed through Prompt Assembly.
 
-`browseSkills` caches marketplace inventory per source, query, and limit for about a day by default. A page visit returns cached results immediately when available; stale cache entries refresh in the background and invalidate the Skills page when new inventory is stored. Passing `refresh: "force"` bypasses the cache for explicit refresh actions while the UI can keep the current table visible.
+`browseSkills` caches inventory per source, query, and limit for about a day by default. An agent call returns cached results immediately when available; stale cache entries refresh in the background. Passing `refresh: "force"` bypasses the cache for explicit refresh actions.
 
 For agent task execution, agents should not show users a list of candidates or ask them which skill to install. The intended agent flow is:
 

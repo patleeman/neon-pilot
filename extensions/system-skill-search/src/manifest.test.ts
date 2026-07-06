@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import manifest from '../extension.json';
 
 describe('system-skill-search manifest', () => {
-  it('registers browseSkills for UI marketplace browsing and CLI use', () => {
+  it('registers browseSkills for agent-internal inventory browsing and CLI use', () => {
     expect(manifest.backend.actions).toContainEqual(
       expect.objectContaining({
         id: 'browseSkills',

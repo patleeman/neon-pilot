@@ -83,7 +83,7 @@
         "description": "Browse upstream skill repositories by source and optional query without invoking the isolated ranking reviewer.",
         "action": "browseSkills",
         "promptGuidelines": [
-          "Use for UI or inventory-style marketplace browsing. Use skill_search when choosing a skill for a specific user task."
+          "Use for inventory-style browsing without the isolated ranking reviewer. Use skill_search when choosing a skill for a specific user task."
         ],
         "inputSchema": {
           "type": "object",
@@ -146,7 +146,7 @@
       {
         "id": "skills-browse-upstream",
         "command": "skills browse",
-        "description": "Browse upstream skill repositories by marketplace source.",
+        "description": "Browse upstream skill repositories by source.",
         "action": "skillSearchCli",
         "inputAction": "browse",
         "jsonDefault": true,
