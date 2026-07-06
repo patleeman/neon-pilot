@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { captureDesktopScreenshot } from './screenshot.js';
+import { captureDesktopScreenshot, captureWindowedDesktopScreenshot } from './screenshot.js';
 
 function createMissingFileError() {
   const error = new Error('missing file') as NodeJS.ErrnoException;
@@ -77,5 +77,71 @@ describe('captureDesktopScreenshot', () => {
         runInteractiveScreencapture: vi.fn().mockResolvedValue({ code: 2, signal: null, stderr: 'permission denied' }),
       }),
     ).rejects.toThrow('Enable Screen Recording for Neon Pilot');
+  });
+});
+
+describe('captureWindowedDesktopScreenshot', () => {
+  it('captures the active renderer page with optional bounds metadata', async () => {
+    const png = Buffer.from('windowed-png');
+    const nativeImage = {
+      toPNG: vi.fn(() => png),
+      getSize: vi.fn(() => ({ width: 320, height: 200 })),
+    };
+    const webContents = {
+      capturePage: vi.fn().mockResolvedValue(nativeImage),
+    };
+
+    const result = await captureWindowedDesktopScreenshot(webContents, {
+      bounds: { x: 10.4, y: 20.6, width: 319.5, height: 199.5 },
+      windowId: 'chat:draft',
+    });
+
+    expect(webContents.capturePage).toHaveBeenCalledWith({ x: 10, y: 21, width: 320, height: 200 });
+    expect(result.image).toMatchObject({
+      mimeType: 'image/png',
+      data: png.toString('base64'),
+      width: 320,
+      height: 200,
+      bounds: { x: 10, y: 21, width: 320, height: 200 },
+      windowId: 'chat:draft',
+    });
+    expect(result.image.capturedAt).toEqual(expect.any(String));
+  });
+
+  it('captures the full renderer page when no bounds are provided', async () => {
+    const nativeImage = {
+      toPNG: vi.fn(() => Buffer.from('full-windowed-png')),
+      getSize: vi.fn(() => ({ width: 1200, height: 800 })),
+    };
+    const webContents = {
+      capturePage: vi.fn().mockResolvedValue(nativeImage),
+    };
+
+    await expect(captureWindowedDesktopScreenshot(webContents)).resolves.toMatchObject({
+      image: { mimeType: 'image/png', width: 1200, height: 800 },
+    });
+    expect(webContents.capturePage).toHaveBeenCalledWith(undefined);
+  });
+
+  it('rejects invalid crop bounds before asking Electron to capture', async () => {
+    const webContents = {
+      capturePage: vi.fn(),
+    };
+
+    await expect(captureWindowedDesktopScreenshot(webContents, { bounds: { x: 0, y: 0, width: 0, height: 200 } })).rejects.toThrow(
+      'bounds must include finite positive width and height',
+    );
+    expect(webContents.capturePage).not.toHaveBeenCalled();
+  });
+
+  it('rejects oversized renderer screenshots before base64 transfer', async () => {
+    const webContents = {
+      capturePage: vi.fn().mockResolvedValue({
+        toPNG: () => Buffer.alloc(8 * 1024 * 1024 + 1),
+        getSize: () => ({ width: 4096, height: 4096 }),
+      }),
+    };
+
+    await expect(captureWindowedDesktopScreenshot(webContents)).rejects.toThrow('Windowed OS screenshot is too large');
   });
 });

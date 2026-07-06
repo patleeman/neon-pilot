@@ -121,6 +121,9 @@ async function callServerModuleExport(relativeSpecifier, name, ...args) {
 async function controlDesktop(input) {
   return callServerModuleExport("../../desktop/desktopControl.js", "issueDesktopControlCommand", input);
 }
+async function captureDesktopScreenshot(input) {
+  return callServerModuleExport("../../desktop/desktopScreenshot.js", "issueDesktopScreenshotRequest", input);
+}
 async function readDesktopState() {
   return callServerModuleExport("../../desktop/desktopState.js", "readDesktopStateSnapshot");
 }
@@ -137,6 +140,24 @@ function toolResult(details) {
     details
   };
 }
+function screenshotDetails(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+  const record = result;
+  const image = record.image && typeof record.image === "object" && !Array.isArray(record.image) ? record.image : null;
+  if (!image) return result;
+  const imageMetadata = { ...image };
+  delete imageMetadata.data;
+  return { ...record, image: imageMetadata };
+}
+function screenshotText(details) {
+  if (!details || typeof details !== "object" || Array.isArray(details)) return JSON.stringify(details, null, 2);
+  const record = details;
+  if (record.ok === false) {
+    const error = typeof record.error === "string" && record.error.trim() ? record.error.trim() : "Windowed OS screenshot failed.";
+    return `desktop_screenshot failed: ${error}`;
+  }
+  return JSON.stringify(details, null, 2);
+}
 async function desktopControl(input, _ctx) {
   const result = await controlDesktop(input);
   return toolResult(result);
@@ -145,7 +166,23 @@ async function desktopState(_input, _ctx) {
   const state = await readDesktopState();
   return toolResult(state);
 }
+async function desktopScreenshot(input, _ctx) {
+  const result = await captureDesktopScreenshot(input);
+  const details = screenshotDetails(result);
+  const content = [
+    {
+      type: "text",
+      text: screenshotText(details)
+    }
+  ];
+  const image = result && typeof result === "object" && !Array.isArray(result) && "image" in result ? result.image ?? null : null;
+  if (image && typeof image.data === "string" && typeof image.mimeType === "string") {
+    content.push({ type: "image", data: image.data, mimeType: image.mimeType });
+  }
+  return { content, details };
+}
 export {
   desktopControl,
+  desktopScreenshot,
   desktopState
 };

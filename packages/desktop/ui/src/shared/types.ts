@@ -2378,3 +2378,41 @@ export interface DesktopControlAckResult {
   status: 'completed' | 'failed' | 'timeout';
   error?: string;
 }
+
+export interface DesktopScreenshotBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DesktopScreenshotRequest {
+  id: string;
+  createdAt: string;
+  windowId?: string;
+}
+
+export interface DesktopScreenshotImage {
+  mimeType: 'image/png';
+  data: string;
+  width: number;
+  height: number;
+  capturedAt: string;
+  bounds?: DesktopScreenshotBounds;
+  windowId?: string;
+}
+
+export interface DesktopScreenshotAckInput {
+  requestId: string;
+  ok: boolean;
+  image?: DesktopScreenshotImage;
+  error?: string;
+}
+
+export interface DesktopScreenshotAckResult {
+  ok: boolean;
+  requestId: string;
+  status: 'completed' | 'failed' | 'timeout';
+  image?: DesktopScreenshotImage;
+  error?: string;
+}

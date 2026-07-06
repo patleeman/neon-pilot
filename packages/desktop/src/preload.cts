@@ -111,6 +111,10 @@ const desktopBridge = {
   pickFolder: (input?: { cwd?: string | null; prompt?: string | null }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:pick-folder`, input),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   captureScreenshot: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:capture-screenshot`),
+  captureWindowedDesktopScreenshot: (input?: {
+    bounds?: { x: number; y: number; width: number; height: number } | null;
+    windowId?: string | null;
+  }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:capture-windowed-desktop-screenshot`, input),
   goBack: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-back`),
   goForward: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-forward`),
   setWorkbenchBrowserBounds: (input: {

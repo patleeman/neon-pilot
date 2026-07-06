@@ -8,6 +8,7 @@ import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from '../route
 import { subscribeAppEvents } from '../shared/appEvents.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
 import { subscribeDesktopControlCommands } from './localApiDesktopControl.js';
+import { subscribeDesktopScreenshotRequests } from './localApiDesktopScreenshot.js';
 import { shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 
 const DEFERRED_APP_EVENT_SNAPSHOT_DELAY_MS = 6_000;
@@ -133,6 +134,17 @@ async function subscribeDesktopControlCommandStream(onEvent: (event: DesktopLoca
   onEvent({ type: 'open' });
   const unsubscribe = subscribeDesktopControlCommands((command) => {
     emitStreamMessage(onEvent, command);
+  });
+  return () => {
+    unsubscribe();
+    onEvent({ type: 'close' });
+  };
+}
+
+async function subscribeDesktopScreenshotRequestStream(onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
+  onEvent({ type: 'open' });
+  const unsubscribe = subscribeDesktopScreenshotRequests((request) => {
+    emitStreamMessage(onEvent, request);
   });
   return () => {
     unsubscribe();
@@ -509,6 +521,10 @@ export async function subscribeDesktopLocalApiStreamByUrl(
 
   if (url.pathname === '/api/desktop/control/events') {
     return subscribeDesktopControlCommandStream(onEvent);
+  }
+
+  if (url.pathname === '/api/desktop/screenshot/events') {
+    return subscribeDesktopScreenshotRequestStream(onEvent);
   }
 
   if (url.pathname === '/api/workspace/events') {

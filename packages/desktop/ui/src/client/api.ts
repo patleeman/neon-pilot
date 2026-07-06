@@ -15,7 +15,14 @@ import type {
   ExtensionSlashCommandRegistration,
   ExtensionSurfaceSummary,
 } from '../extensions/types';
-import type { DesktopControlAckInput, DesktopControlAckResult, DesktopStateListResult, DesktopStateSnapshot } from '../shared/types';
+import type {
+  DesktopControlAckInput,
+  DesktopControlAckResult,
+  DesktopScreenshotAckInput,
+  DesktopScreenshotAckResult,
+  DesktopStateListResult,
+  DesktopStateSnapshot,
+} from '../shared/types';
 import type {
   AppTelemetryLogBundleExport,
   AppTelemetryLogDiagnostics,
@@ -584,6 +591,8 @@ export const api = {
   tools: async () => get<ToolsState>('/tools'),
   desktopState: async () => get<DesktopStateListResult>('/desktop/state'),
   acknowledgeDesktopControl: async (input: DesktopControlAckInput) => post<DesktopControlAckResult>('/desktop/control/ack', input),
+  acknowledgeDesktopScreenshot: async (input: DesktopScreenshotAckInput) =>
+    post<DesktopScreenshotAckResult>('/desktop/screenshot/ack', input),
   publishDesktopState: async (snapshot: DesktopStateSnapshot) =>
     post<{
       ok: true;

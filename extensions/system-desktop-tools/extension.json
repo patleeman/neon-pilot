@@ -18,6 +18,14 @@
         }
       },
       {
+        "id": "desktopScreenshot",
+        "handler": "desktopScreenshot",
+        "title": "Capture desktop screenshot",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "desktopState",
         "handler": "desktopState",
         "title": "Read desktop state",
@@ -84,6 +92,30 @@
             }
           },
           "required": ["action"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "desktop-screenshot",
+        "name": "desktop_screenshot",
+        "title": "Desktop Screenshot",
+        "description": "Capture Neon Pilot's own Windowed OS desktop, or one visible desktop window by semantic window id, as a PNG image.",
+        "action": "desktopScreenshot",
+        "promptGuidelines": [
+          "Call desktop_state first, then pass a windowId from the semantic state when you need a specific window.",
+          "Use this only for Neon Pilot's own Windowed OS renderer. It is not host-OS computer use and does not capture other Mac windows.",
+          "If a target window is minimized or missing, use desktop_control to restore or focus it before retrying."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "windowId": {
+              "type": "string"
+            },
+            "timeoutMs": {
+              "type": "number"
+            }
+          },
           "additionalProperties": false
         }
       },

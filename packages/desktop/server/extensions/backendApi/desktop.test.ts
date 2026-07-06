@@ -8,7 +8,7 @@ vi.mock('./serverModuleResolver.js', () => ({
   callServerModuleExport,
 }));
 
-import { controlDesktop, readDesktopState } from './desktop.js';
+import { captureDesktopScreenshot, controlDesktop, readDesktopState } from './desktop.js';
 
 describe('backendApi/desktop', () => {
   beforeEach(() => {
@@ -42,6 +42,21 @@ describe('backendApi/desktop', () => {
     await expect(controlDesktop({ action: 'focus', windowId: 'chat:draft' })).resolves.toEqual(result);
     expect(callServerModuleExport).toHaveBeenCalledWith('../../desktop/desktopControl.js', 'issueDesktopControlCommand', {
       action: 'focus',
+      windowId: 'chat:draft',
+    });
+  });
+
+  it('forwards desktop screenshot requests through the server module resolver', async () => {
+    const result = {
+      ok: true,
+      requestId: 'desktop-screenshot-1',
+      status: 'completed',
+      image: { mimeType: 'image/png', data: 'cG5n', width: 320, height: 200, capturedAt: '2026-07-05T00:00:00.000Z' },
+    };
+    callServerModuleExport.mockResolvedValue(result);
+
+    await expect(captureDesktopScreenshot({ windowId: 'chat:draft' })).resolves.toEqual(result);
+    expect(callServerModuleExport).toHaveBeenCalledWith('../../desktop/desktopScreenshot.js', 'issueDesktopScreenshotRequest', {
       windowId: 'chat:draft',
     });
   });

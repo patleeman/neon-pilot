@@ -51,7 +51,13 @@ import { useConversations } from '../hooks/useConversations';
 import { getTabSessionKey, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { ConversationPage } from '../pages/ConversationPage';
 import { HomePage } from '../pages/HomePage';
-import type { DesktopControlCommand, DesktopStateSnapshot, DesktopStateWindow, SessionMeta } from '../shared/types';
+import type {
+  DesktopControlCommand,
+  DesktopScreenshotRequest,
+  DesktopStateSnapshot,
+  DesktopStateWindow,
+  SessionMeta,
+} from '../shared/types';
 import {
   boundsForRestoredDragStart,
   boundsForSnapTarget,
@@ -622,6 +628,12 @@ function isDesktopControlCommand(value: unknown): value is DesktopControlCommand
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const record = value as Partial<DesktopControlCommand>;
   return typeof record.id === 'string' && typeof record.action === 'string';
+}
+
+function isDesktopScreenshotRequest(value: unknown): value is DesktopScreenshotRequest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Partial<DesktopScreenshotRequest>;
+  return typeof record.id === 'string' && (record.windowId === undefined || typeof record.windowId === 'string');
 }
 
 function buildDesktopStateSnapshotDraft(input: {
@@ -1872,6 +1884,84 @@ export function WindowedLayout() {
     };
     return () => source.close();
   }, [executeDesktopControlCommand]);
+
+  const executeDesktopScreenshotRequest = useCallback(async (request: DesktopScreenshotRequest) => {
+    const bridge = getDesktopBridge();
+    if (!bridge?.captureWindowedDesktopScreenshot) {
+      return { ok: false, error: 'Windowed OS screenshot capture is only available in the desktop shell.' };
+    }
+
+    if (!request.windowId) {
+      const result = await bridge.captureWindowedDesktopScreenshot();
+      return { ok: true, image: result.image };
+    }
+
+    const windowModel = windowsRef.current.find((candidate) => candidate.id === request.windowId);
+    if (!windowModel) {
+      return { ok: false, error: `Window not found: ${request.windowId}` };
+    }
+    if (windowModel.minimized) {
+      return { ok: false, error: `Window is minimized: ${request.windowId}` };
+    }
+    if (windowModel.kind === 'browser') {
+      return {
+        ok: false,
+        error:
+          'desktop_screenshot cannot capture BrowserView-backed browser windows yet. Use the browser screenshot tool for browser content.',
+      };
+    }
+
+    const desktop = desktopRef.current;
+    const windowElement = Array.from(desktop?.querySelectorAll<HTMLElement>('[data-window-id]') ?? []).find(
+      (candidate) => candidate.dataset.windowId === request.windowId,
+    );
+    if (!windowElement) {
+      return { ok: false, error: `Window element not found: ${request.windowId}` };
+    }
+    const rect = windowElement.getBoundingClientRect();
+    if (!Number.isFinite(rect.width) || !Number.isFinite(rect.height) || rect.width <= 0 || rect.height <= 0) {
+      return { ok: false, error: `Window has no capturable bounds: ${request.windowId}` };
+    }
+
+    const bounds = {
+      x: Math.max(0, Math.round(rect.x)),
+      y: Math.max(0, Math.round(rect.y)),
+      width: Math.max(1, Math.round(rect.width)),
+      height: Math.max(1, Math.round(rect.height)),
+    };
+    const result = await bridge.captureWindowedDesktopScreenshot({ bounds, windowId: request.windowId });
+    return { ok: true, image: result.image };
+  }, []);
+
+  useEffect(() => {
+    const source = createDesktopAwareEventSource('/api/desktop/screenshot/events');
+    source.onmessage = (event) => {
+      let request: unknown;
+      try {
+        request = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (!isDesktopScreenshotRequest(request)) return;
+      void executeDesktopScreenshotRequest(request)
+        .then((result) =>
+          api.acknowledgeDesktopScreenshot({
+            requestId: request.id,
+            ok: result.ok,
+            ...(result.ok ? { image: result.image } : { error: result.error }),
+          }),
+        )
+        .catch((error) =>
+          api.acknowledgeDesktopScreenshot({
+            requestId: request.id,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        )
+        .catch(() => undefined);
+    };
+    return () => source.close();
+  }, [executeDesktopScreenshotRequest]);
 
   const startDrag = useCallback(
     (event: MouseEvent, windowModel: DesktopWindowModel) => {

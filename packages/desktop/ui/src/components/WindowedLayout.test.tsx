@@ -13,6 +13,7 @@ import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrows
 const mocks = vi.hoisted(() => ({
   publishDesktopState: vi.fn(() => Promise.resolve({ ok: true })),
   acknowledgeDesktopControl: vi.fn(() => Promise.resolve({ ok: true })),
+  acknowledgeDesktopScreenshot: vi.fn(() => Promise.resolve({ ok: true })),
   eventSources: [] as Array<{
     path: string;
     onopen: ((event: Event) => void) | null;
@@ -141,6 +142,7 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
 vi.mock('../client/api', () => ({
   api: {
     acknowledgeDesktopControl: mocks.acknowledgeDesktopControl,
+    acknowledgeDesktopScreenshot: mocks.acknowledgeDesktopScreenshot,
     publishDesktopState: mocks.publishDesktopState,
   },
 }));
@@ -247,6 +249,7 @@ describe('WindowedLayout route windows', () => {
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
     mocks.acknowledgeDesktopControl.mockClear();
+    mocks.acknowledgeDesktopScreenshot.mockClear();
     mocks.eventSources = [];
     mocks.publishDesktopState.mockClear();
     mocks.registryLoading = false;
@@ -3522,6 +3525,7 @@ describe('WindowedLayout desktop state publishing', () => {
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
     mocks.acknowledgeDesktopControl.mockClear();
+    mocks.acknowledgeDesktopScreenshot.mockClear();
     mocks.eventSources = [];
     mocks.publishDesktopState.mockClear();
     mocks.registryLoading = false;
@@ -3830,6 +3834,183 @@ describe('WindowedLayout desktop state publishing', () => {
       const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
       expect(notes.agentTouched).toBe(true);
       expect(notes).toMatchObject(expectedState);
+    });
+  });
+
+  it('acknowledges streamed desktop screenshot requests for the full desktop', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+    const image = {
+      mimeType: 'image/png' as const,
+      data: 'cG5n',
+      width: 1024,
+      height: 768,
+      capturedAt: '2026-07-06T00:00:00.000Z',
+    };
+    const captureWindowedDesktopScreenshot = vi.fn().mockResolvedValue({ image });
+    window.neonPilotDesktop = {
+      captureWindowedDesktopScreenshot,
+      setWorkbenchBrowserBounds: vi.fn(() => Promise.resolve(null)),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /new conversation/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/screenshot/events');
+    expect(source).toBeTruthy();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-screenshot-test',
+            createdAt: '2026-07-06T00:00:00.000Z',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(captureWindowedDesktopScreenshot).toHaveBeenCalledWith();
+      expect(mocks.acknowledgeDesktopScreenshot).toHaveBeenCalledWith({
+        requestId: 'desktop-screenshot-test',
+        ok: true,
+        image,
+      });
+    });
+  });
+
+  it('acknowledges streamed desktop screenshot requests for a semantic window id', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+    const image = {
+      mimeType: 'image/png' as const,
+      data: 'cG5n',
+      width: 760,
+      height: 520,
+      capturedAt: '2026-07-06T00:00:00.000Z',
+      windowId: 'route:system-notes:notes',
+    };
+    const captureWindowedDesktopScreenshot = vi.fn().mockResolvedValue({ image });
+    window.neonPilotDesktop = {
+      captureWindowedDesktopScreenshot,
+      setWorkbenchBrowserBounds: vi.fn(() => Promise.resolve(null)),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    vi.spyOn(notesWindow, 'getBoundingClientRect').mockReturnValue({
+      x: 90.4,
+      y: 70.6,
+      width: 759.6,
+      height: 519.6,
+      top: 70.6,
+      right: 850,
+      bottom: 590,
+      left: 90.4,
+      toJSON: () => ({}),
+    } as DOMRect);
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/screenshot/events');
+    expect(source).toBeTruthy();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-screenshot-window-test',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            windowId: 'route:system-notes:notes',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(captureWindowedDesktopScreenshot).toHaveBeenCalledWith({
+        bounds: { x: 90, y: 71, width: 760, height: 520 },
+        windowId: 'route:system-notes:notes',
+      });
+      expect(mocks.acknowledgeDesktopScreenshot).toHaveBeenCalledWith({
+        requestId: 'desktop-screenshot-window-test',
+        ok: true,
+        image,
+      });
+    });
+  });
+
+  it('rejects desktop screenshot requests for BrowserView-backed browser windows', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:browser',
+        kind: 'browser',
+        title: 'Browser',
+        route: '/browser',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+    const captureWindowedDesktopScreenshot = vi.fn().mockResolvedValue({
+      image: {
+        mimeType: 'image/png' as const,
+        data: 'cG5n',
+        width: 760,
+        height: 520,
+        capturedAt: '2026-07-06T00:00:00.000Z',
+      },
+    });
+    window.neonPilotDesktop = {
+      captureWindowedDesktopScreenshot,
+      setWorkbenchBrowserBounds: vi.fn(() => Promise.resolve(null)),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /^browser$/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/screenshot/events');
+    expect(source).toBeTruthy();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-screenshot-browser-test',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            windowId: 'route:browser',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(captureWindowedDesktopScreenshot).not.toHaveBeenCalled();
+      expect(mocks.acknowledgeDesktopScreenshot).toHaveBeenCalledWith({
+        requestId: 'desktop-screenshot-browser-test',
+        ok: false,
+        error:
+          'desktop_screenshot cannot capture BrowserView-backed browser windows yet. Use the browser screenshot tool for browser content.',
+      });
     });
   });
 

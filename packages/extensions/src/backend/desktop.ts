@@ -79,5 +79,36 @@ export interface DesktopControlResult {
   error?: string;
 }
 
+export interface DesktopScreenshotInput {
+  windowId?: string;
+  timeoutMs?: number;
+}
+
+export interface DesktopScreenshotBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DesktopScreenshotImage {
+  mimeType: 'image/png';
+  data: string;
+  width: number;
+  height: number;
+  capturedAt: string;
+  bounds?: DesktopScreenshotBounds;
+  windowId?: string;
+}
+
+export interface DesktopScreenshotResult {
+  ok: boolean;
+  requestId: string;
+  status: 'completed' | 'failed' | 'timeout';
+  image?: DesktopScreenshotImage;
+  error?: string;
+}
+
+export const captureDesktopScreenshot = (..._args: unknown[]): unknown => hostResolved();
 export const controlDesktop = (..._args: unknown[]): unknown => hostResolved();
 export const readDesktopState = (..._args: unknown[]): unknown => hostResolved();

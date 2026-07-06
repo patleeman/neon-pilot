@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@neon-pilot/extensions/backend/desktop', () => ({
+  captureDesktopScreenshot: vi.fn(),
   controlDesktop: vi.fn(),
   readDesktopState: vi.fn(),
 }));
 
-import { controlDesktop, readDesktopState } from '@neon-pilot/extensions/backend/desktop';
+import { captureDesktopScreenshot, controlDesktop, readDesktopState } from '@neon-pilot/extensions/backend/desktop';
 
-import { desktopControl, desktopState } from './backend.js';
+import { desktopControl, desktopScreenshot, desktopState } from './backend.js';
 
 function mockContext() {
   return {
@@ -94,5 +95,66 @@ describe('desktopControl', () => {
     expect(controlDesktop).toHaveBeenCalledWith(input);
     expect(output.details).toEqual(result);
     expect(output.content).toEqual([{ type: 'text', text: JSON.stringify(result, null, 2) }]);
+  });
+});
+
+describe('desktopScreenshot', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns screenshot metadata as text/details and PNG content as an image block', async () => {
+    const input = { windowId: 'chat:draft' };
+    const result = {
+      ok: true,
+      requestId: 'desktop-screenshot-1',
+      status: 'completed',
+      image: {
+        mimeType: 'image/png' as const,
+        data: 'cG5n',
+        width: 640,
+        height: 400,
+        capturedAt: '2026-07-06T00:00:00.000Z',
+        windowId: 'chat:draft',
+      },
+    };
+    vi.mocked(captureDesktopScreenshot).mockResolvedValue(result);
+
+    const output = await desktopScreenshot(input, mockContext());
+
+    expect(captureDesktopScreenshot).toHaveBeenCalledWith(input);
+    expect(output.details).toEqual({
+      ...result,
+      image: {
+        mimeType: 'image/png',
+        width: 640,
+        height: 400,
+        capturedAt: '2026-07-06T00:00:00.000Z',
+        windowId: 'chat:draft',
+      },
+    });
+    expect(output.content).toEqual([
+      {
+        type: 'text',
+        text: JSON.stringify(output.details, null, 2),
+      },
+      { type: 'image', data: 'cG5n', mimeType: 'image/png' },
+    ]);
+    expect(output.content[0]?.text).not.toContain('cG5n');
+  });
+
+  it('returns useful text for failed screenshot requests', async () => {
+    const result = {
+      ok: false,
+      requestId: 'desktop-screenshot-2',
+      status: 'failed',
+      error: 'Window is minimized: chat:draft',
+    };
+    vi.mocked(captureDesktopScreenshot).mockResolvedValue(result);
+
+    const output = await desktopScreenshot({ windowId: 'chat:draft' }, mockContext());
+
+    expect(output.details).toEqual(result);
+    expect(output.content).toEqual([{ type: 'text', text: 'desktop_screenshot failed: Window is minimized: chat:draft' }]);
   });
 });

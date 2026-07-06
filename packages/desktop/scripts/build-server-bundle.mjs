@@ -76,6 +76,7 @@ const backendApiLazyModuleEntries = [
   ['documents/store.js', 'server/documents/store.ts'],
   ['desktop/desktopState.js', 'server/desktop/desktopState.ts'],
   ['desktop/desktopControl.js', 'server/desktop/desktopControl.ts'],
+  ['desktop/desktopScreenshot.js', 'server/desktop/desktopScreenshot.ts'],
   ['tools/toolGateway.js', 'server/tools/toolGateway.ts'],
   ['tools/toolInventory.js', 'server/tools/toolInventory.ts'],
   ['transcription/transcriptionService.js', 'server/transcription/transcriptionService.ts'],

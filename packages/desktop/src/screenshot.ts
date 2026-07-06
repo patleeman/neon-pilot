@@ -3,6 +3,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
+import type { WebContents } from 'electron';
+
 interface DesktopScreenshotImage {
   name?: string;
   mimeType: string;
@@ -12,6 +14,32 @@ interface DesktopScreenshotImage {
 export interface DesktopScreenshotCaptureResult {
   cancelled: boolean;
   image?: DesktopScreenshotImage;
+}
+
+export interface WindowedDesktopScreenshotBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface WindowedDesktopScreenshotInput {
+  bounds?: WindowedDesktopScreenshotBounds | null;
+  windowId?: string | null;
+}
+
+export interface WindowedDesktopScreenshotImage {
+  mimeType: 'image/png';
+  data: string;
+  width: number;
+  height: number;
+  capturedAt: string;
+  bounds?: WindowedDesktopScreenshotBounds;
+  windowId?: string;
+}
+
+export interface WindowedDesktopScreenshotCaptureResult {
+  image: WindowedDesktopScreenshotImage;
 }
 
 interface ScreenshotCommandResult {
@@ -100,6 +128,59 @@ export async function captureDesktopScreenshot(deps: CaptureDesktopScreenshotDep
   } finally {
     await deps.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
   }
+}
+
+function sanitizeWindowedScreenshotBounds(
+  bounds: WindowedDesktopScreenshotBounds | null | undefined,
+): WindowedDesktopScreenshotBounds | undefined {
+  if (bounds === undefined || bounds === null) return undefined;
+  const { x, y, width, height } = bounds;
+  if (
+    typeof x !== 'number' ||
+    typeof y !== 'number' ||
+    typeof width !== 'number' ||
+    typeof height !== 'number' ||
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    throw new Error('Windowed OS screenshot bounds must include finite positive width and height.');
+  }
+  return {
+    x: Math.max(0, Math.round(x)),
+    y: Math.max(0, Math.round(y)),
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
+  };
+}
+
+export async function captureWindowedDesktopScreenshot(
+  webContents: Pick<WebContents, 'capturePage'>,
+  input: WindowedDesktopScreenshotInput = {},
+): Promise<WindowedDesktopScreenshotCaptureResult> {
+  const bounds = sanitizeWindowedScreenshotBounds(input.bounds);
+  const nativeImage = await webContents.capturePage(bounds);
+  const png = nativeImage.toPNG();
+  if (png.length > MAX_DESKTOP_SCREENSHOT_BYTES) {
+    throw new Error(
+      `Windowed OS screenshot is too large to send through the native desktop bridge (${png.length} bytes; max ${MAX_DESKTOP_SCREENSHOT_BYTES} bytes). Capture a smaller window and try again.`,
+    );
+  }
+  const size = nativeImage.getSize();
+  return {
+    image: {
+      mimeType: 'image/png',
+      data: png.toString('base64'),
+      width: size.width,
+      height: size.height,
+      capturedAt: new Date().toISOString(),
+      ...(bounds ? { bounds } : {}),
+      ...(input.windowId ? { windowId: input.windowId } : {}),
+    },
+  };
 }
 
 async function runInteractiveScreencapture(outputPath: string): Promise<ScreenshotCommandResult> {

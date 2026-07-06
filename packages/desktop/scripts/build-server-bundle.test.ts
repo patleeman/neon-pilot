@@ -67,12 +67,12 @@ describe('desktop server bundle lazy module entries', () => {
     const backendApiFiles = [
       'audio.ts',
       'automations.ts',
+      'desktop.ts',
       'documents.ts',
       'events.ts',
       'gateways.ts',
       'images.ts',
       'knowledge.ts',
-      'modelGateway.ts',
       'transcription.ts',
       'videos.ts',
     ].map((file) => `packages/desktop/server/extensions/backendApi/${file}`);
