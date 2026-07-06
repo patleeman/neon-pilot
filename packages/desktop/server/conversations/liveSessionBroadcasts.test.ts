@@ -123,7 +123,11 @@ describe('live session broadcasts', () => {
     readApi.computeLiveSessionRunning.mockReturnValueOnce(true);
     publishRunningChange(e as never);
     expect(e.running).toBe(true);
-    expect(appEvents.publishConversationRuntimeState).toHaveBeenCalledWith({ conversationId: 's1', running: true });
+    expect(appEvents.publishConversationRuntimeState).toHaveBeenCalledWith({
+      conversationId: 's1',
+      running: true,
+      parallelJobs: [],
+    });
     expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'session_meta_changed', sessionId: 's1' });
     expect(appEvents.invalidateAppTopics).not.toHaveBeenCalled();
   });
@@ -195,7 +199,16 @@ describe('live session broadcasts', () => {
     broadcastPresenceState(e, { exclude: (e as never as { listeners: unknown[] }).listeners[0] as never });
 
     expect(durableRun.syncLiveSessionDurableRun).toHaveBeenCalledWith(e, { runId: 'run-1' }, { force: true });
-    expect(appEvents.publishConversationRuntimeState).toHaveBeenCalledWith({ conversationId: 's1', running: true });
+    expect(appEvents.publishConversationRuntimeState).toHaveBeenCalledWith({
+      conversationId: 's1',
+      running: true,
+      parallelJobs: [],
+    });
+    expect(appEvents.publishConversationRuntimeState).toHaveBeenCalledWith({
+      conversationId: 's1',
+      running: false,
+      parallelJobs: [],
+    });
     expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'session_meta_changed', sessionId: 's1' });
     expect(stateBroadcasts.broadcastLiveSessionQueueState).toHaveBeenCalledWith(e, expect.any(Function), true);
     expect(stateBroadcasts.broadcastLiveSessionParallelState).toHaveBeenCalledWith(e, expect.any(Function), true);

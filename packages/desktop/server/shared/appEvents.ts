@@ -16,6 +16,7 @@ import { getDaemonConfigFilePath, loadDaemonConfig, resolveDaemonPaths, resolveD
 
 import { clearDurableRunsListCache } from '../automation/durableRuns.js';
 import { readKnownConversationIdByFilePath } from '../conversations/conversationService.js';
+import type { ParallelPromptPreview } from '../conversations/liveSessionParallelJobs.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
 import { logWarn } from './logging.js';
 
@@ -80,11 +81,16 @@ export interface ConversationRuntimeState {
   revision: number;
   updatedAt: string;
   running: boolean;
+  parallelJobs?: ParallelPromptPreview[];
 }
 
 let conversationRuntimeRevision = 0;
 
-export function publishConversationRuntimeState(input: { conversationId: string; running: boolean }): void {
+export function publishConversationRuntimeState(input: {
+  conversationId: string;
+  running: boolean;
+  parallelJobs?: ParallelPromptPreview[];
+}): void {
   const conversationId = input.conversationId.trim();
   if (!conversationId) return;
   conversationRuntimeRevision += 1;
@@ -93,6 +99,7 @@ export function publishConversationRuntimeState(input: { conversationId: string;
     conversation: {
       id: conversationId,
       running: input.running,
+      ...(input.parallelJobs ? { parallelJobs: input.parallelJobs } : {}),
       revision: conversationRuntimeRevision,
       updatedAt: new Date().toISOString(),
     },

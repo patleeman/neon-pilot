@@ -7,7 +7,12 @@ const forking = vi.hoisted(() => ({
   buildParallelImportedContent: vi.fn((job) => `content:${job.id}`),
   resolveStableForkEntryId: vi.fn(() => 'entry-1'),
 }));
-const jobs = vi.hoisted(() => ({ normalizeParallelPromptList: vi.fn((value) => (Array.isArray(value) ? value.slice(0, 12) : [])) }));
+const jobs = vi.hoisted(() => ({
+  normalizeParallelPromptList: vi.fn((value) => (Array.isArray(value) ? value.slice(0, 12) : [])),
+  generateParallelWorkerName: vi.fn(
+    (input: { id: string; childConversationId: string }) => `Worker ${input.id}-${input.childConversationId}`,
+  ),
+}));
 const reconciliation = vi.hoisted(() => ({
   readParallelCurrentWorktreeDirtyPaths: vi.fn(() => ['dirty.ts']),
   readParallelJobCompletionFromSessionFile: vi.fn(() => ({
@@ -73,6 +78,8 @@ describe('live session parallel import operations', () => {
     ).toMatchObject({
       id: 'job-1',
       status: 'running',
+      workerRole: 'worker',
+      workerName: 'Worker job-1-child',
       createdAt: '2026-05-22T12:00:00.000Z',
       updatedAt: '2026-05-22T12:00:00.000Z',
       imageCount: 2,
@@ -81,6 +88,9 @@ describe('live session parallel import operations', () => {
       repoRoot: '/repo',
       worktreeDirtyPathsAtStart: ['dirty.ts'],
     });
+    expect(jobs.generateParallelWorkerName).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'job-1', childConversationId: 'child', prompt: 'prompt' }),
+    );
   });
 
   it('starts a parallel prompt by forking a stable entry and scheduling completion handling', async () => {

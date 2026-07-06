@@ -11,7 +11,12 @@ import {
 } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { type ActivityTreeItem, buildActivityTreeItems, buildConversationActivityId } from '../activity/activityTree';
+import {
+  type ActivityTreeItem,
+  type ActivityTreeParallelPromptPreview,
+  buildActivityTreeItems,
+  buildConversationActivityId,
+} from '../activity/activityTree';
 import { applyActivityTreeItemStyleProviders } from '../activity/activityTreeExtensionStyles';
 import { type ActivityTreeDropPosition, ActivityTreeView } from '../activity/ActivityTreeView';
 import { useAppEvents, useLiveTitles } from '../app/contexts';
@@ -105,6 +110,7 @@ import {
   useConversationActivityStatus,
   useConversationActivityStatusVersion,
   useConversationRuntime,
+  useConversationRuntimeVersion,
   useSession,
   useSessionsReady,
   useTitle,
@@ -1708,6 +1714,7 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
   const tasks = useAllTasks();
   const executionRecords = useAllExecutions();
   const conversationActivityStatusVersion = useConversationActivityStatusVersion();
+  const conversationRuntimeVersion = useConversationRuntimeVersion();
   const titleVersion = useTitleVersion();
   const extensionRegistry = useExtensionRegistry();
   const {
@@ -2198,8 +2205,15 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
   }, [liveTitles, renderedConversationItems, titleVersion]);
   const baseActivityTreeItems = useMemo(() => {
     const pinnedIdSet = new Set(pinnedIds);
+    const parallelPrompts: ActivityTreeParallelPromptPreview[] = activityTreeSessions.flatMap((session) =>
+      (conversationRuntimeStore.get(session.id)?.parallelJobs ?? []).map((preview) => ({
+        ...preview,
+        parentConversationId: session.id,
+      })),
+    );
     const flatItems = buildActivityTreeItems({
       conversations: activityTreeSessions,
+      parallelPrompts,
     }).map((item) => {
       const conversationId = typeof item.metadata?.conversationId === 'string' ? item.metadata.conversationId : null;
       if (!conversationId) return item;
@@ -2260,6 +2274,7 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
     activityTreeSessions,
     backgroundWorkKindByConversationId,
     conversationActivityStatusVersion,
+    conversationRuntimeVersion,
     groupedConversationRows,
     lockedConversationIdSet,
     pendingExecutionConversationIdSet,

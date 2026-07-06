@@ -5,6 +5,7 @@ import { persistTraceContext } from '../traces/tracePersistence.js';
 import type { WebLiveConversationRunState } from './conversationRuns.js';
 import { syncLiveSessionDurableRun } from './liveSessionDurableRun.js';
 import type { LiveContextUsage, SseEvent } from './liveSessionEvents.js';
+import { readParallelState } from './liveSessionParallelJobs.js';
 import { broadcastLiveSessionPresenceState } from './liveSessionPresenceFacade.js';
 import { computeLiveSessionRunning } from './liveSessionReadApi.js';
 import {
@@ -72,7 +73,11 @@ export function publishRunningChange(entry: LiveEntry): void {
   const next = computeLiveSessionRunning(entry);
   if (next === entry.running) return;
   entry.running = next;
-  publishConversationRuntimeState({ conversationId: entry.sessionId, running: next });
+  publishConversationRuntimeState({
+    conversationId: entry.sessionId,
+    running: next,
+    parallelJobs: entry.lastParallelState ?? readParallelState(entry.parallelJobs),
+  });
   publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId });
 }
 
@@ -162,6 +167,11 @@ export function broadcastQueueState(entry: LiveEntry, force = false): void {
 
 export function broadcastParallelState(entry: LiveEntry, force = false): void {
   broadcastLiveSessionParallelState(entry, (event) => broadcast(entry, event), force);
+  publishConversationRuntimeState({
+    conversationId: entry.sessionId,
+    running: computeLiveSessionRunning(entry),
+    parallelJobs: entry.lastParallelState ?? [],
+  });
 }
 
 export function scheduleContextUsage(entry: LiveEntry, delayMs = 400): void {

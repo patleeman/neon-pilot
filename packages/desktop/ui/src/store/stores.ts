@@ -26,7 +26,9 @@ export type ConversationActivityStatus = 'idle' | 'streaming' | 'automation' | '
 let conversationActivityStatusStates = new Map<string, ConversationActivityStatus>();
 let conversationRuntimeStates = new Map<string, ConversationRuntimeState>();
 let conversationActivityStatusVersion = 0;
+let conversationRuntimeVersion = 0;
 const conversationRuntimeListeners = new Map<string, Set<() => void>>();
+const conversationRuntimeAllListeners = new Set<() => void>();
 const conversationActivityStatusListeners = new Map<string, Set<() => void>>();
 const conversationActivityStatusAllListeners = new Set<() => void>();
 
@@ -109,8 +111,15 @@ export const conversationRuntimeStore = {
     ) {
       return;
     }
-    conversationRuntimeStates = new Map(conversationRuntimeStates).set(sessionId, { ...runtime, id: sessionId });
+    conversationRuntimeStates = new Map(conversationRuntimeStates).set(sessionId, {
+      ...current,
+      ...runtime,
+      id: sessionId,
+      ...(runtime.parallelJobs === undefined && current?.parallelJobs !== undefined ? { parallelJobs: current.parallelJobs } : {}),
+    });
+    conversationRuntimeVersion += 1;
     conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
+    conversationRuntimeAllListeners.forEach((cb) => cb());
     rederiveConversationActivityStatusForId(sessionId);
   },
 
@@ -125,7 +134,9 @@ export const conversationRuntimeStore = {
       running: false,
       updatedAt: new Date().toISOString(),
     });
+    conversationRuntimeVersion += 1;
     conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
+    conversationRuntimeAllListeners.forEach((cb) => cb());
     rederiveConversationActivityStatusForId(sessionId);
   },
 
@@ -133,7 +144,9 @@ export const conversationRuntimeStore = {
     if (!conversationRuntimeStates.has(sessionId)) return;
     conversationRuntimeStates = new Map(conversationRuntimeStates);
     conversationRuntimeStates.delete(sessionId);
+    conversationRuntimeVersion += 1;
     conversationRuntimeListeners.get(sessionId)?.forEach((cb) => cb());
+    conversationRuntimeAllListeners.forEach((cb) => cb());
     rederiveConversationActivityStatusForId(sessionId);
   },
 
@@ -141,9 +154,22 @@ export const conversationRuntimeStore = {
     return conversationRuntimeStates.get(sessionId);
   },
 
+  getVersion(): number {
+    return conversationRuntimeVersion;
+  },
+
+  subscribeAll(callback: () => void): () => void {
+    conversationRuntimeAllListeners.add(callback);
+    return () => {
+      conversationRuntimeAllListeners.delete(callback);
+    };
+  },
+
   reset(): void {
     conversationRuntimeStates = new Map();
     conversationRuntimeListeners.clear();
+    conversationRuntimeAllListeners.clear();
+    conversationRuntimeVersion += 1;
   },
 };
 

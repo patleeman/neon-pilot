@@ -1056,6 +1056,7 @@ export interface ConversationRuntimeState {
   revision: number;
   updatedAt: string;
   running: boolean;
+  parallelJobs?: ParallelPromptPreview[];
 }
 
 // ── Live session ──────────────────────────────────────────────────────────────
@@ -1293,6 +1294,10 @@ export interface ParallelPromptPreview {
   prompt: string;
   childConversationId: string;
   status: 'running' | 'ready' | 'failed' | 'importing';
+  /** Non-persona worker role; always `worker` for parallel prompt attempts. */
+  workerRole?: ExecutionWorkerRole;
+  /** Stable human-readable worker name (generated server-side, not user-set). */
+  workerName?: string;
   imageCount: number;
   attachmentRefs?: string[];
   touchedFiles?: string[];

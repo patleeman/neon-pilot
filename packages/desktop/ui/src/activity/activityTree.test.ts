@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ExecutionRecord, SessionMeta } from '../shared/types';
-import { buildActivityTreeItems, buildConversationActivityId, buildExecutionActivityId, buildRunActivityId } from './activityTree';
+import type { ExecutionRecord, ParallelPromptPreview, SessionMeta } from '../shared/types';
+import {
+  type ActivityTreeParallelPromptPreview,
+  buildActivityTreeItems,
+  buildConversationActivityId,
+  buildExecutionActivityId,
+  buildParallelPromptActivityId,
+  buildRunActivityId,
+} from './activityTree';
 
 function session(overrides: Partial<SessionMeta> & Pick<SessionMeta, 'id' | 'title'>): SessionMeta {
   return {
@@ -30,6 +37,21 @@ function execution(overrides: Partial<ExecutionRecord> & Pick<ExecutionRecord, '
     workerRole: overrides.workerRole,
     workerName: overrides.workerName,
     capabilities: overrides.capabilities ?? { canCancel: true, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
+  };
+}
+
+function parallelPrompt(
+  overrides: Partial<ActivityTreeParallelPromptPreview> & Pick<ParallelPromptPreview, 'id' | 'childConversationId'>,
+): ActivityTreeParallelPromptPreview {
+  return {
+    id: overrides.id,
+    prompt: overrides.prompt ?? 'Review the diff',
+    childConversationId: overrides.childConversationId,
+    status: overrides.status ?? 'running',
+    workerRole: 'worker',
+    workerName: 'workerName' in overrides ? overrides.workerName : 'Focused Reviewer 1a2b3',
+    imageCount: overrides.imageCount ?? 0,
+    parentConversationId: overrides.parentConversationId,
   };
 }
 
@@ -205,5 +227,135 @@ describe('buildActivityTreeItems', () => {
 
     expect(items.find((item) => item.id === buildExecutionActivityId('run-hidden'))).toBeUndefined();
     expect(items.find((item) => item.id === buildExecutionActivityId('run-missing'))).toBeUndefined();
+  });
+
+  describe('parallel prompt worker projection', () => {
+    it('projects parallel prompts as execution-kind worker children under the parent conversation', () => {
+      const items = buildActivityTreeItems({
+        conversations: [
+          session({ id: 'conv-parent', title: 'Build the thing', isRunning: true }),
+          session({ id: 'conv-child', title: 'Worker thread', parentSessionId: 'conv-parent' }),
+        ],
+        parallelPrompts: [
+          parallelPrompt({
+            id: 'prompt-1',
+            childConversationId: 'conv-child',
+            workerName: 'Focused Reviewer 1a2b3',
+            status: 'running',
+          }),
+        ],
+      });
+
+      expect(items.find((item) => item.id === buildParallelPromptActivityId('prompt-1'))).toEqual(
+        expect.objectContaining({
+          id: buildParallelPromptActivityId('prompt-1'),
+          kind: 'execution',
+          parentId: buildConversationActivityId('conv-parent'),
+          title: 'Focused Reviewer 1a2b3',
+          subtitle: 'Background worker',
+          status: 'running',
+          route: '/conversations/conv-child',
+          metadata: expect.objectContaining({
+            parallelPromptId: 'prompt-1',
+            childConversationId: 'conv-child',
+            parentConversationId: 'conv-parent',
+            workerRole: 'worker',
+            workerName: 'Focused Reviewer 1a2b3',
+          }),
+        }),
+      );
+    });
+
+    it('associates via an explicit parentConversationId without requiring the child conversation in the input', () => {
+      const items = buildActivityTreeItems({
+        conversations: [session({ id: 'conv-parent', title: 'Build the thing' })],
+        parallelPrompts: [
+          parallelPrompt({
+            id: 'prompt-1',
+            childConversationId: 'conv-child-elsewhere',
+            parentConversationId: 'conv-parent',
+            status: 'importing',
+          }),
+        ],
+      });
+
+      expect(items.find((item) => item.id === buildParallelPromptActivityId('prompt-1'))).toEqual(
+        expect.objectContaining({
+          parentId: buildConversationActivityId('conv-parent'),
+          status: 'running',
+        }),
+      );
+    });
+
+    it('maps ready -> done and failed -> failed, and falls back to the prompt id when no workerName is present', () => {
+      const items = buildActivityTreeItems({
+        conversations: [session({ id: 'conv-parent', title: 'Build the thing' })],
+        parallelPrompts: [
+          parallelPrompt({
+            id: 'prompt-ready',
+            childConversationId: 'conv-child',
+            parentConversationId: 'conv-parent',
+            status: 'ready',
+            workerName: undefined,
+          }),
+          parallelPrompt({
+            id: 'prompt-failed',
+            childConversationId: 'conv-child-2',
+            parentConversationId: 'conv-parent',
+            status: 'failed',
+            workerName: '  ',
+          }),
+        ],
+      });
+
+      expect(items.find((item) => item.id === buildParallelPromptActivityId('prompt-ready'))).toEqual(
+        expect.objectContaining({ title: 'prompt-ready', status: 'done' }),
+      );
+      expect(items.find((item) => item.id === buildParallelPromptActivityId('prompt-failed'))).toEqual(
+        expect.objectContaining({ title: 'prompt-failed', status: 'failed' }),
+      );
+    });
+
+    it('never surfaces parallel prompts as persona copies and ignores caller-spoofed workerRole metadata', () => {
+      const items = buildActivityTreeItems({
+        conversations: [session({ id: 'conv-parent', title: 'Build the thing' })],
+        parallelPrompts: [
+          // Caller tries to spoof a persona role; projection still forces worker.
+          {
+            ...parallelPrompt({
+              id: 'prompt-1',
+              childConversationId: 'conv-child',
+              parentConversationId: 'conv-parent',
+            }),
+            workerRole: 'persona' as unknown as 'worker',
+          },
+        ],
+      });
+
+      const projected = items.find((item) => item.id === buildParallelPromptActivityId('prompt-1'));
+      expect(projected).toBeDefined();
+      expect(projected?.metadata?.workerRole).toBe('worker');
+      expect(projected?.subtitle).toBe('Background worker');
+    });
+
+    it('skips parallel prompts whose parent conversation cannot be associated from the input', () => {
+      const items = buildActivityTreeItems({
+        conversations: [session({ id: 'conv-parent', title: 'Build the thing' })],
+        parallelPrompts: [
+          // No explicit parent and the child conversation is not in the input.
+          parallelPrompt({ id: 'prompt-orphan', childConversationId: 'conv-missing', status: 'running' }),
+          // Explicit parent that does not exist in the input.
+          parallelPrompt({
+            id: 'prompt-unknown-parent',
+            childConversationId: 'conv-child',
+            parentConversationId: 'conv-missing',
+            status: 'running',
+          }),
+        ],
+      });
+
+      expect(items.find((item) => item.id === buildParallelPromptActivityId('prompt-orphan'))).toBeUndefined();
+      expect(items.find((item) => item.id === buildParallelPromptActivityId('prompt-unknown-parent'))).toBeUndefined();
+    });
   });
 });

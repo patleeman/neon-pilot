@@ -1,5 +1,5 @@
 import { summarizeConversationBackgroundWorkKind } from '../conversation/conversationExecutionActivity';
-import type { ExecutionRecord, SessionMeta } from '../shared/types';
+import type { ExecutionRecord, ParallelPromptPreview, SessionMeta } from '../shared/types';
 
 type ActivityTreeItemKind = 'conversation' | 'execution' | 'run' | 'terminal' | 'artifact' | 'checkpoint' | 'group';
 type ActivityTreeItemStatus = 'idle' | 'running' | 'queued' | 'failed' | 'done';
@@ -48,6 +48,24 @@ export interface ActivityTreeItem {
 export interface BuildActivityTreeInput {
   conversations: readonly SessionMeta[];
   executions?: readonly ExecutionRecord[];
+  /**
+   * Parallel prompt workers to project as execution-kind child items. Each
+   * preview is nested under its parent conversation when association can be
+   * derived from the input: an explicit `parentConversationId`, or by looking
+   * up the `childConversationId` in `conversations` and using that child's
+   * `parentSessionId`.
+   */
+  parallelPrompts?: readonly ActivityTreeParallelPromptPreview[];
+}
+
+/**
+ * Parallel prompt preview extended with an optional explicit parent
+ * conversation id, used only for Activity-tree association. The worker role
+ * is never trusted from caller metadata: projections always treat parallel
+ * prompts as non-persona workers.
+ */
+export interface ActivityTreeParallelPromptPreview extends ParallelPromptPreview {
+  parentConversationId?: string;
 }
 
 export function buildConversationActivityId(conversationId: string): string {
@@ -62,12 +80,21 @@ export function buildExecutionActivityId(executionId: string): string {
   return `execution:${executionId}`;
 }
 
+export function buildParallelPromptActivityId(previewId: string): string {
+  return `parallel:${previewId}`;
+}
+
 function formatConversationActivityTitle(session: SessionMeta): string {
   return session.title || 'Untitled conversation';
 }
 
-export function buildActivityTreeItems({ conversations, executions = [] }: BuildActivityTreeInput): ActivityTreeItem[] {
+export function buildActivityTreeItems({
+  conversations,
+  executions = [],
+  parallelPrompts = [],
+}: BuildActivityTreeInput): ActivityTreeItem[] {
   const conversationIds = new Set(conversations.map((session) => session.id));
+  const conversationsById = new Map(conversations.map((session) => [session.id, session] as const));
   const activeExecutionConversationIds = new Set(
     executions.flatMap((execution) =>
       execution.conversationId && executionIsActive(execution.status) && execution.visibility !== 'hidden'
@@ -133,7 +160,46 @@ export function buildActivityTreeItems({ conversations, executions = [] }: Build
     });
   }
 
+  for (const preview of parallelPrompts) {
+    const explicitParent = preview.parentConversationId?.trim();
+    const parentConversationId =
+      explicitParent && conversationIds.has(explicitParent)
+        ? explicitParent
+        : resolveParallelPromptParentConversationId(preview, conversationsById);
+    if (!parentConversationId || !conversationIds.has(parentConversationId)) {
+      continue;
+    }
+
+    const workerName = typeof preview.workerName === 'string' ? preview.workerName.trim() : '';
+    items.push({
+      id: buildParallelPromptActivityId(preview.id),
+      kind: 'execution',
+      parentId: buildConversationActivityId(parentConversationId),
+      title: workerName || preview.id,
+      subtitle: 'Background worker',
+      status: normalizeParallelPromptStatus(preview.status),
+      route: `/conversations/${encodeURIComponent(preview.childConversationId)}`,
+      metadata: {
+        parallelPromptId: preview.id,
+        childConversationId: preview.childConversationId,
+        parentConversationId,
+        workerRole: 'worker',
+        workerName: workerName || undefined,
+      },
+    });
+  }
+
   return items;
+}
+
+function resolveParallelPromptParentConversationId(
+  preview: ParallelPromptPreview,
+  conversationsById: Map<string, SessionMeta>,
+): string | undefined {
+  const child = conversationsById.get(preview.childConversationId);
+  if (!child) return undefined;
+  const parentSessionId = typeof child.parentSessionId === 'string' ? child.parentSessionId.trim() : '';
+  return parentSessionId || undefined;
 }
 
 function normalizeRunStatus(status: string | undefined): ActivityTreeItemStatus {
@@ -150,6 +216,20 @@ function normalizeRunStatus(status: string | undefined): ActivityTreeItemStatus 
     case 'succeeded':
     case 'success':
       return 'done';
+    default:
+      return 'idle';
+  }
+}
+
+function normalizeParallelPromptStatus(status: ParallelPromptPreview['status']): ActivityTreeItemStatus {
+  switch (status) {
+    case 'running':
+    case 'importing':
+      return 'running';
+    case 'ready':
+      return 'done';
+    case 'failed':
+      return 'failed';
     default:
       return 'idle';
   }

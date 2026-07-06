@@ -4,7 +4,13 @@ import { logWarn } from '../shared/logging.js';
 import { readGitRepoInfo } from '../workspace/gitStatus.js';
 import { buildParallelImportedContent, resolveStableForkEntryId } from './liveSessionForking.js';
 import type { LiveSessionLoaderOptions } from './liveSessionLoader.js';
-import { normalizeParallelPromptList, type ParallelPromptJob, type ParallelPromptJobStatus } from './liveSessionParallelJobs.js';
+import {
+  generateParallelWorkerName,
+  normalizeParallelPromptList,
+  type ParallelPromptJob,
+  type ParallelPromptJobStatus,
+  type ParallelPromptWorkerRole,
+} from './liveSessionParallelJobs.js';
 import {
   readParallelCurrentWorktreeDirtyPaths,
   readParallelJobCompletionFromSessionFile,
@@ -236,12 +242,20 @@ export function createRunningParallelPromptJob(input: {
   autoImport?: boolean;
 }): ParallelPromptJob {
   const now = new Date().toISOString();
+  const workerName = generateParallelWorkerName({
+    id: input.id,
+    prompt: input.prompt,
+    childConversationId: input.childConversationId,
+    purpose: input.purpose,
+  });
   return {
     id: input.id,
     prompt: input.prompt,
     childConversationId: input.childConversationId,
     childSessionFile: input.childSessionFile,
     status: 'running',
+    workerRole: 'worker' satisfies ParallelPromptWorkerRole,
+    workerName,
     ...(input.ownerExtensionId ? { ownerExtensionId: input.ownerExtensionId } : {}),
     ...(input.purpose ? { purpose: input.purpose } : {}),
     ...(input.modelRef ? { modelRef: input.modelRef } : {}),
@@ -258,10 +272,6 @@ export function createRunningParallelPromptJob(input: {
     ...(input.forkEntryId ? { forkEntryId: input.forkEntryId } : {}),
     ...(input.repoRoot ? { repoRoot: input.repoRoot } : {}),
     worktreeDirtyPathsAtStart: readParallelCurrentWorktreeDirtyPaths(input.cwd, input.repoRoot),
-    ...(input.modelRef ? { modelRef: input.modelRef } : {}),
-    ...(input.ownerExtensionId ? { ownerExtensionId: input.ownerExtensionId } : {}),
-    ...(input.purpose ? { purpose: input.purpose } : {}),
-    ...(input.metadata ? { metadata: input.metadata } : {}),
   };
 }
 

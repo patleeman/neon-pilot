@@ -105,6 +105,12 @@ export function useConversationRuntime(id: string | null | undefined): Conversat
   return useDerivedValue(subscribe, getSnapshot);
 }
 
+export function useConversationRuntimeVersion(): number {
+  const subscribe = useCallback((onStoreChange: () => void) => conversationRuntimeStore.subscribeAll(onStoreChange), []);
+  const getSnapshot = useCallback(() => conversationRuntimeStore.getVersion(), []);
+  return useDerivedValue(subscribe, getSnapshot);
+}
+
 export function useConversationActivityStatusVersion(): number {
   const subscribe = useCallback((onStoreChange: () => void) => conversationActivityStatusStore.subscribeAll(onStoreChange), []);
   const getSnapshot = useCallback(() => conversationActivityStatusStore.getVersion(), []);

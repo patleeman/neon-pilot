@@ -104,6 +104,47 @@ describe('conversationActivityStatusStore', () => {
     expect(conversationActivityStatusStore.get('conv-1')).toBe('streaming');
   });
 
+  it('preserves parallel worker previews across newer partial runtime events', () => {
+    conversationRuntimeStore.apply({
+      id: 'conv-1',
+      running: true,
+      revision: 1,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      parallelJobs: [
+        {
+          id: 'parallel-1',
+          prompt: 'Review the diff',
+          childConversationId: 'child-1',
+          status: 'running',
+          workerRole: 'worker',
+          workerName: 'Focused Reviewer 1a2b3',
+          imageCount: 0,
+        },
+      ],
+    });
+
+    conversationRuntimeStore.apply({
+      id: 'conv-1',
+      running: false,
+      revision: 2,
+      updatedAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    expect(conversationRuntimeStore.get('conv-1')?.parallelJobs).toEqual([
+      expect.objectContaining({ id: 'parallel-1', workerName: 'Focused Reviewer 1a2b3' }),
+    ]);
+
+    conversationRuntimeStore.apply({
+      id: 'conv-1',
+      running: false,
+      revision: 3,
+      updatedAt: '2026-01-01T00:00:02.000Z',
+      parallelJobs: [],
+    });
+
+    expect(conversationRuntimeStore.get('conv-1')?.parallelJobs).toEqual([]);
+  });
+
   it('lets canonical idle session metadata clear stale backend running state', () => {
     sessionStore.replaceAll([session('conv-1', true)]);
     conversationRuntimeStore.apply({ id: 'conv-1', running: true, revision: 2, updatedAt: '2026-01-01T00:00:02.000Z' });

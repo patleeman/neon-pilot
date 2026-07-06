@@ -17,6 +17,7 @@ export {
   useConversationActivityStatus,
   useConversationActivityStatusVersion,
   useConversationRuntime,
+  useConversationRuntimeVersion,
   useSession,
   useSessionsReady,
   useTitle,

@@ -2,11 +2,19 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 
 export type ParallelPromptJobStatus = 'running' | 'ready' | 'failed' | 'importing';
 
+/**
+ * Narrow, non-persona role for parallel prompt workers. Caller-provided job
+ * metadata cannot override this: normalization always forces it to `worker`.
+ */
+export type ParallelPromptWorkerRole = 'worker';
+
 export interface ParallelPromptPreview {
   id: string;
   prompt: string;
   childConversationId: string;
   status: ParallelPromptJobStatus;
+  workerRole: ParallelPromptWorkerRole;
+  workerName: string;
   ownerExtensionId?: string;
   purpose?: string;
   modelRef?: string;
@@ -26,6 +34,10 @@ export interface ParallelPromptJob {
   childConversationId: string;
   childSessionFile?: string;
   status: ParallelPromptJobStatus;
+  /** Always `worker` for parallel prompt jobs; ignored from untrusted input. */
+  workerRole?: ParallelPromptWorkerRole;
+  /** Stable human-readable worker name. Generated if absent on persisted jobs. */
+  workerName?: string;
   ownerExtensionId?: string;
   purpose?: string;
   modelRef?: string;
@@ -51,9 +63,58 @@ const PARALLEL_PREVIEW_PATH_LIMIT = 5;
 const PARALLEL_PREVIEW_ATTACHMENT_LIMIT = 4;
 const PARALLEL_PREVIEW_SIDE_EFFECT_LIMIT = 3;
 const MAX_PARALLEL_PROMPT_IMAGE_COUNT = 100;
+const PARALLEL_WORKER_NAME_LABEL_MAX = 28;
+const PARALLEL_WORKER_NAME_HASH_LENGTH = 5;
+const PARALLEL_WORKER_NAME_FALLBACK = 'Worker';
 
 export function resolveParallelJobsFile(sessionFile: string): string {
   return `${sessionFile}${PARALLEL_JOBS_FILE_SUFFIX}`;
+}
+
+function hashSeedToHex(seed: string, length: number): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0').slice(0, length);
+}
+
+function deriveParallelWorkerLabel(input: { prompt: string; purpose?: string }): string {
+  const source = (input.purpose && input.purpose.trim()) || input.prompt || '';
+  const collapsed = source.replace(/\s+/g, ' ').trim();
+  if (!collapsed) return PARALLEL_WORKER_NAME_FALLBACK;
+  const words = collapsed.split(' ').slice(0, 4).join(' ');
+  if (words.length <= PARALLEL_WORKER_NAME_LABEL_MAX) {
+    return words || PARALLEL_WORKER_NAME_FALLBACK;
+  }
+  const trimmed = words.slice(0, PARALLEL_WORKER_NAME_LABEL_MAX - 1).trimEnd();
+  return trimmed || PARALLEL_WORKER_NAME_FALLBACK;
+}
+
+/**
+ * Deterministic, non-persona worker name for a parallel prompt job. Seeds on
+ * `childConversationId`, `purpose`, `prompt`, and `id` so the same job always
+ * produces the same name (stable across reload/re-normalization) while sibling
+ * workers stay distinct via a short hash suffix.
+ */
+export function generateParallelWorkerName(input: { id: string; prompt: string; childConversationId: string; purpose?: string }): string {
+  const seed = `${input.childConversationId}|${input.purpose ?? ''}|${input.prompt}|${input.id}`;
+  const hash = hashSeedToHex(seed, PARALLEL_WORKER_NAME_HASH_LENGTH);
+  const label = deriveParallelWorkerLabel(input);
+  return `${label} ${hash}`;
+}
+
+function resolveWorkerName(job: {
+  id: string;
+  prompt: string;
+  childConversationId: string;
+  purpose?: string;
+  workerName?: string;
+}): string {
+  const existing = typeof job.workerName === 'string' ? job.workerName.trim() : '';
+  if (existing) return existing;
+  return generateParallelWorkerName(job);
 }
 
 function normalizeParallelPromptJobStatus(value: unknown): ParallelPromptJobStatus {
@@ -125,6 +186,9 @@ function normalizeParallelPromptJob(candidate: unknown): ParallelPromptJob | nul
     childConversationId,
     ...(childSessionFile ? { childSessionFile } : {}),
     status: normalizeParallelPromptJobStatus(job.status),
+    // Caller metadata cannot spoof persona vs worker: always force `worker`.
+    workerRole: 'worker',
+    workerName: resolveWorkerName({ id, prompt, childConversationId, purpose, workerName: job.workerName }),
     ...(ownerExtensionId ? { ownerExtensionId } : {}),
     ...(purpose ? { purpose } : {}),
     ...(modelRef ? { modelRef } : {}),
@@ -199,6 +263,8 @@ function buildParallelPromptPreview(job: ParallelPromptJob): ParallelPromptPrevi
     prompt: truncateParallelPreviewText(job.prompt),
     childConversationId: job.childConversationId,
     status: job.status,
+    workerRole: 'worker',
+    workerName: resolveWorkerName(job),
     ...(job.ownerExtensionId ? { ownerExtensionId: job.ownerExtensionId } : {}),
     ...(job.purpose ? { purpose: job.purpose } : {}),
     ...(job.modelRef ? { modelRef: job.modelRef } : {}),

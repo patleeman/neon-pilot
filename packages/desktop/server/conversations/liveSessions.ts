@@ -95,7 +95,7 @@ import {
   startParallelPromptSession as startParallelPromptSessionWithCallbacks,
   tryImportReadyParallelJobs as tryImportReadyParallelJobsWithCallbacks,
 } from './liveSessionParallelImportOps.js';
-import { writePersistedParallelJobs } from './liveSessionParallelJobs.js';
+import { readParallelState, writePersistedParallelJobs } from './liveSessionParallelJobs.js';
 import { loadPersistedParallelJobs, type ResolveParallelChildSession } from './liveSessionParallelReconciliation.js';
 import { resolveLiveSessionFile } from './liveSessionPersistence.js';
 import { createLiveSessionPresenceHost, type LiveSessionPresenceState, type LiveSessionSurfaceType } from './liveSessionPresence.js';
@@ -379,7 +379,11 @@ function publishSessionMetaChanged(sessionId: string): void {
     if (running !== entry.running) {
       entry.running = running;
     }
-    publishConversationRuntimeState({ conversationId: sessionId, running });
+    publishConversationRuntimeState({
+      conversationId: sessionId,
+      running,
+      parallelJobs: readParallelState(entry.parallelJobs),
+    });
   }
   publishAppEvent({ type: 'session_meta_changed', sessionId });
 }
@@ -389,7 +393,11 @@ function publishOptimisticPromptRunningState(entry: LiveEntry): void {
     return;
   }
   entry.running = true;
-  publishConversationRuntimeState({ conversationId: entry.sessionId, running: true });
+  publishConversationRuntimeState({
+    conversationId: entry.sessionId,
+    running: true,
+    parallelJobs: readParallelState(entry.parallelJobs),
+  });
   publishAppEvent({ type: 'session_meta_changed', sessionId: entry.sessionId });
 }
 
