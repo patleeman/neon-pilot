@@ -10,6 +10,7 @@ import {
   resolveDurableRunsRoot,
 } from '@neon-pilot/daemon';
 
+import { getDocumentsStore } from '../documents/store.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listPersonaMemoryDocs } from '../knowledge/personaMemoryDocs.js';
 import {
@@ -24,6 +25,7 @@ import { invalidateAppTopics, logError, logWarn } from '../middleware/index.js';
 import { buildPromptContextPlan } from '../prompt-assembly/promptContextInventory.js';
 import { LIVE_SESSION_RESOURCE_OPTIONS_PERF, type MemoryDocSummary } from '../routes/context.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { writeConversationActivityEntry } from './conversationActivityProducers.js';
 import { buildAttachedConversationContextDocsContext, readConversationContextDocs } from './conversationContextDocs.js';
 import { resolveConversationCwd, resolveNeutralChatCwd } from './conversationCwd.js';
 import { syncWebLiveConversationRun } from './conversationRuns.js';
@@ -779,6 +781,15 @@ export async function createLiveSessionCapability(
     const preferencesAtMs = performance.now();
     await submitInitialPromptForCreatedSession(resumed.id, input, context);
     const initialPromptAtMs = performance.now();
+
+    try {
+      const store = getDocumentsStore(context.getStateRoot(), context.getDesktopRootLayout());
+      const entry = liveRegistry.get(resumed.id);
+      writeConversationActivityEntry(store, resumed.id, 'created', entry?.title || 'New Conversation');
+    } catch {
+      // Activity entry is best-effort; creation succeeds regardless.
+    }
+
     return {
       id: resumed.id,
       sessionFile: reservedSessionFile,
@@ -809,6 +820,14 @@ export async function createLiveSessionCapability(
   const bootstrapAtMs = performance.now();
   await submitInitialPromptForCreatedSession(created.id, input, context);
   const initialPromptAtMs = performance.now();
+
+  try {
+    const store = getDocumentsStore(context.getStateRoot(), context.getDesktopRootLayout());
+    const entry = liveRegistry.get(created.id);
+    writeConversationActivityEntry(store, created.id, 'created', entry?.title || 'New Conversation');
+  } catch {
+    // Activity entry is best-effort; creation succeeds regardless.
+  }
 
   return {
     ...created,
@@ -1518,6 +1537,16 @@ export async function forkLiveSessionCapability(
     input.surfaceId,
   );
   const forkedAtMs = performance.now();
+
+  try {
+    const store = getDocumentsStore(context.getStateRoot(), context.getDesktopRootLayout());
+    const entry = liveRegistry.get(forked.newSessionId);
+    writeConversationActivityEntry(store, forked.newSessionId, 'forked', entry?.title || 'Forked conversation', {
+      sourceConversationId: conversationId,
+    });
+  } catch {
+    // Activity entry is best-effort; fork succeeds regardless.
+  }
 
   return {
     ...forked,

@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const sessionsCapability = vi.hoisted(() => ({ readConversationSessionsCapability: vi.fn() }));
 const broadcasts = vi.hoisted(() => ({ broadcastTitle: vi.fn() }));
 const reservation = vi.hoisted(() => ({ reserveConversationSession: vi.fn() }));
+const activityProducers = vi.hoisted(() => ({ writeConversationActivityEntry: vi.fn() }));
+const documentsStore = vi.hoisted(() => ({ getDocumentsStore: vi.fn(() => ({ kind: 'documents-store' })) }));
 const liveSessionCapability = vi.hoisted(() => ({
   manageLiveSessionParallelJobCapability: vi.fn(),
   submitLiveSessionParallelPromptCapability: vi.fn(),
@@ -101,10 +103,12 @@ const settingsPersistence = vi.hoisted(() => ({
 vi.mock('../conversations/conversationSessionCapability.js', () => sessionsCapability);
 vi.mock('../conversations/liveSessionBroadcasts.js', () => broadcasts);
 vi.mock('../conversations/conversationReservation.js', () => reservation);
+vi.mock('../conversations/conversationActivityProducers.js', () => activityProducers);
 vi.mock('../conversations/liveSessionCapability.js', () => liveSessionCapability);
 vi.mock('../conversations/conversationService.js', () => conversationService);
 vi.mock('../conversations/conversationRunCleanup.js', () => conversationRunCleanup);
 vi.mock('../conversations/liveSessions.js', () => live);
+vi.mock('../documents/store.js', () => documentsStore);
 vi.mock('../conversations/sessions.js', () => sessions);
 vi.mock('./extensionRegistry.js', () => extensionRegistry);
 vi.mock('../conversations/liveSessionTitle.js', () => titles);
@@ -251,6 +255,12 @@ describe('extensionConversations', () => {
     expect(entry.session.setSessionName).toHaveBeenCalledWith('Created Title');
     expect(entry.session.prompt).toHaveBeenCalledWith('Start here');
     expect(entry.session.followUp).not.toHaveBeenCalled();
+    expect(activityProducers.writeConversationActivityEntry).toHaveBeenCalledWith(
+      { kind: 'documents-store' },
+      'conv-1',
+      'created',
+      'Created Title',
+    );
     expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
     expect(appEvents.publishAppEvent).toHaveBeenCalledWith({ type: 'open_session', sessionId: 'conv-1' });
     expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
@@ -460,6 +470,12 @@ describe('extensionConversations', () => {
     expect(live.createSession).not.toHaveBeenCalled();
     expect(reservation.reserveConversationSession).toHaveBeenCalledWith({ cwd: '/repo', profile: 'shared' });
     expect(conversationService.renameStoredConversation).toHaveBeenCalledWith('reserved-1', 'Welcome');
+    expect(activityProducers.writeConversationActivityEntry).toHaveBeenCalledWith(
+      { kind: 'documents-store' },
+      'reserved-1',
+      'created',
+      'Welcome',
+    );
     expect(conversationService.appendStoredVisibleCustomMessage).toHaveBeenCalledWith({
       sessionFile: '/sessions/reserved-1.jsonl',
       customType: 'welcome',

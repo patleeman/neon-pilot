@@ -48,10 +48,16 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
 }));
 
 const buildUnreadInboxContextMock = vi.hoisted(() => vi.fn());
+const activityProducers = vi.hoisted(() => ({ writeConversationActivityEntry: vi.fn() }));
+const documentsStore = vi.hoisted(() => ({ getDocumentsStore: vi.fn(() => ({ kind: 'documents-store' })) }));
 
 vi.mock('./inboxContext.js', () => ({
   buildUnreadInboxContext: buildUnreadInboxContextMock,
 }));
+
+vi.mock('../documents/store.js', () => documentsStore);
+
+vi.mock('./conversationActivityProducers.js', () => activityProducers);
 
 vi.mock('../knowledge/promptReferences.js', () => ({
   buildReferencedMemoryDocsContext: vi.fn(() => ''),
@@ -132,10 +138,11 @@ import { buildAttachedConversationContextDocsContext, readConversationContextDoc
 import { appendConversationWorkspaceMetadata } from './conversationService.js';
 import {
   createLiveSessionCapability,
+  forkLiveSessionCapability,
   restoreQueuedLiveSessionMessageCapability,
   submitLiveSessionPromptCapability,
 } from './liveSessionCapability.js';
-import { createSession, resumeSession } from './liveSessions.js';
+import { createSession, forkSession, resumeSession } from './liveSessions.js';
 
 function createContext() {
   return {
@@ -188,6 +195,8 @@ beforeEach(() => {
   startParallelPromptSessionMock.mockResolvedValue({ jobId: 'job-1', childConversationId: 'child-1' });
   buildUnreadInboxContextMock.mockReset();
   buildUnreadInboxContextMock.mockReturnValue('');
+  activityProducers.writeConversationActivityEntry.mockReset();
+  documentsStore.getDocumentsStore.mockClear();
 });
 
 afterEach(async () => {
@@ -249,6 +258,12 @@ describe('createLiveSessionCapability', () => {
     expect(result.id).toBe('test-session');
     expect(result.sessionFile).toBe('/sessions/test-session.jsonl');
     expect(result.bootstrap).toBeDefined();
+    expect(activityProducers.writeConversationActivityEntry).toHaveBeenCalledWith(
+      { kind: 'documents-store' },
+      'test-session',
+      'created',
+      'New Conversation',
+    );
   });
 
   it('appends workspace metadata with null when no explicit cwd (neutral chat)', async () => {
@@ -373,6 +388,42 @@ describe('createLiveSessionCapability', () => {
         cwd: '/repo',
         workspaceCwd: '/repo',
       }),
+    );
+    expect(activityProducers.writeConversationActivityEntry).toHaveBeenCalledWith(
+      { kind: 'documents-store' },
+      'test-session',
+      'created',
+      'New Conversation',
+    );
+  });
+});
+
+describe('forkLiveSessionCapability', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(forkSession).mockResolvedValue({
+      newSessionId: 'forked-session',
+      sessionFile: '/sessions/forked-session.jsonl',
+      perf: {},
+    });
+    liveRegistry.set('forked-session', {
+      sessionId: 'forked-session',
+      cwd: '/repo',
+      title: 'Forked Title',
+      session: { isStreaming: false, sessionFile: '/sessions/forked-session.jsonl' },
+    } as never);
+  });
+
+  it('writes conversation activity when forking a live session', async () => {
+    const result = await forkLiveSessionCapability({ conversationId: 'source-session', entryId: 'entry-1' }, createContext());
+
+    expect(result.newSessionId).toBe('forked-session');
+    expect(activityProducers.writeConversationActivityEntry).toHaveBeenCalledWith(
+      { kind: 'documents-store' },
+      'forked-session',
+      'forked',
+      'Forked Title',
+      { sourceConversationId: 'source-session' },
     );
   });
 });

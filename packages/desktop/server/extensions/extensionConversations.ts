@@ -1,6 +1,7 @@
 import type { SessionEntry } from '@earendil-works/pi-coding-agent';
 import { getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
 
+import { writeConversationActivityEntry } from '../conversations/conversationActivityProducers.js';
 import { reserveConversationSession } from '../conversations/conversationReservation.js';
 import {
   appendStoredVisibleCustomMessage,
@@ -31,6 +32,7 @@ import {
   updateVisibleCustomMessage as updateVisibleLiveSessionCustomMessage,
 } from '../conversations/liveSessions.js';
 import { resolveStableSessionTitle } from '../conversations/liveSessionTitle.js';
+import { getDocumentsStore } from '../documents/store.js';
 import {
   applySpeculativeWorkspaceChanges,
   createSpeculativeWorkspace,
@@ -49,6 +51,15 @@ import { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceO
 
 const reservedConversationFiles = new Map<string, string>();
 const speculativeWorkspaces = new Map<string, SpeculativeWorkspace>();
+
+function writeCreatedConversationActivity(conversationId: string, title: string): void {
+  try {
+    const store = getDocumentsStore(getStateRoot(), resolveDesktopRootLayout());
+    writeConversationActivityEntry(store, conversationId, 'created', title);
+  } catch {
+    // Activity should never block conversation creation.
+  }
+}
 
 export interface ExtensionConversationDetailOptions {
   tailBlocks?: number;
@@ -671,6 +682,7 @@ export function createExtensionConversationsCapability(
         if (input.title?.trim()) {
           renameStoredConversation(reserved.id, input.title.trim());
         }
+        writeCreatedConversationActivity(reserved.id, input.title?.trim() || reserved.id);
         await addCreatedConversationToWorkspace(reserved.id);
         invalidateAppTopics('sessions');
         publishAppEvent({ type: 'open_session', sessionId: reserved.id });
@@ -697,6 +709,7 @@ export function createExtensionConversationsCapability(
           }
         }
       }
+      writeCreatedConversationActivity(created.id, input?.title?.trim() || created.id);
       if (initialPrompt) {
         const entry = liveSessionRegistry.get(created.id);
         if (entry) await entry.session.prompt(initialPrompt);
