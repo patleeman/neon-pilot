@@ -52,6 +52,34 @@ for (const root of roots) {
   }
 }
 
+// Extension backend source fetch() guard: raw network access must go through networkFetch.
+const extensionSrcRoot = resolve(repoRoot, 'extensions');
+const allowedFetchFiles = new Set([
+  'extensions/system-codex-profile/src/imageTool.ts',
+  'extensions/system-codex-profile/src/compaction.ts',
+]);
+const fetchGuardPattern = /\bfetch\s*\(/;
+
+for (const entryName of readdirSync(extensionSrcRoot, { withFileTypes: true })) {
+  if (!entryName.isDirectory() || entryName.name.startsWith('.')) continue;
+  const srcDir = resolve(extensionSrcRoot, entryName.name, 'src');
+  try {
+    statSync(srcDir);
+  } catch {
+    continue;
+  }
+  for (const file of walk(srcDir)) {
+    const rel = relative(repoRoot, file);
+    if (allowedFetchFiles.has(rel) || rel.endsWith('.test.ts') || rel.endsWith('.smoke.test.ts')) continue;
+    const text = readFileSync(file, 'utf8');
+    if (fetchGuardPattern.test(text)) {
+      violations.push(
+        `${rel}: raw fetch() call detected. Use networkFetch from @neon-pilot/extensions/backend/network instead, or add an explicit reviewed allowlist entry with rationale.`,
+      );
+    }
+  }
+}
+
 if (violations.length > 0) {
   console.error('Extension permission boundary check failed:');
   for (const violation of violations) console.error(`- ${violation}`);
