@@ -3768,6 +3768,49 @@ describe('WindowedLayout desktop state publishing', () => {
     expect(notesWindow.getAttribute('data-agent-touched')).toBe('true');
   });
 
+  it('rejects streamed desktop control open commands for unknown apps or routes', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /new conversation/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/control/events');
+    expect(source).toBeTruthy();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-control-open-rejected-test',
+            action: 'open',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            appId: 'missing-app',
+            route: '/missing-route',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mocks.acknowledgeDesktopControl).toHaveBeenCalledWith({
+        commandId: 'desktop-control-open-rejected-test',
+        ok: false,
+        error: 'desktop_control open requires a known appId or route.',
+      });
+    });
+    expect(screen.queryByRole('region', { name: /missing/i })).toBeNull();
+  });
+
   it.each([
     ['minimize', { action: 'minimize', windowId: 'route:system-notes:notes' }, { minimized: true }],
     [
