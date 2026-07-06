@@ -2,10 +2,41 @@ import { PassThrough } from 'node:stream';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const core = vi.hoisted(() => ({
-  getPiAgentRuntimeDir: vi.fn(() => '/agent'),
-  getStateRoot: vi.fn(() => '/tmp/neon-pilot-protocol-cli-test'),
-}));
+const core = vi.hoisted(() => {
+  const SENTINEL_ROOT = '/var/empty/sentinel-desktop-root';
+  const path = (...segments: string[]) => `${SENTINEL_ROOT}/${segments.join('/')}`;
+  return {
+    getPiAgentRuntimeDir: vi.fn(() => '/agent'),
+    getStateRoot: vi.fn(() => '/tmp/neon-pilot-protocol-cli-test'),
+    resolveDesktopRootLayout: vi.fn(() => ({
+      root: SENTINEL_ROOT,
+      apps: path('apps'),
+      data: path('data'),
+      dataApps: path('data', 'apps'),
+      dataDocuments: path('data', 'documents'),
+      documents: path('documents'),
+      agents: path('agents'),
+      logs: path('logs'),
+      logsDesktop: path('logs', 'desktop'),
+      logsDaemon: path('logs', 'daemon'),
+      logsTelemetry: path('logs', 'telemetry'),
+      system: path('system'),
+      systemAgents: path('system', 'agents'),
+      systemApps: path('system', 'apps'),
+      systemCache: path('system', 'cache'),
+      systemConfig: path('system', 'config'),
+      systemConversations: path('system', 'conversations'),
+      systemSessions: path('system', 'conversations', 'sessions'),
+      systemDaemon: path('system', 'daemon'),
+      systemElectron: path('system', 'electron'),
+      systemElectronUserData: path('system', 'electron', 'user-data'),
+      systemObservability: path('system', 'observability'),
+      systemRuntime: path('system', 'runtime'),
+      systemSecrets: path('system', 'secrets'),
+      systemState: path('system', 'state'),
+    })),
+  };
+});
 const runtime = vi.hoisted(() => ({
   createRuntimeState: vi.fn(() => ({
     getRuntimeScope: vi.fn(() => 'shared'),
@@ -102,6 +133,7 @@ describe('protocol CLI', () => {
       agentDir: '/agent',
       settingsFile: '/agent/settings.json',
       stateRoot: '/tmp/neon-pilot-protocol-cli-test',
+      desktopRootLayout: expect.objectContaining({ root: '/var/empty/sentinel-desktop-root' }),
       logger: { warn: expect.any(Function) },
     });
     expect(extensionHostClient.invokeProtocolEntrypoint).toHaveBeenCalledWith(

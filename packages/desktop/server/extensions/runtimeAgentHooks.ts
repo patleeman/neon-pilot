@@ -1,5 +1,11 @@
 import { AuthStorage, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
+import {
+  getPiAgentRuntimeDir,
+  getRuntimeConfigRoot,
+  getStateRoot,
+  resolveDesktopRootLayout,
+  resolveRuntimeResources,
+} from '@neon-pilot/core';
 
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
@@ -23,12 +29,14 @@ function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
   const runtimeScope = 'shared';
   const stateRoot = getStateRoot();
   const settingsFile = getRuntimeSettingsFilePath(stateRoot);
+  const desktopRootLayout = resolveDesktopRootLayout();
   const resolved = resolveRuntimeResources(runtimeScope, {
     ...(process.env.NEON_PILOT_REPO_ROOT ? { repoRoot: process.env.NEON_PILOT_REPO_ROOT } : {}),
+    desktopRootLayout,
   });
 
   const repoRoot = process.env.NEON_PILOT_REPO_ROOT || process.cwd();
-  const assembly = buildPromptAssemblyPlan({ runtimeScope, repoRoot, modelRef: readSavedModelRef(settingsFile) });
+  const assembly = buildPromptAssemblyPlan({ runtimeScope, repoRoot, modelRef: readSavedModelRef(settingsFile), desktopRootLayout });
 
   return {
     additionalExtensionPaths: resolved.extensionEntries,
