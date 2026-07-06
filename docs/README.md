@@ -125,7 +125,7 @@ Bundled system extensions:
 - [Prompt Assembly](../extensions/system-prompt-assembly/README.md) — prompt inputs, capabilities, and diagnostics inspection
 - [Reply Actions](../extensions/system-reply-actions/README.md) — transcript selection actions and draft starters
 - [Settings](../extensions/system-settings/README.md) — native first-party settings routes
-- [Skill Search](../extensions/system-skill-search/README.md) — trusted skill discovery, quarantine preview, vetting, and installation
+- [Skill Search](../extensions/system-skill-search/README.md) — agent-internal trusted skill discovery, quarantine preview, vetting, and installation
 - [Terminal](../extensions/system-terminal/README.md) — PTY-backed terminal panel
 - [Todos](../extensions/system-todo/README.md) — conversation-scoped execution todos
 - [Web Fetch](../extensions/system-web-tools/README.md) — web content fetch tool
