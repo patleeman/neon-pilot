@@ -141,27 +141,43 @@ const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboardin
 function createId(input: Pick<WindowedAppRegistration, 'kind' | 'route' | 'id'>, suffix?: string): string {
   if (input.kind === 'chat') return `chat:${suffix ?? 'draft'}`;
   if (isChildWindowKind(input.kind)) return `app:${input.id}`;
+  if (suffix) return `route:${input.id}:${suffix}`;
   return `route:${input.id}`;
 }
 
-function idealWindowBounds(kind: LauncherWindowKind, title?: string): { width: number; height: number; x: number; y: number } {
+function createWindowInstanceSuffix(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function idealWindowBounds(
+  kind: LauncherWindowKind,
+  title?: string,
+  size?: { width?: number; height?: number },
+): { width: number; height: number; x: number; y: number } {
   if (kind === 'chat') {
     return { width: 1180, height: 760, x: 42, y: 34 };
   }
-  const size = title ? CANONICAL_WINDOWED_APP_SIZES[title] : undefined;
-  return { width: size?.width ?? 1040, height: size?.height ?? 650, x: 112, y: 72 };
+  const canonicalSize = title ? CANONICAL_WINDOWED_APP_SIZES[title] : undefined;
+  return { width: size?.width ?? canonicalSize?.width ?? 1040, height: size?.height ?? canonicalSize?.height ?? 650, x: 112, y: 72 };
 }
 
-function defaultBounds(index: number, kind: LauncherWindowKind, title?: string): WindowBounds {
+function defaultBounds(index: number, kind: LauncherWindowKind, title?: string, size?: { width?: number; height?: number }): WindowBounds {
   const desktop =
     typeof window === 'undefined'
       ? { width: 1280, height: 800 }
       : { width: window.innerWidth, height: Math.max(MIN_WINDOW_HEIGHT, window.innerHeight - FALLBACK_TASKBAR_HEIGHT) };
-  return defaultBoundsForDesktop(index, kind, desktop, title);
+  return defaultBoundsForDesktop(index, kind, desktop, title, size);
 }
 
-function defaultBoundsForDesktop(index: number, kind: LauncherWindowKind, desktop: DesktopRect, title?: string): WindowBounds {
-  const ideal = idealWindowBounds(kind, title);
+function defaultBoundsForDesktop(
+  index: number,
+  kind: LauncherWindowKind,
+  desktop: DesktopRect,
+  title?: string,
+  size?: { width?: number; height?: number },
+): WindowBounds {
+  const ideal = idealWindowBounds(kind, title, size);
   const width = Math.min(ideal.width, Math.max(MIN_WINDOW_WIDTH, desktop.width - 84));
   const height = Math.min(ideal.height, Math.max(MIN_WINDOW_HEIGHT, desktop.height - 76));
   const maxX = Math.max(0, desktop.width - width - 24);
@@ -181,8 +197,14 @@ function defaultBoundsForDesktop(index: number, kind: LauncherWindowKind, deskto
   };
 }
 
-function nextDefaultBounds(index: number, kind: LauncherWindowKind, desktopElement: HTMLElement | null, title?: string): WindowBounds {
-  return defaultBoundsForDesktop(index, kind, desktopRect(desktopElement), title);
+function nextDefaultBounds(
+  index: number,
+  kind: LauncherWindowKind,
+  desktopElement: HTMLElement | null,
+  title?: string,
+  size?: { width?: number; height?: number },
+): WindowBounds {
+  return defaultBoundsForDesktop(index, kind, desktopRect(desktopElement), title, size);
 }
 
 function childWindowBounds(parentBounds: WindowBounds, desktop: DesktopRect, kind: ChildWindowKind): WindowBounds {
@@ -702,7 +724,12 @@ function canonicalizeRouteWindows(windows: DesktopWindowModel[], apps: WindowedA
       continue;
     }
 
-    const canonicalId = createId(app);
+    const canonicalBaseId = createId(app);
+    const canonicalId = app.window.singleton
+      ? canonicalBaseId
+      : windowModel.id === canonicalBaseId || windowModel.id.startsWith(`${canonicalBaseId}:`)
+        ? windowModel.id
+        : createId(app, createWindowInstanceSuffix());
     const canonicalWindow: DesktopWindowModel =
       windowModel.id === canonicalId && windowModel.title === app.title && windowModel.singleton === app.window.singleton
         ? windowModel
@@ -714,7 +741,7 @@ function canonicalizeRouteWindows(windows: DesktopWindowModel[], apps: WindowedA
           };
     changed ||= canonicalWindow !== windowModel;
 
-    const existingIndex = next.findIndex((candidate) => candidate.id === canonicalId);
+    const existingIndex = app.window.singleton ? next.findIndex((candidate) => candidate.id === canonicalId) : -1;
     if (existingIndex >= 0) {
       changed = true;
       const existing = next[existingIndex]!;
@@ -735,8 +762,10 @@ function focusRouteWindowIn(
   app: WindowedAppRegistration,
   desktopElement: HTMLElement | null,
 ): DesktopWindowModel[] {
-  const id = createId(app);
-  const existing = windows.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app));
+  const id = createId(app, app.window.singleton ? undefined : createWindowInstanceSuffix());
+  const existing = app.window.singleton
+    ? windows.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, createId(app), app))
+    : null;
   if (existing) {
     return [
       ...windows.filter((windowModel) => windowModel.id !== existing.id).map((windowModel) => ({ ...windowModel, focused: false })),
@@ -748,12 +777,27 @@ function focusRouteWindowIn(
     kind: 'route',
     title: app.title,
     route,
-    bounds: nextDefaultBounds(windows.length, 'route', desktopElement, app.title),
+    bounds: nextDefaultBounds(windows.length, 'route', desktopElement, app.title, {
+      width: app.window.defaultWidth,
+      height: app.window.defaultHeight,
+    }),
     minimized: false,
     focused: true,
-    singleton: true,
+    singleton: app.window.singleton,
   };
   return [...windows.map((windowModel) => ({ ...windowModel, focused: false })), next];
+}
+
+function focusExistingRouteWindowIn(
+  windows: DesktopWindowModel[],
+  existing: DesktopWindowModel,
+  route: string,
+  app: WindowedAppRegistration,
+): DesktopWindowModel[] {
+  return [
+    ...windows.filter((windowModel) => windowModel.id !== existing.id).map((windowModel) => ({ ...windowModel, focused: false })),
+    { ...existing, title: app.title, route, minimized: false, focused: true, singleton: app.window.singleton },
+  ];
 }
 
 function focusChatWindowIn(
@@ -1536,14 +1580,14 @@ export function WindowedLayout() {
   );
 
   const openWindowedApp = useCallback((app: WindowedAppRegistration, session?: SessionMeta) => {
-    const id = createId(app, session?.id);
+    const id = createId(app, app.kind === 'route' && !app.window.singleton ? createWindowInstanceSuffix() : session?.id);
     const title = app.kind === 'chat' && session ? conversationWindowTitle(session) : app.title;
     const route = app.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : app.route;
     suspendWindowedBrowserViews();
     setLauncherOpen(false);
     setWindows((current) => {
       const existing =
-        app.kind === 'route'
+        app.kind === 'route' && app.window.singleton
           ? current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app))
           : current.find((windowModel) => windowModel.id === id);
       if (existing) {
@@ -1563,7 +1607,10 @@ export function WindowedLayout() {
         kind: app.kind,
         title,
         route,
-        bounds: nextDefaultBounds(current.length, app.kind, desktopRef.current, title),
+        bounds: nextDefaultBounds(current.length, app.kind, desktopRef.current, title, {
+          width: app.window.defaultWidth,
+          height: app.window.defaultHeight,
+        }),
         minimized: false,
         focused: true,
         singleton: app.window.singleton,
@@ -1622,6 +1669,10 @@ export function WindowedLayout() {
     const id = createId(app);
     const existing = windowsRef.current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app));
     if (existing?.focused && !existing.minimized && existing.route === browserRoute) return;
+    if (existing) {
+      setWindows((current) => focusExistingRouteWindowIn(current, existing, browserRoute, app));
+      return;
+    }
     openRouteWindow(browserRoute);
   }, [browserRoute, conversations.loading, extensionRegistry.loading, openChatWindow, openRouteWindow, windowedApps]);
 

@@ -331,6 +331,54 @@ describe('WindowedLayout route windows', () => {
     expect(within(notesWindow).getByTestId('extension-route-host').textContent).toContain('/notes:windowed');
   });
 
+  it('focuses an existing non-singleton extension app window on boot instead of duplicating it', async () => {
+    mocks.extensions = [
+      {
+        id: 'system-canvas',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'canvas', label: 'Canvas', route: '/canvas' }],
+          views: [{ id: 'canvas-page', title: 'Canvas', location: 'main', route: '/canvas' }],
+          appearance: { singleton: false },
+        },
+      },
+    ];
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:system-canvas:canvas:existing',
+        kind: 'route',
+        title: 'Canvas',
+        route: '/canvas/detail',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: false,
+        singleton: false,
+      },
+    ]);
+
+    const { container } = renderWindowedLayout('/canvas');
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('region', { name: /^canvas$/i })).toHaveLength(1);
+    });
+    const canvasWindow = screen.getByRole('region', { name: /^canvas$/i });
+    expect(canvasWindow.getAttribute('data-focused')).toBe('true');
+    expect(canvasWindow.getAttribute('data-window-id')).toBe('route:system-canvas:canvas:existing');
+    expect(container.querySelector('.windowed-os-shell')?.getAttribute('data-focused-window-id')).toBe(
+      'route:system-canvas:canvas:existing',
+    );
+    expect(within(canvasWindow).getByTestId('extension-route-host').textContent).toContain('/canvas:windowed');
+  });
+
   it('opens the current browser URL as a focused saved conversation window on boot', async () => {
     mocks.tabs = [{ id: 'session-1', title: 'Saved research thread' }];
 
@@ -1496,6 +1544,41 @@ describe('WindowedLayout route windows', () => {
     const settingsWindow = await screen.findByRole('region', { name: /^settings$/i });
     expect(settingsWindow.getAttribute('style')).toContain('width: 940px');
     expect(settingsWindow.getAttribute('style')).toContain('height: 560px');
+  });
+
+  it('uses extension-declared default bounds for launched dynamic route apps', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 960 });
+    mocks.extensions = [
+      {
+        id: 'system-canvas',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'canvas', label: 'Canvas', route: '/canvas' }],
+          views: [{ id: 'canvas-page', title: 'Canvas', location: 'main', route: '/canvas' }],
+          appearance: {
+            accent: 'drawing',
+            aliases: ['whiteboard'],
+            singleton: false,
+            window: { defaultWidth: 880, defaultHeight: 540 },
+          },
+        },
+      },
+    ];
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^canvas$/i }));
+
+    const canvasWindow = await screen.findByRole('region', { name: /^canvas$/i });
+    expect(canvasWindow.getAttribute('style')).toContain('width: 880px');
+    expect(canvasWindow.getAttribute('style')).toContain('height: 540px');
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^canvas$/i }));
+
+    expect(await screen.findAllByRole('region', { name: /^canvas$/i })).toHaveLength(2);
   });
 
   it('uses the canonical Automations window target before desktop fitting clamps it', async () => {

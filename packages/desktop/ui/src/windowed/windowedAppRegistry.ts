@@ -1,5 +1,6 @@
 import { type AppAccent, CANONICAL_WINDOWED_DESKTOP_APPS, type WindowedDesktopAppDefinition } from '@neon-pilot/windowed-os-ui';
 
+import type { ExtensionAppearanceContribution } from '../extensions/types';
 import type { ExtensionRegistryState } from '../extensions/useExtensionRegistry';
 
 export type WindowedAppSource = 'core' | 'app-package';
@@ -24,6 +25,8 @@ export interface WindowedAppRegistration {
   window: {
     allowMultiple: boolean;
     singleton: boolean;
+    defaultWidth?: number;
+    defaultHeight?: number;
   };
 }
 
@@ -95,6 +98,8 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
   const dynamicApps = extensionRegistry.extensions
     .filter((extension) => extension.enabled)
     .flatMap((extension) => {
+      const appearance = extension.contributes?.appearance ?? null;
+
       const navItems = (extension.contributes?.nav ?? []).flatMap((item): WindowedAppRegistration[] => {
         if (!item.route || seenRoutes.has(item.route) || seenTitles.has(item.label)) return [];
         if (!isTopLevelRoute(item.route)) return [];
@@ -103,6 +108,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
           id: item.id,
           title: item.label,
           route: item.route,
+          appearance,
         });
         seenRoutes.add(app.route);
         seenTitles.add(app.title);
@@ -117,6 +123,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
           id: view.id,
           title: view.title,
           route: view.route,
+          appearance,
         });
         seenRoutes.add(app.route);
         seenTitles.add(app.title);
@@ -155,7 +162,12 @@ function createAppPackageWindowedAppRegistration(input: {
   id: string;
   title: string;
   route: string;
+  appearance?: ExtensionAppearanceContribution | null;
 }): WindowedAppRegistration {
+  const accent = input.appearance?.accent ?? accentForTitle(input.title);
+  const singleton = input.appearance?.singleton ?? true;
+  const defaultWidth = input.appearance?.window?.defaultWidth;
+  const defaultHeight = input.appearance?.window?.defaultHeight;
   return {
     id: `${input.packageId}:${input.id}`,
     title: input.title,
@@ -164,8 +176,14 @@ function createAppPackageWindowedAppRegistration(input: {
     source: 'app-package',
     sourcePackageId: input.packageId,
     owner: { packageId: input.packageId, packageType: 'extension' },
-    accent: accentForTitle(input.title),
-    window: { allowMultiple: false, singleton: true },
+    accent,
+    aliases: input.appearance?.aliases,
+    window: {
+      allowMultiple: !singleton,
+      singleton,
+      ...(defaultWidth !== undefined ? { defaultWidth } : {}),
+      ...(defaultHeight !== undefined ? { defaultHeight } : {}),
+    },
   };
 }
 

@@ -26,6 +26,7 @@ Use this sequence when an agent helps a user create a new extension:
 2. **Write the brief.** Summarize the primary user, job-to-be-done, first-version scope, chosen extension surface, state model, main actions, and validation plan. State any assumptions so the user can correct them.
 3. **Prototype UI when UI matters.** For pages, panels, settings, or workflow surfaces, make a quick artifact or local prototype before implementation. Use Neon Pilot's density, shared primitives, and copy rules so the user reacts to the product shape, not a generic mockup.
 4. **Build the extension.** Create editable source in `src/`, declare contributions in `extension.json`, use the public extension SDK, and keep generated output in `dist/`.
+   For route-based app extensions, include `contributes.appearance` with a desktop accent, useful Start menu aliases, and singleton/window defaults when the app should appear as a durable desktop surface.
 5. **Reload and test in the app.** Build, validate, reload extensions, open the actual contributed surface, and exercise default, empty, loading, error, success, disabled, and long-running states that apply.
 6. **Iterate with the user.** Adjust scope, copy, layout, actions, or state behavior from what the user sees. Checkpoint only when the extension is working through the real app path.
 

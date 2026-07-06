@@ -80,6 +80,7 @@ import { applyExtensionKeybindingConfigPatch } from './extensionKeybindingConfig
 import { buildCustomExtensionKeybindingRegistrations } from './extensionKeybindingCustomRegistrations.js';
 import { buildDeclaredExtensionKeybindingRegistrations } from './extensionKeybindingDeclaredRegistrations.js';
 import type {
+  ExtensionAppearanceAccent,
   ExtensionManifest,
   ExtensionPackageType,
   ExtensionSurface,
@@ -924,6 +925,10 @@ export function setExtensionKeybinding(input: {
 }
 
 function validateExtensionContributions(contributes: Record<string, unknown>): void {
+  if (contributes.appearance !== undefined) {
+    validateAppearanceContribution(contributes.appearance);
+  }
+
   if (contributes.views !== undefined) {
     validateViewContributions(contributes.views);
   }
@@ -1120,6 +1125,52 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
 
   if (contributes.secretBackends !== undefined) {
     throw new Error('Extension manifest contributes.secretBackends is not supported. Use the built-in secrets.provider backends.');
+  }
+}
+
+const EXTENSION_APPEARANCE_ACCENTS = new Set<ExtensionAppearanceAccent>([
+  'chat',
+  'automations',
+  'drawing',
+  'apps',
+  'telemetry',
+  'settings',
+]);
+
+function validateAppearanceContribution(value: unknown): void {
+  if (!isRecord(value)) {
+    throw new Error('Extension manifest contributes.appearance must be an object.');
+  }
+
+  if (
+    value.accent !== undefined &&
+    (typeof value.accent !== 'string' || !EXTENSION_APPEARANCE_ACCENTS.has(value.accent as ExtensionAppearanceAccent))
+  ) {
+    throw new Error('Extension manifest contributes.appearance.accent is invalid.');
+  }
+
+  if (
+    value.aliases !== undefined &&
+    (!Array.isArray(value.aliases) || !value.aliases.every((alias) => typeof alias === 'string' && alias.trim().length > 0))
+  ) {
+    throw new Error('Extension manifest contributes.appearance.aliases must be non-empty strings.');
+  }
+
+  if (value.singleton !== undefined && typeof value.singleton !== 'boolean') {
+    throw new Error('Extension manifest contributes.appearance.singleton must be a boolean.');
+  }
+
+  if (value.window !== undefined) {
+    if (!isRecord(value.window)) {
+      throw new Error('Extension manifest contributes.appearance.window must be an object.');
+    }
+    const { defaultWidth, defaultHeight } = value.window;
+    if (defaultWidth !== undefined && (typeof defaultWidth !== 'number' || !Number.isFinite(defaultWidth) || defaultWidth <= 0)) {
+      throw new Error('Extension manifest contributes.appearance.window.defaultWidth must be a positive number.');
+    }
+    if (defaultHeight !== undefined && (typeof defaultHeight !== 'number' || !Number.isFinite(defaultHeight) || defaultHeight <= 0)) {
+      throw new Error('Extension manifest contributes.appearance.window.defaultHeight must be a positive number.');
+    }
   }
 }
 

@@ -155,6 +155,12 @@ The manifest declares what your extension contributes:
     ]
   },
   "contributes": {
+    "appearance": {
+      "accent": "apps",
+      "aliases": ["my app"],
+      "singleton": true,
+      "window": { "defaultWidth": 920, "defaultHeight": 640 }
+    },
     "views": [],
     "nav": [],
     "commands": [],
@@ -175,6 +181,7 @@ The manifest declares what your extension contributes:
 
 | Field                             | Purpose                                                                                       | Docs                                                                                         |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `appearance`                      | Desktop app metadata for Start menu search, app accent, and window behavior                   | [See below](#desktop-appearance-appearance)                                                  |
 | `views`                           | UI surfaces: main pages, route sidebar bodies, route context rails, and workbench panels      | See [Views](#views)                                                                          |
 | `webapps`                         | Locally hosted sidecar webpages exposed through `.localhost` names                            | [See below](#webapps)                                                                        |
 | `nav`                             | App navigation items; can bind route-owned `sidebarView` and `rightSidebarView` regions       | [See below](#route-shell-regions)                                                            |
@@ -228,6 +235,25 @@ The manifest declares what your extension contributes:
 | `composerAttachmentRenderers`     | Renderers for extension-owned composer attachment chips                                       | [See below](#composer-attachments)                                                           |
 | `composerAttachmentResolvers`     | Backend resolvers for extension-owned attachment refs                                         | [See below](#composer-attachments)                                                           |
 | `activityTreeItemActions`         | Inline action buttons on thread/activity tree rows                                            | [See below](#activity-tree-item-actions-activitytreeitemactions)                             |
+
+### Desktop appearance (`appearance`)
+
+Use `contributes.appearance` for app-like route extensions that should feel first-class in the desktop shell. The windowed app registry uses this metadata for Start menu search, app accent, and singleton behavior when projecting extension routes into desktop apps.
+
+```json
+{
+  "contributes": {
+    "appearance": {
+      "accent": "drawing",
+      "aliases": ["whiteboard", "sketchpad"],
+      "singleton": false,
+      "window": { "defaultWidth": 920, "defaultHeight": 640 }
+    }
+  }
+}
+```
+
+Supported accents are `chat`, `automations`, `drawing`, `apps`, `telemetry`, and `settings`. Omit `appearance` for non-app extensions or when the default title-based accent and single-window behavior are fine.
 
 ### Standard file change metadata
 

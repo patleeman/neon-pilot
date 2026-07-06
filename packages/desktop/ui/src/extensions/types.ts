@@ -13,6 +13,7 @@ type ExtensionIconName =
   | 'sparkle'
   | 'terminal';
 type ExtensionRightSurfaceScope = 'global' | 'conversation' | 'workspace' | 'selection';
+export type ExtensionAppearanceAccent = 'chat' | 'automations' | 'drawing' | 'apps' | 'telemetry' | 'settings';
 export type ExtensionViewPlacement = 'primary' | 'workbench-tool';
 export type ExtensionViewScope = 'global' | 'workspace' | 'conversation';
 export type ExtensionViewActivation = 'always' | 'on-route' | 'on-open' | 'on-demand';
@@ -28,6 +29,16 @@ interface ExtensionBackendActionSummary {
 interface ExtensionFrontendManifest {
   entry: string;
   styles?: string[];
+}
+
+export interface ExtensionAppearanceContribution {
+  accent?: ExtensionAppearanceAccent;
+  aliases?: string[];
+  window?: {
+    defaultWidth?: number;
+    defaultHeight?: number;
+  };
+  singleton?: boolean;
 }
 
 interface ExtensionPromptReferenceContribution {
@@ -429,6 +440,7 @@ interface ExtensionSettingsComponentContribution {
 }
 
 interface ExtensionContributions {
+  appearance?: ExtensionAppearanceContribution;
   views?: ExtensionViewContribution[];
   webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];

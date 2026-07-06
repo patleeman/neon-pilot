@@ -904,6 +904,26 @@ export interface ExtensionActivityTreeItemStyleContribution {
   priority?: number;
 }
 
+/** Desktop appearance metadata for agent-built/runtime extension apps in the windowed OS. */
+export type ExtensionAppearanceAccent = 'chat' | 'automations' | 'drawing' | 'apps' | 'telemetry' | 'settings';
+
+/** Desktop appearance metadata for agent-built/runtime extension apps in the windowed OS. */
+export interface ExtensionAppearanceContribution {
+  /** Accent color for the app tile and window chrome. */
+  accent?: ExtensionAppearanceAccent;
+  /** Search aliases for the Start menu and app launcher. */
+  aliases?: string[];
+  /** Optional window defaults for the app's own window. */
+  window?: {
+    /** Default width for new windows (px). */
+    defaultWidth?: number;
+    /** Default height for new windows (px). */
+    defaultHeight?: number;
+  };
+  /** When true (default), only one instance of this app can exist at a time. */
+  singleton?: boolean;
+}
+
 export interface ExtensionSettingsComponentContribution {
   id: string;
   component: string;
@@ -971,6 +991,8 @@ export interface ExtensionContributions {
   settings?: Record<string, ExtensionSettingsContribution>;
   secrets?: Record<string, ExtensionSecretContribution>;
   settingsComponent?: ExtensionSettingsComponentContribution;
+  /** Desktop appearance metadata for the windowed OS app registry (Start menu, launcher, window chrome). */
+  appearance?: ExtensionAppearanceContribution;
 }
 
 export interface ExtensionDependencyContribution {

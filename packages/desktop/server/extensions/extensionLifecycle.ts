@@ -5,7 +5,7 @@ import { basename, join, resolve, sep } from 'node:path';
 
 import { getStateRoot } from '@neon-pilot/core';
 
-import type { ExtensionManifest } from './extensionManifest.js';
+import type { ExtensionAppearanceAccent, ExtensionAppearanceContribution, ExtensionManifest } from './extensionManifest.js';
 import { validateExtensionId } from './extensionManifestCoreValidation.js';
 import {
   findExtensionEntry,
@@ -20,6 +20,15 @@ export interface CreateRuntimeExtensionInput {
   name?: unknown;
   description?: unknown;
   template?: unknown;
+  appearance?: {
+    accent?: unknown;
+    aliases?: unknown;
+    window?: {
+      defaultWidth?: unknown;
+      defaultHeight?: unknown;
+    };
+    singleton?: unknown;
+  };
 }
 
 type RuntimeExtensionTemplate = 'main-page' | 'route-sidebar' | 'route-right-sidebar' | 'route-shell' | 'right-rail' | 'workbench-detail';
@@ -62,6 +71,74 @@ function normalizeExtensionTemplate(value: unknown): RuntimeExtensionTemplate {
   throw new Error(
     'Extension template must be main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
   );
+}
+
+const EXTENSION_APPEARANCE_ACCENTS = new Set<ExtensionAppearanceAccent>([
+  'chat',
+  'automations',
+  'drawing',
+  'apps',
+  'telemetry',
+  'settings',
+]);
+
+function normalizeExtensionAppearance(value: unknown): ExtensionAppearanceContribution | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Extension appearance must be an object.');
+  }
+
+  const obj = value as Record<string, unknown>;
+  const result: ExtensionAppearanceContribution = {};
+
+  if (obj.accent !== undefined) {
+    if (typeof obj.accent !== 'string' || !EXTENSION_APPEARANCE_ACCENTS.has(obj.accent as ExtensionAppearanceAccent)) {
+      throw new Error('Extension appearance accent is invalid.');
+    }
+    result.accent = obj.accent as ExtensionAppearanceAccent;
+  }
+
+  if (obj.aliases !== undefined) {
+    if (
+      !Array.isArray(obj.aliases) ||
+      !obj.aliases.every((alias): alias is string => typeof alias === 'string' && alias.trim().length > 0)
+    ) {
+      throw new Error('Extension appearance aliases must be non-empty strings.');
+    }
+    result.aliases = obj.aliases;
+  }
+
+  if (obj.singleton !== undefined) {
+    if (typeof obj.singleton !== 'boolean') {
+      throw new Error('Extension appearance singleton must be a boolean.');
+    }
+    result.singleton = obj.singleton;
+  }
+
+  if (obj.window !== undefined) {
+    if (!obj.window || typeof obj.window !== 'object' || Array.isArray(obj.window)) {
+      throw new Error('Extension appearance window must be an object.');
+    }
+    const win = obj.window as Record<string, unknown>;
+    const normalizedWindow: NonNullable<ExtensionAppearanceContribution['window']> = {};
+    if (win.defaultWidth !== undefined) {
+      if (typeof win.defaultWidth !== 'number' || !Number.isFinite(win.defaultWidth) || win.defaultWidth <= 0) {
+        throw new Error('Extension appearance window.defaultWidth must be a positive number.');
+      }
+      normalizedWindow.defaultWidth = win.defaultWidth;
+    }
+    if (win.defaultHeight !== undefined) {
+      if (typeof win.defaultHeight !== 'number' || !Number.isFinite(win.defaultHeight) || win.defaultHeight <= 0) {
+        throw new Error('Extension appearance window.defaultHeight must be a positive number.');
+      }
+      normalizedWindow.defaultHeight = win.defaultHeight;
+    }
+    if (Object.keys(normalizedWindow).length > 0) {
+      result.window = normalizedWindow;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function getExtensionSnapshotsRoot(stateRoot: string = getStateRoot()): string {
@@ -483,31 +560,42 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
 
   mkdirSync(join(extensionRoot, 'src'), { recursive: true });
   mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
-  const manifest = parseExtensionManifest({
-    schemaVersion: 2,
-    id,
-    name,
-    packageType: 'user',
-    ...(description ? { description } : {}),
-    frontend: { entry: 'dist/frontend.js', styles: [] },
-    backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', worker: { enabled: true } }] },
-    contributes:
-      template === 'right-rail'
+
+  const appearance = normalizeExtensionAppearance(input.appearance);
+
+  const contributesBase =
+    template === 'right-rail'
+      ? {
+          views: [{ id: 'panel', title: name, location: 'rightRail', scope: 'conversation', component: 'ExtensionPanel', icon: 'app' }],
+        }
+      : template === 'route-sidebar'
         ? {
-            views: [{ id: 'panel', title: name, location: 'rightRail', scope: 'conversation', component: 'ExtensionPanel', icon: 'app' }],
+            views: [
+              { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+              { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
+            ],
+            nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', sidebarView: 'sidebar' }],
           }
-        : template === 'route-sidebar'
+        : template === 'route-right-sidebar'
           ? {
               views: [
                 { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
-                { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
+                {
+                  id: 'context',
+                  title: `${name} context`,
+                  location: 'rightRail',
+                  placement: 'primary',
+                  component: 'ExtensionContextRail',
+                  icon: 'app',
+                },
               ],
-              nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', sidebarView: 'sidebar' }],
+              nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', rightSidebarView: 'context' }],
             }
-          : template === 'route-right-sidebar'
+          : template === 'route-shell'
             ? {
                 views: [
                   { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                  { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
                   {
                     id: 'context',
                     title: `${name} context`,
@@ -517,52 +605,48 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
                     icon: 'app',
                   },
                 ],
-                nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', rightSidebarView: 'context' }],
+                nav: [
+                  {
+                    id: 'nav',
+                    label: name,
+                    route: `/ext/${id}`,
+                    icon: 'app',
+                    sidebarView: 'sidebar',
+                    rightSidebarView: 'context',
+                  },
+                ],
               }
-            : template === 'route-shell'
+            : template === 'workbench-detail'
               ? {
                   views: [
-                    { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
-                    { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
                     {
-                      id: 'context',
-                      title: `${name} context`,
+                      id: 'rail',
+                      title: name,
                       location: 'rightRail',
-                      placement: 'primary',
-                      component: 'ExtensionContextRail',
+                      scope: 'conversation',
+                      component: 'ExtensionRail',
                       icon: 'app',
+                      detailView: 'detail',
                     },
-                  ],
-                  nav: [
-                    {
-                      id: 'nav',
-                      label: name,
-                      route: `/ext/${id}`,
-                      icon: 'app',
-                      sidebarView: 'sidebar',
-                      rightSidebarView: 'context',
-                    },
+                    { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
                   ],
                 }
-              : template === 'workbench-detail'
-                ? {
-                    views: [
-                      {
-                        id: 'rail',
-                        title: name,
-                        location: 'rightRail',
-                        scope: 'conversation',
-                        component: 'ExtensionRail',
-                        icon: 'app',
-                        detailView: 'detail',
-                      },
-                      { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
-                    ],
-                  }
-                : {
-                    views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
-                    nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
-                  },
+              : {
+                  views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
+                  nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
+                };
+
+  const contributes = appearance ? { ...contributesBase, appearance } : contributesBase;
+
+  const manifest = parseExtensionManifest({
+    schemaVersion: 2,
+    id,
+    name,
+    packageType: 'user',
+    ...(description ? { description } : {}),
+    frontend: { entry: 'dist/frontend.js', styles: [] },
+    backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', worker: { enabled: true } }] },
+    contributes,
     permissions: [],
   });
   writeFileSync(join(extensionRoot, 'extension.json'), `${JSON.stringify(manifest, null, 2)}\n`);

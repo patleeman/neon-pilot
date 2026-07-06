@@ -241,6 +241,61 @@ describe('extensionLifecycle', () => {
     expect(frontend).not.toContain('<button');
   });
 
+  it('generates manifest with appearance metadata when caller provides it', () => {
+    const result = createRuntimeExtension(
+      {
+        id: 'styled-app',
+        name: 'Styled App',
+        appearance: {
+          accent: 'drawing',
+          aliases: ['whiteboard', 'sketchpad'],
+          singleton: false,
+          window: { defaultWidth: 800, defaultHeight: 600 },
+        },
+      },
+      stateRoot,
+    );
+
+    expect(result.ok).toBe(true);
+    const manifest = JSON.parse(readFileSync(join(result.packageRoot, 'extension.json'), 'utf-8'));
+    expect(manifest.contributes.appearance).toEqual({
+      accent: 'drawing',
+      aliases: ['whiteboard', 'sketchpad'],
+      singleton: false,
+      window: { defaultWidth: 800, defaultHeight: 600 },
+    });
+  });
+
+  it('includes appearance with only accent when other fields are omitted', () => {
+    const result = createRuntimeExtension(
+      {
+        id: 'accent-only',
+        name: 'Accent Only',
+        appearance: { accent: 'telemetry' },
+      },
+      stateRoot,
+    );
+
+    const manifest = JSON.parse(readFileSync(join(result.packageRoot, 'extension.json'), 'utf-8'));
+    expect(manifest.contributes.appearance).toEqual({ accent: 'telemetry' });
+  });
+
+  it('omits appearance from manifest when input does not provide it', () => {
+    const result = createRuntimeExtension({ id: 'plain-ext', name: 'Plain' }, stateRoot);
+
+    const manifest = JSON.parse(readFileSync(join(result.packageRoot, 'extension.json'), 'utf-8'));
+    expect(manifest.contributes.appearance).toBeUndefined();
+  });
+
+  it('rejects array-shaped runtime appearance metadata', () => {
+    expect(() => createRuntimeExtension({ id: 'array-appearance', name: 'Array Appearance', appearance: [] as never }, stateRoot)).toThrow(
+      'Extension appearance must be an object.',
+    );
+    expect(() =>
+      createRuntimeExtension({ id: 'array-window', name: 'Array Window', appearance: { window: [] } as never }, stateRoot),
+    ).toThrow('Extension appearance window must be an object.');
+  });
+
   it('validates create input and prevents duplicate ids or directories', () => {
     expect(() => createRuntimeExtension({ id: 'Bad', name: 'Name' }, stateRoot)).toThrow('Extension id must be');
     expect(() => createRuntimeExtension({ id: 'ok-id', name: '   ' }, stateRoot)).toThrow('Extension name is required');

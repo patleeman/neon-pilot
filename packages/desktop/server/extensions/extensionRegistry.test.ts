@@ -446,6 +446,49 @@ describe('extension registry', () => {
       }),
     ).toThrow(/contributes\.themes\[0\]\.tokens\.*/);
 
+    expect(
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'styled-ext',
+        name: 'Styled Ext',
+        contributes: {
+          appearance: {
+            accent: 'drawing',
+            aliases: ['whiteboard'],
+            singleton: false,
+            window: { defaultWidth: 920, defaultHeight: 640 },
+          },
+        },
+      }).contributes?.appearance,
+    ).toEqual({
+      accent: 'drawing',
+      aliases: ['whiteboard'],
+      singleton: false,
+      window: { defaultWidth: 920, defaultHeight: 640 },
+    });
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          appearance: { accent: 'neon' },
+        },
+      }),
+    ).toThrow('Extension manifest contributes.appearance.accent is invalid.');
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
+        id: 'bad-ext',
+        name: 'Bad Ext',
+        contributes: {
+          appearance: { window: { defaultWidth: 0 } },
+        },
+      }),
+    ).toThrow('Extension manifest contributes.appearance.window.defaultWidth must be a positive number.');
+
     expect(() =>
       parseExtensionManifest({
         schemaVersion: 2,

@@ -199,4 +199,93 @@ describe('windowed app registry', () => {
     expect(accentForTitle('Provider Tokens')).toBe('settings');
     expect(accentForTitle('Provider Settings')).toBe('settings');
   });
+
+  it('uses declared appearance accent when extension contributes appearance metadata', () => {
+    const apps = buildWindowedAppRegistry(
+      registry([
+        {
+          id: 'drawing-app',
+          name: 'Drawing App',
+          enabled: true,
+          contributes: {
+            nav: [{ id: 'draw', label: 'Canvas', route: '/canvas' }],
+            appearance: { accent: 'drawing' },
+          },
+        },
+      ]),
+    );
+
+    const app = apps.find((a) => a.title === 'Canvas');
+    expect(app).toBeDefined();
+    expect(app!.accent).toBe('drawing');
+  });
+
+  it('respects declared appearance aliases and singleton behavior', () => {
+    const apps = buildWindowedAppRegistry(
+      registry([
+        {
+          id: 'kanban-ext',
+          name: 'Kanban',
+          enabled: true,
+          contributes: {
+            nav: [{ id: 'boards', label: 'Boards', route: '/boards' }],
+            appearance: {
+              accent: 'apps',
+              aliases: ['kanban', 'project boards', 'cards'],
+              singleton: false,
+              window: { defaultWidth: 960, defaultHeight: 620 },
+            },
+          },
+        },
+      ]),
+    );
+
+    const app = apps.find((a) => a.title === 'Boards');
+    expect(app).toBeDefined();
+    expect(app!.accent).toBe('apps');
+    expect(app!.aliases).toEqual(['kanban', 'project boards', 'cards']);
+    expect(app!.window).toEqual({ allowMultiple: true, singleton: false, defaultWidth: 960, defaultHeight: 620 });
+  });
+
+  it('falls back to heuristic accent when appearance has no accent', () => {
+    const apps = buildWindowedAppRegistry(
+      registry([
+        {
+          id: 'my-ext',
+          name: 'My Ext',
+          enabled: true,
+          contributes: {
+            views: [{ id: 'automation-hub', title: 'Automation Hub', location: 'main', route: '/automation-hub' }],
+            appearance: { singleton: false },
+          },
+        },
+      ]),
+    );
+
+    const app = apps.find((a) => a.title === 'Automation Hub');
+    expect(app).toBeDefined();
+    expect(app!.accent).toBe('automations');
+    expect(app!.window).toEqual({ allowMultiple: true, singleton: false });
+  });
+
+  it('preserves current behavior when appearance is omitted', () => {
+    const apps = buildWindowedAppRegistry(
+      registry([
+        {
+          id: 'custom',
+          name: 'Custom',
+          enabled: true,
+          contributes: {
+            nav: [{ id: 'todo', label: 'Todo', route: '/todo' }],
+          },
+        },
+      ]),
+    );
+
+    const app = apps.find((a) => a.title === 'Todo');
+    expect(app).toBeDefined();
+    expect(app!.accent).toBe('settings');
+    expect(app!.aliases).toBeUndefined();
+    expect(app!.window).toEqual({ allowMultiple: false, singleton: true });
+  });
 });

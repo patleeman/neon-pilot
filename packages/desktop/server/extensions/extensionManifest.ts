@@ -110,6 +110,18 @@ export const EXTENSION_PERMISSIONS = [
 ] as const;
 export type ExtensionPermission = (typeof EXTENSION_PERMISSIONS)[number];
 
+export type ExtensionAppearanceAccent = 'chat' | 'automations' | 'drawing' | 'apps' | 'telemetry' | 'settings';
+
+export interface ExtensionAppearanceContribution {
+  accent?: ExtensionAppearanceAccent;
+  aliases?: string[];
+  window?: {
+    defaultWidth?: number;
+    defaultHeight?: number;
+  };
+  singleton?: boolean;
+}
+
 export interface ExtensionManifest {
   schemaVersion: 1 | typeof EXTENSION_MANIFEST_VERSION;
   id: string;
@@ -144,6 +156,7 @@ export interface ExtensionFrontend {
 }
 
 export interface ExtensionContributions {
+  appearance?: ExtensionAppearanceContribution;
   views?: ExtensionViewContribution[];
   webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];
