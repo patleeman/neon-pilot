@@ -61,11 +61,6 @@ import {
 } from './extensionEnabledConfig.js';
 import { normalizeExtensionFailureRecords } from './extensionFailureRecords.js';
 import { buildExtensionFailureResponse, shouldQuarantineExtensionFailure } from './extensionFailureResponse.js';
-import {
-  buildExtensionGatewayProviderRegistrations as buildExtensionGatewayProviderRegistrationsValue,
-  type ExtensionGatewayProviderRegistration,
-  validateGatewayProviderContributions,
-} from './extensionGatewayContributions.js';
 import { buildExtensionInstallRoutes } from './extensionInstallRoutes.js';
 import { buildExtensionQuarantineDiagnostic, mergeExtensionInstallDiagnostics } from './extensionInstallSummaryDiagnostics.js';
 import {
@@ -974,10 +969,6 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
     validateRuntimeProviderContributions(contributes.runtimeProviders);
   }
 
-  if (contributes.gatewayProviders !== undefined) {
-    validateGatewayProviderContributions(contributes.gatewayProviders);
-  }
-
   if (contributes.conversationConnectionProviders !== undefined) {
     validateConversationConnectionProviderContributions(contributes.conversationConnectionProviders);
   }
@@ -1613,10 +1604,6 @@ export function listExtensionPromptContextProviderRegistrations(
 
 export function listExtensionRuntimeProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionRuntimeProviderRegistration[] {
   return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionRuntimeProviderRegistrations);
-}
-
-export function listExtensionGatewayProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionGatewayProviderRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionGatewayProviderRegistrationsValue);
 }
 
 export function listExtensionAssemblyProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionAssemblyProviderRegistration[] {

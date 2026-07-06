@@ -166,7 +166,6 @@ async function assertDesktopApiEndpoints(cdp, child, logs) {
     '/api/extensions/installed',
     '/api/extensions/routes',
     '/api/extensions/surfaces',
-    '/api/gateways',
     '/api/extensions/keybindings',
     '/api/extensions',
     '/api/extensions/slash-commands',

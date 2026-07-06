@@ -22,7 +22,6 @@ const ALL_TOPICS = [
   'extensions',
   'tasks',
   'models',
-  'gateways',
   'runs',
   'executions',
   'automation',

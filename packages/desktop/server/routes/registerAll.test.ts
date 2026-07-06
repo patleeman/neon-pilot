@@ -8,7 +8,6 @@ const routeModules = vi.hoisted(() => ({
   registerExecutionRoutes: vi.fn(),
   registerExtensionRoutes: vi.fn(),
   registerFilePickerRoutes: vi.fn(),
-  registerGatewayRoutes: vi.fn(),
   registerGlobalActivityRoutes: vi.fn(),
   registerInboxRoutes: vi.fn(),
   registerLiveSessionRoutes: vi.fn(),
@@ -29,7 +28,6 @@ vi.mock('./executions.js', () => ({ registerExecutionRoutes: routeModules.regist
 vi.mock('./extensions.js', () => ({ registerExtensionRoutes: routeModules.registerExtensionRoutes }));
 vi.mock('./filePicker.js', () => ({ registerFilePickerRoutes: routeModules.registerFilePickerRoutes }));
 vi.mock('./globalActivity.js', () => ({ registerGlobalActivityRoutes: routeModules.registerGlobalActivityRoutes }));
-vi.mock('./gateways.js', () => ({ registerGatewayRoutes: routeModules.registerGatewayRoutes }));
 vi.mock('./inbox.js', () => ({ registerInboxRoutes: routeModules.registerInboxRoutes }));
 vi.mock('./liveSessions.js', () => ({ registerLiveSessionRoutes: routeModules.registerLiveSessionRoutes }));
 vi.mock('./models.js', () => ({ registerModelRoutes: routeModules.registerModelRoutes }));
@@ -63,7 +61,6 @@ describe('registerServerRoutes', () => {
       routeModules.registerDocumentsRoutes,
       routeModules.registerSettingsRoutes,
       routeModules.registerSecretRoutes,
-      routeModules.registerGatewayRoutes,
       routeModules.registerExtensionRoutes,
       routeModules.registerModelRoutes,
       routeModules.registerToolsRoutes,
@@ -84,7 +81,6 @@ describe('registerServerRoutes', () => {
       routeModules.registerDocumentsRoutes,
       routeModules.registerSettingsRoutes,
       routeModules.registerSecretRoutes,
-      routeModules.registerGatewayRoutes,
       routeModules.registerExtensionRoutes,
       routeModules.registerModelRoutes,
       routeModules.registerToolsRoutes,

@@ -32,7 +32,6 @@ const apiMock = vi.hoisted(() => ({
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
-  gateways: vi.fn(),
   markConversationAttentionRead: vi.fn(),
   prewarmLiveSession: vi.fn(),
   extensionKeybindings: vi.fn(),
@@ -330,7 +329,6 @@ describe('App sidebar conversation navigation workflow', () => {
       return { ok: true, ...workspaceLayout, remoteControlledConversationIds: [] };
     });
     apiMock.setSavedWorkspacePaths.mockResolvedValue([]);
-    apiMock.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     apiMock.markConversationAttentionRead.mockResolvedValue({ ok: true });
     apiMock.prewarmLiveSession.mockResolvedValue({ ok: true });
     apiMock.extensionKeybindings.mockResolvedValue([]);

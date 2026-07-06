@@ -506,7 +506,7 @@ The backend seam is a public SDK contract with a host implementation:
 - Public stubs live in `packages/extensions/src/backend/*.ts` and are exported from `packages/extensions/package.json` as `@neon-pilot/extensions/backend/{name}`.
 - Host implementations live in `packages/desktop/server/extensions/backendApi/{name}.ts` and are swapped in by the extension build/runtime alias.
 - Extension source may import only the SDK seam, never `packages/desktop/server/...`, `@neon-pilot/core`, `@neon-pilot/daemon`, or agent-runtime internals directly.
-- Host backend API modules must stay narrow. If a capability needs desktop runtime, daemon, routes, conversations, gateways, or other heavy app internals, lazy-load that implementation inside the called function instead of importing it at module scope.
+- Host backend API modules must stay narrow. If a capability needs desktop runtime, daemon, routes, conversations, or other heavy app internals, lazy-load that implementation inside the called function instead of importing it at module scope.
 - Prefer focused subpaths over the broad `@neon-pilot/extensions/backend` barrel so a small extension does not bundle unrelated seams.
 
 `pnpm run check:extensions:quick` runs `scripts/check-extension-backend-api.mjs`, which verifies every SDK backend subpath has a matching host implementation, every host backend API module is exported by the SDK, and backend API modules do not statically import known heavy/runtime internals. If this check fails, fix the seam instead of widening the allowlist. Yes, this is intentionally annoying; annoying beats shipping a signed app with surprise noodle imports.

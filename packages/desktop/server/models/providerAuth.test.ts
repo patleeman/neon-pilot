@@ -75,7 +75,7 @@ describe('setProviderApiKey', () => {
     });
   });
 
-  it('hides legacy Telegram credentials because the gateway token is managed as an extension secret', () => {
+  it('hides legacy Telegram credentials because they are not model-provider credentials', () => {
     const dir = createTempDir();
     const authFile = join(dir, 'auth.json');
 

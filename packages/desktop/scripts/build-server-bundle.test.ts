@@ -70,7 +70,6 @@ describe('desktop server bundle lazy module entries', () => {
       'desktop.ts',
       'documents.ts',
       'events.ts',
-      'gateways.ts',
       'images.ts',
       'knowledge.ts',
       'transcription.ts',

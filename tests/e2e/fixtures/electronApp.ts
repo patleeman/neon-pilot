@@ -144,7 +144,6 @@ export async function assertDesktopApiEndpoints(page: Page): Promise<void> {
     '/api/extensions/installed',
     '/api/extensions/routes',
     '/api/extensions/surfaces',
-    '/api/gateways',
     '/api/extensions/keybindings',
     '/api/extensions',
     '/api/extensions/slash-commands',

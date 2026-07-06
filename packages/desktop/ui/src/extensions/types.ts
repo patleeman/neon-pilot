@@ -456,7 +456,6 @@ interface ExtensionContributions {
   instructionProviders?: ExtensionAssemblyProviderContribution[];
   promptAssemblyHooks?: ExtensionPromptAssemblyHookContribution[];
   modelProfiles?: ExtensionModelProfileContribution[];
-  gatewayProviders?: ExtensionGatewayProviderContribution[];
   conversationConnectionProviders?: ExtensionConversationConnectionProviderContribution[];
   transcriptRenderers?: ExtensionTranscriptRendererContribution[];
   promptReferences?: ExtensionPromptReferenceContribution[];
@@ -489,18 +488,6 @@ interface ExtensionContributions {
   settings?: Record<string, unknown>;
   secrets?: Record<string, unknown>;
   settingsComponent?: ExtensionSettingsComponentContribution;
-}
-
-interface ExtensionGatewayProviderContribution {
-  id: string;
-  label: string;
-  description?: string;
-  icon?: ExtensionIconName | string;
-  implemented?: boolean;
-  configurationLocation?: 'gateways' | 'settings' | 'extension' | 'external';
-  setupRoute?: string;
-  docsUrl?: string;
-  order?: number;
 }
 
 interface ExtensionThemeContribution {

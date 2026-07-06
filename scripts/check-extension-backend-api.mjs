@@ -29,19 +29,9 @@ const forbiddenStaticImportPrefixes = [
   '../../conversations/',
   '../../routes/',
   '../../automation/',
-  '../../gateways/',
   '../../shared/',
 ];
-const allowedStringHostApiGlobals = new Map([
-  [
-    'gateways.ts',
-    new Set([
-      // Legacy seam published by routes/gateways.ts. New backend API host access
-      // should use serverModuleResolver or the extension host capability bridge.
-      'TELEGRAM_GATEWAY_HOST_API_GLOBAL',
-    ]),
-  ],
-]);
+const allowedStringHostApiGlobals = new Map();
 const allowedBackendApiLocalStaticSpecifiers = new Set(['./daemonBridge.js', './serverModuleResolver.js']);
 const allowedHostOnlyBackendValueExports = new Map([
   [
@@ -67,13 +57,6 @@ const allowedHostOnlyBackendValueExports = new Map([
       // Test hooks for backendApi/compaction.ts dynamic-import seams.
       'resetExtensionCompactionDynamicImportForTests',
       'setExtensionCompactionDynamicImportForTests',
-    ]),
-  ],
-  [
-    'gateways',
-    new Set([
-      // Legacy host global seam; public SDK exposes typed gateway operations instead.
-      'TELEGRAM_GATEWAY_HOST_API_GLOBAL',
     ]),
   ],
 ]);
@@ -123,19 +106,13 @@ function collectStaticExportSpecifiers(filePath) {
 }
 
 function collectLocalBackendApiStaticSpecifiers(filePath) {
-  return [
-    ...collectImportSpecifiers(filePath, { staticOnly: true }),
-    ...collectStaticExportSpecifiers(filePath),
-  ]
+  return [...collectImportSpecifiers(filePath, { staticOnly: true }), ...collectStaticExportSpecifiers(filePath)]
     .filter((specifier) => specifier.startsWith('./'))
     .sort();
 }
 
 function collectParentStaticSpecifiers(filePath) {
-  return [
-    ...collectImportSpecifiers(filePath, { staticOnly: true }),
-    ...collectStaticExportSpecifiers(filePath),
-  ]
+  return [...collectImportSpecifiers(filePath, { staticOnly: true }), ...collectStaticExportSpecifiers(filePath)]
     .filter((specifier) => specifier.startsWith('../'))
     .sort();
 }
@@ -268,8 +245,7 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
     failures,
     `backendApi/${fileName} statically imports or re-exports local backend API siblings (${disallowedLocalStaticSpecifiers.join(', ')}); use only ${[...allowedBackendApiLocalStaticSpecifiers].sort().join(' or ')} helper seams, or add public barrel exports from backendApi/index.ts`,
   );
-  const parentStaticSpecifiers =
-    fileName === 'index.ts' || fileName.endsWith('.test.ts') ? [] : collectParentStaticSpecifiers(filePath);
+  const parentStaticSpecifiers = fileName === 'index.ts' || fileName.endsWith('.test.ts') ? [] : collectParentStaticSpecifiers(filePath);
   assert(
     parentStaticSpecifiers.length === 0,
     failures,

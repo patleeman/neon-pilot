@@ -18,7 +18,6 @@ import {
   listExtensionCliCommandRegistrations,
   listExtensionCommandRegistrations,
   listExtensionComposerInputToolRegistrations,
-  listExtensionGatewayProviderRegistrations,
   listExtensionInstallSummaries,
   listExtensionKeybindingRegistrations,
   listExtensionModelProfileRegistrations,
@@ -900,43 +899,6 @@ describe('extension registry', () => {
 
     setExtensionEnabled('default-disabled-tool', true, stateRoot);
     expect(isExtensionEnabled('default-disabled-tool', stateRoot)).toBe(true);
-  });
-
-  it('lists gateway provider contributions from enabled extensions', () => {
-    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
-    const extensionRoot = join(stateRoot, 'extensions', 'discord-gateway');
-    mkdirSync(extensionRoot, { recursive: true });
-    writeFileSync(
-      join(extensionRoot, 'extension.json'),
-      JSON.stringify({
-        schemaVersion: 2,
-        id: 'discord-gateway',
-        name: 'Discord Gateway',
-        contributes: {
-          gatewayProviders: [
-            {
-              id: 'discord',
-              label: 'Discord',
-              description: 'Route Discord messages into Neon Pilot.',
-              setupRoute: '/apps/discord-gateway',
-              order: 30,
-            },
-          ],
-        },
-      }),
-    );
-
-    expect(listExtensionGatewayProviderRegistrations(stateRoot)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          extensionId: 'discord-gateway',
-          id: 'discord',
-          label: 'Discord',
-          configurationLocation: 'extension',
-          setupRoute: '/apps/discord-gateway',
-        }),
-      ]),
-    );
   });
 
   it('keeps runtime extensions enabled with diagnostics when compatibility metadata is stale', () => {

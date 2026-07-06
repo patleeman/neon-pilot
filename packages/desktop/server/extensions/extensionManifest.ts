@@ -178,7 +178,6 @@ export interface ExtensionContributions {
   promptContextProviders?: ExtensionPromptContextProviderContribution[];
   turnContextProviders?: ExtensionTurnContextProviderContribution[];
   runtimeProviders?: ExtensionRuntimeProviderContribution[];
-  gatewayProviders?: ExtensionGatewayProviderContribution[];
   conversationConnectionProviders?: ExtensionConversationConnectionProviderContribution[];
   quickOpen?: ExtensionQuickOpenContribution[];
   searchProviders?: ExtensionSearchProviderContribution[];
@@ -217,26 +216,6 @@ export interface ExtensionContributions {
 export interface ExtensionModelDiscoveryContribution {
   /** Backend action id. Called with no input; returns DiscoveredProvider | null. */
   action: string;
-}
-
-export interface ExtensionGatewayProviderContribution {
-  /** Stable provider id used in gateway state, routes, and events. */
-  id: string;
-  /** Human-readable provider name rendered by gateway setup surfaces. */
-  label: string;
-  /** Short setup/runtime description rendered under the provider name. */
-  description?: string;
-  icon?: ExtensionIconName | string;
-  /** Whether this provider has an implemented runtime or backend action yet. Default true. */
-  implemented?: boolean;
-  /** Where users complete provider-specific setup. Default "extension". */
-  configurationLocation?: 'gateways' | 'settings' | 'extension' | 'external';
-  /** Optional in-app route for provider-specific setup. */
-  setupRoute?: string;
-  /** Optional external setup documentation URL. */
-  docsUrl?: string;
-  /** Sort order for provider summaries. Lower renders first. Default 0. */
-  order?: number;
 }
 
 export interface ExtensionWebappContribution {

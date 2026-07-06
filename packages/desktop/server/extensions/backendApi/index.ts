@@ -23,7 +23,6 @@ export {
   saveSubscription,
 } from './events.js';
 export * from './extensions.js';
-export * from './gateways.js';
 export * from './images.js';
 export * from './knowledge.js';
 export * from './mcp.js';
