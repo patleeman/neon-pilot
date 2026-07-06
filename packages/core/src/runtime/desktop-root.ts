@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -101,6 +102,12 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
     systemSecrets: join(system, 'secrets'),
     systemState: join(system, 'state'),
   };
+}
+
+export function ensureDesktopRootDir(options?: DesktopRootOptions): string {
+  const root = getDesktopRootDir(options);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  return root;
 }
 
 export function resolveDesktopAppDataDir(appId: string, options: DesktopRootOptions = {}): string {

@@ -1,9 +1,15 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { homedir, tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getDefaultDesktopRoot, getDesktopRootDir, resolveDesktopAppDataDir, resolveDesktopRootLayout } from './desktop-root.js';
+import {
+  ensureDesktopRootDir,
+  getDefaultDesktopRoot,
+  getDesktopRootDir,
+  resolveDesktopAppDataDir,
+  resolveDesktopRootLayout,
+} from './desktop-root.js';
 
 describe('desktop root layout', () => {
   const tempDirs: string[] = [];
@@ -74,5 +80,49 @@ describe('desktop root layout', () => {
   it('normalizes app data directories from app ids', () => {
     expect(resolveDesktopAppDataDir('system browser', { root: '/desktop' })).toBe('/desktop/data/apps/system-browser');
     expect(() => resolveDesktopAppDataDir('   ', { root: '/desktop' })).toThrow('Desktop app id must not be empty.');
+  });
+
+  describe('ensureDesktopRootDir', () => {
+    it('creates the desktop root directory', () => {
+      const testRoot = tempDir('neon-pilot-desktop-root-');
+      expect(existsSync(testRoot)).toBe(true);
+
+      // Now test that ensureDesktopRootDir creates a subdirectory within it
+      const target = join(testRoot, 'my-desktop');
+      expect(existsSync(target)).toBe(false);
+
+      const result = ensureDesktopRootDir({ root: target });
+      expect(result).toBe(target);
+      expect(existsSync(target)).toBe(true);
+    });
+
+    it('is idempotent when the directory already exists', () => {
+      const testRoot = tempDir('neon-pilot-desktop-root-');
+
+      const target = join(testRoot, 'already-exists');
+      mkdirSync(target, { recursive: true });
+      expect(existsSync(target)).toBe(true);
+      expect(existsSync(join(target, 'sub'))).toBe(false);
+
+      const result = ensureDesktopRootDir({ root: target });
+      expect(result).toBe(target);
+      expect(existsSync(target)).toBe(true);
+
+      // No additional subdirectory was created by ensureDesktopRootDir
+      expect(existsSync(join(target, 'sub'))).toBe(false);
+    });
+
+    it('returns the canonical root path', () => {
+      const testRoot = tempDir('neon-pilot-desktop-root-');
+
+      const target = join(testRoot, 'nested', 'desktop');
+      const result = ensureDesktopRootDir({ root: target });
+      expect(result).toBe(target);
+
+      // Verify subdirectories are NOT created (only root)
+      expect(existsSync(join(target, 'data'))).toBe(false);
+      expect(existsSync(join(target, 'system'))).toBe(false);
+      expect(existsSync(join(target, 'logs'))).toBe(false);
+    });
   });
 });

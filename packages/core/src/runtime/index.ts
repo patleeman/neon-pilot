@@ -9,6 +9,7 @@
 export {
   type DesktopRootLayout,
   type DesktopRootOptions,
+  ensureDesktopRootDir,
   getDefaultDesktopRoot,
   getDesktopRootDir,
   resolveDesktopAppDataDir,

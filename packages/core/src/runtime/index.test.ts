@@ -6,6 +6,7 @@ describe('core runtime barrel', () => {
   it('reexports runtime path helpers, bootstrap helpers, and agent dir preparation', () => {
     expect(runtime).toEqual(
       expect.objectContaining({
+        ensureDesktopRootDir: expect.any(Function),
         getConfigRoot: expect.any(Function),
         getDefaultDesktopRoot: expect.any(Function),
         getDefaultKnowledgeRoot: expect.any(Function),

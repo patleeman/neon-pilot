@@ -11,7 +11,13 @@ const DESKTOP_SCHEDULED_TASK_PROFILE = 'shared';
 const DESKTOP_FORK_BOOTSTRAP_TAIL_BLOCKS = 24;
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getStateRoot, resolveDesktopRootLayout, saveConversationCommitCheckpoint } from '@neon-pilot/core';
+import {
+  ensureDesktopRootDir,
+  getPiAgentRuntimeDir,
+  getStateRoot,
+  resolveDesktopRootLayout,
+  saveConversationCommitCheckpoint,
+} from '@neon-pilot/core';
 import { ensureAutomationThread } from '@neon-pilot/daemon';
 import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
@@ -787,6 +793,10 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const pathsAtMs = performance.now();
   process.stderr.write(`[perf] buildLocalContexts: paths ${Math.round(pathsAtMs - startedAtMs)}ms\n`);
+
+  // Ensure the desktop root directory exists before any consumer
+  // (e.g. getDefaultWebCwd) can reference it.
+  ensureDesktopRootDir();
 
   const runtimeState = createRuntimeState({
     repoRoot,
