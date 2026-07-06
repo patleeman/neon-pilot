@@ -772,6 +772,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   // Ensure the desktop root directory exists before any consumer
   // (e.g. getDefaultWebCwd) can reference it.
   ensureDesktopRootDir();
+  const desktopRootLayout = resolveDesktopRootLayout();
 
   const runtimeState = createRuntimeState({
     repoRoot,
@@ -830,7 +831,8 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     materializeWebRuntimeConfig: () => runtimeState.materializeRuntimeResources(),
     getStateRoot: () => stateRoot,
     serverPort: 0,
-    getDefaultWebCwd: () => resolveDesktopRootLayout().root,
+    getDefaultWebCwd: () => desktopRootLayout.root,
+    getDesktopRootLayout: () => desktopRootLayout,
     resolveRequestedCwd,
     buildLiveSessionResourceOptions: runtimeState.buildLiveSessionResourceOptions,
     buildLiveSessionResourceOptionsAsync: runtimeState.buildLiveSessionResourceOptionsAsync,
