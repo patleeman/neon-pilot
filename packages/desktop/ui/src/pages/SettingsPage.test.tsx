@@ -291,10 +291,6 @@ describe('SettingsPage', () => {
         });
       }
 
-      if (fetcher === api.telegramGatewayToken) {
-        return buildUseApiResult({ configured: false });
-      }
-
       if (key === 'knowledge-settings-knowledge-base') {
         return buildUseApiResult({
           repoUrl: 'https://github.com/user/knowledge-base.git',

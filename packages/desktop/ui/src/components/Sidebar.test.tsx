@@ -22,7 +22,7 @@ import {
   taskStore,
   titleStore,
 } from '../store';
-import { buildGatewayConversationAttachRoute, Sidebar } from './Sidebar.js';
+import { Sidebar } from './Sidebar.js';
 
 const apiMocks = vi.hoisted(() => ({
   sidebarConversations: vi.fn(),
@@ -140,10 +140,6 @@ describe('Sidebar', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   const originalConsoleError = console.error;
   const storage = new MemoryStorage();
-
-  it('builds gateway attach routes for the selected conversation', () => {
-    expect(buildGatewayConversationAttachRoute('conv 1/slash')).toBe('/gateways?conversationId=conv%201%2Fslash');
-  });
 
   beforeEach(() => {
     vi.useFakeTimers();

@@ -29,7 +29,6 @@ const apiMocks = vi.hoisted(() => ({
   saveConversationWorkspaceLayout: vi.fn(),
   updateConversationWorkspace: vi.fn(),
   setSavedWorkspacePaths: vi.fn(),
-  gateways: vi.fn(),
 }));
 
 vi.mock('../client/api', () => ({ api: apiMocks }));
@@ -170,7 +169,6 @@ describe('Sidebar branch conversation interactions', () => {
     apiMocks.saveConversationWorkspaceLayout.mockReset();
     apiMocks.updateConversationWorkspace.mockReset();
     apiMocks.setSavedWorkspacePaths.mockReset();
-    apiMocks.gateways.mockReset();
     apiMocks.readConversationWorkspace.mockResolvedValue({
       sessionIds: [],
       pinnedSessionIds: [],
@@ -189,7 +187,6 @@ describe('Sidebar branch conversation interactions', () => {
     apiMocks.saveConversationWorkspaceLayout.mockResolvedValue({ ok: true });
     apiMocks.updateConversationWorkspace.mockResolvedValue({ ok: true });
     apiMocks.setSavedWorkspacePaths.mockResolvedValue([]);
-    apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     localStorage.setItem(PINNED_SESSION_IDS_STORAGE_KEY, JSON.stringify([]));
     resetLocalWriteGrace();
     resetRemoteConversationLayoutCache();

@@ -83,7 +83,6 @@ import { createNativeExtensionClient } from '../extensions/nativePaClient';
 import { ThreadHeaderActionHost } from '../extensions/ThreadHeaderActionHost';
 import { type ExtensionSurfaceSummary, isExtensionLeftNavItemSurface, isNativeExtensionSidebarSurface } from '../extensions/types';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
-import { GATEWAY_STATE_CHANGED_EVENT } from '../gateways/gatewayEvents';
 import { getOrCreateConversationSurfaceId } from '../hooks/sessionStream';
 import { useConversations } from '../hooks/useConversations';
 import { prefetchDesktopConversationState } from '../hooks/useDesktopConversationState';
@@ -98,7 +97,7 @@ import {
   readConversationLayout,
   replaceConversationLayout,
 } from '../session/sessionTabs';
-import type { GatewayState, SessionMeta } from '../shared/types';
+import type { SessionMeta } from '../shared/types';
 import { timeAgoCompact } from '../shared/utils';
 import {
   conversationRuntimeStore,
@@ -159,35 +158,6 @@ function MoreActionsIcon({ size = 12 }: { size?: number }) {
   );
 }
 
-function formatGatewayProviderLabel(provider: string): string {
-  if (provider === 'telegram') return 'Telegram';
-  return provider
-    .replace(/[_:-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function GatewayRailIcon({ provider }: { provider: string }) {
-  const providerLabel = formatGatewayProviderLabel(provider);
-  const label = `${providerLabel} gateway attached`;
-  const abbreviation = providerLabel
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-  return (
-    <span className="ui-sidebar-count-badge" title={label} aria-label={label}>
-      {abbreviation || 'GW'}
-    </span>
-  );
-}
-
-export function buildGatewayConversationAttachRoute(conversationId: string): string {
-  return `/gateways?conversationId=${encodeURIComponent(conversationId)}`;
-}
-
 const PATH = {
   conversations:
     'M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25H13.5l-3 3v-3H6.75A2.25 2.25 0 0 1 4.5 14.25v-7.5Z',
@@ -200,7 +170,6 @@ const PATH = {
   workspaceAdd:
     'M3.75 7.5A1.5 1.5 0 0 1 5.25 6h4.018a1.5 1.5 0 0 1 1.06.44l1.172 1.17a1.5 1.5 0 0 0 1.06.44h6.19a1.5 1.5 0 0 1 1.5 1.5v7.95a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V7.5Z M3.75 9.75h16.5 M15.75 11.25v4.5 M13.5 13.5h4.5',
   automations: 'M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-  gateways: 'M5 12h5m4 0h5M9 8l3-3 3 3M9 16l3 3 3-3M10 12a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z',
   settings:
     'M10.5 6h3m-1.5-3v6m4.348-2.826 2.121 2.121m-12.728 0 2.121-2.121m8.486 8.486 2.121 2.121m-12.728 0 2.121-2.121M6 10.5H3m18 0h-3m-5.25 7.5v3m0-18v3',
   close: 'M6 18 18 6M6 6l12 12',
@@ -1089,7 +1058,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
   onCopyWorkingDirectory,
   onCopyId,
   onPrefetch,
-  gatewayProviders = [],
   isAutomation = false,
   automationTitle,
   hasPendingRuns = false,
@@ -1115,7 +1083,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
   onCopyWorkingDirectory?: () => boolean | Promise<boolean>;
   onCopyId?: () => boolean | Promise<boolean>;
   onPrefetch?: () => void;
-  gatewayProviders?: string[];
   isAutomation?: boolean;
   automationTitle?: string;
   hasPendingRuns?: boolean;
@@ -1126,7 +1093,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
   onDragEnd?: (event: DragEvent<HTMLDivElement>) => void;
 }) {
   const { hoverRef, hovered, onMouseEnter, onMouseLeave } = useSidebarRowHover<HTMLDivElement>();
-  const navigate = useNavigate();
   const needsAttention = sessionNeedsAttention(session as Parameters<typeof sessionNeedsAttention>[0]);
   const { conversationDecorators, contextMenus } = useExtensionRegistry();
   const conversationExtensionMenuItems = useMemo(
@@ -1138,8 +1104,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
 
         // Evaluate action-specific visibility conditions by action id.
         switch (menu.action) {
-          case 'attachConversation':
-            return session.id !== DRAFT_CONVERSATION_ID;
           case 'duplicateConversation':
             return Boolean(onDuplicate);
           case 'copyWorkingDirectory':
@@ -1338,10 +1302,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
     setBusyExtensionMenuId(menu.id);
     try {
       switch (menu.action) {
-        case 'attachConversation': {
-          navigate(buildGatewayConversationAttachRoute(session.id));
-          return;
-        }
         case 'duplicateConversation': {
           await onDuplicate?.();
           return;
@@ -1463,9 +1423,6 @@ const OpenConversationRow = memo(function OpenConversationRow({
                 <Ico d={PATH.lock} size={11} />
               </span>
             ) : null}
-            {gatewayProviders.map((provider) => (
-              <GatewayRailIcon key={provider} provider={provider} />
-            ))}
             {decoratorsByPosition['before-title'].length > 0 &&
               decoratorsByPosition['before-title'].map((d) => (
                 <ConversationDecoratorHost key={`${d.extensionId}:${d.id}`} registration={d} session={session} />
@@ -1613,7 +1570,6 @@ const SessionRow = memo(function SessionRow({
   automationTitle,
   hasPendingRuns,
   backgroundWorkKind,
-  gatewayProviders,
   onPin,
   onUnpin,
   onClose,
@@ -1639,7 +1595,6 @@ const SessionRow = memo(function SessionRow({
   automationTitle?: string;
   hasPendingRuns?: boolean;
   backgroundWorkKind?: ConversationBackgroundWorkKind | null;
-  gatewayProviders?: string[];
   onPin?: () => void;
   onUnpin?: () => void;
   onClose?: () => void;
@@ -1682,7 +1637,6 @@ const SessionRow = memo(function SessionRow({
       automationTitle={automationTitle}
       hasPendingRuns={pending}
       backgroundWorkKind={backgroundWorkKind}
-      gatewayProviders={gatewayProviders}
       onPin={onPin}
       onUnpin={onUnpin}
       onClose={onClose}
@@ -1767,7 +1721,6 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
   const conversationSurfaceId = useMemo(() => getOrCreateConversationSurfaceId(), []);
   const sidebarNoticeTimeoutRef = useRef<number | null>(null);
   const [sidebarNotice, setSidebarNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null);
-  const [gatewayState, setGatewayState] = useState<GatewayState | null>(null);
   const [addWorkspaceBusy, setAddWorkspaceBusy] = useState(false);
   const workspaceLoadLifecycleRef = useRef({ latestRequestId: 0, disposed: false });
 
@@ -1777,28 +1730,6 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
       workspaceLoadLifecycleRef.current.disposed = true;
     };
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    function handleGatewayStateChanged(event: Event) {
-      setGatewayState((event as CustomEvent<GatewayState>).detail);
-    }
-
-    window.addEventListener(GATEWAY_STATE_CHANGED_EVENT, handleGatewayStateChanged);
-    api
-      .gateways()
-      .then((next) => {
-        if (!cancelled) setGatewayState(next);
-      })
-      .catch(() => {
-        if (!cancelled) setGatewayState(null);
-      });
-    return () => {
-      cancelled = true;
-      window.removeEventListener(GATEWAY_STATE_CHANGED_EVENT, handleGatewayStateChanged);
-    };
-  }, [versions.sessions]);
 
   const showSidebarNotice = useCallback((tone: 'accent' | 'danger', text: string, durationMs = 2500) => {
     if (tone === 'danger') {
@@ -2465,11 +2396,6 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
       input: { conversationId: string; sessionTitle: string; cwd: string | undefined },
     ) => {
       try {
-        if (menu.action === 'attachConversation') {
-          navigate(buildGatewayConversationAttachRoute(input.conversationId));
-          return;
-        }
-
         if (menu.action === 'exportSession') {
           await api.invokeExtensionAction(menu.extensionId, menu.action, input);
           return;
@@ -3766,12 +3692,6 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
         ? dropTarget.position
         : null;
 
-    const gatewayProviders =
-      gatewayState?.bindings
-        .filter((binding) => binding.conversationId === session.id)
-        .map((binding) => binding.provider)
-        .filter((provider, index, providers) => providers.indexOf(provider) === index) ?? [];
-
     const isAutomationRunning = runningAutomationConversationIdSet.has(session.id);
     const hasPendingExecutions = pendingExecutionConversationIdSet.has(session.id);
     const locked = lockedConversationIdSet.has(session.id);
@@ -3788,7 +3708,6 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
         automationTitle={automationThreadTitleByConversationId.get(session.id)}
         hasPendingRuns={hasPendingExecutions && !session.isRunning && !isAutomationRunning}
         backgroundWorkKind={backgroundWorkKindByConversationId.get(session.id) ?? null}
-        gatewayProviders={gatewayProviders}
         isDragging={canDrag && draggingSessionId === session.id}
         dropPosition={dropPosition}
         onPin={!pinned && !isDraftTab ? () => handlePinConversation(session.id) : undefined}

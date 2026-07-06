@@ -39,9 +39,6 @@ import type {
   DefaultCwdState,
   DeferredResumeSummary,
   FilePickerResult,
-  GatewayProviderId,
-  GatewayState,
-  GatewayStatus,
   GlobalActivityResult,
   InjectedPromptMessage,
   InstructionFilesState,
@@ -1371,29 +1368,6 @@ export const api = {
       command,
       excludeFromContext: options?.excludeFromContext,
     }),
-
-  gateways: async () => get<GatewayState>('/gateways'),
-  ensureGatewayConnection: async (provider: GatewayProviderId) => post<GatewayState>('/gateways/connections', { provider }),
-  updateGatewayConnection: async (
-    provider: GatewayProviderId,
-    input: { status: GatewayStatus; enabled?: boolean; statusMessage?: string },
-  ) => patch<GatewayState>(`/gateways/connections/${encodeURIComponent(provider)}`, input),
-  attachGatewayConversation: async (input: {
-    provider: GatewayProviderId;
-    conversationId: string;
-    conversationTitle?: string;
-    externalChatId?: string;
-    externalChatLabel?: string;
-  }) => post<GatewayState>('/gateways/bindings', input),
-  detachGatewayConversation: async (conversationId: string, provider?: GatewayProviderId) =>
-    del<GatewayState>(
-      `/gateways/bindings/${encodeURIComponent(conversationId)}${provider ? `?provider=${encodeURIComponent(provider)}` : ''}`,
-    ),
-  telegramGatewayToken: async () => get<{ configured: boolean }>('/gateways/telegram/token'),
-  saveTelegramGatewayToken: async (token: string) =>
-    post<{ configured: boolean; state: GatewayState }>('/gateways/telegram/token', { token }),
-  deleteTelegramGatewayToken: async () => del<{ configured: boolean; state: GatewayState }>('/gateways/telegram/token'),
-  saveTelegramGatewayChat: async (chatId: string) => post<GatewayState>('/gateways/telegram/chat', { chatId }),
 
   // ── Unified settings store ──────────────────────────────────────
 

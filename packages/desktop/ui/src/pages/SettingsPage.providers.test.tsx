@@ -471,10 +471,6 @@ describe('SettingsPage provider model editor', () => {
         return buildUseApiResult({ backend: 'file', secrets: [] });
       }
 
-      if (fetcher === api.telegramGatewayToken) {
-        return buildUseApiResult({ configured: false });
-      }
-
       if (key === 'system-remote-auth') {
         return remoteAuthResult;
       }

@@ -27,7 +27,6 @@ const apiMocks = vi.hoisted(() => ({
   pickFolder: vi.fn(),
   createLiveSession: vi.fn(),
   markConversationAttentionRead: vi.fn(),
-  gateways: vi.fn(),
   sessions: vi.fn(),
   sidebarConversations: vi.fn(),
   sessionMeta: vi.fn(),
@@ -189,7 +188,6 @@ describe('Sidebar group drag reordering', () => {
     apiMocks.pickFolder.mockReset();
     apiMocks.createLiveSession.mockReset();
     apiMocks.markConversationAttentionRead.mockReset();
-    apiMocks.gateways.mockReset();
     apiMocks.sessions.mockReset();
     apiMocks.sidebarConversations.mockReset();
     apiMocks.sessionMeta.mockReset();
@@ -214,7 +212,6 @@ describe('Sidebar group drag reordering', () => {
     apiMocks.pickFolder.mockResolvedValue({ cancelled: true, path: null });
     apiMocks.createLiveSession.mockResolvedValue({ id: 'created-conversation', sessionFile: '/tmp/created-conversation.jsonl' });
     apiMocks.markConversationAttentionRead.mockResolvedValue({ ok: true });
-    apiMocks.gateways.mockResolvedValue({ providers: [], connections: [], bindings: [], events: [], chatTargets: [] });
     apiMocks.sessions.mockResolvedValue([]);
     apiMocks.sessionMeta.mockImplementation(async (id: string) => sessionStore.get(id) ?? createSession({ id }));
     apiMocks.sidebarConversations.mockImplementation(async () => ({
