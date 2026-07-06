@@ -55,6 +55,11 @@ export interface LiveSessionParallelImportCallbacks<TEntry extends LiveSessionPa
     childConversationId: string,
     options?: { abortIfRunning?: boolean },
   ) => Promise<'destroyed' | 'preserved' | 'missing'>;
+  publishParallelResultToInbox?: (
+    entry: TEntry,
+    job: ParallelPromptJob,
+    details: { childConversationId: string; status: 'complete' | 'failed' },
+  ) => Promise<void>;
 }
 
 export async function startParallelPromptSession<TEntry extends LiveSessionParallelImportHost>(
@@ -412,6 +417,21 @@ export async function tryImportReadyParallelJobs<TEntry extends LiveSessionParal
           childConversationId: currentJob.childConversationId,
           status: currentJob.error?.trim() ? 'failed' : 'complete',
         });
+        if (callbacks.publishParallelResultToInbox) {
+          try {
+            await callbacks.publishParallelResultToInbox(entry, currentJob, {
+              childConversationId: currentJob.childConversationId,
+              status: currentJob.error?.trim() ? 'failed' : 'complete',
+            });
+          } catch (error) {
+            logWarn('parallel result inbox delivery failed', {
+              jobId: currentJob.id,
+              childConversationId: currentJob.childConversationId,
+              message: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+            });
+          }
+        }
       } catch (error) {
         currentJob.status = fallbackStatus;
         currentJob.updatedAt = new Date().toISOString();

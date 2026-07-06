@@ -1,0 +1,85 @@
+import type { DocumentRecord, DocumentsStore } from '../documents/store.js';
+import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { invalidateAppTopics, logError } from '../middleware/index.js';
+
+export const INBOX_OWNER = 'system-inbox';
+export const INBOX_COLLECTION = 'messages';
+
+export const VALID_INBOX_SENDER_KINDS = ['persona', 'worker', 'user', 'system', 'automation'] as const;
+export const VALID_INBOX_MESSAGE_KINDS = ['note', 'question', 'result', 'alert'] as const;
+
+export type InboxSenderKind = (typeof VALID_INBOX_SENDER_KINDS)[number];
+export type InboxMessageKind = (typeof VALID_INBOX_MESSAGE_KINDS)[number];
+
+export interface InboxMessageBody {
+  from: string;
+  fromKind: InboxSenderKind;
+  to?: string;
+  subject: string;
+  body: string;
+  kind: InboxMessageKind;
+  refId?: string;
+  read?: boolean;
+  archived?: boolean;
+}
+
+export interface InboxCreateMessageInput {
+  id?: string;
+  from: string;
+  fromKind: InboxSenderKind;
+  to?: string;
+  subject: string;
+  body: string;
+  kind: InboxMessageKind;
+  refId?: string;
+  read?: boolean;
+  archived?: boolean;
+}
+
+export function generateInboxMessageId(): string {
+  const time = Date.now().toString(36);
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `msg_${time}_${rand}`;
+}
+
+export function writeInboxMessage(store: DocumentsStore, input: InboxCreateMessageInput): DocumentRecord {
+  const id = input.id?.trim() || generateInboxMessageId();
+  const body: InboxMessageBody = {
+    from: input.from,
+    fromKind: input.fromKind,
+    subject: input.subject,
+    body: input.body,
+    kind: input.kind,
+    read: input.read ?? false,
+    archived: input.archived ?? false,
+    ...(input.to ? { to: input.to } : {}),
+    ...(input.refId ? { refId: input.refId } : {}),
+  };
+
+  return store.putDocument(INBOX_OWNER, INBOX_COLLECTION, id, body);
+}
+
+function publishExtensionEvent(topic: 'documents' | 'inbox', payload: unknown): void {
+  let extensionHostClient: ReturnType<typeof getExtensionHostClient>;
+  try {
+    extensionHostClient = getExtensionHostClient();
+  } catch (error) {
+    logError(`${topic} event publish skipped`, { message: error instanceof Error ? error.message : String(error) });
+    return;
+  }
+  void Promise.resolve(extensionHostClient.publishEvent(topic, payload)).catch((error) => {
+    logError(`${topic} event publish failed`, { message: error instanceof Error ? error.message : String(error) });
+  });
+}
+
+export function notifyInboxMutation(type: string, id: string, body: InboxMessageBody | undefined, extra?: Record<string, unknown>): void {
+  invalidateAppTopics('inbox', 'documents');
+  publishExtensionEvent('inbox', { type, owner: INBOX_OWNER, collection: INBOX_COLLECTION, id, ...extra });
+  publishExtensionEvent('documents', {
+    type: type === 'inbox.deleted' ? 'document.deleted' : 'document.updated',
+    owner: INBOX_OWNER,
+    collection: INBOX_COLLECTION,
+    id,
+    ...(body === undefined ? {} : { body }),
+  });
+}

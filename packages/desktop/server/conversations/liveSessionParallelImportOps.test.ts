@@ -355,6 +355,7 @@ describe('live session parallel import operations', () => {
       persistParallelJobs: vi.fn(),
       broadcastParallelState: vi.fn(),
       appendParallelImportedMessage: vi.fn(async () => undefined),
+      publishParallelResultToInbox: vi.fn(async () => undefined),
       finalizeParallelChildLiveSession: vi.fn(async () => 'destroyed'),
     };
     await tryImportReadyParallelJobs(e as never, callbacks as never);
@@ -362,6 +363,11 @@ describe('live session parallel import operations', () => {
       childConversationId: 'child-1',
       status: 'complete',
     });
+    expect(callbacks.publishParallelResultToInbox).toHaveBeenCalledWith(
+      e,
+      expect.objectContaining({ id: 'job-1', childConversationId: 'child-1' }),
+      { childConversationId: 'child-1', status: 'complete' },
+    );
     expect(e.parallelJobs).toEqual([]);
 
     const failing = entry({
@@ -377,6 +383,23 @@ describe('live session parallel import operations', () => {
     await expect(tryImportReadyParallelJobs(failing as never, failingCallbacks as never)).rejects.toThrow('append failed');
     expect(failing.parallelJobs[0]).toMatchObject({ id: 'job-2', status: 'failed' });
     expect(failing.importingParallelJobs).toBe(false);
+
+    const inboxFailing = entry({
+      session: { isStreaming: false },
+      parallelJobs: [{ id: 'job-3', status: 'ready', childConversationId: 'child-3', prompt: 'p' }],
+    });
+    const inboxFailingCallbacks = {
+      ...callbacks,
+      publishParallelResultToInbox: vi.fn(async () => {
+        throw new Error('inbox failed');
+      }),
+    };
+    await expect(tryImportReadyParallelJobs(inboxFailing as never, inboxFailingCallbacks as never)).resolves.toBeUndefined();
+    expect(inboxFailing.parallelJobs).toEqual([]);
+    expect(logging.logWarn).toHaveBeenCalledWith(
+      'parallel result inbox delivery failed',
+      expect.objectContaining({ jobId: 'job-3', childConversationId: 'child-3', message: 'inbox failed' }),
+    );
   });
 
   it('manages skip, cancel, import-now, and validation cases', async () => {

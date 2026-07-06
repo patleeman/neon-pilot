@@ -17,34 +17,26 @@
 import type { Express, Request, Response } from 'express';
 
 import { type DocumentRecord, type DocumentsStore, getDocumentsStore } from '../documents/store.js';
-import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { invalidateAppTopics, logError } from '../middleware/index.js';
+import {
+  generateInboxMessageId,
+  INBOX_COLLECTION,
+  INBOX_OWNER,
+  type InboxMessageBody,
+  notifyInboxMutation,
+  VALID_INBOX_MESSAGE_KINDS,
+  VALID_INBOX_SENDER_KINDS,
+  writeInboxMessage,
+} from '../inbox/messages.js';
+import { logError } from '../middleware/index.js';
 import type { ServerRouteContext } from './context.js';
 
 // ── Constants ──────────────────────────────────────────────────────────
 
-export const INBOX_OWNER = 'system-inbox';
-export const INBOX_COLLECTION = 'messages';
-
-const VALID_SENDER_KINDS = ['persona', 'worker', 'user', 'system', 'automation'] as const;
-const VALID_MESSAGE_KINDS = ['note', 'question', 'result', 'alert'] as const;
 const DEFAULT_LIST_LIMIT = 100;
 const MAX_LIST_LIMIT = 500;
 
-type SenderKind = (typeof VALID_SENDER_KINDS)[number];
-type MessageKind = (typeof VALID_MESSAGE_KINDS)[number];
-
-export interface InboxMessageBody {
-  from: string;
-  fromKind: SenderKind;
-  to?: string;
-  subject: string;
-  body: string;
-  kind: MessageKind;
-  refId?: string;
-  read?: boolean;
-  archived?: boolean;
-}
+type SenderKind = (typeof VALID_INBOX_SENDER_KINDS)[number];
+type MessageKind = (typeof VALID_INBOX_MESSAGE_KINDS)[number];
 
 // ── Store lifecycle ────────────────────────────────────────────────────
 
@@ -94,14 +86,14 @@ function readBoolean(value: unknown): boolean | undefined {
 }
 
 function readSenderKind(value: unknown): SenderKind | undefined {
-  if (typeof value === 'string' && (VALID_SENDER_KINDS as readonly string[]).includes(value)) {
+  if (typeof value === 'string' && (VALID_INBOX_SENDER_KINDS as readonly string[]).includes(value)) {
     return value as SenderKind;
   }
   return undefined;
 }
 
 function readMessageKind(value: unknown): MessageKind | undefined {
-  if (typeof value === 'string' && (VALID_MESSAGE_KINDS as readonly string[]).includes(value)) {
+  if (typeof value === 'string' && (VALID_INBOX_MESSAGE_KINDS as readonly string[]).includes(value)) {
     return value as MessageKind;
   }
   return undefined;
@@ -124,29 +116,8 @@ function sendError(res: Response, error: unknown, statusCode = 500): void {
   res.status(status).json({ error: message });
 }
 
-function publishExtensionEvent(topic: 'documents' | 'inbox', payload: unknown): void {
-  let extensionHostClient: ReturnType<typeof getExtensionHostClient>;
-  try {
-    extensionHostClient = getExtensionHostClient();
-  } catch (error) {
-    logError(`${topic} event publish skipped`, { message: error instanceof Error ? error.message : String(error) });
-    return;
-  }
-  void Promise.resolve(extensionHostClient.publishEvent(topic, payload)).catch((error) => {
-    logError(`${topic} event publish failed`, { message: error instanceof Error ? error.message : String(error) });
-  });
-}
-
 function afterMutation(type: string, id: string, body: InboxMessageBody | undefined, extra?: Record<string, unknown>): void {
-  invalidateAppTopics('inbox', 'documents');
-  publishExtensionEvent('inbox', { type, owner: INBOX_OWNER, collection: INBOX_COLLECTION, id, ...extra });
-  publishExtensionEvent('documents', {
-    type: type === 'inbox.deleted' ? 'document.deleted' : 'document.updated',
-    owner: INBOX_OWNER,
-    collection: INBOX_COLLECTION,
-    id,
-    ...(body === undefined ? {} : { body }),
-  });
+  notifyInboxMutation(type, id, body, extra);
 }
 
 // ── Handlers ───────────────────────────────────────────────────────────
@@ -228,7 +199,7 @@ function handleCreate(store: DocumentsStore, req: Request, res: Response): void 
       return;
     }
     if (!fromKind) {
-      res.status(400).json({ error: 'fromKind must be one of: ' + VALID_SENDER_KINDS.join(', ') });
+      res.status(400).json({ error: 'fromKind must be one of: ' + VALID_INBOX_SENDER_KINDS.join(', ') });
       return;
     }
     if (!subject) {
@@ -236,7 +207,7 @@ function handleCreate(store: DocumentsStore, req: Request, res: Response): void 
       return;
     }
     if (!messageKind) {
-      res.status(400).json({ error: 'kind must be one of: ' + VALID_MESSAGE_KINDS.join(', ') });
+      res.status(400).json({ error: 'kind must be one of: ' + VALID_INBOX_MESSAGE_KINDS.join(', ') });
       return;
     }
     if (messageText === undefined || messageText.length === 0) {
@@ -246,26 +217,25 @@ function handleCreate(store: DocumentsStore, req: Request, res: Response): void 
 
     const to = readOptionalString(body.to);
     const refId = readOptionalString(body.refId);
-    const id = readString(body.id) ?? generateMessageId();
+    const id = readString(body.id) ?? generateInboxMessageId();
 
     if (store.getDocument(INBOX_OWNER, INBOX_COLLECTION, id)) {
       res.status(409).json({ error: 'Inbox message with that id already exists' });
       return;
     }
 
-    const messageBody: InboxMessageBody = {
+    const doc = writeInboxMessage(store, {
+      id,
       from,
       fromKind,
       subject,
       body: messageText,
       kind: messageKind,
-      read: false,
-      archived: false,
       ...(to ? { to } : {}),
       ...(refId ? { refId } : {}),
-    };
+    });
 
-    const doc = store.putDocument(INBOX_OWNER, INBOX_COLLECTION, id, messageBody);
+    const messageBody = messageBodyOf(doc);
     afterMutation('inbox.created', id, messageBody);
     res.json({ document: doc });
   } catch (error) {
@@ -345,15 +315,6 @@ function handleDelete(store: DocumentsStore, req: Request, res: Response): void 
   } catch (error) {
     sendError(res, error);
   }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────
-
-function generateMessageId(): string {
-  // Deterministic-enough id for host-created messages: time-based with random suffix.
-  const time = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 10);
-  return `msg_${time}_${rand}`;
 }
 
 // ── Registration ───────────────────────────────────────────────────────

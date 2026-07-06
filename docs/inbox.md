@@ -32,6 +32,19 @@ Mutations invalidate both `inbox` and `documents` app topics and publish both
 Inbox and Documents extension-host events so the Inbox app, Documents app, and
 document watchers converge on the same store state.
 
+## Worker Result Delivery
+
+Parallel prompt workers still import their result into the parent transcript for
+conversation continuity. After a successful transcript import, the host also
+writes an unread Inbox `result` message from the generated worker name to the
+persona. The Inbox body includes the original prompt, child conversation id,
+result or error text, touched files, and reported side effects.
+
+Inbox delivery is best-effort: if writing or publishing the Inbox message fails,
+the transcript import remains complete and the worker job is not resurrected.
+This keeps Inbox as an attention surface over worker output without making it a
+second source of truth for execution state.
+
 ## UI Surface
 
 `/inbox` renders as a core windowed feature page through
