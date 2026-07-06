@@ -231,7 +231,7 @@ describe('tool gateway', () => {
     );
   });
 
-  it('routes allowlisted desktop control through the system desktop tools action', async () => {
+  it('routes allowlisted desktop tools through the system desktop tools actions', async () => {
     toolInventory.listToolDefinitionsAsync.mockResolvedValue([
       {
         id: 'system-desktop-tools/desktop-control',
@@ -249,13 +249,45 @@ describe('tool gateway', () => {
         },
         priority: 0,
       },
+      {
+        id: 'system-desktop-tools/desktop-screenshot',
+        name: 'desktop_screenshot',
+        description: 'Capture the Windowed OS desktop',
+        inputSchema: { type: 'object' },
+        raw: {
+          extensionId: 'system-desktop-tools',
+          packageType: 'system',
+          id: 'desktop-screenshot',
+          name: 'desktop_screenshot',
+          action: 'desktopScreenshot',
+          description: 'Capture the Windowed OS desktop',
+          inputSchema: { type: 'object' },
+        },
+        priority: 0,
+      },
+      {
+        id: 'system-desktop-tools/desktop-state',
+        name: 'desktop_state',
+        description: 'Read the Windowed OS desktop state',
+        inputSchema: { type: 'object' },
+        raw: {
+          extensionId: 'system-desktop-tools',
+          packageType: 'system',
+          id: 'desktop-state',
+          name: 'desktop_state',
+          action: 'desktopState',
+          description: 'Read the Windowed OS desktop state',
+          inputSchema: { type: 'object' },
+        },
+        priority: 0,
+      },
     ]);
 
     await expect(
       listInvocableExtensionTools({
         modelRef: 'ds4/deepseek-v4-flash',
         repoRoot: '/repo',
-        directToolNames: ['desktop_control'],
+        directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
       }),
     ).resolves.toEqual([
       expect.objectContaining({
@@ -264,6 +296,22 @@ describe('tool gateway', () => {
           extensionId: 'system-desktop-tools',
           toolId: 'desktop-control',
           action: 'desktopControl',
+        },
+      }),
+      expect.objectContaining({
+        name: 'desktop_screenshot',
+        source: {
+          extensionId: 'system-desktop-tools',
+          toolId: 'desktop-screenshot',
+          action: 'desktopScreenshot',
+        },
+      }),
+      expect.objectContaining({
+        name: 'desktop_state',
+        source: {
+          extensionId: 'system-desktop-tools',
+          toolId: 'desktop-state',
+          action: 'desktopState',
         },
       }),
     ]);
@@ -275,7 +323,7 @@ describe('tool gateway', () => {
         runtime: {
           modelRef: 'ds4/deepseek-v4-flash',
           repoRoot: '/repo',
-          directToolNames: ['desktop_control'],
+          directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
         },
         toolContext: { conversationId: 'conv-1', cwd: '/repo' },
       }),
@@ -287,6 +335,45 @@ describe('tool gateway', () => {
       input: { action: 'open', appId: 'browser' },
       serverContextSnapshot: undefined,
       toolContextSnapshot: { conversationId: 'conv-1', cwd: '/repo' },
+    });
+
+    await expect(
+      invokeExtensionToolByName({
+        name: 'desktop_screenshot',
+        input: { windowId: 'browser:main' },
+        runtime: {
+          modelRef: 'ds4/deepseek-v4-flash',
+          repoRoot: '/repo',
+          directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
+        },
+      }),
+    ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
+
+    expect(extensionHostClient.invokeAction).toHaveBeenLastCalledWith({
+      extensionId: 'system-desktop-tools',
+      actionId: 'desktopScreenshot',
+      input: { windowId: 'browser:main' },
+      serverContextSnapshot: undefined,
+      toolContextSnapshot: undefined,
+    });
+
+    await expect(
+      invokeExtensionToolByName({
+        name: 'desktop_state',
+        runtime: {
+          modelRef: 'ds4/deepseek-v4-flash',
+          repoRoot: '/repo',
+          directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
+        },
+      }),
+    ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
+
+    expect(extensionHostClient.invokeAction).toHaveBeenLastCalledWith({
+      extensionId: 'system-desktop-tools',
+      actionId: 'desktopState',
+      input: {},
+      serverContextSnapshot: undefined,
+      toolContextSnapshot: undefined,
     });
   });
 
