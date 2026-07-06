@@ -10,13 +10,18 @@ import {
   listConversationAttachments,
   readConversationAttachmentDownload,
   resolveConversationAttachmentDir,
+  resolveConversationAttachmentDirFromLayout,
   resolveConversationAttachmentPromptFiles,
   resolveConversationAttachmentRevisionDir,
+  resolveConversationAttachmentRevisionDirFromLayout,
   resolveConversationAttachmentsDir,
+  resolveConversationAttachmentsDirFromLayout,
   resolveProfileConversationAttachmentsDir,
+  resolveProfileConversationAttachmentsDirFromLayout,
   saveConversationAttachment,
   validateConversationAttachmentId,
 } from './conversation-attachments.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -64,6 +69,26 @@ describe('conversation attachment paths', () => {
         revision: 2,
       }),
     ).toBe(join(stateRoot, 'pi-agent', 'state', 'conversation-attachments', 'assistant', 'conv-123', 'diagram', 'revisions', '2'));
+  });
+
+  it('resolves paths from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileConversationAttachmentsDirFromLayout(layout as DesktopRootLayout, 'assistant')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-attachments', 'assistant'),
+    );
+
+    expect(resolveConversationAttachmentsDirFromLayout(layout as DesktopRootLayout, 'assistant', 'conv-123')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-attachments', 'assistant', 'conv-123'),
+    );
+
+    expect(resolveConversationAttachmentDirFromLayout(layout as DesktopRootLayout, 'assistant', 'conv-123', 'diagram')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-attachments', 'assistant', 'conv-123', 'diagram'),
+    );
+
+    expect(resolveConversationAttachmentRevisionDirFromLayout(layout as DesktopRootLayout, 'assistant', 'conv-123', 'diagram', 2)).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-attachments', 'assistant', 'conv-123', 'diagram', 'revisions', '2'),
+    );
   });
 
   it('rejects invalid attachment ids', () => {

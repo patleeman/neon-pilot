@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 
 import type { AlertSeverity } from './alerts.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const DEFAULT_RUNTIME_SCOPE = 'shared';
@@ -109,6 +110,10 @@ export function resolveTaskCallbackBindingsFile(options: { profile: string; stat
     'task-callback-bindings',
     `${normalizeRuntimeScope(options.profile)}.json`,
   );
+}
+
+export function resolveTaskCallbackBindingsFileFromLayout(layout: DesktopRootLayout, profile: string): string {
+  return join(layout.systemState, 'pi-agent', 'state', 'task-callback-bindings', `${normalizeRuntimeScope(profile)}.json`);
 }
 
 export function loadTaskCallbackBindings(options: { profile: string; stateRoot?: string }): Record<string, TaskCallbackBinding> {

@@ -9,15 +9,21 @@ import {
   listProfileActivityEntries,
   loadProfileActivityReadState,
   resolveActivityEntryPath,
+  resolveActivityEntryPathFromLayout,
   resolveActivityReadStatePath,
+  resolveActivityReadStatePathFromLayout,
   resolveProfileActivityDbPath,
+  resolveProfileActivityDbPathFromLayout,
   resolveProfileActivityDir,
+  resolveProfileActivityDirFromLayout,
   resolveProfileActivityStateDir,
+  resolveProfileActivityStateDirFromLayout,
   saveProfileActivityReadState,
   validateActivityId,
   writeProfileActivityEntry,
 } from './activity.js';
 import { createProjectActivityEntry } from './project-artifacts.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -56,6 +62,30 @@ describe('activity paths', () => {
 
   it('rejects invalid activity ids', () => {
     expect(() => validateActivityId('bad/id')).toThrow('Invalid activity id');
+  });
+
+  it('resolves paths from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileActivityStateDirFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'activity', 'datadog'),
+    );
+
+    expect(resolveProfileActivityDirFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'activity', 'datadog', 'activities'),
+    );
+
+    expect(resolveActivityEntryPathFromLayout(layout as DesktopRootLayout, 'datadog', 'daily-report')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'activity', 'datadog', 'activities', 'daily-report.md'),
+    );
+
+    expect(resolveActivityReadStatePathFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'activity', 'datadog', 'read-state.json'),
+    );
+
+    expect(resolveProfileActivityDbPathFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'activity', 'datadog', 'runtime.db'),
+    );
   });
 });
 

@@ -3,6 +3,7 @@ import { join, resolve } from 'path';
 
 import { validateActivityId } from './activity.js';
 import { validateConversationId } from './conversation-project-links.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
@@ -62,10 +63,21 @@ export function resolveProfileActivityConversationLinksDir(options: ResolveActiv
   return join(getActivityConversationLinkStateRoot(options.stateRoot), 'pi-agent', 'state', 'activity-conversation-links', options.profile);
 }
 
+export function resolveProfileActivityConversationLinksDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'activity-conversation-links', profile);
+}
+
 export function resolveActivityConversationLinkPath(options: ResolveActivityConversationLinkPathOptions): string {
   validateProfileName(options.profile);
   validateActivityId(options.activityId);
   return join(resolveProfileActivityConversationLinksDir(options), `${options.activityId}.json`);
+}
+
+export function resolveActivityConversationLinkPathFromLayout(layout: DesktopRootLayout, profile: string, activityId: string): string {
+  validateProfileName(profile);
+  validateActivityId(activityId);
+  return join(resolveProfileActivityConversationLinksDirFromLayout(layout, profile), `${activityId}.json`);
 }
 
 export function readActivityConversationLink(path: string): ActivityConversationLinkDocument {

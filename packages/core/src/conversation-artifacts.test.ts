@@ -10,11 +10,15 @@ import {
   listConversationArtifacts,
   normalizeConversationArtifactMetadata,
   resolveConversationArtifactPath,
+  resolveConversationArtifactPathFromLayout,
   resolveConversationArtifactsDir,
+  resolveConversationArtifactsDirFromLayout,
   resolveProfileConversationArtifactsDir,
+  resolveProfileConversationArtifactsDirFromLayout,
   saveConversationArtifact,
   validateConversationArtifactId,
 } from './conversation-artifacts.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -54,6 +58,22 @@ describe('conversation artifact paths', () => {
 
   it('rejects invalid artifact ids', () => {
     expect(() => validateConversationArtifactId('bad/id')).toThrow('Invalid artifact id');
+  });
+
+  it('resolves paths from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileConversationArtifactsDirFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-artifacts', 'datadog'),
+    );
+
+    expect(resolveConversationArtifactsDirFromLayout(layout as DesktopRootLayout, 'datadog', 'conv-123')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-artifacts', 'datadog', 'conv-123'),
+    );
+
+    expect(resolveConversationArtifactPathFromLayout(layout as DesktopRootLayout, 'datadog', 'conv-123', 'mockup')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-artifacts', 'datadog', 'conv-123', 'mockup.json'),
+    );
   });
 });
 

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSyn
 import { join, resolve } from 'path';
 
 import { validateProjectId } from './projects.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
@@ -45,10 +46,21 @@ export function resolveProfileConversationLinksDir(options: ResolveConversationL
   return join(getConversationLinkStateRoot(options.stateRoot), 'pi-agent', 'state', 'conversation-project-links', options.profile);
 }
 
+export function resolveProfileConversationLinksDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'conversation-project-links', profile);
+}
+
 export function resolveConversationLinkPath(options: ResolveConversationLinkPathOptions): string {
   validateProfileName(options.profile);
   validateConversationId(options.conversationId);
   return join(resolveProfileConversationLinksDir(options), `${options.conversationId}.json`);
+}
+
+export function resolveConversationLinkPathFromLayout(layout: DesktopRootLayout, profile: string, conversationId: string): string {
+  validateProfileName(profile);
+  validateConversationId(conversationId);
+  return join(resolveProfileConversationLinksDirFromLayout(layout, profile), `${conversationId}.json`);
 }
 
 function normalizeIsoTimestamp(value: string, label: string): string {

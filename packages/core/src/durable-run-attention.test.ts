@@ -11,7 +11,9 @@ import {
   markDurableRunAttentionRead,
   markDurableRunAttentionUnread,
   resolveDurableRunAttentionStatePath,
+  resolveDurableRunAttentionStatePathFromLayout,
 } from './durable-run-attention.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -24,6 +26,14 @@ function createTempDir(prefix: string): string {
 describe('durable run attention state', () => {
   afterEach(async () => {
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+  });
+
+  it('resolves the state path from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveDurableRunAttentionStatePathFromLayout(layout as DesktopRootLayout)).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'durable-run-attention.json'),
+    );
   });
 
   it('tracks reviewed signatures per run id', () => {

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, w
 import { isAbsolute, join, resolve } from 'path';
 
 import { validateConversationId } from './conversation-project-links.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
@@ -292,12 +293,25 @@ export function resolveProfileConversationCheckpointsDir(options: ResolveConvers
   return join(getConversationCheckpointStateRoot(options.stateRoot), 'pi-agent', 'state', 'conversation-checkpoints', options.profile);
 }
 
+export function resolveProfileConversationCheckpointsDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'conversation-checkpoints', profile);
+}
+
 export function resolveConversationCheckpointMetaDir(options: ResolveConversationCheckpointOptions): string {
   return join(resolveProfileConversationCheckpointsDir(options), 'meta');
 }
 
+export function resolveConversationCheckpointMetaDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  return join(resolveProfileConversationCheckpointsDirFromLayout(layout, profile), 'meta');
+}
+
 export function resolveConversationCheckpointSnapshotsDir(options: ResolveConversationCheckpointOptions): string {
   return join(resolveProfileConversationCheckpointsDir(options), 'snapshots');
+}
+
+export function resolveConversationCheckpointSnapshotsDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  return join(resolveProfileConversationCheckpointsDirFromLayout(layout, profile), 'snapshots');
 }
 
 export function resolveConversationCheckpointMetaPath(options: ResolveConversationCheckpointPathOptions): string {
@@ -305,9 +319,23 @@ export function resolveConversationCheckpointMetaPath(options: ResolveConversati
   return join(resolveConversationCheckpointMetaDir(options), `${options.checkpointId}.json`);
 }
 
+export function resolveConversationCheckpointMetaPathFromLayout(layout: DesktopRootLayout, profile: string, checkpointId: string): string {
+  validateConversationCheckpointId(checkpointId);
+  return join(resolveConversationCheckpointMetaDirFromLayout(layout, profile), `${checkpointId}.json`);
+}
+
 export function resolveConversationCheckpointSnapshotPath(options: ResolveConversationCheckpointPathOptions): string {
   validateConversationCheckpointId(options.checkpointId);
   return join(resolveConversationCheckpointSnapshotsDir(options), `${options.checkpointId}.jsonl`);
+}
+
+export function resolveConversationCheckpointSnapshotPathFromLayout(
+  layout: DesktopRootLayout,
+  profile: string,
+  checkpointId: string,
+): string {
+  validateConversationCheckpointId(checkpointId);
+  return join(resolveConversationCheckpointSnapshotsDirFromLayout(layout, profile), `${checkpointId}.jsonl`);
 }
 
 export function resolveConversationCheckpointSnapshotFile(options: ResolveConversationCheckpointSnapshotFileOptions): string {

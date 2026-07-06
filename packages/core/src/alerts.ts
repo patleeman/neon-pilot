@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const DEFAULT_RUNTIME_SCOPE = 'shared';
@@ -184,6 +185,10 @@ export function createEmptyAlertState(): AlertStateFile {
 
 export function resolveProfileAlertsStateFile(options: ResolveAlertOptions): string {
   return join(resolveStateRoot(options.stateRoot), 'pi-agent', 'state', 'alerts', `${normalizeRuntimeScope(options.profile)}.json`);
+}
+
+export function resolveProfileAlertsStateFileFromLayout(layout: DesktopRootLayout, profile: string): string {
+  return join(layout.systemState, 'pi-agent', 'state', 'alerts', `${normalizeRuntimeScope(profile)}.json`);
 }
 
 export function loadAlertState(options: ResolveAlertOptions): AlertStateFile {

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getPiAgentStateDir, getStateRoot } from './runtime/paths.js';
 
 export interface DurableRunAttentionStateOptions {
@@ -112,6 +113,10 @@ function sortRuns(runs: Record<string, DurableRunAttentionRecord>): Record<strin
 
 export function resolveDurableRunAttentionStatePath(options: DurableRunAttentionStateOptions = {}): string {
   return join(getPiAgentStateDir(resolveAttentionStateRoot(options.stateRoot)), 'state', 'durable-run-attention.json');
+}
+
+export function resolveDurableRunAttentionStatePathFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.systemState, 'pi-agent', 'state', 'durable-run-attention.json');
 }
 
 export function loadDurableRunAttentionState(options: DurableRunAttentionStateOptions = {}): DurableRunAttentionStateDocument {

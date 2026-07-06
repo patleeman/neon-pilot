@@ -4,7 +4,13 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding } from './task-callback-bindings.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
+import {
+  clearTaskCallbackBinding,
+  getTaskCallbackBinding,
+  resolveTaskCallbackBindingsFileFromLayout,
+  setTaskCallbackBinding,
+} from './task-callback-bindings.js';
 
 const tempDirs: string[] = [];
 
@@ -19,6 +25,14 @@ afterEach(async () => {
 });
 
 describe('task callback bindings', () => {
+  it('resolves the bindings file path from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveTaskCallbackBindingsFileFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'task-callback-bindings', 'shared.json'),
+    );
+  });
+
   it('stores and retrieves bindings per profile/task id', () => {
     const stateRoot = createTempDir('pa-task-callbacks-');
 

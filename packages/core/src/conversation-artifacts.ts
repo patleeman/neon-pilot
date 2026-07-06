@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { join, resolve } from 'path';
 
 import { validateConversationId } from './conversation-project-links.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
@@ -258,10 +259,21 @@ export function resolveProfileConversationArtifactsDir(options: { profile: strin
   return join(getConversationArtifactStateRoot(options.stateRoot), 'pi-agent', 'state', 'conversation-artifacts', options.profile);
 }
 
+export function resolveProfileConversationArtifactsDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'conversation-artifacts', profile);
+}
+
 export function resolveConversationArtifactsDir(options: ResolveConversationArtifactOptions): string {
   validateProfileName(options.profile);
   validateConversationId(options.conversationId);
   return join(resolveProfileConversationArtifactsDir(options), options.conversationId);
+}
+
+export function resolveConversationArtifactsDirFromLayout(layout: DesktopRootLayout, profile: string, conversationId: string): string {
+  validateProfileName(profile);
+  validateConversationId(conversationId);
+  return join(resolveProfileConversationArtifactsDirFromLayout(layout, profile), conversationId);
 }
 
 export function resolveConversationArtifactPath(options: ResolveConversationArtifactPathOptions): string {
@@ -269,6 +281,18 @@ export function resolveConversationArtifactPath(options: ResolveConversationArti
   validateConversationId(options.conversationId);
   validateConversationArtifactId(options.artifactId);
   return join(resolveConversationArtifactsDir(options), `${options.artifactId}.json`);
+}
+
+export function resolveConversationArtifactPathFromLayout(
+  layout: DesktopRootLayout,
+  profile: string,
+  conversationId: string,
+  artifactId: string,
+): string {
+  validateProfileName(profile);
+  validateConversationId(conversationId);
+  validateConversationArtifactId(artifactId);
+  return join(resolveConversationArtifactsDirFromLayout(layout, profile, conversationId), `${artifactId}.json`);
 }
 
 export function readConversationArtifact(path: string): ConversationArtifactRecord {

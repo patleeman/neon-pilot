@@ -11,8 +11,10 @@ import {
   getAlert,
   listAlerts,
   resolveProfileAlertsStateFile,
+  resolveProfileAlertsStateFileFromLayout,
   upsertAlert,
 } from './alerts.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -107,6 +109,14 @@ describe('alerts', () => {
     );
 
     expect(listAlerts({ stateRoot, profile: 'shared' })).toEqual([expect.objectContaining({ id: 'valid', kind: 'blocked' })]);
+  });
+
+  it('resolves the alerts state file from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileAlertsStateFileFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'alerts', 'shared.json'),
+    );
   });
 
   it('rejects invalid mutation timestamps', () => {

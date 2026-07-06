@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join, resolve } from 'path';
 
 import { validateConversationId } from './conversation-project-links.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
@@ -241,10 +242,25 @@ export function resolveProfileConversationCommitCheckpointsDir(options: { profil
   );
 }
 
+export function resolveProfileConversationCommitCheckpointsDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'conversation-commit-checkpoints', profile);
+}
+
 export function resolveConversationCommitCheckpointsDir(options: ResolveConversationCommitCheckpointOptions): string {
   validateProfileName(options.profile);
   validateConversationId(options.conversationId);
   return join(resolveProfileConversationCommitCheckpointsDir(options), options.conversationId);
+}
+
+export function resolveConversationCommitCheckpointsDirFromLayout(
+  layout: DesktopRootLayout,
+  profile: string,
+  conversationId: string,
+): string {
+  validateProfileName(profile);
+  validateConversationId(conversationId);
+  return join(resolveProfileConversationCommitCheckpointsDirFromLayout(layout, profile), conversationId);
 }
 
 export function resolveConversationCommitCheckpointPath(options: ResolveConversationCommitCheckpointPathOptions): string {
@@ -252,6 +268,18 @@ export function resolveConversationCommitCheckpointPath(options: ResolveConversa
   validateConversationId(options.conversationId);
   validateConversationCommitCheckpointId(options.checkpointId);
   return join(resolveConversationCommitCheckpointsDir(options), `${options.checkpointId}.json`);
+}
+
+export function resolveConversationCommitCheckpointPathFromLayout(
+  layout: DesktopRootLayout,
+  profile: string,
+  conversationId: string,
+  checkpointId: string,
+): string {
+  validateProfileName(profile);
+  validateConversationId(conversationId);
+  validateConversationCommitCheckpointId(checkpointId);
+  return join(resolveConversationCommitCheckpointsDirFromLayout(layout, profile, conversationId), `${checkpointId}.json`);
 }
 
 export function getConversationCommitCheckpoint(

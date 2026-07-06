@@ -8,10 +8,14 @@ import {
   getConversationCommitCheckpoint,
   listConversationCommitCheckpoints,
   resolveConversationCommitCheckpointPath,
+  resolveConversationCommitCheckpointPathFromLayout,
+  resolveConversationCommitCheckpointsDirFromLayout,
   resolveProfileConversationCommitCheckpointsDir,
+  resolveProfileConversationCommitCheckpointsDirFromLayout,
   saveConversationCommitCheckpoint,
   validateConversationCommitCheckpointId,
 } from './conversation-commit-checkpoints.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -28,6 +32,37 @@ function createTempStateRoot(): string {
 }
 
 describe('conversation commit checkpoint storage', () => {
+  it('resolves paths from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileConversationCommitCheckpointsDirFromLayout(layout as DesktopRootLayout, 'assistant')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-commit-checkpoints', 'assistant'),
+    );
+
+    const conversationDir = resolveConversationCommitCheckpointsDirFromLayout(layout as DesktopRootLayout, 'assistant', 'conversation-1');
+    expect(conversationDir).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-commit-checkpoints', 'assistant', 'conversation-1'),
+    );
+
+    const checkpointPath = resolveConversationCommitCheckpointPathFromLayout(
+      layout as DesktopRootLayout,
+      'assistant',
+      'conversation-1',
+      'abc1234def567890abc1234def567890abc12345',
+    );
+    expect(checkpointPath).toBe(
+      join(
+        layout.systemState,
+        'pi-agent',
+        'state',
+        'conversation-commit-checkpoints',
+        'assistant',
+        'conversation-1',
+        'abc1234def567890abc1234def567890abc12345.json',
+      ),
+    );
+  });
+
   it('saves and lists commit checkpoints', () => {
     const stateRoot = createTempStateRoot();
 

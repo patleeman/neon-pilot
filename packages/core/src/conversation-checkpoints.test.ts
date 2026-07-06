@@ -7,14 +7,20 @@ import {
   deleteConversationCheckpoint,
   getConversationCheckpoint,
   listConversationCheckpoints,
+  resolveConversationCheckpointMetaDirFromLayout,
   resolveConversationCheckpointMetaPath,
+  resolveConversationCheckpointMetaPathFromLayout,
   resolveConversationCheckpointSnapshotFile,
   resolveConversationCheckpointSnapshotPath,
+  resolveConversationCheckpointSnapshotPathFromLayout,
   resolveConversationCheckpointSnapshotsDir,
+  resolveConversationCheckpointSnapshotsDirFromLayout,
   resolveProfileConversationCheckpointsDir,
+  resolveProfileConversationCheckpointsDirFromLayout,
   saveConversationCheckpoint,
   validateConversationCheckpointId,
 } from './conversation-checkpoints.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -53,6 +59,30 @@ describe('conversation checkpoint paths', () => {
 
   it('rejects invalid checkpoint ids', () => {
     expect(() => validateConversationCheckpointId('bad/id')).toThrow('Invalid checkpoint id');
+  });
+
+  it('resolves paths from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileConversationCheckpointsDirFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-checkpoints', 'datadog'),
+    );
+
+    expect(resolveConversationCheckpointSnapshotsDirFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-checkpoints', 'datadog', 'snapshots'),
+    );
+
+    expect(resolveConversationCheckpointMetaDirFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-checkpoints', 'datadog', 'meta'),
+    );
+
+    expect(resolveConversationCheckpointMetaPathFromLayout(layout as DesktopRootLayout, 'datadog', 'ckpt-1')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-checkpoints', 'datadog', 'meta', 'ckpt-1.json'),
+    );
+
+    expect(resolveConversationCheckpointSnapshotPathFromLayout(layout as DesktopRootLayout, 'datadog', 'ckpt-1')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-checkpoints', 'datadog', 'snapshots', 'ckpt-1.jsonl'),
+    );
   });
 });
 

@@ -8,9 +8,12 @@ import {
   clearActivityConversationLinks,
   getActivityConversationLink,
   resolveActivityConversationLinkPath,
+  resolveActivityConversationLinkPathFromLayout,
   resolveProfileActivityConversationLinksDir,
+  resolveProfileActivityConversationLinksDirFromLayout,
   setActivityConversationLinks,
 } from './activity-conversation-links.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -36,6 +39,18 @@ describe('activity conversation link paths', () => {
     const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
     expect(resolveActivityConversationLinkPath({ stateRoot, profile: 'assistant', activityId: 'daily-report' })).toBe(
       join(stateRoot, 'pi-agent', 'state', 'activity-conversation-links', 'assistant', 'daily-report.json'),
+    );
+  });
+
+  it('resolves paths from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileActivityConversationLinksDirFromLayout(layout as DesktopRootLayout, 'assistant')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'activity-conversation-links', 'assistant'),
+    );
+
+    expect(resolveActivityConversationLinkPathFromLayout(layout as DesktopRootLayout, 'assistant', 'daily-report')).toBe(
+      join('/custom/root/system/state', 'pi-agent', 'state', 'activity-conversation-links', 'assistant', 'daily-report.json'),
     );
   });
 });

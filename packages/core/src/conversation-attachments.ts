@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { join, resolve } from 'path';
 
 import { validateConversationId } from './conversation-project-links.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
@@ -419,10 +420,21 @@ export function resolveProfileConversationAttachmentsDir(options: { profile: str
   return join(getConversationAttachmentStateRoot(options.stateRoot), 'pi-agent', 'state', 'conversation-attachments', options.profile);
 }
 
+export function resolveProfileConversationAttachmentsDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'conversation-attachments', profile);
+}
+
 export function resolveConversationAttachmentsDir(options: ResolveConversationAttachmentOptions): string {
   validateProfileName(options.profile);
   validateConversationId(options.conversationId);
   return join(resolveProfileConversationAttachmentsDir(options), options.conversationId);
+}
+
+export function resolveConversationAttachmentsDirFromLayout(layout: DesktopRootLayout, profile: string, conversationId: string): string {
+  validateProfileName(profile);
+  validateConversationId(conversationId);
+  return join(resolveProfileConversationAttachmentsDirFromLayout(layout, profile), conversationId);
 }
 
 export function resolveConversationAttachmentDir(options: ResolveConversationAttachmentPathOptions): string {
@@ -432,9 +444,32 @@ export function resolveConversationAttachmentDir(options: ResolveConversationAtt
   return join(resolveConversationAttachmentsDir(options), options.attachmentId);
 }
 
+export function resolveConversationAttachmentDirFromLayout(
+  layout: DesktopRootLayout,
+  profile: string,
+  conversationId: string,
+  attachmentId: string,
+): string {
+  validateProfileName(profile);
+  validateConversationId(conversationId);
+  validateConversationAttachmentId(attachmentId);
+  return join(resolveConversationAttachmentsDirFromLayout(layout, profile, conversationId), attachmentId);
+}
+
 export function resolveConversationAttachmentRevisionDir(options: ResolveConversationAttachmentPathOptions & { revision: number }): string {
   normalizeRevisionNumber(options.revision);
   return join(resolveConversationAttachmentDir(options), 'revisions', String(options.revision));
+}
+
+export function resolveConversationAttachmentRevisionDirFromLayout(
+  layout: DesktopRootLayout,
+  profile: string,
+  conversationId: string,
+  attachmentId: string,
+  revision: number,
+): string {
+  normalizeRevisionNumber(revision);
+  return join(resolveConversationAttachmentDirFromLayout(layout, profile, conversationId, attachmentId), 'revisions', String(revision));
 }
 
 export function listConversationAttachments(options: ResolveConversationAttachmentOptions): ConversationAttachmentSummary[] {

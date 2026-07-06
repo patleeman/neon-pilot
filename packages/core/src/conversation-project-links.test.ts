@@ -10,10 +10,13 @@ import {
   listConversationProjectLinks,
   removeConversationProjectLink,
   resolveConversationLinkPath,
+  resolveConversationLinkPathFromLayout,
   resolveProfileConversationLinksDir,
+  resolveProfileConversationLinksDirFromLayout,
   setConversationProjectLinks,
   validateConversationId,
 } from './conversation-project-links.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -44,6 +47,18 @@ describe('conversation link paths', () => {
 
   it('rejects invalid conversation ids', () => {
     expect(() => validateConversationId('bad/id')).toThrow('Invalid conversation id');
+  });
+
+  it('resolves paths from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveProfileConversationLinksDirFromLayout(layout as DesktopRootLayout, 'assistant')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-project-links', 'assistant'),
+    );
+
+    expect(resolveConversationLinkPathFromLayout(layout as DesktopRootLayout, 'assistant', 'conv-123')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'conversation-project-links', 'assistant', 'conv-123.json'),
+    );
   });
 });
 

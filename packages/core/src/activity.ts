@@ -6,6 +6,7 @@ import {
   type ProjectActivityEntryDocument,
   type ProjectActivityNotificationState,
 } from './project-artifacts.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 import { openSqliteDatabase, type SqliteDatabase } from './sqlite.js';
 
@@ -63,6 +64,32 @@ export function validateActivityId(activityId: string): void {
 export function resolveProfileActivityStateDir(options: ResolveActivityOptions): string {
   validateProfileName(options.profile);
   return join(getActivityStateRoot(options.stateRoot), 'pi-agent', 'state', 'activity', options.profile);
+}
+
+export function resolveProfileActivityStateDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'activity', profile);
+}
+
+export function resolveProfileActivityDirFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(resolveProfileActivityStateDirFromLayout(layout, profile), 'activities');
+}
+
+export function resolveActivityEntryPathFromLayout(layout: DesktopRootLayout, profile: string, activityId: string): string {
+  validateProfileName(profile);
+  validateActivityId(activityId);
+  return join(resolveProfileActivityDirFromLayout(layout, profile), `${activityId}.md`);
+}
+
+export function resolveActivityReadStatePathFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(resolveProfileActivityStateDirFromLayout(layout, profile), 'read-state.json');
+}
+
+export function resolveProfileActivityDbPathFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(resolveProfileActivityStateDirFromLayout(layout, profile), 'runtime.db');
 }
 
 export function resolveProfileActivityDir(options: ResolveActivityOptions): string {
