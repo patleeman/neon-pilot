@@ -322,6 +322,270 @@ describe('DocumentsPage', () => {
     expect(refetch).toHaveBeenCalledWith({ resetLoading: false });
   });
 
+  // ── Editor / Save tests ─────────────────────────────────────────────
+
+  it('shows editable JSON textarea when a record is selected', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const doc: DocumentRecord = makeRecord({
+      id: 'doc-1',
+      body: { greeting: 'hello' },
+    });
+    const recordsResult: ListDocumentsResult = { records: [doc], total: 1 };
+
+    setupCollectionsAndRecords(collectionsResult, recordsResult);
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('doc-1'));
+
+    // The textarea should be seeded with the document body as pretty-printed JSON
+    const textarea = screen.getByRole('textbox');
+    expect(textarea).toBeTruthy();
+    expect((textarea as HTMLTextAreaElement).value).toContain('hello');
+  });
+
+  it('shows local invalid JSON error when saving with bad JSON', async () => {
+    vi.spyOn(api.documents, 'put').mockResolvedValue({ document: makeRecord({ id: 'doc-1' }) } as never);
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const doc: DocumentRecord = makeRecord({ id: 'doc-1', body: { ok: true } });
+    const recordsResult: ListDocumentsResult = { records: [doc], total: 1 };
+
+    setupCollectionsAndRecords(collectionsResult, recordsResult);
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('doc-1'));
+
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: 'not valid json' } });
+
+    // Click Save
+    fireEvent.click(screen.getByText('Save'));
+
+    expect(screen.getByText('Invalid JSON')).toBeTruthy();
+    expect(api.documents.put).not.toHaveBeenCalled();
+  });
+
+  it('calls api.documents.put on Save with valid JSON and refreshes', async () => {
+    const putSpy = vi.spyOn(api.documents, 'put').mockResolvedValue({ document: makeRecord({ id: 'doc-1' }) } as never);
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const doc: DocumentRecord = makeRecord({ id: 'doc-1', body: { count: 1 } });
+    const recordsResult: ListDocumentsResult = { records: [doc], total: 1 };
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, error: null, data: collectionsResult, refetch: vi.fn() });
+      }
+      return buildUseApiResult({ loading: false, error: null, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('doc-1'));
+
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: '{"count": 2}' } });
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(putSpy).toHaveBeenCalledWith('host', 'test-collection', 'doc-1', { count: 2 });
+    });
+  });
+
+  // ── New document tests ─────────────────────────────────────────────────
+
+  it('shows New document inline form when button is clicked', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+
+    setupCollectionsAndRecords(collectionsResult, recordsResult);
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    fireEvent.click(screen.getByText('New document'));
+
+    expect(screen.getByText('New document')).toBeTruthy();
+    expect(screen.getByPlaceholderText('my-document-id')).toBeTruthy();
+    expect(screen.getByText('Create')).toBeTruthy();
+  });
+
+  it('calls api.documents.put on New document create and refreshes', async () => {
+    const putSpy = vi.spyOn(api.documents, 'put').mockResolvedValue({ document: makeRecord({ id: 'new-doc' }) } as never);
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, error: null, data: collectionsResult, refetch: vi.fn() });
+      }
+      return buildUseApiResult({ loading: false, error: null, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('New document'));
+
+    const idInput = screen.getByPlaceholderText('my-document-id');
+    fireEvent.change(idInput, { target: { value: 'new-doc' } });
+
+    // The body textarea has placeholder "{}"
+    const bodyTextarea = screen.getByPlaceholderText('{}');
+    fireEvent.change(bodyTextarea, { target: { value: '{"key": "value"}' } });
+
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(putSpy).toHaveBeenCalledWith('host', 'test-collection', 'new-doc', { key: 'value' });
+    });
+  });
+
+  it('shows error for empty document ID on create', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+
+    setupCollectionsAndRecords(collectionsResult, recordsResult);
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('New document'));
+
+    // Click Create without entering an ID
+    fireEvent.click(screen.getByText('Create'));
+
+    expect(screen.getByText('Document ID is required')).toBeTruthy();
+  });
+
+  // ── Delete tests ────────────────────────────────────────────────────────
+
+  it('shows delete confirmation when Delete button is clicked', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const doc: DocumentRecord = makeRecord({ id: 'doc-to-delete' });
+    const recordsResult: ListDocumentsResult = { records: [doc], total: 1 };
+
+    setupCollectionsAndRecords(collectionsResult, recordsResult);
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('doc-to-delete'));
+
+    // Click Delete in the detail aside
+    fireEvent.click(screen.getByText('Delete'));
+
+    // The confirmation text is within a paragraph with class text-danger
+    expect(screen.getByText(/^Delete /)).toBeTruthy();
+    expect(screen.getByText('Confirm')).toBeTruthy();
+    expect(screen.getByText('Cancel')).toBeTruthy();
+  });
+
+  it('calls api.documents.delete on Confirm and refreshes', async () => {
+    const deleteSpy = vi.spyOn(api.documents, 'delete').mockResolvedValue({ deleted: true });
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const doc: DocumentRecord = makeRecord({ id: 'doc-to-delete' });
+    const recordsResult: ListDocumentsResult = { records: [doc], total: 1 };
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, error: null, data: collectionsResult, refetch: vi.fn() });
+      }
+      return buildUseApiResult({ loading: false, error: null, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('doc-to-delete'));
+
+    fireEvent.click(screen.getByText('Delete'));
+    fireEvent.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(deleteSpy).toHaveBeenCalledWith('host', 'test-collection', 'doc-to-delete');
+    });
+  });
+
+  // ── New collection tests ────────────────────────────────────────────────
+
+  it('shows New collection form when button is clicked on All collections tab', () => {
+    setupCollectionsOnly({ collections: [] });
+    renderDocumentsPage();
+
+    // Click the "New collection" button (there's only one before the form appears)
+    fireEvent.click(screen.getAllByText('New collection')[0]);
+
+    // After clicking, both the button and the inline heading say "New collection"
+    // Use a more specific query for the form heading
+    expect(screen.getByPlaceholderText('host')).toBeTruthy();
+    expect(screen.getByPlaceholderText('my-collection')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Optional description')).toBeTruthy();
+    expect(screen.getAllByText('Create').length).toBeGreaterThan(0);
+  });
+
+  it('calls api.documents.upsertCollection on create and refreshes', async () => {
+    const upsertSpy = vi.spyOn(api.documents, 'upsertCollection').mockResolvedValue({
+      collection: makeCollection({ collection: 'new-col', owner: 'ext-1' }),
+    });
+    const collectionsResult: CollectionListResult = { collections: [] };
+    const refetchCollections = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, error: null, data: collectionsResult, refetch: refetchCollections });
+      }
+      return buildUseApiResult({ loading: false, error: null, data: { records: [], total: 0 } });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+
+    // All collections tab - click New collection
+    fireEvent.click(screen.getByText('New collection'));
+
+    const ownerInput = screen.getByPlaceholderText('host');
+    const nameInput = screen.getByPlaceholderText('my-collection');
+    const descInput = screen.getByPlaceholderText('Optional description');
+
+    fireEvent.change(ownerInput, { target: { value: 'ext-1' } });
+    fireEvent.change(nameInput, { target: { value: 'new-col' } });
+    fireEvent.change(descInput, { target: { value: 'A test collection' } });
+
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(upsertSpy).toHaveBeenCalledWith('ext-1', 'new-col', { description: 'A test collection' });
+    });
+  });
+
+  it('shows error when collection name is empty', () => {
+    setupCollectionsOnly({ collections: [] });
+    renderDocumentsPage();
+
+    fireEvent.click(screen.getByText('New collection'));
+
+    // Clear owner and leave collection name empty
+    const ownerInput = screen.getByPlaceholderText('host');
+    fireEvent.change(ownerInput, { target: { value: '' } });
+
+    fireEvent.click(screen.getByText('Create'));
+
+    expect(screen.getByText('Owner is required')).toBeTruthy();
+  });
+
+  // ── Keep original test ─────────────────────────────────────────────────
+
   it('deselects record when clicked again', () => {
     const collectionsResult: CollectionListResult = {
       collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../client/api';
 import {
   AppPageEmptyState,
   AppPageIntro,
   AppPageLayout,
+  Button,
   DataTable,
   DataTableBody,
   DataTableCell,
@@ -15,10 +16,13 @@ import {
   DataTableRow,
   DataTableToolbar,
   ErrorState,
+  FieldError,
+  InlineTextInput,
   KeyValueTable,
   QuietLoadingState,
   TabButton,
   TabList,
+  Textarea,
   ToolbarButton,
 } from '../components/ui';
 import { useApi } from '../hooks/useApi';
@@ -55,6 +59,10 @@ function DocumentsEmptyState() {
   );
 }
 
+function bodyToJson(body: unknown): string {
+  return JSON.stringify(body, null, 2) || '{}';
+}
+
 export function DocumentsPage() {
   const [selectedCollection, setSelectedCollection] = useState<DocumentCollection | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<DocumentRecord | null>(null);
@@ -62,6 +70,24 @@ export function DocumentsPage() {
   const owner = selectedCollection?.owner ?? '';
   const collection = selectedCollection?.collection ?? '';
 
+  const [editBody, setEditBody] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newDocId, setNewDocId] = useState('');
+  const [newDocBody, setNewDocBody] = useState('{}');
+  const [newDocError, setNewDocError] = useState<string | null>(null);
+  const [isCreatingDoc, setIsCreatingDoc] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [showNewCollection, setShowNewCollection] = useState(false);
+  const [newColOwner, setNewColOwner] = useState('host');
+  const [newColName, setNewColName] = useState('');
+  const [newColDescription, setNewColDescription] = useState('');
+  const [newColError, setNewColError] = useState<string | null>(null);
+  const [isCreatingCol, setIsCreatingCol] = useState(false);
   const collectionsFetcher = useCallback(async () => {
     return api.documents.collections();
   }, []);
@@ -97,14 +123,35 @@ export function DocumentsPage() {
     collection: c,
   }));
 
+  const selectedCollectionKey = selectedCollection ? `${selectedCollection.owner}/${selectedCollection.collection}` : null;
+
   const handleSelectCollection = (nextCollection: DocumentCollection | null) => {
     setSelectedCollection(nextCollection);
     setSelectedDoc(null);
     setPage(1);
+    setShowNewCollection(false);
+    setEditBody('');
+    setEditError(null);
+    setIsCreating(false);
+    setNewDocError(null);
+    setShowDeleteConfirm(false);
+    setDeleteError(null);
+    setNewColError(null);
   };
 
   const handleSelectDocument = (doc: DocumentRecord) => {
-    setSelectedDoc(doc.id === selectedDoc?.id ? null : doc);
+    if (doc.id === selectedDoc?.id) {
+      setSelectedDoc(null);
+      setShowDeleteConfirm(false);
+      return;
+    }
+    setSelectedDoc(doc);
+    setEditBody(bodyToJson(doc.body));
+    setEditError(null);
+    setShowDeleteConfirm(false);
+    setDeleteError(null);
+    setIsCreating(false);
+    setNewDocError(null);
   };
 
   const handleRefresh = () => {
@@ -127,17 +174,137 @@ export function DocumentsPage() {
       (record) => record.owner === selectedDoc.owner && record.collection === selectedDoc.collection && record.id === selectedDoc.id,
     );
     setSelectedDoc(nextSelectedDoc ?? null);
+    if (nextSelectedDoc) {
+      setEditBody(bodyToJson(nextSelectedDoc.body));
+      setEditError(null);
+    }
   }, [recordsData, selectedDoc]);
 
   const isRefreshing = collectionsLoading || recordsRefreshing;
+  const selectedDocJson = useMemo(() => (selectedDoc ? bodyToJson(selectedDoc.body) : ''), [selectedDoc]);
+  const hasUnsavedEdit = selectedDoc !== null && editBody !== selectedDocJson;
+
+  const handleSave = useCallback(async () => {
+    if (!selectedDoc) return;
+    setEditError(null);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(editBody);
+    } catch {
+      setEditError('Invalid JSON');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const result = await api.documents.put(selectedDoc.owner, selectedDoc.collection, selectedDoc.id, parsed);
+      setSelectedDoc(result.document);
+      setEditBody(bodyToJson(result.document.body));
+      setEditError(null);
+      await refetchData();
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedDoc, editBody, refetchData]);
+
+  const handleCreateDocument = useCallback(async () => {
+    if (!selectedCollection) return;
+    setNewDocError(null);
+    if (!newDocId.trim()) {
+      setNewDocError('Document ID is required');
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(newDocBody);
+    } catch {
+      setNewDocError('Invalid JSON body');
+      return;
+    }
+    setIsCreatingDoc(true);
+    try {
+      const result = await api.documents.put(selectedCollection.owner, selectedCollection.collection, newDocId.trim(), parsed);
+      setNewDocError(null);
+      setNewDocId('');
+      setNewDocBody('{}');
+      setIsCreating(false);
+      setSelectedDoc(result.document);
+      setEditBody(bodyToJson(result.document.body));
+      await refetchData();
+    } catch (err: unknown) {
+      setNewDocError(err instanceof Error ? err.message : 'Create failed');
+    } finally {
+      setIsCreatingDoc(false);
+    }
+  }, [selectedCollection, newDocId, newDocBody, refetchData]);
+
+  const handleDelete = useCallback(async () => {
+    if (!selectedDoc) return;
+    setDeleteError(null);
+    setIsDeleting(true);
+    try {
+      await api.documents.delete(selectedDoc.owner, selectedDoc.collection, selectedDoc.id);
+      setShowDeleteConfirm(false);
+      setSelectedDoc(null);
+      await refetchData();
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedDoc, refetchData]);
+
+  const handleCreateCollection = useCallback(async () => {
+    setNewColError(null);
+    if (!newColOwner.trim()) {
+      setNewColError('Owner is required');
+      return;
+    }
+    if (!newColName.trim()) {
+      setNewColError('Collection name is required');
+      return;
+    }
+    setIsCreatingCol(true);
+    try {
+      const result = await api.documents.upsertCollection(newColOwner.trim(), newColName.trim(), {
+        description: newColDescription.trim() || undefined,
+      });
+      setNewColError(null);
+      setShowNewCollection(false);
+      setNewColOwner('host');
+      setNewColName('');
+      setNewColDescription('');
+      setSelectedCollection(result.collection);
+      setPage(1);
+      await refetchData();
+    } catch (err: unknown) {
+      setNewColError(err instanceof Error ? err.message : 'Create collection failed');
+    } finally {
+      setIsCreatingCol(false);
+    }
+  }, [newColOwner, newColName, newColDescription, refetchData]);
 
   return (
     <AppPageLayout
       aside={
         selectedDoc ? (
           <div className="space-y-3">
-            <div className="ui-app-page-intro">
-              <h2 className="ui-app-page-title text-sm">Record Detail</h2>
+            <div className="flex items-center justify-between">
+              <div className="ui-app-page-intro">
+                <h2 className="ui-app-page-title text-sm">Record Detail</h2>
+              </div>
+              {!showDeleteConfirm ? (
+                <ToolbarButton
+                  type="button"
+                  className="text-danger hover:bg-danger/10"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  aria-label="Delete record"
+                  title="Delete"
+                >
+                  Delete
+                </ToolbarButton>
+              ) : null}
             </div>
             <KeyValueTable
               columns={1}
@@ -150,11 +317,46 @@ export function DocumentsPage() {
               ]}
             />
             <div>
-              <h3 className="mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">Body</h3>
-              <pre className="max-h-80 overflow-auto rounded-sm border border-border-subtle bg-bg-subtle p-2 text-[11px] leading-relaxed">
-                {JSON.stringify(selectedDoc.body, null, 2) || '{}'}
-              </pre>
+              <div className="mb-1 flex items-center justify-between">
+                <h3 className="text-[11px] font-medium uppercase tracking-wide text-secondary">Body</h3>
+                <ToolbarButton type="button" disabled={isSaving || !hasUnsavedEdit} onClick={handleSave}>
+                  {isSaving ? 'Saving...' : 'Save'}
+                </ToolbarButton>
+              </div>
+              <Textarea
+                className="min-h-[120px] w-full resize-y rounded-sm border border-border-subtle bg-bg-subtle p-2 font-mono text-[11px] leading-relaxed"
+                value={editBody}
+                onChange={(e) => {
+                  setEditBody(e.target.value);
+                  setEditError(null);
+                }}
+                placeholder="{}"
+              />
+              {editError ? <FieldError className="mt-1">{editError}</FieldError> : null}
             </div>
+            {showDeleteConfirm ? (
+              <div className="rounded-sm border border-danger/30 bg-bg-subtle p-2">
+                <p className="mb-2 text-[11px] text-danger">
+                  Delete <span className="font-mono">{selectedDoc.id}</span>?
+                </p>
+                <div className="flex gap-2">
+                  <Button tone="danger" disabled={isDeleting} onClick={handleDelete}>
+                    {isDeleting ? 'Deleting...' : 'Confirm'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={isDeleting}
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                {deleteError ? <FieldError className="mt-1">{deleteError}</FieldError> : null}
+              </div>
+            ) : null}
           </div>
         ) : undefined
       }
@@ -176,26 +378,41 @@ export function DocumentsPage() {
                 All collections{collections.length > 0 ? ` ${collections.length}` : ''}
               </TabButton>
               {availableTabs.map((tab) => (
-                <TabButton
-                  key={tab.key}
-                  active={selectedCollection?.owner === tab.collection.owner && selectedCollection.collection === tab.collection.collection}
-                  onClick={() => handleSelectCollection(tab.collection)}
-                >
+                <TabButton key={tab.key} active={selectedCollectionKey === tab.key} onClick={() => handleSelectCollection(tab.collection)}>
                   {tab.label}
                 </TabButton>
               ))}
             </TabList>
           }
           actions={
-            selectedCollection && total > PAGE_SIZE ? (
-              <DataTablePagination
-                page={page}
-                pageCount={pageCount}
-                totalLabel={`${total} records`}
-                onPrevious={page > 1 ? () => setPage((p) => Math.max(1, p - 1)) : undefined}
-                onNext={page < pageCount ? () => setPage((p) => p + 1) : undefined}
-              />
-            ) : undefined
+            selectedCollection ? (
+              <div className="flex items-center gap-2">
+                {total > PAGE_SIZE ? (
+                  <DataTablePagination
+                    page={page}
+                    pageCount={pageCount}
+                    totalLabel={`${total} records`}
+                    onPrevious={page > 1 ? () => setPage((p) => Math.max(1, p - 1)) : undefined}
+                    onNext={page < pageCount ? () => setPage((p) => p + 1) : undefined}
+                  />
+                ) : null}
+                {!isCreating ? (
+                  <ToolbarButton
+                    type="button"
+                    onClick={() => {
+                      setIsCreating(true);
+                      setNewDocError(null);
+                    }}
+                  >
+                    New document
+                  </ToolbarButton>
+                ) : null}
+              </div>
+            ) : (
+              <ToolbarButton type="button" onClick={() => setShowNewCollection(true)}>
+                New collection
+              </ToolbarButton>
+            )
           }
           summary={
             recordsError && !recordsData ? (
@@ -214,15 +431,71 @@ export function DocumentsPage() {
             loading={collectionsLoading && !collectionsData}
             error={collectionsError}
             onSelect={handleSelectCollection}
+            showNewCollection={showNewCollection}
+            newColOwner={newColOwner}
+            newColName={newColName}
+            newColDescription={newColDescription}
+            newColError={newColError}
+            isCreatingCol={isCreatingCol}
+            onNewColOwnerChange={setNewColOwner}
+            onNewColNameChange={setNewColName}
+            onNewColDescriptionChange={setNewColDescription}
+            onNewColSubmit={handleCreateCollection}
+            onNewColCancel={() => {
+              setShowNewCollection(false);
+              setNewColError(null);
+            }}
           />
         ) : (
-          <RecordsTable
-            records={records}
-            loading={recordsLoading && !recordsData}
-            error={recordsError}
-            selectedDoc={selectedDoc}
-            onSelect={handleSelectDocument}
-          />
+          <>
+            {isCreating ? (
+              <div className="mb-2 rounded-sm border border-border-subtle bg-bg-subtle p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-[11px] font-medium uppercase tracking-wide text-secondary">New document</h3>
+                  <div className="flex gap-2">
+                    <ToolbarButton type="button" disabled={isCreatingDoc} onClick={handleCreateDocument}>
+                      {isCreatingDoc ? 'Creating...' : 'Create'}
+                    </ToolbarButton>
+                    <ToolbarButton
+                      type="button"
+                      onClick={() => {
+                        setIsCreating(false);
+                        setNewDocError(null);
+                      }}
+                    >
+                      Cancel
+                    </ToolbarButton>
+                  </div>
+                </div>
+                <div className="mb-2">
+                  <label className="mb-1 block text-[11px] font-medium text-secondary">Document ID</label>
+                  <InlineTextInput
+                    className="w-full"
+                    value={newDocId}
+                    onChange={(e) => setNewDocId(e.target.value)}
+                    placeholder="my-document-id"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-secondary">JSON Body</label>
+                  <Textarea
+                    className="min-h-[80px] w-full resize-y rounded-sm border border-border-subtle bg-bg p-2 font-mono text-[11px] leading-relaxed"
+                    value={newDocBody}
+                    onChange={(e) => setNewDocBody(e.target.value)}
+                    placeholder="{}"
+                  />
+                </div>
+                {newDocError ? <FieldError className="mt-1">{newDocError}</FieldError> : null}
+              </div>
+            ) : null}
+            <RecordsTable
+              records={records}
+              loading={recordsLoading && !recordsData}
+              error={recordsError}
+              selectedDoc={selectedDoc}
+              onSelect={handleSelectDocument}
+            />
+          </>
         )}
       </div>
     </AppPageLayout>
@@ -234,11 +507,33 @@ function CollectionsTable({
   loading,
   error,
   onSelect,
+  showNewCollection,
+  newColOwner,
+  newColName,
+  newColDescription,
+  newColError,
+  isCreatingCol,
+  onNewColOwnerChange,
+  onNewColNameChange,
+  onNewColDescriptionChange,
+  onNewColSubmit,
+  onNewColCancel,
 }: {
   collections: DocumentCollection[];
   loading: boolean;
   error: string | null;
   onSelect: (collection: DocumentCollection) => void;
+  showNewCollection: boolean;
+  newColOwner: string;
+  newColName: string;
+  newColDescription: string;
+  newColError: string | null;
+  isCreatingCol: boolean;
+  onNewColOwnerChange: (value: string) => void;
+  onNewColNameChange: (value: string) => void;
+  onNewColDescriptionChange: (value: string) => void;
+  onNewColSubmit: () => void;
+  onNewColCancel: () => void;
 }) {
   return (
     <DataTable>
@@ -256,11 +551,84 @@ function CollectionsTable({
           <DataTableEmptyRow colSpan={5}>
             <QuietLoadingState label="Loading collections" />
           </DataTableEmptyRow>
+        ) : showNewCollection || collections.length > 0 ? (
+          <>
+            {showNewCollection ? (
+              <DataTableRow>
+                <DataTableCell colSpan={5} className="p-3">
+                  <div className="rounded-sm border border-border-subtle bg-bg-subtle p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="text-[11px] font-medium uppercase tracking-wide text-secondary">New collection</h3>
+                      <div className="flex gap-2">
+                        <ToolbarButton type="button" disabled={isCreatingCol} onClick={onNewColSubmit}>
+                          {isCreatingCol ? 'Creating...' : 'Create'}
+                        </ToolbarButton>
+                        <ToolbarButton type="button" onClick={onNewColCancel}>
+                          Cancel
+                        </ToolbarButton>
+                      </div>
+                    </div>
+                    <div className="mb-2 flex gap-2">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[11px] font-medium text-secondary">Owner</label>
+                        <InlineTextInput
+                          className="w-full"
+                          value={newColOwner}
+                          onChange={(e) => onNewColOwnerChange(e.target.value)}
+                          placeholder="host"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="mb-1 block text-[11px] font-medium text-secondary">Collection</label>
+                        <InlineTextInput
+                          className="w-full"
+                          value={newColName}
+                          onChange={(e) => onNewColNameChange(e.target.value)}
+                          placeholder="my-collection"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-secondary">Description (optional)</label>
+                      <InlineTextInput
+                        className="w-full"
+                        value={newColDescription}
+                        onChange={(e) => onNewColDescriptionChange(e.target.value)}
+                        placeholder="Optional description"
+                      />
+                    </div>
+                    {newColError ? <FieldError className="mt-1">{newColError}</FieldError> : null}
+                    {error ? <FieldError className="mt-1">{error}</FieldError> : null}
+                  </div>
+                </DataTableCell>
+              </DataTableRow>
+            ) : null}
+            {collections.map((col) => (
+              <DataTableRow key={`${col.owner}/${col.collection}`} className="cursor-pointer" onClick={() => onSelect(col)}>
+                <DataTableCell className="align-middle">
+                  <span className="text-[13px] font-medium">{col.collection}</span>
+                  {col.description ? (
+                    <span className="ml-2 border-l border-border-subtle pl-2 text-[11px] text-tertiary">{col.description}</span>
+                  ) : null}
+                </DataTableCell>
+                <DataTableCell className="align-middle">
+                  <span className="inline-block rounded-sm bg-bg-subtle px-1.5 py-0.5 text-[10px] font-medium uppercase leading-tight tracking-wide text-secondary">
+                    {col.owner}
+                  </span>
+                </DataTableCell>
+                <DataTableCell className="align-middle text-[11px] text-tertiary">{col.defaultGrantRead}</DataTableCell>
+                <DataTableCell className="align-middle text-[11px] text-tertiary">{col.defaultGrantWrite}</DataTableCell>
+                <DataTableCell className="whitespace-nowrap align-middle text-[11px] text-tertiary">
+                  {formatTimestamp(col.updatedAt)}
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </>
         ) : error && !collections.length ? (
           <DataTableEmptyRow colSpan={5}>
             <ErrorState message={error} />
           </DataTableEmptyRow>
-        ) : collections.length === 0 ? (
+        ) : collections.length === 0 && !showNewCollection ? (
           <DataTableEmptyRow colSpan={5}>
             <AppPageEmptyState
               title="No collections yet"
@@ -272,28 +640,7 @@ function CollectionsTable({
               align="start"
             />
           </DataTableEmptyRow>
-        ) : (
-          collections.map((col) => (
-            <DataTableRow key={`${col.owner}/${col.collection}`} className="cursor-pointer" onClick={() => onSelect(col)}>
-              <DataTableCell className="align-middle">
-                <span className="text-[13px] font-medium">{col.collection}</span>
-                {col.description ? (
-                  <span className="ml-2 border-l border-border-subtle pl-2 text-[11px] text-tertiary">{col.description}</span>
-                ) : null}
-              </DataTableCell>
-              <DataTableCell className="align-middle">
-                <span className="inline-block rounded-sm bg-bg-subtle px-1.5 py-0.5 text-[10px] font-medium uppercase leading-tight tracking-wide text-secondary">
-                  {col.owner}
-                </span>
-              </DataTableCell>
-              <DataTableCell className="align-middle text-[11px] text-tertiary">{col.defaultGrantRead}</DataTableCell>
-              <DataTableCell className="align-middle text-[11px] text-tertiary">{col.defaultGrantWrite}</DataTableCell>
-              <DataTableCell className="whitespace-nowrap align-middle text-[11px] text-tertiary">
-                {formatTimestamp(col.updatedAt)}
-              </DataTableCell>
-            </DataTableRow>
-          ))
-        )}
+        ) : null}
       </DataTableBody>
     </DataTable>
   );
