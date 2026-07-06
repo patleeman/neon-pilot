@@ -207,7 +207,7 @@ Common route shapes:
 }
 ```
 
-Use this main-only shape for pages like Automations or Diagnostics where the route does not need a selector on the left or persistent details on the right.
+Use this main-only shape for pages like Automations or Settings where the route does not need a selector on the left or persistent details on the right.
 
 ```json
 {
