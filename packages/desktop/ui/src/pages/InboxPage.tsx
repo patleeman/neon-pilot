@@ -19,6 +19,7 @@ import {
   QuietLoadingState,
   TabButton,
   TabList,
+  Textarea,
   ToolbarButton,
 } from '../components/ui';
 import { useApi } from '../hooks/useApi';
@@ -107,7 +108,7 @@ export function InboxPage() {
     await refetch({ resetLoading: false });
   }, [refetch]);
 
-  async function mutateMessage(id: string, patch: { read?: boolean; archived?: boolean }): Promise<void> {
+  async function mutateMessage(id: string, patch: { read?: boolean; archived?: boolean; answer?: string }): Promise<void> {
     setMutatingId(id);
     setActionError(null);
     try {
@@ -175,6 +176,9 @@ export function InboxPage() {
               void mutateMessage(selectedDoc.id, { archived: next });
             }}
             onDelete={() => void deleteMessage(selectedDoc.id)}
+            onAnswer={(text) => {
+              void mutateMessage(selectedDoc.id, { answer: text });
+            }}
           />
         ) : undefined
       }
@@ -332,6 +336,59 @@ function InboxTable({
   );
 }
 
+function QuestionAnswerSection({
+  body,
+  mutating,
+  onAnswer,
+}: {
+  body: InboxMessageBody;
+  mutating: boolean;
+  onAnswer: (text: string) => void;
+}) {
+  const [text, setText] = useState('');
+  const isAnswered = body.answer !== undefined;
+
+  if (isAnswered) {
+    return (
+      <div>
+        <h3 className="mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">Answer</h3>
+        <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-sm border border-accent/30 bg-accent/10 p-2 text-[12px] leading-relaxed">
+          {body.answer.text}
+        </pre>
+        <p className="mt-1 text-[10px] text-tertiary">Answered {formatTimestamp(body.answer.answeredAt)}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h3 className="mb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">Your Answer</h3>
+      <Textarea
+        className="min-h-[4rem] w-full resize-y text-[12px] leading-relaxed"
+        placeholder="Type your answer..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        disabled={mutating}
+        rows={3}
+      />
+      <div className="mt-2">
+        <ToolbarButton
+          type="button"
+          disabled={mutating || text.trim().length === 0}
+          onClick={() => {
+            if (text.trim().length > 0) {
+              onAnswer(text.trim());
+              setText('');
+            }
+          }}
+        >
+          {mutating ? 'Submitting...' : 'Submit Answer'}
+        </ToolbarButton>
+      </div>
+    </div>
+  );
+}
+
 function MessageDetail({
   doc,
   view,
@@ -339,6 +396,7 @@ function MessageDetail({
   onToggleRead,
   onToggleArchive,
   onDelete,
+  onAnswer,
 }: {
   doc: DocumentRecord;
   view: InboxView;
@@ -346,10 +404,12 @@ function MessageDetail({
   onToggleRead: () => void;
   onToggleArchive: () => void;
   onDelete: () => void;
+  onAnswer: (text: string) => void;
 }) {
   const body = messageBody(doc);
   const isRead = body.read === true;
   const isArchived = body.archived === true;
+  const isQuestion = body.kind === 'question';
 
   return (
     <div className="space-y-3">
@@ -378,6 +438,8 @@ function MessageDetail({
           {body.body || ''}
         </pre>
       </div>
+
+      {isQuestion && <QuestionAnswerSection body={body} onAnswer={onAnswer} mutating={mutating} />}
 
       <div className="flex flex-wrap items-center gap-2">
         <ToolbarButton type="button" disabled={mutating} onClick={onToggleRead}>

@@ -56,3 +56,7 @@ gateway conversations, and parallel prompts do not inherit this context.
 `/inbox` renders as a core windowed feature page through
 `ExtensionPage`. The first slice supports listing, selecting, read/unread,
 archive/restore, delete, refresh, empty/error/loading states, and pagination.
+Question messages also render an answer composer. Submitting an answer stores an
+`answer` object on the same Inbox document and moves the message back to the
+active unread Inbox so the next direct persona chat can see the user's response
+as bounded Inbox data.

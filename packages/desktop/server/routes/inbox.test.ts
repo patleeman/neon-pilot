@@ -403,7 +403,72 @@ describe('registerInboxRoutes', () => {
       );
     });
 
-    it('rejects patch with no recognized field', () => {
+    it('accepts answer on a question-kind message', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'q1', kind: 'question', subject: 'Continue?', body: 'Should we proceed?' });
+
+      const res = createRes();
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'q1' }, body: { answer: 'Yes, proceed' } }, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            body: expect.objectContaining({
+              answer: expect.objectContaining({ text: 'Yes, proceed', answeredAt: expect.any(String) }),
+              archived: false,
+              read: false,
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('rejects replacing an existing question answer', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'q-answered', kind: 'question', subject: 'Continue?', body: 'Should we proceed?' });
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'q-answered' }, body: { answer: 'Yes, proceed' } }, createRes());
+
+      const res = createRes();
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'q-answered' }, body: { answer: 'Actually, no' } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({ error: expect.stringContaining('already has an answer') });
+    });
+
+    it('rejects answer on non-question messages', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'result-1', kind: 'result', subject: 'Done', body: 'Result body' });
+
+      const res = createRes();
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'result-1' }, body: { answer: 'Looks good' } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: expect.stringContaining('only supported for question messages') });
+    });
+
+    it('rejects empty answer string', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'q2', kind: 'question' });
+
+      const res = createRes();
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'q2' }, body: { answer: '' } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: expect.stringContaining('non-empty') });
+    });
+
+    it('rejects non-string answer', () => {
+      const handlers = createHarness();
+      seedMessage(handlers, { id: 'q3', kind: 'question' });
+
+      const res = createRes();
+      handlers['PATCH /api/inbox/:id']({ params: { id: 'q3' }, body: { answer: 42 } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: expect.stringContaining('non-empty') });
+    });
+
+    it('rejects patch with no recognized field (read, archived, or answer)', () => {
       const handlers = createHarness();
       seedMessage(handlers, { id: 'noop' });
 

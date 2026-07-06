@@ -178,4 +178,58 @@ describe('buildUnreadInboxContext', () => {
     const result = buildUnreadInboxContext(stateRoot, layout);
     expect(result).toContain('msg_custom_id');
   });
+
+  it('includes the answer for answered question messages', () => {
+    const { layout, stateRoot } = createDesktopRoot();
+    const store = getDocumentsStore(stateRoot, layout);
+    store.putDocument('system-inbox', 'messages', 'q-answered', {
+      from: 'persona',
+      fromKind: 'persona',
+      subject: 'Proceed?',
+      body: 'Should we continue with the deployment?',
+      kind: 'question',
+      read: true,
+      answer: { text: 'Yes, deploy', answeredAt: new Date().toISOString() },
+    });
+    const result = buildUnreadInboxContext(stateRoot, layout);
+    // Answered questions are unread if read=false; here read=true so excluded.
+    expect(result).not.toContain('Proceed?');
+    expect(result).not.toContain('Yes, deploy');
+  });
+
+  it('includes the answer for unread answered question messages in persona context', () => {
+    const { layout, stateRoot } = createDesktopRoot();
+    const store = getDocumentsStore(stateRoot, layout);
+    store.putDocument('system-inbox', 'messages', 'q-unread-answered', {
+      from: 'persona',
+      fromKind: 'persona',
+      subject: 'New feature?',
+      body: 'Should we add user-answer support?',
+      kind: 'question',
+      read: false,
+      answer: { text: 'Yes, that would be great', answeredAt: new Date().toISOString() },
+    });
+    const result = buildUnreadInboxContext(stateRoot, layout);
+    expect(result).toContain('New feature?');
+    expect(result).toContain('User answered:');
+    expect(result).toContain('Yes, that would be great');
+  });
+
+  it('truncates long answers in persona context', () => {
+    const { layout, stateRoot } = createDesktopRoot();
+    const store = getDocumentsStore(stateRoot, layout);
+    const longAnswer = 'y'.repeat(500);
+    store.putDocument('system-inbox', 'messages', 'q-long-answer', {
+      from: 'persona',
+      fromKind: 'persona',
+      subject: 'Long answer Q',
+      body: 'Question body',
+      kind: 'question',
+      read: false,
+      answer: { text: longAnswer, answeredAt: new Date().toISOString() },
+    });
+    const result = buildUnreadInboxContext(stateRoot, layout);
+    expect(result).toContain('User answered:');
+    expect(result).toContain(`${'y'.repeat(200)}...`);
+  });
 });

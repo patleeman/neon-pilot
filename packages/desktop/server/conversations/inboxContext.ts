@@ -86,6 +86,13 @@ export function buildUnreadInboxContext(stateRoot: string, desktopRootLayout: De
       meta.push(`  **Ref:** ${body.refId}`);
     }
 
+    // Surface answered questions so the persona can see user input.
+    if (body.kind === 'question' && body.answer) {
+      const answerSnippet =
+        body.answer.text.length > BODY_SNIPPET_MAX_LENGTH ? `${body.answer.text.slice(0, BODY_SNIPPET_MAX_LENGTH)}...` : body.answer.text;
+      meta.push(`  **User answered:** ${answerSnippet}`);
+    }
+
     meta.push(`  **Message ID:** ${doc.id}`);
     meta.push(`  **Snippet:** ${snippet}`);
     lines.push(meta.join('\n'));

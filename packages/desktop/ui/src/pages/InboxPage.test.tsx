@@ -297,4 +297,160 @@ describe('InboxPage', () => {
 
     expect(listSpy).toHaveBeenCalledWith({ archived: false, limit: 50, offset: 0 });
   });
+
+  describe('question answering', () => {
+    it('shows the answer input section for question-kind messages', async () => {
+      vi.spyOn(api.inbox, 'patch').mockResolvedValue({
+        document: makeRecord({
+          id: 'q-1',
+          body: {
+            from: 'persona',
+            fromKind: 'persona',
+            subject: 'Continue?',
+            body: 'Should we proceed?',
+            kind: 'question',
+            read: true,
+            archived: false,
+          },
+        }),
+      });
+      const records = [
+        makeRecord({
+          id: 'q-1',
+          body: {
+            from: 'persona',
+            fromKind: 'persona',
+            subject: 'Continue?',
+            body: 'Should we proceed?',
+            kind: 'question',
+            read: false,
+            archived: false,
+          },
+        }),
+      ];
+      mockApiCalls(buildUseApiResult({ loading: false, data: { records, total: 1 } as InboxListResult }));
+      renderInboxPage();
+
+      fireEvent.click(screen.getByText('Continue?'));
+
+      // Wait for auto-mark-read mutation to settle so the button reads "Submit Answer".
+      await screen.findByRole('button', { name: 'Submit Answer' });
+      expect(screen.getByPlaceholderText('Type your answer...')).toBeTruthy();
+    });
+
+    it('shows answer text for already-answered question messages', () => {
+      const records = [
+        makeRecord({
+          id: 'q-answered',
+          body: {
+            from: 'persona',
+            fromKind: 'persona',
+            subject: 'Approved?',
+            body: 'Can I proceed?',
+            kind: 'question',
+            read: true,
+            archived: false,
+            answer: { text: 'Yes, approved', answeredAt: '2026-01-15T10:00:00.000Z' },
+          },
+        }),
+      ];
+      mockApiCalls(buildUseApiResult({ loading: false, data: { records, total: 1 } as InboxListResult }));
+      renderInboxPage();
+
+      fireEvent.click(screen.getByText('Approved?'));
+
+      expect(screen.getByText('Answer')).toBeTruthy();
+      expect(screen.getByText('Yes, approved')).toBeTruthy();
+      expect(screen.getAllByText(/Answered/).length).toBeGreaterThan(0);
+      // No answer input when already answered
+      expect(screen.queryByPlaceholderText('Type your answer...')).toBeNull();
+    });
+
+    it('submits an answer via PATCH when Submit Answer is clicked', async () => {
+      const patchSpy = vi.spyOn(api.inbox, 'patch').mockResolvedValue({
+        document: makeRecord({
+          id: 'q-2',
+          body: {
+            from: 'persona',
+            fromKind: 'persona',
+            subject: 'Deploy?',
+            body: 'Should we deploy?',
+            kind: 'question',
+            read: true,
+            archived: false,
+            answer: { text: 'Yes', answeredAt: '2026-01-15T10:00:00.000Z' },
+          },
+        }),
+      });
+      const replaceData = vi.fn();
+      const records = [
+        makeRecord({
+          id: 'q-2',
+          body: {
+            from: 'persona',
+            fromKind: 'persona',
+            subject: 'Deploy?',
+            body: 'Should we deploy?',
+            kind: 'question',
+            read: false,
+            archived: false,
+          },
+        }),
+      ];
+      mockApiCalls(buildUseApiResult({ loading: false, data: { records, total: 1 } as InboxListResult, replaceData }));
+
+      renderInboxPage();
+      fireEvent.click(screen.getByText('Deploy?'));
+
+      // Wait for auto-mark-read mutation to settle before interacting.
+      const submitBtn = await screen.findByRole('button', { name: 'Submit Answer' });
+      const textarea = screen.getByPlaceholderText('Type your answer...');
+      fireEvent.change(textarea, { target: { value: 'Yes, deploy now' } });
+
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(patchSpy).toHaveBeenCalledWith('q-2', { answer: 'Yes, deploy now' });
+      });
+    });
+
+    it('disables the Submit Answer button when the input is empty', async () => {
+      vi.spyOn(api.inbox, 'patch').mockResolvedValue({
+        document: makeRecord({
+          id: 'q-3',
+          body: {
+            from: 'persona',
+            fromKind: 'persona',
+            subject: 'Empty input?',
+            body: 'Test',
+            kind: 'question',
+            read: true,
+            archived: false,
+          },
+        }),
+      });
+      const records = [
+        makeRecord({
+          id: 'q-3',
+          body: {
+            from: 'persona',
+            fromKind: 'persona',
+            subject: 'Empty input?',
+            body: 'Test',
+            kind: 'question',
+            read: false,
+            archived: false,
+          },
+        }),
+      ];
+      mockApiCalls(buildUseApiResult({ loading: false, data: { records, total: 1 } as InboxListResult }));
+      renderInboxPage();
+
+      fireEvent.click(screen.getByText('Empty input?'));
+
+      // Wait for the auto-mark-read mutation to settle so mutating state releases.
+      const submitBtn = await screen.findByRole('button', { name: 'Submit Answer' });
+      expect(submitBtn.hasAttribute('disabled')).toBe(true);
+    });
+  });
 });

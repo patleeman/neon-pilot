@@ -260,8 +260,9 @@ function handlePatch(store: DocumentsStore, req: Request, res: Response): void {
     const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
     const hasRead = Object.prototype.hasOwnProperty.call(body, 'read');
     const hasArchived = Object.prototype.hasOwnProperty.call(body, 'archived');
-    if (!hasRead && !hasArchived) {
-      res.status(400).json({ error: 'Provide at least one of read or archived' });
+    const hasAnswer = Object.prototype.hasOwnProperty.call(body, 'answer');
+    if (!hasRead && !hasArchived && !hasAnswer) {
+      res.status(400).json({ error: 'Provide at least one of read, archived, or answer' });
       return;
     }
 
@@ -277,10 +278,31 @@ function handlePatch(store: DocumentsStore, req: Request, res: Response): void {
     }
 
     const current = messageBodyOf(existing) ?? {};
+
+    // Validate answer field: must be a non-empty string for question messages.
+    let answer: InboxMessageBody['answer'] | undefined;
+    if (hasAnswer) {
+      if (current.kind !== 'question') {
+        res.status(400).json({ error: 'answer is only supported for question messages' });
+        return;
+      }
+      if (current.answer) {
+        res.status(409).json({ error: 'question already has an answer' });
+        return;
+      }
+      const raw = body.answer;
+      if (typeof raw !== 'string' || raw.trim().length === 0) {
+        res.status(400).json({ error: 'answer must be a non-empty string' });
+        return;
+      }
+      answer = { text: raw.trim(), answeredAt: new Date().toISOString() };
+    }
+
     const nextBody: InboxMessageBody = {
       ...current,
       ...(hasRead ? { read } : {}),
       ...(hasArchived ? { archived } : {}),
+      ...(answer ? { answer, read: false, archived: false } : {}),
     };
 
     const doc = store.putDocument(INBOX_OWNER, INBOX_COLLECTION, id, nextBody);
@@ -288,6 +310,7 @@ function handlePatch(store: DocumentsStore, req: Request, res: Response): void {
       changes: {
         ...(hasRead ? { read: nextBody.read } : {}),
         ...(hasArchived ? { archived: nextBody.archived } : {}),
+        ...(answer ? { answered: true } : {}),
       },
     });
     res.json({ document: doc });

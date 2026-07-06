@@ -11,6 +11,13 @@ export const VALID_INBOX_MESSAGE_KINDS = ['note', 'question', 'result', 'alert']
 export type InboxSenderKind = (typeof VALID_INBOX_SENDER_KINDS)[number];
 export type InboxMessageKind = (typeof VALID_INBOX_MESSAGE_KINDS)[number];
 
+export interface InboxMessageAnswer {
+  /** The user's answer text. */
+  text: string;
+  /** ISO-8601 timestamp of when the user answered. */
+  answeredAt: string;
+}
+
 export interface InboxMessageBody {
   from: string;
   fromKind: InboxSenderKind;
@@ -21,6 +28,9 @@ export interface InboxMessageBody {
   refId?: string;
   read?: boolean;
   archived?: boolean;
+  /** User answer for question-kind messages. Mutations set this; worker/persona
+   * code must never overwrite an existing answer. */
+  answer?: InboxMessageAnswer;
 }
 
 export interface InboxCreateMessageInput {

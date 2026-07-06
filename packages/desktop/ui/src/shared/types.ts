@@ -1778,6 +1778,11 @@ export interface DocumentResult {
 export type InboxSenderKind = 'persona' | 'worker' | 'user' | 'system' | 'automation';
 export type InboxMessageKind = 'note' | 'question' | 'result' | 'alert';
 
+export interface InboxMessageAnswer {
+  text: string;
+  answeredAt: string;
+}
+
 export interface InboxMessageBody {
   from: string;
   fromKind: InboxSenderKind;
@@ -1788,6 +1793,8 @@ export interface InboxMessageBody {
   refId?: string;
   read?: boolean;
   archived?: boolean;
+  /** User answer for question-kind messages. */
+  answer?: InboxMessageAnswer;
 }
 
 export interface InboxListResult {
@@ -1809,6 +1816,9 @@ export interface InboxCreateInput {
 export interface InboxPatchInput {
   read?: boolean;
   archived?: boolean;
+  /** Answer text for question-kind messages. Setting this stores the answer
+   * and wakes the question back into the active Inbox for persona attention. */
+  answer?: string;
 }
 
 // ── Knowledge editor ────────────────────────────────────────────────────────
