@@ -30,6 +30,15 @@
   cursor: pointer;
 }
 
+.wos-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .windowed-os-shell button:disabled {
   cursor: default;
 }
@@ -558,6 +567,7 @@
   min-width: 132px;
   max-width: 220px;
   flex: 0 0 auto;
+  position: relative;
   background: var(--wos-surface-2);
   font: var(--wos-text-row);
 }
@@ -767,6 +777,31 @@
 
 .wos-taskbar__button[data-minimized='true'] .wos-app-monogram {
   opacity: 0.68;
+}
+
+.wos-agent-touch-badge {
+  display: inline-flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 5px;
+  background: color-mix(in oklab, var(--wos-surface-1) 84%, transparent);
+  color: currentColor;
+  font: var(--wos-text-meta);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.wos-agent-touch-badge--taskbar {
+  margin-left: 4px;
+  padding-inline: 4px;
+  font-size: 9px;
+}
+
+.wos-taskbar__button[data-agent-touched='true'] {
+  padding-right: 6px;
 }
 
 .wos-start-menu {

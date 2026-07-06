@@ -100,6 +100,7 @@ interface DesktopWindowModel {
   parentWindowId?: string;
   parentWindowTitle?: string;
   parentMinimized?: boolean;
+  agentTouched?: boolean;
 }
 
 type DragState = {
@@ -264,6 +265,7 @@ function readStoredWindows(): DesktopWindowModel[] {
           parentWindowId: typeof record.parentWindowId === 'string' ? record.parentWindowId : undefined,
           parentWindowTitle: typeof record.parentWindowTitle === 'string' ? record.parentWindowTitle : undefined,
           parentMinimized: record.parentMinimized === true,
+          agentTouched: record.agentTouched === true,
         },
       ];
     });
@@ -646,6 +648,7 @@ function buildDesktopStateSnapshotDraft(input: {
       maximized: minimized ? false : Boolean(input.restoreBounds[windowModel.id]),
       zIndex,
     };
+    if (windowModel.agentTouched) windowRecord.agentTouched = true;
     if (windowModel.parentWindowId) windowRecord.parentWindowId = windowModel.parentWindowId;
     if (windowModel.parentWindowTitle) windowRecord.parentWindowTitle = windowModel.parentWindowTitle;
     windowRecord.workspaceCwd = windowModel.workspaceCwd ?? null;
@@ -1729,16 +1732,26 @@ export function WindowedLayout() {
       const fail = (error: string) => ({ ok: false, error });
       const findWindow = (windowId: string | undefined) =>
         windowId ? windowsRef.current.find((candidate) => candidate.id === windowId) : null;
+      const markFocusedWindowAgentTouched = () => {
+        setWindows((current) =>
+          current.map((candidate) => (candidate.focused && !candidate.minimized ? { ...candidate, agentTouched: true } : candidate)),
+        );
+      };
+      const markWindowAgentTouched = (windowId: string) => {
+        setWindows((current) => current.map((candidate) => (candidate.id === windowId ? { ...candidate, agentTouched: true } : candidate)));
+      };
 
       switch (command.action) {
         case 'open': {
           const app = command.appId ? windowedApps.find((candidate) => candidate.id === command.appId) : null;
           if (app) {
             openWindowedApp(app);
+            markFocusedWindowAgentTouched();
             return { ok: true };
           }
           const route = command.route;
           if (route && (openChatWindow(route) || openRouteWindow(route))) {
+            markFocusedWindowAgentTouched();
             return { ok: true };
           }
           return fail('desktop_control open requires a known appId or route.');
@@ -1757,7 +1770,9 @@ export function WindowedLayout() {
             setWindows((current) =>
               withFocusedWindow(
                 current.map((candidate) =>
-                  candidate.id === windowModel.id ? { ...candidate, bounds: restoreTarget, minimized: false } : candidate,
+                  candidate.id === windowModel.id
+                    ? { ...candidate, bounds: restoreTarget, minimized: false, agentTouched: true }
+                    : candidate,
                 ),
                 windowModel.id,
               ),
@@ -1765,11 +1780,13 @@ export function WindowedLayout() {
             return { ok: true };
           }
           focusWindow(windowModel.id);
+          markWindowAgentTouched(windowModel.id);
           return { ok: true };
         }
         case 'minimize': {
           const windowModel = findWindow(command.windowId);
           if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+          markWindowAgentTouched(windowModel.id);
           minimizeWindow(windowModel.id);
           return { ok: true };
         }
@@ -1794,7 +1811,9 @@ export function WindowedLayout() {
           });
           setWindows((current) =>
             withFocusedWindow(
-              current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false } : candidate)),
+              current.map((candidate) =>
+                candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false, agentTouched: true } : candidate,
+              ),
               windowModel.id,
             ),
           );
@@ -1809,7 +1828,9 @@ export function WindowedLayout() {
           setRestoreBounds((current) => ({ ...current, [windowModel.id]: current[windowModel.id] ?? windowModel.bounds }));
           setWindows((current) =>
             withFocusedWindow(
-              current.map((candidate) => (candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false } : candidate)),
+              current.map((candidate) =>
+                candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false, agentTouched: true } : candidate,
+              ),
               windowModel.id,
             ),
           );
@@ -2104,6 +2125,7 @@ export function WindowedLayout() {
         focused: windowModel.focused,
         minimized: windowModel.minimized,
         accent: accentForWindow(windowModel),
+        agentTouched: windowModel.agentTouched,
         onSelect: () => selectTaskbarWindow(windowModel),
       }),
     );
@@ -2114,6 +2136,7 @@ export function WindowedLayout() {
       focused: windowModel.focused,
       minimized: windowModel.minimized,
       accent: 'chat',
+      agentTouched: windowModel.agentTouched,
       onSelect: () => selectTaskbarWindow(windowModel),
     }),
   );
@@ -2217,6 +2240,7 @@ export function WindowedLayout() {
               parentWindowTitle={windowModel.parentWindowTitle}
               focused={windowModel.focused}
               minimized={windowModel.minimized}
+              agentTouched={windowModel.agentTouched}
               className={isToolWindow ? `${isChildWindow ? 'wos-window--child ' : ''}wos-window--${windowModel.kind}` : undefined}
               style={windowFrameStyle(windowModel, visibleWindows)}
               iframeBlocked={

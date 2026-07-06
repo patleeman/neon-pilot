@@ -49,6 +49,7 @@ describe('localApiDesktopState store/read', () => {
           minimized: false,
           maximized: true,
           zIndex: 11,
+          agentTouched: true,
           routeMetadata: { appId: 'system-notes', singleton: true },
         },
       ],
@@ -67,6 +68,7 @@ describe('localApiDesktopState store/read', () => {
     expect(stored.publishedAt).toBe('2026-07-05T12:34:56.000Z');
     expect(stored.revision).toBe(1);
     expect(stored.publisherId).toBe('windowed-layout:test');
+    expect(stored.windows[1]?.agentTouched).toBe(true);
 
     expect(readDesktopStateSnapshot()).toEqual({
       windows: input.windows,

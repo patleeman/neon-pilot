@@ -2311,6 +2311,8 @@ export interface DesktopStateWindow {
   maximized: boolean;
   /** Render z-order; higher paints above lower. 0 when minimized. */
   zIndex: number;
+  /** True after an agent desktop-control command last acted on this window. */
+  agentTouched?: boolean;
   /** Parent window id for tool child windows attached to a chat window. */
   parentWindowId?: string;
   parentWindowTitle?: string;

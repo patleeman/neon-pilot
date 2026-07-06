@@ -1635,6 +1635,7 @@ export interface TaskbarItem {
   meta?: string;
   focused?: boolean;
   minimized?: boolean;
+  agentTouched?: boolean;
   accent?: AppAccent;
   count?: number;
   onSelect: () => void;
@@ -1789,13 +1790,25 @@ export function Taskbar({
               className="wos-taskbar__button"
               data-focused={item.focused}
               data-minimized={item.minimized}
+              data-agent-touched={item.agentTouched ? 'true' : undefined}
               data-accent={item.accent}
               aria-current={item.focused ? 'page' : undefined}
               aria-pressed={item.focused ? true : undefined}
-              title={item.meta ? `${item.title} attached to ${item.meta}` : item.title}
+              aria-describedby={item.agentTouched ? `${item.id}-agent-touch-description` : undefined}
+              title={`${item.meta ? `${item.title} attached to ${item.meta}` : item.title}${item.agentTouched ? ' - agent touched' : ''}`}
               onClick={item.onSelect}
             >
               <WindowedAppTile label={item.title} meta={item.meta} accent={item.accent} count={item.count} variant="taskbar" />
+              {item.agentTouched ? (
+                <>
+                  <span className="wos-agent-touch-badge wos-agent-touch-badge--taskbar" aria-hidden="true">
+                    Agent
+                  </span>
+                  <span id={`${item.id}-agent-touch-description`} className="wos-sr-only">
+                    Agent touched this window
+                  </span>
+                </>
+              ) : null}
             </button>
           ))}
         </nav>
@@ -1833,6 +1846,7 @@ export interface WindowFrameProps {
   parentWindowTitle?: string;
   focused?: boolean;
   minimized?: boolean;
+  agentTouched?: boolean;
   iframeBlocked?: boolean;
   style?: CSSProperties;
   className?: string;
@@ -1853,6 +1867,7 @@ export function WindowFrame({
   parentWindowTitle,
   focused = false,
   minimized = false,
+  agentTouched = false,
   iframeBlocked = false,
   style,
   className,
@@ -1874,6 +1889,7 @@ export function WindowFrame({
       data-parent-window-title={parentWindowTitle}
       data-focused={focused}
       data-minimized={minimized ? 'true' : undefined}
+      data-agent-touched={agentTouched ? 'true' : undefined}
       data-iframe-blocked={iframeBlocked ? 'true' : undefined}
       aria-hidden={minimized ? 'true' : undefined}
       style={style}
@@ -1887,6 +1903,11 @@ export function WindowFrame({
           {parentWindowTitle ? (
             <div className="wos-window__meta" title={`Attached to ${parentWindowTitle}`}>
               {parentWindowTitle}
+            </div>
+          ) : null}
+          {agentTouched ? (
+            <div className="wos-agent-touch-badge" title="Agent touched this window">
+              Agent
             </div>
           ) : null}
         </div>

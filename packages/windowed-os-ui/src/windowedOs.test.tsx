@@ -475,6 +475,22 @@ describe('Taskbar', () => {
     expect(html).toContain('title="Terminal attached to New conversation"');
     expect(html).toContain('class="wos-app-tile__meta" aria-hidden="true">New conversation</span>');
   });
+
+  it('renders a compact agent attribution affordance without changing taskbar names', () => {
+    const html = renderToStaticMarkup(
+      <Taskbar
+        startOpen={false}
+        onToggleStart={() => undefined}
+        items={[{ id: 'notes', title: 'Notes', accent: 'settings', agentTouched: true, onSelect: () => undefined }]}
+      />,
+    );
+
+    expect(html).toContain('data-agent-touched="true"');
+    expect(html).toContain('aria-describedby="notes-agent-touch-description"');
+    expect(html).toContain('title="Notes - agent touched"');
+    expect(html).toContain('class="wos-agent-touch-badge wos-agent-touch-badge--taskbar" aria-hidden="true">Agent</span>');
+    expect(html).toContain('id="notes-agent-touch-description" class="wos-sr-only">Agent touched this window</span>');
+  });
 });
 
 describe('StartMenu', () => {
@@ -757,6 +773,17 @@ describe('WindowFrame', () => {
     expect(html).toContain('data-parent-window-title="New conversation"');
     expect(html).toContain('class="wos-window__meta" title="Attached to New conversation"');
     expect(html).toContain('New conversation');
+  });
+
+  it('marks windows that were touched by agent desktop control', () => {
+    const html = renderToStaticMarkup(
+      <WindowFrame title="Notes" agentTouched onMinimize={() => undefined} onMaximize={() => undefined} onClose={() => undefined}>
+        <div>Notes surface</div>
+      </WindowFrame>,
+    );
+
+    expect(html).toContain('data-agent-touched="true"');
+    expect(html).toContain('class="wos-agent-touch-badge" title="Agent touched this window">Agent</div>');
   });
 });
 

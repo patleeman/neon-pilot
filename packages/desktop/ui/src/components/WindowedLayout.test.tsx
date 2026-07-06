@@ -3701,6 +3701,135 @@ describe('WindowedLayout desktop state publishing', () => {
     await waitFor(() => {
       const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
       expect(lastSnapshot.focusedWindowId).toBe('chat:draft');
+      const draft = lastSnapshot.windows.find((window: { id: string }) => window.id === 'chat:draft');
+      expect(draft.agentTouched).toBe(true);
+    });
+    const draftWindow = screen.getByRole('region', { name: /new conversation/i });
+    expect(draftWindow.getAttribute('data-agent-touched')).toBe('true');
+    expect(within(draftWindow).getByText('Agent')).toBeTruthy();
+    const draftTaskbarButton = within(screen.getByRole('navigation', { name: /open windows/i })).getByRole('button', {
+      name: /new conversation/i,
+    });
+    expect(draftTaskbarButton.getAttribute('data-agent-touched')).toBe('true');
+    expect(draftTaskbarButton.querySelector('.wos-agent-touch-badge--taskbar')?.textContent).toBe('Agent');
+  });
+
+  it('marks the newly opened window after a streamed desktop control open command', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /new conversation/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/control/events');
+    expect(source).toBeTruthy();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-control-open-test',
+            action: 'open',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            appId: 'system-notes:notes',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mocks.acknowledgeDesktopControl).toHaveBeenCalledWith({
+        commandId: 'desktop-control-open-test',
+        ok: true,
+      });
+    });
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      const draft = lastSnapshot.windows.find((window: { id: string }) => window.id === 'chat:draft');
+      const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
+      expect(lastSnapshot.focusedWindowId).toBe('route:system-notes:notes');
+      expect(draft.agentTouched).toBeUndefined();
+      expect(notes.agentTouched).toBe(true);
+    });
+    const notesWindow = screen.getByRole('region', { name: /^notes$/i });
+    expect(notesWindow.getAttribute('data-agent-touched')).toBe('true');
+  });
+
+  it.each([
+    ['minimize', { action: 'minimize', windowId: 'route:system-notes:notes' }, { minimized: true }],
+    [
+      'move',
+      { action: 'move', windowId: 'route:system-notes:notes', bounds: { x: 120, y: 130, width: 760, height: 520 } },
+      { bounds: { x: 120, y: 130, width: 760, height: 520 } },
+    ],
+    [
+      'resize',
+      { action: 'resize', windowId: 'route:system-notes:notes', bounds: { x: 90, y: 70, width: 640, height: 480 } },
+      { bounds: { x: 90, y: 70, width: 640, height: 480 } },
+    ],
+    ['snap', { action: 'snap', windowId: 'route:system-notes:notes', snapTarget: 'left' }, { focused: true }],
+  ])('marks the target window after a streamed desktop control %s command', async (_label, command, expectedState) => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /^notes$/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/control/events');
+    expect(source).toBeTruthy();
+    const commandId = `desktop-control-${command.action}-test`;
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: commandId,
+            createdAt: '2026-07-06T00:00:00.000Z',
+            ...command,
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mocks.acknowledgeDesktopControl).toHaveBeenCalledWith({
+        commandId,
+        ok: true,
+      });
+    });
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
+      expect(notes.agentTouched).toBe(true);
+      expect(notes).toMatchObject(expectedState);
     });
   });
 

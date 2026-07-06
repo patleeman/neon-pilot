@@ -43,6 +43,7 @@ export interface DesktopStateWindow {
   minimized: boolean;
   maximized: boolean;
   zIndex: number;
+  agentTouched?: boolean;
   parentWindowId?: string;
   parentWindowTitle?: string;
   workspaceCwd?: string | null;
@@ -148,6 +149,7 @@ function sanitizeWindow(value: unknown): DesktopStateWindow | null {
     maximized: minimized ? false : maximized,
     zIndex: minimized ? 0 : zIndex,
   };
+  if (value.agentTouched === true) windowRecord.agentTouched = true;
   const parentWindowId = sanitizeString(value.parentWindowId, 256);
   if (parentWindowId) windowRecord.parentWindowId = parentWindowId;
   const parentWindowTitle = sanitizeString(value.parentWindowTitle, MAX_DESKTOP_STATE_TITLE_LENGTH);

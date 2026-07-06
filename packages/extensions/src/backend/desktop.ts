@@ -35,6 +35,7 @@ export interface DesktopStateWindow {
   minimized: boolean;
   maximized: boolean;
   zIndex: number;
+  agentTouched?: boolean;
   parentWindowId?: string;
   parentWindowTitle?: string;
   workspaceCwd?: string | null;
