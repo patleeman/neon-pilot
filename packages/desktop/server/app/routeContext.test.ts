@@ -1,3 +1,4 @@
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { describe, expect, it } from 'vitest';
 
 import { createServerRouteContext } from './routeContext.js';
@@ -64,5 +65,106 @@ describe('createServerRouteContext', () => {
     expect(context.listProfileAgentItems()).toEqual([{ source: 'shared', path: '/knowledge/_profiles/assistant/AGENTS.md' }]);
     await expect(context.withTemporaryRuntimeAgentDir('assistant', async (agentDir) => agentDir)).resolves.toBe('/tmp/agent-dir');
     await expect(context.getDurableRunSnapshot('run-123', 50)).resolves.toEqual({ runId: 'run-123' });
+  });
+
+  it('defaults getDesktopRootLayout to resolveDesktopRootLayout when no option is provided', () => {
+    const options = {
+      repoRoot: '/repo',
+      settingsFile: '/repo/settings.json',
+      authFile: '/repo/auth.json',
+      getRuntimeScope: () => 'shared',
+      materializeWebRuntimeConfig: () => undefined,
+      getStateRoot: () => '/state',
+      serverPort: 4111,
+      getDefaultWebCwd: () => '/repo',
+      resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => cwd ?? defaultCwd,
+      buildLiveSessionResourceOptions: () => ({
+        additionalExtensionPaths: [],
+        additionalSkillPaths: [],
+        additionalPromptTemplatePaths: [],
+        additionalThemePaths: [],
+      }),
+      buildLiveSessionExtensionFactories: () => [],
+      flushLiveDeferredResumes: async () => undefined,
+      getSavedUiPreferences: () => ({ sidebarExpanded: true }),
+      listTasksForRuntimeScope: () => [],
+      listMemoryDocs: () => [],
+      listSkillsForRuntimeScope: () => [],
+      listProfileAgentItems: () => [],
+      withTemporaryRuntimeAgentDir: async <T>(_profile: string, run: (agentDir: string) => Promise<T>) => run('/tmp/agent-dir'),
+      getDurableRunSnapshot: async () => null,
+    };
+
+    const context = createServerRouteContext(options);
+    const layout = context.getDesktopRootLayout();
+
+    // Should match the core resolver output for default options
+    const expected = resolveDesktopRootLayout();
+    expect(layout).toEqual(expected);
+  });
+
+  it('uses an injected getDesktopRootLayout getter when provided', () => {
+    const injectedLayout = {
+      root: '/custom/root',
+      apps: '/custom/root/apps',
+      data: '/custom/root/data',
+      dataApps: '/custom/root/data/apps',
+      dataDocuments: '/custom/root/data/documents',
+      documents: '/custom/root/documents',
+      agents: '/custom/root/agents',
+      logs: '/custom/root/logs',
+      logsDesktop: '/custom/root/logs/desktop',
+      logsDaemon: '/custom/root/logs/daemon',
+      logsTelemetry: '/custom/root/logs/telemetry',
+      system: '/custom/root/system',
+      systemAgents: '/custom/root/system/agents',
+      systemApps: '/custom/root/system/apps',
+      systemCache: '/custom/root/system/cache',
+      systemConfig: '/custom/root/system/config',
+      systemConversations: '/custom/root/system/conversations',
+      systemSessions: '/custom/root/system/conversations/sessions',
+      systemDaemon: '/custom/root/system/daemon',
+      systemElectron: '/custom/root/system/electron',
+      systemElectronUserData: '/custom/root/system/electron/user-data',
+      systemObservability: '/custom/root/system/observability',
+      systemRuntime: '/custom/root/system/runtime',
+      systemSecrets: '/custom/root/system/secrets',
+      systemState: '/custom/root/system/state',
+    };
+
+    const options = {
+      repoRoot: '/repo',
+      settingsFile: '/repo/settings.json',
+      authFile: '/repo/auth.json',
+      getRuntimeScope: () => 'shared',
+      materializeWebRuntimeConfig: () => undefined,
+      getStateRoot: () => '/state',
+      serverPort: 4111,
+      getDefaultWebCwd: () => '/repo',
+      resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => cwd ?? defaultCwd,
+      getDesktopRootLayout: () => injectedLayout,
+      buildLiveSessionResourceOptions: () => ({
+        additionalExtensionPaths: [],
+        additionalSkillPaths: [],
+        additionalPromptTemplatePaths: [],
+        additionalThemePaths: [],
+      }),
+      buildLiveSessionExtensionFactories: () => [],
+      flushLiveDeferredResumes: async () => undefined,
+      getSavedUiPreferences: () => ({ sidebarExpanded: true }),
+      listTasksForRuntimeScope: () => [],
+      listMemoryDocs: () => [],
+      listSkillsForRuntimeScope: () => [],
+      listProfileAgentItems: () => [],
+      withTemporaryRuntimeAgentDir: async <T>(_profile: string, run: (agentDir: string) => Promise<T>) => run('/tmp/agent-dir'),
+      getDurableRunSnapshot: async () => null,
+    };
+
+    const context = createServerRouteContext(options);
+    const layout = context.getDesktopRootLayout();
+
+    expect(layout).toBe(injectedLayout);
+    expect(layout.root).toBe('/custom/root');
+    expect(layout.systemSecrets).toBe('/custom/root/system/secrets');
   });
 });

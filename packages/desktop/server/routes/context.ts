@@ -1,4 +1,5 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import type { Express } from 'express';
 
 import type { SavedUiPreferences } from '../ui/uiPreferences.js';
@@ -63,6 +64,7 @@ export interface ServerRouteContext {
   getServerPort: () => number;
   getDefaultWebCwd: () => string;
   resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => string | undefined;
+  getDesktopRootLayout: () => DesktopRootLayout;
   buildLiveSessionResourceOptions: (profile?: string) => LiveSessionResourceOptions;
   buildLiveSessionResourceOptionsAsync?: (profile?: string) => Promise<LiveSessionResourceOptions>;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];

@@ -1,4 +1,5 @@
-import { getRuntimeConfigRoot } from '@neon-pilot/core';
+import type { DesktopRootLayout } from '@neon-pilot/core';
+import { getRuntimeConfigRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 import type {
   MemoryDocSummary,
@@ -18,6 +19,7 @@ interface CreateServerRouteContextOptions {
   serverPort: number;
   getDefaultWebCwd: () => string;
   resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => string | undefined;
+  getDesktopRootLayout?: () => DesktopRootLayout;
   buildLiveSessionResourceOptions: ServerRouteContext['buildLiveSessionResourceOptions'];
   buildLiveSessionResourceOptionsAsync?: ServerRouteContext['buildLiveSessionResourceOptionsAsync'];
   buildLiveSessionExtensionFactories: ServerRouteContext['buildLiveSessionExtensionFactories'];
@@ -43,6 +45,7 @@ export function createServerRouteContext(options: CreateServerRouteContextOption
     getServerPort: () => options.serverPort,
     getDefaultWebCwd: options.getDefaultWebCwd,
     resolveRequestedCwd: options.resolveRequestedCwd,
+    getDesktopRootLayout: options.getDesktopRootLayout ?? resolveDesktopRootLayout,
     buildLiveSessionResourceOptions: options.buildLiveSessionResourceOptions,
     ...(options.buildLiveSessionResourceOptionsAsync
       ? { buildLiveSessionResourceOptionsAsync: options.buildLiveSessionResourceOptionsAsync }

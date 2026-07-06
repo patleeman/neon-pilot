@@ -3,6 +3,7 @@ import { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import express from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -46,6 +47,7 @@ describe('registerServerRoutes smoke test', () => {
   const settingsFile = join(tempRoot, 'settings.json');
   const authFile = join(tempRoot, 'auth.json');
   const runtimeConfigRoot = join(tempRoot, 'profiles');
+  const desktopRoot = join(tempRoot, 'desktop-root');
 
   let appBaseUrl = '';
   let closeAppServer: (() => Promise<void>) | null = null;
@@ -79,6 +81,7 @@ describe('registerServerRoutes smoke test', () => {
         const candidate = typeof cwd === 'string' && cwd.trim().length > 0 ? cwd.trim() : defaultCwd?.trim();
         return candidate && candidate.length > 0 ? candidate : workspaceDir;
       },
+      getDesktopRootLayout: () => resolveDesktopRootLayout({ root: desktopRoot }),
       buildLiveSessionResourceOptions: () => ({
         additionalExtensionPaths: [],
         additionalSkillPaths: [],

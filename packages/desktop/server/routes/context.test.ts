@@ -1,3 +1,4 @@
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { describe, expect, it } from 'vitest';
 
 import type { LiveSessionResourceOptions, RegisterServerRoutesInput, ServerRouteContext } from './context.js';
@@ -22,6 +23,7 @@ describe('routes context contracts', () => {
       getServerPort: () => 3838,
       getDefaultWebCwd: () => '/repo',
       resolveRequestedCwd: (cwd) => cwd ?? undefined,
+      getDesktopRootLayout: () => resolveDesktopRootLayout({ root: '/desktop-root' }),
       buildLiveSessionResourceOptions: () => resourceOptions,
       buildLiveSessionResourceOptionsAsync: async () => resourceOptions,
       buildLiveSessionExtensionFactories: () => [],

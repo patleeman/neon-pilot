@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ExtensionHostClient } from './extensions/extensionHostClient.js';
@@ -20,6 +21,7 @@ function context(stateRoot: string): ServerRouteContext {
     getServerPort: () => 0,
     getDefaultWebCwd: () => '/repo',
     resolveRequestedCwd: () => '/repo',
+    getDesktopRootLayout: () => resolveDesktopRootLayout({ root: join(stateRoot, 'desktop-root') }),
     buildLiveSessionResourceOptions: () => ({
       additionalExtensionPaths: [],
       additionalSkillPaths: [],
