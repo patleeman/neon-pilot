@@ -22,6 +22,22 @@ function setup() {
   return { routes, context };
 }
 
+function setupWithLayout() {
+  const routes = new Map<string, Handler>();
+  const router = {
+    get: vi.fn((path: string, handler: Handler) => routes.set(`GET ${path}`, handler)),
+    put: vi.fn((path: string, handler: Handler) => routes.set(`PUT ${path}`, handler)),
+    delete: vi.fn((path: string, handler: Handler) => routes.set(`DELETE ${path}`, handler)),
+  };
+  const layout = { root: '/test/layout-root', systemSecrets: '/test/layout-system/secrets' };
+  const context = {
+    getStateRoot: vi.fn(() => '/state'),
+    getDesktopRootLayout: vi.fn(() => layout),
+  };
+  registerSecretRoutes(router, context);
+  return { routes, context, layout };
+}
+
 function res() {
   const response = { status: vi.fn(), json: vi.fn() };
   response.status.mockReturnValue(response);
@@ -71,6 +87,31 @@ describe('secret routes', () => {
       backend: 'keychain',
       secrets: [{ extensionId: 'ext', secretId: 'secret', configured: false }],
     });
+  });
+
+  it('uses getDesktopRootLayout when provided', () => {
+    const { routes, context, layout } = setupWithLayout();
+    const response = res();
+
+    routes.get('GET /api/secrets')!({}, response);
+
+    expect(context.getDesktopRootLayout).toHaveBeenCalledOnce();
+    expect(store.readSecretBackendId).toHaveBeenCalledWith(layout);
+    expect(store.listSecretStatuses).toHaveBeenCalledWith(layout);
+    expect(response.json).toHaveBeenCalledWith({
+      backend: 'keychain',
+      secrets: [{ extensionId: 'ext', secretId: 'secret', configured: true }],
+    });
+  });
+
+  it('falls back to getStateRoot when getDesktopRootLayout is absent', () => {
+    const { routes } = setup();
+    const response = res();
+
+    routes.get('GET /api/secrets')!({}, response);
+
+    expect(store.readSecretBackendId).toHaveBeenCalledWith('/state');
+    expect(store.listSecretStatuses).toHaveBeenCalledWith('/state');
   });
 
   it('returns 500 and logs for validation or store errors', () => {
