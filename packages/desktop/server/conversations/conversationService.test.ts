@@ -403,7 +403,7 @@ describe('conversationService', () => {
       layout,
     });
     expect(getActivityConversationLinkMock).toHaveBeenCalledWith({
-      stateRoot: undefined,
+      layout,
       profile: 'assistant',
       activityId: 'activity-1',
     });

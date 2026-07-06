@@ -153,10 +153,10 @@ type ActivityRecord = {
 function attachActivityConversationLinks(
   profile: string,
   entry: ReturnType<typeof listProfileActivityEntries>[number]['entry'],
-  stateRoot?: string,
+  store: ActivityStoreOptions,
 ): ActivityEntryWithConversationLinks {
   const relatedConversationIds = getActivityConversationLink({
-    stateRoot,
+    ...store,
     profile,
     activityId: entry.id,
   })?.relatedConversationIds;
@@ -181,7 +181,7 @@ function listActivityRecordsForProfile(profile = getRuntimeScopeFn()): ActivityR
     for (const { entry } of entries) {
       records.push({
         stateRoot: store.stateRoot,
-        entry: attachActivityConversationLinks(profile, entry, store.stateRoot),
+        entry: attachActivityConversationLinks(profile, entry, store),
         read: readState.has(entry.id),
       });
     }
