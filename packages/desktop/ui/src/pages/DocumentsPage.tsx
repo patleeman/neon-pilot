@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../client/api';
 import {
@@ -88,6 +88,7 @@ export function DocumentsPage() {
   const [newColDescription, setNewColDescription] = useState('');
   const [newColError, setNewColError] = useState<string | null>(null);
   const [isCreatingCol, setIsCreatingCol] = useState(false);
+  const bodyEditedRef = useRef(false);
   const collectionsFetcher = useCallback(async () => {
     return api.documents.collections();
   }, []);
@@ -152,6 +153,7 @@ export function DocumentsPage() {
     setDeleteError(null);
     setIsCreating(false);
     setNewDocError(null);
+    bodyEditedRef.current = false;
   };
 
   const handleRefresh = () => {
@@ -173,8 +175,16 @@ export function DocumentsPage() {
     const nextSelectedDoc = recordsData.records.find(
       (record) => record.owner === selectedDoc.owner && record.collection === selectedDoc.collection && record.id === selectedDoc.id,
     );
-    setSelectedDoc(nextSelectedDoc ?? null);
-    if (nextSelectedDoc) {
+    if (!nextSelectedDoc) {
+      // Document was removed from the records; deselect.
+      setSelectedDoc(null);
+      bodyEditedRef.current = false;
+      return;
+    }
+    // Update the selected doc reference to the freshest recordsData entry,
+    // but only sync the editor body if the user has not made local edits.
+    setSelectedDoc(nextSelectedDoc);
+    if (!bodyEditedRef.current) {
       setEditBody(bodyToJson(nextSelectedDoc.body));
       setEditError(null);
     }
@@ -200,6 +210,7 @@ export function DocumentsPage() {
       setSelectedDoc(result.document);
       setEditBody(bodyToJson(result.document.body));
       setEditError(null);
+      bodyEditedRef.current = false;
       await refetchData();
     } catch (err: unknown) {
       setEditError(err instanceof Error ? err.message : 'Save failed');
@@ -231,6 +242,7 @@ export function DocumentsPage() {
       setIsCreating(false);
       setSelectedDoc(result.document);
       setEditBody(bodyToJson(result.document.body));
+      bodyEditedRef.current = false;
       await refetchData();
     } catch (err: unknown) {
       setNewDocError(err instanceof Error ? err.message : 'Create failed');
@@ -327,8 +339,10 @@ export function DocumentsPage() {
                 className="min-h-[120px] w-full resize-y rounded-sm border border-border-subtle bg-bg-subtle p-2 font-mono text-[11px] leading-relaxed"
                 value={editBody}
                 onChange={(e) => {
-                  setEditBody(e.target.value);
+                  const nextBody = e.target.value;
+                  setEditBody(nextBody);
                   setEditError(null);
+                  bodyEditedRef.current = nextBody !== selectedDocJson;
                 }}
                 placeholder="{}"
               />
@@ -684,7 +698,11 @@ function RecordsTable({
           records.map((doc) => {
             const isSelected = selectedDoc?.id === doc.id && selectedDoc?.collection === doc.collection;
             return (
-              <DataTableRow key={doc.id} className={isSelected ? 'bg-bg-active' : 'cursor-pointer'} onClick={() => onSelect(doc)}>
+              <DataTableRow
+                key={`${doc.owner}/${doc.collection}/${doc.id}`}
+                className={isSelected ? 'bg-bg-active' : 'cursor-pointer'}
+                onClick={() => onSelect(doc)}
+              >
                 <DataTableCell className="align-middle">
                   <div className={`h-2 w-2 rounded-full ${isSelected ? 'bg-accent' : 'bg-border-subtle'}`} aria-hidden="true" />
                 </DataTableCell>

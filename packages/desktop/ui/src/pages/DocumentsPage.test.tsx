@@ -398,6 +398,62 @@ describe('DocumentsPage', () => {
     });
   });
 
+  it('does not overwrite unsaved edits when records are refreshed', async () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const doc: DocumentRecord = makeRecord({ id: 'doc-1', body: { original: 'value' } });
+    let recordsResult: ListDocumentsResult = { records: [doc], total: 1 };
+    const refetchRecords = vi.fn().mockImplementation(async () => {
+      // Simulate a records refresh that preserves the doc (no body change)
+    });
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, error: null, data: collectionsResult, refetch: vi.fn() });
+      }
+      return buildUseApiResult({ loading: false, error: null, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    const view = renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+    fireEvent.click(screen.getByText('doc-1'));
+
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    const originalValue = textarea.value;
+
+    // Make an unsaved edit
+    fireEvent.change(textarea, { target: { value: '{"edited": true}' } });
+    expect(textarea.value).toBe('{"edited": true}');
+
+    recordsResult = { records: [makeRecord({ id: 'doc-1', body: { original: 'value' } })], total: 1 };
+    view.rerender(
+      <MemoryRouter initialEntries={['/documents']}>
+        <Routes>
+          <Route path="/documents" element={<DocumentsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // The editor body should still show the unsaved edit, not the original
+    expect(textarea.value).toBe('{"edited": true}');
+
+    fireEvent.change(textarea, { target: { value: originalValue } });
+
+    recordsResult = { records: [makeRecord({ id: 'doc-1', body: { original: 'latest server value' } })], total: 1 };
+    view.rerender(
+      <MemoryRouter initialEntries={['/documents']}>
+        <Routes>
+          <Route path="/documents" element={<DocumentsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(textarea.value).toContain('latest server value');
+    });
+  });
+
   // ── New document tests ─────────────────────────────────────────────────
 
   it('shows New document inline form when button is clicked', () => {
