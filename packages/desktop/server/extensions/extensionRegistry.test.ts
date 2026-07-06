@@ -12,6 +12,8 @@ import {
   beginExtensionStartupGuard,
   clearExtensionFailureRecordsForOperation,
   completeExtensionStartupGuard,
+  getExtensionRegistryPaths,
+  getRuntimeExtensionsRootFromLayout,
   invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
   listExtensionAssemblyProviderRegistrations,
@@ -1175,7 +1177,52 @@ describe('extension registry', () => {
 
       rmSync(stateRoot, { recursive: true, force: true });
     });
+  });
 
+  describe('layout-based path resolution', () => {
+    const layout = {
+      root: '/root',
+      apps: '/root/apps',
+      data: '/root/data',
+      dataApps: '/root/data/apps',
+      dataDocuments: '/root/data/documents',
+      documents: '/root/documents',
+      agents: '/root/agents',
+      logs: '/root/logs',
+      logsDesktop: '/root/logs/desktop',
+      logsDaemon: '/root/logs/daemon',
+      logsTelemetry: '/root/logs/telemetry',
+      system: '/root/system',
+      systemAgents: '/root/system/agents',
+      systemApps: '/root/system/apps',
+      systemCache: '/root/system/cache',
+      systemConfig: '/root/system/config',
+      systemConversations: '/root/system/conversations',
+      systemSessions: '/root/system/conversations/sessions',
+      systemDaemon: '/root/system/daemon',
+      systemElectron: '/root/system/electron',
+      systemElectronUserData: '/root/system/electron/user-data',
+      systemObservability: '/root/system/observability',
+      systemRuntime: '/root/system/runtime',
+      systemSecrets: '/root/system/secrets',
+      systemState: '/root/system/state',
+    };
+
+    it('getExtensionRegistryPaths returns paths under systemApps/extensions', () => {
+      const paths = getExtensionRegistryPaths(layout);
+      expect(paths).toEqual({
+        config: '/root/system/apps/extensions/registry.json',
+        failures: '/root/system/apps/extensions/failures.json',
+        startupMarker: '/root/system/apps/extensions/startup-marker.json',
+      });
+    });
+
+    it('getRuntimeExtensionsRootFromLayout returns apps/extensions', () => {
+      expect(getRuntimeExtensionsRootFromLayout(layout)).toBe('/root/apps/extensions');
+    });
+  });
+
+  describe('permissionState', () => {
     it('is not present on invalid extension summaries', () => {
       const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
       const extensionRoot = join(stateRoot, 'extensions', 'invalid-perms');

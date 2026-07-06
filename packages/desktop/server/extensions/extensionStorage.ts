@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { getStateRoot, openSqliteDatabase, type SqliteDatabase } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot, openSqliteDatabase, type SqliteDatabase } from '@neon-pilot/core';
 
 import { preparePrivateExtensionSqlitePath, repairPrivateExtensionSqliteFiles } from './extensionSqliteSecurity.js';
 
@@ -20,6 +20,14 @@ const dbCache = new Map<string, SqliteDatabase>();
 
 function getExtensionStateDbPath(stateRoot: string = getStateRoot()): string {
   return join(stateRoot, 'app-state', 'app-state.sqlite');
+}
+
+/**
+ * Resolve the extension app-state database path from a DesktopRootLayout.
+ * The app-state DB lives under `layout.systemState/`.
+ */
+export function getExtensionStateDbPathFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.systemState, 'app-state.sqlite');
 }
 
 function normalizeStateKey(key: string): string {

@@ -2,6 +2,7 @@ import { join } from 'node:path';
 
 import {
   applyMigrations,
+  type DesktopRootLayout,
   getStateRoot,
   type Migration,
   openSqliteDatabase,
@@ -49,6 +50,21 @@ function normalizeDatabaseName(name = 'main'): string {
 
 function getExtensionDatabasePath(extensionId: string, name = 'main', stateRoot: string = getStateRoot()): string {
   return join(stateRoot, 'extension-data', extensionId, 'databases', `${normalizeDatabaseName(name)}.sqlite`);
+}
+
+/**
+ * Resolve extension database paths from a DesktopRootLayout.
+ * Extension databases live under `layout.dataApps/<extensionId>/databases/`.
+ */
+export function getExtensionDatabasePathFromLayout(extensionId: string, name: string, layout: DesktopRootLayout): string {
+  return join(layout.dataApps, extensionId, 'databases', `${normalizeDatabaseName(name)}.sqlite`);
+}
+
+/**
+ * Resolve the extension data root directory from a DesktopRootLayout.
+ */
+export function getExtensionDataRootFromLayout(layout: DesktopRootLayout): string {
+  return layout.dataApps;
 }
 
 function toCoreMigrations(extensionId: string, name: string, migrations: ExtensionDatabaseMigration[]): Migration[] {

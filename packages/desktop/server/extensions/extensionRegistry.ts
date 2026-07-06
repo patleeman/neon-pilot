@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import { invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
 import {
@@ -581,6 +581,32 @@ interface ExtensionRegistryReadCache {
   configs: Map<string, ExtensionRegistryConfig>;
   entries: Map<string, ExtensionRegistryEntry[]>;
   invalidEntries: Map<string, InvalidExtensionEntry[]>;
+}
+
+/**
+ * Resolve registry/system state paths from a DesktopRootLayout.
+ * Registry config, failure records, and startup markers live under
+ * `layout.systemApps/extensions/`.
+ */
+export function getExtensionRegistryPaths(layout: DesktopRootLayout): {
+  config: string;
+  failures: string;
+  startupMarker: string;
+} {
+  const root = join(layout.systemApps, 'extensions');
+  return {
+    config: join(root, 'registry.json'),
+    failures: join(root, 'failures.json'),
+    startupMarker: join(root, 'startup-marker.json'),
+  };
+}
+
+/**
+ * Derive the runtime extension packages root from a DesktopRootLayout.
+ * User-installed extension packages live under `layout.apps/extensions/`.
+ */
+export function getRuntimeExtensionsRootFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.apps, 'extensions');
 }
 
 const registryReadCache = new AsyncLocalStorage<ExtensionRegistryReadCache>();

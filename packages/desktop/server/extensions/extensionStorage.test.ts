@@ -11,8 +11,14 @@ vi.mock('@neon-pilot/core', async (importOriginal) => {
 });
 
 const core = await import('@neon-pilot/core');
-const { closeExtensionStateDbs, deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } =
-  await import('./extensionStorage.js');
+const {
+  closeExtensionStateDbs,
+  deleteExtensionState,
+  getExtensionStateDbPathFromLayout,
+  listExtensionState,
+  readExtensionState,
+  writeExtensionState,
+} = await import('./extensionStorage.js');
 
 describe('extensionStorage', () => {
   const stateRoot = join(tmpdir(), `extension-storage-${randomUUID()}`);
@@ -88,6 +94,37 @@ describe('extensionStorage', () => {
     ]);
     expect(deleteExtensionState('ext', 'prefs/a')).toEqual({ ok: true, deleted: true });
     expect(deleteExtensionState('ext', 'prefs/a')).toEqual({ ok: true, deleted: false });
+  });
+
+  it('resolves extension state DB path from DesktopRootLayout', () => {
+    const layout = {
+      root: '/root',
+      apps: '/root/apps',
+      data: '/root/data',
+      dataApps: '/root/data/apps',
+      dataDocuments: '/root/data/documents',
+      documents: '/root/documents',
+      agents: '/root/agents',
+      logs: '/root/logs',
+      logsDesktop: '/root/logs/desktop',
+      logsDaemon: '/root/logs/daemon',
+      logsTelemetry: '/root/logs/telemetry',
+      system: '/root/system',
+      systemAgents: '/root/system/agents',
+      systemApps: '/root/system/apps',
+      systemCache: '/root/system/cache',
+      systemConfig: '/root/system/config',
+      systemConversations: '/root/system/conversations',
+      systemSessions: '/root/system/conversations/sessions',
+      systemDaemon: '/root/system/daemon',
+      systemElectron: '/root/system/electron',
+      systemElectronUserData: '/root/system/electron/user-data',
+      systemObservability: '/root/system/observability',
+      systemRuntime: '/root/system/runtime',
+      systemSecrets: '/root/system/secrets',
+      systemState: '/root/system/state',
+    };
+    expect(getExtensionStateDbPathFromLayout(layout)).toBe('/root/system/state/app-state.sqlite');
   });
 
   it('rejects invalid state keys and prefixes', () => {

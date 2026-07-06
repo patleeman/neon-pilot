@@ -11,7 +11,12 @@ vi.mock('@neon-pilot/core', async (importOriginal) => {
 });
 
 const core = await import('@neon-pilot/core');
-const { closeExtensionDatabaseManagersForTests, createExtensionDatabaseManager } = await import('./extensionDatabase.js');
+const {
+  closeExtensionDatabaseManagersForTests,
+  createExtensionDatabaseManager,
+  getExtensionDatabasePathFromLayout,
+  getExtensionDataRootFromLayout,
+} = await import('./extensionDatabase.js');
 
 describe('extensionDatabase', () => {
   const stateRoot = join(tmpdir(), `extension-database-${randomUUID()}`);
@@ -64,6 +69,40 @@ describe('extensionDatabase', () => {
 
     expect(statSync(dbDir).mode & 0o777).toBe(0o700);
     expect(statSync(dbPath).mode & 0o777).toBe(0o600);
+  });
+
+  it('resolves extension database paths from DesktopRootLayout', () => {
+    const layout = {
+      root: '/root',
+      apps: '/root/apps',
+      data: '/root/data',
+      dataApps: '/root/data/apps',
+      dataDocuments: '/root/data/documents',
+      documents: '/root/documents',
+      agents: '/root/agents',
+      logs: '/root/logs',
+      logsDesktop: '/root/logs/desktop',
+      logsDaemon: '/root/logs/daemon',
+      logsTelemetry: '/root/logs/telemetry',
+      system: '/root/system',
+      systemAgents: '/root/system/agents',
+      systemApps: '/root/system/apps',
+      systemCache: '/root/system/cache',
+      systemConfig: '/root/system/config',
+      systemConversations: '/root/system/conversations',
+      systemSessions: '/root/system/conversations/sessions',
+      systemDaemon: '/root/system/daemon',
+      systemElectron: '/root/system/electron',
+      systemElectronUserData: '/root/system/electron/user-data',
+      systemObservability: '/root/system/observability',
+      systemRuntime: '/root/system/runtime',
+      systemSecrets: '/root/system/secrets',
+      systemState: '/root/system/state',
+    };
+    const dbPath = getExtensionDatabasePathFromLayout('my-ext', 'main', layout);
+    expect(dbPath).toBe('/root/data/apps/my-ext/databases/main.sqlite');
+
+    expect(getExtensionDataRootFromLayout(layout)).toBe('/root/data/apps');
   });
 
   it('isolates databases by extension id and rejects unsafe names', async () => {

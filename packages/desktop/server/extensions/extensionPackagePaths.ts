@@ -1,9 +1,19 @@
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { basename, dirname, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import type { DesktopRootLayout } from '@neon-pilot/core';
 
 import { isForkExcludedExtensionId } from './extensionForkExclusions.js';
 import { readConfiguredExtensionPaths, readEnvironmentExtensionPaths } from './extensionSearchPaths.js';
+
+/**
+ * Derive the runtime extension packages root from a DesktopRootLayout.
+ * User-installed extension packages live under `layout.apps/extensions/`.
+ */
+export function getExtensionPackagesRoot(layout: DesktopRootLayout): string {
+  return join(layout.apps, 'extensions');
+}
 
 export interface ExtensionPackagePath {
   packageRoot: string;

@@ -5,7 +5,7 @@ import { chdir } from 'node:process';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { listExtensionPackagePaths } from './extensionPackagePaths.js';
+import { getExtensionPackagesRoot, listExtensionPackagePaths } from './extensionPackagePaths.js';
 
 const originalResourcesPath = process.resourcesPath;
 const originalCwd = process.cwd();
@@ -88,6 +88,37 @@ describe('extension package paths', () => {
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it('resolves extension packages root from DesktopRootLayout', () => {
+    const root = getExtensionPackagesRoot({
+      root: '/Users/example/desktop',
+      apps: '/Users/example/desktop/apps',
+      data: '/Users/example/desktop/data',
+      dataApps: '/Users/example/desktop/data/apps',
+      dataDocuments: '/Users/example/desktop/data/documents',
+      documents: '/Users/example/desktop/documents',
+      agents: '/Users/example/desktop/agents',
+      logs: '/Users/example/desktop/logs',
+      logsDesktop: '/Users/example/desktop/logs/desktop',
+      logsDaemon: '/Users/example/desktop/logs/daemon',
+      logsTelemetry: '/Users/example/desktop/logs/telemetry',
+      system: '/Users/example/desktop/system',
+      systemAgents: '/Users/example/desktop/system/agents',
+      systemApps: '/Users/example/desktop/system/apps',
+      systemCache: '/Users/example/desktop/system/cache',
+      systemConfig: '/Users/example/desktop/system/config',
+      systemConversations: '/Users/example/desktop/system/conversations',
+      systemSessions: '/Users/example/desktop/system/conversations/sessions',
+      systemDaemon: '/Users/example/desktop/system/daemon',
+      systemElectron: '/Users/example/desktop/system/electron',
+      systemElectronUserData: '/Users/example/desktop/system/electron/user-data',
+      systemObservability: '/Users/example/desktop/system/observability',
+      systemRuntime: '/Users/example/desktop/system/runtime',
+      systemSecrets: '/Users/example/desktop/system/secrets',
+      systemState: '/Users/example/desktop/system/state',
+    });
+    expect(root).toBe('/Users/example/desktop/apps/extensions');
   });
 
   it('deduplicates package roots that resolve to the same real path', () => {

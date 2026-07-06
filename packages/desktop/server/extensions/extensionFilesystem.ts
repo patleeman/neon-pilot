@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import { defaultFileSystemAuthority, type FileAccess, type ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { assertExtensionAnyPermission } from './extensionPermissions.js';
@@ -14,6 +14,14 @@ type ExtensionFilesystemRootKind = 'workspace' | 'app' | 'cache' | 'temp';
 
 function extensionFileRootPath(extensionId: string, kind: 'app' | 'cache', stateRoot: string = getStateRoot()): string {
   return join(stateRoot, 'extension-data', extensionId, kind === 'app' ? 'files' : 'cache');
+}
+
+/**
+ * Resolve extension file storage roots from a DesktopRootLayout.
+ * Extension files/cache live under `layout.dataApps/<extensionId>/`.
+ */
+export function extensionFileRootPathFromLayout(extensionId: string, kind: 'app' | 'cache', layout: DesktopRootLayout): string {
+  return join(layout.dataApps, extensionId, kind === 'app' ? 'files' : 'cache');
 }
 
 function hasWriteAccess(access: FileAccess[]): boolean {
