@@ -780,6 +780,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     agentDir,
     settingsFile,
     stateRoot,
+    desktopRootLayout,
     logger: {
       warn: () => {
         // Ignore local desktop route-context warnings here.

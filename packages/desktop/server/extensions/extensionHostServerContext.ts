@@ -45,6 +45,7 @@ export function createExtensionBackendServerContextFromSnapshot(
       agentDir,
       settingsFile,
       stateRoot,
+      ...(snapshot.desktopRootLayout ? { desktopRootLayout: snapshot.desktopRootLayout } : {}),
       logger: { warn: () => undefined },
     });
     return runtimeState;

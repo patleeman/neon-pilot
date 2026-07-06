@@ -428,4 +428,53 @@ describe('createRuntimeState', () => {
     expect(() => state.materializeRuntimeResources()).toThrow('initial materialize failed');
     expect(logger.warn).not.toHaveBeenCalledWith('failed to materialize runtime resources', expect.anything());
   });
+
+  it('forwards desktopRootLayout to resolveRuntimeResources when provided in options', () => {
+    const customDesktopRootLayout = {
+      root: '/custom-root',
+      apps: '/custom-root/apps',
+      data: '/custom-root/data',
+      dataApps: '/custom-root/data/apps',
+      dataDocuments: '/custom-root/data/documents',
+      documents: '/custom-root/documents',
+      agents: '/custom-root/agents',
+      logs: '/custom-root/logs',
+      logsDesktop: '/custom-root/logs/desktop',
+      logsDaemon: '/custom-root/logs/daemon',
+      logsTelemetry: '/custom-root/logs/telemetry',
+      system: '/custom-root/system',
+      systemAgents: '/custom-root/system/agents',
+      systemApps: '/custom-root/system/apps',
+      systemCache: '/custom-root/system/cache',
+      systemConfig: '/custom-root/system/config',
+      systemConversations: '/custom-root/system/conversations',
+      systemSessions: '/custom-root/system/conversations/sessions',
+      systemDaemon: '/custom-root/system/daemon',
+      systemElectron: '/custom-root/system/electron',
+      systemElectronUserData: '/custom-root/system/electron/user-data',
+      systemObservability: '/custom-root/system/observability',
+      systemRuntime: '/custom-root/system/runtime',
+      systemSecrets: '/custom-root/system/secrets',
+      systemState: '/custom-root/system/state',
+    };
+
+    resolveRuntimeResourcesMock.mockClear();
+    const state = createRuntimeState({
+      repoRoot: '/repo-root',
+      agentDir: '/agent-dir',
+      settingsFile: '/runtime/settings.json',
+      stateRoot: '/state-root',
+      desktopRootLayout: customDesktopRootLayout,
+      logger: createLogger(),
+    });
+
+    state.materializeRuntimeResources();
+
+    expect(resolveRuntimeResourcesMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        desktopRootLayout: customDesktopRootLayout,
+      }),
+    );
+  });
 });

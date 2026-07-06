@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { AuthStorage, type ExtensionAPI, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { getRuntimeConfigRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
-import { materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
+import { type DesktopRootLayout, materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { ensureNeonPilotCliLauncher, prependNeonPilotCliBin } from '../cliEnvironment.js';
 import { type BashProcessWrapper, clearBashProcessWrappers, registerBashProcessWrapper } from '../conversations/processWrappers.js';
@@ -33,6 +33,7 @@ export interface CreateRuntimeStateOptions {
   settingsFile: string;
   stateRoot: string;
   logger: RuntimeStateLogger;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 export interface RuntimeState {
@@ -74,7 +75,7 @@ export function refreshRegisteredSkillRuntimeResources(input: { runtimeScope?: s
 }
 
 export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeState {
-  const { repoRoot, agentDir, settingsFile, stateRoot, logger } = options;
+  const { repoRoot, agentDir, settingsFile, stateRoot, logger, desktopRootLayout } = options;
   const runtimeScope = DEFAULT_RUNTIME_SCOPE;
   const mcpConfigWatchers: FSWatcher[] = [];
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
@@ -170,6 +171,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries,
+      ...(desktopRootLayout ? { desktopRootLayout } : {}),
     });
     const modelRef = readSavedModelRef(settingsFile);
     const skills = buildSkillInjectionPlan({
@@ -410,6 +412,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries,
+      ...(desktopRootLayout ? { desktopRootLayout } : {}),
     });
     const resourcesAtMs = performance.now();
     materializeRuntimeResourcesToAgentDir(resolved, agentDir);
@@ -483,6 +486,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       const resolved = resolveRuntimeResources(runtimeScope, {
         repoRoot,
         extensionEntries,
+        ...(desktopRootLayout ? { desktopRootLayout } : {}),
       });
       const resourcesAtMs = performance.now();
       materializeRuntimeResourcesToAgentDir(resolved, agentDir);
@@ -542,6 +546,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries: listRuntimeExtensionBackendEntries(),
+      ...(desktopRootLayout ? { desktopRootLayout } : {}),
     });
     const runtimeAgentDir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-runtime-inspect-'));
     materializeRuntimeResourcesToAgentDir(resolved, runtimeAgentDir);
