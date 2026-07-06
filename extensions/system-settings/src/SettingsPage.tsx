@@ -55,7 +55,6 @@ import {
   writeWindowedOsTheme,
 } from '@neon-pilot/extensions/settings';
 import {
-  AppPageLayout,
   Button,
   Checkbox,
   cx,
@@ -66,7 +65,6 @@ import {
   KeyboardShortcutCaptureInput,
   RowButton,
   SearchInput,
-  SegmentedControl,
   Select,
   SidebarRow,
   SidebarSection,
@@ -354,34 +352,6 @@ export function scrollSettingsSectionIntoView(container: HTMLElement | null, sec
   if (container && typeof container.scrollTo === 'function') {
     container.scrollTo({ top: 0 });
   }
-}
-
-function scheduleSettingsSectionScroll(container: HTMLElement | null, sectionId: SettingsQuickLinkId): () => void {
-  if (typeof window === 'undefined') return () => undefined;
-  const timers: Array<ReturnType<typeof window.setTimeout>> = [];
-  let frame: number | null = null;
-  let attempts = 0;
-  const isSectionVisible = () => {
-    const section = document.getElementById(sectionId);
-    if (!section || !container?.contains(section)) return false;
-    const sectionRect = section.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    return sectionRect.top >= containerRect.top - 24 && sectionRect.top <= containerRect.top + 120;
-  };
-  const scroll = () => {
-    attempts += 1;
-    scrollSettingsSectionIntoView(container, sectionId);
-    if (attempts < 16 && !isSectionVisible()) {
-      timers.push(window.setTimeout(scroll, attempts < 6 ? 100 : 300));
-    }
-  };
-  frame = window.requestAnimationFrame(scroll);
-  return () => {
-    if (frame !== null) {
-      window.cancelAnimationFrame(frame);
-    }
-    timers.forEach((timer) => window.clearTimeout(timer));
-  };
 }
 
 type ShortcutListItem = {
@@ -2412,46 +2382,25 @@ function AppSettingsIndex({ items }: { items: readonly SettingsQuickLink[] }) {
 function ExtensionSettingsComponentPanels({
   registrations,
   includeExtensionIds,
-  shellPresentation = 'stable',
 }: {
   registrations: ReturnType<typeof useExtensionRegistry>['settingsComponents'];
   includeExtensionIds?: readonly string[];
-  shellPresentation?: 'stable' | 'windowed';
 }) {
   const includedExtensionIds = includeExtensionIds ? new Set(includeExtensionIds) : null;
   const visibleRegistrations = includedExtensionIds
     ? registrations.filter((registration) => includedExtensionIds.has(registration.extensionId))
     : registrations;
   if (visibleRegistrations.length === 0) return null;
-  if (shellPresentation === 'windowed') {
-    return (
-      <div className="space-y-3 pt-4 settings-page-app-component-stack-windowed">
-        {visibleRegistrations.map((registration) => (
-          <div
-            key={`${registration.extensionId}:${registration.id}`}
-            id={settingsAppAnchorId(registration.extensionId)}
-            className="settings-page-app-component-body settings-page-app-component-body-windowed"
-          >
-            <SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />
-          </div>
-        ))}
-      </div>
-    );
-  }
   return (
-    <div className="space-y-3 pt-4">
+    <div className="space-y-3 pt-4 settings-page-app-component-stack-windowed">
       {visibleRegistrations.map((registration) => (
-        <SettingsGroup
+        <div
           key={`${registration.extensionId}:${registration.id}`}
           id={settingsAppAnchorId(registration.extensionId)}
-          title={registration.label}
-          description={registration.description}
-          className={cx(SETTINGS_PANEL_DENSE_CLASS, 'settings-page-app-components-group')}
+          className="settings-page-app-component-body settings-page-app-component-body-windowed"
         >
-          <div className="settings-page-app-component-body">
-            <SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />
-          </div>
-        </SettingsGroup>
+          <SettingsPanelHost registration={registration} />
+        </div>
       ))}
     </div>
   );
@@ -2761,7 +2710,6 @@ export function SettingsPage({
   const settingsScrollRef = useRef<HTMLDivElement | null>(null);
 
   const { settingsNavLinks, visibleSectionIds } = useSettingsNavigation(sectionIds);
-  const isWindowedSettingsSurface = context?.shellPresentation === 'windowed';
   const initialQuickLinkId = settingsNavLinks[0]?.id ?? SETTINGS_QUICK_LINKS[0].id;
   const visibleTocLinks = useMemo(() => flattenSettingsQuickLinks(settingsNavLinks), [settingsNavLinks]);
   const routeQuickLinkId = readSettingsSectionIdFromContext(context, { pathname: location.pathname, hash: location.hash });
@@ -2771,13 +2719,7 @@ export function SettingsPage({
   const extensionLabels = useMemo(() => {
     return new Map(extensionRegistry.extensions.map((extension) => [extension.id, extension.name]));
   }, [extensionRegistry.extensions]);
-  const effectiveActiveQuickLinkId = isWindowedSettingsSurface
-    ? visibleTocLinks.some((item) => item.id === activeQuickLinkId)
-      ? activeQuickLinkId
-      : routeQuickLinkId
-    : visibleTocLinks.some((item) => item.id === routeQuickLinkId)
-      ? routeQuickLinkId
-      : activeQuickLinkId;
+  const effectiveActiveQuickLinkId = visibleTocLinks.some((item) => item.id === activeQuickLinkId) ? activeQuickLinkId : routeQuickLinkId;
   const activeRootSectionId = useMemo<SettingsQuickLinkId>(() => {
     for (const item of settingsNavLinks) {
       if (item.id === effectiveActiveQuickLinkId || item.children?.some((child) => child.id === effectiveActiveQuickLinkId)) {
@@ -2793,8 +2735,8 @@ export function SettingsPage({
     return visibleTocLinks.find((item) => item.id === effectiveActiveQuickLinkId && item.extensionId) ?? null;
   }, [effectiveActiveQuickLinkId, activeRootSectionId, visibleTocLinks]);
   const renderedSectionIds = useMemo(
-    () => visibleSectionIds ?? (routeQuickLinkId || isWindowedSettingsSurface ? new Set<SettingsQuickLinkId>([activeRootSectionId]) : null),
-    [activeRootSectionId, isWindowedSettingsSurface, routeQuickLinkId, visibleSectionIds],
+    () => visibleSectionIds ?? new Set<SettingsQuickLinkId>([activeRootSectionId]),
+    [activeRootSectionId, visibleSectionIds],
   );
 
   useEffect(() => {
@@ -2802,14 +2744,10 @@ export function SettingsPage({
     const sectionId = visibleTocLinks.some((item) => item.id === rawSectionId) ? rawSectionId : '';
     if (!sectionId) return;
     setActiveQuickLinkId(sectionId);
-    if (isWindowedSettingsSurface) {
-      if (typeof settingsScrollRef.current?.scrollTo === 'function') {
-        settingsScrollRef.current.scrollTo({ top: 0 });
-      }
-      return undefined;
+    if (typeof settingsScrollRef.current?.scrollTo === 'function') {
+      settingsScrollRef.current.scrollTo({ top: 0 });
     }
-    return scheduleSettingsSectionScroll(settingsScrollRef.current, sectionId);
-  }, [context, isWindowedSettingsSurface, location.hash, location.pathname, visibleTocLinks]);
+  }, [context, location.hash, location.pathname, visibleTocLinks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2832,14 +2770,13 @@ export function SettingsPage({
   }, []);
 
   useEffect(() => {
-    if (!isWindowedSettingsSurface) return undefined;
     const handleWindowedThemeChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ theme?: WindowedOsTheme }>;
       setWindowedOsTheme(customEvent.detail?.theme ?? readWindowedOsTheme());
     };
     window.addEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, handleWindowedThemeChange);
     return () => window.removeEventListener(WINDOWED_OS_THEME_CHANGED_EVENT, handleWindowedThemeChange);
-  }, [isWindowedSettingsSurface]);
+  }, []);
 
   useEffect(() => {
     if (visibleTocLinks.some((item) => item.id === activeQuickLinkId)) {
@@ -3881,18 +3818,14 @@ export function SettingsPage({
 
   function focusSettingsSection(item: SettingsQuickLink) {
     setActiveQuickLinkId(item.id);
-    if (isWindowedSettingsSurface) {
-      if (typeof settingsScrollRef.current?.scrollTo === 'function') {
-        settingsScrollRef.current.scrollTo({ top: 0 });
-      }
-      const route = settingsQuickLinkRoute(item);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent(DESKTOP_NAVIGATE_EVENT, { detail: { route } }));
-      }
-      navigate(route);
-      return;
+    if (typeof settingsScrollRef.current?.scrollTo === 'function') {
+      settingsScrollRef.current.scrollTo({ top: 0 });
     }
-    scheduleSettingsSectionScroll(settingsScrollRef.current, item.id);
+    const route = settingsQuickLinkRoute(item);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(DESKTOP_NAVIGATE_EVENT, { detail: { route } }));
+    }
+    navigate(route);
   }
 
   const settingsSections = (
@@ -3904,30 +3837,17 @@ export function SettingsPage({
               title="Mode"
               description={availableThemes.find((availableTheme) => availableTheme.id === theme)?.label ?? theme}
             >
-              {isWindowedSettingsSurface ? (
-                <WindowedSegmentedControl
-                  ariaLabel="Theme mode selection"
-                  accent="settings"
-                  value={themePreference}
-                  onChange={setThemePreference}
-                  options={[
-                    { id: 'system', label: 'Auto' },
-                    { id: 'light', label: 'Light' },
-                    { id: 'dark', label: 'Dark' },
-                  ]}
-                />
-              ) : (
-                <SegmentedControl
-                  ariaLabel="Theme mode selection"
-                  value={themePreference}
-                  onChange={setThemePreference}
-                  options={[
-                    { value: 'system', label: 'Auto' },
-                    { value: 'light', label: 'Light' },
-                    { value: 'dark', label: 'Dark' },
-                  ]}
-                />
-              )}
+              <WindowedSegmentedControl
+                ariaLabel="Theme mode selection"
+                accent="settings"
+                value={themePreference}
+                onChange={setThemePreference}
+                options={[
+                  { id: 'system', label: 'Auto' },
+                  { id: 'light', label: 'Light' },
+                  { id: 'dark', label: 'Dark' },
+                ]}
+              />
             </SettingsControlRow>
             <SettingsControlRow title="Light default">
               <Select
@@ -3985,21 +3905,19 @@ export function SettingsPage({
                 })}
               </div>
             </SettingsControlRow>
-            {isWindowedSettingsSurface ? (
-              <SettingsControlRow title="Windowed OS" description="Desktop window chrome">
-                <WindowedSegmentedControl
-                  ariaLabel="Windowed OS theme"
-                  accent="settings"
-                  value={windowedOsTheme}
-                  onChange={(value) => {
-                    const nextTheme: WindowedOsTheme = value === 'dark' || value === 'auto' ? value : 'light';
-                    setWindowedOsTheme(nextTheme);
-                    writeWindowedOsTheme(nextTheme);
-                  }}
-                  options={WINDOWED_OS_THEME_OPTIONS}
-                />
-              </SettingsControlRow>
-            ) : null}
+            <SettingsControlRow title="Windowed OS" description="Desktop window chrome">
+              <WindowedSegmentedControl
+                ariaLabel="Windowed OS theme"
+                accent="settings"
+                value={windowedOsTheme}
+                onChange={(value) => {
+                  const nextTheme: WindowedOsTheme = value === 'dark' || value === 'auto' ? value : 'light';
+                  setWindowedOsTheme(nextTheme);
+                  writeWindowedOsTheme(nextTheme);
+                }}
+                options={WINDOWED_OS_THEME_OPTIONS}
+              />
+            </SettingsControlRow>
           </SettingsGroup>
         </SettingsSection>
 
@@ -4191,16 +4109,12 @@ export function SettingsPage({
               <ExtensionSettingsComponentPanels
                 registrations={extensionRegistry.settingsComponents}
                 includeExtensionIds={[activeAppSettingsLink.extensionId]}
-                shellPresentation={context?.shellPresentation}
               />
             </>
           ) : (
             <>
               <ExtensionSettingsSection excludeExtensionIds={['system-settings']} groupByExtension extensionLabels={extensionLabels} />
-              <ExtensionSettingsComponentPanels
-                registrations={extensionRegistry.settingsComponents}
-                shellPresentation={context?.shellPresentation}
-              />
+              <ExtensionSettingsComponentPanels registrations={extensionRegistry.settingsComponents} />
               <AppSettingsIndex items={settingsNavLinks} />
             </>
           )}
@@ -5186,7 +5100,7 @@ export function SettingsPage({
     </div>
   );
 
-  const settingsContent = isWindowedSettingsSurface ? (
+  const settingsContent = (
     <WindowedPageShell layout="two-column" className="settings-page-windowed">
       <WindowedPageRail title="Sections" accent="settings" showHeader={false} className="settings-page-windowed-nav">
         <WindowedList>
@@ -5227,18 +5141,12 @@ export function SettingsPage({
         </div>
       </WindowedPageMain>
     </WindowedPageShell>
-  ) : (
-    <div ref={settingsScrollRef} className="h-full overflow-y-auto">
-      <AppPageLayout shellClassName="settings-page-shell" contentClassName="settings-page-main">
-        {settingsSections}
-      </AppPageLayout>
-    </div>
   );
 
   return (
     <VisibleSettingsSectionsContext.Provider value={renderedSectionIds}>
-      <HideSettingsSectionHeadingsContext.Provider value={isWindowedSettingsSurface}>
-        <WindowedSettingsChromeContext.Provider value={isWindowedSettingsSurface}>{settingsContent}</WindowedSettingsChromeContext.Provider>
+      <HideSettingsSectionHeadingsContext.Provider value={true}>
+        <WindowedSettingsChromeContext.Provider value={true}>{settingsContent}</WindowedSettingsChromeContext.Provider>
       </HideSettingsSectionHeadingsContext.Provider>
     </VisibleSettingsSectionsContext.Provider>
   );

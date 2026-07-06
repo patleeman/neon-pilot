@@ -425,12 +425,12 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Command palette actions and keyboard shortcuts');
   });
 
-  it('does not show the isolated windowed OS theme control in stable settings', () => {
+  it('shows the desktop theme control in routed settings', () => {
     const html = renderPage('/settings', ['settings-appearance']);
 
     expect(html).toContain('Theme mode selection');
-    expect(html).not.toContain('Windowed OS');
-    expect(html).not.toContain('aria-label="Windowed OS theme"');
+    expect(html).toContain('Windowed OS');
+    expect(html).toContain('aria-label="Windowed OS theme"');
   });
 
   it('keeps the windowed settings rail on the shared list-row grammar', () => {
@@ -463,11 +463,12 @@ describe('SettingsPage', () => {
   it('keeps windowed extension settings panels out of nested settings groups', () => {
     const source = readFileSync(systemSettingsSourcePath('SettingsPage.tsx'), 'utf8');
 
-    expect(source).toContain("if (shellPresentation === 'windowed') {");
     expect(source).toContain('settings-page-app-settings-stack-windowed');
     expect(source).toContain('settings-page-app-component-stack-windowed');
     expect(source).toContain('settings-page-app-component-body-windowed');
-    expect(source).toContain('<SettingsPanelHost registration={registration} shellPresentation={shellPresentation} />');
+    expect(source).toContain('<SettingsPanelHost registration={registration} />');
+    expect(source).not.toContain("if (shellPresentation === 'windowed') {");
+    expect(source).not.toContain('shellPresentation={shellPresentation}');
   });
 
   it('right-aligns appearance accent choices within the settings action column', () => {

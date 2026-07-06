@@ -1,7 +1,6 @@
 import './frontend.css';
 
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions/ui';
-import { useEffect } from 'react';
 
 import { SettingsPage, SettingsSidebar } from './SettingsPage';
 
@@ -16,16 +15,6 @@ type SettingsSectionId =
   | 'settings-desktop';
 
 function SettingsSectionPage({ sectionIds, context }: ExtensionSurfaceProps & { sectionIds: SettingsSectionId[] }) {
-  useEffect(() => {
-    if (context?.shellPresentation === 'windowed') return;
-    window.requestAnimationFrame(() => {
-      const section = document.getElementById(sectionIds[0]);
-      if (typeof section?.scrollIntoView === 'function') {
-        section.scrollIntoView({ block: 'start' });
-      }
-    });
-  }, [context?.shellPresentation, sectionIds]);
-
   return <SettingsPage sectionIds={sectionIds} context={context} />;
 }
 
