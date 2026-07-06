@@ -71,7 +71,6 @@ const BUILT_IN_API_KEY_PROVIDERS: string[] = [
   'cerebras',
   'xai',
   'openrouter',
-  'vercel-ai-gateway',
   'zai',
   'opencode',
   'opencode-go',

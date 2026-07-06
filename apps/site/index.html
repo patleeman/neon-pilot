@@ -304,8 +304,8 @@
         aggregators: {
           name: 'Aggregators',
           tag: 'gateway',
-          note: 'One key fronts many vendors through OpenRouter, Vercel AI Gateway, or Cloudflare AI Gateway.',
-          connect: ['OpenRouter', 'Vercel AI Gateway', 'Cloudflare'],
+          note: 'One key fronts many vendors through OpenRouter or Cloudflare AI Gateway.',
+          connect: ['OpenRouter', 'Cloudflare'],
           command: 'neon-pilot bootstrap provider set-key openrouter',
           store: 'Gateway keys live in your local auth file alongside every other provider.',
         },

@@ -36,7 +36,6 @@ const MODEL_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   opencode: 'OpenCode',
   'opencode-go': 'OpenCode Gateway',
   openrouter: 'OpenRouter',
-  'vercel-ai-gateway': 'Vercel AI Gateway',
   xai: 'xAI',
   zai: 'ZAI',
 };

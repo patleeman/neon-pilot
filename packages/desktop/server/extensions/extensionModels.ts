@@ -28,7 +28,6 @@ const PROVIDERS_REQUIRING_CREDENTIAL = new Set([
   'openai',
   'openai-codex',
   'openrouter',
-  'vercel-ai-gateway',
   'xai',
   'zai',
 ]);
