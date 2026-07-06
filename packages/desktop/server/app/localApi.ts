@@ -11,7 +11,7 @@ const DESKTOP_SCHEDULED_TASK_PROFILE = 'shared';
 const DESKTOP_FORK_BOOTSTRAP_TAIL_BLOCKS = 24;
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getStateRoot, saveConversationCommitCheckpoint } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getStateRoot, resolveDesktopRootLayout, saveConversationCommitCheckpoint } from '@neon-pilot/core';
 import { ensureAutomationThread } from '@neon-pilot/daemon';
 import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
@@ -845,7 +845,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     materializeWebRuntimeConfig: () => runtimeState.materializeRuntimeResources(),
     getStateRoot: () => stateRoot,
     serverPort: 0,
-    getDefaultWebCwd: () => process.cwd(),
+    getDefaultWebCwd: () => resolveDesktopRootLayout().root,
     resolveRequestedCwd,
     buildLiveSessionResourceOptions: runtimeState.buildLiveSessionResourceOptions,
     buildLiveSessionResourceOptionsAsync: runtimeState.buildLiveSessionResourceOptionsAsync,
@@ -2375,13 +2375,14 @@ export async function updateDesktopModelPreferences(input: {
 
 export async function readDesktopDefaultCwd() {
   const context = await getLocalServerRouteContext();
-  return readSavedDefaultCwdPreferences(context.getSettingsFile(), process.cwd());
+  return readSavedDefaultCwdPreferences(context.getSettingsFile(), context.getDesktopRootLayout().root);
 }
 
 export async function updateDesktopDefaultCwd(cwd: string | null) {
   const context = await getLocalServerRouteContext();
   const state = persistSettingsWrite(
-    (settingsFile) => writeSavedDefaultCwdPreference({ cwd }, settingsFile, { baseDir: process.cwd(), validate: true }),
+    (settingsFile) =>
+      writeSavedDefaultCwdPreference({ cwd }, settingsFile, { baseDir: context.getDesktopRootLayout().root, validate: true }),
     {
       runtimeSettingsFile: context.getSettingsFile(),
     },

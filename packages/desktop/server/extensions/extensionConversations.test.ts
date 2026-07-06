@@ -261,6 +261,27 @@ describe('extensionConversations', () => {
     expect(result).toEqual({ id: 'conv-1', conversationId: 'conv-1' });
   });
 
+  it('uses the default web cwd when creating a live conversation without an explicit cwd', async () => {
+    live.createSession.mockResolvedValue({ id: 'conv-1' });
+    const entry = liveEntry({ cwd: '/desktop-root' });
+    live.registry.set('conv-1', entry);
+
+    await expect(
+      createExtensionConversationsCapability({
+        getRuntimeScope: () => 'shared',
+        getDefaultWebCwd: () => '/desktop-root',
+      }).create({ title: 'Desktop Root Conversation' }),
+    ).resolves.toEqual({ id: 'conv-1', conversationId: 'conv-1' });
+
+    expect(live.createSession).toHaveBeenCalledWith('/desktop-root', {});
+    expect(entry.session.setSessionName).toHaveBeenCalledWith('Desktop Root Conversation');
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.created',
+      conversationId: 'conv-1',
+      cwd: '/desktop-root',
+    });
+  });
+
   it('adds conversations created through extensions to the persisted workspace so sidebars refresh', async () => {
     live.createSession.mockResolvedValue({ id: 'conv-created' });
     live.registry.set('conv-created', liveEntry());
@@ -451,6 +472,26 @@ describe('extensionConversations', () => {
       type: 'session.created',
       conversationId: 'reserved-1',
       cwd: '/repo',
+    });
+  });
+
+  it('uses the default web cwd when reserving a non-live conversation without an explicit cwd', async () => {
+    const capability = createExtensionConversationsCapability({
+      getRuntimeScope: () => 'shared',
+      getDefaultWebCwd: () => '/desktop-root',
+    });
+
+    await expect(capability.create({ title: 'Welcome', live: false })).resolves.toEqual({
+      id: 'reserved-1',
+      conversationId: 'reserved-1',
+    });
+
+    expect(live.createSession).not.toHaveBeenCalled();
+    expect(reservation.reserveConversationSession).toHaveBeenCalledWith({ cwd: '/desktop-root', profile: 'shared' });
+    expect(subscriptions.publishExtensionHostEvent).toHaveBeenCalledWith('conversationSessions', {
+      type: 'session.created',
+      conversationId: 'reserved-1',
+      cwd: '/desktop-root',
     });
   });
 
