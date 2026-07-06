@@ -71,6 +71,12 @@ vi.mock('../routes/system.js', () => ({
   buildSnapshotEventsForTopic: buildSnapshotEventsForTopicMock,
 }));
 
+import { acknowledgeDesktopControlCommand, issueDesktopControlCommand, resetDesktopControlForTests } from './localApiDesktopControl.js';
+import {
+  acknowledgeDesktopScreenshotRequest,
+  issueDesktopScreenshotRequest,
+  resetDesktopScreenshotForTests,
+} from './localApiDesktopScreenshot.js';
 import { subscribeDesktopLocalApiStreamByUrl } from './localApiStreams.js';
 
 describe('localApiStreams', () => {
@@ -80,6 +86,8 @@ describe('localApiStreams', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetDesktopControlForTests();
+    resetDesktopScreenshotForTests();
     existsSyncMock.mockReturnValue(false);
     extensionHostClientMock.invokeRoute.mockReset();
     buildSnapshotEventsForTopicMock.mockResolvedValue([]);
@@ -167,6 +175,63 @@ describe('localApiStreams', () => {
       subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/live-sessions/session-1/events?tailBlocks=20'), vi.fn()),
     ).rejects.toThrow('No local API stream for /api/live-sessions/session-1/events');
     expect(subscribeLiveSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('streams pending desktop control commands through the local API stream bridge', async () => {
+    const pending = issueDesktopControlCommand({ action: 'focus', windowId: 'chat:draft', timeoutMs: 500 });
+    const events: unknown[] = [];
+
+    const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/desktop/control/events'), (event) =>
+      events.push(event),
+    );
+
+    expect(events[0]).toEqual({ type: 'open' });
+    expect(events[1]).toMatchObject({ type: 'message' });
+    const command = JSON.parse((events[1] as { data: string }).data) as { id: string; action: string; windowId: string };
+    expect(command).toEqual(
+      expect.objectContaining({
+        id: expect.stringMatching(/^desktop-control-/),
+        action: 'focus',
+        windowId: 'chat:draft',
+      }),
+    );
+
+    acknowledgeDesktopControlCommand({ commandId: command.id, ok: true });
+    unsubscribe();
+    await expect(pending).resolves.toMatchObject({ ok: true, commandId: command.id, status: 'completed' });
+  });
+
+  it('streams pending desktop screenshot requests through the local API stream bridge', async () => {
+    const pending = issueDesktopScreenshotRequest({ windowId: 'chat:draft', timeoutMs: 500 });
+    const events: unknown[] = [];
+
+    const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/desktop/screenshot/events'), (event) =>
+      events.push(event),
+    );
+
+    expect(events[0]).toEqual({ type: 'open' });
+    expect(events[1]).toMatchObject({ type: 'message' });
+    const request = JSON.parse((events[1] as { data: string }).data) as { id: string; windowId: string };
+    expect(request).toEqual(
+      expect.objectContaining({
+        id: expect.stringMatching(/^desktop-screenshot-/),
+        windowId: 'chat:draft',
+      }),
+    );
+
+    acknowledgeDesktopScreenshotRequest({
+      requestId: request.id,
+      ok: true,
+      image: {
+        mimeType: 'image/png',
+        data: Buffer.from('png-bytes').toString('base64'),
+        width: 320,
+        height: 200,
+        capturedAt: '2026-07-06T00:00:00.000Z',
+      },
+    });
+    unsubscribe();
+    await expect(pending).resolves.toMatchObject({ ok: true, requestId: request.id, status: 'completed' });
   });
 
   it('stops desktop run stream polling after a terminal snapshot grace period', async () => {
