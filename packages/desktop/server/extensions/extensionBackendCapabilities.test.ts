@@ -42,6 +42,17 @@ const terminalSessions = vi.hoisted(() => ({
   streamTerminalSession: vi.fn(),
   writeTerminalSession: vi.fn(),
 }));
+const agentApi = vi.hoisted(() => ({
+  createAgentConversation: vi.fn(async () => ({ conversationId: 'agent-conv-1' })),
+  sendAgentMessage: vi.fn(async () => ({ ok: true })),
+  runAgentTask: vi.fn(async () => ({ ok: true, result: 'task done' })),
+  getAgentConversation: vi.fn(async () => ({ conversationId: 'agent-conv-1' })),
+  listAgentConversations: vi.fn(async () => [{ conversationId: 'agent-conv-1' }]),
+  abortAgentConversation: vi.fn(async () => ({ ok: true })),
+  disposeAgentConversation: vi.fn(async () => ({ ok: true })),
+  streamAgentMessage: vi.fn(async () => ({ events: [] })),
+}));
+
 const workbenchBrowserToolHost = vi.hoisted(() => ({
   cdp: vi.fn(async () => ({ ok: true })),
   isActive: vi.fn(async () => true),
@@ -61,6 +72,7 @@ vi.mock('./terminalSessions.js', () => terminalSessions);
 vi.mock('./workbenchBrowserToolHost.js', () => ({
   getWorkbenchBrowserToolHost: vi.fn(() => workbenchBrowserToolHost),
 }));
+vi.mock('./backendApi/agent.js', () => agentApi);
 
 describe('extension backend capability dispatcher', () => {
   beforeEach(() => {
@@ -85,6 +97,14 @@ describe('extension backend capability dispatcher', () => {
         ],
       },
     });
+    agentApi.createAgentConversation.mockClear();
+    agentApi.sendAgentMessage.mockClear();
+    agentApi.runAgentTask.mockClear();
+    agentApi.getAgentConversation.mockClear();
+    agentApi.listAgentConversations.mockClear();
+    agentApi.abortAgentConversation.mockClear();
+    agentApi.disposeAgentConversation.mockClear();
+    agentApi.streamAgentMessage.mockClear();
   });
 
   it('dispatches extension-scoped live conversation capability calls', async () => {
@@ -2636,5 +2656,140 @@ describe('extension backend capability dispatcher', () => {
       }),
     ).rejects.toThrow('requires permission mcp:write');
     expect(runtime.refreshSkillMcpConfig).not.toHaveBeenCalled();
+  });
+
+  it('permits agent conversation operations with agent:conversations and agent task runs with agent:run', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['agent:conversations', 'agent:run'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'agent',
+          operation: 'createConversation',
+          input: { input: { title: 'Test', visibility: 'hidden', persistence: 'ephemeral' } },
+        }),
+      ),
+    ).resolves.toEqual({ conversationId: 'agent-conv-1' });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'agent',
+          operation: 'runTask',
+          input: { input: { cwd: '/repo', prompt: 'Do something' } },
+        }),
+      ),
+    ).resolves.toEqual({ ok: true, result: 'task done' });
+
+    expect(agentApi.createAgentConversation).toHaveBeenCalled();
+    expect(agentApi.runAgentTask).toHaveBeenCalled();
+  });
+
+  it('denies agent operations without required agent permissions', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'createConversation',
+        input: { input: { title: 'Test' } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.createConversation.');
+    expect(agentApi.createAgentConversation).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'runTask',
+        input: { input: { cwd: '/repo', prompt: 'Do something' } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:run to use agent.runTask.');
+    expect(agentApi.runAgentTask).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 3,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'sendMessage',
+        input: { input: { conversationId: 'agent-conv-1', text: 'Hello' } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.sendMessage.');
+    expect(agentApi.sendAgentMessage).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 4,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'disposeConversation',
+        input: { input: { conversationId: 'agent-conv-1' } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.disposeConversation.');
+    expect(agentApi.disposeAgentConversation).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 5,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'getConversation',
+        input: { input: { conversationId: 'agent-conv-1' } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.getConversation.');
+    expect(agentApi.getAgentConversation).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 6,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'listConversations',
+        input: { input: {} },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.listConversations.');
+    expect(agentApi.listAgentConversations).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 7,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'abortConversation',
+        input: { input: { conversationId: 'agent-conv-1' } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.abortConversation.');
+    expect(agentApi.abortAgentConversation).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 8,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'agent',
+        operation: 'streamMessage',
+        input: { handleId: 'handle-1', input: { conversationId: 'agent-conv-1', text: 'Hello' } },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.streamMessage.');
+    expect(agentApi.streamAgentMessage).not.toHaveBeenCalled();
   });
 });

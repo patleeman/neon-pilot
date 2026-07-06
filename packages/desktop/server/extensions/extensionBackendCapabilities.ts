@@ -774,6 +774,21 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     return request.operation === 'refreshSkillMcpConfig' ? ['mcp:write'] : [];
   }
 
+  if (request.capability === 'agent') {
+    const conversationOperations = [
+      'createConversation',
+      'sendMessage',
+      'streamMessage',
+      'disposeConversation',
+      'getConversation',
+      'listConversations',
+      'abortConversation',
+    ];
+    if (request.operation === 'runTask') return ['agent:run'];
+    if (conversationOperations.includes(request.operation)) return ['agent:conversations'];
+    return [];
+  }
+
   return [];
 }
 

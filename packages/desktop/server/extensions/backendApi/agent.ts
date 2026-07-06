@@ -647,6 +647,13 @@ export async function createAgentConversation(
   if (bridge) return bridge('agent', 'createConversation', { input }) as Promise<ExtensionAgentConversationSummary>;
 
   await assertPermission(ctx, 'agent:conversations');
+  return createAgentConversationInternal(input, ctx);
+}
+
+async function createAgentConversationInternal(
+  input: ExtensionAgentConversationCreateInput,
+  ctx: ExtensionBackendContextLike,
+): Promise<ExtensionAgentConversationSummary> {
   const owner = ownerExtensionId(ctx);
   const mode = validateConversationMode(input);
   const now = new Date().toISOString();
@@ -748,6 +755,13 @@ export async function sendAgentMessage(
   if (bridge) return bridge('agent', 'sendMessage', { input }) as Promise<ExtensionAgentConversationMessageResult>;
 
   await assertPermission(ctx, 'agent:conversations');
+  return sendAgentMessageInternal(input, ctx);
+}
+
+async function sendAgentMessageInternal(
+  input: ExtensionAgentConversationSendInput,
+  ctx: ExtensionBackendContextLike,
+): Promise<ExtensionAgentConversationMessageResult> {
   const record = getOwnedRecord(input.conversationId, ctx);
   if (record.isBusy) throw new Error(`Agent conversation is already busy: ${input.conversationId}`);
   const text = typeof input.text === 'string' ? input.text.trim() : '';
@@ -1016,6 +1030,10 @@ export async function disposeAgentConversation(input: { conversationId: string }
   if (bridge) return bridge('agent', 'disposeConversation', { input });
 
   await assertPermission(ctx, 'agent:conversations');
+  return disposeAgentConversationInternal(input, ctx);
+}
+
+function disposeAgentConversationInternal(input: { conversationId: string }, ctx: ExtensionBackendContextLike) {
   const record = getOwnedRecord(input.conversationId, ctx);
   disposeRecord(record);
   conversations.delete(record.id);
@@ -1038,7 +1056,7 @@ export async function runAgentTask(
     throw new Error('Extension agent tasks cannot combine tools="none" with allowedToolNames.');
   if (input.allowedToolNames && input.allowedToolNames.length > 0) {
     const allowedToolNames = new Set(input.allowedToolNames);
-    const conversation = await createAgentConversation(
+    const conversation = await createAgentConversationInternal(
       {
         title: 'Extension agent task',
         cwd: input.cwd,
@@ -1052,7 +1070,7 @@ export async function runAgentTask(
       ctx,
     );
     try {
-      let result = await sendAgentMessage(
+      let result = await sendAgentMessageInternal(
         { conversationId: conversation.id, text: prompt, images: input.images, timeoutMs: input.timeoutMs },
         ctx,
       );
@@ -1079,7 +1097,7 @@ export async function runAgentTask(
         if (isRecord(toolResult) && toolResult.terminate === true) {
           return { text: toolResultText(toolResult), model: result.model, provider: result.provider };
         }
-        result = await sendAgentMessage(
+        result = await sendAgentMessageInternal(
           {
             conversationId: conversation.id,
             text: [
@@ -1095,7 +1113,7 @@ export async function runAgentTask(
       }
       return { text: result.text, model: result.model, provider: result.provider };
     } finally {
-      await disposeAgentConversation({ conversationId: conversation.id }, ctx).catch(() => undefined);
+      await Promise.resolve(disposeAgentConversationInternal({ conversationId: conversation.id }, ctx)).catch(() => undefined);
     }
   }
   const created = await createSession({ ...input, title: 'Extension agent task', visibility: 'hidden', persistence: 'ephemeral' }, ctx);

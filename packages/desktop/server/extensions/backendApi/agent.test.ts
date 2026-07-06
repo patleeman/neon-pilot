@@ -224,6 +224,27 @@ describe('extension agent backend API', () => {
     ]);
   });
 
+  it('runs allowlisted hidden agent tasks with agent:run alone', async () => {
+    installImporter({ permissions: ['agent:run'] });
+    serverModuleMocks.liveResponses = ['done'];
+
+    await expect(
+      runAgentTask(
+        {
+          prompt: 'Review',
+          modelRef: 'ds4/deepseek-v4-flash',
+          allowedToolNames: ['writing_studio_get_canvas'],
+        },
+        createCtx({ extensionId: 'system-writing-studio' }),
+      ),
+    ).resolves.toMatchObject({ text: 'done' });
+
+    expect(serverModuleMocks.liveCreated).toEqual([
+      { cwd: '/workspace', options: { initialModel: 'ds4/deepseek-v4-flash', allowedToolNames: ['writing_studio_get_canvas'] } },
+    ]);
+    expect(serverModuleMocks.liveDestroyed).toEqual(['live-1']);
+  });
+
   it('executes raw FunctionCalls invoke text for allowlisted hidden agent tasks', async () => {
     installImporter();
     serverModuleMocks.liveResponses = [
