@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 
+import { readMachineConfig, resolveDesktopRootLayout } from '@neon-pilot/core';
 import { app, dialog, shell } from 'electron';
 
 import { applyDesktopAboutPanelOptions } from './about.js';
@@ -149,6 +150,12 @@ if (desktopLaunchPresentation.mode === 'rc' && !process.env.NEON_PILOT_RUNTIME_C
 const desktopUserDataDir = process.env.NEON_PILOT_DESKTOP_USER_DATA_DIR?.trim();
 if (desktopUserDataDir) {
   app.setPath('userData', resolve(desktopUserDataDir));
+} else {
+  const { desktopRoot } = readMachineConfig();
+  if (desktopRoot) {
+    const layout = resolveDesktopRootLayout({ root: desktopRoot });
+    app.setPath('userData', layout.systemElectronUserData);
+  }
 }
 
 const hasDesktopSingleInstanceLock = claimDesktopSingleInstance(app, (_event, argv) => {
