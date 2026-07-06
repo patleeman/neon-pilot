@@ -11,8 +11,10 @@ import {
   markConversationAttentionUnread,
   mergeConversationAttentionStateDocuments,
   resolveConversationAttentionStatePath,
+  resolveConversationAttentionStatePathFromLayout,
   summarizeConversationAttention,
 } from './conversation-attention.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -27,6 +29,13 @@ function createTempStateRoot(): string {
 }
 
 describe('conversation attention storage', () => {
+  it('resolves the profile-scoped attention state path from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+    expect(resolveConversationAttentionStatePathFromLayout(layout as DesktopRootLayout, 'assistant')).toBe(
+      '/custom/root/system/state/pi-agent/state/conversation-attention/assistant.json',
+    );
+  });
+
   it('resolves the profile-scoped attention state path', () => {
     const stateRoot = createTempStateRoot();
     expect(resolveConversationAttentionStatePath({ stateRoot, profile: 'assistant' })).toBe(

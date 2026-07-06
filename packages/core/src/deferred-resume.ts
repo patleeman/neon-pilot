@@ -1,6 +1,7 @@
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 export const DEFERRED_RESUME_STATE_FILE_NAME = 'deferred-resumes-state.json';
@@ -376,6 +377,10 @@ export function createEmptyDeferredResumeState(): DeferredResumeStateFile {
 
 export function resolveDeferredResumeStateFile(stateRoot = getStateRoot()): string {
   return join(stateRoot, 'pi-agent', DEFERRED_RESUME_STATE_FILE_NAME);
+}
+
+export function resolveDeferredResumeStateFileFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.systemState, 'pi-agent', DEFERRED_RESUME_STATE_FILE_NAME);
 }
 
 export function loadDeferredResumeState(path = resolveDeferredResumeStateFile()): DeferredResumeStateFile {

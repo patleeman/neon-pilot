@@ -15,11 +15,14 @@ import {
   parseDeferredResumeDelayMs,
   readSessionConversationId,
   removeDeferredResume,
+  resolveDeferredResumeStateFile,
+  resolveDeferredResumeStateFileFromLayout,
   retryDeferredResume,
   saveDeferredResumeState,
   scheduleDeferredResume,
   withDeferredResumeLock,
 } from './deferred-resume.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 const tempDirs: string[] = [];
 
@@ -34,6 +37,16 @@ function createTempDir(prefix: string): string {
 }
 
 describe('deferred resume state', () => {
+  it('resolves the deferred resume state file path from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+    expect(resolveDeferredResumeStateFileFromLayout(layout as DesktopRootLayout)).toBe(
+      '/custom/root/system/state/pi-agent/deferred-resumes-state.json',
+    );
+  });
+
+  it('resolves the deferred resume state file path', () => {
+    expect(resolveDeferredResumeStateFile('/state')).toBe('/state/pi-agent/deferred-resumes-state.json');
+  });
   it('parses supported deferred resume delay strings', () => {
     expect(parseDeferredResumeDelayMs('30s')).toBe(30_000);
     expect(parseDeferredResumeDelayMs('10m')).toBe(600_000);

@@ -1,5 +1,6 @@
 import { dirname } from 'node:path';
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -19,8 +20,10 @@ const {
   logWarnMock,
   readKnownSessionIdByFilePathMock,
   readdirSyncMock,
+  resolveConversationAttentionStatePathFromLayoutMock,
   resolveConversationAttentionStatePathMock,
   resolveDaemonPathsMock,
+  resolveDeferredResumeStateFileFromLayoutMock,
   resolveDeferredResumeStateFileMock,
   resolveDurableRunsRootMock,
   resolveProfileActivityConversationLinksDirMock,
@@ -99,8 +102,12 @@ const {
     logWarnMock: vi.fn(),
     readKnownSessionIdByFilePathMock: vi.fn((filePath: string) => (filePath.includes('conv-1') ? ' conv-1 ' : undefined)),
     readdirSyncMock,
+    resolveConversationAttentionStatePathFromLayoutMock: vi.fn(
+      (_layout: { systemState: string }, profile: string) => `/layout-attention/${profile}.json`,
+    ),
     resolveConversationAttentionStatePathMock: vi.fn(({ profile }: { profile: string }) => `/attention/${profile}.json`),
     resolveDaemonPathsMock: vi.fn(() => ({ root: '/daemon-root', socketPath: '/daemon/socket.sock' })),
+    resolveDeferredResumeStateFileFromLayoutMock: vi.fn((_layout: { systemState: string }) => '/layout/deferred.json'),
     resolveDeferredResumeStateFileMock: vi.fn(() => '/state/deferred.json'),
     resolveDurableRunsRootMock: vi.fn(() => '/runs'),
     resolveProfileActivityConversationLinksDirMock: vi.fn(
@@ -149,7 +156,9 @@ vi.mock('@neon-pilot/core', () => ({
   getPiAgentRuntimeDir: getPiAgentRuntimeDirMock,
   getStateRoot: getStateRootMock,
   resolveConversationAttentionStatePath: resolveConversationAttentionStatePathMock,
+  resolveConversationAttentionStatePathFromLayout: resolveConversationAttentionStatePathFromLayoutMock,
   resolveDeferredResumeStateFile: resolveDeferredResumeStateFileMock,
+  resolveDeferredResumeStateFileFromLayout: resolveDeferredResumeStateFileFromLayoutMock,
   resolveProfileAlertsStateFile: resolveProfileAlertsStateFileMock,
   resolveProfileAlertsStateFileFromLayout: resolveProfileAlertsStateFileFromLayoutMock,
   resolveProfileConversationArtifactsDir: resolveProfileConversationArtifactsDirMock,
@@ -229,6 +238,8 @@ function seedBaseFs(): void {
   markDirectory('/layout-artifacts/assistant');
   markDirectory('/layout-attachments/assistant');
   markDirectory('/layout-commit-checkpoints/assistant');
+  markFile('/layout-attention/assistant.json');
+  markFile('/layout/deferred.json');
   markFile('/layout-alerts/assistant.json');
   markFile('/config/profile.json');
 }
@@ -258,8 +269,10 @@ describe('appEvents mocked behavior', () => {
     logWarnMock.mockReset();
     readKnownSessionIdByFilePathMock.mockClear();
     readdirSyncMock.mockClear();
+    resolveConversationAttentionStatePathFromLayoutMock.mockClear();
     resolveConversationAttentionStatePathMock.mockClear();
     resolveDaemonPathsMock.mockClear();
+    resolveDeferredResumeStateFileFromLayoutMock.mockClear();
     resolveDeferredResumeStateFileMock.mockClear();
     resolveDurableRunsRootMock.mockClear();
     resolveProfileActivityConversationLinksDirMock.mockClear();
@@ -524,19 +537,43 @@ describe('appEvents mocked behavior', () => {
       taskStateFile: '/state/daemon/task-state.json',
       profileConfigFile: '/config/profile.json',
       getRuntimeScope: () => 'assistant',
-      getDesktopRootLayout: () => ({ systemState: '/layout' }) as never,
+      getDesktopRootLayout: () => ({ systemState: '/layout' }) as Pick<DesktopRootLayout, 'systemState'> as DesktopRootLayout,
     });
 
-    expect(resolveProfileConversationArtifactsDirFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
-    expect(resolveProfileConversationAttachmentsDirFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
-    expect(resolveProfileConversationCommitCheckpointsDirFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
-    expect(resolveProfileAlertsStateFileFromLayoutMock).toHaveBeenCalledWith({ systemState: '/layout' }, 'assistant');
+    // Layout-aware path resolvers are called when layout is available
+    expect(resolveConversationAttentionStatePathFromLayoutMock).toHaveBeenCalledWith(
+      expect.objectContaining({ systemState: '/layout' }),
+      'assistant',
+    );
+    expect(resolveDeferredResumeStateFileFromLayoutMock).toHaveBeenCalledWith(expect.objectContaining({ systemState: '/layout' }));
+    expect(resolveProfileConversationArtifactsDirFromLayoutMock).toHaveBeenCalledWith(
+      expect.objectContaining({ systemState: '/layout' }),
+      'assistant',
+    );
+    expect(resolveProfileConversationAttachmentsDirFromLayoutMock).toHaveBeenCalledWith(
+      expect.objectContaining({ systemState: '/layout' }),
+      'assistant',
+    );
+    expect(resolveProfileConversationCommitCheckpointsDirFromLayoutMock).toHaveBeenCalledWith(
+      expect.objectContaining({ systemState: '/layout' }),
+      'assistant',
+    );
+    expect(resolveProfileAlertsStateFileFromLayoutMock).toHaveBeenCalledWith(
+      expect.objectContaining({ systemState: '/layout' }),
+      'assistant',
+    );
 
+    // Non-layout path resolvers are NOT called when layout is available
+    expect(resolveConversationAttentionStatePathMock).not.toHaveBeenCalled();
+    expect(resolveDeferredResumeStateFileMock).not.toHaveBeenCalled();
     expect(resolveProfileConversationArtifactsDirMock).not.toHaveBeenCalled();
     expect(resolveProfileConversationAttachmentsDirMock).not.toHaveBeenCalled();
     expect(resolveProfileConversationCommitCheckpointsDirMock).not.toHaveBeenCalled();
     expect(resolveProfileAlertsStateFileMock).not.toHaveBeenCalled();
 
+    // Watch targets use layout-derived paths (parent directories)
+    expect(getLatestWatch('/layout-attention', (r) => !r.options.recursive)).toBeDefined();
+    expect(getLatestWatch('/layout', (r) => !r.options.recursive)).toBeDefined();
     expect(getLatestWatch('/layout-artifacts/assistant', (r) => r.options.recursive)).toBeDefined();
     expect(getLatestWatch('/layout-artifacts', (r) => !r.options.recursive)).toBeDefined();
     expect(getLatestWatch('/layout-commit-checkpoints/assistant', (r) => r.options.recursive)).toBeDefined();

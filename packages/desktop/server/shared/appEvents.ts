@@ -7,7 +7,9 @@ import {
   getPiAgentRuntimeDir,
   getStateRoot,
   resolveConversationAttentionStatePath,
+  resolveConversationAttentionStatePathFromLayout,
   resolveDeferredResumeStateFile,
+  resolveDeferredResumeStateFileFromLayout,
   resolveProfileAlertsStateFile,
   resolveProfileAlertsStateFileFromLayout,
   resolveProfileConversationArtifactsDir,
@@ -398,8 +400,10 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
   const daemonStateDir = dirname(options.taskStateFile);
   const runtimeDbFile = join(daemonStateDir, 'runtime.db');
   const runsRoot = resolveDurableRunsRoot(daemonStateDir);
-  const conversationAttentionStateFile = resolveConversationAttentionStatePath({ profile });
-  const deferredResumeStateFile = resolveDeferredResumeStateFile();
+  const conversationAttentionStateFile = layout
+    ? resolveConversationAttentionStatePathFromLayout(layout, profile)
+    : resolveConversationAttentionStatePath({ profile });
+  const deferredResumeStateFile = layout ? resolveDeferredResumeStateFileFromLayout(layout) : resolveDeferredResumeStateFile();
   const alertsStateFile = layout ? resolveProfileAlertsStateFileFromLayout(layout, profile) : resolveProfileAlertsStateFile({ profile });
 
   return {

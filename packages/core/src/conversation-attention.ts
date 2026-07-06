@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 import { validateConversationId } from './conversation-project-links.js';
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getDurableConversationAttentionDir } from './runtime/paths.js';
 
 const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
@@ -189,6 +190,11 @@ function sortConversationIds(conversations: Record<string, ConversationAttention
 export function resolveConversationAttentionStatePath(options: ConversationAttentionStateOptions): string {
   validateProfileName(options.profile);
   return join(getDurableConversationAttentionDir(options.stateRoot), `${options.profile}.json`);
+}
+
+export function resolveConversationAttentionStatePathFromLayout(layout: DesktopRootLayout, profile: string): string {
+  validateProfileName(profile);
+  return join(layout.systemState, 'pi-agent', 'state', 'conversation-attention', `${profile}.json`);
 }
 
 export function loadConversationAttentionState(options: ConversationAttentionStateOptions): ConversationAttentionStateDocument {
