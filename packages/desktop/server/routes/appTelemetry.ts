@@ -1,10 +1,3 @@
-import {
-  exportAppTelemetryLogBundle,
-  listAppTelemetryLogFiles,
-  maintainAppTelemetryDb,
-  maintainTraceDb,
-  resolveAppTelemetryLogDir,
-} from '@neon-pilot/core';
 import type { Express } from 'express';
 
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
@@ -21,32 +14,7 @@ function readMetadata(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
-function readSinceParam(value: unknown): string | undefined {
-  if (typeof value !== 'string' || !value.trim()) return undefined;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
-}
-
 export function registerAppTelemetryRoutes(router: Pick<Express, 'get' | 'post'>): void {
-  router.get('/api/telemetry/logs', (_req, res) => {
-    const files = listAppTelemetryLogFiles();
-    res.json({
-      logDir: resolveAppTelemetryLogDir(),
-      fileCount: files.length,
-      sizeBytes: files.reduce((total, file) => total + file.sizeBytes, 0),
-      files,
-    });
-  });
-
-  router.post('/api/telemetry/logs/export', (req, res) => {
-    const result = exportAppTelemetryLogBundle({ since: readSinceParam(req.body?.since) });
-    res.status(201).json(result);
-  });
-
-  router.post('/api/telemetry/db/maintenance', (_req, res) => {
-    res.json({ appTelemetry: maintainAppTelemetryDb(), trace: maintainTraceDb() });
-  });
-
   router.post('/api/telemetry/event', (req, res) => {
     const category = readString(req.body?.category);
     const name = readString(req.body?.name);

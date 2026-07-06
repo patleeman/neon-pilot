@@ -100,8 +100,6 @@ export {
   writeStringRecordDraftEntries,
 } from '../model/modelProviderEditorDrafts';
 export type {
-  AppTelemetryLogBundleExport,
-  AppTelemetryLogDiagnostics,
   DesktopAppPreferencesState,
   DesktopEnvironmentState,
   ModelProviderApi,
@@ -113,7 +111,6 @@ export type {
   ProviderConnectionTestResult,
   ProviderOAuthLoginState,
   ProviderOAuthLoginStreamEvent,
-  TelemetryDbMaintenanceResult,
 } from '../shared/types';
 export type { SecretsState, SecretStatusEntry, UnifiedSettingsEntry } from '../shared/types';
 export { type ColorTheme, type ThemeAccent, type ThemePreference, useTheme } from '../ui-state/theme';

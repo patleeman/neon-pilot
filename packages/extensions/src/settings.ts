@@ -1,8 +1,6 @@
 import type { ExtensionDesktopBridge } from './desktopBridge.js';
 
 export type HostComponent = (...args: never[]) => unknown;
-export type AppTelemetryLogBundleExport = unknown;
-export type AppTelemetryLogDiagnostics = unknown;
 export type DesktopAppPreferencesState = unknown;
 export type DesktopEnvironmentState = unknown;
 export type ExtensionKeybindingRegistration = unknown;
@@ -24,7 +22,6 @@ export type ProviderOAuthLoginState = unknown;
 export type ProviderOAuthLoginStreamEvent = unknown;
 export type SecretsState = unknown;
 export type SecretStatusEntry = unknown;
-export type TelemetryDbMaintenanceResult = unknown;
 export interface ColorTheme {
   id: string;
   label: string;

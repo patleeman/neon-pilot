@@ -26,8 +26,6 @@ import type {
   DesktopUserActionEventResult,
 } from '../shared/types';
 import type {
-  AppTelemetryLogBundleExport,
-  AppTelemetryLogDiagnostics,
   ConversationAggregateDeltaListResult,
   ConversationAggregateState,
   ConversationAttachmentAssetData,
@@ -65,7 +63,6 @@ import type {
   SetupReadinessSnapshot,
   SkillFoldersState,
   SystemPromptTemplateState,
-  TelemetryDbMaintenanceResult,
   ToolsState,
   UncommittedDiffResult,
   WorkspaceDiffOverlay,
@@ -1397,10 +1394,6 @@ export const api = {
     post<{ configured: boolean; state: GatewayState }>('/gateways/telegram/token', { token }),
   deleteTelegramGatewayToken: async () => del<{ configured: boolean; state: GatewayState }>('/gateways/telegram/token'),
   saveTelegramGatewayChat: async (chatId: string) => post<GatewayState>('/gateways/telegram/chat', { chatId }),
-
-  telemetryLogs: () => get<AppTelemetryLogDiagnostics>('/telemetry/logs'),
-  exportTelemetryLogs: (input?: { since?: string }) => post<AppTelemetryLogBundleExport>('/telemetry/logs/export', input ?? {}),
-  maintainTelemetryDb: () => post<TelemetryDbMaintenanceResult>('/telemetry/db/maintenance'),
 
   // ── Unified settings store ──────────────────────────────────────
 

@@ -1,25 +1,5 @@
-const {
-  exportAppTelemetryLogBundleMock,
-  listAppTelemetryLogFilesMock,
-  maintainAppTelemetryDbMock,
-  maintainTraceDbMock,
-  persistAppTelemetryEventMock,
-  resolveAppTelemetryLogDirMock,
-} = vi.hoisted(() => ({
-  exportAppTelemetryLogBundleMock: vi.fn(),
-  listAppTelemetryLogFilesMock: vi.fn(),
-  maintainAppTelemetryDbMock: vi.fn(),
-  maintainTraceDbMock: vi.fn(),
+const { persistAppTelemetryEventMock } = vi.hoisted(() => ({
   persistAppTelemetryEventMock: vi.fn(),
-  resolveAppTelemetryLogDirMock: vi.fn(),
-}));
-
-vi.mock('@neon-pilot/core', () => ({
-  exportAppTelemetryLogBundle: exportAppTelemetryLogBundleMock,
-  listAppTelemetryLogFiles: listAppTelemetryLogFilesMock,
-  maintainAppTelemetryDb: maintainAppTelemetryDbMock,
-  maintainTraceDb: maintainTraceDbMock,
-  resolveAppTelemetryLogDir: resolveAppTelemetryLogDirMock,
 }));
 
 vi.mock('../traces/appTelemetry.js', () => ({
@@ -32,35 +12,13 @@ import { registerAppTelemetryRoutes } from './appTelemetry.js';
 
 describe('app telemetry routes', () => {
   beforeEach(() => {
-    exportAppTelemetryLogBundleMock.mockReset();
-    listAppTelemetryLogFilesMock.mockReset();
-    maintainAppTelemetryDbMock.mockReset();
-    maintainTraceDbMock.mockReset();
     persistAppTelemetryEventMock.mockReset();
-    resolveAppTelemetryLogDirMock.mockReset();
-    listAppTelemetryLogFilesMock.mockReturnValue([]);
-    maintainAppTelemetryDbMock.mockReturnValue({
-      dbPath: '/tmp/pa/observability/observability.db',
-      maxEvents: 50000,
-      deletedRows: 1,
-      remainingRows: 2,
-      vacuumed: true,
-    });
-    maintainTraceDbMock.mockReturnValue({
-      dbPath: '/tmp/pa/observability/observability.db',
-      maxRowsPerTable: 50000,
-      deletedRows: { trace_stats: 3 },
-      vacuumed: true,
-    });
-    resolveAppTelemetryLogDirMock.mockReturnValue('/tmp/pa/logs/telemetry');
   });
 
   it('accepts renderer telemetry events', () => {
     const routes: Record<string, (req: unknown, res: unknown) => void> = {};
     registerAppTelemetryRoutes({
-      get: (path: string, handler: unknown) => {
-        routes[path] = handler;
-      },
+      get: (_path: string, _handler: unknown) => {},
       post: (path: string, handler: unknown) => {
         routes[path] = handler;
       },
@@ -88,83 +46,47 @@ describe('app telemetry routes', () => {
     expect(json).toHaveBeenCalledWith({ ok: true });
   });
 
-  it('reports telemetry log diagnostics', () => {
+  it('accepts renderer telemetry events with varying payloads', () => {
     const routes: Record<string, (req: unknown, res: unknown) => void> = {};
-    const files = [
-      {
-        path: '/tmp/pa/logs/telemetry/app-telemetry-2026-05-14.jsonl',
-        name: 'app-telemetry-2026-05-14.jsonl',
-        sizeBytes: 42,
-        modifiedAt: '2026-05-14T00:00:00.000Z',
-      },
-    ];
-    listAppTelemetryLogFilesMock.mockReturnValue(files);
     registerAppTelemetryRoutes({
-      get: (path: string, handler: unknown) => void (routes[path] = handler),
-      post: (path: string, handler: unknown) => void (routes[path] = handler),
-    });
-    const json = vi.fn();
-
-    routes['/api/telemetry/logs']({ body: {}, headers: {} }, { status: vi.fn().mockReturnThis(), json });
-
-    expect(json).toHaveBeenCalledWith({ logDir: '/tmp/pa/logs/telemetry', fileCount: 1, sizeBytes: 42, files });
-  });
-
-  it('exports telemetry log bundles', () => {
-    const routes: Record<string, (req: unknown, res: unknown) => void> = {};
-    exportAppTelemetryLogBundleMock.mockReturnValue({
-      path: '/tmp/pa/exports/telemetry/app-telemetry.jsonl',
-      fileCount: 1,
-      eventCount: 2,
-      sizeBytes: 99,
-    });
-    registerAppTelemetryRoutes({
-      get: (path: string, handler: unknown) => void (routes[path] = handler),
+      get: (_path: string, _handler: unknown) => {},
       post: (path: string, handler: unknown) => void (routes[path] = handler),
     });
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
 
-    routes['/api/telemetry/logs/export']({ body: { since: '2026-05-14T00:00:00.000Z' }, headers: {} }, { status, json });
-
-    expect(exportAppTelemetryLogBundleMock).toHaveBeenCalledWith({ since: '2026-05-14T00:00:00.000Z' });
-    expect(status).toHaveBeenCalledWith(201);
-    expect(json).toHaveBeenCalledWith({
-      path: '/tmp/pa/exports/telemetry/app-telemetry.jsonl',
-      fileCount: 1,
-      eventCount: 2,
-      sizeBytes: 99,
-    });
-  });
-
-  it('runs telemetry database maintenance', () => {
-    const routes: Record<string, (req: unknown, res: unknown) => void> = {};
-    registerAppTelemetryRoutes({
-      get: (path: string, handler: unknown) => void (routes[path] = handler),
-      post: (path: string, handler: unknown) => void (routes[path] = handler),
-    });
-    const json = vi.fn();
-
-    routes['/api/telemetry/db/maintenance']({ body: {}, headers: {} }, { status: vi.fn().mockReturnThis(), json });
-
-    expect(maintainAppTelemetryDbMock).toHaveBeenCalledWith();
-    expect(maintainTraceDbMock).toHaveBeenCalledWith();
-    expect(json).toHaveBeenCalledWith({
-      appTelemetry: {
-        dbPath: '/tmp/pa/observability/observability.db',
-        maxEvents: 50000,
-        deletedRows: 1,
-        remainingRows: 2,
-        vacuumed: true,
+    routes['/api/telemetry/event'](
+      {
+        body: {
+          category: 'performance',
+          name: 'render_time',
+          durationMs: 120,
+          count: 1,
+          metadata: { component: 'Settings' },
+        },
+        headers: { 'user-agent': 'renderer/1.0' },
       },
-      trace: { dbPath: '/tmp/pa/observability/observability.db', maxRowsPerTable: 50000, deletedRows: { trace_stats: 3 }, vacuumed: true },
-    });
+      { status, json },
+    );
+
+    expect(persistAppTelemetryEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'renderer',
+        category: 'performance',
+        name: 'render_time',
+        durationMs: 120,
+        count: 1,
+        metadata: expect.objectContaining({ component: 'Settings', userAgent: 'renderer/1.0' }),
+      }),
+    );
+    expect(status).toHaveBeenCalledWith(202);
+    expect(json).toHaveBeenCalledWith({ ok: true });
   });
 
   it('rejects events missing category or name', () => {
     const routes: Record<string, (req: unknown, res: unknown) => void> = {};
     registerAppTelemetryRoutes({
-      get: (path: string, handler: unknown) => void (routes[path] = handler),
+      get: (_path: string, _handler: unknown) => {},
       post: (path: string, handler: unknown) => void (routes[path] = handler),
     });
     const status = vi.fn().mockReturnThis();

@@ -1,7 +1,5 @@
 import {
   api,
-  type AppTelemetryLogBundleExport,
-  type AppTelemetryLogDiagnostics,
   CORE_KEYBOARD_SHORTCUT_REGISTRATIONS,
   createDesktopAwareEventSource,
   createModelEditorDraft,
@@ -42,7 +40,6 @@ import {
   SettingsPanelHost,
   SettingsRow,
   subscribeDesktopProviderOAuthLogin,
-  type TelemetryDbMaintenanceResult,
   type ThemeAccent,
   THINKING_LEVEL_OPTIONS,
   type UnifiedSettingsEntry,
@@ -1690,144 +1687,6 @@ export function desktopShortcutIdForHostCommand(command: CommandSettingsEntry): 
     }
   }
   return null;
-}
-
-function formatTelemetryLogBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function TelemetryLogsSettingsPanel() {
-  const { data, loading, error, refetch } = useApi<AppTelemetryLogDiagnostics>(api.telemetryLogs as never, 'telemetry-logs');
-  const [action, setAction] = useState<'open' | 'export' | 'maintain' | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const openPath = useCallback(async (path: string) => {
-    const bridge = getDesktopBridge();
-    if (!bridge?.openPath) {
-      setNotice(`Path: ${path}`);
-      return;
-    }
-
-    const result = await bridge.openPath(path);
-    if (result?.error) {
-      setNotice(result.error);
-      return;
-    }
-    setNotice(`Opened ${path}`);
-  }, []);
-
-  const openLogFolder = useCallback(async () => {
-    if (!data?.logDir) return;
-    setAction('open');
-    setNotice(null);
-    try {
-      await openPath(data.logDir);
-    } catch (nextError) {
-      setNotice(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setAction(null);
-    }
-  }, [data?.logDir, openPath]);
-
-  const exportLogs = useCallback(async () => {
-    setAction('export');
-    setNotice(null);
-    try {
-      const exported = (await api.exportTelemetryLogs()) as AppTelemetryLogBundleExport;
-      await refetch({ resetLoading: false });
-      await openPath(exported.path);
-      setNotice(`Exported ${exported.eventCount} events from ${exported.fileCount} files to ${exported.path}.`);
-    } catch (nextError) {
-      setNotice(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setAction(null);
-    }
-  }, [openPath, refetch]);
-
-  const maintainTelemetryDb = useCallback(async () => {
-    setAction('maintain');
-    setNotice(null);
-    try {
-      const result = (await api.maintainTelemetryDb()) as TelemetryDbMaintenanceResult;
-      const traceDeleted = Object.values(result.trace.deletedRows).reduce((total, value) => total + value, 0);
-      setNotice(
-        `Pruned ${result.appTelemetry.deletedRows} app activity rows and ${traceDeleted} trace rows, then vacuumed ${result.appTelemetry.dbPath}.`,
-      );
-    } catch (nextError) {
-      setNotice(nextError instanceof Error ? nextError.message : String(nextError));
-    } finally {
-      setAction(null);
-    }
-  }, []);
-
-  return (
-    <SettingsGroup
-      title="Diagnostic logs"
-      actions={
-        <>
-          <IconButton
-            compact
-            type="button"
-            onClick={openLogFolder}
-            disabled={!data?.logDir || action !== null}
-            aria-label="Open diagnostic log folder"
-            title={action === 'open' ? 'Opening...' : 'Open log folder'}
-          >
-            <SettingsIcon name="external" />
-          </IconButton>
-          <IconButton
-            compact
-            type="button"
-            onClick={exportLogs}
-            disabled={action !== null}
-            aria-label="Export diagnostic bundle"
-            title={action === 'export' ? 'Exporting...' : 'Export diagnostics bundle'}
-          >
-            <SettingsIcon name="external" />
-          </IconButton>
-          <IconButton
-            compact
-            type="button"
-            onClick={maintainTelemetryDb}
-            disabled={action !== null}
-            aria-label="Clean up diagnostics index"
-            title={action === 'maintain' ? 'Cleaning...' : 'Clean up diagnostics index'}
-          >
-            <SettingsIcon name="trash" />
-          </IconButton>
-        </>
-      }
-    >
-      {loading ? <p className="ui-card-meta">Loading diagnostic log details...</p> : null}
-      {error ? <p className="text-[12px] text-danger">{error}</p> : null}
-      {data ? (
-        <>
-          <SettingsControlRow title="Files" description={data.logDir}>
-            <span className="text-[13px] text-primary">
-              {data.fileCount} · {formatTelemetryLogBytes(data.sizeBytes)}
-            </span>
-          </SettingsControlRow>
-          {data.files.length > 0 ? (
-            <div className="settings-page-log-files">
-              {data.files.slice(0, 3).map((file) => (
-                <div key={file.path} className="flex items-center justify-between gap-3 text-[12px] text-secondary">
-                  <span className="min-w-0 truncate font-mono text-primary" title={file.path}>
-                    {file.name}
-                  </span>
-                  <span className="shrink-0 text-dim">{formatTelemetryLogBytes(file.sizeBytes)}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="settings-page-panel-message ui-card-meta">No diagnostic log files yet.</p>
-          )}
-        </>
-      ) : null}
-      {notice ? <p className="ui-card-meta break-words">{notice}</p> : null}
-    </SettingsGroup>
-  );
 }
 
 function SettingsTableOfContents({
@@ -5093,7 +4952,6 @@ export function SettingsPage({
         <SettingsSection id="settings-desktop" label="Desktop">
           <DesktopConnectionsSettingsPanel />
           <DesktopKeyboardShortcutsSettingsSection />
-          <TelemetryLogsSettingsPanel />
         </SettingsSection>
       </div>
     </div>

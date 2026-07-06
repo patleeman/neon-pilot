@@ -1966,43 +1966,6 @@ export interface AppTelemetryEventRow {
   metadataJson: string | null;
 }
 
-export interface AppTelemetryLogFileSummary {
-  path: string;
-  name: string;
-  sizeBytes: number;
-  modifiedAt: string;
-}
-
-export interface AppTelemetryLogDiagnostics {
-  logDir: string;
-  fileCount: number;
-  sizeBytes: number;
-  files: AppTelemetryLogFileSummary[];
-}
-
-export interface AppTelemetryLogBundleExport {
-  path: string;
-  fileCount: number;
-  eventCount: number;
-  sizeBytes: number;
-}
-
-export interface TelemetryDbMaintenanceResult {
-  appTelemetry: {
-    dbPath: string;
-    maxEvents: number;
-    deletedRows: number;
-    remainingRows: number;
-    vacuumed: boolean;
-  };
-  trace: {
-    dbPath: string;
-    maxRowsPerTable: number;
-    deletedRows: Record<string, number>;
-    vacuumed: boolean;
-  };
-}
-
 export interface TraceSummary {
   activeSessions: number;
   runsToday: number;

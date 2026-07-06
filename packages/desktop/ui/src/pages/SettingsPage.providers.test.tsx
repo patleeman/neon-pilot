@@ -235,7 +235,6 @@ describe('SettingsPage provider model editor', () => {
   let startProviderOAuthLoginMock: ReturnType<typeof vi.spyOn>;
   let setProviderApiKeyMock: ReturnType<typeof vi.spyOn>;
   let removeProviderCredentialMock: ReturnType<typeof vi.spyOn>;
-  let maintainTelemetryDbMock: ReturnType<typeof vi.spyOn>;
   let updateSettingsMock: ReturnType<typeof vi.spyOn>;
   let modelsRefetchMock: ReturnType<typeof vi.fn>;
   let settingsResult: ReturnType<typeof buildUseApiResult<Record<string, unknown>>>;
@@ -253,7 +252,6 @@ describe('SettingsPage provider model editor', () => {
     startProviderOAuthLoginMock = vi.spyOn(api, 'startProviderOAuthLogin');
     setProviderApiKeyMock = vi.spyOn(api, 'setProviderApiKey');
     removeProviderCredentialMock = vi.spyOn(api, 'removeProviderCredential');
-    maintainTelemetryDbMock = vi.spyOn(api, 'maintainTelemetryDb');
     updateSettingsMock = vi.spyOn(api, 'updateSettings').mockResolvedValue({});
     vi.clearAllMocks();
     window.history.replaceState(null, '', '/settings');
@@ -465,10 +463,6 @@ describe('SettingsPage provider model editor', () => {
         return statusResult;
       }
 
-      if (fetcher === api.telemetryLogs) {
-        return buildUseApiResult({ logDir: '/tmp/pa/logs/telemetry', fileCount: 0, sizeBytes: 0, files: [] });
-      }
-
       if (fetcher === api.providerAuth) {
         return providerAuthResult;
       }
@@ -490,17 +484,6 @@ describe('SettingsPage provider model editor', () => {
       }
 
       throw new Error(`Unexpected SettingsPage useApi call for key ${key ?? '<none>'}`);
-    });
-
-    maintainTelemetryDbMock.mockResolvedValue({
-      appTelemetry: {
-        dbPath: '/tmp/pa/observability/observability.db',
-        maxEvents: 50000,
-        deletedRows: 1,
-        remainingRows: 10,
-        vacuumed: true,
-      },
-      trace: { dbPath: '/tmp/pa/observability/observability.db', maxRowsPerTable: 50000, deletedRows: { trace_stats: 2 }, vacuumed: true },
     });
 
     const savedProviderState = {
@@ -590,7 +573,6 @@ describe('SettingsPage provider model editor', () => {
     startProviderOAuthLoginMock.mockRestore();
     setProviderApiKeyMock.mockRestore();
     removeProviderCredentialMock.mockRestore();
-    maintainTelemetryDbMock.mockRestore();
     updateSettingsMock.mockRestore();
     delete (window as { neonPilotDesktop?: unknown }).neonPilotDesktop;
     for (const root of mountedRoots.splice(0)) {
@@ -1523,36 +1505,6 @@ describe('SettingsPage provider model editor', () => {
 
     expect(container.textContent).toContain('Provider · anthropic');
     expect(queryInput(container, '#settings-provider-api-key-modal')).toBeInstanceOf(HTMLInputElement);
-  });
-
-  it('runs telemetry database maintenance from settings', async () => {
-    Object.assign(window as { neonPilotDesktop?: unknown }, {
-      neonPilotDesktop: {
-        getEnvironment: vi.fn().mockResolvedValue({ isElectron: true }),
-        readDesktopAppPreferences: vi.fn().mockResolvedValue({
-          available: true,
-          supportsStartOnSystemStart: true,
-          autoInstallUpdates: false,
-          updatePath: 'stable',
-          startOnSystemStart: false,
-          keyboardShortcuts: {},
-          update: { supported: false, status: 'idle', currentVersion: '0.0.0' },
-        }),
-        updateDesktopAppPreferences: vi.fn(),
-      },
-    });
-
-    const { container } = renderPage('settings-desktop');
-    await flushAsyncWork();
-
-    const button = queryButtonByLabel(container, 'Clean up diagnostics index');
-    await act(async () => {
-      button.click();
-    });
-    await flushAsyncWork();
-
-    expect(maintainTelemetryDbMock).toHaveBeenCalledWith();
-    expect(container.textContent).toContain('Pruned 1 app activity rows and 2 trace rows');
   });
 
   it('does not render the vision model selector in general conversation settings', async () => {
