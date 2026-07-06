@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
-import { getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
+import { type DesktopRootLayout, getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
@@ -51,6 +51,7 @@ export interface RuntimeSkillInjectionPlan {
 export interface SkillRuntimeContext {
   runtimeScope?: string;
   repoRoot: string;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 export interface SkillRuntimeHook {
@@ -232,7 +233,10 @@ export function buildFilteredSkillPaths(skillDirs: string[], extensionSkillDirs:
 }
 
 function listConfiguredSkillDefinitions(ctx: SkillRuntimeContext): SkillDefinition[] {
-  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), {
+    repoRoot: ctx.repoRoot,
+    ...(ctx.desktopRootLayout ? { desktopRootLayout: ctx.desktopRootLayout } : {}),
+  });
   const durableSkillsDir = getDurableSkillsDir();
   return dedupeSkills([
     ...listSkillDefinitionsFromParents(resolved.skillDirs, 'configured-folder'),

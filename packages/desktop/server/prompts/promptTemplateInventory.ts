@@ -49,7 +49,10 @@ export function registerPromptTemplateRuntimeHook(hook: PromptTemplateRuntimeHoo
 }
 
 export function listPromptTemplateDefinitions(ctx: AssemblyRuntimeContext): PromptTemplateDefinition[] {
-  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), {
+    repoRoot: ctx.repoRoot,
+    ...(ctx.desktopRootLayout ? { desktopRootLayout: ctx.desktopRootLayout } : {}),
+  });
   let templates = resolved.promptEntries.map((path, index): PromptTemplateDefinition => {
     const title = basename(path).replace(/\.[^.]+$/, '');
     return {

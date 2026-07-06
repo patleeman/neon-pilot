@@ -177,11 +177,13 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const skills = buildSkillInjectionPlan({
       runtimeScope,
       repoRoot,
+      ...(desktopRootLayout ? { desktopRootLayout } : {}),
     });
     const promptTemplates = buildPromptTemplatePlan({
       runtimeScope,
       repoRoot,
       modelRef,
+      ...(desktopRootLayout ? { desktopRootLayout } : {}),
     });
     liveSessionResourceOptionsCache = {
       key: JSON.stringify({ runtimeScope, modelRef, extensionEntries }),
@@ -422,6 +424,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       runtimeScope,
       repoRoot,
       modelRef,
+      ...(desktopRootLayout ? { desktopRootLayout } : {}),
     };
     const skills = buildSkillInjectionPlan(assemblyContext);
     const skillsAtMs = performance.now();
@@ -495,6 +498,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         runtimeScope,
         repoRoot,
         modelRef,
+        ...(desktopRootLayout ? { desktopRootLayout } : {}),
       };
       const skillsPromise = buildSkillInjectionPlanAsync(assemblyContext);
       const skillsDispatchedAtMs = performance.now();

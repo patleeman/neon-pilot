@@ -114,7 +114,11 @@ export async function buildInstructionPlan(ctx: AssemblyRuntimeContext): Promise
 }
 
 function listFileInstructionLayers(ctx: AssemblyRuntimeContext): InstructionLayer[] {
-  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot, cwd: ctx.cwd });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), {
+    repoRoot: ctx.repoRoot,
+    cwd: ctx.cwd,
+    ...(ctx.desktopRootLayout ? { desktopRootLayout: ctx.desktopRootLayout } : {}),
+  });
   const layers: InstructionLayer[] = [];
   for (const [index, path] of resolved.agentsFiles.entries()) {
     const content = readText(path);
@@ -166,7 +170,11 @@ function listFileInstructionLayers(ctx: AssemblyRuntimeContext): InstructionLaye
 }
 
 async function generatedRuntimeLayer(ctx: AssemblyRuntimeContext): Promise<InstructionLayer | null> {
-  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), { repoRoot: ctx.repoRoot, cwd: ctx.cwd });
+  const resolved = resolveRuntimeResources(getAssemblyRuntimeScope(ctx), {
+    repoRoot: ctx.repoRoot,
+    cwd: ctx.cwd,
+    ...(ctx.desktopRootLayout ? { desktopRootLayout: ctx.desktopRootLayout } : {}),
+  });
   const variables: SystemPromptTemplateVariables = {
     repo_root: resolved.repoRoot,
     knowledge_root: resolved.knowledgeRoot,

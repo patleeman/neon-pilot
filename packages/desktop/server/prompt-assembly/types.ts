@@ -1,3 +1,5 @@
+import type { DesktopRootLayout } from '@neon-pilot/core';
+
 export interface AssemblyDiagnostic {
   severity: 'info' | 'warning' | 'error';
   code: string;
@@ -18,6 +20,7 @@ export interface AssemblyRuntimeContext {
   modelRef?: string;
   provider?: string;
   cwd?: string;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 export interface PromptAssemblyPlan {
