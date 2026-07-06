@@ -45,7 +45,7 @@ Focused checks:
 
 `check:extensions:static` enforces the extension/core boundary. Extension runtime source and fenced markdown examples in extension docs must use `@neon-pilot/extensions` public APIs instead of importing `@neon-pilot/core`, `@neon-pilot/desktop`, or app package internals directly. Host backend API modules must stay narrow and lazy-load host implementations rather than statically re-exporting core/desktop modules.
 
-Use `pnpm test` as the default single command for deterministic code-level behavior regressions. Use `pnpm run test:e2e` for Electron app-path coverage that needs the real desktop shell, renderer, backend API, and isolated profile state. Legacy focused aliases such as `pnpm run e2e:chat`, `pnpm run smoke:routines-ui`, and `pnpm run smoke:desktop:fork-rewind` now run filtered Playwright E2E specs through the same runner.
+Use `pnpm test` as the default single command for deterministic code-level behavior regressions. Use `pnpm run test:e2e` for Electron app-path coverage that needs the real desktop shell, renderer, backend API, and isolated profile state. Legacy focused aliases such as `pnpm run e2e:chat` and `pnpm run smoke:desktop:fork-rewind` now run filtered Playwright E2E specs through the same runner.
 
 Electron E2E:
 
@@ -55,7 +55,7 @@ pnpm run test:e2e:runner --grep @chat
 pnpm run test:e2e:runner --grep @core
 ```
 
-The Playwright E2E suite launches Electron directly with a temporary state root, captures traces/screenshots/video on failure, and writes artifacts under `test-results/e2e` and `playwright-report/e2e`. The full command rebuilds the desktop app first; use `test:e2e:runner` only when the build outputs are already fresh. Core happy-path coverage lives under `@core-conversations` and `@core-shell`: seeded conversation navigation/sidebar placement/reload, command palette, app-shell routes, extension routes, routines, and settings.
+The Playwright E2E suite launches Electron directly with a temporary state root, captures traces/screenshots/video on failure, and writes artifacts under `test-results/e2e` and `playwright-report/e2e`. The full command rebuilds the desktop app first; use `test:e2e:runner` only when the build outputs are already fresh. Core happy-path coverage lives under `@core-conversations` and `@core-shell`: seeded conversation navigation/sidebar placement/reload, command palette, app-shell routes, extension routes, and settings.
 
 Startup idle smoke:
 
