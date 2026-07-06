@@ -3940,6 +3940,126 @@ describe('WindowedLayout desktop state publishing', () => {
     });
   });
 
+  it('proves the desktop control loop can open, inspect, capture, and observe user window actions', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+    const image = {
+      mimeType: 'image/png' as const,
+      data: 'cG5n',
+      width: 760,
+      height: 520,
+      capturedAt: '2026-07-06T00:00:00.000Z',
+      windowId: 'route:system-notes:notes',
+    };
+    const captureWindowedDesktopScreenshot = vi.fn().mockResolvedValue({ image });
+    window.neonPilotDesktop = {
+      captureWindowedDesktopScreenshot,
+      setWorkbenchBrowserBounds: vi.fn(() => Promise.resolve(null)),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /new conversation/i });
+    const controlSource = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/control/events');
+    const screenshotSource = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/screenshot/events');
+    expect(controlSource).toBeTruthy();
+    expect(screenshotSource).toBeTruthy();
+
+    act(() => {
+      controlSource?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-control-loop-open-test',
+            action: 'open',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            appId: 'system-notes:notes',
+          }),
+        }),
+      );
+    });
+
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    vi.spyOn(notesWindow, 'getBoundingClientRect').mockReturnValue({
+      x: 90,
+      y: 70,
+      width: 760,
+      height: 520,
+      top: 70,
+      right: 850,
+      bottom: 590,
+      left: 90,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    await waitFor(() => {
+      expect(mocks.acknowledgeDesktopControl).toHaveBeenCalledWith({
+        commandId: 'desktop-control-loop-open-test',
+        ok: true,
+      });
+    });
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
+      expect(lastSnapshot.focusedWindowId).toBe('route:system-notes:notes');
+      expect(notes).toMatchObject({
+        id: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        agentTouched: true,
+      });
+    });
+    expect(notesWindow.getAttribute('data-agent-touched')).toBe('true');
+    expect(within(notesWindow).getByText('Agent')).toBeTruthy();
+
+    act(() => {
+      screenshotSource?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-screenshot-loop-window-test',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            windowId: 'route:system-notes:notes',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(captureWindowedDesktopScreenshot).toHaveBeenCalledWith({
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        windowId: 'route:system-notes:notes',
+      });
+      expect(mocks.acknowledgeDesktopScreenshot).toHaveBeenCalledWith({
+        requestId: 'desktop-screenshot-loop-window-test',
+        ok: true,
+        image,
+      });
+    });
+
+    mocks.publishDesktopUserAction.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: /^close notes$/i }));
+
+    await waitFor(() => {
+      expect(mocks.publishDesktopUserAction).toHaveBeenCalledWith({
+        action: 'close',
+        windowId: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        createdAt: expect.any(String),
+      });
+    });
+  });
+
   it('rejects streamed desktop control open commands for unknown apps or routes', async () => {
     seedWindowedWindows([
       {
