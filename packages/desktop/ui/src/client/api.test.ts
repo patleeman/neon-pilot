@@ -188,6 +188,100 @@ describe('api live session surface forwarding', () => {
   });
 });
 
+describe('api.documents grants', () => {
+  beforeEach(resetApiTestGlobals);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('lists document collections through the shared api path prefix', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ collections: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.documents.collections('owner/app')).resolves.toEqual({ collections: [] });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents/collections?owner=owner%2Fapp', {
+      method: 'GET',
+      cache: 'no-store',
+    });
+  });
+
+  it('saves documents through the shared api path prefix', async () => {
+    const document = {
+      owner: 'owner',
+      collection: 'tasks',
+      id: 'doc/1',
+      content: { title: 'Plan' },
+      createdAt: '2026-07-06T00:00:00.000Z',
+      updatedAt: '2026-07-06T00:00:00.000Z',
+    };
+    const fetchMock = vi.fn(async () => jsonResponse({ document }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.documents.put('owner', 'tasks', 'doc/1', { title: 'Plan' })).resolves.toEqual({ document });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents/collections/owner/tasks/doc%2F1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Plan' }),
+    });
+  });
+
+  it('lists collection grants with encoded owner and collection path segments', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ grants: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.documents.listGrants('owner/app', 'tasks inbox')).resolves.toEqual({ grants: [] });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents/collections/owner%2Fapp/tasks%20inbox/grants', {
+      method: 'GET',
+      cache: 'no-store',
+    });
+  });
+
+  it('sets collection grants with encoded grantee path segment', async () => {
+    const grant = {
+      id: 'owner::tasks::reader',
+      owner: 'owner',
+      collection: 'tasks',
+      granteeAppId: 'reader/app',
+      canRead: true,
+      canWrite: false,
+      createdAt: '2026-07-06T00:00:00.000Z',
+      updatedAt: '2026-07-06T00:00:00.000Z',
+    };
+    const fetchMock = vi.fn(async () => jsonResponse({ grant }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.documents.setGrant('owner', 'tasks', 'reader/app', { canRead: true, canWrite: false })).resolves.toEqual({ grant });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents/collections/owner/tasks/grants/reader%2Fapp', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ canRead: true, canWrite: false }),
+    });
+  });
+
+  it('deletes collection grants with encoded grantee path segment', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ deleted: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.documents.deleteGrant('owner', 'tasks', 'reader/app')).resolves.toEqual({ deleted: true });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents/collections/owner/tasks/grants/reader%2Fapp', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: undefined,
+    });
+  });
+});
+
 describe('api.memory', () => {
   beforeEach(() => {
     vi.resetModules();

@@ -26,6 +26,7 @@ import type {
   DesktopUserActionEventResult,
 } from '../shared/types';
 import type {
+  CollectionListResult,
   ConversationAggregateDeltaListResult,
   ConversationAggregateState,
   ConversationAttachmentAssetData,
@@ -38,10 +39,16 @@ import type {
   ConversationSummaryRecord,
   DefaultCwdState,
   DeferredResumeSummary,
+  DeleteGrantResult,
+  DocumentCollection,
+  DocumentResult,
   FilePickerResult,
   GlobalActivityResult,
+  GrantListResult,
+  GrantResult,
   InjectedPromptMessage,
   InstructionFilesState,
+  ListDocumentsResult,
   LiveSessionCreateResult,
   LiveSessionExportResult,
   LiveSessionMeta,
@@ -57,6 +64,7 @@ import type {
   ProviderAuthState,
   ProviderConnectionTestResult,
   SecretsState,
+  SetGrantInput,
   SetupReadinessSnapshot,
   SkillFoldersState,
   SystemPromptTemplateState,
@@ -1412,11 +1420,11 @@ export const api = {
   documents: {
     collections: async (owner?: string) => {
       const params = owner ? `?owner=${encodeURIComponent(owner)}` : '';
-      return get<import('../shared/types').CollectionListResult>(`/api/documents/collections${params}`);
+      return get<CollectionListResult>(`/documents/collections${params}`);
     },
     upsertCollection: async (owner: string, collection: string, options?: { description?: string }) => {
-      return put<{ collection: import('../shared/types').DocumentCollection }>(
-        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}`,
+      return put<{ collection: DocumentCollection }>(
+        `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}`,
         options ?? {},
       );
     },
@@ -1425,24 +1433,41 @@ export const api = {
       if (options?.limit !== undefined) params.set('limit', String(options.limit));
       if (options?.offset !== undefined) params.set('offset', String(options.offset));
       const qs = params.toString();
-      return get<import('../shared/types').ListDocumentsResult>(
-        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}${qs ? `?${qs}` : ''}`,
+      return get<ListDocumentsResult>(
+        `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}${qs ? `?${qs}` : ''}`,
       );
     },
     get: async (owner: string, collection: string, id: string) => {
-      return get<import('../shared/types').DocumentResult>(
-        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+      return get<DocumentResult>(
+        `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
       );
     },
     put: async (owner: string, collection: string, id: string, body: unknown) => {
-      return put<import('../shared/types').DocumentResult>(
-        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+      return put<DocumentResult>(
+        `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
         body,
       );
     },
     delete: async (owner: string, collection: string, id: string) => {
       return del<{ deleted: boolean }>(
-        `/api/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+        `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+      );
+    },
+
+    // ── Grants ───────────────────────────────────────────────────
+
+    listGrants: async (owner: string, collection: string) => {
+      return get<GrantListResult>(`/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/grants`);
+    },
+    setGrant: async (owner: string, collection: string, granteeAppId: string, input: SetGrantInput) => {
+      return put<GrantResult>(
+        `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/grants/${encodeURIComponent(granteeAppId)}`,
+        input,
+      );
+    },
+    deleteGrant: async (owner: string, collection: string, granteeAppId: string) => {
+      return del<DeleteGrantResult>(
+        `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/grants/${encodeURIComponent(granteeAppId)}`,
       );
     },
   },

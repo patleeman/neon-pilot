@@ -1691,6 +1691,34 @@ export interface DocumentResult {
   document: DocumentRecord;
 }
 
+export interface CollectionGrant {
+  id: string;
+  owner: string;
+  collection: string;
+  granteeAppId: string;
+  canRead: boolean;
+  canWrite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GrantListResult {
+  grants: CollectionGrant[];
+}
+
+export interface GrantResult {
+  grant: CollectionGrant;
+}
+
+export interface DeleteGrantResult {
+  deleted: boolean;
+}
+
+export interface SetGrantInput {
+  canRead?: boolean;
+  canWrite?: boolean;
+}
+
 // ── Inbox ───────────────────────────────────────────────────────────────────
 
 /**
