@@ -14,6 +14,7 @@ import {
   updateConversationAttachmentCapability,
 } from '../conversations/conversationAssetsCapability.js';
 import { pingDaemon, startBackgroundRun } from '../daemon/index.js';
+import { writeExtensionActivityEntrySafe } from '../extensions/extensionActivityProducers.js';
 import { acknowledgeHostCommand, executeHostCommandInRenderer } from '../extensions/extensionCommandBridge.js';
 import { findExtensionCommandRegistration } from '../extensions/extensionCommandLookup.js';
 import { createExtensionConversationsCapability } from '../extensions/extensionConversations.js';
@@ -838,7 +839,11 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions', (req, res) => {
     try {
-      res.status(201).json(createRuntimeExtension(req.body as { id?: unknown; name?: unknown; description?: unknown }));
+      const result = createRuntimeExtension(req.body as { id?: unknown; name?: unknown; description?: unknown });
+      if (result?.extension?.id) {
+        writeExtensionActivityEntrySafe(result.extension.id, 'created', result.extension.name ?? result.extension.id);
+      }
+      res.status(201).json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status = /required|must|already exists/i.test(message) ? 400 : 500;
@@ -849,7 +854,11 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/import', (req, res) => {
     try {
-      res.status(201).json(importRuntimeExtensionBundle(req.body as { zipPath?: unknown }));
+      const result = importRuntimeExtensionBundle(req.body as { zipPath?: unknown });
+      if (result?.extension?.id) {
+        writeExtensionActivityEntrySafe(result.extension.id, 'imported', result.extension.name ?? result.extension.id);
+      }
+      res.status(201).json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status = /required|not found|unsafe|symlink|must|already exists|empty/i.test(message) ? 400 : 500;
@@ -1314,7 +1323,9 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/snapshot', (req, res) => {
     try {
-      res.status(201).json(snapshotRuntimeExtension(req.params.id));
+      const result = snapshotRuntimeExtension(req.params.id);
+      writeExtensionActivityEntrySafe(req.params.id, 'snapshotted', req.params.id);
+      res.status(201).json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status = /not found/i.test(message) ? 404 : /package root/i.test(message) ? 400 : 500;
@@ -1325,7 +1336,9 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/export', (req, res) => {
     try {
-      res.status(201).json(exportRuntimeExtension(req.params.id));
+      const result = exportRuntimeExtension(req.params.id);
+      writeExtensionActivityEntrySafe(req.params.id, 'exported', req.params.id);
+      res.status(201).json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status = /not found/i.test(message) ? 404 : /package root/i.test(message) ? 400 : 500;
@@ -1352,6 +1365,8 @@ export function registerExtensionRoutes(
         res.status(result.status ?? 400).json({ error: result.error ?? 'Extension update failed.' });
         return;
       }
+      const extName = typeof result.extension?.name === 'string' ? result.extension.name : req.params.id;
+      writeExtensionActivityEntrySafe(req.params.id, enabled ? 'enabled' : 'disabled', extName);
       res.json({ ok: true, extension: result.extension, ...(result.actionResult ? { actionResult: result.actionResult } : {}) });
     } catch (err) {
       sendRouteError(res, 'extension update error', err);
@@ -1361,7 +1376,11 @@ export function registerExtensionRoutes(
   router.delete('/api/extensions/:id', async (req, res) => {
     try {
       const { deleteRuntimeExtension } = await import('../extensions/extensionLifecycle.js');
-      res.json(await deleteRuntimeExtension(req.params.id));
+      const result = await deleteRuntimeExtension(req.params.id);
+      if (result.deleted) {
+        writeExtensionActivityEntrySafe(req.params.id, 'deleted', req.params.id);
+      }
+      res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status = /not found/i.test(message) ? 404 : /packaged system|package root|path escapes/i.test(message) ? 400 : 500;

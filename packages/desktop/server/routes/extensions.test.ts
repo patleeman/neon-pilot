@@ -11,6 +11,14 @@ import { clearExtensionHostAuditEvents } from '../extensions/extensionHostAudit.
 import { createInProcessExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionRequestAbortSignal, readSystemConversationSetTitleMutation, registerExtensionRoutes } from './extensions.js';
 
+const { writeExtensionActivityEntrySafeMock } = vi.hoisted(() => ({
+  writeExtensionActivityEntrySafeMock: vi.fn(),
+}));
+
+vi.mock('../extensions/extensionActivityProducers.js', () => ({
+  writeExtensionActivityEntrySafe: writeExtensionActivityEntrySafeMock,
+}));
+
 const originalResourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
 
 type Handler = (
@@ -67,6 +75,7 @@ function setPackagedResourcesPath(value = '/Applications/Neon Pilot.app/Contents
 beforeEach(() => {
   setExtensionHostClient(createInProcessExtensionHostClient());
   setDefaultExtensionBackendWorkerUrl(new URL('../dist/extensions/extensionBackendWorker.js', import.meta.url));
+  writeExtensionActivityEntrySafeMock.mockReset();
 });
 
 afterEach(() => {
@@ -1271,5 +1280,142 @@ describe('registerExtensionRoutes', () => {
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({ error: 'Extension not found.' });
+  });
+
+  it('writes an activity entry when a runtime extension is created', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const harness = createHarness();
+    const res = createResponse();
+    harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: 'Agent Board' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'created', 'Agent Board');
+  });
+
+  it('writes an activity entry when a runtime extension is imported', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        frontend: { entry: 'dist/frontend.js' },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'frontend.js'), 'export function AgentBoardPage() {}');
+    writeFileSync(join(extensionRoot, 'dist', 'build-manifest.json'), '{}');
+
+    const exportHarness = createHarness();
+    const exportRes = createResponse();
+    exportHarness.postHandler('/api/extensions/:id/export')({ params: { id: 'agent-board' } }, exportRes);
+    const exportPayload = exportRes.json.mock.calls[0]?.[0] as { exportPath: string };
+
+    // Import into a fresh state root so the same extension id does not conflict.
+    process.env.NEON_PILOT_STATE_ROOT = mkdtempSync(join(tmpdir(), 'pa-ext-route-import-'));
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const importHarness = createHarness();
+    const importRes = createResponse();
+    importHarness.postHandler('/api/extensions/import')({ body: { zipPath: exportPayload.exportPath } }, importRes);
+
+    expect(importRes.status).toHaveBeenCalledWith(201);
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'imported', 'Agent Board');
+  });
+
+  it('writes an activity entry when a runtime extension is snapshotted', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 1, id: 'agent-board', name: 'Agent Board' }));
+
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const harness = createHarness();
+    const res = createResponse();
+    harness.postHandler('/api/extensions/:id/snapshot')({ params: { id: 'agent-board' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'snapshotted', 'agent-board');
+  });
+
+  it('writes an activity entry when a runtime extension is toggled (enabled or disabled)', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 1, id: 'agent-board', name: 'Agent Board' }));
+
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const harness = createHarness();
+    const disableRes = createResponse();
+    await harness.patchHandler('/api/extensions/:id')({ params: { id: 'agent-board' }, body: { enabled: false } }, disableRes);
+
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'disabled', 'Agent Board');
+
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const enableRes = createResponse();
+    await harness.patchHandler('/api/extensions/:id')({ params: { id: 'agent-board' }, body: { enabled: true } }, enableRes);
+
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'enabled', 'Agent Board');
+  });
+
+  it('writes an activity entry when a runtime extension is exported', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        frontend: { entry: 'dist/frontend.js' },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'frontend.js'), 'export function AgentBoardPage() {}');
+    writeFileSync(join(extensionRoot, 'dist', 'build-manifest.json'), '{}');
+
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const harness = createHarness();
+    const res = createResponse();
+    harness.postHandler('/api/extensions/:id/export')({ params: { id: 'agent-board' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'exported', 'agent-board');
+  });
+
+  it('writes an activity entry when a runtime extension is deleted', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 1, id: 'agent-board', name: 'Agent Board' }));
+
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const harness = createHarness();
+    const res = createResponse();
+    await harness.deleteHandler('/api/extensions/:id')({ params: { id: 'agent-board' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, extensionId: 'agent-board', deleted: true }));
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'deleted', 'agent-board');
+  });
+
+  it('does not write a deleted activity entry when no extension package was deleted', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+
+    writeExtensionActivityEntrySafeMock.mockReset();
+    const harness = createHarness();
+    const res = createResponse();
+    await harness.deleteHandler('/api/extensions/:id')({ params: { id: 'missing-extension' } }, res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, extensionId: 'missing-extension', deleted: false }));
+    expect(writeExtensionActivityEntrySafeMock).not.toHaveBeenCalled();
   });
 });
