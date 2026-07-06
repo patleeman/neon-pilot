@@ -231,6 +231,65 @@ describe('tool gateway', () => {
     );
   });
 
+  it('routes allowlisted desktop control through the system desktop tools action', async () => {
+    toolInventory.listToolDefinitionsAsync.mockResolvedValue([
+      {
+        id: 'system-desktop-tools/desktop-control',
+        name: 'desktop_control',
+        description: 'Control the Windowed OS desktop',
+        inputSchema: { type: 'object' },
+        raw: {
+          extensionId: 'system-desktop-tools',
+          packageType: 'system',
+          id: 'desktop-control',
+          name: 'desktop_control',
+          action: 'desktopControl',
+          description: 'Control the Windowed OS desktop',
+          inputSchema: { type: 'object' },
+        },
+        priority: 0,
+      },
+    ]);
+
+    await expect(
+      listInvocableExtensionTools({
+        modelRef: 'ds4/deepseek-v4-flash',
+        repoRoot: '/repo',
+        directToolNames: ['desktop_control'],
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'desktop_control',
+        source: {
+          extensionId: 'system-desktop-tools',
+          toolId: 'desktop-control',
+          action: 'desktopControl',
+        },
+      }),
+    ]);
+
+    await expect(
+      invokeExtensionToolByName({
+        name: 'desktop_control',
+        input: { action: 'open', appId: 'browser' },
+        runtime: {
+          modelRef: 'ds4/deepseek-v4-flash',
+          repoRoot: '/repo',
+          directToolNames: ['desktop_control'],
+        },
+        toolContext: { conversationId: 'conv-1', cwd: '/repo' },
+      }),
+    ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
+
+    expect(extensionHostClient.invokeAction).toHaveBeenLastCalledWith({
+      extensionId: 'system-desktop-tools',
+      actionId: 'desktopControl',
+      input: { action: 'open', appId: 'browser' },
+      serverContextSnapshot: undefined,
+      toolContextSnapshot: { conversationId: 'conv-1', cwd: '/repo' },
+    });
+  });
+
   it('does not expose unrelated extension tools from a direct tool allowlist', async () => {
     toolInventory.listToolDefinitionsAsync.mockResolvedValue([
       {
