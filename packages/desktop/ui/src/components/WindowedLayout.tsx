@@ -135,6 +135,7 @@ const FALLBACK_TASKBAR_HEIGHT = 44;
 const DEFAULT_WINDOW_BOTTOM_GUTTER = 56;
 const DEFAULT_CHAT_WORKBENCH_COLLAPSED = true;
 const DESKTOP_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-desktop-shell-active';
+const WINDOWED_WORKSPACE_APP_KINDS = new Set<WindowKind>(['files', 'terminal']);
 
 const TASKBAR_EXCLUDED_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
@@ -506,6 +507,10 @@ function hasCoveredChatWindow(visibleWindows: DesktopWindowModel[]): boolean {
 
 function hasOverlappingWindowedSurface(visibleWindows: DesktopWindowModel[]): boolean {
   return visibleWindows.some((windowModel) => isWindowCoveredByHigherWindow(windowModel, visibleWindows));
+}
+
+function windowedWorkspaceDefaultCwdForApp(app: Pick<WindowedAppRegistration, 'kind'>, defaultWorkspaceCwd: string | null): string | null {
+  return WINDOWED_WORKSPACE_APP_KINDS.has(app.kind) ? defaultWorkspaceCwd : null;
 }
 
 function canHostBrowserFrame(windowModel: DesktopWindowModel): boolean {
@@ -987,15 +992,18 @@ function WindowedChatTerminalWindowBody({
   parentWindowId,
   parentWindowTitle,
   route,
+  standaloneWorkspacePending,
 }: {
   cwd?: string | null;
   parentWindowId?: string;
   parentWindowTitle?: string;
   route: string;
+  standaloneWorkspacePending?: boolean;
 }) {
   const extensionRegistry = useExtensionRegistry();
   const routeLocationValue = useMemo(() => routeLocation(route), [route]);
   const terminalSurface = useMemo(() => findTerminalSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
+  const missingStandaloneCwd = !parentWindowId && !cwd;
 
   return (
     <div
@@ -1005,7 +1013,13 @@ function WindowedChatTerminalWindowBody({
       data-parent-window-id={parentWindowId}
       data-parent-window-title={parentWindowTitle}
     >
-      {terminalSurface ? (
+      {missingStandaloneCwd && standaloneWorkspacePending ? (
+        <WindowedChildWindowEmptyState title="Preparing workspace">Connecting Terminal to the desktop root.</WindowedChildWindowEmptyState>
+      ) : missingStandaloneCwd ? (
+        <WindowedChildWindowEmptyState title="Workspace unavailable">
+          Terminal requires a desktop root before it can start.
+        </WindowedChildWindowEmptyState>
+      ) : terminalSurface ? (
         <NativeExtensionSurfaceHost
           surface={terminalSurface}
           pathname={routeLocationValue.pathname}
@@ -1069,15 +1083,18 @@ function WindowedChatFilesWindowBody({
   parentWindowId,
   parentWindowTitle,
   route,
+  standaloneWorkspacePending,
 }: {
   cwd?: string | null;
   parentWindowId?: string;
   parentWindowTitle?: string;
   route: string;
+  standaloneWorkspacePending?: boolean;
 }) {
   const extensionRegistry = useExtensionRegistry();
   const routeLocationValue = useMemo(() => routeLocation(route), [route]);
   const filesSurface = useMemo(() => findFilesSurface(extensionRegistry.surfaces), [extensionRegistry.surfaces]);
+  const missingStandaloneCwd = !parentWindowId && !cwd;
 
   return (
     <div
@@ -1087,7 +1104,13 @@ function WindowedChatFilesWindowBody({
       data-parent-window-id={parentWindowId}
       data-parent-window-title={parentWindowTitle}
     >
-      {filesSurface ? (
+      {missingStandaloneCwd && standaloneWorkspacePending ? (
+        <WindowedChildWindowEmptyState title="Preparing workspace">Connecting Files to the desktop root.</WindowedChildWindowEmptyState>
+      ) : missingStandaloneCwd ? (
+        <WindowedChildWindowEmptyState title="Workspace unavailable">
+          Files requires a desktop root before it can open.
+        </WindowedChildWindowEmptyState>
+      ) : filesSurface ? (
         <NativeExtensionSurfaceHost
           surface={filesSurface}
           pathname={routeLocationValue.pathname}
@@ -1316,6 +1339,8 @@ export function WindowedLayout() {
   const extensionRegistry = useExtensionRegistry();
   const conversations = useConversations({ includeArchivedSessions: false });
   const desktopRef = useRef<HTMLElement | null>(null);
+  const [defaultWorkspaceCwd, setDefaultWorkspaceCwd] = useState<string | null>(null);
+  const [defaultWorkspaceCwdPending, setDefaultWorkspaceCwdPending] = useState(true);
   const [launcherOpen, setLauncherOpen] = useState(false);
   const [windows, setWindows] = useState<DesktopWindowModel[]>(() => {
     const stored = readStoredWindows();
@@ -1373,6 +1398,42 @@ export function WindowedLayout() {
       document.body.removeAttribute(DESKTOP_SHELL_ACTIVE_ATTRIBUTE);
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .defaultCwd()
+      .then((state) => {
+        if (!cancelled) {
+          setDefaultWorkspaceCwd(state.effectiveCwd?.trim() || null);
+          setDefaultWorkspaceCwdPending(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDefaultWorkspaceCwd(null);
+          setDefaultWorkspaceCwdPending(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!defaultWorkspaceCwd) return;
+    setWindows((current) => {
+      let changed = false;
+      const next = current.map((windowModel) => {
+        if (windowModel.parentWindowId || !WINDOWED_WORKSPACE_APP_KINDS.has(windowModel.kind) || windowModel.workspaceCwd) {
+          return windowModel;
+        }
+        changed = true;
+        return { ...windowModel, workspaceCwd: defaultWorkspaceCwd };
+      });
+      return changed ? next : current;
+    });
+  }, [defaultWorkspaceCwd]);
 
   useEffect(() => {
     if (windowedTheme !== 'auto') {
@@ -1576,48 +1637,57 @@ export function WindowedLayout() {
     [openChildWindow],
   );
 
-  const openWindowedApp = useCallback((app: WindowedAppRegistration, session?: SessionMeta) => {
-    const id = createId(app, app.kind === 'route' && !app.window.singleton ? createWindowInstanceSuffix() : session?.id);
-    const title = app.kind === 'chat' && session ? conversationWindowTitle(session) : app.title;
-    const route = app.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : app.route;
-    suspendWindowedBrowserViews();
-    setLauncherOpen(false);
-    setWindows((current) => {
-      const existing =
-        app.kind === 'route' && app.window.singleton
-          ? current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app))
-          : current.find((windowModel) => windowModel.id === id);
-      if (existing) {
-        return withFocusedWindow(
-          current.map((windowModel) =>
-            windowModel.id === existing.id && app.kind === 'route'
-              ? { ...windowModel, id, title: app.title, route: app.route }
-              : windowModel.id === existing.id && app.kind === 'chat'
-                ? { ...windowModel, title, route, workspaceCwd: conversationWorkspaceCwd(session ?? null) }
-                : windowModel,
-          ),
+  const openWindowedApp = useCallback(
+    (app: WindowedAppRegistration, session?: SessionMeta) => {
+      const id = createId(app, app.kind === 'route' && !app.window.singleton ? createWindowInstanceSuffix() : session?.id);
+      const title = app.kind === 'chat' && session ? conversationWindowTitle(session) : app.title;
+      const route = app.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : app.route;
+      suspendWindowedBrowserViews();
+      setLauncherOpen(false);
+      setWindows((current) => {
+        const existing =
+          app.kind === 'route' && app.window.singleton
+            ? current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app))
+            : current.find((windowModel) => windowModel.id === id);
+        if (existing) {
+          return withFocusedWindow(
+            current.map((windowModel) =>
+              windowModel.id === existing.id && app.kind === 'route'
+                ? { ...windowModel, id, title: app.title, route: app.route }
+                : windowModel.id === existing.id && app.kind === 'chat'
+                  ? { ...windowModel, title, route, workspaceCwd: conversationWorkspaceCwd(session ?? null) }
+                  : windowModel.id === existing.id
+                    ? {
+                        ...windowModel,
+                        workspaceCwd: windowModel.workspaceCwd ?? windowedWorkspaceDefaultCwdForApp(app, defaultWorkspaceCwd),
+                      }
+                    : windowModel,
+            ),
+            id,
+          );
+        }
+        const next: DesktopWindowModel = {
           id,
-        );
-      }
-      const next: DesktopWindowModel = {
-        id,
-        kind: app.kind,
-        title,
-        route,
-        bounds: nextDefaultBounds(current.length, app.kind, desktopRef.current, title, {
-          width: app.window.defaultWidth,
-          height: app.window.defaultHeight,
-        }),
-        minimized: false,
-        focused: true,
-        singleton: app.window.singleton,
-        archivedOnClose: app.kind === 'chat' && Boolean(session?.id),
-        workbenchCollapsed: app.kind === 'chat' ? DEFAULT_CHAT_WORKBENCH_COLLAPSED : undefined,
-        workspaceCwd: app.kind === 'chat' ? conversationWorkspaceCwd(session ?? null) : null,
-      };
-      return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
-    });
-  }, []);
+          kind: app.kind,
+          title,
+          route,
+          bounds: nextDefaultBounds(current.length, app.kind, desktopRef.current, title, {
+            width: app.window.defaultWidth,
+            height: app.window.defaultHeight,
+          }),
+          minimized: false,
+          focused: true,
+          singleton: app.window.singleton,
+          archivedOnClose: app.kind === 'chat' && Boolean(session?.id),
+          workbenchCollapsed: app.kind === 'chat' ? DEFAULT_CHAT_WORKBENCH_COLLAPSED : undefined,
+          workspaceCwd:
+            app.kind === 'chat' ? conversationWorkspaceCwd(session ?? null) : windowedWorkspaceDefaultCwdForApp(app, defaultWorkspaceCwd),
+        };
+        return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
+      });
+    },
+    [defaultWorkspaceCwd],
+  );
 
   const openRouteWindow = useCallback(
     (route: string) => {
@@ -2450,6 +2520,7 @@ export function WindowedLayout() {
                     parentWindowId={windowModel.parentWindowId}
                     parentWindowTitle={windowModel.parentWindowTitle}
                     route={windowModel.route}
+                    standaloneWorkspacePending={defaultWorkspaceCwdPending}
                   />
                 </div>
               ) : isFilesWindow ? (
@@ -2459,6 +2530,7 @@ export function WindowedLayout() {
                     parentWindowId={windowModel.parentWindowId}
                     parentWindowTitle={windowModel.parentWindowTitle}
                     route={windowModel.route}
+                    standaloneWorkspacePending={defaultWorkspaceCwdPending}
                   />
                 </div>
               ) : isBrowserWindow ? (

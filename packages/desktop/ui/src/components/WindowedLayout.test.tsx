@@ -11,6 +11,9 @@ import { WindowedLayout } from './WindowedLayout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
 
 const mocks = vi.hoisted(() => ({
+  defaultCwd: vi.fn(() =>
+    Promise.resolve({ currentCwd: '', effectiveCwd: '/Users/patrick/Library/Application Support/Neon Pilot/Desktop' }),
+  ),
   publishDesktopState: vi.fn(() => Promise.resolve({ ok: true })),
   publishDesktopUserAction: vi.fn(() => Promise.resolve({ ok: true })),
   acknowledgeDesktopControl: vi.fn(() => Promise.resolve({ ok: true })),
@@ -142,6 +145,7 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
 
 vi.mock('../client/api', () => ({
   api: {
+    defaultCwd: mocks.defaultCwd,
     acknowledgeDesktopControl: mocks.acknowledgeDesktopControl,
     acknowledgeDesktopScreenshot: mocks.acknowledgeDesktopScreenshot,
     publishDesktopState: mocks.publishDesktopState,
@@ -249,6 +253,8 @@ describe('WindowedLayout route windows', () => {
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
     delete window.neonPilotDesktop;
     mocks.layout.mockClear();
+    mocks.defaultCwd.mockClear();
+    mocks.defaultCwd.mockResolvedValue({ currentCwd: '', effectiveCwd: '/Users/patrick/Library/Application Support/Neon Pilot/Desktop' });
     mocks.archiveSession.mockClear();
     mocks.acknowledgeDesktopControl.mockClear();
     mocks.acknowledgeDesktopScreenshot.mockClear();
@@ -895,6 +901,7 @@ describe('WindowedLayout route windows', () => {
     mocks.surfaces = [surfaceForChildTool(kind)];
 
     renderWindowedLayout();
+    await waitFor(() => expect(mocks.defaultCwd).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
     fireEvent.mouseDown(screen.getByRole('button', { name: title }), { button: 0 });
 
@@ -912,6 +919,81 @@ describe('WindowedLayout route windows', () => {
     expect(host.getAttribute('data-surface-id')).toBe(surfaceId);
     expect(host.getAttribute('data-shell-presentation')).toBe('windowed');
     expect(host.getAttribute('data-instance-id')).toBe(`app:${kind}`);
+    expect(host.getAttribute('data-cwd')).toBe(
+      kind === 'files' || kind === 'terminal' ? '/Users/patrick/Library/Application Support/Neon Pilot/Desktop' : '',
+    );
+  });
+
+  it.each([
+    ['files' as const, 'Files'],
+    ['terminal' as const, 'Terminal'],
+  ])('backfills a stored standalone %s window with the desktop root cwd', async (kind, title) => {
+    mocks.extensions = [{ id: kind === 'files' ? 'system-files' : 'system-terminal', enabled: true, contributes: {} }];
+    mocks.surfaces = [surfaceForChildTool(kind)];
+    seedWindowedWindows([
+      {
+        id: `app:${kind}`,
+        kind,
+        title,
+        route: `/${kind}`,
+        bounds: { x: 112, y: 72, width: 820, height: 560 },
+        minimized: false,
+        focused: true,
+        workspaceCwd: null,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const host = await screen.findByTestId('native-extension-surface');
+    await waitFor(() => {
+      expect(host.getAttribute('data-cwd')).toBe('/Users/patrick/Library/Application Support/Neon Pilot/Desktop');
+    });
+  });
+
+  it('waits for the desktop root cwd before mounting a standalone Terminal surface', async () => {
+    mocks.extensions = [{ id: 'system-terminal', enabled: true, contributes: {} }];
+    mocks.surfaces = [surfaceForChildTool('terminal')];
+    let resolveDefaultCwd: (state: { currentCwd: string; effectiveCwd: string }) => void = () => undefined;
+    mocks.defaultCwd.mockReturnValue(
+      new Promise((resolve) => {
+        resolveDefaultCwd = resolve;
+      }),
+    );
+
+    renderWindowedLayout();
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Terminal' }), { button: 0 });
+
+    const terminalWindow = await screen.findByRole('region', { name: 'Terminal' });
+    expect(within(terminalWindow).getByText('Preparing workspace')).toBeTruthy();
+    expect(within(terminalWindow).queryByTestId('native-extension-surface')).toBeNull();
+
+    await act(async () => {
+      resolveDefaultCwd({ currentCwd: '', effectiveCwd: '/Users/patrick/Library/Application Support/Neon Pilot/Desktop' });
+    });
+
+    await waitFor(() => {
+      expect(within(terminalWindow).getByTestId('native-extension-surface').getAttribute('data-cwd')).toBe(
+        '/Users/patrick/Library/Application Support/Neon Pilot/Desktop',
+      );
+    });
+  });
+
+  it('shows a workspace error instead of mounting standalone Terminal when the desktop root cwd is unavailable', async () => {
+    mocks.extensions = [{ id: 'system-terminal', enabled: true, contributes: {} }];
+    mocks.surfaces = [surfaceForChildTool('terminal')];
+    mocks.defaultCwd.mockRejectedValue(new Error('desktop root unavailable'));
+
+    renderWindowedLayout();
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Terminal' }), { button: 0 });
+
+    const terminalWindow = await screen.findByRole('region', { name: 'Terminal' });
+    await waitFor(() => {
+      expect(within(terminalWindow).getByText('Workspace unavailable')).toBeTruthy();
+    });
+    expect(within(terminalWindow).queryByTestId('native-extension-surface')).toBeNull();
   });
 
   it('keeps standalone tool apps open together when launched from the Start menu', async () => {
