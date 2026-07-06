@@ -36,9 +36,81 @@ describe('system-extension-manager backend', () => {
   beforeEach(async () => {
     vi.resetModules();
     for (const mock of Object.values(extensionBackendApi)) mock.mockReset();
+    extensionBackendApi.createRuntimeExtension.mockReturnValue({
+      ok: true,
+      extensionId: 'created-app',
+      packageRoot: '/runtime/extensions/created-app',
+    });
     extensionBackendApi.runExtensionSelfTest.mockResolvedValue({ ok: true, checks: [] });
     extensionBackendApi.invalidateExtensionRegistryReadCaches.mockResolvedValue(undefined);
     mod = await import('./backend.js');
+  });
+
+  it('passes direct create action appearance metadata to runtime extension creation', async () => {
+    const result = await mod.createExtension(
+      {
+        id: 'styled-app',
+        name: 'Styled App',
+        description: 'A styled app.',
+        template: 'route-shell',
+        appearance: {
+          accent: 'drawing',
+          aliases: ['whiteboard', 'sketchpad'],
+          singleton: false,
+          window: { defaultWidth: 800, defaultHeight: 600 },
+        },
+      },
+      createBackendContext(),
+    );
+
+    expect(result).toMatchObject({ ok: true, extensionId: 'created-app' });
+    expect(extensionBackendApi.createRuntimeExtension).toHaveBeenCalledWith({
+      id: 'styled-app',
+      name: 'Styled App',
+      description: 'A styled app.',
+      template: 'route-shell',
+      appearance: {
+        accent: 'drawing',
+        aliases: ['whiteboard', 'sketchpad'],
+        singleton: false,
+        window: { defaultWidth: 800, defaultHeight: 600 },
+      },
+    });
+  });
+
+  it('normalizes CLI create appearance flags for app registry metadata', async () => {
+    await mod.manageExtension(
+      {
+        cli: {
+          command: 'extensions create',
+          args: ['kanban-board'],
+          flags: {
+            name: 'Kanban Board',
+            description: 'Personal project board',
+            template: 'main-page',
+            accent: 'apps',
+            aliases: 'kanban, projects',
+            singleton: 'false',
+            'window-width': '960',
+            windowHeight: '720',
+          },
+        },
+      },
+      createBackendContext(),
+    );
+
+    expect(extensionBackendApi.createRuntimeExtension).toHaveBeenCalledWith({
+      id: 'kanban-board',
+      name: 'Kanban Board',
+      description: 'Personal project board',
+      template: 'main-page',
+      appearance: {
+        accent: 'apps',
+        aliases: ['kanban', 'projects'],
+        singleton: false,
+        window: { defaultWidth: 960, defaultHeight: 720 },
+      },
+    });
   });
 
   it('uses app-package copy for smoke check results while preserving extension ids', async () => {

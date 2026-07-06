@@ -66,6 +66,7 @@ export async function createExtension(input: unknown, _ctx: ExtensionBackendCont
     name: body.name,
     description: body.description,
     template: body.template,
+    appearance: body.appearance,
   });
   return { ok: true, ...result };
 }
@@ -209,6 +210,7 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
       name: flags.name,
       description: flags.description,
       template: flags.template,
+      appearance: normalizeCreateAppearanceFlags(flags),
     };
   if (command === 'extensions snapshot') return { ...body, action: 'snapshot', extensionId: args[0] };
   if (command === 'extensions delete' || command === 'extensions uninstall') return { ...body, action: 'delete', extensionId: args[0] };
@@ -269,6 +271,65 @@ function splitEnvironmentPathList(value: string | undefined): string[] {
     .split(/[,\n:]/)
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function normalizeCreateAppearanceFlags(flags: Record<string, unknown>): Record<string, unknown> | undefined {
+  const appearance: Record<string, unknown> = {};
+  if (flags.accent !== undefined) appearance.accent = flags.accent;
+
+  const aliases = normalizeAliasFlag(flags.aliases ?? flags.alias);
+  if (aliases !== undefined) appearance.aliases = aliases;
+
+  const singleton = normalizeBooleanFlag(flags.singleton);
+  if (singleton !== undefined) appearance.singleton = singleton;
+
+  const window: Record<string, unknown> = {};
+  const defaultWidth = normalizeNumberFlag(flags['window-width'] ?? flags.windowWidth);
+  const defaultHeight = normalizeNumberFlag(flags['window-height'] ?? flags.windowHeight);
+  if (defaultWidth !== undefined) window.defaultWidth = defaultWidth;
+  if (defaultHeight !== undefined) window.defaultHeight = defaultHeight;
+  if (Object.keys(window).length > 0) appearance.window = window;
+
+  return Object.keys(appearance).length > 0 ? appearance : undefined;
+}
+
+function normalizeAliasFlag(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  if (typeof value === 'string') {
+    const aliases = splitCommaList(value);
+    return aliases.length > 0 ? aliases : undefined;
+  }
+  if (Array.isArray(value) && value.every((entry): entry is string => typeof entry === 'string')) {
+    const aliases = value.flatMap(splitCommaList);
+    return aliases.length > 0 ? aliases : undefined;
+  }
+  return value;
+}
+
+function splitCommaList(value: string): string[] {
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function normalizeBooleanFlag(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true') return true;
+  if (normalized === 'false') return false;
+  return value;
+}
+
+function normalizeNumberFlag(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return value;
+  if (value.trim().length === 0) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : value;
 }
 
 function asRecord(input: unknown): Record<string, unknown> {
