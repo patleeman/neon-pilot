@@ -319,6 +319,7 @@ function isAppEventTopic(value: unknown): value is AppEventTopic {
     value === 'checkpoints' ||
     value === 'attachments' ||
     value === 'documents' ||
+    value === 'activity' ||
     value === 'extensions' ||
     value === 'tasks' ||
     value === 'models' ||
@@ -329,6 +330,7 @@ function isAppEventTopic(value: unknown): value is AppEventTopic {
     value === 'workspace' ||
     value === 'knowledgeBase' ||
     value === 'notifications' ||
+    value === 'inbox' ||
     value === 'readiness'
   );
 }

@@ -1,4 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { listConversationSessionsSnapshotMock, listExecutionsMock, logErrorMock } = vi.hoisted(() => ({
   listConversationSessionsSnapshotMock: vi.fn(),
@@ -18,13 +23,25 @@ vi.mock('../middleware/index.js', () => ({
   logError: logErrorMock,
 }));
 
+import { ACTIVITY_COLLECTION, ACTIVITY_OWNER } from '../activity/activityEntries.js';
+import { getDocumentsStore, resetDocumentsStoreSingleton } from '../documents/store.js';
 import { registerGlobalActivityRoutes } from './globalActivity.js';
 
 describe('registerGlobalActivityRoutes', () => {
+  let tempRoots: string[] = [];
+
   beforeEach(() => {
     listConversationSessionsSnapshotMock.mockReset();
     listExecutionsMock.mockReset();
     logErrorMock.mockReset();
+  });
+
+  afterEach(() => {
+    resetDocumentsStoreSingleton();
+    for (const root of tempRoots) {
+      rmSync(root, { recursive: true, force: true });
+    }
+    tempRoots = [];
   });
 
   function createHarness() {
@@ -39,6 +56,28 @@ describe('registerGlobalActivityRoutes', () => {
 
     return {
       activityHandler: handlers['GET /api/activity']!,
+    };
+  }
+
+  function createHarnessWithDocuments() {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'global-activity-docs-test-'));
+    tempRoots.push(stateRoot);
+    const desktopRootLayout = resolveDesktopRootLayout({ root: join(stateRoot, 'desktop-root') });
+    const handlers: Record<string, (req: unknown, res: unknown) => Promise<void> | void> = {};
+    const router = {
+      get: vi.fn((path: string, next: (req: unknown, res: unknown) => Promise<void> | void) => {
+        handlers[`GET ${path}`] = next;
+      }),
+    };
+
+    registerGlobalActivityRoutes(router as never, {
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => desktopRootLayout,
+    });
+
+    return {
+      activityHandler: handlers['GET /api/activity']!,
+      store: getDocumentsStore(stateRoot, desktopRootLayout),
     };
   }
 
@@ -165,6 +204,34 @@ describe('registerGlobalActivityRoutes', () => {
     const call = res.json.mock.calls[0][0] as { items: Array<{ kind: string }> };
     expect(call.items).toHaveLength(1);
     expect(call.items[0].kind).toBe('execution');
+  });
+
+  it('includes documents-backed activity entries when a route context is available', async () => {
+    const { activityHandler, store } = createHarnessWithDocuments();
+    listConversationSessionsSnapshotMock.mockReturnValue([]);
+    listExecutionsMock.mockResolvedValue({ executions: [] });
+    store.putDocument(ACTIVITY_OWNER, ACTIVITY_COLLECTION, 'entry-1', {
+      type: 'milestone',
+      title: 'Installed app',
+      subtitle: 'system-documents',
+      source: 'App Manager',
+    });
+
+    const res = createJsonResponse();
+    await activityHandler({ query: {} }, res);
+
+    const call = res.json.mock.calls[0][0] as { items: Array<Record<string, unknown>>; total: number };
+    expect(call.total).toBe(1);
+    expect(call.items[0]).toEqual(
+      expect.objectContaining({
+        id: 'entry:entry-1',
+        kind: 'entry',
+        title: 'Installed app',
+        subtitle: 'system-documents',
+        source: 'App Manager',
+        entryType: 'milestone',
+      }),
+    );
   });
 
   it('filters by active status', async () => {

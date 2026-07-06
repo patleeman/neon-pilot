@@ -1406,7 +1406,7 @@ export const api = {
 
   // ── Global activity ─────────────────────────────────────────────────────
 
-  activity: async (options?: { limit?: number; kind?: 'conversation' | 'execution' | 'all'; active?: boolean }) => {
+  activity: async (options?: { limit?: number; kind?: 'conversation' | 'execution' | 'entry' | 'all'; active?: boolean }) => {
     const params = new URLSearchParams();
     if (options?.limit) params.set('limit', String(options.limit));
     if (options?.kind) params.set('kind', options.kind);

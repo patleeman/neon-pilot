@@ -1,9 +1,9 @@
 # Global Activity feed
 
 The global Activity page (`/activity`) and its `/api/activity` endpoint are the app-wide
-view of work happening across all conversations: chat threads plus background workers
-(backed by durable runs). It is intentionally a worker/app task manager rather than a
-generic chat/run table.
+view of work happening across all conversations: chat threads, background workers
+(backed by durable runs), and durable activity entries in the documents store. It is
+intentionally a worker/app task manager rather than a generic chat/run table.
 
 This is separate from the left-sidebar **activity tree** (see
 [`activity-tree.md`](./activity-tree.md)), which is the per-conversation tree model.
@@ -15,7 +15,7 @@ The global feed is a flat, app-wide list.
 the existing backward-compatible query parameters:
 
 - `limit` — positive integer, clamped to 200, default 50
-- `kind` — `conversation` | `execution` | `all` (malformed values are ignored)
+- `kind` — `conversation` | `execution` | `entry` | `all` (malformed values are ignored)
 - `active` — `true` restricts to queued/running rows; `false` restricts to the rest
 
 Rows keep the existing fields (`id`, `kind`, `title`, `subtitle`, `status`,
@@ -34,6 +34,20 @@ optional worker/app-centric fields on execution rows:
 
 Conversation rows are preserved and additionally carry `active` and `source: 'Conversation'`
 so the UI can group and label them alongside workers.
+
+Durable activity entries are stored as documents under owner `activity`, collection
+`activity-entries`. They appear in `/api/activity` as `kind: 'entry'` rows with
+`entryType` set from the document body's `type`. The host-owned
+`/api/activity/entries` route provides a thin documents-backed CRUD surface for this
+collection:
+
+- `GET /api/activity/entries`
+- `GET /api/activity/entries/:id`
+- `POST /api/activity/entries`
+- `DELETE /api/activity/entries/:id`
+
+Entry mutations invalidate both `activity` and `documents` so the Activity and
+Documents apps can refresh from the same shared data plane.
 
 ## UI
 

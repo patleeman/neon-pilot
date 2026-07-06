@@ -597,7 +597,7 @@ export interface ExecutionDetailResult {
   execution: ExecutionRecord;
 }
 
-export type GlobalActivityKind = 'conversation' | 'execution';
+export type GlobalActivityKind = 'conversation' | 'execution' | 'entry';
 export type GlobalActivityStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'unknown';
 
 export interface GlobalActivityItem {
@@ -610,7 +610,7 @@ export interface GlobalActivityItem {
   active?: boolean;
   /** User-facing source label, e.g. "Background command", "Subagent", "Conversation". */
   source?: string;
-  /** Typed execution kind for executions; undefined for conversation rows. */
+  /** Typed execution kind for executions; undefined for conversation/entry rows. */
   executionKind?: ExecutionKind;
   /** Execution visibility channel. */
   visibility?: ExecutionVisibility;
@@ -622,6 +622,8 @@ export interface GlobalActivityItem {
   conversationTitle?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Activity entry type for durable entry rows. */
+  entryType?: string;
 }
 
 export interface GlobalActivityResult {

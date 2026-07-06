@@ -1,3 +1,4 @@
+import { registerActivityEntriesRoutes } from './activity.js';
 import { registerAppTelemetryRoutes } from './appTelemetry.js';
 import type { RegisterServerRoutesInput } from './context.js';
 import { registerConversationActivityRoutes } from './conversationActivity.js';
@@ -48,7 +49,9 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
 
   registerExecutionRoutes(app);
 
-  registerGlobalActivityRoutes(app);
+  registerGlobalActivityRoutes(app, context);
+
+  registerActivityEntriesRoutes(app, context);
 
   registerInboxRoutes(app, context);
 

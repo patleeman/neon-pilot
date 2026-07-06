@@ -325,7 +325,9 @@ export function HomePage() {
                         as={Link}
                         to="/activity"
                         label={item.title}
-                        meta={item.source ?? (item.kind === 'conversation' ? 'Conversation' : 'Worker')}
+                        meta={
+                          item.source ?? (item.kind === 'conversation' ? 'Conversation' : item.kind === 'entry' ? 'Activity' : 'Worker')
+                        }
                         detail={
                           <span className="inline-flex items-center gap-1.5">
                             <StatusDot tone={activityStatusTone(item.status)} size="sm" title={activityStatusLabel(item.status)} />

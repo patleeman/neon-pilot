@@ -1,13 +1,16 @@
 import type { Express, Response } from 'express';
 
+import { ACTIVITY_COLLECTION, ACTIVITY_OWNER, type ActivityEntryBody } from '../activity/activityEntries.js';
 import { listConversationSessionsSnapshot } from '../conversations/conversationService.js';
+import { type DocumentsStore, getDocumentsStore } from '../documents/store.js';
 import type { ExecutionKind, ExecutionVisibility } from '../executions/executionService.js';
 import { listExecutions } from '../executions/executionService.js';
 import { logError } from '../middleware/index.js';
+import type { ServerRouteContext } from './context.js';
 
 // Public types
 
-export type GlobalActivityKind = 'conversation' | 'execution';
+export type GlobalActivityKind = 'conversation' | 'execution' | 'entry';
 export type GlobalActivityStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'unknown';
 
 export interface GlobalActivityItem {
@@ -20,7 +23,7 @@ export interface GlobalActivityItem {
   active?: boolean;
   /** User-facing source label, e.g. "Background command", "Subagent", "Conversation". */
   source?: string;
-  /** Typed execution kind for executions; undefined for conversation rows. */
+  /** Typed execution kind for executions; undefined for conversation/entry rows. */
   executionKind?: ExecutionKind;
   /** Execution visibility channel. */
   visibility?: ExecutionVisibility;
@@ -32,6 +35,8 @@ export interface GlobalActivityItem {
   conversationTitle?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Activity entry type for entry-kind items. */
+  entryType?: string;
 }
 
 export interface GlobalActivityResult {
@@ -53,7 +58,9 @@ function parsePositiveInteger(value: unknown, defaultVal: number, maxVal: number
 function parseKindQuery(value: unknown): GlobalActivityKind | 'all' | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
-  return normalized === 'conversation' || normalized === 'execution' || normalized === 'all' ? normalized : undefined;
+  return normalized === 'conversation' || normalized === 'execution' || normalized === 'entry' || normalized === 'all'
+    ? normalized
+    : undefined;
 }
 
 function parseBooleanQuery(value: unknown): boolean | undefined {
@@ -103,9 +110,34 @@ function handleError(res: Response, err: unknown): void {
   res.status(500).json({ error: String(err) });
 }
 
+/** Helper to build entry items from the documents store. */
+function buildEntryItems(store: DocumentsStore): GlobalActivityItem[] {
+  const all = store.listDocuments(ACTIVITY_OWNER, ACTIVITY_COLLECTION, { limit: 1000, offset: 0 });
+  return all.records.map((doc) => {
+    const body = doc.body as ActivityEntryBody;
+    return {
+      id: `entry:${doc.id}`,
+      kind: 'entry' as const,
+      title: body.title,
+      subtitle: body.subtitle,
+      status: 'completed' as GlobalActivityStatus,
+      active: false,
+      source: body.source ?? 'Activity',
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+      entryType: body.type,
+    };
+  });
+}
+
 // Route registration
 
-export function registerGlobalActivityRoutes(router: Pick<Express, 'get'>): void {
+interface GlobalActivityRouteContext {
+  getStateRoot: ServerRouteContext['getStateRoot'];
+  getDesktopRootLayout?: ServerRouteContext['getDesktopRootLayout'];
+}
+
+export function registerGlobalActivityRoutes(router: Pick<Express, 'get'>, context?: GlobalActivityRouteContext): void {
   router.get('/api/activity', async (req, res) => {
     try {
       const limit = parsePositiveInteger(req.query.limit, 50, 200);
@@ -160,8 +192,22 @@ export function registerGlobalActivityRoutes(router: Pick<Express, 'get'>): void
         };
       });
 
+      // Build entry items from the documents store (when context is available)
+      let entryItems: GlobalActivityItem[] = [];
+      if (context) {
+        const stateRoot = context.getStateRoot?.();
+        if (stateRoot) {
+          try {
+            const store = getDocumentsStore(stateRoot, context.getDesktopRootLayout?.());
+            entryItems = buildEntryItems(store);
+          } catch {
+            // Documents store not available; skip entry items.
+          }
+        }
+      }
+
       // Merge
-      const rawItems: GlobalActivityItem[] = [...conversationItems, ...executionItems];
+      const rawItems: GlobalActivityItem[] = [...conversationItems, ...executionItems, ...entryItems];
 
       // Apply optional kind filter
       let filtered = rawItems;

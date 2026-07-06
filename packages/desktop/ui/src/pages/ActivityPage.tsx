@@ -68,7 +68,9 @@ function itemIsActive(item: GlobalActivityItem): boolean {
  * backend did not provide one (e.g. older cached responses). */
 function itemSourceLabel(item: GlobalActivityItem): string {
   if (item.source) return item.source;
-  return item.kind === 'conversation' ? 'Conversation' : 'Worker';
+  if (item.kind === 'conversation') return 'Conversation';
+  if (item.kind === 'entry') return 'Activity';
+  return 'Worker';
 }
 
 function timeAgoShort(iso: string | undefined): string {
@@ -111,7 +113,7 @@ export function ActivityPage() {
   }, []);
 
   const { data, loading, refreshing, error, refetch } = useApi(fetcher, 'global-activity');
-  useInvalidateOnTopics(['sessions', 'executions'], refetch);
+  useInvalidateOnTopics(['sessions', 'executions', 'activity'], refetch);
 
   const allItems = data ? data.items : [];
   const items = filterItems(allItems, filter);
