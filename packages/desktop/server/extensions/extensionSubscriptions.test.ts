@@ -163,6 +163,48 @@ describe('extensionSubscriptions', () => {
     );
   });
 
+  it('delivers documents host events through source-level extension subscriptions', async () => {
+    const handler = vi.fn();
+    publishExtensionEvent.mockImplementation(async (sourceExtensionId, event, payload) => {
+      for (const subscription of handlers) {
+        if (subscription.pattern === event) {
+          subscription.handler({ event, payload, sourceExtensionId });
+        }
+      }
+    });
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
+    findExtensionEntry.mockReturnValue({
+      manifest: { contributes: { subscriptions: [{ id: 'documents', source: 'documents', handler: 'onDocumentEvent' }] } },
+    });
+    loadExtensionBackend.mockResolvedValue({ onDocumentEvent: handler });
+
+    await publishExtensionHostEvent('documents', {
+      type: 'document.updated',
+      owner: 'app-a',
+      collection: 'tasks',
+      id: 'task-1',
+      body: { title: 'Ship it' },
+    });
+
+    await vi.waitFor(() => expect(handler).toHaveBeenCalledOnce());
+    expect(subscribeExtensionEvents).toHaveBeenCalledWith('ext', 'host:documents', expect.any(Function));
+    expect(handler).toHaveBeenCalledWith(
+      {
+        subscriptionId: 'documents',
+        event: 'host:documents',
+        payload: {
+          type: 'document.updated',
+          owner: 'app-a',
+          collection: 'tasks',
+          id: 'task-1',
+          body: { title: 'Ship it' },
+        },
+        sourceExtensionId: 'host',
+      },
+      { ctx: true },
+    );
+  });
+
   it('is idempotent and uninstalls subscriptions by extension', async () => {
     findExtensionEntry.mockReturnValue({
       manifest: { contributes: { subscriptions: [{ id: 'sub', source: 'settings', handler: 'onSettings' }] } },
