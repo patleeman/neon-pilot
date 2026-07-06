@@ -1,4 +1,4 @@
-import { getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 import { type ActivityEntryBody, notifyActivityMutation, writeActivityEntry } from '../activity/activityEntries.js';
 import type { DocumentsStore } from '../documents/store.js';
@@ -50,16 +50,22 @@ export function writeAutomationActivityEntry(
  * Best-effort variant that acquires the DocumentsStore from the global
  * singleton and catches/logs any failure. Use this from capability functions
  * that do not already have a store reference.
+ *
+ * @param desktopRootLayout - Optional explicit layout. When provided, avoids
+ *   the global `resolveDesktopRootLayout()` fallback so that callers with
+ *   context-aware layout (e.g. extension or route context) can pass it
+ *   through instead of re-resolving from disk/environment.
  */
 export function writeAutomationActivityEntrySafe(
   taskId: string,
   event: AutomationLifecycleEvent,
   title: string,
   metadata?: Record<string, unknown>,
+  desktopRootLayout?: DesktopRootLayout,
 ): void {
   try {
     const stateRoot = getStateRoot();
-    const layout = resolveDesktopRootLayout();
+    const layout: DesktopRootLayout = desktopRootLayout ?? resolveDesktopRootLayout();
     const store = getDocumentsStore(stateRoot, layout);
     writeAutomationActivityEntry(store, taskId, event, title, metadata);
   } catch (error) {

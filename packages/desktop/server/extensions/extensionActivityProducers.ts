@@ -11,7 +11,7 @@
  * See to-do/windowed-os.md §D4 for the product intent.
  */
 
-import { getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 import { type ActivityEntryBody, notifyActivityMutation, writeActivityEntry } from '../activity/activityEntries.js';
 import type { DocumentsStore } from '../documents/store.js';
@@ -80,11 +80,12 @@ export function writeExtensionActivityEntrySafe(
   event: ExtensionLifecycleEvent,
   title: string,
   metadata?: Record<string, unknown>,
+  layout?: DesktopRootLayout,
 ): void {
   try {
     const stateRoot = getStateRoot();
-    const layout = resolveDesktopRootLayout();
-    const store = getDocumentsStore(stateRoot, layout);
+    const desktopRootLayout = layout ?? resolveDesktopRootLayout();
+    const store = getDocumentsStore(stateRoot, desktopRootLayout);
     writeExtensionActivityEntry(store, extensionId, event, title, metadata);
   } catch (error) {
     logError('Failed to write extension activity entry', {

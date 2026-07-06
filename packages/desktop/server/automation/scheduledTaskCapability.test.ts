@@ -465,10 +465,17 @@ describe('scheduledTaskCapability', () => {
       cwd: '/tmp/work',
     });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks');
-    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(1, 'task-created', 'created', 'Created task', {
-      scheduleType: 'cron',
-      targetType: 'background-agent',
-    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(
+      1,
+      'task-created',
+      'created',
+      'Created task',
+      {
+        scheduleType: 'cron',
+        targetType: 'background-agent',
+      },
+      undefined,
+    );
 
     const updatedTask = createTask({ id: 'task-created', title: 'Updated task', prompt: 'Updated prompt' });
     findTaskForProfileMock
@@ -524,10 +531,17 @@ describe('scheduledTaskCapability', () => {
       cwd: '/repo',
     });
     expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(2);
-    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(2, 'task-created', 'updated', 'Updated task', {
-      scheduleType: 'cron',
-      targetType: undefined,
-    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(
+      2,
+      'task-created',
+      'updated',
+      'Updated task',
+      {
+        scheduleType: 'cron',
+        targetType: undefined,
+      },
+      undefined,
+    );
   });
 
   it('records enabled and disabled activity only when the state changes', async () => {
@@ -551,18 +565,39 @@ describe('scheduledTaskCapability', () => {
       enabled: true,
     });
 
-    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(1, 'task-toggle', 'updated', 'Task 1', {
-      scheduleType: 'cron',
-      targetType: undefined,
-    });
-    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(2, 'task-toggle', 'enabled', 'Task 1', {
-      scheduleType: 'cron',
-      targetType: undefined,
-    });
-    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(3, 'task-toggle', 'updated', 'Task 1', {
-      scheduleType: 'cron',
-      targetType: undefined,
-    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(
+      1,
+      'task-toggle',
+      'updated',
+      'Task 1',
+      {
+        scheduleType: 'cron',
+        targetType: undefined,
+      },
+      undefined,
+    );
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(
+      2,
+      'task-toggle',
+      'enabled',
+      'Task 1',
+      {
+        scheduleType: 'cron',
+        targetType: undefined,
+      },
+      undefined,
+    );
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenNthCalledWith(
+      3,
+      'task-toggle',
+      'updated',
+      'Task 1',
+      {
+        scheduleType: 'cron',
+        targetType: undefined,
+      },
+      undefined,
+    );
     expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledTimes(3);
   });
 
@@ -587,9 +622,15 @@ describe('scheduledTaskCapability', () => {
     expect(deleteStoredAutomationMock).toHaveBeenCalledWith('task-1');
     expect(clearTaskCallbackBindingMock).toHaveBeenCalledWith({ profile: 'assistant', taskId: 'task-1' });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks');
-    expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledWith('task-1', 'deleted', 'Task 1', {
-      scheduleType: 'cron',
-    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledWith(
+      'task-1',
+      'deleted',
+      'Task 1',
+      {
+        scheduleType: 'cron',
+      },
+      undefined,
+    );
   });
 
   it('reads task logs and reports missing logs', async () => {
@@ -630,9 +671,15 @@ describe('scheduledTaskCapability', () => {
       runId: 'run-1',
     });
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('tasks', 'runs', 'sessions', 'workspace');
-    expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledWith('task-1', 'manual_run', 'Task 1', {
-      runId: 'run-1',
-      scheduleType: 'cron',
-    });
+    expect(writeAutomationActivityEntrySafeMock).toHaveBeenCalledWith(
+      'task-1',
+      'manual_run',
+      'Task 1',
+      {
+        runId: 'run-1',
+        scheduleType: 'cron',
+      },
+      undefined,
+    );
   });
 });

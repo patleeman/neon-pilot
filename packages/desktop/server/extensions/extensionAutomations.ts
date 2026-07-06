@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import { clearTaskCallbackBinding } from '@neon-pilot/core';
+import { clearTaskCallbackBinding, type DesktopRootLayout } from '@neon-pilot/core';
 import type { AutomationActivityEntry } from '@neon-pilot/daemon';
 import {
   createStoredAutomation,
@@ -12,6 +12,7 @@ import {
   updateStoredAutomation,
 } from '@neon-pilot/daemon';
 
+import { writeAutomationActivityEntrySafe } from '../automation/automationActivityProducers.js';
 import { readScheduledTaskSchedulerHealth } from '../automation/scheduledTaskCapability.js';
 import { loadScheduledTasksForProfile, type TaskRuntimeEntry, toScheduledTaskMetadata } from '../automation/scheduledTasks.js';
 import {
@@ -95,7 +96,10 @@ function assertAutomationPermission(extensionId: string | undefined, permission:
   assertExtensionPermission(extensionId, permission, capability);
 }
 
-export function createExtensionAutomationsCapability(context?: Pick<ServerRouteContext, 'getRuntimeScope'>, extensionId?: string) {
+export function createExtensionAutomationsCapability(
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'> & { getDesktopRootLayout?: ServerRouteContext['getDesktopRootLayout'] },
+  extensionId?: string,
+) {
   return {
     async list() {
       assertAutomationReadPermission(extensionId, 'automations.list');
@@ -171,6 +175,17 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
         threadSessionFile: threadSelection.sessionFile,
         cwd: input.cwd,
       });
+      const layout: DesktopRootLayout | undefined = context?.getDesktopRootLayout?.();
+      writeAutomationActivityEntrySafe(
+        task.id,
+        'created',
+        task.title ?? input.title ?? '',
+        {
+          scheduleType: task.schedule.type,
+          targetType,
+        },
+        layout,
+      );
       invalidateAppTopics('tasks', 'sessions', 'workspace');
       const savedTask = findTaskForProfile(profile, task.id);
       return {
@@ -210,6 +225,17 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
         threadSessionFile: threadSelection.sessionFile,
         cwd: input.cwd ?? updatedTask.cwd,
       });
+      const layout: DesktopRootLayout | undefined = context?.getDesktopRootLayout?.();
+      writeAutomationActivityEntrySafe(
+        task.id,
+        'updated',
+        task.title ?? '',
+        {
+          scheduleType: task.schedule.type,
+          targetType,
+        },
+        layout,
+      );
       invalidateAppTopics('tasks', 'sessions', 'workspace');
       const refreshedTask = findTaskForProfile(profile, task.id);
       return {
@@ -228,16 +254,38 @@ export function createExtensionAutomationsCapability(context?: Pick<ServerRouteC
       const deleted = deleteStoredAutomation(resolvedTask.task.id);
       if (!deleted) throw new Error('Task not found');
       clearTaskCallbackBinding({ profile, taskId: resolvedTask.task.id });
+      const layout: DesktopRootLayout | undefined = context?.getDesktopRootLayout?.();
+      writeAutomationActivityEntrySafe(
+        resolvedTask.task.id,
+        'deleted',
+        resolvedTask.task.title ?? '',
+        {
+          scheduleType: resolvedTask.task.schedule.type,
+        },
+        layout,
+      );
       invalidateAppTopics('tasks', 'sessions', 'workspace');
       return { ok: true, deleted: true };
     },
     async run(taskId: string) {
       assertAutomationPermission(extensionId, 'automations:run', 'automations.run');
-      const resolvedTask = findTaskForProfile(getProfile(context), taskId);
+      const profile = getProfile(context);
+      const resolvedTask = findTaskForProfile(profile, taskId);
       if (!resolvedTask) throw new Error('Task not found');
       if (!resolvedTask.task.prompt.trim()) throw new Error('Task has no prompt body');
       const result = await startScheduledTaskRun(resolvedTask.task.id);
       if (!result.accepted) throw new Error(result.reason ?? 'Could not start the task run.');
+      const layout: DesktopRootLayout | undefined = context?.getDesktopRootLayout?.();
+      writeAutomationActivityEntrySafe(
+        resolvedTask.task.id,
+        'manual_run',
+        resolvedTask.task.title ?? '',
+        {
+          runId: result.runId,
+          scheduleType: resolvedTask.task.schedule.type,
+        },
+        layout,
+      );
       invalidateAppTopics('tasks', 'runs', 'sessions', 'workspace');
       return { ok: true, accepted: result.accepted, runId: result.runId };
     },

@@ -733,7 +733,8 @@ async function readExtensionFile(req: Request, res: Response): Promise<void> {
 
 export function registerExtensionRoutes(
   router: Pick<Express, 'delete' | 'get' | 'patch' | 'post' | 'put'>,
-  context?: Pick<ServerRouteContext, 'getRuntimeScope'> & Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort'>>,
+  context?: Pick<ServerRouteContext, 'getRuntimeScope'> &
+    Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort' | 'getDesktopRootLayout'>>,
 ): void {
   router.get('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
   router.post('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
@@ -841,7 +842,13 @@ export function registerExtensionRoutes(
     try {
       const result = createRuntimeExtension(req.body as { id?: unknown; name?: unknown; description?: unknown });
       if (result?.extension?.id) {
-        writeExtensionActivityEntrySafe(result.extension.id, 'created', result.extension.name ?? result.extension.id);
+        writeExtensionActivityEntrySafe(
+          result.extension.id,
+          'created',
+          result.extension.name ?? result.extension.id,
+          undefined,
+          context?.getDesktopRootLayout?.(),
+        );
       }
       res.status(201).json(result);
     } catch (err) {
@@ -856,7 +863,13 @@ export function registerExtensionRoutes(
     try {
       const result = importRuntimeExtensionBundle(req.body as { zipPath?: unknown });
       if (result?.extension?.id) {
-        writeExtensionActivityEntrySafe(result.extension.id, 'imported', result.extension.name ?? result.extension.id);
+        writeExtensionActivityEntrySafe(
+          result.extension.id,
+          'imported',
+          result.extension.name ?? result.extension.id,
+          undefined,
+          context?.getDesktopRootLayout?.(),
+        );
       }
       res.status(201).json(result);
     } catch (err) {
@@ -1324,7 +1337,7 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/:id/snapshot', (req, res) => {
     try {
       const result = snapshotRuntimeExtension(req.params.id);
-      writeExtensionActivityEntrySafe(req.params.id, 'snapshotted', req.params.id);
+      writeExtensionActivityEntrySafe(req.params.id, 'snapshotted', req.params.id, undefined, context?.getDesktopRootLayout?.());
       res.status(201).json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -1337,7 +1350,7 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/:id/export', (req, res) => {
     try {
       const result = exportRuntimeExtension(req.params.id);
-      writeExtensionActivityEntrySafe(req.params.id, 'exported', req.params.id);
+      writeExtensionActivityEntrySafe(req.params.id, 'exported', req.params.id, undefined, context?.getDesktopRootLayout?.());
       res.status(201).json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -1366,7 +1379,13 @@ export function registerExtensionRoutes(
         return;
       }
       const extName = typeof result.extension?.name === 'string' ? result.extension.name : req.params.id;
-      writeExtensionActivityEntrySafe(req.params.id, enabled ? 'enabled' : 'disabled', extName);
+      writeExtensionActivityEntrySafe(
+        req.params.id,
+        enabled ? 'enabled' : 'disabled',
+        extName,
+        undefined,
+        context?.getDesktopRootLayout?.(),
+      );
       res.json({ ok: true, extension: result.extension, ...(result.actionResult ? { actionResult: result.actionResult } : {}) });
     } catch (err) {
       sendRouteError(res, 'extension update error', err);
@@ -1378,7 +1397,7 @@ export function registerExtensionRoutes(
       const { deleteRuntimeExtension } = await import('../extensions/extensionLifecycle.js');
       const result = await deleteRuntimeExtension(req.params.id);
       if (result.deleted) {
-        writeExtensionActivityEntrySafe(req.params.id, 'deleted', req.params.id);
+        writeExtensionActivityEntrySafe(req.params.id, 'deleted', req.params.id, undefined, context?.getDesktopRootLayout?.());
       }
       res.json(result);
     } catch (err) {

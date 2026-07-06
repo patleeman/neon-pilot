@@ -40,7 +40,7 @@ function createResponse() {
   });
 }
 
-function createHarness() {
+function createHarness(context?: Parameters<typeof registerExtensionRoutes>[1]) {
   const getHandlers = new Map<string, Handler>();
   const postHandlers = new Map<string, Handler>();
   const patchHandlers = new Map<string, Handler>();
@@ -53,7 +53,7 @@ function createHarness() {
     put: vi.fn((path: string, handler: Handler) => putHandlers.set(path, handler)),
     delete: vi.fn((path: string, handler: Handler) => deleteHandlers.set(path, handler)),
   };
-  registerExtensionRoutes(router as never);
+  registerExtensionRoutes(router as never, context);
   return {
     getHandler: (path: string) => getHandlers.get(path)!,
     postHandler: (path: string) => postHandlers.get(path)!,
@@ -1285,13 +1285,14 @@ describe('registerExtensionRoutes', () => {
   it('writes an activity entry when a runtime extension is created', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const desktopRootLayout = { root: '/desktop-root' } as never;
     writeExtensionActivityEntrySafeMock.mockReset();
-    const harness = createHarness();
+    const harness = createHarness({ getRuntimeScope: () => 'shared', getDesktopRootLayout: () => desktopRootLayout });
     const res = createResponse();
     harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: 'Agent Board' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'created', 'Agent Board');
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'created', 'Agent Board', undefined, desktopRootLayout);
   });
 
   it('writes an activity entry when a runtime extension is imported', () => {
@@ -1324,7 +1325,7 @@ describe('registerExtensionRoutes', () => {
     importHarness.postHandler('/api/extensions/import')({ body: { zipPath: exportPayload.exportPath } }, importRes);
 
     expect(importRes.status).toHaveBeenCalledWith(201);
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'imported', 'Agent Board');
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'imported', 'Agent Board', undefined, undefined);
   });
 
   it('writes an activity entry when a runtime extension is snapshotted', () => {
@@ -1340,7 +1341,7 @@ describe('registerExtensionRoutes', () => {
     harness.postHandler('/api/extensions/:id/snapshot')({ params: { id: 'agent-board' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'snapshotted', 'agent-board');
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'snapshotted', 'agent-board', undefined, undefined);
   });
 
   it('writes an activity entry when a runtime extension is toggled (enabled or disabled)', async () => {
@@ -1355,13 +1356,13 @@ describe('registerExtensionRoutes', () => {
     const disableRes = createResponse();
     await harness.patchHandler('/api/extensions/:id')({ params: { id: 'agent-board' }, body: { enabled: false } }, disableRes);
 
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'disabled', 'Agent Board');
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'disabled', 'Agent Board', undefined, undefined);
 
     writeExtensionActivityEntrySafeMock.mockReset();
     const enableRes = createResponse();
     await harness.patchHandler('/api/extensions/:id')({ params: { id: 'agent-board' }, body: { enabled: true } }, enableRes);
 
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'enabled', 'Agent Board');
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'enabled', 'Agent Board', undefined, undefined);
   });
 
   it('writes an activity entry when a runtime extension is exported', () => {
@@ -1387,7 +1388,7 @@ describe('registerExtensionRoutes', () => {
     harness.postHandler('/api/extensions/:id/export')({ params: { id: 'agent-board' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'exported', 'agent-board');
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'exported', 'agent-board', undefined, undefined);
   });
 
   it('writes an activity entry when a runtime extension is deleted', async () => {
@@ -1403,7 +1404,7 @@ describe('registerExtensionRoutes', () => {
     await harness.deleteHandler('/api/extensions/:id')({ params: { id: 'agent-board' } }, res);
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, extensionId: 'agent-board', deleted: true }));
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'deleted', 'agent-board');
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'deleted', 'agent-board', undefined, undefined);
   });
 
   it('does not write a deleted activity entry when no extension package was deleted', async () => {

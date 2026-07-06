@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import { clearTaskCallbackBinding, getTaskCallbackBinding, setTaskCallbackBinding } from '@neon-pilot/core';
+import { clearTaskCallbackBinding, type DesktopRootLayout, getTaskCallbackBinding, setTaskCallbackBinding } from '@neon-pilot/core';
 import {
   type AutomationActivityEntry,
   createStoredAutomation,
@@ -299,7 +299,11 @@ function applyScheduledTaskCallbackBinding(
   });
 }
 
-export async function createScheduledTaskCapability(profile: string, input: ScheduledTaskCreateCapabilityInput) {
+export async function createScheduledTaskCapability(
+  profile: string,
+  input: ScheduledTaskCreateCapabilityInput,
+  desktopRootLayout?: DesktopRootLayout,
+) {
   const startedAt = process.hrtime.bigint();
   const targetType = normalizeAutomationTargetTypeForSelection(input.targetType);
   const threadSelection = resolveScheduledTaskThreadBinding({
@@ -339,10 +343,16 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
   applyScheduledTaskCallbackBinding(profile, task.id, input, targetType);
   invalidateAppTopics('tasks');
 
-  writeAutomationActivityEntrySafe(task.id, 'created', task.title ?? input.title ?? '', {
-    scheduleType: task.schedule.type,
-    targetType,
-  });
+  writeAutomationActivityEntrySafe(
+    task.id,
+    'created',
+    task.title ?? input.title ?? '',
+    {
+      scheduleType: task.schedule.type,
+      targetType,
+    },
+    desktopRootLayout,
+  );
 
   const savedTask = findTaskForProfile(profile, task.id);
   const callbackBinding = getTaskCallbackBinding({ profile, taskId: task.id });
@@ -360,7 +370,11 @@ export async function createScheduledTaskCapability(profile: string, input: Sche
   };
 }
 
-export async function updateScheduledTaskCapability(profile: string, input: ScheduledTaskUpdateCapabilityInput) {
+export async function updateScheduledTaskCapability(
+  profile: string,
+  input: ScheduledTaskUpdateCapabilityInput,
+  desktopRootLayout?: DesktopRootLayout,
+) {
   const startedAt = process.hrtime.bigint();
   const taskId = readRequiredTaskId(input.taskId);
   const resolvedTask = findTaskForProfile(profile, taskId);
@@ -408,17 +422,29 @@ export async function updateScheduledTaskCapability(profile: string, input: Sche
   applyScheduledTaskCallbackBinding(profile, task.id, input, targetType);
   invalidateAppTopics('tasks');
 
-  writeAutomationActivityEntrySafe(task.id, 'updated', task.title ?? '', {
-    scheduleType: task.schedule.type,
-    targetType,
-  });
+  writeAutomationActivityEntrySafe(
+    task.id,
+    'updated',
+    task.title ?? '',
+    {
+      scheduleType: task.schedule.type,
+      targetType,
+    },
+    desktopRootLayout,
+  );
 
   if (input.enabled !== undefined && input.enabled !== resolvedTask.task.enabled) {
     const enableEvent = input.enabled ? 'enabled' : 'disabled';
-    writeAutomationActivityEntrySafe(task.id, enableEvent, task.title ?? '', {
-      scheduleType: task.schedule.type,
-      targetType,
-    });
+    writeAutomationActivityEntrySafe(
+      task.id,
+      enableEvent,
+      task.title ?? '',
+      {
+        scheduleType: task.schedule.type,
+        targetType,
+      },
+      desktopRootLayout,
+    );
   }
 
   const refreshedTask = findTaskForProfile(profile, task.id);
@@ -437,7 +463,7 @@ export async function updateScheduledTaskCapability(profile: string, input: Sche
   };
 }
 
-export async function deleteScheduledTaskCapability(profile: string, taskId: string) {
+export async function deleteScheduledTaskCapability(profile: string, taskId: string, desktopRootLayout?: DesktopRootLayout) {
   const normalizedTaskId = readRequiredTaskId(taskId);
   const resolvedTask = findTaskForProfile(profile, normalizedTaskId);
   if (!resolvedTask) {
@@ -455,9 +481,15 @@ export async function deleteScheduledTaskCapability(profile: string, taskId: str
   clearTaskCallbackBinding({ profile, taskId: resolvedTask.task.id });
   invalidateAppTopics('tasks');
 
-  writeAutomationActivityEntrySafe(resolvedTask.task.id, 'deleted', resolvedTask.task.title ?? '', {
-    scheduleType: resolvedTask.task.schedule.type,
-  });
+  writeAutomationActivityEntrySafe(
+    resolvedTask.task.id,
+    'deleted',
+    resolvedTask.task.title ?? '',
+    {
+      scheduleType: resolvedTask.task.schedule.type,
+    },
+    desktopRootLayout,
+  );
 
   persistAppTelemetryEvent({
     source: 'server',
@@ -488,7 +520,7 @@ export async function readScheduledTaskLogCapability(profile: string, taskId: st
   };
 }
 
-export async function runScheduledTaskCapability(profile: string, taskId: string) {
+export async function runScheduledTaskCapability(profile: string, taskId: string, desktopRootLayout?: DesktopRootLayout) {
   const startedAt = process.hrtime.bigint();
   const resolvedTask = findTaskForProfile(profile, readRequiredTaskId(taskId));
   if (!resolvedTask) {
@@ -515,10 +547,16 @@ export async function runScheduledTaskCapability(profile: string, taskId: string
 
   invalidateAppTopics('tasks', 'runs', 'sessions', 'workspace');
 
-  writeAutomationActivityEntrySafe(resolvedTask.task.id, 'manual_run', resolvedTask.task.title ?? '', {
-    runId: result.runId,
-    scheduleType: resolvedTask.task.schedule.type,
-  });
+  writeAutomationActivityEntrySafe(
+    resolvedTask.task.id,
+    'manual_run',
+    resolvedTask.task.title ?? '',
+    {
+      runId: result.runId,
+      scheduleType: resolvedTask.task.schedule.type,
+    },
+    desktopRootLayout,
+  );
 
   return {
     ok: true as const,

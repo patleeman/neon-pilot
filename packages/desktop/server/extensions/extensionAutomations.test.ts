@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const activityProducers = vi.hoisted(() => ({ writeAutomationActivityEntrySafe: vi.fn() }));
 const core = vi.hoisted(() => ({ clearTaskCallbackBinding: vi.fn() }));
 const daemon = vi.hoisted(() => ({
   createStoredAutomation: vi.fn(),
@@ -54,6 +55,7 @@ const permissions = vi.hoisted(() => ({
   }),
 }));
 
+vi.mock('../automation/automationActivityProducers.js', () => activityProducers);
 vi.mock('@neon-pilot/core', () => core);
 vi.mock('@neon-pilot/daemon', () => daemon);
 vi.mock('../automation/scheduledTasks.js', () => scheduledTasks);
@@ -65,7 +67,8 @@ vi.mock('./extensionPermissions.js', () => permissions);
 
 import { createExtensionAutomationsCapability } from './extensionAutomations.js';
 
-const context = { getRuntimeScope: () => 'shared' };
+const desktopRootLayout = { root: '/desktop-root' } as never;
+const context = { getRuntimeScope: () => 'shared', getDesktopRootLayout: () => desktopRootLayout };
 
 function task(overrides: Record<string, unknown> = {}) {
   return {
@@ -91,6 +94,7 @@ describe('extensionAutomations', () => {
     daemon.listAutomationActivityEntries.mockReturnValue([]);
     health.readScheduledTaskSchedulerHealth.mockReturnValue({});
     permissions.granted.clear();
+    activityProducers.writeAutomationActivityEntrySafe.mockClear();
   });
 
   it('requires server route context', async () => {
@@ -135,7 +139,7 @@ describe('extensionAutomations', () => {
     await expect(createExtensionAutomationsCapability(context, 'automation-helper-ext').list()).resolves.toEqual([]);
   });
 
-  it('creates a conversation automation with thread binding and invalidates visible thread state', async () => {
+  it('creates a conversation automation with thread binding, activity write, and invalidates visible thread state', async () => {
     threads.resolveScheduledTaskThreadBinding.mockReturnValue({ mode: 'existing', conversationId: 'conv-1', sessionFile: '/session.json' });
     const created = task({ targetType: 'conversation' });
     daemon.createStoredAutomation.mockReturnValue(created);
@@ -155,6 +159,13 @@ describe('extensionAutomations', () => {
     expect(threads.applyScheduledTaskThreadBinding).toHaveBeenCalledWith(
       'task-1',
       expect.objectContaining({ threadMode: 'existing', threadConversationId: 'conv-1' }),
+    );
+    expect(activityProducers.writeAutomationActivityEntrySafe).toHaveBeenCalledWith(
+      'task-1',
+      'created',
+      'Task One',
+      { scheduleType: 'cron', targetType: 'conversation' },
+      desktopRootLayout,
     );
     expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'sessions', 'workspace');
     expect(result).toMatchObject({ ok: true, task: { id: 'task-1', targetType: 'conversation' } });
@@ -180,13 +191,52 @@ describe('extensionAutomations', () => {
     });
   });
 
-  it('deletes tasks, clears callbacks, and invalidates task topics', async () => {
+  it('updates tasks, writes activity with context layout, and invalidates visible thread state', async () => {
+    const existing = task({ title: 'Old' });
+    const updated = task({ title: 'Updated', targetType: 'conversation' });
+    taskService.findTaskForProfile
+      .mockReturnValueOnce({ task: existing, runtime: undefined })
+      .mockReturnValueOnce({ task: updated, runtime: undefined });
+    daemon.updateStoredAutomation.mockReturnValue(updated);
+    threads.resolveScheduledTaskThreadBinding.mockReturnValue({
+      mode: 'existing',
+      conversationId: 'conv-2',
+      sessionFile: '/session-2.json',
+    });
+    threads.applyScheduledTaskThreadBinding.mockReturnValue({ ...updated, threadConversationId: 'conv-2' });
+
+    await expect(
+      createExtensionAutomationsCapability(context).update('task-1', {
+        title: 'Updated',
+        targetType: 'conversation',
+        threadConversationId: 'conv-2',
+      }),
+    ).resolves.toMatchObject({ ok: true, task: { id: 'task-1' } });
+
+    expect(activityProducers.writeAutomationActivityEntrySafe).toHaveBeenCalledWith(
+      'task-1',
+      'updated',
+      'Updated',
+      { scheduleType: 'cron', targetType: 'conversation' },
+      desktopRootLayout,
+    );
+    expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'sessions', 'workspace');
+  });
+
+  it('deletes tasks, clears callbacks, writes activity, and invalidates task topics', async () => {
     taskService.findTaskForProfile.mockReturnValue({ task: task(), runtime: undefined });
     daemon.deleteStoredAutomation.mockReturnValue(true);
 
     await expect(createExtensionAutomationsCapability(context).delete('task-1')).resolves.toEqual({ ok: true, deleted: true });
     expect(daemon.deleteStoredAutomation).toHaveBeenCalledWith('task-1');
     expect(core.clearTaskCallbackBinding).toHaveBeenCalledWith({ profile: 'shared', taskId: 'task-1' });
+    expect(activityProducers.writeAutomationActivityEntrySafe).toHaveBeenCalledWith(
+      'task-1',
+      'deleted',
+      'Task One',
+      { scheduleType: 'cron' },
+      desktopRootLayout,
+    );
     expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'sessions', 'workspace');
   });
 
@@ -200,7 +250,7 @@ describe('extensionAutomations', () => {
     expect(core.clearTaskCallbackBinding).not.toHaveBeenCalled();
   });
 
-  it('runs tasks and reads available logs', async () => {
+  it('runs tasks, logs activity, and reads available logs', async () => {
     const dir = join(tmpdir(), `extension-automations-${process.pid}`);
     const logPath = join(dir, 'task.log');
     rmSync(dir, { recursive: true, force: true });
@@ -215,6 +265,13 @@ describe('extensionAutomations', () => {
         accepted: true,
         runId: 'run-1',
       });
+      expect(activityProducers.writeAutomationActivityEntrySafe).toHaveBeenCalledWith(
+        'task-1',
+        'manual_run',
+        'Task One',
+        { runId: 'run-1', scheduleType: 'cron' },
+        desktopRootLayout,
+      );
       expect(middleware.invalidateAppTopics).toHaveBeenCalledWith('tasks', 'runs', 'sessions', 'workspace');
       await expect(createExtensionAutomationsCapability(context).readLog('task-1')).resolves.toEqual({ log: 'hello log', path: logPath });
     } finally {
