@@ -1,7 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { execFileSyncMock } = vi.hoisted(() => ({
@@ -27,12 +28,16 @@ vi.mock('../extensions/extensionRegistry.js', () => ({
 }));
 
 const {
+  deleteProviderApiKeySecret,
   deleteSecret,
   listSecretStatuses,
   readSecretBackendId,
   resolveIndexedProviderApiKey,
   resolveProviderApiKey,
   resolveSecret,
+  resolveSecretsFileFromLayout,
+  resolveSecretsIndexFromLayout,
+  secretsRootFromLayout,
   setProviderApiKeySecret,
   setSecret,
 } = await import('./secretStore.js');
@@ -104,10 +109,14 @@ describe('secretStore', () => {
 
     setProviderApiKeySecret('openrouter', 'provider-secret', stateRoot);
 
-    expect(execFileSyncMock).toHaveBeenCalledWith('security', ['add-generic-password', '-U', '-s', 'neon-pilot', '-a', 'provider:openrouter:apiKey', '-w'], {
-      input: 'provider-secret\nprovider-secret\n',
-      stdio: ['pipe', 'ignore', 'pipe'],
-    });
+    expect(execFileSyncMock).toHaveBeenCalledWith(
+      'security',
+      ['add-generic-password', '-U', '-s', 'neon-pilot', '-a', 'provider:openrouter:apiKey', '-w'],
+      {
+        input: 'provider-secret\nprovider-secret\n',
+        stdio: ['pipe', 'ignore', 'pipe'],
+      },
+    );
     expect(execFileSyncMock.mock.calls.flatMap(([, args]) => args as string[])).not.toContain('provider-secret');
     expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.index.json'), 'utf-8'))).toEqual(['provider:openrouter:apiKey']);
   });
@@ -180,5 +189,72 @@ describe('secretStore', () => {
 
     expect(() => setSecret('unknown-extension', 'apiKey', 'secret', stateRoot)).toThrow('not registered');
     expect(() => deleteSecret('unknown-extension', 'apiKey', stateRoot)).toThrow('not registered');
+  });
+
+  it('resolveSecretsFileFromLayout returns a path under layout.systemSecrets', () => {
+    const layout = resolveDesktopRootLayout({ root: '/test/layout-root' });
+    expect(resolveSecretsFileFromLayout(layout)).toBe('/test/layout-root/system/secrets/secrets.json');
+  });
+
+  it('resolveSecretsIndexFromLayout returns a path under layout.systemSecrets', () => {
+    const layout = resolveDesktopRootLayout({ root: '/test/layout-root' });
+    expect(resolveSecretsIndexFromLayout(layout)).toBe('/test/layout-root/system/secrets/secrets.index.json');
+  });
+
+  it('secretsRootFromLayout returns systemSecrets path', () => {
+    const layout = resolveDesktopRootLayout({ root: '/test/layout-root' });
+    expect(secretsRootFromLayout(layout)).toBe('/test/layout-root/system/secrets');
+  });
+
+  it('writes file backend secrets under layout.systemSecrets instead of legacy stateRoot', () => {
+    const tmpRoot = createTempStateRoot();
+    const layout = resolveDesktopRootLayout({ root: tmpRoot });
+    mkdirSync(layout.systemSecrets, { recursive: true });
+    writeFileSync(join(layout.systemSecrets, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
+
+    setSecret('system-exa-search', 'exaApiKey', 'layout-secret', layout);
+
+    expect(JSON.parse(readFileSync(resolveSecretsFileFromLayout(layout), 'utf-8'))).toEqual({
+      'extension:system-exa-search:exaApiKey': 'layout-secret',
+    });
+    expect(JSON.parse(readFileSync(resolveSecretsIndexFromLayout(layout), 'utf-8'))).toEqual(['extension:system-exa-search:exaApiKey']);
+    expect(statSync(resolveSecretsFileFromLayout(layout)).mode & 0o777).toBe(0o600);
+    expect(statSync(resolveSecretsIndexFromLayout(layout)).mode & 0o777).toBe(0o600);
+
+    expect(existsSync(join(tmpRoot, 'secrets.json'))).toBe(false);
+    expect(existsSync(join(tmpRoot, 'secrets.index.json'))).toBe(false);
+
+    expect(resolveSecret('system-exa-search', 'exaApiKey', layout)).toBe('layout-secret');
+    expect(resolveSecret('system-exa-search', 'exaApiKey', tmpRoot)).toBeUndefined();
+    expect(readdirSync(layout.systemSecrets).filter((entry) => entry.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('reads backend provider from settings.json under systemSecrets when using layout', () => {
+    const tmpRoot = createTempStateRoot();
+    const layout = resolveDesktopRootLayout({ root: tmpRoot });
+    mkdirSync(layout.systemSecrets, { recursive: true });
+    writeFileSync(join(layout.systemSecrets, 'settings.json'), JSON.stringify({ secrets: { provider: 'env-only' } }));
+
+    expect(readSecretBackendId(layout)).toBe('env-only');
+  });
+
+  it('manages provider API keys under layout.systemSecrets', () => {
+    const tmpRoot = createTempStateRoot();
+    const layout = resolveDesktopRootLayout({ root: tmpRoot });
+    mkdirSync(layout.systemSecrets, { recursive: true });
+    writeFileSync(join(layout.systemSecrets, 'settings.json'), JSON.stringify({ secrets: { provider: 'file' } }));
+
+    setProviderApiKeySecret('test-provider', 'test-key', layout);
+
+    expect(resolveProviderApiKey('test-provider', layout)).toBe('test-key');
+    expect(resolveIndexedProviderApiKey('test-provider', layout)).toBe('test-key');
+    expect(JSON.parse(readFileSync(resolveSecretsFileFromLayout(layout), 'utf-8'))).toEqual({
+      'provider:test-provider:apiKey': 'test-key',
+    });
+
+    deleteProviderApiKeySecret('test-provider', layout);
+    expect(resolveProviderApiKey('test-provider', layout)).toBeUndefined();
+    expect(existsSync(resolveSecretsFileFromLayout(layout))).toBe(false);
+    expect(existsSync(resolveSecretsIndexFromLayout(layout))).toBe(false);
   });
 });

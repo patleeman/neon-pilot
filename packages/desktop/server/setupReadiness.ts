@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
+
 import { type ExtensionHostClient, getExtensionHostClient } from './extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 import type {
@@ -77,8 +79,8 @@ export interface SetupReadinessDeps {
 
 const DEFAULT_STATE: SetupReadinessState = { dismissed: {} };
 
-function stateFileFor(context: ServerRouteContext): string {
-  return join(context.getStateRoot(), 'setup-readiness.json');
+export function resolveSetupReadinessStateFile(layout: DesktopRootLayout): string {
+  return join(layout.system, 'setup-readiness.json');
 }
 
 function readState(path: string): SetupReadinessState {
@@ -178,7 +180,7 @@ export async function readSetupReadiness(context: ServerRouteContext, deps: Setu
   const client = deps.extensionHostClient ?? getExtensionHostClient();
   const now = deps.now?.() ?? new Date();
   const checkedAt = now.toISOString();
-  const statePath = deps.stateFile ?? stateFileFor(context);
+  const statePath = deps.stateFile ?? resolveSetupReadinessStateFile(context.getDesktopRootLayout());
   const state = readState(statePath);
   const { installSummaries } = await client.readRegistryPresentation();
   const items: SetupReadinessItem[] = [];
@@ -271,7 +273,7 @@ export async function runSetupReadinessAction(
     serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
   });
   if (!response.ok) throw new Error(response.error);
-  const statePath = deps.stateFile ?? stateFileFor(context);
+  const statePath = deps.stateFile ?? resolveSetupReadinessStateFile(context.getDesktopRootLayout());
   const state = readState(statePath);
   delete state.dismissed[itemKey(input.extensionId, input.itemId)];
   writeState(statePath, state);
@@ -284,7 +286,7 @@ export async function dismissSetupReadinessItem(
   input: { extensionId: string; itemId: string; dismissed: boolean },
   deps: SetupReadinessDeps = {},
 ): Promise<SetupReadinessSnapshot> {
-  const statePath = deps.stateFile ?? stateFileFor(context);
+  const statePath = deps.stateFile ?? resolveSetupReadinessStateFile(context.getDesktopRootLayout());
   const state = readState(statePath);
   const key = itemKey(input.extensionId, input.itemId);
   if (input.dismissed) state.dismissed[key] = { dismissedAt: (deps.now?.() ?? new Date()).toISOString() };

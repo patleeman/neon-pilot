@@ -1,10 +1,10 @@
-import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import { listExtensionSecretRegistrations } from '../extensions/extensionRegistry.js';
 
@@ -48,7 +48,8 @@ function readSettingsObject(stateRoot: string): Record<string, unknown> {
   }
 }
 
-export function readSecretBackendId(stateRoot: string = getStateRoot()): SecretBackendId {
+export function readSecretBackendId(root?: string | DesktopRootLayout): SecretBackendId {
+  const stateRoot = resolveSecretsRoot(root);
   const settings = readSettingsObject(stateRoot);
   const nested = isRecord(settings.secrets) ? settings.secrets.provider : undefined;
   const flat = settings['secrets.provider'];
@@ -230,7 +231,8 @@ function createSecretBackendForId(backendId: SecretBackendId, stateRoot: string)
   return createFileSecretBackend(stateRoot);
 }
 
-export function createSecretBackend(stateRoot: string = getStateRoot()): SecretBackend {
+export function createSecretBackend(root?: string | DesktopRootLayout): SecretBackend {
+  const stateRoot = resolveSecretsRoot(root);
   return createSecretBackendForId(readSecretBackendId(stateRoot), stateRoot);
 }
 
@@ -246,7 +248,8 @@ function findSecretRegistration(
   return declaration;
 }
 
-export function resolveSecret(extensionId: string, secretId: string, stateRoot: string = getStateRoot()): string | undefined {
+export function resolveSecret(extensionId: string, secretId: string, root?: string | DesktopRootLayout): string | undefined {
+  const stateRoot = resolveSecretsRoot(root);
   const declaration = findSecretRegistration(extensionId, secretId, stateRoot);
   const backendValue = createSecretBackend(stateRoot).get(makeSecretKey(extensionId, secretId));
   if (backendValue) return backendValue;
@@ -258,7 +261,8 @@ export function resolveSecret(extensionId: string, secretId: string, stateRoot: 
   return undefined;
 }
 
-export function listSecretStatuses(stateRoot: string = getStateRoot()): SecretStatus[] {
+export function listSecretStatuses(root?: string | DesktopRootLayout): SecretStatus[] {
+  const stateRoot = resolveSecretsRoot(root);
   const backend = createSecretBackend(stateRoot);
   return listExtensionSecretRegistrations(stateRoot).map((secret) => {
     const key = makeSecretKey(secret.extensionId, secret.id);
@@ -279,7 +283,8 @@ export function listSecretStatuses(stateRoot: string = getStateRoot()): SecretSt
   });
 }
 
-export function setSecret(extensionId: string, secretId: string, value: string, stateRoot: string = getStateRoot()): SecretStatus[] {
+export function setSecret(extensionId: string, secretId: string, value: string, root?: string | DesktopRootLayout): SecretStatus[] {
+  const stateRoot = resolveSecretsRoot(root);
   const normalized = value.trim();
   if (!normalized) throw new Error('secret value is required');
   findSecretRegistration(extensionId, secretId, stateRoot);
@@ -289,7 +294,8 @@ export function setSecret(extensionId: string, secretId: string, value: string, 
   return listSecretStatuses(stateRoot);
 }
 
-export function deleteSecret(extensionId: string, secretId: string, stateRoot: string = getStateRoot()): SecretStatus[] {
+export function deleteSecret(extensionId: string, secretId: string, root?: string | DesktopRootLayout): SecretStatus[] {
+  const stateRoot = resolveSecretsRoot(root);
   findSecretRegistration(extensionId, secretId, stateRoot);
   const key = makeSecretKey(extensionId, secretId);
   createSecretBackend(stateRoot).delete(key);
@@ -297,11 +303,13 @@ export function deleteSecret(extensionId: string, secretId: string, stateRoot: s
   return listSecretStatuses(stateRoot);
 }
 
-export function resolveProviderApiKey(provider: string, stateRoot: string = getStateRoot()): string | undefined {
+export function resolveProviderApiKey(provider: string, root?: string | DesktopRootLayout): string | undefined {
+  const stateRoot = resolveSecretsRoot(root);
   return createSecretBackend(stateRoot).get(makeProviderApiKeySecretKey(provider))?.trim() || undefined;
 }
 
-export function resolveIndexedProviderApiKey(provider: string, stateRoot: string = getStateRoot()): string | undefined {
+export function resolveIndexedProviderApiKey(provider: string, root?: string | DesktopRootLayout): string | undefined {
+  const stateRoot = resolveSecretsRoot(root);
   const key = makeProviderApiKeySecretKey(provider);
   if (readSecretBackendId(stateRoot) === 'keychain' && !readSecretIndex(stateRoot).includes(key)) {
     return undefined;
@@ -309,7 +317,8 @@ export function resolveIndexedProviderApiKey(provider: string, stateRoot: string
   return resolveProviderApiKey(provider, stateRoot);
 }
 
-export function setProviderApiKeySecret(provider: string, apiKey: string, stateRoot: string = getStateRoot()): void {
+export function setProviderApiKeySecret(provider: string, apiKey: string, root?: string | DesktopRootLayout): void {
+  const stateRoot = resolveSecretsRoot(root);
   const normalized = apiKey.trim();
   if (!normalized) throw new Error('apiKey is required');
   const key = makeProviderApiKeySecretKey(provider);
@@ -317,7 +326,8 @@ export function setProviderApiKeySecret(provider: string, apiKey: string, stateR
   addSecretIndexKey(stateRoot, key);
 }
 
-export function deleteProviderApiKeySecret(provider: string, stateRoot: string = getStateRoot()): void {
+export function deleteProviderApiKeySecret(provider: string, root?: string | DesktopRootLayout): void {
+  const stateRoot = resolveSecretsRoot(root);
   const key = makeProviderApiKeySecretKey(provider);
   createSecretBackend(stateRoot).delete(key);
   removeSecretIndexKey(stateRoot, key);
@@ -336,7 +346,8 @@ export interface SecretBackendMigrationResult {
   skipped: number;
 }
 
-export function migrateSecretBackend(to: SecretBackendId, stateRoot: string = getStateRoot()): SecretBackendMigrationResult {
+export function migrateSecretBackend(to: SecretBackendId, root?: string | DesktopRootLayout): SecretBackendMigrationResult {
+  const stateRoot = resolveSecretsRoot(root);
   const from = readSecretBackendId(stateRoot);
   if (to !== 'keychain' && to !== 'file' && to !== 'env-only') {
     throw new Error(`Unsupported secret backend: ${to}`);
@@ -372,6 +383,33 @@ export function migrateSecretBackend(to: SecretBackendId, stateRoot: string = ge
   }
   writeSecretIndex(stateRoot, migratedKeys);
   return { from, to, migrated, skipped };
+}
+
+export function resolveSecretsFileFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.systemSecrets, 'secrets.json');
+}
+
+export function resolveSecretsIndexFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.systemSecrets, 'secrets.index.json');
+}
+
+/**
+ * Return the directory root that holds secrets payload and index for a
+ * DesktopRootLayout. Equivalent to the legacy `stateRoot` parameter for
+ * secrets-only operations.
+ */
+export function secretsRootFromLayout(layout: DesktopRootLayout): string {
+  return layout.systemSecrets;
+}
+
+/**
+ * Normalise a call-site root into a string state-root path.
+ * Accepts either a legacy string stateRoot or a DesktopRootLayout.
+ */
+function resolveSecretsRoot(root?: string | DesktopRootLayout): string {
+  if (root === undefined) return getStateRoot();
+  if (typeof root === 'object' && root !== null) return (root as DesktopRootLayout).systemSecrets;
+  return root;
 }
 
 export function expandHomePath(pathValue: string): string {

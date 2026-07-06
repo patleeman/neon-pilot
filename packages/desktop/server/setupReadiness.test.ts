@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -7,7 +7,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ExtensionHostClient } from './extensions/extensionHostClient.js';
 import type { ServerRouteContext } from './routes/context.js';
-import { dismissSetupReadinessItem, readSetupReadiness, runSetupReadinessAction } from './setupReadiness.js';
+import {
+  dismissSetupReadinessItem,
+  readSetupReadiness,
+  resolveSetupReadinessStateFile,
+  runSetupReadinessAction,
+} from './setupReadiness.js';
 
 function context(stateRoot: string): ServerRouteContext {
   return {
@@ -102,6 +107,11 @@ describe('setupReadiness', () => {
     return root;
   }
 
+  it('resolves readiness state from a desktop root layout', () => {
+    const layout = resolveDesktopRootLayout({ root: '/test/desktop-root' });
+    expect(resolveSetupReadinessStateFile(layout)).toBe('/test/desktop-root/system/setup-readiness.json');
+  });
+
   it('reads enabled extension setup items and counts actionable incomplete items', async () => {
     const root = tempRoot();
     const host = client({ statusResult: { status: 'needs_setup', detail: 'Install required.', actions: ['install'] } });
@@ -135,7 +145,21 @@ describe('setupReadiness', () => {
 
     expect(dismissed.counts).toMatchObject({ incomplete: 1, actionable: 0, dismissed: 1 });
     expect(dismissed.items[0].dismissed).toBe(true);
-    expect(JSON.parse(readFileSync(join(root, 'setup-readiness.json'), 'utf8')).dismissed['ext:item']).toBeTruthy();
+    expect(
+      JSON.parse(readFileSync(join(root, 'desktop-root', 'system', 'setup-readiness.json'), 'utf8')).dismissed['ext:item'],
+    ).toBeTruthy();
+  });
+
+  it('stores state under DesktopRootLayout system directory, not under getStateRoot', async () => {
+    const root = tempRoot();
+    const host = client();
+
+    await readSetupReadiness(context(root), { extensionHostClient: host });
+
+    const layoutPath = join(root, 'desktop-root', 'system', 'setup-readiness.json');
+    const stateRootPath = join(root, 'setup-readiness.json');
+    expect(existsSync(layoutPath)).toBe(true);
+    expect(existsSync(stateRootPath)).toBe(false);
   });
 
   it('adds an extension settings action when an incomplete item has no declared action for its state', async () => {
