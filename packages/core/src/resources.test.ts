@@ -6,11 +6,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   buildPiResourceArgs,
+  type DesktopRootLayout,
   installPackageSource,
   listRuntimeScopes,
   materializeRuntimeResourcesToAgentDir,
   mergeJsonFiles,
   readPackageSourceTargetState,
+  resolveDesktopRootLayout,
   resolveLocalRuntimeSettingsFilePath,
   resolveRuntimeResources,
 } from './index.js';
@@ -54,6 +56,10 @@ function createTempRuntimeConfigRoot(): string {
 function writeFile(path: string, content: string): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, content);
+}
+
+function createDesktopRootLayout(root: string): DesktopRootLayout {
+  return resolveDesktopRootLayout({ root });
 }
 
 describe('runtime resource loader', () => {
@@ -391,6 +397,51 @@ description: Commit and push the agent's current work.
       { source: '/existing-package', filtered: false },
       { source: join(repo, 'local-package'), filtered: false },
     ]);
+  });
+
+  it('uses supplied DesktopRootLayout to resolve agents path', () => {
+    const repo = createTempRepo();
+    const runtimeConfigRoot = createTempRuntimeConfigRoot();
+    const customRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-custom-root-'));
+    tempDirs.push(customRoot);
+    const customLayout = createDesktopRootLayout(customRoot);
+    const defaultLayout = resolveDesktopRootLayout();
+
+    writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
+    writeFile(join(customLayout.agents, 'AGENTS.md'), '# Custom desktop agents\n');
+    writeFile(join(defaultLayout.agents, 'AGENTS.md'), '# Default desktop agents\n');
+
+    const resolved = resolveRuntimeResources('shared', {
+      repoRoot: repo,
+      runtimeConfigRoot,
+      localRuntimeConfigDir: join(repo, '.local-profile'),
+      desktopRootLayout: customLayout,
+    });
+
+    expect(resolved.agentsFiles).toContain(join(customLayout.agents, 'AGENTS.md'));
+    expect(resolved.agentsFiles).not.toContain(join(defaultLayout.agents, 'AGENTS.md'));
+  });
+
+  it('omitting desktopRootLayout falls back to default layout resolution', () => {
+    const repo = createTempRepo();
+    const runtimeConfigRoot = createTempRuntimeConfigRoot();
+    const customRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-custom-root-'));
+    tempDirs.push(customRoot);
+    const customLayout = createDesktopRootLayout(customRoot);
+    const defaultLayout = resolveDesktopRootLayout();
+
+    writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
+    writeFile(join(customLayout.agents, 'AGENTS.md'), '# Custom desktop agents\n');
+    writeFile(join(defaultLayout.agents, 'AGENTS.md'), '# Default desktop agents\n');
+
+    const withoutOption = resolveRuntimeResources('shared', {
+      repoRoot: repo,
+      runtimeConfigRoot,
+      localRuntimeConfigDir: join(repo, '.local-profile'),
+    });
+
+    expect(withoutOption.agentsFiles).toContain(join(defaultLayout.agents, 'AGENTS.md'));
+    expect(withoutOption.agentsFiles).not.toContain(join(customLayout.agents, 'AGENTS.md'));
   });
 
   it('builds pi args from resource directories', () => {

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 import { readMachineInstructionFiles, readMachineSkillDirs, readMachineSystemPromptTemplate } from './machine-config.js';
 import { listUnifiedSkillNodeDirs } from './nodes.js';
-import { resolveDesktopRootLayout } from './runtime/desktop-root.js';
+import { type DesktopRootLayout, resolveDesktopRootLayout } from './runtime/desktop-root.js';
 import {
   getDurableAgentFilePath,
   getDurableRuntimeConfigRoot as getCanonicalRuntimeConfigRoot,
@@ -57,6 +57,8 @@ export interface ResolveResourceOptions {
   extensionDirs?: string[];
   /** Optional pre-resolved extension entry paths. When provided, core will use these instead of auto-discovering entries. */
   extensionEntries?: string[];
+  /** Optional pre-resolved desktop root layout. When provided, core will use these paths instead of auto-resolving from config/env. */
+  desktopRootLayout?: DesktopRootLayout;
   /** Working directory used for project instruction discovery. Defaults to process.cwd(). */
   cwd?: string;
 }
@@ -723,7 +725,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
   const repoRoot = getRepoRoot(options.repoRoot);
   const knowledgeRoot = resolveKnowledgeRoot(options);
   const runtimeConfigRoot = resolveRuntimeConfigRoot(options);
-  const desktopRootLayout = resolveDesktopRootLayout();
+  const desktopRootLayout = options.desktopRootLayout ?? resolveDesktopRootLayout();
 
   const repoDefaultsAgentDir = existingDir(getRepoDefaultsAgentDir(repoRoot));
 
