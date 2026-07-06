@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { resolveSessionsDir, resolveSessionsIndexFile } from './sessionPaths';
+const core = vi.hoisted(() => ({ getDurableSessionsDir: vi.fn(() => '/durable/sessions') }));
+
+vi.mock('@neon-pilot/core', () => core);
+
+import { resolvePersistentSessionDir, resolveSessionsDir, resolveSessionsIndexFile } from './sessionPaths';
 
 describe('sessionPaths', () => {
   it('uses the configured sessions dir when provided', () => {
@@ -20,5 +24,26 @@ describe('sessionPaths', () => {
       '/tmp/session-meta-index.json',
     );
     expect(resolveSessionsIndexFile({ defaultSessionsIndexFile: '/default/index.json' })).toBe('/default/index.json');
+  });
+
+  describe('resolvePersistentSessionDir', () => {
+    it('uses getDurableSessionsDir when no options are provided', () => {
+      expect(resolvePersistentSessionDir('/Users/patrick/project')).toBe('/durable/sessions/--Users-patrick-project--');
+    });
+
+    it('strips leading slash and replaces separators with hyphens', () => {
+      expect(resolvePersistentSessionDir('/dev/my:app', { sessionsDir: '/base' })).toBe('/base/--dev-my-app--');
+      expect(resolvePersistentSessionDir('C:\\Users\\test', { sessionsDir: '/base' })).toBe('/base/--C--Users-test--');
+    });
+
+    it('uses custom sessionsDir when provided', () => {
+      expect(resolvePersistentSessionDir('/project', { sessionsDir: '/custom/sessions' })).toBe('/custom/sessions/--project--');
+    });
+
+    it('does not call getDurableSessionsDir when sessionsDir is provided', () => {
+      core.getDurableSessionsDir.mockClear();
+      resolvePersistentSessionDir('/some/path', { sessionsDir: '/explicit/dir' });
+      expect(core.getDurableSessionsDir).not.toHaveBeenCalled();
+    });
   });
 });

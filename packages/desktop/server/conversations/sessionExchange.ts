@@ -7,6 +7,7 @@ import { type DesktopRootLayout, getDurableSessionsDir, getStateRoot } from '@ne
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { readConversationSessionMeta } from './conversationService.js';
 import { clearTranscriptBackedConversationCaches, listTranscriptBackedConversationSessions } from './conversationTranscriptOps.js';
+import { resolvePersistentSessionDir } from './sessionPaths.js';
 
 interface RawSessionHeader {
   type?: unknown;
@@ -39,10 +40,6 @@ function sanitizeFileStem(value: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
   return normalized || 'session';
-}
-
-function cwdToSlug(cwd: string): string {
-  return `--${cwd.replace(/^[\\/]/, '').replace(/[\\/:]/g, '-')}--`;
 }
 
 function readSessionHeader(filePath: string): RawSessionHeader {
@@ -128,7 +125,7 @@ export function importConversationSession(input: { filePath?: unknown }, layout?
   const cwd = typeof header.cwd === 'string' && header.cwd.trim().length > 0 ? header.cwd.trim() : process.cwd();
 
   const sessionsDir = layout ? layout.systemSessions : getDurableSessionsDir();
-  const destinationDir = join(sessionsDir, cwdToSlug(cwd));
+  const destinationDir = resolvePersistentSessionDir(cwd, { sessionsDir });
   mkdirSync(destinationDir, { recursive: true });
 
   const sourceStem = sanitizeFileStem(basename(filePath, ext));

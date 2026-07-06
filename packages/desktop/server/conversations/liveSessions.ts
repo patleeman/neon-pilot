@@ -11,7 +11,6 @@ import type { DesktopRootLayout } from '@neon-pilot/core';
 import {
   type ConversationArtifactRecord,
   getConversationArtifact,
-  getDurableSessionsDir,
   getPiAgentRuntimeDir,
   getStateRoot,
   listConversationArtifacts,
@@ -147,6 +146,7 @@ import { resolveStableSessionTitle } from './liveSessionTitle.js';
 import { type BeforeAgentStartProbeMessage, inspectAvailableLiveSessionTools } from './liveSessionToolInspection.js';
 import { repairLiveSessionTranscriptTail as repairLiveSessionTranscriptTailWithCallbacks } from './liveSessionTranscriptRepair.js';
 import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
+import { resolvePersistentSessionDir } from './sessionPaths.js';
 
 export function registerLiveSessionLifecycleHandler(handler: LiveSessionLifecycleHandler): () => void {
   const unregisterDefault = registerDefaultLiveSessionLifecycleHandler(handler);
@@ -196,14 +196,7 @@ function resolveSettingsFile(): string {
   return join(resolveAgentDir(), 'settings.json');
 }
 
-function resolveSessionsDir(): string {
-  return getDurableSessionsDir();
-}
-
-export function resolvePersistentSessionDir(cwd: string): string {
-  const safePath = `--${cwd.replace(/^[/\\]/, '').replace(/[/\\:]/g, '-')}--`;
-  return join(resolveSessionsDir(), safePath);
-}
+export { resolvePersistentSessionDir };
 
 function resolveConversationPreferenceStateForSession(
   sessionManager: Parameters<typeof resolveConversationPreferenceStateForSessionWithSettings>[1],

@@ -2,16 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { getDurableSessionsDir } from '@neon-pilot/core';
-
 import { upsertConversationCatalogSession } from './conversationCatalog.js';
 import { resolveNeutralChatCwd } from './conversationCwd.js';
 import { readConversationSessionMetaByFile } from './conversationService.js';
-
-function resolvePersistentSessionDir(cwd: string): string {
-  const safePath = `--${cwd.replace(/^[/\\]/, '').replace(/[/\\:]/g, '-')}--`;
-  return join(getDurableSessionsDir(), safePath);
-}
+import { resolvePersistentSessionDir } from './sessionPaths.js';
 
 export function reserveConversationSession(input: { cwd?: string | null; profile?: string }): {
   id: string;
