@@ -68,7 +68,7 @@ function createPa(
 
 describe('AutomationsPage windowed surface', () => {
   it('renders native windowed automation chrome without the stable app page shell', async () => {
-    const { container } = render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<AutomationsPage pa={createPa()} />);
 
     await waitFor(() => expect(container.querySelector('.wos-page-shell')?.getAttribute('data-layout')).toBe('standard'));
 
@@ -137,7 +137,7 @@ describe('AutomationsPage windowed surface', () => {
 
   it('keeps destructive automation actions available in windowed rows', async () => {
     const pa = createPa();
-    render(<AutomationsPage pa={pa} context={{ shellPresentation: 'windowed' }} />);
+    render(<AutomationsPage pa={pa} />);
 
     const deleteButton = await screen.findByRole('button', { name: 'Delete Release watch' });
     expect(deleteButton.closest('.wos-page-button')?.getAttribute('data-tone')).toBe('danger');
@@ -150,7 +150,7 @@ describe('AutomationsPage windowed surface', () => {
   });
 
   it('opens automation details with native windowed dialog chrome instead of the stable context rail', async () => {
-    const { container } = render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<AutomationsPage pa={createPa()} />);
 
     const row = (await screen.findByText('Quarter-hour chime')).closest('.wos-data-row');
     if (!row) throw new Error('Missing automation row');
@@ -173,7 +173,7 @@ describe('AutomationsPage windowed surface', () => {
   });
 
   it('opens automation details from selectable rows with the keyboard', async () => {
-    render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
+    render(<AutomationsPage pa={createPa()} />);
 
     const row = (await screen.findByText('Release watch')).closest('.wos-data-row');
     if (!row) throw new Error('Missing automation row');
@@ -186,7 +186,7 @@ describe('AutomationsPage windowed surface', () => {
   });
 
   it('opens automation edit forms with native windowed fields', async () => {
-    const { container } = render(<AutomationsPage pa={createPa()} context={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<AutomationsPage pa={createPa()} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Edit Quarter-hour chime' }));
 
@@ -202,7 +202,7 @@ describe('AutomationsPage windowed surface', () => {
   });
 
   it('uses shared windowed empty-state chrome when no automations exist', async () => {
-    const { container } = render(<AutomationsPage pa={createPa([])} context={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<AutomationsPage pa={createPa([])} />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Task queue' })).toBeTruthy());
 
@@ -217,9 +217,7 @@ describe('AutomationsPage windowed surface', () => {
   });
 
   it('uses shared windowed loading-state chrome while automations are loading', async () => {
-    const { container } = render(
-      <AutomationsPage pa={createPa(new Promise(() => undefined))} context={{ shellPresentation: 'windowed' }} />,
-    );
+    const { container } = render(<AutomationsPage pa={createPa(new Promise(() => undefined))} />);
 
     await waitFor(() => expect(screen.getByText('Loading automations')).toBeTruthy());
 
@@ -234,7 +232,7 @@ describe('AutomationsPage windowed surface', () => {
     const pa = createPa([]);
     vi.mocked(pa.automations.list).mockRejectedValueOnce(new Error('Automations could not be loaded.'));
 
-    const { container } = render(<AutomationsPage pa={pa} context={{ shellPresentation: 'windowed' }} />);
+    const { container } = render(<AutomationsPage pa={pa} />);
 
     await waitFor(() => expect(screen.getByText('Automations could not be loaded.')).toBeTruthy());
 

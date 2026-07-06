@@ -1,48 +1,7 @@
 import type { ExtensionSurfaceProps, NativeExtensionClient } from '@neon-pilot/extensions';
 import { timeAgo } from '@neon-pilot/extensions/data';
 import {
-  AppPageIntro,
-  AppPageLayout,
-  BrowsePathButton,
-  Button,
-  ContextRail,
-  ContextRailBody,
-  ContextRailHeader,
-  ContextRailSection,
   cx,
-  DataTable,
-  DataTableActionGroup,
-  DataTableBody,
-  DataTableCell,
-  DataTableEmptyRow,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-  DataTableToolbar,
-  Dialog,
-  DialogBody,
-  DialogHeader,
-  Disclosure,
-  EmptyState,
-  Field,
-  FieldError,
-  FieldHint,
-  FieldLabel,
-  IconButton,
-  KeyValueItem,
-  KeyValueList,
-  MenuItem,
-  MenuSeparator,
-  Notice,
-  PanelMessage,
-  Pill,
-  PositionedMenu,
-  QuietLoadingState,
-  SegmentedControl,
-  Select,
-  Textarea,
-  TextButton,
-  TextInput,
   WindowedActionRow,
   WindowedBadge,
   WindowedDataRow,
@@ -70,7 +29,7 @@ import {
   WindowedToggle,
   WindowedToolbar,
 } from '@neon-pilot/extensions/ui';
-import { type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface TaskSummary {
   id: string;
@@ -120,11 +79,7 @@ interface AutomationFormState {
   enabled: boolean;
 }
 
-type AutomationsPageContext = Partial<Pick<ExtensionSurfaceProps['context'], 'search' | 'shellPresentation'>>;
-type RowMenuState = {
-  taskId: string;
-  position: Pick<CSSProperties, 'top' | 'right' | 'bottom'>;
-};
+type AutomationsPageContext = Partial<Pick<ExtensionSurfaceProps['context'], 'search'>>;
 type AutomationSelectionData =
   | {
       kind: 'automation' | 'edit';
@@ -158,10 +113,6 @@ function stopRowAction(event: ReactMouseEvent<HTMLButtonElement>) {
   event.stopPropagation();
 }
 
-const ROW_ACTION_MENU_GAP = 4;
-const ROW_ACTION_MENU_MARGIN = 8;
-const ROW_ACTION_MENU_MIN_WIDTH = 144;
-const ROW_ACTION_MENU_ESTIMATED_HEIGHT = 168;
 const MAX_TIMEOUT_SECONDS = 7 * 24 * 60 * 60;
 
 const CRON_PRESETS: ReadonlyArray<{ value: string; label: string }> = [
@@ -173,26 +124,6 @@ const CRON_PRESETS: ReadonlyArray<{ value: string; label: string }> = [
   { value: '0 9 * * 1-5', label: 'Weekdays at 9:00 AM' },
   { value: '0 9 1 * *', label: 'First of the month at 9:00 AM' },
 ];
-
-export function automationRowActionMenuPosition(
-  anchorRect: Pick<DOMRect, 'top' | 'right' | 'bottom'>,
-  viewport: { width: number; height: number },
-): Pick<CSSProperties, 'top' | 'right' | 'bottom'> {
-  const maxRight = Math.max(ROW_ACTION_MENU_MARGIN, viewport.width - ROW_ACTION_MENU_MARGIN - ROW_ACTION_MENU_MIN_WIDTH);
-  const right = Math.min(Math.max(ROW_ACTION_MENU_MARGIN, viewport.width - anchorRect.right), maxRight);
-  const availableBelow = viewport.height - anchorRect.bottom - ROW_ACTION_MENU_GAP - ROW_ACTION_MENU_MARGIN;
-  const availableAbove = anchorRect.top - ROW_ACTION_MENU_GAP - ROW_ACTION_MENU_MARGIN;
-  if (availableBelow < ROW_ACTION_MENU_ESTIMATED_HEIGHT && availableAbove > availableBelow) {
-    return {
-      right,
-      bottom: Math.max(ROW_ACTION_MENU_MARGIN, viewport.height - anchorRect.top + ROW_ACTION_MENU_GAP),
-    };
-  }
-  return {
-    right,
-    top: Math.max(ROW_ACTION_MENU_MARGIN, anchorRect.bottom + ROW_ACTION_MENU_GAP),
-  };
-}
 
 const TIMEOUT_PRESETS: ReadonlyArray<{ value: number; label: string }> = [
   { value: 300, label: '5 minutes' },
@@ -351,13 +282,6 @@ function statusLabel(task: TaskSummary): string {
   if (!task.enabled) return 'Paused';
   if (task.lastStatus === 'failed') return 'Failed';
   return 'On';
-}
-
-function statusPillTone(task: TaskSummary): 'accent' | 'steel' | 'danger' | 'success' {
-  if (task.running) return 'accent';
-  if (!task.enabled) return 'steel';
-  if (task.lastStatus === 'failed') return 'danger';
-  return 'success';
 }
 
 function windowedStatusTone(task: TaskSummary): 'neutral' | 'positive' | 'warning' | 'danger' {
@@ -531,12 +455,10 @@ function modelLabel(model: ModelOption): string {
 
 export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; context?: AutomationsPageContext }) {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
-  const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null);
   const [activeAutomation, setActiveAutomation] = useState<AutomationSelectionData | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const rowMenuBaseId = useId();
   const loadRequestIdRef = useRef(0);
   const handledRouteSearchRef = useRef<string | null>(null);
 
@@ -592,34 +514,7 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
     return () => window.clearInterval(timer);
   }, [load]);
 
-  useEffect(() => {
-    if (!rowMenu) return;
-    const close = () => setRowMenu(null);
-    const closeOnOutsideEvent = (event: Event) => {
-      const target = event.target;
-      const menuRoot = target instanceof Element ? target.closest('[data-automation-row-menu]') : null;
-      if (menuRoot?.getAttribute('data-automation-row-menu') === rowMenu.taskId) return;
-      close();
-    };
-    const closeOnKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    document.addEventListener('pointerdown', closeOnOutsideEvent, true);
-    document.addEventListener('click', closeOnOutsideEvent, true);
-    document.addEventListener('keydown', closeOnKeyDown);
-    window.addEventListener('resize', close);
-    window.addEventListener('scroll', close, true);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutsideEvent, true);
-      document.removeEventListener('click', closeOnOutsideEvent, true);
-      document.removeEventListener('keydown', closeOnKeyDown);
-      window.removeEventListener('resize', close);
-      window.removeEventListener('scroll', close, true);
-    };
-  }, [rowMenu]);
-
   const openCreate = useCallback(() => {
-    setRowMenu(null);
     setActiveAutomation({ kind: 'new' });
   }, []);
 
@@ -637,13 +532,11 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const visibleTasks = useMemo(() => sortTasks(tasks), [tasks]);
 
   const selectTask = useCallback((task: TaskSummary, mode: 'automation' | 'edit' = 'automation') => {
-    setRowMenu(null);
     setActiveAutomation({ kind: mode, task });
   }, []);
 
   const updateEnabled = async (task: TaskSummary, enabled: boolean) => {
     setBusy(`${enabled ? 'resume' : 'pause'}:${task.id}`);
-    setRowMenu(null);
     try {
       await pa.automations.update(task.id, { enabled, threadConversationId: task.threadConversationId, targetType: 'conversation' });
       await load();
@@ -659,7 +552,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       return;
     }
     setBusy(`run:${task.id}`);
-    setRowMenu(null);
     try {
       await pa.automations.run(task.id);
       await load();
@@ -671,7 +563,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   };
 
   const deleteTask = async (task: TaskSummary) => {
-    setRowMenu(null);
     const confirmed = await pa.ui.confirm({
       title: 'Delete automation',
       message: `Delete automation "${taskTitle(task)}"? This cannot be undone.`,
@@ -691,7 +582,6 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
   const openOwnerThread = async (task: TaskSummary) => {
     const conversationId = task.threadConversationId?.trim();
     if (!conversationId) return;
-    setRowMenu(null);
     try {
       const opened = await pa.commands.execute('conversation.open', { conversationId });
       if (!opened) {
@@ -758,383 +648,196 @@ export function AutomationsPage({ pa, context }: { pa: NativeExtensionClient; co
       } as NativeExtensionClient)
     : null;
 
-  if (context?.shellPresentation === 'windowed') {
-    const runningCount = visibleTasks.filter((task) => task.running).length;
-    const failedCount = visibleTasks.filter((task) => task.lastStatus === 'failed').length;
-    const pausedCount = visibleTasks.filter((task) => !task.enabled).length;
-
-    return (
-      <div className="h-full overflow-hidden">
-        <WindowedPageShell layout="standard" className="automations-page-windowed">
-          <WindowedPageMain
-            title="Automations"
-            actions={
-              <>
-                <WindowedPageButton disabled={loading} onClick={() => void load()}>
-                  Refresh
-                </WindowedPageButton>
-                <WindowedPageButton tone="accent" onClick={openCreate}>
-                  New automation
-                </WindowedPageButton>
-              </>
-            }
-          >
-            <WindowedPageStack>
-              {error ? (
-                <WindowedPageSection title="Action needed">
-                  <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
-                </WindowedPageSection>
-              ) : null}
-
-              <WindowedPageSection title="Overview" meta={`${visibleTasks.length} total`}>
-                <WindowedKeyValueGrid
-                  items={[
-                    { label: 'Running', value: String(runningCount) },
-                    { label: 'Failed', value: String(failedCount) },
-                    { label: 'Paused', value: String(pausedCount) },
-                    { label: 'Enabled', value: String(visibleTasks.filter((task) => task.enabled ?? true).length) },
-                  ]}
-                  columns={4}
-                />
-              </WindowedPageSection>
-
-              <WindowedPageSection title="Task queue">
-                {loading && visibleTasks.length === 0 ? <WindowedLoadingState label="Loading automations" /> : null}
-                {!error && !loading && visibleTasks.length === 0 ? (
-                  <WindowedEmptyState
-                    title="No automations scheduled"
-                    action={
-                      <WindowedPageButton tone="accent" onClick={openCreate}>
-                        New automation
-                      </WindowedPageButton>
-                    }
-                  >
-                    Schedule prompts into owner threads for recurring reports, checks, and reminders.
-                  </WindowedEmptyState>
-                ) : null}
-                {visibleTasks.length > 0 ? (
-                  <WindowedDataTable
-                    className="wos-automation-queue"
-                    columnTemplate="minmax(12rem, 1fr) minmax(5.75rem, 0.34fr) minmax(0, 1.08fr)"
-                    columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}
-                  >
-                    {visibleTasks.map((task) => {
-                      const title = taskTitle(task);
-                      const runLabel = `Run ${title}`;
-                      const toggleLabel = task.enabled ? `Pause ${title}` : `Resume ${title}`;
-                      const editLabel = `Edit ${title}`;
-                      const selected = activeAutomation?.kind === 'automation' && activeAutomation.task.id === task.id;
-                      return (
-                        <WindowedDataRow
-                          key={task.id}
-                          className="wos-automation-queue-row"
-                          name={title}
-                          meta={windowedAutomationMeta(task)}
-                          selected={selected}
-                          accent="automations"
-                          status={<WindowedBadge tone={windowedStatusTone(task)}>{statusLabel(task)}</WindowedBadge>}
-                          onSelect={() => selectTask(task)}
-                          action={
-                            <span className="wos-automation-actions">
-                              <WindowedPageButton
-                                aria-label={`Open details for ${title}`}
-                                title={`Open details for ${title}`}
-                                density="icon"
-                                onClick={(event) => {
-                                  stopRowAction(event);
-                                  selectTask(task);
-                                }}
-                              >
-                                <AutomationRowIcon name="details" />
-                              </WindowedPageButton>
-                              <WindowedPageButton
-                                disabled={!task.threadConversationId}
-                                aria-label={`Open owner thread for ${title}: ${task.threadTitle || task.threadConversationId || 'None'}`}
-                                title={`Open owner thread for ${title}`}
-                                density="icon"
-                                onClick={(event) => {
-                                  stopRowAction(event);
-                                  void openOwnerThread(task);
-                                }}
-                              >
-                                <AutomationRowIcon name="owner" />
-                              </WindowedPageButton>
-                              <WindowedPageButton
-                                disabled={task.running || busy === `run:${task.id}`}
-                                aria-label={runLabel}
-                                title={runLabel}
-                                density="icon"
-                                onClick={(event) => {
-                                  stopRowAction(event);
-                                  void runNow(task);
-                                }}
-                              >
-                                <AutomationRowIcon name="run" />
-                              </WindowedPageButton>
-                              <WindowedPageButton
-                                disabled={Boolean(busy?.endsWith(`:${task.id}`))}
-                                aria-label={toggleLabel}
-                                title={toggleLabel}
-                                density="icon"
-                                onClick={(event) => {
-                                  stopRowAction(event);
-                                  void updateEnabled(task, !task.enabled);
-                                }}
-                              >
-                                <AutomationRowIcon name={task.enabled ? 'pause' : 'resume'} />
-                              </WindowedPageButton>
-                              <WindowedPageButton
-                                aria-label={editLabel}
-                                title={editLabel}
-                                density="icon"
-                                onClick={(event) => {
-                                  stopRowAction(event);
-                                  selectTask(task, 'edit');
-                                }}
-                              >
-                                <AutomationRowIcon name="edit" />
-                              </WindowedPageButton>
-                              <WindowedPageButton
-                                tone="danger"
-                                disabled={task.running || busy === `delete:${task.id}`}
-                                aria-label={`Delete ${title}`}
-                                title={`Delete ${title}`}
-                                density="icon"
-                                onClick={(event) => {
-                                  stopRowAction(event);
-                                  void deleteTask(task);
-                                }}
-                              >
-                                <AutomationRowIcon name="delete" />
-                              </WindowedPageButton>
-                            </span>
-                          }
-                        />
-                      );
-                    })}
-                  </WindowedDataTable>
-                ) : null}
-              </WindowedPageSection>
-            </WindowedPageStack>
-          </WindowedPageMain>
-        </WindowedPageShell>
-
-        {activeAutomation && dialogPa ? (
-          <WindowedDialog
-            title={activeAutomationTitle}
-            meta={activeAutomationMeta}
-            accent="automations"
-            className={cx(
-              'wos-automation-dialog',
-              activeAutomation.kind === 'automation' ? 'wos-automation-dialog--details' : 'wos-automation-dialog--editor',
-            )}
-            parentWindowTitle="Automations"
-            subwindowId={
-              activeAutomation.kind === 'new'
-                ? 'automation-create'
-                : activeAutomation.kind === 'edit'
-                  ? 'automation-edit'
-                  : 'automation-details'
-            }
-            onClose={() => setActiveAutomation(null)}
-          >
-            <AutomationDialogPanel
-              key={`${activeAutomation.kind}:${activeAutomation.kind === 'new' ? 'new' : activeAutomation.task.id}`}
-              pa={dialogPa}
-              presentation="windowed"
-            />
-          </WindowedDialog>
-        ) : null}
-      </div>
-    );
-  }
+  const runningCount = visibleTasks.filter((task) => task.running).length;
+  const failedCount = visibleTasks.filter((task) => task.lastStatus === 'failed').length;
+  const pausedCount = visibleTasks.filter((task) => !task.enabled).length;
 
   return (
-    <div className="h-full overflow-y-auto bg-base">
-      <AppPageLayout contentClassName="flex min-h-full flex-col gap-4">
-        <AppPageIntro title="Automations" />
-
-        {error ? <Notice tone="danger">{error}</Notice> : null}
-
-        <DataTableToolbar
-          summary={`${visibleTasks.length} automation${visibleTasks.length === 1 ? '' : 's'}`}
+    <div className="h-full overflow-hidden">
+      <WindowedPageShell layout="standard" className="automations-page-windowed">
+        <WindowedPageMain
+          title="Automations"
           actions={
             <>
-              <IconButton compact aria-label="Refresh automations" title="Refresh automations" onClick={() => void load()}>
-                <RefreshIcon />
-              </IconButton>
-              <Button variant="action" tone="accent" onClick={openCreate}>
-                <span aria-hidden="true">+</span>
+              <WindowedPageButton disabled={loading} onClick={() => void load()}>
+                Refresh
+              </WindowedPageButton>
+              <WindowedPageButton tone="accent" onClick={openCreate}>
                 New automation
-              </Button>
+              </WindowedPageButton>
             </>
           }
-        />
-
-        <DataTable
-          className="min-h-0 overflow-hidden"
-          tableClassName="table-fixed"
-          columns={
-            <colgroup>
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '24%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '13%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '5%' }} />
-            </colgroup>
-          }
         >
-          <DataTableHead>
-            <DataTableRow>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell>Automation</DataTableHeaderCell>
-              <DataTableHeaderCell>Schedule</DataTableHeaderCell>
-              <DataTableHeaderCell>Next run</DataTableHeaderCell>
-              <DataTableHeaderCell>Last run</DataTableHeaderCell>
-              <DataTableHeaderCell>Owner thread</DataTableHeaderCell>
-              <DataTableHeaderCell aria-label="Actions" />
-            </DataTableRow>
-          </DataTableHead>
-          <DataTableBody>
-            {loading && tasks.length === 0 ? (
-              <DataTableEmptyRow colSpan={7} cellClassName="py-8 text-left">
-                <QuietLoadingState label="Loading automations" className="min-h-8" />
-              </DataTableEmptyRow>
+          <WindowedPageStack>
+            {error ? (
+              <WindowedPageSection title="Action needed">
+                <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>
+              </WindowedPageSection>
             ) : null}
 
-            {!loading && visibleTasks.length === 0 ? (
-              <DataTableEmptyRow colSpan={7} cellClassName="py-10 text-left">
-                <EmptyState
-                  title="Schedule work into a conversation"
-                  body="Automations run prompts on a one-time or recurring schedule, then write the result back to an owner thread."
-                  steps={[
-                    'Pick an owner thread so every run is auditable.',
-                    'Choose a schedule such as daily, weekdays, or one-time follow-up.',
-                    'Use it for project check-ins, release watches, reminders, or recurring reports.',
-                  ]}
+            <WindowedPageSection title="Overview" meta={`${visibleTasks.length} total`}>
+              <WindowedKeyValueGrid
+                items={[
+                  { label: 'Running', value: String(runningCount) },
+                  { label: 'Failed', value: String(failedCount) },
+                  { label: 'Paused', value: String(pausedCount) },
+                  { label: 'Enabled', value: String(visibleTasks.filter((task) => task.enabled ?? true).length) },
+                ]}
+                columns={4}
+              />
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Task queue">
+              {loading && visibleTasks.length === 0 ? <WindowedLoadingState label="Loading automations" /> : null}
+              {!error && !loading && visibleTasks.length === 0 ? (
+                <WindowedEmptyState
+                  title="No automations scheduled"
                   action={
-                    <Button variant="action" tone="accent" onClick={openCreate}>
-                      <span aria-hidden="true">+</span>
+                    <WindowedPageButton tone="accent" onClick={openCreate}>
                       New automation
-                    </Button>
+                    </WindowedPageButton>
                   }
-                  align="start"
-                  className="max-w-[34rem]"
-                />
-              </DataTableEmptyRow>
-            ) : null}
-
-            {visibleTasks.map((task) => (
-              <DataTableRow key={task.id}>
-                <DataTableCell>
-                  <Pill tone={statusPillTone(task)}>{statusLabel(task)}</Pill>
-                </DataTableCell>
-                <DataTableCell>
-                  <div className="min-w-0">
-                    <Button
-                      variant="ghost"
-                      className="max-w-full justify-start truncate px-0 py-0 text-left font-medium text-primary"
-                      onClick={() => selectTask(task)}
-                    >
-                      {taskTitle(task)}
-                    </Button>
-                    {task.prompt ? <div className="mt-0.5 truncate text-[12px] text-dim">{task.prompt}</div> : null}
-                  </div>
-                </DataTableCell>
-                <DataTableCell className="truncate text-secondary">
-                  <span className={cx(task.scheduleType === 'cron' && 'font-mono text-[12px]')}>{scheduleText(task)}</span>
-                </DataTableCell>
-                <DataTableCell className="truncate text-secondary">{nextRunText(task)}</DataTableCell>
-                <DataTableCell className="truncate text-secondary">{lastRunText(task)}</DataTableCell>
-                <DataTableCell className="min-w-0 text-secondary">
-                  {task.threadConversationId ? (
-                    <TextButton
-                      aria-label={`Open owner thread for ${taskTitle(task)}: ${task.threadTitle || task.threadConversationId}`}
-                      title={`Open ${task.threadTitle || task.threadConversationId}`}
-                      tone="accent"
-                      className="w-full max-w-full justify-start truncate px-0 py-0 text-left text-[13px]"
-                      style={{ justifyContent: 'flex-start' }}
-                      onClick={() => void openOwnerThread(task)}
-                    >
-                      {task.threadTitle || task.threadConversationId}
-                    </TextButton>
-                  ) : (
-                    '—'
-                  )}
-                </DataTableCell>
-                <DataTableCell className="relative" data-automation-row-menu={task.id}>
-                  <DataTableActionGroup>
-                    <IconButton
-                      aria-label={`Actions for ${taskTitle(task)}`}
-                      title={`Actions for ${taskTitle(task)}`}
-                      aria-haspopup="menu"
-                      aria-expanded={rowMenu?.taskId === task.id}
-                      aria-controls={rowMenu?.taskId === task.id ? `${rowMenuBaseId}-${task.id}` : undefined}
-                      onClick={(event: ReactMouseEvent<HTMLButtonElement>) => {
-                        const rect = event.currentTarget.getBoundingClientRect();
-                        setRowMenu((current) =>
-                          current?.taskId === task.id
-                            ? null
-                            : {
-                                taskId: task.id,
-                                position: automationRowActionMenuPosition(rect, {
-                                  width: window.innerWidth,
-                                  height: window.innerHeight,
-                                }),
-                              },
-                        );
-                      }}
-                    >
-                      <MoreIcon />
-                    </IconButton>
-                  </DataTableActionGroup>
-                  {rowMenu?.taskId === task.id ? (
-                    <PositionedMenu
-                      id={`${rowMenuBaseId}-${task.id}`}
-                      aria-label={`Actions for ${taskTitle(task)}`}
-                      data-automation-row-menu={task.id}
-                      position={rowMenu.position}
-                      className="z-50 min-w-36"
-                    >
-                      <MenuItem disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow(task)}>
-                        Run now
-                      </MenuItem>
-                      <MenuItem disabled={busy?.endsWith(`:${task.id}`)} onClick={() => void updateEnabled(task, !task.enabled)}>
-                        {task.enabled ? 'Pause' : 'Resume'}
-                      </MenuItem>
-                      <MenuItem onClick={() => selectTask(task)}>Details</MenuItem>
-                      <MenuItem onClick={() => selectTask(task, 'edit')}>Edit</MenuItem>
-                      <MenuSeparator />
-                      <MenuItem tone="danger" disabled={task.running || busy === `delete:${task.id}`} onClick={() => void deleteTask(task)}>
-                        Delete
-                      </MenuItem>
-                    </PositionedMenu>
-                  ) : null}
-                </DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
-      </AppPageLayout>
+                >
+                  Schedule prompts into owner threads for recurring reports, checks, and reminders.
+                </WindowedEmptyState>
+              ) : null}
+              {visibleTasks.length > 0 ? (
+                <WindowedDataTable
+                  className="wos-automation-queue"
+                  columnTemplate="minmax(12rem, 1fr) minmax(5.75rem, 0.34fr) minmax(0, 1.08fr)"
+                  columns={[{ label: 'Automation' }, { label: 'Status' }, { label: 'Actions', align: 'right' }]}
+                >
+                  {visibleTasks.map((task) => {
+                    const title = taskTitle(task);
+                    const runLabel = `Run ${title}`;
+                    const toggleLabel = task.enabled ? `Pause ${title}` : `Resume ${title}`;
+                    const editLabel = `Edit ${title}`;
+                    const selected = activeAutomation?.kind === 'automation' && activeAutomation.task.id === task.id;
+                    return (
+                      <WindowedDataRow
+                        key={task.id}
+                        className="wos-automation-queue-row"
+                        name={title}
+                        meta={windowedAutomationMeta(task)}
+                        selected={selected}
+                        accent="automations"
+                        status={<WindowedBadge tone={windowedStatusTone(task)}>{statusLabel(task)}</WindowedBadge>}
+                        onSelect={() => selectTask(task)}
+                        action={
+                          <span className="wos-automation-actions">
+                            <WindowedPageButton
+                              aria-label={`Open details for ${title}`}
+                              title={`Open details for ${title}`}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                selectTask(task);
+                              }}
+                            >
+                              <AutomationRowIcon name="details" />
+                            </WindowedPageButton>
+                            <WindowedPageButton
+                              disabled={!task.threadConversationId}
+                              aria-label={`Open owner thread for ${title}: ${task.threadTitle || task.threadConversationId || 'None'}`}
+                              title={`Open owner thread for ${title}`}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void openOwnerThread(task);
+                              }}
+                            >
+                              <AutomationRowIcon name="owner" />
+                            </WindowedPageButton>
+                            <WindowedPageButton
+                              disabled={task.running || busy === `run:${task.id}`}
+                              aria-label={runLabel}
+                              title={runLabel}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void runNow(task);
+                              }}
+                            >
+                              <AutomationRowIcon name="run" />
+                            </WindowedPageButton>
+                            <WindowedPageButton
+                              disabled={Boolean(busy?.endsWith(`:${task.id}`))}
+                              aria-label={toggleLabel}
+                              title={toggleLabel}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void updateEnabled(task, !task.enabled);
+                              }}
+                            >
+                              <AutomationRowIcon name={task.enabled ? 'pause' : 'resume'} />
+                            </WindowedPageButton>
+                            <WindowedPageButton
+                              aria-label={editLabel}
+                              title={editLabel}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                selectTask(task, 'edit');
+                              }}
+                            >
+                              <AutomationRowIcon name="edit" />
+                            </WindowedPageButton>
+                            <WindowedPageButton
+                              tone="danger"
+                              disabled={task.running || busy === `delete:${task.id}`}
+                              aria-label={`Delete ${title}`}
+                              title={`Delete ${title}`}
+                              density="icon"
+                              onClick={(event) => {
+                                stopRowAction(event);
+                                void deleteTask(task);
+                              }}
+                            >
+                              <AutomationRowIcon name="delete" />
+                            </WindowedPageButton>
+                          </span>
+                        }
+                      />
+                    );
+                  })}
+                </WindowedDataTable>
+              ) : null}
+            </WindowedPageSection>
+          </WindowedPageStack>
+        </WindowedPageMain>
+      </WindowedPageShell>
 
       {activeAutomation && dialogPa ? (
-        <Dialog className="max-w-3xl" labelledBy="automation-dialog-title" onClose={() => setActiveAutomation(null)}>
-          <DialogHeader title={activeAutomationTitle} titleId="automation-dialog-title" />
-          <DialogBody className="max-h-[min(78vh,52rem)] overflow-auto">
-            <AutomationDialogPanel
-              key={`${activeAutomation.kind}:${activeAutomation.kind === 'new' ? 'new' : activeAutomation.task.id}`}
-              pa={dialogPa}
-            />
-          </DialogBody>
-        </Dialog>
+        <WindowedDialog
+          title={activeAutomationTitle}
+          meta={activeAutomationMeta}
+          accent="automations"
+          className={cx(
+            'wos-automation-dialog',
+            activeAutomation.kind === 'automation' ? 'wos-automation-dialog--details' : 'wos-automation-dialog--editor',
+          )}
+          parentWindowTitle="Automations"
+          subwindowId={
+            activeAutomation.kind === 'new'
+              ? 'automation-create'
+              : activeAutomation.kind === 'edit'
+                ? 'automation-edit'
+                : 'automation-details'
+          }
+          onClose={() => setActiveAutomation(null)}
+        >
+          <AutomationDialogPanel
+            key={`${activeAutomation.kind}:${activeAutomation.kind === 'new' ? 'new' : activeAutomation.task.id}`}
+            pa={dialogPa}
+          />
+        </WindowedDialog>
       ) : null}
     </div>
   );
 }
 
-export function AutomationDialogPanel({ pa, presentation }: { pa: NativeExtensionClient; presentation?: 'windowed' }) {
+export function AutomationDialogPanel({ pa }: { pa: NativeExtensionClient }) {
   const [selection, setSelection] = useState<AutomationSelectionData | null>(() => {
     const current = pa.selection.get();
     return isAutomationSelection(current) && isAutomationSelectionData(current.resource.data) ? current.resource.data : null;
@@ -1248,8 +951,6 @@ export function AutomationDialogPanel({ pa, presentation }: { pa: NativeExtensio
   ];
   const cronValue = cronSelectValue(form.cron);
   const timeoutValue = timeoutSelectValue(form.timeoutSeconds);
-  const panelTitle = editorOpen ? (editingTask ? 'Edit automation' : 'New automation') : 'Automation details';
-
   const clearSelection = useCallback(() => {
     pa.selection.set(null);
     setSelection(null);
@@ -1403,398 +1104,140 @@ export function AutomationDialogPanel({ pa, presentation }: { pa: NativeExtensio
     }
   }, [pa, task]);
 
-  const detailTitle = editorOpen ? panelTitle : task ? taskTitle(task) : panelTitle;
-  const detailSubtitle = editorOpen
-    ? 'Configure schedule and owner'
-    : task
-      ? `${statusLabel(task)} · ${scheduleText(task)}`
-      : 'Select a row to inspect details';
+  if (error) {
+    return <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>;
+  }
 
-  if (presentation === 'windowed') {
-    if (error) {
-      return <WindowedStateBlock tone="danger">{error}</WindowedStateBlock>;
-    }
+  if (editorOpen) {
+    return (
+      <form
+        className="wos-automation-dialog-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void saveForm();
+        }}
+      >
+        <WindowedDialogStack>
+          {formError ? <WindowedStateBlock tone="danger">{formError}</WindowedStateBlock> : null}
+          <WindowedPageSection title="Prompt">
+            <WindowedFormGrid>
+              <WindowedField label="Name">
+                <WindowedTextInput
+                  name="automation-title"
+                  autoFocus
+                  autoComplete="off"
+                  value={form.title}
+                  onChange={(event) => setForm({ ...form, title: event.target.value })}
+                  placeholder="Morning release check..."
+                />
+              </WindowedField>
+              <WindowedField label="Instructions" span="full">
+                <WindowedTextarea
+                  name="automation-prompt"
+                  value={form.prompt}
+                  onChange={(event) => setForm({ ...form, prompt: event.target.value })}
+                  placeholder="Check the release dashboard and summarize blockers..."
+                />
+              </WindowedField>
+            </WindowedFormGrid>
+          </WindowedPageSection>
 
-    if (editorOpen) {
-      return (
-        <form
-          className="wos-automation-dialog-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void saveForm();
-          }}
-        >
-          <WindowedDialogStack>
-            {formError ? <WindowedStateBlock tone="danger">{formError}</WindowedStateBlock> : null}
-            <WindowedPageSection title="Prompt">
-              <WindowedFormGrid>
-                <WindowedField label="Name">
-                  <WindowedTextInput
-                    name="automation-title"
-                    autoFocus
-                    autoComplete="off"
-                    value={form.title}
-                    onChange={(event) => setForm({ ...form, title: event.target.value })}
-                    placeholder="Morning release check..."
-                  />
-                </WindowedField>
-                <WindowedField label="Instructions" span="full">
-                  <WindowedTextarea
-                    name="automation-prompt"
-                    value={form.prompt}
-                    onChange={(event) => setForm({ ...form, prompt: event.target.value })}
-                    placeholder="Check the release dashboard and summarize blockers..."
-                  />
-                </WindowedField>
-              </WindowedFormGrid>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Schedule">
-              <WindowedFormGrid>
-                <WindowedField label="Type">
-                  <WindowedSegmentedControl
-                    ariaLabel="Schedule type"
-                    accent="automations"
-                    value={form.scheduleType}
-                    options={scheduleTypeOptions.map((option) => ({ id: option.value, label: option.label }))}
-                    onChange={(next) => setForm({ ...form, scheduleType: next as 'cron' | 'at' })}
-                  />
-                </WindowedField>
-                {form.scheduleType === 'cron' ? (
-                  <WindowedField label="Repeat">
-                    <WindowedSelect
-                      name="automation-cron-preset"
-                      aria-label="Repeat schedule"
-                      value={cronValue}
-                      onChange={(event) => {
-                        const next = event.target.value;
-                        setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? '' : next }));
-                      }}
-                    >
-                      {CRON_PRESETS.map((preset) => (
-                        <option key={preset.value} value={preset.value}>
-                          {preset.label}
-                        </option>
-                      ))}
-                      <option value={CUSTOM_VALUE}>Custom cron...</option>
-                    </WindowedSelect>
-                  </WindowedField>
-                ) : (
-                  <WindowedField
-                    label="Run at"
-                    hint="Uses your local timezone."
-                    error={form.scheduleType === 'at' && !form.atLocal ? 'Pick a date and time.' : undefined}
-                  >
-                    <WindowedTextInput
-                      type="datetime-local"
-                      name="automation-run-at"
-                      aria-label="Run at"
-                      value={form.atLocal}
-                      onChange={(event) => setForm({ ...form, atLocal: event.target.value })}
-                    />
-                  </WindowedField>
-                )}
-                {form.scheduleType === 'cron' && cronValue === CUSTOM_VALUE ? (
-                  <WindowedField label="Custom cron" hint="Five-field cron." span="full">
-                    <WindowedTextInput
-                      name="automation-cron"
-                      aria-label="Custom cron schedule"
-                      autoComplete="off"
-                      className="font-mono"
-                      value={form.cron}
-                      onChange={(event) => setForm({ ...form, cron: event.target.value })}
-                      placeholder="0 9 * * *..."
-                    />
-                  </WindowedField>
-                ) : null}
-              </WindowedFormGrid>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Owner">
-              <WindowedFormGrid>
-                <WindowedField label="Owner thread" hint={ownerThreadHint(ownerConversation)}>
+          <WindowedPageSection title="Schedule">
+            <WindowedFormGrid>
+              <WindowedField label="Type">
+                <WindowedSegmentedControl
+                  ariaLabel="Schedule type"
+                  accent="automations"
+                  value={form.scheduleType}
+                  options={scheduleTypeOptions.map((option) => ({ id: option.value, label: option.label }))}
+                  onChange={(next) => setForm({ ...form, scheduleType: next as 'cron' | 'at' })}
+                />
+              </WindowedField>
+              {form.scheduleType === 'cron' ? (
+                <WindowedField label="Repeat">
                   <WindowedSelect
-                    name="automation-owner-thread"
-                    value={form.ownerThreadId}
-                    onChange={(event) => setForm({ ...form, ownerThreadId: event.target.value })}
-                  >
-                    <option value="">Choose a thread...</option>
-                    {conversations.map((conversation) => (
-                      <option key={conversation.id} value={conversation.id}>
-                        {conversation.title}
-                      </option>
-                    ))}
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedField label="Enabled">
-                  <WindowedToggle
-                    checked={form.enabled}
-                    accent="automations"
-                    label={`${form.enabled ? 'Disable' : 'Enable'} automation`}
-                    onChange={(checked) => setForm({ ...form, enabled: checked })}
-                  />
-                </WindowedField>
-              </WindowedFormGrid>
-            </WindowedPageSection>
-
-            <WindowedPageSection title="Advanced">
-              <WindowedFormGrid>
-                <WindowedField label="Model" hint="Uses the app default when empty.">
-                  <WindowedSelect
-                    name="automation-model"
-                    value={form.model}
-                    onChange={(event) => setForm({ ...form, model: event.target.value })}
-                  >
-                    <option value="">Use app default</option>
-                    {groupedModels(models).map(([provider, providerModels]) => (
-                      <optgroup key={provider} label={provider}>
-                        {providerModels.map((model) => (
-                          <option key={`${provider}/${model.id}`} value={model.id}>
-                            {modelLabel(model)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </WindowedSelect>
-                </WindowedField>
-                <WindowedField label="Timeout">
-                  <WindowedSelect
-                    name="automation-timeout-preset"
-                    aria-label="Timeout"
-                    value={timeoutValue}
+                    name="automation-cron-preset"
+                    aria-label="Repeat schedule"
+                    value={cronValue}
                     onChange={(event) => {
                       const next = event.target.value;
-                      setForm((current) => ({ ...current, timeoutSeconds: next === CUSTOM_VALUE ? '' : next }));
+                      setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? '' : next }));
                     }}
                   >
-                    {TIMEOUT_PRESETS.map((preset) => (
+                    {CRON_PRESETS.map((preset) => (
                       <option key={preset.value} value={preset.value}>
                         {preset.label}
                       </option>
                     ))}
-                    <option value={CUSTOM_VALUE}>Custom...</option>
+                    <option value={CUSTOM_VALUE}>Custom cron...</option>
                   </WindowedSelect>
                 </WindowedField>
-                {timeoutValue === CUSTOM_VALUE ? (
-                  <WindowedField
-                    label="Custom timeout"
-                    hint="Seconds before the run is stopped."
-                    error={!parseTimeoutSeconds(form.timeoutSeconds) ? 'Enter a whole number from 1 to 604800 seconds.' : undefined}
-                  >
-                    <WindowedTextInput
-                      name="automation-timeout"
-                      aria-label="Custom timeout in seconds"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={form.timeoutSeconds}
-                      onChange={(event) => setForm({ ...form, timeoutSeconds: event.target.value })}
-                    />
-                  </WindowedField>
-                ) : null}
-                <WindowedField label="Working directory" span="full">
-                  <div className="flex gap-2">
-                    <WindowedTextInput
-                      name="automation-cwd"
-                      aria-label="Working directory"
-                      autoComplete="off"
-                      className="min-w-0 flex-1 font-mono"
-                      value={form.cwd}
-                      onChange={(event) => setForm({ ...form, cwd: event.target.value })}
-                      placeholder="Thread default..."
-                    />
-                    <WindowedPageButton disabled={pickingCwd} onClick={() => void pickCwd()}>
-                      {pickingCwd ? 'Choosing' : 'Browse'}
-                    </WindowedPageButton>
-                  </div>
-                </WindowedField>
-              </WindowedFormGrid>
-            </WindowedPageSection>
-
-            <WindowedToolbar
-              end={
-                <WindowedPageButton type="submit" tone="accent" disabled={busy === 'save'}>
-                  {busy === 'save' ? 'Saving' : editingTask ? 'Save automation' : 'Create automation'}
-                </WindowedPageButton>
-              }
-            >
-              <WindowedPageButton onClick={cancelEditor}>Cancel</WindowedPageButton>
-            </WindowedToolbar>
-          </WindowedDialogStack>
-        </form>
-      );
-    }
-
-    if (loading && !task) {
-      return <WindowedLoadingState label="Loading automation details" />;
-    }
-
-    if (!task) {
-      return <WindowedEmptyState>Select an automation to inspect schedule, owner, and run controls.</WindowedEmptyState>;
-    }
-
-    return (
-      <WindowedDialogStack>
-        {task.prompt ? <WindowedDialogCopy>{task.prompt}</WindowedDialogCopy> : null}
-        <WindowedPageSection title="Actions" meta={statusLabel(task)}>
-          <WindowedActionRow align="start" className="wos-automation-actions">
-            <WindowedPageButton disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow()}>
-              Run
-            </WindowedPageButton>
-            <WindowedPageButton disabled={Boolean(busy?.endsWith(`:${task.id}`))} onClick={() => void updateEnabled()}>
-              {(task.enabled ?? true) ? 'Pause' : 'Resume'}
-            </WindowedPageButton>
-            <WindowedPageButton tone="danger" disabled={task.running || busy === `delete:${task.id}`} onClick={() => void deleteTask()}>
-              Delete
-            </WindowedPageButton>
-          </WindowedActionRow>
-        </WindowedPageSection>
-        <WindowedPageSection title="Schedule">
-          <WindowedKeyValueList
-            items={[
-              { label: 'Next run', value: nextRunText(task) },
-              { label: 'Last run', value: lastRunText(task) },
-              { label: 'Type', value: task.scheduleType === 'at' ? 'Once' : 'Recurring' },
-              ...(task.cron ? [{ label: 'Cron', value: <span className="font-mono">{task.cron}</span> }] : []),
-              ...(task.at ? [{ label: 'Run at', value: task.at }] : []),
-            ]}
-          />
-        </WindowedPageSection>
-        <WindowedPageSection title="Owner">
-          <WindowedKeyValueList
-            items={[
-              {
-                label: 'Thread',
-                value: task.threadConversationId ? (
-                  <WindowedTextButton onClick={() => void openOwnerThread()}>
-                    {task.threadTitle || task.threadConversationId}
-                  </WindowedTextButton>
-                ) : (
-                  'None'
-                ),
-              },
-              ...(task.cwd ? [{ label: 'Directory', value: <span className="font-mono">{task.cwd}</span> }] : []),
-              ...(task.model ? [{ label: 'Model', value: <span className="font-mono">{task.model}</span> }] : []),
-              ...(task.timeoutSeconds ? [{ label: 'Timeout', value: `${task.timeoutSeconds}s` }] : []),
-            ]}
-          />
-        </WindowedPageSection>
-      </WindowedDialogStack>
-    );
-  }
-
-  return (
-    <ContextRail>
-      <ContextRailHeader eyebrow="Automation context" title={detailTitle} subtitle={detailSubtitle} />
-      <ContextRailBody>
-        {error ? <Notice tone="danger">{error}</Notice> : null}
-        {editorOpen ? (
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void saveForm();
-            }}
-          >
-            {formError ? <Notice tone="danger">{formError}</Notice> : null}
-
-            <Field label="Name">
-              <TextInput
-                name="automation-title"
-                autoFocus
-                autoComplete="off"
-                value={form.title}
-                onChange={(event) => setForm({ ...form, title: event.target.value })}
-                placeholder="Morning release check..."
-              />
-            </Field>
-
-            <Field label="Instructions">
-              <Textarea
-                name="automation-prompt"
-                className="min-h-28 resize-y text-[13px]"
-                value={form.prompt}
-                onChange={(event) => setForm({ ...form, prompt: event.target.value })}
-                placeholder="Check the release dashboard and summarize blockers..."
-              />
-            </Field>
-
-            <div className="ui-field">
-              <FieldLabel>Schedule</FieldLabel>
-              <SegmentedControl
-                ariaLabel="Schedule type"
-                value={form.scheduleType}
-                options={scheduleTypeOptions}
-                onChange={(next: 'cron' | 'at') => setForm({ ...form, scheduleType: next })}
-              />
-            </div>
-
-            {form.scheduleType === 'cron' ? (
-              <div className="ui-field">
-                <FieldLabel>Repeat</FieldLabel>
-                <Select
-                  name="automation-cron-preset"
-                  aria-label="Repeat schedule"
-                  value={cronValue}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    setForm((current) => ({ ...current, cron: next === CUSTOM_VALUE ? '' : next }));
-                  }}
+              ) : (
+                <WindowedField
+                  label="Run at"
+                  hint="Uses your local timezone."
+                  error={form.scheduleType === 'at' && !form.atLocal ? 'Pick a date and time.' : undefined}
                 >
-                  {CRON_PRESETS.map((preset) => (
-                    <option key={preset.value} value={preset.value}>
-                      {preset.label}
+                  <WindowedTextInput
+                    type="datetime-local"
+                    name="automation-run-at"
+                    aria-label="Run at"
+                    value={form.atLocal}
+                    onChange={(event) => setForm({ ...form, atLocal: event.target.value })}
+                  />
+                </WindowedField>
+              )}
+              {form.scheduleType === 'cron' && cronValue === CUSTOM_VALUE ? (
+                <WindowedField label="Custom cron" hint="Five-field cron." span="full">
+                  <WindowedTextInput
+                    name="automation-cron"
+                    aria-label="Custom cron schedule"
+                    autoComplete="off"
+                    className="font-mono"
+                    value={form.cron}
+                    onChange={(event) => setForm({ ...form, cron: event.target.value })}
+                    placeholder="0 9 * * *..."
+                  />
+                </WindowedField>
+              ) : null}
+            </WindowedFormGrid>
+          </WindowedPageSection>
+
+          <WindowedPageSection title="Owner">
+            <WindowedFormGrid>
+              <WindowedField label="Owner thread" hint={ownerThreadHint(ownerConversation)}>
+                <WindowedSelect
+                  name="automation-owner-thread"
+                  value={form.ownerThreadId}
+                  onChange={(event) => setForm({ ...form, ownerThreadId: event.target.value })}
+                >
+                  <option value="">Choose a thread...</option>
+                  {conversations.map((conversation) => (
+                    <option key={conversation.id} value={conversation.id}>
+                      {conversation.title}
                     </option>
                   ))}
-                  <option value={CUSTOM_VALUE}>Custom cron...</option>
-                </Select>
-                {cronValue === CUSTOM_VALUE ? (
-                  <div className="mt-2">
-                    <TextInput
-                      name="automation-cron"
-                      aria-label="Custom cron schedule"
-                      autoComplete="off"
-                      className="font-mono text-[13px]"
-                      value={form.cron}
-                      onChange={(event) => setForm({ ...form, cron: event.target.value })}
-                      placeholder="0 9 * * *..."
-                    />
-                    <FieldHint>Five-field cron.</FieldHint>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="ui-field">
-                <FieldLabel>Run at</FieldLabel>
-                <TextInput
-                  type="datetime-local"
-                  name="automation-run-at"
-                  aria-label="Run at"
-                  value={form.atLocal}
-                  onChange={(event) => setForm({ ...form, atLocal: event.target.value })}
+                </WindowedSelect>
+              </WindowedField>
+              <WindowedField label="Enabled">
+                <WindowedToggle
+                  checked={form.enabled}
+                  accent="automations"
+                  label={`${form.enabled ? 'Disable' : 'Enable'} automation`}
+                  onChange={(checked) => setForm({ ...form, enabled: checked })}
                 />
-                {form.scheduleType === 'at' && !form.atLocal ? <FieldError>Pick a date and time.</FieldError> : null}
-                <FieldHint>Uses your local timezone.</FieldHint>
-              </div>
-            )}
+              </WindowedField>
+            </WindowedFormGrid>
+          </WindowedPageSection>
 
-            <Field label="Owner thread" hint={ownerThreadHint(ownerConversation)}>
-              <Select
-                name="automation-owner-thread"
-                value={form.ownerThreadId}
-                onChange={(event) => setForm({ ...form, ownerThreadId: event.target.value })}
-              >
-                <option value="">Choose a thread...</option>
-                {conversations.map((conversation) => (
-                  <option key={conversation.id} value={conversation.id}>
-                    {conversation.title}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <Disclosure summary="Advanced" bodyClassName="grid gap-4 pt-3">
-              <Field label="Model" hint="Uses the app default when empty.">
-                <Select name="automation-model" value={form.model} onChange={(event) => setForm({ ...form, model: event.target.value })}>
+          <WindowedPageSection title="Advanced">
+            <WindowedFormGrid>
+              <WindowedField label="Model" hint="Uses the app default when empty.">
+                <WindowedSelect
+                  name="automation-model"
+                  value={form.model}
+                  onChange={(event) => setForm({ ...form, model: event.target.value })}
+                >
                   <option value="">Use app default</option>
                   {groupedModels(models).map(([provider, providerModels]) => (
                     <optgroup key={provider} label={provider}>
@@ -1805,11 +1248,10 @@ export function AutomationDialogPanel({ pa, presentation }: { pa: NativeExtensio
                       ))}
                     </optgroup>
                   ))}
-                </Select>
-              </Field>
-
-              <Field label="Timeout">
-                <Select
+                </WindowedSelect>
+              </WindowedField>
+              <WindowedField label="Timeout">
+                <WindowedSelect
                   name="automation-timeout-preset"
                   aria-label="Timeout"
                   value={timeoutValue}
@@ -1824,144 +1266,111 @@ export function AutomationDialogPanel({ pa, presentation }: { pa: NativeExtensio
                     </option>
                   ))}
                   <option value={CUSTOM_VALUE}>Custom...</option>
-                </Select>
-                {timeoutValue === CUSTOM_VALUE ? (
-                  <div className="mt-2">
-                    <TextInput
-                      name="automation-timeout"
-                      aria-label="Custom timeout in seconds"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={form.timeoutSeconds}
-                      onChange={(event) => setForm({ ...form, timeoutSeconds: event.target.value })}
-                    />
-                    {!parseTimeoutSeconds(form.timeoutSeconds) ? (
-                      <FieldError>Enter a whole number from 1 to 604800 seconds.</FieldError>
-                    ) : null}
-                    <FieldHint>Seconds before the run is stopped.</FieldHint>
-                  </div>
-                ) : null}
-              </Field>
-
-              <div className="ui-field">
-                <FieldLabel>Working directory</FieldLabel>
+                </WindowedSelect>
+              </WindowedField>
+              {timeoutValue === CUSTOM_VALUE ? (
+                <WindowedField
+                  label="Custom timeout"
+                  hint="Seconds before the run is stopped."
+                  error={!parseTimeoutSeconds(form.timeoutSeconds) ? 'Enter a whole number from 1 to 604800 seconds.' : undefined}
+                >
+                  <WindowedTextInput
+                    name="automation-timeout"
+                    aria-label="Custom timeout in seconds"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={form.timeoutSeconds}
+                    onChange={(event) => setForm({ ...form, timeoutSeconds: event.target.value })}
+                  />
+                </WindowedField>
+              ) : null}
+              <WindowedField label="Working directory" span="full">
                 <div className="flex gap-2">
-                  <TextInput
+                  <WindowedTextInput
                     name="automation-cwd"
                     aria-label="Working directory"
                     autoComplete="off"
-                    className="min-w-0 flex-1 font-mono text-[12px]"
+                    className="min-w-0 flex-1 font-mono"
                     value={form.cwd}
                     onChange={(event) => setForm({ ...form, cwd: event.target.value })}
                     placeholder="Thread default..."
                   />
-                  <BrowsePathButton
-                    busy={pickingCwd}
-                    title="Choose working directory"
-                    ariaLabel="Choose automation working directory"
-                    onClick={() => void pickCwd()}
-                  />
+                  <WindowedPageButton disabled={pickingCwd} onClick={() => void pickCwd()}>
+                    {pickingCwd ? 'Choosing' : 'Browse'}
+                  </WindowedPageButton>
                 </div>
-              </div>
-            </Disclosure>
+              </WindowedField>
+            </WindowedFormGrid>
+          </WindowedPageSection>
 
-            <div className="flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
-              <Button variant="ghost" type="button" onClick={cancelEditor}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="action" tone="accent" disabled={busy === 'save'}>
-                {busy === 'save' ? 'Saving...' : editingTask ? 'Save automation' : 'Create automation'}
-              </Button>
-            </div>
-          </form>
-        ) : null}
-        {!editorOpen && loading && !task ? <QuietLoadingState label="Loading automations" className="min-h-12" /> : null}
-        {!editorOpen && !loading && !task ? (
-          <EmptyState
-            eyebrow="Context rail"
-            title="No automation selected"
-            body="Select an automation to inspect schedule, owner, and run controls without leaving the table."
-            steps={[
-              'Pick a row in the automations table.',
-              'Review schedule and owner details here.',
-              'Run, pause, or edit from this rail.',
-            ]}
-            align="start"
-          />
-        ) : null}
-        {!editorOpen && task ? (
-          <div className="space-y-5">
-            {task.prompt ? <p className="text-[12px] leading-5 text-secondary">{task.prompt}</p> : null}
+          <WindowedToolbar
+            end={
+              <WindowedPageButton type="submit" tone="accent" disabled={busy === 'save'}>
+                {busy === 'save' ? 'Saving' : editingTask ? 'Save automation' : 'Create automation'}
+              </WindowedPageButton>
+            }
+          >
+            <WindowedPageButton onClick={cancelEditor}>Cancel</WindowedPageButton>
+          </WindowedToolbar>
+        </WindowedDialogStack>
+      </form>
+    );
+  }
 
-            <ContextRailSection
-              title="Actions"
-              actions={<Pill tone={statusPillTone(task)}>{statusLabel(task)}</Pill>}
-              bodyClassName="flex flex-wrap gap-2"
-            >
-              <Button variant="toolbar" disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow()}>
-                Run now
-              </Button>
-              <Button variant="toolbar" disabled={Boolean(busy?.endsWith(`:${task.id}`))} onClick={() => void updateEnabled()}>
-                {(task.enabled ?? true) ? 'Pause' : 'Resume'}
-              </Button>
-              <Button
-                variant="toolbar"
-                tone="danger"
-                disabled={task.running || busy === `delete:${task.id}`}
-                onClick={() => void deleteTask()}
-              >
-                Delete
-              </Button>
-            </ContextRailSection>
+  if (loading && !task) {
+    return <WindowedLoadingState label="Loading automation details" />;
+  }
 
-            <ContextRailSection title="Schedule">
-              <KeyValueList>
-                <KeyValueItem label="Next run" value={nextRunText(task)} />
-                <KeyValueItem label="Last run" value={lastRunText(task)} />
-                <KeyValueItem label="Type" value={task.scheduleType === 'at' ? 'Once' : 'Recurring'} />
-                {task.cron ? <KeyValueItem label="Cron" value={<span className="font-mono">{task.cron}</span>} /> : null}
-                {task.at ? <KeyValueItem label="Run at" value={task.at} /> : null}
-              </KeyValueList>
-            </ContextRailSection>
+  if (!task) {
+    return <WindowedEmptyState>Select an automation to inspect schedule, owner, and run controls.</WindowedEmptyState>;
+  }
 
-            <ContextRailSection title="Owner">
-              {task.threadConversationId ? (
-                <TextButton className="max-w-full text-left" tone="accent" onClick={() => void openOwnerThread()}>
+  return (
+    <WindowedDialogStack>
+      {task.prompt ? <WindowedDialogCopy>{task.prompt}</WindowedDialogCopy> : null}
+      <WindowedPageSection title="Actions" meta={statusLabel(task)}>
+        <WindowedActionRow align="start" className="wos-automation-actions">
+          <WindowedPageButton disabled={task.running || busy === `run:${task.id}`} onClick={() => void runNow()}>
+            Run
+          </WindowedPageButton>
+          <WindowedPageButton disabled={Boolean(busy?.endsWith(`:${task.id}`))} onClick={() => void updateEnabled()}>
+            {(task.enabled ?? true) ? 'Pause' : 'Resume'}
+          </WindowedPageButton>
+          <WindowedPageButton tone="danger" disabled={task.running || busy === `delete:${task.id}`} onClick={() => void deleteTask()}>
+            Delete
+          </WindowedPageButton>
+        </WindowedActionRow>
+      </WindowedPageSection>
+      <WindowedPageSection title="Schedule">
+        <WindowedKeyValueList
+          items={[
+            { label: 'Next run', value: nextRunText(task) },
+            { label: 'Last run', value: lastRunText(task) },
+            { label: 'Type', value: task.scheduleType === 'at' ? 'Once' : 'Recurring' },
+            ...(task.cron ? [{ label: 'Cron', value: <span className="font-mono">{task.cron}</span> }] : []),
+            ...(task.at ? [{ label: 'Run at', value: task.at }] : []),
+          ]}
+        />
+      </WindowedPageSection>
+      <WindowedPageSection title="Owner">
+        <WindowedKeyValueList
+          items={[
+            {
+              label: 'Thread',
+              value: task.threadConversationId ? (
+                <WindowedTextButton onClick={() => void openOwnerThread()}>
                   {task.threadTitle || task.threadConversationId}
-                </TextButton>
+                </WindowedTextButton>
               ) : (
-                <PanelMessage className="py-1">No owner thread.</PanelMessage>
-              )}
-              <KeyValueList>
-                {task.cwd ? <KeyValueItem label="Directory" value={<span className="font-mono">{task.cwd}</span>} /> : null}
-                {task.model ? <KeyValueItem label="Model" value={<span className="font-mono">{task.model}</span>} /> : null}
-                {task.timeoutSeconds ? <KeyValueItem label="Timeout" value={`${task.timeoutSeconds}s`} /> : null}
-              </KeyValueList>
-            </ContextRailSection>
-          </div>
-        ) : null}
-      </ContextRailBody>
-    </ContextRail>
-  );
-}
-
-function RefreshIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
-      <path d="M13 7a5 5 0 0 0-8.5-3.2L3 5.3" />
-      <path d="M3 2.8v2.5h2.5" />
-      <path d="M3 9a5 5 0 0 0 8.5 3.2L13 10.7" />
-      <path d="M13 13.2v-2.5h-2.5" />
-    </svg>
-  );
-}
-
-function MoreIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4" fill="currentColor">
-      <circle cx="3.5" cy="8" r="1.15" />
-      <circle cx="8" cy="8" r="1.15" />
-      <circle cx="12.5" cy="8" r="1.15" />
-    </svg>
+                'None'
+              ),
+            },
+            ...(task.cwd ? [{ label: 'Directory', value: <span className="font-mono">{task.cwd}</span> }] : []),
+            ...(task.model ? [{ label: 'Model', value: <span className="font-mono">{task.model}</span> }] : []),
+            ...(task.timeoutSeconds ? [{ label: 'Timeout', value: `${task.timeoutSeconds}s` }] : []),
+          ]}
+        />
+      </WindowedPageSection>
+    </WindowedDialogStack>
   );
 }
