@@ -2,6 +2,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import { networkFetch } from '@neon-pilot/extensions/backend/network';
 import { extractReadableHtml } from '@neon-pilot/extensions/backend/webContent';
 
 const DEFAULT_MAX_BYTES = 50 * 1024;
@@ -23,6 +24,9 @@ function friendlyFetchError(error: unknown): string {
   const message = getErrorMessage(error);
   const code = getErrorCauseCode(error);
   if (error instanceof DOMException && error.name === 'TimeoutError') {
+    return 'The request timed out after 15 seconds.';
+  }
+  if (message === 'The operation was aborted due to timeout') {
     return 'The request timed out after 15 seconds.';
   }
   if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
@@ -55,10 +59,6 @@ function toolError(url: string, error: unknown) {
     details: { url, error: message },
     isError: true,
   };
-}
-
-function createRequestSignal(timeoutMs: number): AbortSignal {
-  return AbortSignal.timeout(timeoutMs);
 }
 
 function isPrivateIpv4(host: string): boolean {
@@ -163,24 +163,24 @@ export async function webFetch(input: { url: string; raw?: boolean }, _ctx?: Ext
   try {
     if (typeof url !== 'string' || !url.trim()) throw new Error('URL is required');
     const parsedUrl = await validateFetchUrl(url);
-    const response = await fetch(parsedUrl, {
+    const result = await networkFetch(parsedUrl.toString(), {
       redirect: 'manual',
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
-      signal: createRequestSignal(15000),
+      timeoutMs: 15000,
     });
 
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get('location');
-      throw new Error(location ? `Redirects are not followed: ${location}` : `Redirects are not followed: HTTP ${response.status}`);
+    if (result.status >= 300 && result.status < 400) {
+      const location = result.headers['location'];
+      throw new Error(location ? `Redirects are not followed: ${location}` : `Redirects are not followed: HTTP ${result.status}`);
     }
-    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (!result.ok) throw new Error(`HTTP ${result.status}: ${result.statusText}`);
 
-    const contentType = response.headers.get('content-type') || '';
-    const body = await response.text();
+    const contentType = result.headers['content-type'] || '';
+    const body = result.text;
 
     if (!contentType.includes('html') || raw) {
       const formatted = formatTruncatedContent(body);

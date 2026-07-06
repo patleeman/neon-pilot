@@ -2792,4 +2792,121 @@ describe('extension backend capability dispatcher', () => {
     ).rejects.toThrow('Extension "ext" requires permission agent:conversations to use agent.streamMessage.');
     expect(agentApi.streamAgentMessage).not.toHaveBeenCalled();
   });
+
+  it('dispatches network fetch capability calls with network:read permission', async () => {
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['network:read'],
+      },
+    });
+    const network = {
+      fetch: vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'text/html' },
+        text: '<html>hello</html>',
+        url: 'https://example.com',
+      })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ network });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-web-tools',
+          capability: 'network',
+          operation: 'fetch',
+          input: { url: 'https://example.com', redirect: 'manual', timeoutMs: 15000 },
+        }),
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { 'content-type': 'text/html' },
+      text: '<html>hello</html>',
+      url: 'https://example.com',
+    });
+
+    expect(network.fetch).toHaveBeenCalledWith({
+      url: 'https://example.com',
+      redirect: 'manual',
+      timeoutMs: 15000,
+    });
+  });
+
+  it('denies network fetch without network:read permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
+    const network = { fetch: vi.fn() };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ network });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: { url: 'https://example.com' },
+      }),
+    ).rejects.toThrow('requires permission network:read');
+    expect(network.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed network fetch inputs', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['network:read'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ network: { fetch: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: { url: 1 },
+      }),
+    ).rejects.toThrow('Network url must be a string.');
+
+    await expect(async () =>
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: { url: 'https://example.com', redirect: 'bananas' },
+      }),
+    ).rejects.toThrow('Network redirect must be "follow", "error", or "manual".');
+
+    await expect(async () =>
+      dispatch({
+        id: 3,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: null,
+      }),
+    ).rejects.toThrow('Network capability input must be an object.');
+  });
+
+  it('rejects unsupported network operations', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['network:read'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ network: { fetch: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'listen',
+        input: { url: 'https://example.com' },
+      }),
+    ).rejects.toThrow('Unsupported network capability operation: listen');
+  });
 });

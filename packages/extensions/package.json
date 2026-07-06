@@ -135,6 +135,10 @@
       "types": "./dist/backend/mcp.d.ts",
       "default": "./dist/backend/mcp.js"
     },
+    "./backend/network": {
+      "types": "./dist/backend/network.d.ts",
+      "default": "./dist/backend/network.js"
+    },
     "./backend/promptAssembly": {
       "types": "./dist/backend/promptAssembly.d.ts",
       "default": "./dist/backend/promptAssembly.js"

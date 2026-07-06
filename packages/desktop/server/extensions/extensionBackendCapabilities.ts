@@ -148,6 +148,23 @@ interface ExtensionBackendCapabilityVideo {
   transcribe(input: unknown): Promise<unknown>;
 }
 
+interface ExtensionBackendCapabilityNetwork {
+  fetch(input: {
+    url: string;
+    method?: string;
+    headers?: Record<string, string>;
+    redirect?: 'follow' | 'error' | 'manual';
+    timeoutMs?: number;
+  }): Promise<{
+    ok: boolean;
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    text: string;
+    url: string;
+  }>;
+}
+
 interface ExtensionBackendCapabilityConversations {
   list?(extensionId: string, input?: { runtimeScope?: string; runtimeSettingsFilePath?: string }): Promise<unknown> | unknown;
   activity?(
@@ -557,6 +574,7 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   video?: ExtensionBackendCapabilityVideo;
   log?: ExtensionBackendCapabilityLogger;
   models?: ExtensionBackendCapabilityModels;
+  network?: ExtensionBackendCapabilityNetwork;
   notify?: ExtensionBackendCapabilityNotify;
   runtime?: ExtensionBackendCapabilityRuntime;
   secrets?: ExtensionBackendCapabilitySecrets;
@@ -768,6 +786,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
 
   if (request.capability === 'video') {
     return ['videos:read'];
+  }
+
+  if (request.capability === 'network') {
+    return request.operation === 'fetch' ? ['network:read'] : [];
   }
 
   if (request.capability === 'runtime') {
@@ -1644,6 +1666,43 @@ function dispatchVideoCapability(video: ExtensionBackendCapabilityVideo, request
   if (request.operation === 'sampleFrames') return video.sampleFrames(request.input, context);
   if (request.operation === 'transcribe') return video.transcribe(request.input);
   throw new Error(`Unsupported video capability operation: ${request.operation}`);
+}
+
+function dispatchNetworkCapability(network: ExtensionBackendCapabilityNetwork, request: ExtensionBackendWorkerCapabilityRequest): unknown {
+  if (request.operation !== 'fetch') {
+    throw new Error(`Unsupported network capability operation: ${request.operation}`);
+  }
+  const input = normalizeRecordInput(request.input, 'Network');
+  const url = requireString(input.url, 'Network url');
+  return network.fetch({
+    url,
+    ...(input.method !== undefined ? { method: requireString(input.method, 'Network method') } : {}),
+    ...(input.headers !== undefined
+      ? {
+          headers: Object.fromEntries(Object.entries(requireStringRecord(input.headers, 'Network headers'))),
+        }
+      : {}),
+    ...(input.redirect !== undefined ? { redirect: normalizeFetchRedirect(input.redirect) } : {}),
+    ...(input.timeoutMs !== undefined ? { timeoutMs: requireNumber(input.timeoutMs, 'Network timeoutMs') } : {}),
+  });
+}
+
+function requireStringRecord(value: unknown, label: string): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.some(([, v]) => typeof v !== 'string')) {
+    throw new Error(`${label} values must be strings.`);
+  }
+  return Object.fromEntries(entries) as Record<string, string>;
+}
+
+function normalizeFetchRedirect(value: unknown): 'follow' | 'error' | 'manual' {
+  if (value !== 'follow' && value !== 'error' && value !== 'manual') {
+    throw new Error('Network redirect must be "follow", "error", or "manual".');
+  }
+  return value;
 }
 
 function normalizeModelWriteContext(input: Record<string, unknown>): ExtensionBackendModelWriteContext {
@@ -2966,6 +3025,31 @@ export function createExtensionBackendCapabilityDispatcher(
         return module.transcribeVideo(input);
       },
     } satisfies ExtensionBackendCapabilityVideo);
+  const network =
+    options.network ??
+    ({
+      fetch: async (input) => {
+        const response = await globalThis.fetch(input.url, {
+          method: input.method,
+          headers: input.headers,
+          redirect: input.redirect,
+          signal: input.timeoutMs ? AbortSignal.timeout(input.timeoutMs) : undefined,
+        });
+        const text = await response.text();
+        const headers: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+        return {
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+          text,
+          url: response.url,
+        };
+      },
+    } satisfies ExtensionBackendCapabilityNetwork);
   const logger = options.log ?? { info: logInfo, warn: logWarn, error: logError };
   const models = options.models ?? {
     list: (context?: ExtensionBackendModelWriteContext) => createModelsCapabilityForWriteContext(context).list(),
@@ -3095,6 +3179,9 @@ export function createExtensionBackendCapabilityDispatcher(
     }
     if (request.capability === 'video') {
       return dispatchVideoCapability(video, request);
+    }
+    if (request.capability === 'network') {
+      return dispatchNetworkCapability(network, request);
     }
     if (request.capability === 'log') {
       return dispatchLogCapability(logger, request);

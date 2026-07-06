@@ -131,6 +131,14 @@ globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')] = async (capa
     throw new Error('Unsupported smoke telemetry operation: ' + operation);
   }
   if (capability === 'desktop') {
+    if (operation === 'state') {
+      return {
+        windows: [],
+        focusedWindowId: null,
+        apps: [],
+        capturedAt: '2026-07-06T00:00:00.000Z',
+      };
+    }
     if (operation === 'control') {
       return {
         ok: true,
@@ -155,6 +163,9 @@ globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')] = async (capa
           windowId: input.windowId,
         },
       };
+    }
+    if (operation === 'events') {
+      return [];
     }
     throw new Error('Unsupported smoke desktop operation: ' + operation);
   }
@@ -792,12 +803,13 @@ const smokes = {
     assert(context.blocks?.[0]?.content?.includes('Smoke todo'), 'todo turn context missing open todo');
   },
   async 'system-web-tools'() {
-    globalThis.fetch = async () => ({
+    globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')] = async () => ({
       ok: true,
       status: 200,
       statusText: 'OK',
-      headers: { get: () => 'text/plain' },
-      text: async () => 'smoke',
+      headers: { 'content-type': 'text/plain' },
+      text: 'smoke',
+      url: 'https://example.org/smoke',
     });
     const result = await module.webFetch({ url: 'https://example.org/smoke' }, ctx);
     assert(result.text.includes('smoke'), 'webFetch HTTPS URL failed');
