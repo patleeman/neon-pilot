@@ -108,6 +108,30 @@ async function publishDocumentsMutation(payload: DocumentMutationPayload): Promi
   await callMod<void>('../../extensions/extensionSubscriptions.js', 'publishExtensionHostEvent', 'documents', payload);
 }
 
+async function writeDocumentLifecycleActivity(
+  store: Awaited<ReturnType<typeof getStore>>,
+  owner: string,
+  collection: string,
+  id: string,
+  event: 'created' | 'deleted',
+): Promise<void> {
+  try {
+    await callMod<void>(
+      '../../documents/documentActivityProducers.js',
+      'writeDocumentActivityEntrySafe',
+      store,
+      owner,
+      collection,
+      id,
+      event,
+      `${owner}/${collection}/${id}`,
+      { source: 'backend-api' },
+    );
+  } catch {
+    // Best effort: document mutations should not fail because activity recording failed.
+  }
+}
+
 function resolveStateRoot(): string {
   if (typeof globalThis !== 'undefined') {
     const g = globalThis as Record<string, unknown>;
@@ -235,7 +259,16 @@ export async function putDocument(owner: string, collection: string, id: string,
   await assertPermission(appId, 'documents:write', 'documents.putDocument');
   const store = await getStore();
   assertCanWrite(store, makeCaller(appId), owner, collection);
+
+  const existing = store.getDocument(owner, collection, id);
+  const isCreate = !existing;
+
   const result = store.putDocument(owner, collection, id, body);
+
+  if (isCreate) {
+    await writeDocumentLifecycleActivity(store, owner, collection, id, 'created');
+  }
+
   await publishDocumentsMutation({ type: 'document.updated', owner, collection, id, body });
   return result;
 }
@@ -247,6 +280,7 @@ export async function deleteDocument(owner: string, collection: string, id: stri
   assertCanWrite(store, makeCaller(appId), owner, collection);
   const deleted = store.deleteDocument(owner, collection, id);
   if (deleted) {
+    await writeDocumentLifecycleActivity(store, owner, collection, id, 'deleted');
     await publishDocumentsMutation({ type: 'document.deleted', owner, collection, id });
   }
   return { deleted };

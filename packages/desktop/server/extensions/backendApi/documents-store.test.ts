@@ -287,6 +287,7 @@ describe('documents-store backend API', () => {
     it('allows owner to put document', async () => {
       store.getCollection.mockReturnValue({ owner: 'my-app', collection: 'col', defaultGrantRead: 'owner', defaultGrantWrite: 'owner' });
       store.getGrant.mockReturnValue(null);
+      store.getDocument.mockReturnValue(null);
       store.putDocument.mockReturnValue({
         owner: 'my-app',
         collection: 'col',
@@ -298,6 +299,17 @@ describe('documents-store backend API', () => {
 
       const result = await putDocument('my-app', 'col', 'doc-1', { data: 42 }, 'my-app');
       expect(result?.body).toEqual({ data: 42 });
+      expect(callServerModuleExportMock).toHaveBeenCalledWith(
+        '../../documents/documentActivityProducers.js',
+        'writeDocumentActivityEntrySafe',
+        store,
+        'my-app',
+        'col',
+        'doc-1',
+        'created',
+        'my-app/col/doc-1',
+        { source: 'backend-api' },
+      );
       expect(callServerModuleExportMock).toHaveBeenCalledWith('../../shared/appEvents.js', 'invalidateAppTopics', 'documents');
       expect(callServerModuleExportMock).toHaveBeenCalledWith(
         '../../extensions/extensionSubscriptions.js',
@@ -310,6 +322,41 @@ describe('documents-store backend API', () => {
           id: 'doc-1',
           body: { data: 42 },
         },
+      );
+    });
+
+    it('does not record document creation activity for updates', async () => {
+      store.getCollection.mockReturnValue({ owner: 'my-app', collection: 'col', defaultGrantRead: 'owner', defaultGrantWrite: 'owner' });
+      store.getGrant.mockReturnValue(null);
+      store.getDocument.mockReturnValue({
+        owner: 'my-app',
+        collection: 'col',
+        id: 'doc-1',
+        body: { old: true },
+        createdAt: '',
+        updatedAt: '',
+      });
+      store.putDocument.mockReturnValue({
+        owner: 'my-app',
+        collection: 'col',
+        id: 'doc-1',
+        body: { data: 42 },
+        createdAt: '',
+        updatedAt: '',
+      });
+
+      await putDocument('my-app', 'col', 'doc-1', { data: 42 }, 'my-app');
+
+      expect(callServerModuleExportMock).not.toHaveBeenCalledWith(
+        '../../documents/documentActivityProducers.js',
+        'writeDocumentActivityEntrySafe',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        'created',
+        expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -336,6 +383,17 @@ describe('documents-store backend API', () => {
 
       const result = await deleteDocument('my-app', 'col', 'doc-1', 'my-app');
       expect(result.deleted).toBe(true);
+      expect(callServerModuleExportMock).toHaveBeenCalledWith(
+        '../../documents/documentActivityProducers.js',
+        'writeDocumentActivityEntrySafe',
+        store,
+        'my-app',
+        'col',
+        'doc-1',
+        'deleted',
+        'my-app/col/doc-1',
+        { source: 'backend-api' },
+      );
       expect(callServerModuleExportMock).toHaveBeenCalledWith('../../shared/appEvents.js', 'invalidateAppTopics', 'documents');
       expect(callServerModuleExportMock).toHaveBeenCalledWith(
         '../../extensions/extensionSubscriptions.js',
@@ -357,6 +415,17 @@ describe('documents-store backend API', () => {
 
       const result = await deleteDocument('my-app', 'col', 'ghost', 'my-app');
       expect(result.deleted).toBe(false);
+      expect(callServerModuleExportMock).not.toHaveBeenCalledWith(
+        '../../documents/documentActivityProducers.js',
+        'writeDocumentActivityEntrySafe',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        'deleted',
+        expect.anything(),
+        expect.anything(),
+      );
       expect(callServerModuleExportMock).not.toHaveBeenCalledWith('../../shared/appEvents.js', 'invalidateAppTopics', 'documents');
       expect(callServerModuleExportMock).not.toHaveBeenCalledWith(
         '../../extensions/extensionSubscriptions.js',

@@ -490,7 +490,9 @@ describe('registerDocumentsRoutes', () => {
 
       handler({ params: { owner: 'app', collection: 'col', id: 'doc-1' }, body: { data: 1 } }, createRes());
 
-      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
+      // Activity producer invalidates (activity, documents) + route invalidates (documents)
+      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(2);
+      expect(invalidateAppTopicsMock).toHaveBeenCalledWith('activity', 'documents');
       expect(invalidateAppTopicsMock).toHaveBeenCalledWith('documents');
     });
 
@@ -504,7 +506,9 @@ describe('registerDocumentsRoutes', () => {
       const delHandler = handlers['DELETE /api/documents/collections/:owner/:collection/:id'];
       delHandler({ params: { owner: 'app', collection: 'col', id: 'delete-me' } }, createRes());
 
-      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(1);
+      // Activity producer invalidates (activity, documents) + route invalidates (documents)
+      expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(2);
+      expect(invalidateAppTopicsMock).toHaveBeenCalledWith('activity', 'documents');
       expect(invalidateAppTopicsMock).toHaveBeenCalledWith('documents');
     });
 
@@ -624,13 +628,36 @@ describe('registerDocumentsRoutes', () => {
 
       handler({ params: { owner: 'app', collection: 'col', id: 'doc-1' }, body: { data: 1 } }, createRes());
 
-      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      // Activity producer publishes 2 events (activity.created + document.updated for activity-entries)
+      // + route handler publishes 1 event (document.updated for the actual document)
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(3);
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('activity', expect.objectContaining({ type: 'activity.created' }));
       expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
         type: 'document.updated',
         owner: 'app',
         collection: 'col',
         id: 'doc-1',
         body: { data: 1 },
+      });
+    });
+
+    it('does not publish activity after document update', () => {
+      const handlers = createHarness();
+      const handler = handlers['PUT /api/documents/collections/:owner/:collection/:id'];
+
+      handler({ params: { owner: 'app', collection: 'col', id: 'doc-1' }, body: { data: 1 } }, createRes());
+      publishExtensionHostEventMock.mockReset();
+
+      handler({ params: { owner: 'app', collection: 'col', id: 'doc-1' }, body: { data: 2 } }, createRes());
+
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      expect(publishExtensionHostEventMock).not.toHaveBeenCalledWith('activity', expect.objectContaining({ type: 'activity.created' }));
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
+        type: 'document.updated',
+        owner: 'app',
+        collection: 'col',
+        id: 'doc-1',
+        body: { data: 2 },
       });
     });
 
@@ -644,7 +671,10 @@ describe('registerDocumentsRoutes', () => {
       const delHandler = handlers['DELETE /api/documents/collections/:owner/:collection/:id'];
       delHandler({ params: { owner: 'app', collection: 'col', id: 'del-doc' } }, createRes());
 
-      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(1);
+      // Activity producer publishes 2 events (activity.created + document.updated for activity-entries)
+      // + route handler publishes 1 event (document.deleted)
+      expect(publishExtensionHostEventMock).toHaveBeenCalledTimes(3);
+      expect(publishExtensionHostEventMock).toHaveBeenCalledWith('activity', expect.objectContaining({ type: 'activity.created' }));
       expect(publishExtensionHostEventMock).toHaveBeenCalledWith('documents', {
         type: 'document.deleted',
         owner: 'app',

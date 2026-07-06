@@ -74,6 +74,7 @@ const backendApiLazyModuleEntries = [
   ['settings/settingsStore.js', 'server/settings/settingsStore.ts'],
   ['shared/appEvents.js', 'server/shared/appEvents.ts'],
   ['documents/store.js', 'server/documents/store.ts'],
+  ['documents/documentActivityProducers.js', 'server/documents/documentActivityProducers.ts'],
   ['desktop/desktopState.js', 'server/desktop/desktopState.ts'],
   ['desktop/desktopControl.js', 'server/desktop/desktopControl.ts'],
   ['desktop/desktopEventReader.js', 'server/desktop/desktopEventReader.ts'],

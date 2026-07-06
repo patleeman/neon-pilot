@@ -11,6 +11,7 @@
 
 import type { Express, Request, Response } from 'express';
 
+import { writeDocumentActivityEntrySafe } from '../documents/documentActivityProducers.js';
 import { DocumentsStore, getDocumentsStore, resetDocumentsStoreSingleton, type UpsertCollectionOptions } from '../documents/store.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { invalidateAppTopics, logError } from '../middleware/index.js';
@@ -268,7 +269,15 @@ function handlePutDocument(store: DocumentsStore, caller: DocumentsRouteCaller, 
       return;
     }
 
+    const existing = store.getDocument(owner, collection, id);
+    const isCreate = !existing;
+
     const doc = store.putDocument(owner, collection, id, req.body);
+
+    if (isCreate) {
+      writeDocumentActivityEntrySafe(store, owner, collection, id, 'created', `${owner}/${collection}/${id}`, { source: 'http' });
+    }
+
     invalidateAppTopics('documents');
     publishDocumentsEvent({
       type: 'document.updated',
@@ -311,6 +320,9 @@ function handleDeleteDocument(store: DocumentsStore, caller: DocumentsRouteCalle
       res.status(404).json({ error: 'Document not found' });
       return;
     }
+
+    writeDocumentActivityEntrySafe(store, owner, collection, id, 'deleted', `${owner}/${collection}/${id}`, { source: 'http' });
+
     invalidateAppTopics('documents');
     publishDocumentsEvent({
       type: 'document.deleted',
