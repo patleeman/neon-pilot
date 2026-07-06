@@ -21,49 +21,24 @@ interface TerminalState {
 // suppress the exact history the realtime attach already rendered.
 const MAX_REMOTE_REPLAY_CHUNKS = 128;
 
-function readRgbVar(element: HTMLElement, name: string): string {
-  const value = getComputedStyle(element).getPropertyValue(name).trim();
-  return value ? `rgb(${value})` : '';
-}
-
 function readCssVar(element: HTMLElement, name: string): string {
   return getComputedStyle(element).getPropertyValue(name).trim();
 }
 
-function terminalThemeForSurface(element: HTMLElement, shellPresentation?: 'windowed') {
-  if (shellPresentation === 'windowed') {
-    return {
-      background: readCssVar(element, '--wos-surface-1') || '#fbf7ea',
-      foreground: readCssVar(element, '--wos-ink-900') || '#2b241d',
-      cursor: readCssVar(element, '--wos-extensions') || '#e78a3c',
-      selectionBackground: 'rgba(43, 36, 29, 0.18)',
-      black: '#2b241d',
-      red: '#b84a35',
-      green: '#317a54',
-      yellow: '#9a6a12',
-      blue: '#326d86',
-      magenta: '#8755a5',
-      cyan: '#2d7f75',
-      white: '#fbf7ea',
-    };
-  }
-
-  const baseColor = readRgbVar(element, '--color-base') || '#080c10';
-  const primaryColor = readRgbVar(element, '--color-primary') || '#f6f4ec';
-  const accentColor = readRgbVar(element, '--color-accent') || '#7aa2f7';
+function terminalThemeForSurface(element: HTMLElement) {
   return {
-    background: baseColor,
-    foreground: primaryColor,
-    cursor: accentColor,
-    selectionBackground: accentColor.replace(/^rgb\((.*)\)$/, 'rgba($1, 0.3)'),
-    black: '#1d2021',
-    red: '#ea6962',
-    green: '#a9b665',
-    yellow: '#d8a657',
-    blue: '#7daea3',
-    magenta: '#d3869b',
-    cyan: '#89b482',
-    white: '#d4be98',
+    background: readCssVar(element, '--wos-surface-1') || '#fbf7ea',
+    foreground: readCssVar(element, '--wos-ink-900') || '#2b241d',
+    cursor: readCssVar(element, '--wos-extensions') || '#e78a3c',
+    selectionBackground: 'rgba(43, 36, 29, 0.18)',
+    black: '#2b241d',
+    red: '#b84a35',
+    green: '#317a54',
+    yellow: '#9a6a12',
+    blue: '#326d86',
+    magenta: '#8755a5',
+    cyan: '#2d7f75',
+    white: '#fbf7ea',
   };
 }
 
@@ -128,7 +103,7 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       cursorStyle: 'block',
       fontSize: 13,
       fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-      theme: terminalThemeForSurface(container, context.shellPresentation),
+      theme: terminalThemeForSurface(container),
       allowProposedApi: true,
     });
 
@@ -490,17 +465,12 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
       state.fitAddon = null;
       state.usingPty = false;
     };
-  }, [pa, context.cwd, context.shellPresentation]);
+  }, [pa, context.cwd]);
 
   const terminalHost = (
     <div
       ref={containerRef}
-      className={
-        context.shellPresentation === 'windowed'
-          ? 'wos-terminal-panel'
-          : 'h-full w-full overflow-hidden bg-base p-1 [&_.xterm-screen]:bg-base [&_.xterm-viewport]:bg-base [&_.xterm]:bg-base'
-      }
-      data-shell-presentation={context.shellPresentation}
+      className="wos-terminal-panel"
       tabIndex={0}
       aria-label="Interactive terminal"
       onFocus={() => {
@@ -511,13 +481,9 @@ export function TerminalPanel({ pa, context }: ExtensionSurfaceProps) {
     />
   );
 
-  if (context.shellPresentation === 'windowed') {
-    return (
-      <WindowedTerminalFrame cwd={context.cwd} status="PTY shell">
-        {terminalHost}
-      </WindowedTerminalFrame>
-    );
-  }
-
-  return terminalHost;
+  return (
+    <WindowedTerminalFrame cwd={context.cwd} status="PTY shell">
+      {terminalHost}
+    </WindowedTerminalFrame>
+  );
 }

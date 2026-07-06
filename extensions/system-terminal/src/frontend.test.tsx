@@ -213,6 +213,9 @@ describe('TerminalPanel', () => {
       await Promise.resolve();
     });
 
+    expect(container?.querySelector('.wos-terminal-frame')).toBeTruthy();
+    expect(container?.querySelector('.wos-terminal-panel')).toBeTruthy();
+
     const socket = FakeWebSocket.instances[0];
     expect(socket?.url).toBe('ws://127.0.0.1:4321/api/realtime');
     await act(async () => {
@@ -298,7 +301,7 @@ describe('TerminalPanel', () => {
                 workbench: { closeTab: vi.fn() },
               } as never
             }
-            context={{ cwd: '/repo', instanceId: 'tab-1', shellPresentation: 'windowed' } as never}
+            context={{ cwd: '/repo', instanceId: 'tab-1' } as never}
           />
         </div>,
       );
@@ -314,7 +317,6 @@ describe('TerminalPanel', () => {
     expect(container?.querySelector('.wos-terminal-frame__cwd')?.textContent).toBe('/repo');
     expect(container?.querySelector('.wos-terminal-frame__state')?.textContent).toBe('PTY shell');
     expect(container?.querySelector('.wos-terminal-panel')).toBeTruthy();
-    expect(container?.querySelector('[data-shell-presentation="windowed"]')).toBeTruthy();
     getComputedStyleSpy.mockRestore();
   });
 
