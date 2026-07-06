@@ -18,7 +18,8 @@ export interface ExtensionStatePutOptions {
 
 const dbCache = new Map<string, SqliteDatabase>();
 
-function getExtensionStateDbPath(stateRoot: string = getStateRoot()): string {
+function getExtensionStateDbPath(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): string {
+  if (layout) return getExtensionStateDbPathFromLayout(layout);
   return join(stateRoot, 'app-state', 'app-state.sqlite');
 }
 
@@ -41,8 +42,8 @@ function normalizeStateKey(key: string): string {
   return normalized;
 }
 
-function openExtensionStateDb(dbPath: string = getExtensionStateDbPath()): SqliteDatabase {
-  const resolved = dbPath;
+function openExtensionStateDb(dbPath?: string, layout?: DesktopRootLayout): SqliteDatabase {
+  const resolved = dbPath ?? getExtensionStateDbPath(undefined, layout);
   const cached = dbCache.get(resolved);
   if (cached) return cached;
 
@@ -84,9 +85,13 @@ function rowToDocument<T = unknown>(row: ExtensionStateRow): ExtensionStateDocum
   };
 }
 
-export function readExtensionState<T = unknown>(extensionId: string, key: string): ExtensionStateDocument<T> | null {
+export function readExtensionState<T = unknown>(
+  extensionId: string,
+  key: string,
+  layout?: DesktopRootLayout,
+): ExtensionStateDocument<T> | null {
   const normalizedKey = normalizeStateKey(key);
-  const row = openExtensionStateDb()
+  const row = openExtensionStateDb(undefined, layout)
     .prepare('SELECT key, value_json, version, created_at, updated_at FROM extension_state WHERE extension_id = ? AND key = ?')
     .get(extensionId, normalizedKey) as ExtensionStateRow | undefined;
   return row ? rowToDocument<T>(row) : null;
@@ -97,10 +102,11 @@ export function writeExtensionState<T = unknown>(
   key: string,
   value: T,
   options: ExtensionStatePutOptions = {},
+  layout?: DesktopRootLayout,
 ): ExtensionStateDocument<T> {
   const normalizedKey = normalizeStateKey(key);
-  const db = openExtensionStateDb();
-  const existing = readExtensionState<T>(extensionId, normalizedKey);
+  const db = openExtensionStateDb(undefined, layout);
+  const existing = readExtensionState<T>(extensionId, normalizedKey, layout);
   if (options.expectedVersion !== undefined && existing?.version !== options.expectedVersion) {
     const error = new Error('Extension state version conflict.');
     (error as Error & { current?: ExtensionStateDocument<T> | null }).current = existing;
@@ -122,15 +128,19 @@ export function writeExtensionState<T = unknown>(
   return { key: normalizedKey, value, version: nextVersion, createdAt, updatedAt: now };
 }
 
-export function deleteExtensionState(extensionId: string, key: string): { ok: true; deleted: boolean } {
+export function deleteExtensionState(extensionId: string, key: string, layout?: DesktopRootLayout): { ok: true; deleted: boolean } {
   const normalizedKey = normalizeStateKey(key);
-  const result = openExtensionStateDb()
+  const result = openExtensionStateDb(undefined, layout)
     .prepare('DELETE FROM extension_state WHERE extension_id = ? AND key = ?')
     .run(extensionId, normalizedKey);
   return { ok: true, deleted: result.changes > 0 };
 }
 
-export function listExtensionState<T = unknown>(extensionId: string, prefix = ''): Array<ExtensionStateDocument<T>> {
+export function listExtensionState<T = unknown>(
+  extensionId: string,
+  prefix = '',
+  layout?: DesktopRootLayout,
+): Array<ExtensionStateDocument<T>> {
   const normalizedPrefix = prefix
     .trim()
     .replace(/^\/+/, '')
@@ -138,7 +148,7 @@ export function listExtensionState<T = unknown>(extensionId: string, prefix = ''
   if (normalizedPrefix.includes('\0') || normalizedPrefix.split('/').includes('..')) {
     throw new Error('Extension state prefix is invalid.');
   }
-  const rows = openExtensionStateDb()
+  const rows = openExtensionStateDb(undefined, layout)
     .prepare(
       normalizedPrefix
         ? 'SELECT key, value_json, version, created_at, updated_at FROM extension_state WHERE extension_id = ? AND key LIKE ? ORDER BY key'

@@ -13,6 +13,7 @@ import {
   clearExtensionFailureRecordsForOperation,
   completeExtensionStartupGuard,
   getExtensionRegistryPaths,
+  getRuntimeExtensionsRoot,
   getRuntimeExtensionsRootFromLayout,
   invalidateExtensionRegistryReadCaches,
   isExtensionEnabled,
@@ -1219,6 +1220,14 @@ describe('extension registry', () => {
 
     it('getRuntimeExtensionsRootFromLayout returns apps/extensions', () => {
       expect(getRuntimeExtensionsRootFromLayout(layout)).toBe('/root/apps/extensions');
+    });
+
+    it('getRuntimeExtensionsRoot uses layout when provided', () => {
+      expect(getRuntimeExtensionsRoot(undefined, layout)).toBe('/root/apps/extensions');
+    });
+
+    it('getRuntimeExtensionsRoot falls back to stateRoot when no layout is provided', () => {
+      expect(getRuntimeExtensionsRoot('/state-root')).toBe('/state-root/extensions');
     });
   });
 

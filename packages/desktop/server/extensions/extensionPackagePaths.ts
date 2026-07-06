@@ -65,11 +65,12 @@ function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath
     });
 }
 
-export function listExtensionPackagePaths(options: { runtimeRoot?: string } = {}): ExtensionPackagePath[] {
+export function listExtensionPackagePaths(options: { runtimeRoot?: string; layout?: DesktopRootLayout } = {}): ExtensionPackagePath[] {
+  const runtimeRoot = options.runtimeRoot ?? (options.layout ? getExtensionPackagesRoot(options.layout) : undefined);
   const seen = new Set<string>();
   const inputs: Array<{ path: string; source: ExtensionPackagePath['source'] }> = [
     ...candidateBundledExtensionRoots().map((path) => ({ path, source: 'bundled' as const })),
-    ...(options.runtimeRoot ? [{ path: options.runtimeRoot, source: 'external' as const }] : []),
+    ...(runtimeRoot ? [{ path: runtimeRoot, source: 'external' as const }] : []),
     ...readConfiguredExtensionPaths().map((path) => ({ path, source: 'external' as const })),
     ...readEnvironmentExtensionPaths().map((path) => ({ path, source: 'external' as const })),
   ];

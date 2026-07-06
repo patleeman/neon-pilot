@@ -48,7 +48,16 @@ function normalizeDatabaseName(name = 'main'): string {
   return normalized.replace(/\.sqlite$/i, '');
 }
 
-function getExtensionDatabasePath(extensionId: string, name = 'main', stateRoot: string = getStateRoot()): string {
+function getExtensionDatabasePath(
+  extensionId: string,
+  name = 'main',
+  stateRoot: string = getStateRoot(),
+  /**
+   * When provided, resolves the path from a DesktopRootLayout instead of stateRoot.
+   */
+  layout?: DesktopRootLayout,
+): string {
+  if (layout) return getExtensionDatabasePathFromLayout(extensionId, name, layout);
   return join(stateRoot, 'extension-data', extensionId, 'databases', `${normalizeDatabaseName(name)}.sqlite`);
 }
 
@@ -83,18 +92,19 @@ function toCoreMigrations(extensionId: string, name: string, migrations: Extensi
   });
 }
 
-export function createExtensionDatabaseManager(extensionId: string): ExtensionDatabaseManager {
+export function createExtensionDatabaseManager(extensionId: string, options?: { layout?: DesktopRootLayout }): ExtensionDatabaseManager {
+  const dbOptionsLayout = options?.layout;
   return {
-    async open(name = 'main', options: ExtensionDatabaseOpenOptions = {}): Promise<SqliteDatabase> {
+    async open(name = 'main', openOptions: ExtensionDatabaseOpenOptions = {}): Promise<SqliteDatabase> {
       const normalizedName = normalizeDatabaseName(name);
-      const dbPath = getExtensionDatabasePath(extensionId, normalizedName);
+      const dbPath = getExtensionDatabasePath(extensionId, normalizedName, undefined, dbOptionsLayout);
       const cached = dbCache.get(dbPath);
       if (cached) {
-        if (options.migrations?.length)
+        if (openOptions.migrations?.length)
           applyMigrations(
             cached,
             `extension ${extensionId} database ${normalizedName}`,
-            toCoreMigrations(extensionId, normalizedName, options.migrations),
+            toCoreMigrations(extensionId, normalizedName, openOptions.migrations),
           );
         return cached;
       }
@@ -103,11 +113,11 @@ export function createExtensionDatabaseManager(extensionId: string): ExtensionDa
       const db = openSqliteDatabase(dbPath);
       db.pragma('journal_mode = WAL');
       repairPrivateExtensionSqliteFiles(dbPath);
-      if (options.migrations?.length) {
+      if (openOptions.migrations?.length) {
         applyMigrations(
           db,
           `extension ${extensionId} database ${normalizedName}`,
-          toCoreMigrations(extensionId, normalizedName, options.migrations),
+          toCoreMigrations(extensionId, normalizedName, openOptions.migrations),
         );
       }
       repairPrivateExtensionSqliteFiles(dbPath);
@@ -116,7 +126,7 @@ export function createExtensionDatabaseManager(extensionId: string): ExtensionDa
     },
 
     async close(name = 'main'): Promise<void> {
-      const dbPath = getExtensionDatabasePath(extensionId, name);
+      const dbPath = getExtensionDatabasePath(extensionId, name, undefined, dbOptionsLayout);
       const db = dbCache.get(dbPath);
       if (!db) return;
       closeDatabase(db);
@@ -124,7 +134,9 @@ export function createExtensionDatabaseManager(extensionId: string): ExtensionDa
     },
 
     async closeAll(): Promise<void> {
-      const prefix = join(getStateRoot(), 'extension-data', extensionId, 'databases');
+      const prefix = dbOptionsLayout
+        ? join(dbOptionsLayout.dataApps, extensionId, 'databases')
+        : join(getStateRoot(), 'extension-data', extensionId, 'databases');
       for (const [dbPath, db] of dbCache) {
         if (!dbPath.startsWith(prefix)) continue;
         closeDatabase(db);

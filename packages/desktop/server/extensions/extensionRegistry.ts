@@ -628,8 +628,9 @@ export function invalidateExtensionRegistryReadCaches(stateRoot: string = getSta
   processRegistryReadCache.invalidEntries.delete(stateRoot);
 }
 
-export function getRuntimeExtensionsRoot(stateRoot: string = getStateRoot()): string {
-  return join(stateRoot, 'extensions');
+export function getRuntimeExtensionsRoot(stateRoot?: string, layout?: DesktopRootLayout): string {
+  if (layout) return getRuntimeExtensionsRootFromLayout(layout);
+  return join(stateRoot ?? getStateRoot(), 'extensions');
 }
 
 function getExtensionRegistryConfigPath(stateRoot: string = getStateRoot()): string {

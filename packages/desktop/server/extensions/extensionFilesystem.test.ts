@@ -1,3 +1,5 @@
+import { rmSync } from 'node:fs';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requestRoot = vi.fn();
@@ -120,6 +122,87 @@ describe('extensionFilesystem', () => {
     };
     expect(extensionFileRootPathFromLayout('my-ext', 'app', layout)).toBe('/root/data/apps/my-ext/files');
     expect(extensionFileRootPathFromLayout('my-ext', 'cache', layout)).toBe('/root/data/apps/my-ext/cache');
+  });
+
+  it('uses DesktopRootLayout-based paths when layout option is provided', async () => {
+    const { mkdtempSync, mkdirSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const layoutRoot = mkdtempSync(join(tmpdir(), 'np-ext-fs-layout-'));
+    const layout = {
+      root: layoutRoot,
+      apps: join(layoutRoot, 'apps'),
+      data: join(layoutRoot, 'data'),
+      dataApps: join(layoutRoot, 'data', 'apps'),
+      dataDocuments: join(layoutRoot, 'data', 'documents'),
+      documents: join(layoutRoot, 'documents'),
+      agents: join(layoutRoot, 'agents'),
+      logs: join(layoutRoot, 'logs'),
+      logsDesktop: join(layoutRoot, 'logs', 'desktop'),
+      logsDaemon: join(layoutRoot, 'logs', 'daemon'),
+      logsTelemetry: join(layoutRoot, 'logs', 'telemetry'),
+      system: join(layoutRoot, 'system'),
+      systemAgents: join(layoutRoot, 'system', 'agents'),
+      systemApps: join(layoutRoot, 'system', 'apps'),
+      systemCache: join(layoutRoot, 'system', 'cache'),
+      systemConfig: join(layoutRoot, 'system', 'config'),
+      systemConversations: join(layoutRoot, 'system', 'conversations'),
+      systemSessions: join(layoutRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(layoutRoot, 'system', 'daemon'),
+      systemElectron: join(layoutRoot, 'system', 'electron'),
+      systemElectronUserData: join(layoutRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(layoutRoot, 'system', 'observability'),
+      systemRuntime: join(layoutRoot, 'system', 'runtime'),
+      systemSecrets: join(layoutRoot, 'system', 'secrets'),
+      systemState: join(layoutRoot, 'system', 'state'),
+    };
+    mkdirSync(layout.dataApps, { recursive: true });
+    const fs = createExtensionFilesystemCapability('ext', undefined, { layout });
+    requestRoot.mockResolvedValueOnce({ root: 'app' }).mockResolvedValueOnce({ root: 'cache' });
+
+    await expect(fs.app()).resolves.toEqual({ root: 'app' });
+    expect(requestRoot).toHaveBeenCalledWith({
+      subject: { type: 'extension', extensionId: 'ext' },
+      root: {
+        kind: 'extension-storage',
+        id: 'ext:app',
+        path: join(layout.dataApps, 'ext', 'files'),
+        displayName: 'ext app files',
+        labels: { bucket: 'app' },
+      },
+      access: ['read', 'write', 'delete', 'list', 'metadata'],
+      reason: 'extension app files',
+    });
+
+    await expect(fs.cache()).resolves.toEqual({ root: 'cache' });
+    expect(requestRoot).toHaveBeenLastCalledWith({
+      subject: { type: 'extension', extensionId: 'ext' },
+      root: {
+        kind: 'extension-storage',
+        id: 'ext:cache',
+        path: join(layout.dataApps, 'ext', 'cache'),
+        displayName: 'ext cache',
+        labels: { bucket: 'cache' },
+      },
+      access: ['read', 'write', 'delete', 'list', 'metadata'],
+      reason: 'extension cache files',
+    });
+
+    rmSync(layoutRoot, { recursive: true, force: true });
+  });
+
+  it('preserves backwards-compatible default paths when layout is not provided', async () => {
+    const fs = createExtensionFilesystemCapability('ext');
+    requestRoot.mockResolvedValueOnce({ root: 'app' });
+
+    await fs.app();
+    expect(requestRoot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        root: expect.objectContaining({
+          path: '/tmp/neon-pilot-extension-filesystem-test-state/extension-data/ext/files',
+        }),
+      }),
+    );
   });
 
   it('creates temp roots with defaults and caller overrides', async () => {

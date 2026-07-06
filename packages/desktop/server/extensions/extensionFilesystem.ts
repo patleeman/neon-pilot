@@ -12,7 +12,17 @@ function workspaceRootId(cwd: string): string {
 
 type ExtensionFilesystemRootKind = 'workspace' | 'app' | 'cache' | 'temp';
 
-function extensionFileRootPath(extensionId: string, kind: 'app' | 'cache', stateRoot: string = getStateRoot()): string {
+function extensionFileRootPath(
+  extensionId: string,
+  kind: 'app' | 'cache',
+  stateRoot: string = getStateRoot(),
+  /**
+   * When provided, resolves the root from a DesktopRootLayout instead of stateRoot.
+   * Extension files/cache live under `layout.dataApps/<extensionId>/`.
+   */
+  layout?: DesktopRootLayout,
+): string {
+  if (layout) return extensionFileRootPathFromLayout(extensionId, kind, layout);
   return join(stateRoot, 'extension-data', extensionId, kind === 'app' ? 'files' : 'cache');
 }
 
@@ -31,7 +41,7 @@ function hasWriteAccess(access: FileAccess[]): boolean {
 export function createExtensionFilesystemCapability(
   extensionId: string,
   toolContext?: { cwd?: string },
-  options: { enforceManifestPermissions?: boolean } = {},
+  options: { enforceManifestPermissions?: boolean; layout?: DesktopRootLayout } = {},
 ) {
   function assertPermission(access: FileAccess[], capability: string): void {
     if (!options.enforceManifestPermissions) return;
@@ -54,7 +64,7 @@ export function createExtensionFilesystemCapability(
 
   async function requestExtensionRoot(kind: 'app' | 'cache', access: FileAccess[], reason: string): Promise<ScopedFileSystem> {
     assertPermission(access, `filesystem.${kind}`);
-    const rootPath = extensionFileRootPath(extensionId, kind);
+    const rootPath = extensionFileRootPath(extensionId, kind, undefined, options.layout);
     mkdirSync(rootPath, { recursive: true });
     return defaultFileSystemAuthority.requestRoot({
       subject: { type: 'extension', extensionId },

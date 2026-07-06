@@ -121,6 +121,93 @@ describe('extension package paths', () => {
     expect(root).toBe('/Users/example/desktop/apps/extensions');
   });
 
+  it('accepts a DesktopRootLayout option and derives runtimeRoot from layout.apps/extensions', () => {
+    const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
+    const appsRoot = join(tempRoot, 'apps');
+    const extensionRoot = writeExtension(join(appsRoot, 'extensions'), 'layout-ext');
+
+    const layout = {
+      root: tempRoot,
+      apps: appsRoot,
+      data: join(tempRoot, 'data'),
+      dataApps: join(tempRoot, 'data', 'apps'),
+      dataDocuments: join(tempRoot, 'data', 'documents'),
+      documents: join(tempRoot, 'documents'),
+      agents: join(tempRoot, 'agents'),
+      logs: join(tempRoot, 'logs'),
+      logsDesktop: join(tempRoot, 'logs', 'desktop'),
+      logsDaemon: join(tempRoot, 'logs', 'daemon'),
+      logsTelemetry: join(tempRoot, 'logs', 'telemetry'),
+      system: join(tempRoot, 'system'),
+      systemAgents: join(tempRoot, 'system', 'agents'),
+      systemApps: join(tempRoot, 'system', 'apps'),
+      systemCache: join(tempRoot, 'system', 'cache'),
+      systemConfig: join(tempRoot, 'system', 'config'),
+      systemConversations: join(tempRoot, 'system', 'conversations'),
+      systemSessions: join(tempRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(tempRoot, 'system', 'daemon'),
+      systemElectron: join(tempRoot, 'system', 'electron'),
+      systemElectronUserData: join(tempRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(tempRoot, 'system', 'observability'),
+      systemRuntime: join(tempRoot, 'system', 'runtime'),
+      systemSecrets: join(tempRoot, 'system', 'secrets'),
+      systemState: join(tempRoot, 'system', 'state'),
+    };
+
+    delete process.env.NEON_PILOT_REPO_ROOT;
+
+    try {
+      const paths = listExtensionPackagePaths({ layout });
+      expect(paths).toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: extensionRoot, source: 'external' })]));
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('prefers explicit runtimeRoot over layout when both are provided', () => {
+    const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
+    const explicitRoot = writeExtension(join(tempRoot, 'explicit'), 'explicit-ext');
+    const appsRoot = join(tempRoot, 'apps');
+    writeExtension(join(appsRoot, 'extensions'), 'layout-ext');
+
+    const layout = {
+      root: tempRoot,
+      apps: appsRoot,
+      data: join(tempRoot, 'data'),
+      dataApps: join(tempRoot, 'data', 'apps'),
+      dataDocuments: join(tempRoot, 'data', 'documents'),
+      documents: join(tempRoot, 'documents'),
+      agents: join(tempRoot, 'agents'),
+      logs: join(tempRoot, 'logs'),
+      logsDesktop: join(tempRoot, 'logs', 'desktop'),
+      logsDaemon: join(tempRoot, 'logs', 'daemon'),
+      logsTelemetry: join(tempRoot, 'logs', 'telemetry'),
+      system: join(tempRoot, 'system'),
+      systemAgents: join(tempRoot, 'system', 'agents'),
+      systemApps: join(tempRoot, 'system', 'apps'),
+      systemCache: join(tempRoot, 'system', 'cache'),
+      systemConfig: join(tempRoot, 'system', 'config'),
+      systemConversations: join(tempRoot, 'system', 'conversations'),
+      systemSessions: join(tempRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(tempRoot, 'system', 'daemon'),
+      systemElectron: join(tempRoot, 'system', 'electron'),
+      systemElectronUserData: join(tempRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(tempRoot, 'system', 'observability'),
+      systemRuntime: join(tempRoot, 'system', 'runtime'),
+      systemSecrets: join(tempRoot, 'system', 'secrets'),
+      systemState: join(tempRoot, 'system', 'state'),
+    };
+
+    delete process.env.NEON_PILOT_REPO_ROOT;
+
+    try {
+      const paths = listExtensionPackagePaths({ runtimeRoot: join(explicitRoot, '..'), layout });
+      expect(paths).toEqual(expect.arrayContaining([expect.objectContaining({ packageRoot: explicitRoot, source: 'external' })]));
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('deduplicates package roots that resolve to the same real path', () => {
     const tempRoot = join(tmpdir(), `neon-pilot-extension-paths-${process.pid}-${Date.now()}`);
     const bundledRoot = join(tempRoot, 'extensions');

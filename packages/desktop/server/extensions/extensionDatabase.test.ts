@@ -105,6 +105,77 @@ describe('extensionDatabase', () => {
     expect(getExtensionDataRootFromLayout(layout)).toBe('/root/data/apps');
   });
 
+  it('uses DesktopRootLayout-based paths when layout option is provided', async () => {
+    const dbRoot = join(tmpdir(), `extension-database-layout-${randomUUID()}`);
+    closeExtensionDatabaseManagersForTests();
+    rmSync(dbRoot, { recursive: true, force: true });
+
+    const layout = {
+      root: dbRoot,
+      apps: join(dbRoot, 'apps'),
+      data: join(dbRoot, 'data'),
+      dataApps: join(dbRoot, 'data', 'apps'),
+      dataDocuments: join(dbRoot, 'data', 'documents'),
+      documents: join(dbRoot, 'documents'),
+      agents: join(dbRoot, 'agents'),
+      logs: join(dbRoot, 'logs'),
+      logsDesktop: join(dbRoot, 'logs', 'desktop'),
+      logsDaemon: join(dbRoot, 'logs', 'daemon'),
+      logsTelemetry: join(dbRoot, 'logs', 'telemetry'),
+      system: join(dbRoot, 'system'),
+      systemAgents: join(dbRoot, 'system', 'agents'),
+      systemApps: join(dbRoot, 'system', 'apps'),
+      systemCache: join(dbRoot, 'system', 'cache'),
+      systemConfig: join(dbRoot, 'system', 'config'),
+      systemConversations: join(dbRoot, 'system', 'conversations'),
+      systemSessions: join(dbRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(dbRoot, 'system', 'daemon'),
+      systemElectron: join(dbRoot, 'system', 'electron'),
+      systemElectronUserData: join(dbRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(dbRoot, 'system', 'observability'),
+      systemRuntime: join(dbRoot, 'system', 'runtime'),
+      systemSecrets: join(dbRoot, 'system', 'secrets'),
+      systemState: join(dbRoot, 'system', 'state'),
+    };
+
+    const expectedDbPath = join(layout.dataApps, 'layout-ext', 'databases', 'main.sqlite');
+    const manager = createExtensionDatabaseManager('layout-ext', { layout });
+    const db = await manager.open('main');
+    db.exec('CREATE TABLE IF NOT EXISTS layout_marker (value TEXT)');
+    db.prepare('INSERT INTO layout_marker (value) VALUES (?)').run('layout-works');
+    await manager.close('main');
+
+    expect(await import('node:fs').then((fs) => fs.existsSync(expectedDbPath))).toBe(true);
+
+    const reopened = await manager.open('main');
+    expect(reopened.prepare('SELECT value FROM layout_marker WHERE value = ?').get('layout-works')).toEqual({
+      value: 'layout-works',
+    });
+
+    closeExtensionDatabaseManagersForTests();
+    rmSync(dbRoot, { recursive: true, force: true });
+  });
+
+  it('preserves backwards-compatible stateRoot-based paths when layout is not provided', async () => {
+    closeExtensionDatabaseManagersForTests();
+    const dbRoot = join(tmpdir(), `extension-database-state-${randomUUID()}`);
+    vi.mocked(core.getStateRoot).mockReturnValue(dbRoot);
+    rmSync(dbRoot, { recursive: true, force: true });
+
+    const expectedDbPath = join(dbRoot, 'extension-data', 'state-ext', 'databases', 'main.sqlite');
+    const manager = createExtensionDatabaseManager('state-ext');
+    const db = await manager.open('main');
+    db.exec('CREATE TABLE IF NOT EXISTS state_marker (value TEXT)');
+    db.prepare('INSERT INTO state_marker (value) VALUES (?)').run('state-works');
+    await manager.close('main');
+
+    expect(await import('node:fs').then((fs) => fs.existsSync(expectedDbPath))).toBe(true);
+
+    closeExtensionDatabaseManagersForTests();
+    rmSync(dbRoot, { recursive: true, force: true });
+    vi.mocked(core.getStateRoot).mockReturnValue(stateRoot);
+  });
+
   it('isolates databases by extension id and rejects unsafe names', async () => {
     const first = await createExtensionDatabaseManager('first').open();
     first.exec('CREATE TABLE marker (value TEXT)');

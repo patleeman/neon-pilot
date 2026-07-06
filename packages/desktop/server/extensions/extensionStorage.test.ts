@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { chmodSync, rmSync, statSync } from 'node:fs';
+import { chmodSync, existsSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -125,6 +125,66 @@ describe('extensionStorage', () => {
       systemState: '/root/system/state',
     };
     expect(getExtensionStateDbPathFromLayout(layout)).toBe('/root/system/state/app-state.sqlite');
+  });
+
+  it('uses DesktopRootLayout-based paths when layout is provided', () => {
+    const dbRoot = join(tmpdir(), `extension-storage-layout-${randomUUID()}`);
+    closeExtensionStateDbs();
+    rmSync(dbRoot, { recursive: true, force: true });
+
+    const layout = {
+      root: dbRoot,
+      apps: join(dbRoot, 'apps'),
+      data: join(dbRoot, 'data'),
+      dataApps: join(dbRoot, 'data', 'apps'),
+      dataDocuments: join(dbRoot, 'data', 'documents'),
+      documents: join(dbRoot, 'documents'),
+      agents: join(dbRoot, 'agents'),
+      logs: join(dbRoot, 'logs'),
+      logsDesktop: join(dbRoot, 'logs', 'desktop'),
+      logsDaemon: join(dbRoot, 'logs', 'daemon'),
+      logsTelemetry: join(dbRoot, 'logs', 'telemetry'),
+      system: join(dbRoot, 'system'),
+      systemAgents: join(dbRoot, 'system', 'agents'),
+      systemApps: join(dbRoot, 'system', 'apps'),
+      systemCache: join(dbRoot, 'system', 'cache'),
+      systemConfig: join(dbRoot, 'system', 'config'),
+      systemConversations: join(dbRoot, 'system', 'conversations'),
+      systemSessions: join(dbRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(dbRoot, 'system', 'daemon'),
+      systemElectron: join(dbRoot, 'system', 'electron'),
+      systemElectronUserData: join(dbRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(dbRoot, 'system', 'observability'),
+      systemRuntime: join(dbRoot, 'system', 'runtime'),
+      systemSecrets: join(dbRoot, 'system', 'secrets'),
+      systemState: join(dbRoot, 'system', 'state'),
+    };
+
+    writeExtensionState('layout-ext', 'key', 'layout-value', {}, layout);
+    expect(readExtensionState('layout-ext', 'key', layout)).toEqual(
+      expect.objectContaining({ key: 'key', value: 'layout-value', version: 1 }),
+    );
+
+    expect(listExtensionState('layout-ext', '', layout)).toHaveLength(1);
+    expect(deleteExtensionState('layout-ext', 'key', layout)).toEqual({ ok: true, deleted: true });
+    expect(readExtensionState('layout-ext', 'key', layout)).toBeNull();
+
+    // Verify the DB was created at the layout path
+    const expectedDbPath = join(layout.systemState, 'app-state.sqlite');
+    expect(existsSync(expectedDbPath)).toBe(true);
+
+    closeExtensionStateDbs();
+    rmSync(dbRoot, { recursive: true, force: true });
+  });
+
+  it('preserves backwards-compatible stateRoot-based paths when layout is not provided', () => {
+    writeExtensionState('state-ext', 'state-key', 'state-value');
+    expect(readExtensionState('state-ext', 'state-key')).toEqual(
+      expect.objectContaining({ key: 'state-key', value: 'state-value', version: 1 }),
+    );
+
+    // Clean up the test data we added
+    closeExtensionStateDbs();
   });
 
   it('rejects invalid state keys and prefixes', () => {
