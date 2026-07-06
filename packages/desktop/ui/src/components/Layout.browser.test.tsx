@@ -366,7 +366,7 @@ describe('WorkbenchBrowserTab', () => {
 
     const container = document.createElement('div');
     container.innerHTML =
-      '<div class="windowed-os-shell" data-focused-window-id="route:routines"><section class="wos-window" data-window-id="chat:draft" data-focused="true"><div id="browser-root"></div></section><section class="wos-window" data-window-id="route:routines" data-focused="true"></section></div>';
+      '<div class="windowed-os-shell" data-focused-window-id="route:automations"><section class="wos-window" data-window-id="chat:draft" data-focused="true"><div id="browser-root"></div></section><section class="wos-window" data-window-id="route:automations" data-focused="true"></section></div>';
     document.body.appendChild(container);
     const browserRoot = container.querySelector('#browser-root')!;
     root = createRoot(browserRoot);
