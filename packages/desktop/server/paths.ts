@@ -1,4 +1,4 @@
-import { resolveStatePaths } from '@neon-pilot/core';
+import { type DesktopRootLayout, resolveStatePaths } from '@neon-pilot/core';
 import { createHash } from 'crypto';
 import { mkdirSync } from 'fs';
 import { homedir, tmpdir } from 'os';
@@ -45,17 +45,38 @@ function createShortSocketPath(stateRoot: string, daemonDirName: string): string
   return join(tmpdir(), `neon-pilotd-${digest}.sock`);
 }
 
-export function resolveDaemonPaths(explicitSocketPath?: string, namespace = process.env.NEON_PILOT_DAEMON_NAMESPACE): DaemonPaths {
+export function resolveDaemonPaths(
+  explicitSocketPath?: string,
+  namespace = process.env.NEON_PILOT_DAEMON_NAMESPACE,
+  layout?: DesktopRootLayout,
+): DaemonPaths {
   const statePaths = resolveStatePaths();
   const normalizedNamespace = explicitSocketPath ? undefined : normalizeDaemonNamespace(namespace);
-  const daemonDirName = normalizedNamespace ? `daemon-${normalizedNamespace}` : 'daemon';
-  const defaultSocketPath = join(statePaths.root, daemonDirName, DAEMON_SOCKET_FILE_NAME);
-  const socketPath = explicitSocketPath
-    ? resolve(expandHome(explicitSocketPath))
-    : defaultSocketPath.length > UNIX_SOCKET_PATH_MAX
-      ? createShortSocketPath(statePaths.root, daemonDirName)
-      : defaultSocketPath;
-  const root = explicitSocketPath ? dirname(socketPath) : join(statePaths.root, daemonDirName);
+
+  let root: string;
+  let logDir: string;
+  let logFile: string;
+  let socketPath: string;
+
+  if (layout && !explicitSocketPath) {
+    root = normalizedNamespace ? `${layout.systemDaemon}-${normalizedNamespace}` : layout.systemDaemon;
+    logDir = layout.logsDaemon;
+    logFile = join(layout.logsDaemon, 'daemon.log');
+
+    const defaultSocketPath = join(root, DAEMON_SOCKET_FILE_NAME);
+    socketPath = defaultSocketPath.length > UNIX_SOCKET_PATH_MAX ? createShortSocketPath(statePaths.root, root) : defaultSocketPath;
+  } else {
+    const daemonDirName = normalizedNamespace ? `daemon-${normalizedNamespace}` : 'daemon';
+    const defaultSocketPath = join(statePaths.root, daemonDirName, DAEMON_SOCKET_FILE_NAME);
+    socketPath = explicitSocketPath
+      ? resolve(expandHome(explicitSocketPath))
+      : defaultSocketPath.length > UNIX_SOCKET_PATH_MAX
+        ? createShortSocketPath(statePaths.root, daemonDirName)
+        : defaultSocketPath;
+    root = explicitSocketPath ? dirname(socketPath) : join(statePaths.root, daemonDirName);
+    logDir = join(root, 'logs');
+    logFile = join(root, 'logs', 'daemon.log');
+  }
 
   if (socketPath.length > UNIX_SOCKET_PATH_MAX) {
     throw new Error(
@@ -70,8 +91,8 @@ export function resolveDaemonPaths(explicitSocketPath?: string, namespace = proc
     root,
     socketPath,
     pidFile: join(root, DAEMON_PID_FILE_NAME),
-    logDir: join(root, 'logs'),
-    logFile: join(root, 'logs', 'daemon.log'),
+    logDir,
+    logFile,
   };
 }
 

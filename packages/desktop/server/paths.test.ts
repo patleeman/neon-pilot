@@ -3,6 +3,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { resolveDaemonPaths } from './paths.js';
@@ -14,6 +15,10 @@ function createTempDir(prefix: string): string {
   const dir = mkdtempSync(join(tmpdir(), prefix));
   tempDirs.push(dir);
   return dir;
+}
+
+function createDesktopLayout(root: string) {
+  return resolveDesktopRootLayout({ root });
 }
 
 describe('daemon paths', () => {
@@ -80,6 +85,57 @@ describe('daemon paths', () => {
       socketPath: join(daemonRoot, 'custom.sock'),
       pidFile: join(daemonRoot, 'neon-pilotd.pid'),
       logFile: join(daemonRoot, 'logs', 'daemon.log'),
+    });
+  });
+
+  describe('with DesktopRootLayout', () => {
+    it('uses layout systemDaemon as root and layout logsDaemon for logs', () => {
+      const stateRoot = createTempDir('pa-dp-layout-');
+      process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+      const layout = createDesktopLayout('/mock/desktop-root');
+
+      const result = resolveDaemonPaths(undefined, undefined, layout);
+
+      expect(result).toMatchObject({
+        stateRoot,
+        root: '/mock/desktop-root/system/daemon',
+        socketPath: '/mock/desktop-root/system/daemon/neon-pilotd.sock',
+        pidFile: '/mock/desktop-root/system/daemon/neon-pilotd.pid',
+        logDir: '/mock/desktop-root/logs/daemon',
+        logFile: '/mock/desktop-root/logs/daemon/daemon.log',
+      });
+    });
+
+    it('applies namespace suffix to layout systemDaemon', () => {
+      const stateRoot = createTempDir('pa-dp-layout-ns-');
+      process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+      const layout = createDesktopLayout('/mock/ns-root');
+
+      const result = resolveDaemonPaths(undefined, 'staging-2', layout);
+
+      expect(result).toMatchObject({
+        stateRoot,
+        root: '/mock/ns-root/system/daemon-staging-2',
+        socketPath: '/mock/ns-root/system/daemon-staging-2/neon-pilotd.sock',
+        pidFile: '/mock/ns-root/system/daemon-staging-2/neon-pilotd.pid',
+        logDir: '/mock/ns-root/logs/daemon',
+        logFile: '/mock/ns-root/logs/daemon/daemon.log',
+      });
+    });
+
+    it('ignores layout when explicit socket path is provided', () => {
+      const stateRoot = createTempDir('pa-dp-layout-explicit-');
+      const daemonRoot = createTempDir('pa-dp-layout-explicit-daemon-');
+      process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+      const layout = createDesktopLayout('/ignored-root');
+
+      expect(resolveDaemonPaths(join(daemonRoot, 'custom.sock'), undefined, layout)).toMatchObject({
+        stateRoot,
+        root: daemonRoot,
+        socketPath: join(daemonRoot, 'custom.sock'),
+        pidFile: join(daemonRoot, 'neon-pilotd.pid'),
+        logFile: join(daemonRoot, 'logs', 'daemon.log'),
+      });
     });
   });
 });
