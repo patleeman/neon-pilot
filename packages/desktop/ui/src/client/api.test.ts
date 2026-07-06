@@ -282,6 +282,30 @@ describe('api.documents grants', () => {
   });
 });
 
+describe('api.activity entries', () => {
+  beforeEach(resetApiTestGlobals);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('creates activity entries through the host activity endpoint', async () => {
+    const document = { owner: 'activity', collection: 'activity-entries', id: 'activity-1' };
+    const fetchMock = vi.fn(async () => jsonResponse({ document }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    const input = { type: 'app_launch', title: 'Notes', source: 'Window manager', kind: 'activity' };
+    await expect(api.createActivityEntry(input)).resolves.toEqual({ document });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/activity/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+  });
+});
+
 describe('api.memory', () => {
   beforeEach(() => {
     vi.resetModules();

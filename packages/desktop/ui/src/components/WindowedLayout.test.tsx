@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   publishDesktopUserAction: vi.fn(() => Promise.resolve({ ok: true })),
   acknowledgeDesktopControl: vi.fn(() => Promise.resolve({ ok: true })),
   acknowledgeDesktopScreenshot: vi.fn(() => Promise.resolve({ ok: true })),
+  createActivityEntry: vi.fn(() => Promise.resolve({ document: {} })),
   eventSources: [] as Array<{
     path: string;
     onopen: ((event: Event) => void) | null;
@@ -150,6 +151,7 @@ vi.mock('../client/api', () => ({
     acknowledgeDesktopScreenshot: mocks.acknowledgeDesktopScreenshot,
     publishDesktopState: mocks.publishDesktopState,
     publishDesktopUserAction: mocks.publishDesktopUserAction,
+    createActivityEntry: mocks.createActivityEntry,
   },
 }));
 
@@ -261,6 +263,7 @@ describe('WindowedLayout route windows', () => {
     mocks.eventSources = [];
     mocks.publishDesktopState.mockClear();
     mocks.publishDesktopUserAction.mockClear();
+    mocks.createActivityEntry.mockClear();
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
@@ -3696,6 +3699,7 @@ describe('WindowedLayout desktop state publishing', () => {
     mocks.acknowledgeDesktopScreenshot.mockClear();
     mocks.eventSources = [];
     mocks.publishDesktopState.mockClear();
+    mocks.createActivityEntry.mockClear();
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
@@ -4627,5 +4631,140 @@ describe('WindowedLayout desktop state publishing', () => {
       const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
       expect(notes.maximized).toBe(false);
     });
+  });
+});
+
+describe('WindowedLayout activity entries', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.history.pushState({}, '', '/');
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+    delete window.neonPilotDesktop;
+    mocks.layout.mockClear();
+    mocks.defaultCwd.mockClear();
+    mocks.defaultCwd.mockResolvedValue({ currentCwd: '', effectiveCwd: '/Users/patrick/Library/Application Support/Neon Pilot/Desktop' });
+    mocks.archiveSession.mockClear();
+    mocks.acknowledgeDesktopControl.mockClear();
+    mocks.acknowledgeDesktopScreenshot.mockClear();
+    mocks.eventSources = [];
+    mocks.publishDesktopState.mockClear();
+    mocks.publishDesktopUserAction.mockClear();
+    mocks.createActivityEntry.mockClear();
+    mocks.registryLoading = false;
+    mocks.pinnedSessions = [];
+    mocks.tabs = [];
+    mocks.conversationsLoading = false;
+    mocks.topBarElements = [];
+    mocks.surfaces = [];
+    mocks.extensions = [
+      {
+        id: 'system-notes',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'notes', label: 'Notes', route: '/notes' }],
+        },
+      },
+    ];
+  });
+
+  it('writes app_launch activity when opening a route window from start menu', async () => {
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^notes$/i }));
+
+    await screen.findByRole('region', { name: /^notes$/i });
+
+    await waitFor(() => {
+      expect(mocks.createActivityEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'app_launch',
+          title: 'Notes',
+          source: 'Window manager',
+          kind: 'activity',
+        }),
+      );
+    });
+  });
+
+  it('does not write app_launch when focusing an existing route window', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 620, height: 440 },
+        minimized: false,
+        focused: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+    await screen.findByRole('region', { name: /^notes$/i });
+
+    // Focus the existing window by opening it again from start menu.
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /start menu/i })).getByRole('button', { name: /^notes$/i }));
+
+    // Wait a tick for any async effects.
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+    });
+
+    expect(mocks.createActivityEntry).not.toHaveBeenCalled();
+  });
+
+  it('writes window_close activity when a window is closed', async () => {
+    renderWindowedLayout();
+
+    const chatWindow = screen.getByRole('region', { name: /new conversation/i });
+    fireEvent.click(within(chatWindow).getByRole('button', { name: /close/i }));
+
+    await waitFor(() => {
+      expect(mocks.createActivityEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'window_close',
+          source: 'Window manager',
+          kind: 'activity',
+        }),
+      );
+    });
+  });
+
+  it('does not write activity for a simple window focus', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: true,
+      },
+      {
+        id: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 620, height: 440 },
+        minimized: false,
+        focused: false,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    fireEvent.mouseDown(notesWindow);
+
+    // Wait a tick for any async effects.
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+    });
+
+    expect(mocks.createActivityEntry).not.toHaveBeenCalled();
   });
 });

@@ -1537,6 +1537,14 @@ export function WindowedLayout() {
     [],
   );
 
+  // Fire-and-forget Activity entry writer. Failures should not break window actions.
+  const writeActivityEntry = useCallback(
+    (input: { type: string; title: string; subtitle?: string; source?: string; kind?: string; metadata?: Record<string, unknown> }) => {
+      void api.createActivityEntry(input).catch(() => undefined);
+    },
+    [],
+  );
+
   const reconcileWindowBounds = useCallback(() => {
     const rect = desktopRect(desktopRef.current);
     setWindows((current) => constrainWindowCollectionBounds(current, rect));
@@ -1582,6 +1590,15 @@ export function WindowedLayout() {
         suspendWindowedBrowserViews();
       }
       if (targetWindow?.minimized) {
+        if (source === 'agent') {
+          writeActivityEntry({
+            type: 'state_change',
+            title: `Restored: ${targetWindow.title}`,
+            source: 'Window manager',
+            kind: 'activity',
+            metadata: { windowId: targetWindow.id, windowKind: targetWindow.kind, action: 'restore', source },
+          });
+        }
         dispatchParentLifecycleForWindow(targetWindow, 'restored');
       }
       if (targetWindow) {
@@ -1592,7 +1609,7 @@ export function WindowedLayout() {
         return targetWindow?.kind === 'chat' ? restoreChildWindowsForParent(focused, targetWindow.id) : focused;
       });
     },
-    [publishUserActionForWindow],
+    [publishUserActionForWindow, writeActivityEntry],
   );
 
   const openChildWindow = useCallback((parentWindowId: string, kind: ChildWindowKind) => {
@@ -1644,6 +1661,25 @@ export function WindowedLayout() {
       const route = app.kind === 'chat' && session ? `/conversations/${encodeURIComponent(session.id)}` : app.route;
       suspendWindowedBrowserViews();
       setLauncherOpen(false);
+
+      // Write Activity entries for new windows only, not focus-only actions.
+      {
+        const existingInCurrentState =
+          app.kind === 'route' && app.window.singleton
+            ? windowsRef.current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app))
+            : windowsRef.current.find((windowModel) => windowModel.id === id);
+        if (!existingInCurrentState) {
+          writeActivityEntry({
+            type: 'app_launch',
+            title,
+            subtitle: app.kind === 'chat' && session ? `Conversation: ${session.title}` : undefined,
+            source: 'Window manager',
+            kind: 'activity',
+            metadata: { appId: app.id, appKind: app.kind, route },
+          });
+        }
+      }
+
       setWindows((current) => {
         const existing =
           app.kind === 'route' && app.window.singleton
@@ -1686,31 +1722,67 @@ export function WindowedLayout() {
         return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
       });
     },
-    [defaultWorkspaceCwd],
+    [defaultWorkspaceCwd, writeActivityEntry],
   );
 
   const openRouteWindow = useCallback(
     (route: string) => {
       const app = findWindowedAppForRoute(route, windowedApps);
       if (!app) return false;
+
+      // Write Activity entries for new route windows only, not focus-only actions.
+      {
+        const id = createId(app);
+        const existing = app.window.singleton
+          ? windowsRef.current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app))
+          : null;
+        if (!existing) {
+          writeActivityEntry({
+            type: 'app_launch',
+            title: app.title,
+            source: 'Window manager',
+            kind: 'activity',
+            metadata: { appId: app.id, route },
+          });
+        }
+      }
+
       suspendWindowedBrowserViews();
       setLauncherOpen(false);
       setWindows((current) => focusRouteWindowIn(current, route, app, desktopRef.current));
       return true;
     },
-    [windowedApps],
+    [windowedApps, writeActivityEntry],
   );
 
   const openChatWindow = useCallback(
     (route: string) => {
       const sessionId = chatSessionIdForRoute(route);
       if (!sessionId) return false;
+
+      // Write Activity entries for new chat windows only, not focus-only actions.
+      {
+        const isDraft = sessionId === 'draft';
+        const id = isDraft ? 'chat:draft' : `chat:${sessionId}`;
+        const existing = windowsRef.current.find((windowModel) => windowModel.id === id);
+        if (!existing) {
+          writeActivityEntry({
+            type: 'app_launch',
+            title: 'Chat',
+            subtitle: isDraft ? undefined : `Session: ${sessionId}`,
+            source: 'Window manager',
+            kind: 'activity',
+            metadata: { sessionId, route },
+          });
+        }
+      }
+
       suspendWindowedBrowserViews();
       setLauncherOpen(false);
       setWindows((current) => focusChatWindowIn(current, route, chatSessions, desktopRef.current));
       return true;
     },
-    [chatSessions],
+    [chatSessions, writeActivityEntry],
   );
 
   useEffect(() => {
@@ -1788,6 +1860,14 @@ export function WindowedLayout() {
   const closeWindow = useCallback(
     (windowModel: DesktopWindowModel, source: DesktopActionSource = 'user') => {
       suspendWindowedBrowserViews();
+      writeActivityEntry({
+        type: 'window_close',
+        title: windowModel.title,
+        subtitle: source === 'agent' ? 'Closed by agent' : undefined,
+        source: 'Window manager',
+        kind: 'activity',
+        metadata: { windowId: windowModel.id, windowKind: windowModel.kind, source },
+      });
       dispatchParentLifecycleForWindow(windowModel, 'closed');
       publishUserActionForWindow('close', windowModel, source);
       setRestoreBounds((current) => {
@@ -1802,7 +1882,7 @@ export function WindowedLayout() {
         return ensureFocusedWindow(withoutChildren);
       });
     },
-    [publishUserActionForWindow],
+    [publishUserActionForWindow, writeActivityEntry],
   );
 
   const minimizeWindow = useCallback(
@@ -1810,6 +1890,15 @@ export function WindowedLayout() {
       suspendWindowedBrowserViews();
       const windowModel = windowsRef.current.find((candidate) => candidate.id === windowId);
       if (windowModel) {
+        if (source === 'agent') {
+          writeActivityEntry({
+            type: 'state_change',
+            title: `Minimized: ${windowModel.title}`,
+            source: 'Window manager',
+            kind: 'activity',
+            metadata: { windowId: windowModel.id, windowKind: windowModel.kind, action: 'minimize', source },
+          });
+        }
         dispatchParentLifecycleForWindow(windowModel, 'minimized');
         publishUserActionForWindow('minimize', windowModel, source);
       }
@@ -1822,7 +1911,7 @@ export function WindowedLayout() {
         ),
       );
     },
-    [publishUserActionForWindow],
+    [publishUserActionForWindow, writeActivityEntry],
   );
 
   const selectTaskbarWindow = useCallback(

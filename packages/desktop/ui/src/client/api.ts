@@ -1498,6 +1498,17 @@ export const api = {
     },
   },
 
+  createActivityEntry: async (input: {
+    type: string;
+    title: string;
+    subtitle?: string;
+    source?: string;
+    kind?: string;
+    metadata?: Record<string, unknown>;
+    processed?: boolean;
+    id?: string;
+  }) => post<{ document: unknown }>('/activity/entries', input),
+
   // ── Setup readiness ─────────────────────────────────────────────
 
   setupReadiness: async () => get<SetupReadinessSnapshot>('/setup/readiness'),
