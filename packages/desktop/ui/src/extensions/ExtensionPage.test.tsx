@@ -35,7 +35,7 @@ vi.mock('./NativeExtensionSurfaceHost', () => ({
     shellPresentation,
   }: {
     surface: { extensionId: string; id: string };
-    shellPresentation?: 'stable' | 'windowed';
+    shellPresentation?: 'windowed';
   }) => {
     const [mountedSurfaceId] = useState(surface.id);
     return (

@@ -68,7 +68,7 @@ Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
 const roots: Root[] = [];
 
-function renderSettings(shellPresentation?: 'stable' | 'windowed') {
+function renderSettings(shellPresentation?: 'windowed') {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -116,7 +116,7 @@ describe('MultimediaProbeSettings', () => {
     expect(container.textContent).toContain('openai/gpt-4.1');
   });
 
-  it('preserves the stable settings row outside windowed mode', () => {
+  it('preserves the settings row outside windowed mode', () => {
     modelsMock.mockReturnValue({
       loading: false,
       error: null,

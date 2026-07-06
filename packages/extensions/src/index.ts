@@ -1132,7 +1132,7 @@ export interface ExtensionRouteResponse {
 export interface ExtensionRenderContext {
   extensionId: string;
   surfaceId: string;
-  shellPresentation?: 'stable' | 'windowed';
+  shellPresentation?: 'windowed';
   route?: string | null;
   pathname: string;
   search: string;
@@ -1140,6 +1140,12 @@ export interface ExtensionRenderContext {
   conversationId?: string | null;
   cwd?: string | null;
   instanceId?: string | null;
+}
+
+export interface ExtensionSettingsPanelContext {
+  sectionId: string;
+  extensionId: string;
+  shellPresentation?: 'windowed';
 }
 
 export interface ExtensionSurfaceProps<Params = Record<string, string>> {

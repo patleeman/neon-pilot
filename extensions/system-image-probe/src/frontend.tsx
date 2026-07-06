@@ -20,7 +20,7 @@ function formatModelLabel(model: ModelOption): string {
 export function MultimediaProbeSettings({
   settingsContext,
 }: {
-  settingsContext?: { extensionId?: string; shellPresentation?: 'stable' | 'windowed' };
+  settingsContext?: { extensionId?: string; shellPresentation?: 'windowed' };
 }) {
   const { data: modelState, loading, error } = useApi(api.models);
   const [saving, setSaving] = useState(false);

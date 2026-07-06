@@ -95,7 +95,7 @@ function renderDictationButton(input: {
   return { container, root };
 }
 
-function renderDictationSettingsPanel(input: { invoke: ReturnType<typeof vi.fn>; shellPresentation?: 'stable' | 'windowed' }) {
+function renderDictationSettingsPanel(input: { invoke: ReturnType<typeof vi.fn>; shellPresentation?: 'windowed' }) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);

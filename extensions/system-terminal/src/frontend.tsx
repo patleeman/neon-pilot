@@ -30,7 +30,7 @@ function readCssVar(element: HTMLElement, name: string): string {
   return getComputedStyle(element).getPropertyValue(name).trim();
 }
 
-function terminalThemeForSurface(element: HTMLElement, shellPresentation?: 'stable' | 'windowed') {
+function terminalThemeForSurface(element: HTMLElement, shellPresentation?: 'windowed') {
   if (shellPresentation === 'windowed') {
     return {
       background: readCssVar(element, '--wos-surface-1') || '#fbf7ea',

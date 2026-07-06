@@ -71,7 +71,7 @@ type ServerDraft = {
   url: string;
 };
 type OperationResult = { ok: boolean; message: string; toolCount?: number };
-type McpSettingsContext = { shellPresentation?: 'stable' | 'windowed' };
+type McpSettingsContext = { shellPresentation?: 'windowed' };
 
 const emptyDraft: ServerDraft = { name: '', transport: 'stdio', command: '', args: [''], cwd: '', url: '' };
 

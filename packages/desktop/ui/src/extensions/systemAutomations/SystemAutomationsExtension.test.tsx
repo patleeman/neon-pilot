@@ -89,7 +89,7 @@ function createPa(overrides: Partial<NativeExtensionClient['automations']> = {})
   } as unknown as NativeExtensionClient;
 }
 
-async function renderPage(pa = createPa(), context: { search?: string; shellPresentation?: 'stable' | 'windowed' } = {}) {
+async function renderPage(pa = createPa(), context: { search?: string; shellPresentation?: 'windowed' } = {}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);

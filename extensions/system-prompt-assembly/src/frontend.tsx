@@ -24,7 +24,7 @@ export function PromptAssemblySettingsPanel({
   settingsContext,
 }: {
   pa: ExtensionSurfaceProps['pa'];
-  settingsContext?: { sectionId?: string; shellPresentation?: 'stable' | 'windowed' };
+  settingsContext?: { sectionId?: string; shellPresentation?: 'windowed' };
 }) {
   return (
     <PromptAssemblyPage

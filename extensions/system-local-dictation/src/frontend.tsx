@@ -382,7 +382,7 @@ export function DictationSettingsPanel({
   settingsContext,
 }: {
   pa: NativeExtensionClient;
-  settingsContext?: { extensionId?: string; shellPresentation?: 'stable' | 'windowed' };
+  settingsContext?: { extensionId?: string; shellPresentation?: 'windowed' };
 }) {
   const [settings, setSettings] = useState<DictationSettings | null>(null);
   const [model, setModel] = useState('base.en');

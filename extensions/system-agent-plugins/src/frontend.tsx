@@ -82,7 +82,7 @@ type OperationState = {
 };
 
 type AgentPluginsSettingsContext = {
-  shellPresentation?: 'stable' | 'windowed';
+  shellPresentation?: 'windowed';
 };
 
 const emptyDraft: AddDraft = { sourceKind: 'git', source: '' };

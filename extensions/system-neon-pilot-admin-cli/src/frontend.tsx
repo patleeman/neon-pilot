@@ -26,7 +26,7 @@ type CliShellLinkSetupState = {
 };
 
 type SettingsPanelContext = {
-  shellPresentation?: 'stable' | 'windowed';
+  shellPresentation?: 'windowed';
 };
 
 const DEFAULT_SETTINGS: Settings = {

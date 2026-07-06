@@ -93,7 +93,7 @@ vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
   }: {
     cwd?: string | null;
     instanceId?: string | null;
-    shellPresentation?: 'stable' | 'windowed';
+    shellPresentation?: 'windowed';
     surface: { extensionId: string; id: string };
   }) => (
     <div

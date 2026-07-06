@@ -1,3 +1,4 @@
+import type { ExtensionSettingsPanelContext } from '@neon-pilot/extensions';
 import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
@@ -15,12 +16,6 @@ export interface ExtensionSettingsPanelRegistration {
   description?: string;
   order?: number;
   frontendEntry?: string;
-}
-
-interface ExtensionSettingsPanelContext {
-  sectionId: string;
-  extensionId: string;
-  shellPresentation?: 'stable' | 'windowed';
 }
 
 type ExtensionSettingsPanelComponent = ComponentType<{
@@ -51,7 +46,7 @@ export function SettingsPanelHost({
   shellPresentation = 'windowed',
 }: {
   registration: ExtensionSettingsPanelRegistration;
-  shellPresentation?: 'stable' | 'windowed';
+  shellPresentation?: 'windowed';
 }) {
   const moduleKey = `${registration.extensionId}:${registration.frontendEntry ?? ''}:${getExtensionRegistryRevision()}`;
   const pa = useMemo(() => createNativeExtensionClient(registration.extensionId), [registration.extensionId]);

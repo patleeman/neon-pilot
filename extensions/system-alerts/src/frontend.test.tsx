@@ -98,7 +98,7 @@ async function flush() {
   await Promise.resolve();
 }
 
-function renderPanel(invoke = vi.fn(), shellPresentation?: 'stable' | 'windowed') {
+function renderPanel(invoke = vi.fn(), shellPresentation?: 'windowed') {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -275,7 +275,7 @@ describe('AlertsSettingsPanel', () => {
       throw new Error('Extension "system-alerts" action "readSettings" must declare worker.enabled before it can run.');
     });
 
-    const { container } = renderPanel(invoke, 'stable');
+    const { container } = renderPanel(invoke);
     await act(async () => flush());
 
     expect(container.textContent).toContain('Alert settings are unavailable. Reload the app or restart Neon Pilot.');

@@ -52,7 +52,7 @@ vi.mock('./systemExtensionModules', () => ({
           context,
         }: {
           pa: { automations: { list: () => Promise<unknown> } };
-          context: { shellPresentation?: 'stable' | 'windowed' };
+          context: { shellPresentation?: 'windowed' };
         }) => {
           React.useEffect(() => {
             void pa.automations.list();

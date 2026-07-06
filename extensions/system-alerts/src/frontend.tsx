@@ -37,7 +37,7 @@ const SOUND_OPTIONS: Array<{ id: AlertSoundId; label: string }> = [
 
 interface AlertsSettingsPanelProps {
   pa: NativeExtensionClient;
-  settingsContext?: { extensionId?: string; shellPresentation?: 'stable' | 'windowed' };
+  settingsContext?: { extensionId?: string; shellPresentation?: 'windowed' };
 }
 
 function statusText(settings: AlertsSettings, systemNotificationsAvailable: boolean): string {

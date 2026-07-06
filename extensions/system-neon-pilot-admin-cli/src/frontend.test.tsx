@@ -192,7 +192,7 @@ describe('NeonPilotAgentSettingsPanel', () => {
     expect(screen.getByText('Loading settings.').closest('.wos-state-block')).toBeTruthy();
   });
 
-  it('keeps the stable settings row presentation outside windowed mode', () => {
+  it('keeps the settings row presentation outside windowed mode', () => {
     render(<NeonPilotAgentSettingsPanel />);
 
     expect(screen.queryByRole('table')).toBeNull();

@@ -53,7 +53,7 @@ function renderPage({
   cwd: string;
   invoke: ReturnType<typeof vi.fn>;
   callAction?: ReturnType<typeof vi.fn>;
-  shellPresentation?: 'stable' | 'windowed';
+  shellPresentation?: 'windowed';
 }) {
   return (
     <PromptAssemblyPage
