@@ -4093,7 +4093,7 @@ describe('WindowedLayout desktop state publishing', () => {
     });
   });
 
-  it('rejects desktop screenshot requests for BrowserView-backed browser windows', async () => {
+  it('captures BrowserView-backed browser windows through the desktop bridge', async () => {
     seedWindowedWindows([
       {
         id: 'route:browser',
@@ -4139,12 +4139,88 @@ describe('WindowedLayout desktop state publishing', () => {
     });
 
     await waitFor(() => {
-      expect(captureWindowedDesktopScreenshot).not.toHaveBeenCalled();
+      expect(captureWindowedDesktopScreenshot).toHaveBeenCalledWith({
+        browserSessionKey: null,
+        windowId: 'route:browser',
+      });
       expect(mocks.acknowledgeDesktopScreenshot).toHaveBeenCalledWith({
         requestId: 'desktop-screenshot-browser-test',
-        ok: false,
-        error:
-          'desktop_screenshot cannot capture BrowserView-backed browser windows yet. Use the browser screenshot tool for browser content.',
+        ok: true,
+        image: {
+          mimeType: 'image/png',
+          data: 'cG5n',
+          width: 760,
+          height: 520,
+          capturedAt: '2026-07-06T00:00:00.000Z',
+        },
+      });
+    });
+  });
+
+  it('captures attached browser child windows through the active BrowserView session', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'chat:draft:browser',
+        kind: 'browser',
+        title: 'Browser',
+        route: '/conversations/new',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        parentWindowId: 'chat:draft',
+        parentWindowTitle: 'New conversation',
+      },
+    ]);
+    const image = {
+      mimeType: 'image/png' as const,
+      data: 'cG5n',
+      width: 1280,
+      height: 720,
+      capturedAt: '2026-07-06T00:00:00.000Z',
+      windowId: 'chat:draft:browser',
+    };
+    const captureWindowedDesktopScreenshot = vi.fn().mockResolvedValue({ image });
+    window.neonPilotDesktop = {
+      captureWindowedDesktopScreenshot,
+      setWorkbenchBrowserBounds: vi.fn(() => Promise.resolve(null)),
+    } as unknown as typeof window.neonPilotDesktop;
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /^browser$/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/screenshot/events');
+    expect(source).toBeTruthy();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-screenshot-browser-child-test',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            windowId: 'chat:draft:browser',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(captureWindowedDesktopScreenshot).toHaveBeenCalledWith({
+        browserSessionKey: null,
+        windowId: 'chat:draft:browser',
+      });
+      expect(mocks.acknowledgeDesktopScreenshot).toHaveBeenCalledWith({
+        requestId: 'desktop-screenshot-browser-child-test',
+        ok: true,
+        image,
       });
     });
   });

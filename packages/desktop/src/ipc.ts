@@ -1,7 +1,7 @@
 import { clipboard, ipcMain, shell } from 'electron';
 
 import type { HostManager } from './hosts/host-manager.js';
-import { captureDesktopScreenshot, captureWindowedDesktopScreenshot } from './screenshot.js';
+import { captureDesktopScreenshot, captureWindowedBrowserScreenshot, captureWindowedDesktopScreenshot } from './screenshot.js';
 import type { DesktopWindowController } from './window.js';
 
 const CHANNEL_PREFIX = 'neon-pilot-desktop';
@@ -140,9 +140,17 @@ export function registerDesktopIpc(options: {
   });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:capture-screenshot`, async () => captureDesktopScreenshot());
-  ipcMain.handle(`${CHANNEL_PREFIX}:capture-windowed-desktop-screenshot`, async (event, input) =>
-    captureWindowedDesktopScreenshot(event.sender, input),
-  );
+  ipcMain.handle(`${CHANNEL_PREFIX}:capture-windowed-desktop-screenshot`, async (event, input) => {
+    if (input && typeof input === 'object' && 'browserSessionKey' in input) {
+      const sessionKey = typeof input.browserSessionKey === 'string' ? input.browserSessionKey : null;
+      const windowId = typeof input.windowId === 'string' ? input.windowId : undefined;
+      return captureWindowedBrowserScreenshot(
+        () => options.windowController.screenshotWorkbenchBrowserForWebContents(event.sender.id, sessionKey),
+        { windowId },
+      );
+    }
+    return captureWindowedDesktopScreenshot(event.sender, input);
+  });
 
   ipcMain.handle(`${CHANNEL_PREFIX}:go-back`, async (event) => {
     return options.windowController.goBackForWebContents(event.sender.id);

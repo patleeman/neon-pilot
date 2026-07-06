@@ -90,6 +90,7 @@ export interface NeonPilotDesktopBridge {
   captureWindowedDesktopScreenshot(input?: {
     bounds?: DesktopScreenshotBounds | null;
     windowId?: string | null;
+    browserSessionKey?: string | null;
   }): Promise<WindowedDesktopScreenshotCaptureResult>;
   goBack(): Promise<DesktopNavigationState>;
   goForward(): Promise<DesktopNavigationState>;

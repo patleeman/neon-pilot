@@ -1904,11 +1904,8 @@ export function WindowedLayout() {
       return { ok: false, error: `Window is minimized: ${request.windowId}` };
     }
     if (windowModel.kind === 'browser') {
-      return {
-        ok: false,
-        error:
-          'desktop_screenshot cannot capture BrowserView-backed browser windows yet. Use the browser screenshot tool for browser content.',
-      };
+      const result = await bridge.captureWindowedDesktopScreenshot({ browserSessionKey: null, windowId: request.windowId });
+      return { ok: true, image: result.image };
     }
 
     const desktop = desktopRef.current;

@@ -100,6 +100,7 @@ describe('registerDesktopIpc', () => {
           reloadWorkbenchBrowserForWebContents: vi.fn(),
           stopWorkbenchBrowserForWebContents: vi.fn(),
           snapshotWorkbenchBrowserForWebContents: vi.fn(),
+          screenshotWorkbenchBrowserForWebContents: vi.fn(),
           getNavigationStateForWebContents: vi.fn(),
           goBackForWebContents: vi.fn(),
           goForwardForWebContents: vi.fn(),
@@ -140,6 +141,65 @@ describe('registerDesktopIpc', () => {
     const calls = mockIpcHandle.mock.calls;
     const hasBrowserHandler = calls.some((call: unknown[]) => (call[0] as string).includes('workbench-browser'));
     expect(hasBrowserHandler).toBe(true);
+  });
+
+  it('routes BrowserView windowed desktop screenshots through the window controller', async () => {
+    mockIpcHandle.mockClear();
+    const windowController = {
+      sendShortcutToFocusedWindow: vi.fn(),
+      setWorkbenchBrowserBoundsForWebContents: vi.fn(),
+      getWorkbenchBrowserStateForWebContents: vi.fn(),
+      navigateWorkbenchBrowserForWebContents: vi.fn(),
+      goBackWorkbenchBrowserForWebContents: vi.fn(),
+      goForwardWorkbenchBrowserForWebContents: vi.fn(),
+      reloadWorkbenchBrowserForWebContents: vi.fn(),
+      stopWorkbenchBrowserForWebContents: vi.fn(),
+      snapshotWorkbenchBrowserForWebContents: vi.fn(),
+      screenshotWorkbenchBrowserForWebContents: vi.fn().mockResolvedValue({
+        mimeType: 'image/png',
+        dataBase64: Buffer.from('browser-png').toString('base64'),
+        viewport: { width: 1280, height: 720 },
+        capturedAt: '2026-07-06T00:00:00.000Z',
+      }),
+      getNavigationStateForWebContents: vi.fn(),
+      goBackForWebContents: vi.fn(),
+      goForwardForWebContents: vi.fn(),
+      handleRendererProcessGone: vi.fn(),
+      openConversationPopoutWindow: vi.fn().mockResolvedValue(undefined),
+      openMainWindow: vi.fn().mockResolvedValue(undefined),
+      openNewWindow: vi.fn().mockResolvedValue(undefined),
+      openAbsoluteUrl: vi.fn().mockResolvedValue(undefined),
+      getHostIdForWebContentsId: vi.fn().mockReturnValue('local'),
+      getMainWindowRoute: vi.fn().mockReturnValue('/'),
+      openHostAbsoluteUrl: vi.fn().mockResolvedValue(undefined),
+      snapshotWorkbenchBrowser: vi.fn(),
+    };
+    registerDesktopIpc({
+      hostManager: {
+        getActiveHostId: () => 'local',
+        getActiveHostController: () => createMockController(),
+        getHostController: () => createMockController(),
+        getHostRecord: (id: string) => ({ id: id ?? 'local', kind: 'local' }),
+        getHostBaseUrl: vi.fn().mockResolvedValue('neon-pilot://app/'),
+        openNewConversation: vi.fn().mockResolvedValue('/conversations/new'),
+        openNewConversationInHost: vi.fn(),
+      } as never,
+      windowController: windowController as never,
+    });
+
+    const handler = mockIpcHandle.mock.calls.find(([channel]) => channel === 'neon-pilot-desktop:capture-windowed-desktop-screenshot')?.[1];
+    await expect(
+      handler({ sender: { id: 42 } }, { windowId: 'chat:draft:browser', browserSessionKey: '@global:tab-chat:draft:browser' }),
+    ).resolves.toMatchObject({
+      image: {
+        mimeType: 'image/png',
+        data: Buffer.from('browser-png').toString('base64'),
+        width: 1280,
+        height: 720,
+        windowId: 'chat:draft:browser',
+      },
+    });
+    expect(windowController.screenshotWorkbenchBrowserForWebContents).toHaveBeenCalledWith(42, '@global:tab-chat:draft:browser');
   });
 
   it('delegates folder picking to the host controller for the sender window', async () => {

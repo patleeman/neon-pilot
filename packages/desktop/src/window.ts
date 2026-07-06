@@ -522,6 +522,15 @@ export class DesktopWindowController {
     return this.workbenchBrowser.snapshot(tracked.window.webContents, sessionKey);
   }
 
+  async screenshotWorkbenchBrowserForWebContents(webContentsId: number, sessionKey?: string | null): Promise<unknown> {
+    const tracked = this.trackedWindows.get(webContentsId);
+    if (!tracked || tracked.window.isDestroyed()) {
+      throw new Error('Workbench browser owner window is unavailable.');
+    }
+    const resolvedSessionKey = sessionKey ?? this.workbenchBrowser.getActiveSessionKey(webContentsId);
+    return this.workbenchBrowser.screenshot(tracked.window.webContents, resolvedSessionKey);
+  }
+
   async snapshotWorkbenchBrowserForConversation(conversationId?: string | null): Promise<unknown> {
     const owner = await this.ensureWorkbenchBrowserOwner(conversationId);
     return this.workbenchBrowser.snapshot(owner, conversationId);

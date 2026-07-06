@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { captureDesktopScreenshot, captureWindowedDesktopScreenshot } from './screenshot.js';
+import { captureDesktopScreenshot, captureWindowedBrowserScreenshot, captureWindowedDesktopScreenshot } from './screenshot.js';
 
 function createMissingFileError() {
   const error = new Error('missing file') as NodeJS.ErrnoException;
@@ -143,5 +143,43 @@ describe('captureWindowedDesktopScreenshot', () => {
     };
 
     await expect(captureWindowedDesktopScreenshot(webContents)).rejects.toThrow('Windowed OS screenshot is too large');
+  });
+});
+
+describe('captureWindowedBrowserScreenshot', () => {
+  it('normalizes a BrowserView screenshot into the Windowed OS screenshot contract', async () => {
+    const result = await captureWindowedBrowserScreenshot(
+      vi.fn().mockResolvedValue({
+        mimeType: 'image/png',
+        dataBase64: Buffer.from('browser-png').toString('base64'),
+        viewport: { width: 1279.6, height: 719.5 },
+        capturedAt: '2026-07-06T00:00:00.000Z',
+      }),
+      { windowId: 'route:browser' },
+    );
+
+    expect(result).toEqual({
+      image: {
+        mimeType: 'image/png',
+        data: Buffer.from('browser-png').toString('base64'),
+        width: 1280,
+        height: 720,
+        capturedAt: '2026-07-06T00:00:00.000Z',
+        windowId: 'route:browser',
+      },
+    });
+  });
+
+  it('rejects oversized BrowserView screenshots before base64 transfer', async () => {
+    await expect(
+      captureWindowedBrowserScreenshot(() =>
+        Promise.resolve({
+          mimeType: 'image/png',
+          dataBase64: Buffer.alloc(8 * 1024 * 1024 + 1).toString('base64'),
+          viewport: { width: 4096, height: 4096 },
+          capturedAt: '2026-07-06T00:00:00.000Z',
+        }),
+      ),
+    ).rejects.toThrow('Windowed OS screenshot is too large');
   });
 });

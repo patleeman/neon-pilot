@@ -26,6 +26,7 @@ export interface WindowedDesktopScreenshotBounds {
 export interface WindowedDesktopScreenshotInput {
   bounds?: WindowedDesktopScreenshotBounds | null;
   windowId?: string | null;
+  browserSessionKey?: string | null;
 }
 
 export interface WindowedDesktopScreenshotImage {
@@ -46,6 +47,10 @@ interface ScreenshotCommandResult {
   code: number | null;
   signal: NodeJS.Signals | null;
   stderr: string;
+}
+
+interface WindowedBrowserScreenshotInput {
+  windowId?: string | null;
 }
 
 interface CaptureDesktopScreenshotDeps {
@@ -178,6 +183,40 @@ export async function captureWindowedDesktopScreenshot(
       height: size.height,
       capturedAt: new Date().toISOString(),
       ...(bounds ? { bounds } : {}),
+      ...(input.windowId ? { windowId: input.windowId } : {}),
+    },
+  };
+}
+
+export async function captureWindowedBrowserScreenshot(
+  capture: () => Promise<unknown>,
+  input: WindowedBrowserScreenshotInput = {},
+): Promise<WindowedDesktopScreenshotCaptureResult> {
+  const rawCapture = await capture();
+  const captureResult = rawCapture && typeof rawCapture === 'object' ? (rawCapture as Record<string, unknown>) : {};
+  const viewport =
+    captureResult.viewport && typeof captureResult.viewport === 'object' ? (captureResult.viewport as Record<string, unknown>) : {};
+  const dataBase64 = typeof captureResult.dataBase64 === 'string' ? captureResult.dataBase64 : '';
+  const capturedAt = typeof captureResult.capturedAt === 'string' ? captureResult.capturedAt : new Date().toISOString();
+  const width = typeof viewport.width === 'number' && Number.isFinite(viewport.width) ? viewport.width : 1;
+  const height = typeof viewport.height === 'number' && Number.isFinite(viewport.height) ? viewport.height : 1;
+  if (captureResult.mimeType !== 'image/png' || dataBase64.length === 0) {
+    throw new Error('Workbench browser screenshot did not return a PNG payload.');
+  }
+  const png = Buffer.from(dataBase64, 'base64');
+  if (png.length > MAX_DESKTOP_SCREENSHOT_BYTES) {
+    throw new Error(
+      `Windowed OS screenshot is too large to send through the native desktop bridge (${png.length} bytes; max ${MAX_DESKTOP_SCREENSHOT_BYTES} bytes). Capture a smaller window and try again.`,
+    );
+  }
+
+  return {
+    image: {
+      mimeType: 'image/png',
+      data: dataBase64,
+      width: Math.max(1, Math.round(width)),
+      height: Math.max(1, Math.round(height)),
+      capturedAt,
       ...(input.windowId ? { windowId: input.windowId } : {}),
     },
   };

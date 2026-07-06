@@ -114,6 +114,7 @@ const desktopBridge = {
   captureWindowedDesktopScreenshot: (input?: {
     bounds?: { x: number; y: number; width: number; height: number } | null;
     windowId?: string | null;
+    browserSessionKey?: string | null;
   }) => ipcRenderer.invoke(`${CHANNEL_PREFIX}:capture-windowed-desktop-screenshot`, input),
   goBack: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-back`),
   goForward: () => ipcRenderer.invoke(`${CHANNEL_PREFIX}:go-forward`),
