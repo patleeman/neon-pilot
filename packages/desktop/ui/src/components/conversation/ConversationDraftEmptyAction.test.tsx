@@ -68,25 +68,26 @@ describe('ConversationDraftEmptyAction', () => {
     expect(DRAFT_EMPTY_STATE_CONTENT_WIDTH_CLASS).toContain('items-stretch');
   });
 
-  it('renders chat/workspace selection', () => {
+  it('renders working directory selection', () => {
     const html = renderAction();
 
-    expect(html).toContain('Chat');
-    expect(html).toContain('Saved workspace');
-    expect(html).toContain('Chat — no workspace');
-    expect(html).toContain('Choose workspace folder');
+    expect(html).toContain('Working directory');
+    expect(html).toContain('Choose working directory');
+    expect(html).not.toContain('Chat');
   });
 
-  it('summarizes selected workspace paths', () => {
+  it('summarizes selected working directory paths', () => {
     const html = renderAction({
       hasDraftCwd: true,
       draftCwdValue: '/Users/patrick/workingdir/neon-pilot',
     });
 
-    expect(html).toContain('Workspace');
+    expect(html).toContain('Working directory');
     expect(html).toContain('neon-pilot');
     expect(html).toContain('In workingdir');
     expect(html).not.toContain('/Users/patrick/workingdir');
+    expect(html).not.toContain('Chat');
+    expect(html).not.toContain('workspace');
   });
 
   it('renders cwd errors without remote controls', () => {
@@ -96,16 +97,16 @@ describe('ConversationDraftEmptyAction', () => {
     });
 
     expect(html).toContain('bad path');
-    expect(html).toContain('Saved workspace');
+    expect(html).toContain('Working directory');
   });
 
-  it('keeps the saved workspace picker bounded in narrow layouts', () => {
+  it('keeps the working directory picker bounded in narrow layouts', () => {
     const { container, unmount } = renderInteractive({
       availableDraftWorkspacePaths: ['/Users/patrick/workingdir/neon-pilot', '/tmp/neon-pilot-long-worktree'],
     });
 
     try {
-      const workspaceButton = container.querySelector<HTMLButtonElement>('button[aria-label="Saved workspace"]');
+      const workspaceButton = container.querySelector<HTMLButtonElement>('button[aria-label="Working directory"]');
       expect(workspaceButton).not.toBeNull();
 
       const pickerWrapper = workspaceButton?.closest('div');
@@ -116,7 +117,7 @@ describe('ConversationDraftEmptyAction', () => {
 
       act(() => workspaceButton?.click());
 
-      const listbox = container.querySelector<HTMLElement>('[role="listbox"][aria-label="Saved workspaces"]');
+      const listbox = container.querySelector<HTMLElement>('[role="listbox"][aria-label="Working directories"]');
       expect(listbox).not.toBeNull();
       expect(listbox?.className).toContain('overflow-y-auto');
       expect(listbox?.style.maxHeight).toBe('min(18rem, 42vh)');
@@ -125,56 +126,56 @@ describe('ConversationDraftEmptyAction', () => {
     }
   });
 
-  it('closes the saved workspace picker from the shared command event', () => {
+  it('closes the working directory picker from the shared command event', () => {
     const { container, unmount } = renderInteractive({
       availableDraftWorkspacePaths: ['/Users/patrick/workingdir/neon-pilot', '/tmp/neon-pilot-long-worktree'],
     });
 
     try {
-      const workspaceButton = container.querySelector<HTMLButtonElement>('button[aria-label="Saved workspace"]');
+      const workspaceButton = container.querySelector<HTMLButtonElement>('button[aria-label="Working directory"]');
       expect(workspaceButton).not.toBeNull();
 
       act(() => workspaceButton?.click());
-      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).not.toBeNull();
+      expect(container.querySelector('[role="listbox"][aria-label="Working directories"]')).not.toBeNull();
 
       act(() => {
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT));
       });
 
-      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
+      expect(container.querySelector('[role="listbox"][aria-label="Working directories"]')).toBeNull();
     } finally {
       unmount();
     }
   });
 
-  it('opens and toggles the saved workspace picker from shared command events', () => {
+  it('opens and toggles the working directory picker from shared command events', () => {
     const { container, unmount } = renderInteractive({
       availableDraftWorkspacePaths: ['/Users/patrick/workingdir/neon-pilot', '/tmp/neon-pilot-long-worktree'],
     });
 
     try {
-      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
+      expect(container.querySelector('[role="listbox"][aria-label="Working directories"]')).toBeNull();
 
       act(() => {
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT));
       });
-      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).not.toBeNull();
+      expect(container.querySelector('[role="listbox"][aria-label="Working directories"]')).not.toBeNull();
 
       act(() => {
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
       });
-      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
+      expect(container.querySelector('[role="listbox"][aria-label="Working directories"]')).toBeNull();
 
       act(() => {
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
       });
-      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).not.toBeNull();
+      expect(container.querySelector('[role="listbox"][aria-label="Working directories"]')).not.toBeNull();
     } finally {
       unmount();
     }
   });
 
-  it('ignores open and toggle commands when the saved workspace picker is disabled', () => {
+  it('ignores open and toggle commands when the working directory picker is disabled', () => {
     const { container, unmount } = renderInteractive({
       savedWorkspacePathsLoading: true,
       availableDraftWorkspacePaths: [],
@@ -185,7 +186,7 @@ describe('ConversationDraftEmptyAction', () => {
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT));
         window.dispatchEvent(new CustomEvent(DRAFT_WORKSPACE_PICKER_TOGGLE_COMMAND_EVENT));
       });
-      expect(container.querySelector('[role="listbox"][aria-label="Saved workspaces"]')).toBeNull();
+      expect(container.querySelector('[role="listbox"][aria-label="Working directories"]')).toBeNull();
     } finally {
       unmount();
     }

@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -34,13 +36,13 @@ const baseProps: React.ComponentProps<typeof ConversationComposerMeta> = {
 };
 
 describe('ConversationComposerMeta', () => {
-  it('renders draft workspace controls', () => {
+  it('renders draft working directory controls', () => {
     const html = renderToString(<ConversationComposerMeta {...baseProps} />);
 
-    expect(html).toContain('Workspace folder');
+    expect(html).toContain('Working directory');
     expect(html).toContain('repo');
     expect(html).not.toContain('&gt;/repo&lt;');
-    expect(html).toContain('Choose folder');
+    expect(html).toContain('Choose working directory');
     expect(html).not.toContain('Conversation options');
   });
 
@@ -48,7 +50,7 @@ describe('ConversationComposerMeta', () => {
     const html = renderToString(<ConversationComposerMeta {...baseProps} draftCwdValue="~/repo" draftCwdError="bad path" />);
 
     expect(html).toContain('bad path');
-    expect(html).toContain('Workspace folder');
+    expect(html).toContain('Working directory');
   });
 
   it('does not render raw internal draft cwd picker details when given sanitized error copy', () => {
@@ -82,19 +84,20 @@ describe('ConversationComposerMeta', () => {
     expect(html).not.toContain('Conversation options');
   });
 
-  it('renders neutral chat cwd without exposing the backing path', () => {
+  it('presents chat-workspaces cwd as normal working directory path', () => {
     const html = renderToString(
       <ConversationComposerMeta
         {...baseProps}
         draft={false}
         currentCwd="/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared"
-        currentCwdLabel="Chat"
+        currentCwdLabel="shared"
       />,
     );
 
-    expect(html).toContain('Chat - no workspace');
-    expect(html).toContain('Chat');
+    expect(html).toContain('Working directory: shared');
+    expect(html).toContain('shared');
     expect(html).not.toContain('chat-workspaces/shared');
+    expect(html).not.toContain('Chat');
   });
 
   it('renders saved conversation cwd editing as an immediate dropdown picker', () => {
@@ -115,29 +118,51 @@ describe('ConversationComposerMeta', () => {
     expect(html).toContain('other');
     expect(html).not.toContain('&gt;/repo/project&lt;');
     expect(html).not.toContain('&gt;/repo/other&lt;');
-    expect(html).toContain('Choose folder');
+    expect(html).toContain('Choose working directory');
     expect(html).toContain('Cancel working directory edit');
     expect(html).not.toContain('Switch');
     expect(html).not.toContain('>Cancel<');
     expect(html).not.toContain('type="text"');
   });
 
-  it('keeps neutral chat selected when editing a no-workspace conversation cwd', () => {
+  it('offers no-working-directory option when editing conversation cwd', () => {
     const html = renderToString(
       <ConversationComposerMeta
         {...baseProps}
         draft={false}
         conversationCwdEditorOpen
         currentCwd="/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared"
-        currentCwdLabel="Chat"
+        currentCwdLabel="shared"
         conversationCwdDraft=""
         availableConversationWorkspacePaths={['/repo/other']}
       />,
     );
 
     expect(html).toContain('Conversation working directory');
-    expect(html).toContain('<option value="" selected="">Chat</option>');
+    expect(html).toContain('<option value="" selected="">No working directory</option>');
     expect(html).toContain('other');
     expect(html).not.toContain('chat-workspaces/shared');
+    expect(html).not.toContain('Chat');
+  });
+
+  it('clears the conversation cwd when the no-working-directory option is selected', () => {
+    const onSubmitConversationCwdChange = vi.fn();
+
+    render(
+      <ConversationComposerMeta
+        {...baseProps}
+        draft={false}
+        conversationCwdEditorOpen
+        currentCwd="/repo/project"
+        currentCwdLabel="project"
+        conversationCwdDraft="/repo/project"
+        availableConversationWorkspacePaths={['/repo/project', '/repo/other']}
+        onSubmitConversationCwdChange={onSubmitConversationCwdChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Conversation working directory'), { target: { value: '' } });
+
+    expect(onSubmitConversationCwdChange).toHaveBeenCalledWith(null, null);
   });
 });

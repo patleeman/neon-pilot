@@ -6,7 +6,7 @@ import { createNativeExtensionClient } from '../../extensions/nativePaClient';
 import { StatusBarItemHost } from '../../extensions/StatusBarItemHost';
 import { type ExtensionStatusBarItemRegistration, useExtensionRegistry } from '../../extensions/useExtensionRegistry';
 import { IconButton, RowButton, Select, TextButton } from '../ui';
-import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
+import { BrowsePathButton, FolderIcon } from './ConversationComposerChrome';
 
 export type ConversationGitSummaryPresentation =
   | { kind: 'none' }
@@ -15,7 +15,6 @@ export type ConversationGitSummaryPresentation =
 
 export function ConversationComposerMeta({
   draft,
-  hasDraftCwd,
   draftCwdValue,
   draftCwdError,
   draftCwdPickBusy,
@@ -73,15 +72,14 @@ export function ConversationComposerMeta({
     gitSummary: gitSummaryPresentation,
     contextUsage: sessionTokens,
   };
-  const neutralChatCwd = currentCwdLabel === 'Chat';
   return (
     <div className="conversation-composer-meta ui-composer-meta mt-1.5 flex min-h-4 flex-row flex-wrap items-center justify-between gap-x-2 gap-y-1 overflow-visible px-3 text-[10.5px] font-mono text-dim/80 tracking-[0.02em]">
       <div className="ui-composer-meta__primary flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
         {draft ? (
           <div className="ui-composer-meta__workspace flex min-w-0 max-w-full flex-1 items-center gap-1.5 xl:max-w-[26rem] xl:flex-none">
-            {hasDraftCwd ? <FolderIcon className="shrink-0 text-dim/70" /> : <ChatBubbleIcon className="shrink-0 text-dim/70" />}
+            <FolderIcon className="shrink-0 text-dim/70" />
             <label className="sr-only" htmlFor="draft-composer-cwd">
-              Workspace folder
+              Working directory
             </label>
             <div className="relative min-w-0 flex-1 xl:max-w-[22rem]">
               <Select
@@ -97,7 +95,7 @@ export function ConversationComposerMeta({
                 }}
                 className="h-7 w-full min-w-0 truncate appearance-none border-transparent bg-transparent py-0 pl-1 pr-6 text-xs font-mono text-secondary"
               >
-                <option value="">Chat</option>
+                <option value="">No working directory</option>
                 {availableDraftWorkspacePaths.map((workspacePath) => (
                   <option key={workspacePath} value={workspacePath}>
                     {formatWorkspacePathName(workspacePath) || workspacePath}
@@ -122,8 +120,8 @@ export function ConversationComposerMeta({
             <BrowsePathButton
               busy={draftCwdPickBusy}
               onClick={onPickDraftCwd}
-              title={draftCwdPickBusy ? 'Choosing folder…' : 'Choose folder'}
-              ariaLabel="Choose folder"
+              title={draftCwdPickBusy ? 'Choosing working directory…' : 'Choose working directory'}
+              ariaLabel="Choose working directory"
             />
           </div>
         ) : conversationCwdEditorOpen ? (
@@ -146,16 +144,21 @@ export function ConversationComposerMeta({
                 value={conversationCwdDraft}
                 onChange={(event) => {
                   const nextWorkspacePath = event.target.value.trim();
-                  if (nextWorkspacePath) {
-                    onSubmitConversationCwdChange(nextWorkspacePath, nextWorkspacePath);
+                  if (!nextWorkspacePath) {
+                    onSubmitConversationCwdChange(null, null);
+                    return;
                   }
+                  onSubmitConversationCwdChange(nextWorkspacePath, nextWorkspacePath);
                 }}
                 aria-label="Conversation working directory"
                 className="h-7 w-full min-w-0 truncate py-0 pl-2 pr-6 text-[11px] font-mono text-primary"
                 disabled={conversationCwdBusy || conversationCwdPickBusy || availableConversationWorkspacePaths.length === 0}
               >
-                {neutralChatCwd ? <option value="">Chat</option> : null}
-                {availableConversationWorkspacePaths.length === 0 ? <option value="">Choose a working directory</option> : null}
+                {availableConversationWorkspacePaths.length === 0 ? (
+                  <option value="">Choose a working directory</option>
+                ) : (
+                  <option value="">No working directory</option>
+                )}
                 {availableConversationWorkspacePaths.map((workspacePath) => (
                   <option key={workspacePath} value={workspacePath}>
                     {formatWorkspacePathName(workspacePath) || workspacePath}
@@ -180,8 +183,8 @@ export function ConversationComposerMeta({
             <BrowsePathButton
               busy={conversationCwdBusy || conversationCwdPickBusy}
               onClick={onPickConversationCwd}
-              title={conversationCwdPickBusy ? 'Choosing folder…' : 'Choose folder'}
-              ariaLabel="Choose folder"
+              title={conversationCwdPickBusy ? 'Choosing working directory…' : 'Choose working directory'}
+              ariaLabel="Choose working directory"
             />
             <IconButton
               size="sm"
@@ -200,9 +203,9 @@ export function ConversationComposerMeta({
             onClick={onBeginConversationCwdEdit}
             compact
             className="max-w-full flex-1 gap-1.5 px-1.5 py-1 text-secondary xl:w-[26rem] xl:flex-none"
-            title={neutralChatCwd ? 'Chat - no workspace' : currentCwd ? `Working directory: ${currentCwdLabel}` : 'Set working directory'}
+            title={currentCwd ? `Working directory: ${currentCwdLabel}` : 'Set working directory'}
           >
-            {neutralChatCwd ? <ChatBubbleIcon className="shrink-0 text-dim/70" /> : <FolderIcon className="shrink-0 text-dim/70" />}
+            <FolderIcon className="shrink-0 text-dim/70" />
             <span className="ui-truncate-start min-w-0 flex-1 font-mono text-xs">{currentCwdLabel || 'Set working directory'}</span>
           </RowButton>
         )}

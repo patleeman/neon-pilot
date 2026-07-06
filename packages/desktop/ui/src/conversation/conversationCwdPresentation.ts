@@ -20,10 +20,6 @@ export function isNeutralChatCwdPath(currentCwd: string | null | undefined): boo
 }
 
 export function formatConversationCwdLabel(currentCwd: string | null | undefined): string {
-  if (isNeutralChatCwdPath(currentCwd)) {
-    return 'Chat';
-  }
-
   return currentCwd ? formatWorkspacePathName(currentCwd) || truncateConversationCwdFromFront(currentCwd) : '';
 }
 

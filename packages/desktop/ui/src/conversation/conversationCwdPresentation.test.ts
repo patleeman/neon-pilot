@@ -7,7 +7,7 @@ describe('conversationCwdPresentation', () => {
     expect(formatConversationCwdLabel(null)).toBe('');
     expect(formatConversationCwdLabel(undefined)).toBe('');
     expect(formatConversationCwdLabel('/Users/patrick/workingdir/personal-agent')).toBe('personal-agent');
-    expect(formatConversationCwdLabel('/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared')).toBe('Chat');
+    expect(formatConversationCwdLabel('/Users/patrick/.local/state/neon-pilot/neon-pilot-runtime/chat-workspaces/shared')).toBe('shared');
   });
 
   it('detects neutral chat workspace paths', () => {

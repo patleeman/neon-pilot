@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { formatWorkspacePathName, formatWorkspacePathParentName } from '../../conversation/conversationCwdPresentation';
 import { setExtensionCommandContext } from '../../extensions/commands';
 import { cx, MenuShell, RowButton, SectionLabel } from '../ui';
-import { BrowsePathButton, ChatBubbleIcon, FolderIcon } from './ConversationComposerChrome';
+import { BrowsePathButton, FolderIcon } from './ConversationComposerChrome';
 import {
   DRAFT_WORKSPACE_PICKER_CLOSE_COMMAND_EVENT,
   DRAFT_WORKSPACE_PICKER_OPEN_COMMAND_EVENT,
@@ -25,16 +25,16 @@ function formatWorkspaceOption(workspacePath: string): WorkspacePickerOption {
   if (!workspacePath) {
     return {
       value: '',
-      label: 'Chat — no workspace',
-      detail: 'No attached workspace',
-      title: 'Start as a chat with no attached workspace.',
+      label: 'No working directory',
+      detail: '',
+      title: 'Start without a working directory.',
     };
   }
 
-  const label = formatWorkspacePathName(workspacePath) || 'Workspace';
+  const label = formatWorkspacePathName(workspacePath) || 'Working directory';
   const parentName = formatWorkspacePathParentName(workspacePath);
-  const detail = parentName ? `In ${parentName}` : 'Workspace folder';
-  return { value: workspacePath, label, detail, title: `${label} workspace` };
+  const detail = parentName ? `In ${parentName}` : 'Working directory';
+  return { value: workspacePath, label, detail, title: `Use ${label} as the working directory.` };
 }
 
 export function ConversationDraftEmptyAction({
@@ -67,15 +67,13 @@ export function ConversationDraftEmptyAction({
     () => [
       {
         value: '',
-        label: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Loading workspaces…' : 'Chat — no workspace',
-        detail:
-          savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0
-            ? 'Fetching saved workspace paths'
-            : 'No attached workspace',
+        label:
+          savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Loading working directories…' : 'No working directory',
+        detail: savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0 ? 'Fetching saved working directories' : '',
         title:
           savedWorkspacePathsLoading && availableDraftWorkspacePaths.length === 0
-            ? 'Fetching saved workspace paths'
-            : 'Start as a chat with no attached workspace.',
+            ? 'Fetching saved working directories'
+            : 'Start without a working directory.',
       },
       ...availableDraftWorkspacePaths.map(formatWorkspaceOption),
     ],
@@ -156,18 +154,18 @@ export function ConversationDraftEmptyAction({
   return (
     <div className="mt-4 w-full space-y-3">
       <div className="flex items-center justify-start gap-2">
-        {hasDraftCwd ? <FolderIcon className="text-accent" /> : <ChatBubbleIcon className="text-accent" />}
-        <SectionLabel tone="muted">{hasDraftCwd ? 'Workspace' : 'Chat'}</SectionLabel>
+        <FolderIcon className="text-accent" />
+        <SectionLabel tone="muted">Working directory</SectionLabel>
       </div>
       <div className="flex w-full flex-nowrap items-start justify-start gap-2">
         <div ref={pickerRef} className="relative min-w-0 max-w-[32rem] flex-1 basis-72">
-          <span className="sr-only">Saved workspace</span>
+          <span className="sr-only">Working directory</span>
           <RowButton
             compact
             className={cx('min-h-11 w-full justify-start px-2.5 py-2 text-left', workspacePickerDisabled && 'cursor-default opacity-60')}
             aria-haspopup="listbox"
             aria-expanded={workspacePickerOpen}
-            aria-label="Saved workspace"
+            aria-label="Working directory"
             title={selectedWorkspace.title}
             disabled={workspacePickerDisabled}
             onClick={() => setWorkspacePickerOpen((open) => !open)}
@@ -197,7 +195,7 @@ export function ConversationDraftEmptyAction({
           {workspacePickerOpen && !workspacePickerDisabled ? (
             <MenuShell
               role="listbox"
-              aria-label="Saved workspaces"
+              aria-label="Working directories"
               className="absolute bottom-auto left-0 right-0 top-full z-50 mb-0 mt-1 overflow-y-auto p-1"
               style={{ bottom: 'auto', marginBottom: 0, maxHeight: 'min(18rem, 42vh)' }}
             >
@@ -229,8 +227,8 @@ export function ConversationDraftEmptyAction({
         <BrowsePathButton
           busy={draftCwdPickBusy}
           onClick={onPickDraftCwd}
-          title={draftCwdPickBusy ? 'Choosing workspace…' : 'Choose workspace folder'}
-          ariaLabel="Choose workspace folder"
+          title={draftCwdPickBusy ? 'Choosing working directory…' : 'Choose working directory'}
+          ariaLabel="Choose working directory"
         />
       </div>
 
