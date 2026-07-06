@@ -163,3 +163,58 @@ All paths below are under `<state-root>/pi-agent/state/` unless noted as `sync/.
 - Extension/app install writes packages to `<desktop-root>/apps` and private data to `<desktop-root>/data/apps/<app-id>`.
 - Documents store writes to `<desktop-root>/data/documents` and emits document-change events.
 - No Phase 3 code path creates new state in old `<state-root>/sync/pi-agent/sessions`, `<state-root>/extensions`, or `<state-root>/neon-pilot-runtime/chat-workspaces` except explicit migration compatibility code.
+
+## Documents Store Convention
+
+The documents store at `<desktop-root>/data/documents` is the canonical storage
+for shared, user-visible, and cross-app durable records. First-party extensions
+and app-style packages should use it according to these conventions:
+
+### Owner / collection / id
+
+Every document record is addressed by a triple `(owner, collection, id)`:
+
+| Part         | Format                       | Example                                | Convention                                                                             |
+| ------------ | ---------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------- |
+| `owner`      | kebab-case extension/app id  | `"system-todo"`, `"inbox"`, `"home"`   | Must be stable across versions; matches `extension.json` `id`                          |
+| `collection` | kebab-case semantic grouping | `"todos"`, `"inbox-items"`, `"alerts"` | Small stable set per app; matches domain noun                                          |
+| `id`         | Human-readable slug or UUID  | `"getting-started-checklist"`          | Unique within `(owner, collection)`; prefer descriptive slugs for user-visible records |
+
+### What belongs in the documents store
+
+- User-visible records that appear in Home, Inbox, Activity, or app-owned pages
+- Cross-app data that multiple extensions need to read (with explicit grants or
+  `defaultGrantRead: "all"`)
+- Durable domain objects that should survive extension reinstall
+- App-created artifacts, exports, and user-facing configs
+
+### What stays in per-extension storage
+
+- Extension-private settings (`ctx.storage`)
+- Internal relational state (`ctx.database`)
+- Large blobs, caches, temp files (`ctx.filesystem.app()` / `.cache()` / `.temp()`)
+- Derived indexes rebuildable from documents store records
+
+### Extension API boundary
+
+Extensions must access the documents store through the public SDK seam
+`@neon-pilot/extensions/backend/documents-store` or the `ctx.documents`
+backend context property. Do not:
+
+- Import `packages/desktop/server/` internals
+- Construct filesystem paths under `<desktop-root>/data/documents/`
+- Bypass permission checks with host-level identity
+
+See [`docs/extensions.md`](extensions.md) for the full API reference, permissions,
+and examples.
+
+### Permissions
+
+| Permission            | Effect                               |
+| --------------------- | ------------------------------------ |
+| `documents:read`      | Read documents where grants allow    |
+| `documents:write`     | Write documents in owned collections |
+| `documents:readwrite` | Combined read + write                |
+
+Declare the needed permission in `extension.json`. An extension always has
+full access to its own collections.

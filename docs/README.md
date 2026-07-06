@@ -68,6 +68,7 @@ The public website docs are built by scanning [`docs/public`](public). Put human
 - [Build an extension with your agent](public/20-extensions/00-build-an-extension.md) — agent-first guide for asking Neon Pilot to create, build, reload, validate, and test native extensions
 - [Extension authoring](public/20-extensions/20-extensions.md) — native extension manifests, frontend/backend entries, tools, skills, agent hooks, event bus, notifications, stable SDK imports, and integration testing
 - [Extension API types](../packages/extensions/README.md) — SDK package with exported types for frontend and backend code
+- [Extension data conventions](extensions.md) — documents-store convention for shared, user-visible, and cross-app durable app data
 - [Extension templates](extension-templates/README.md) — copy-paste stubs for data-dashboard, crud-page, and settings-section patterns
 - [Design system](design-system.md) — shared UI package, Storybook, and extension-friendly component guidance
 - [Neon Pilot taste](design/neon-pilot-taste.md) — mandatory UI taste and control-selection guidance for app and extension work

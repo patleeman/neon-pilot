@@ -1034,6 +1034,68 @@ await cache.writeJson('remote-index.json', index);
 
 `ctx.filesystem.app()` is durable extension-owned file storage, `ctx.filesystem.cache()` is disposable extension-owned cache storage, `ctx.filesystem.temp()` creates a temporary workspace, and `ctx.filesystem.workspace()` requests permissioned workspace access.
 
+### Documents
+
+For **shared, user-visible, or cross-app** durable records, use the host-owned
+documents store instead of per-extension storage:
+
+```ts
+// Backend action handler: write a document
+const task = await ctx.documents.putDocument({
+  owner: ctx.extensionId,
+  collection: 'tasks',
+  id: 'task-onboarding-001',
+  body: { title: 'Onboarding task', status: 'open' },
+});
+
+// Backend action handler: list documents
+const { records, total } = await ctx.documents.listDocuments({
+  owner: ctx.extensionId,
+  collection: 'tasks',
+  limit: 20,
+});
+```
+
+Key differences from per-extension storage:
+
+| Per-extension (`ctx.storage`, `ctx.database`, `ctx.filesystem.app()`)          | Documents store (`ctx.documents`)                                           |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Private to one extension                                                       | Owned collections visible by grant                                          |
+| No cross-app access built in                                                   | Other extensions can read with `defaultGrantRead: "all"` or explicit grants |
+| No change events                                                               | Mutations publish host events (`documents` topic)                           |
+| Survives extension reinstall (files/db) but not designed for cross-app queries | Designed for app-level queries, Home/Inbox/Activity integration             |
+
+**When to use the documents store:**
+
+- User-visible records that should appear in Home, Inbox, Activity, or an app page
+- Domain objects meaningful outside the owning extension
+- Data that another first-party app or agent tool needs to read
+- Artifacts, exports, and durable configs the user owns
+
+**When to keep per-extension storage:**
+
+- Extension-private settings and preferences (`ctx.storage`)
+- Internal relational state, queues, indexes (`ctx.database`)
+- Large blobs, cached derivations, temp workspaces (`ctx.filesystem.*`)
+
+Documents are addressed by the triple `(owner, collection, id)`. Use stable
+kebab-case owner (the extension `id`) and collection names. Prefer descriptive
+slugs for user-facing document ids.
+
+Declare the required permission in `extension.json`:
+
+```json
+{
+  "permissions": ["documents:readwrite"]
+}
+```
+
+Available grants: `documents:read`, `documents:write`, `documents:readwrite`.
+An extension always has full access to its own collections.
+
+See [`docs/extensions.md`](../../docs/extensions.md) for complete convention
+guidance, owner/collection/id rules, and cross-app access patterns.
+
 ## Trust and permissions
 
 V1 native extensions are trusted local code. They are not sandboxed.
