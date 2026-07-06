@@ -20,6 +20,8 @@ export interface ExecutionCapabilities {
   hasResult: boolean;
 }
 
+export type ExecutionWorkerRole = 'worker';
+
 export interface ExecutionRecord {
   id: string;
   kind: ExecutionKind;
@@ -36,6 +38,10 @@ export interface ExecutionRecord {
   prompt?: string;
   model?: string;
   taskId?: string;
+  /** Non-persona worker role. Present for programmatic/background/automation runs. */
+  workerRole?: ExecutionWorkerRole;
+  /** Stable human-readable name for worker executions. */
+  workerName?: string;
   createdAt?: string;
   startedAt?: string;
   updatedAt?: string;
@@ -93,6 +99,22 @@ function shouldListExecution(run: ScannedDurableRun): boolean {
   }
 
   return hasPendingOperation(run);
+}
+
+function readMetadata(run: ScannedDurableRun): Record<string, unknown> | undefined {
+  const spec = readRecord(run.manifest?.spec);
+  return readRecord(spec?.metadata) ?? readRecord(spec?.manifestMetadata);
+}
+
+function readWorkerRole(run: ScannedDurableRun): ExecutionWorkerRole | undefined {
+  if (run.manifest?.kind !== 'background-run') return undefined;
+  const metadata = readMetadata(run);
+  return readString(metadata?.agentRole) === 'worker' ? 'worker' : undefined;
+}
+
+function readWorkerName(run: ScannedDurableRun): string | undefined {
+  if (run.manifest?.kind !== 'background-run') return undefined;
+  return readString(readMetadata(run)?.workerName);
 }
 
 function readShellCommand(spec: Record<string, unknown> | undefined): string | undefined {
@@ -173,15 +195,19 @@ export function projectExecution(run: ScannedDurableRun): ExecutionRecord {
   const prompt = readString(spec?.prompt) ?? readString(agent?.prompt);
   const model = readString(spec?.model) ?? readString(agent?.model);
   const taskId = readString(spec?.taskId) ?? readString(spec?.taskSlug) ?? readString(run.manifest?.source?.id);
+  const workerRole = readWorkerRole(run);
+  const workerName = readWorkerName(run);
   const hasResult = Boolean(run.result && Object.keys(run.result).length > 0);
   const hasLog = Boolean(run.paths.outputLogPath);
+  // Worker executions surface their generated worker name as the title.
+  const title = workerRole === 'worker' && workerName ? workerName : inferTitle(run, kind);
   return {
     id: run.runId,
     kind,
     visibility: inferVisibility(kind),
     ...(inferConversationId(run) ? { conversationId: inferConversationId(run) } : {}),
     ...(inferSessionFile(run) ? { sessionFile: inferSessionFile(run) } : {}),
-    title: inferTitle(run, kind),
+    title,
     ...(command && kind !== 'background-command' ? { subtitle: command } : {}),
     status,
     ...(cwd ? { cwd } : {}),
@@ -189,6 +215,8 @@ export function projectExecution(run: ScannedDurableRun): ExecutionRecord {
     ...(prompt ? { prompt } : {}),
     ...(model ? { model } : {}),
     ...(taskId ? { taskId } : {}),
+    ...(workerRole ? { workerRole } : {}),
+    ...(workerName ? { workerName } : {}),
     ...(run.manifest?.createdAt ? { createdAt: run.manifest.createdAt } : {}),
     ...(run.status?.startedAt ? { startedAt: run.status.startedAt } : {}),
     ...(run.status?.updatedAt ? { updatedAt: run.status.updatedAt } : {}),

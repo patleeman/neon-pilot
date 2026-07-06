@@ -165,6 +165,85 @@ describe('Execution projection', () => {
     });
   });
 
+  it('projects durable worker identity metadata onto executions', () => {
+    const workerRun = run({
+      runId: 'run-worker',
+      manifest: {
+        version: 1,
+        id: 'run-worker',
+        kind: 'background-run',
+        resumePolicy: 'manual',
+        createdAt: '2026-05-15T00:00:00.000Z',
+        spec: {
+          agent: { prompt: 'Review the current diff', model: 'gpt-5.5' },
+          cwd: '/repo',
+          metadata: {
+            taskSlug: 'code-review',
+            agentRole: 'worker',
+            workerName: 'Focused Analyst 1a2b',
+            callbackConversation: { conversationId: 'conversation-1', sessionFile: '/sessions/conversation-1.jsonl' },
+          },
+        },
+        source: { type: 'tool', id: 'conversation-1' },
+      },
+    });
+
+    expect(projectExecution(workerRun)).toMatchObject({
+      id: 'run-worker',
+      kind: 'subagent',
+      workerRole: 'worker',
+      workerName: 'Focused Analyst 1a2b',
+      title: 'Focused Analyst 1a2b',
+      conversationId: 'conversation-1',
+      prompt: 'Review the current diff',
+      model: 'gpt-5.5',
+    });
+  });
+
+  it('leaves worker fields absent when a run has no worker metadata', () => {
+    const plainRun = run({
+      manifest: {
+        version: 1,
+        id: 'run-plain',
+        kind: 'background-run',
+        resumePolicy: 'manual',
+        createdAt: '2026-05-15T00:00:00.000Z',
+        spec: { agent: { prompt: 'Review the current diff' }, cwd: '/repo' },
+        source: { type: 'tool', id: 'conversation-1' },
+      },
+    });
+    const projected = projectExecution(plainRun);
+    expect(projected).not.toHaveProperty('workerRole');
+    expect(projected).not.toHaveProperty('workerName');
+    expect(projected.title).not.toBe('');
+  });
+
+  it('does not allow non-background run metadata to spoof worker identity', () => {
+    const conversationRun = run({
+      runId: 'run-conversation',
+      manifest: {
+        version: 1,
+        id: 'run-conversation',
+        kind: 'conversation',
+        resumePolicy: 'manual',
+        createdAt: '2026-05-15T00:00:00.000Z',
+        spec: {
+          metadata: {
+            agentRole: 'worker',
+            workerName: 'Focused Analyst 1a2b',
+          },
+        },
+        source: { type: 'web-live-session', id: 'conversation-live-conversation-1' },
+      },
+    });
+
+    const projected = projectExecution(conversationRun);
+    expect(projected.kind).toBe('conversation');
+    expect(projected).not.toHaveProperty('workerRole');
+    expect(projected).not.toHaveProperty('workerName');
+    expect(projected.title).not.toBe('Focused Analyst 1a2b');
+  });
+
   it('allows subagent follow-up only after terminal completion', () => {
     const backgroundRun = run({
       manifest: {

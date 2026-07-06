@@ -10,6 +10,7 @@ import {
   createBackgroundRunId,
   createBackgroundRunRecord,
   finalizeBackgroundRun,
+  generateWorkerName,
   markBackgroundRunCancelling,
   markBackgroundRunInterrupted,
   markBackgroundRunStarted,
@@ -430,6 +431,60 @@ describe('background runs', () => {
         success: false,
       }),
     );
+  });
+
+  it('stamps background-run manifests with durable worker identity metadata', async () => {
+    const runsRoot = createTempDir('pa-background-run-worker-identity-');
+    const record = await createBackgroundRunRecord(runsRoot, {
+      taskSlug: 'worker-identity',
+      cwd: '/tmp/workspace',
+      shellCommand: 'echo hello',
+      createdAt: '2026-03-19T20:00:00.000Z',
+    });
+
+    const manifest = loadDurableRunManifest(record.paths.manifestPath);
+    const metadata = manifest?.spec.metadata as Record<string, unknown> | undefined;
+    expect(metadata?.agentRole).toBe('worker');
+    expect(typeof metadata?.workerName).toBe('string');
+    expect((metadata?.workerName as string).length).toBeGreaterThan(0);
+
+    // Same intent yields the same stable worker name (no global counter).
+    const twin = await createBackgroundRunRecord(runsRoot, {
+      taskSlug: 'worker-identity',
+      cwd: '/tmp/workspace',
+      shellCommand: 'echo hello',
+      createdAt: '2026-03-19T20:00:00.000Z',
+    });
+    const twinManifest = loadDurableRunManifest(twin.paths.manifestPath);
+    const twinMetadata = twinManifest?.spec.metadata as Record<string, unknown> | undefined;
+    expect(twinMetadata?.workerName).toBe(metadata?.workerName);
+
+    // Distinct intents yield distinct worker names.
+    const other = await createBackgroundRunRecord(runsRoot, {
+      taskSlug: 'different-task',
+      cwd: '/tmp/workspace',
+      shellCommand: 'echo goodbye',
+      createdAt: '2026-03-19T20:00:00.000Z',
+    });
+    const otherMetadata = loadDurableRunManifest(other.paths.manifestPath)?.spec.metadata as Record<string, unknown> | undefined;
+    expect(otherMetadata?.workerName).not.toBe(metadata?.workerName);
+
+    // generateWorkerName is deterministic over its seed.
+    expect(generateWorkerName('worker-identity|echo hello')).toBe(metadata?.workerName);
+  });
+
+  it('honors caller-provided workerName overrides in manifest metadata', async () => {
+    const runsRoot = createTempDir('pa-background-run-worker-override-');
+    const record = await createBackgroundRunRecord(runsRoot, {
+      taskSlug: 'named-worker',
+      cwd: '/tmp/workspace',
+      shellCommand: 'echo hello',
+      manifestMetadata: { agentRole: 'persona', workerName: 'Custom Worker' },
+      createdAt: '2026-03-19T20:00:00.000Z',
+    });
+    const metadata = loadDurableRunManifest(record.paths.manifestPath)?.spec.metadata as Record<string, unknown> | undefined;
+    expect(metadata?.agentRole).toBe('worker');
+    expect(metadata?.workerName).toBe('Custom Worker');
   });
 
   it('marks active runs cancelled before the child process exits', async () => {

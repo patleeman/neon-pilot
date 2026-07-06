@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 
@@ -86,6 +88,121 @@ function sanitizeIdSegment(value: string, fallback: string): string {
 
 function toTimestampKey(value: string): string {
   return value.replace(/[:.]/g, '-');
+}
+
+/**
+ * Stable adjective/noun pools used to generate human-readable worker names.
+ *
+ * Names are picked deterministically from a seed (task slug + command/prompt)
+ * so the same background-run intent yields the same worker name across
+ * re-runs and recovery, without relying on a global counter.
+ */
+const WORKER_ADJECTIVES = [
+  'Focused',
+  'Steady',
+  'Keen',
+  'Brisk',
+  'Careful',
+  'Nimble',
+  'Sturdy',
+  'Lucid',
+  'Crisp',
+  'Direct',
+  'Adept',
+  'Calm',
+  'Swift',
+  'Solid',
+  'Sharp',
+  'Bright',
+  'Patient',
+  'Ready',
+  'Exact',
+  'Clear',
+  'Bold',
+  'Clean',
+  'Rapid',
+  'Measured',
+  'Cogent',
+  'Tidy',
+  'Stoic',
+  'Fleet',
+  'Orderly',
+  'Polished',
+  'Practical',
+  'Warm',
+];
+
+const WORKER_NOUNS = [
+  'Analyst',
+  'Builder',
+  'Reviewer',
+  'Runner',
+  'Operator',
+  'Planner',
+  'Inspector',
+  'Maintainer',
+  'Coordinator',
+  'Checker',
+  'Researcher',
+  'Writer',
+  'Mapper',
+  'Assembler',
+  'Tester',
+  'Dispatcher',
+  'Auditor',
+  'Compiler',
+  'Watcher',
+  'Guide',
+  'Verifier',
+  'Scout',
+  'Recorder',
+  'Designer',
+  'Formatter',
+  'Indexer',
+  'Synthesizer',
+  'Navigator',
+  'Editor',
+  'Monitor',
+  'Fixer',
+  'Reporter',
+];
+
+function capitalizeWord(value: string): string {
+  return value.length === 0 ? value : value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/**
+ * Generate a stable, human-readable worker name from a deterministic seed.
+ *
+ * The seed combines the task slug and the underlying command or prompt so
+ * distinct intents produce distinct names, while the same intent re-runs
+ * yield the same name. No global counter is used.
+ */
+export function generateWorkerName(seed: string): string {
+  const hash = createHash('sha1').update(seed, 'utf8').digest('hex');
+  const digest = Buffer.from(hash, 'hex');
+  const adjective = WORKER_ADJECTIVES[digest.readUInt16BE(0) % WORKER_ADJECTIVES.length];
+  const noun = WORKER_NOUNS[digest.readUInt16BE(2) % WORKER_NOUNS.length];
+  return `${capitalizeWord(adjective)} ${capitalizeWord(noun)} ${hash.slice(0, 4)}`;
+}
+
+/**
+ * Build the deterministic seed for a background run's worker name.
+ */
+function buildWorkerNameSeed(input: StartBackgroundRunInput): string {
+  const command = input.agent?.prompt ?? input.shellCommand ?? (input.argv ? input.argv.join(' ') : '');
+  return [input.taskSlug, command].join('|');
+}
+
+/**
+ * Resolve the worker name for a background run, honoring caller overrides.
+ */
+function resolveWorkerName(input: StartBackgroundRunInput): string {
+  const override = input.manifestMetadata?.workerName;
+  if (typeof override === 'string' && override.trim().length > 0) {
+    return override.trim();
+  }
+  return generateWorkerName(buildWorkerNameSeed(input));
 }
 
 function normalizeArgv(argv: string[] | undefined): string[] | undefined {
@@ -258,6 +375,11 @@ function buildScheduleRunInputFromBackgroundRun(
       ...(input.manifestMetadata ?? {}),
       ...(input.checkpointPayload ?? {}),
       ...(input.callbackConversation ? { callbackConversation: input.callbackConversation } : {}),
+      // Background/automation runs execute as a distinct worker identity, not
+      // the user's persona. Stamp these last so caller metadata cannot
+      // accidentally downgrade the role.
+      agentRole: 'worker',
+      workerName: resolveWorkerName(input),
     },
   };
 }

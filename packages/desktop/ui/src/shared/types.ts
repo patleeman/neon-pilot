@@ -463,6 +463,7 @@ export interface DurableRunDetailResult {
 
 export type ExecutionKind = 'background-command' | 'subagent' | 'scheduled-task' | 'deferred-resume' | 'conversation' | 'unknown';
 export type ExecutionVisibility = 'primary' | 'system' | 'hidden';
+export type ExecutionWorkerRole = 'worker';
 
 export interface ExecutionRecord {
   id: string;
@@ -480,6 +481,10 @@ export interface ExecutionRecord {
   prompt?: string;
   model?: string;
   taskId?: string;
+  /** Non-persona worker role. Present for programmatic/background/automation runs. */
+  workerRole?: ExecutionWorkerRole;
+  /** Stable human-readable name for worker executions. */
+  workerName?: string;
   createdAt?: string;
   startedAt?: string;
   updatedAt?: string;

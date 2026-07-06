@@ -27,6 +27,8 @@ function execution(overrides: Partial<ExecutionRecord> & Pick<ExecutionRecord, '
     status: overrides.status ?? 'running',
     createdAt: overrides.createdAt ?? '2026-05-12T10:01:00.000Z',
     updatedAt: overrides.updatedAt,
+    workerRole: overrides.workerRole,
+    workerName: overrides.workerName,
     capabilities: overrides.capabilities ?? { canCancel: true, canRerun: false, canFollowUp: false, hasLog: true, hasResult: false },
   };
 }
@@ -152,6 +154,44 @@ describe('buildActivityTreeItems', () => {
     expect(items.find((item) => item.id === buildConversationActivityId('rewind-conv'))?.title).toBe('Earlier path');
     expect(items.find((item) => item.id === buildConversationActivityId('duplicate-conv'))?.title).toBe('Copy path');
     expect(items.find((item) => item.id === buildConversationActivityId('side-conv'))?.title).toBe('Side quest');
+  });
+
+  it('uses the worker name as the title for worker executions with a friendly subtitle', () => {
+    const items = buildActivityTreeItems({
+      conversations: [session({ id: 'conv-1', title: 'Build the thing' })],
+      executions: [
+        execution({
+          id: 'run-1',
+          kind: 'subagent',
+          conversationId: 'conv-1',
+          workerRole: 'worker',
+          workerName: 'Focused Analyst 1a2b',
+          title: 'code-review',
+          status: 'running',
+        }),
+      ],
+    });
+
+    expect(items.find((item) => item.id === buildExecutionActivityId('run-1'))).toEqual(
+      expect.objectContaining({
+        title: 'Focused Analyst 1a2b',
+        subtitle: 'Background worker',
+        status: 'running',
+      }),
+    );
+  });
+
+  it('uses a human-friendly subtitle instead of the raw execution kind enum', () => {
+    const items = buildActivityTreeItems({
+      conversations: [session({ id: 'conv-1', title: 'Build the thing' })],
+      executions: [
+        execution({ id: 'run-bg', kind: 'background-command', conversationId: 'conv-1', title: 'pnpm test', status: 'running' }),
+        execution({ id: 'run-sub', kind: 'subagent', conversationId: 'conv-1', title: 'Subagent smoke', status: 'running' }),
+      ],
+    });
+
+    expect(items.find((item) => item.id === buildExecutionActivityId('run-bg'))?.subtitle).toBe('Background command');
+    expect(items.find((item) => item.id === buildExecutionActivityId('run-sub'))?.subtitle).toBe('Subagent');
   });
 
   it('skips hidden and unlinked executions', () => {

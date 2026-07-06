@@ -4,6 +4,28 @@ import type { ExecutionRecord, SessionMeta } from '../shared/types';
 type ActivityTreeItemKind = 'conversation' | 'execution' | 'run' | 'terminal' | 'artifact' | 'checkpoint' | 'group';
 type ActivityTreeItemStatus = 'idle' | 'running' | 'queued' | 'failed' | 'done';
 
+/**
+ * Human-friendly subtitle for an execution, avoiding raw internal enum kinds.
+ * Worker executions are labeled as background workers rather than "subagent".
+ */
+function formatExecutionSubtitle(execution: ExecutionRecord): string | undefined {
+  if (execution.workerRole === 'worker') return 'Background worker';
+  switch (execution.kind) {
+    case 'background-command':
+      return 'Background command';
+    case 'subagent':
+      return 'Subagent';
+    case 'scheduled-task':
+      return 'Scheduled task';
+    case 'deferred-resume':
+      return 'Deferred resume';
+    case 'conversation':
+      return 'Conversation';
+    default:
+      return undefined;
+  }
+}
+
 function executionIsActive(status: string | undefined): boolean {
   // Match server-side terminalStatus(): only completed/failed/cancelled/interrupted are terminal
   return !(status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'interrupted');
@@ -94,12 +116,14 @@ export function buildActivityTreeItems({ conversations, executions = [] }: Build
     const sourceConversationId = execution.kind === 'subagent' ? conversationIdBySourceRunId.get(execution.id) : undefined;
     const routeConversationId = sourceConversationId ?? parentConversationId;
 
+    const isWorker = execution.workerRole === 'worker';
+    const workerTitle = isWorker && execution.workerName ? execution.workerName : undefined;
     items.push({
       id: buildExecutionActivityId(execution.id),
       kind: 'execution',
       parentId: buildConversationActivityId(parentConversationId),
-      title: execution.title || execution.id,
-      subtitle: execution.kind,
+      title: workerTitle ?? execution.title ?? execution.id,
+      subtitle: formatExecutionSubtitle(execution),
       status: normalizeRunStatus(execution.status),
       route: sourceConversationId
         ? `/conversations/${encodeURIComponent(sourceConversationId)}`
