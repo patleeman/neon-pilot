@@ -1,5 +1,5 @@
 import type { SessionEntry } from '@earendil-works/pi-coding-agent';
-import { getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 import { writeConversationActivityEntry } from '../conversations/conversationActivityProducers.js';
 import { reserveConversationSession } from '../conversations/conversationReservation.js';
@@ -52,9 +52,9 @@ import { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceO
 const reservedConversationFiles = new Map<string, string>();
 const speculativeWorkspaces = new Map<string, SpeculativeWorkspace>();
 
-function writeCreatedConversationActivity(conversationId: string, title: string): void {
+function writeCreatedConversationActivity(conversationId: string, title: string, desktopRootLayout: DesktopRootLayout): void {
   try {
-    const store = getDocumentsStore(getStateRoot(), resolveDesktopRootLayout());
+    const store = getDocumentsStore(getStateRoot(), desktopRootLayout);
     writeConversationActivityEntry(store, conversationId, 'created', title);
   } catch {
     // Activity should never block conversation creation.
@@ -671,7 +671,9 @@ export function createExtensionConversationsCapability(
       input?: ExtensionConversationCreateOptions & { title?: string; initialPrompt?: string },
     ): Promise<{ id: string; conversationId: string }> {
       assertConversationPermission('write', 'conversations.create');
-      const cwd = input?.cwd?.trim() || buildLiveSessionCapabilityContext().getDefaultWebCwd();
+      const liveSessionContext = buildLiveSessionCapabilityContext();
+      const cwd = input?.cwd?.trim() || liveSessionContext.getDefaultWebCwd();
+      const desktopRootLayout = liveSessionContext.getDesktopRootLayout();
       if (input?.live === false) {
         if (input.prompt?.trim() || input.initialPrompt?.trim()) {
           throw new Error('Non-live conversation creation does not support initial prompts.');
@@ -682,7 +684,7 @@ export function createExtensionConversationsCapability(
         if (input.title?.trim()) {
           renameStoredConversation(reserved.id, input.title.trim());
         }
-        writeCreatedConversationActivity(reserved.id, input.title?.trim() || reserved.id);
+        writeCreatedConversationActivity(reserved.id, input.title?.trim() || reserved.id, desktopRootLayout);
         await addCreatedConversationToWorkspace(reserved.id);
         invalidateAppTopics('sessions');
         publishAppEvent({ type: 'open_session', sessionId: reserved.id });
@@ -709,7 +711,7 @@ export function createExtensionConversationsCapability(
           }
         }
       }
-      writeCreatedConversationActivity(created.id, input?.title?.trim() || created.id);
+      writeCreatedConversationActivity(created.id, input?.title?.trim() || created.id, desktopRootLayout);
       if (initialPrompt) {
         const entry = liveSessionRegistry.get(created.id);
         if (entry) await entry.session.prompt(initialPrompt);

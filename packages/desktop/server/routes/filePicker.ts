@@ -1,11 +1,12 @@
-import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import type { Express } from 'express';
 
 import { logError } from '../shared/logging.js';
 import { pickFilesCapability } from '../workspace/workspaceDesktopCapability.js';
 import type { ServerRouteContext } from './context.js';
 
-let _getDefaultWebCwd: () => string = () => resolveDesktopRootLayout().root;
+let _getDefaultWebCwd: () => string = () => {
+  throw new Error('registerFilePickerRoutes must be called before the file picker handler');
+};
 let _resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => string | undefined = () => undefined;
 
 function initializeFilePickerRoutesContext(context: Pick<ServerRouteContext, 'getDefaultWebCwd' | 'resolveRequestedCwd'>): void {
