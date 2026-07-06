@@ -87,4 +87,16 @@ describe('localApiDesktopScreenshot', () => {
       status: 'timeout',
     });
   });
+
+  it('rejects acknowledgements for requests that already timed out', async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeDesktopScreenshotRequests(listener);
+    const pending = issueDesktopScreenshotRequest({ windowId: 'chat:draft', timeoutMs: 100 });
+    const requestId = listener.mock.calls[0]?.[0]?.id as string;
+
+    await expect(pending).resolves.toMatchObject({ ok: false, requestId, status: 'timeout' });
+    expect(() => acknowledgeDesktopScreenshotRequest({ requestId, ok: true, image })).toThrow(/no longer pending/);
+
+    unsubscribe();
+  });
 });

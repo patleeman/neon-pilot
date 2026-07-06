@@ -78,4 +78,16 @@ describe('localApiDesktopControl', () => {
       status: 'timeout',
     });
   });
+
+  it('rejects acknowledgements for commands that already timed out', async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeDesktopControlCommands(listener);
+    const pending = issueDesktopControlCommand({ action: 'focus', windowId: 'chat:draft', timeoutMs: 100 });
+    const commandId = listener.mock.calls[0]?.[0]?.id as string;
+
+    await expect(pending).resolves.toMatchObject({ ok: false, commandId, status: 'timeout' });
+    expect(() => acknowledgeDesktopControlCommand({ commandId, ok: true })).toThrow(/no longer pending/);
+
+    unsubscribe();
+  });
 });
