@@ -902,6 +902,12 @@ function CollectionGrantsSection({
         ) : null}
       </div>
 
+      {error && grants.length > 0 ? (
+        <div className="rounded-sm border border-danger/30 bg-bg-subtle p-2">
+          <span className="text-[11px] text-danger">{error}</span>
+        </div>
+      ) : null}
+
       {showNewGrant ? (
         <div className="rounded-sm border border-border-subtle bg-bg-subtle p-3">
           <div className="mb-2 flex items-center justify-between">

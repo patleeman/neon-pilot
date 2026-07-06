@@ -775,6 +775,37 @@ describe('DocumentsPage', () => {
     expect(screen.getByText('Grants unavailable')).toBeTruthy();
   });
 
+  it('shows grant error banner outside the data table when grants exist', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({
+          loading: false,
+          error: 'Toggle failed - server error',
+          data: {
+            grants: [makeGrant({ granteeAppId: 'my-app', canRead: true, canWrite: false })],
+          },
+        });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    // The error banner should render above the table, not replace it
+    expect(screen.getByText('Toggle failed - server error')).toBeTruthy();
+    // Grants should still be visible
+    expect(screen.getByText('my-app')).toBeTruthy();
+  });
+
   it('can open add grant form and validates empty grant app ID', () => {
     const collectionsResult: CollectionListResult = {
       collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
