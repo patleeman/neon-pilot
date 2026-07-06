@@ -881,7 +881,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
         updated: doc.updated,
       })),
     listSkillsForRuntimeScope: () =>
-      listSkillsForProfile(runtimeState.getRuntimeScope()).map((skill) => ({
+      listSkillsForProfile(runtimeState.getRuntimeScope(), { repoRoot, desktopRootLayout }).map((skill) => ({
         name: skill.name,
         source: skill.source,
         description: skill.description,

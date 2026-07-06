@@ -10,6 +10,7 @@ import { join, normalize } from 'node:path';
 
 import {
   createUnifiedNode,
+  type DesktopRootLayout,
   getDurableAgentFilePath,
   getDurableNotesDir,
   getDurableSkillsDir,
@@ -17,8 +18,8 @@ import {
   listUnifiedSkillNodeDirs,
   loadMemoryPackageReferences,
   loadUnifiedNodes,
+  resolveRuntimeResources,
 } from '@neon-pilot/core';
-import { resolveRuntimeResources } from '@neon-pilot/core';
 import { parseDocument, stringify as stringifyYaml } from 'yaml';
 
 import { listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
@@ -216,9 +217,17 @@ export interface CreatedSkillDoc {
   force?: boolean;
 }
 
-export function listSkillsForProfile(profile: string): SkillItem[] {
+export interface ListSkillsForProfileOptions {
+  /** Repo root for runtime resource resolution. Defaults to process.cwd(). */
+  repoRoot?: string;
+  /** Pre-resolved desktop root layout for path resolution. */
+  desktopRootLayout?: DesktopRootLayout;
+}
+
+export function listSkillsForProfile(profile: string, options?: ListSkillsForProfileOptions): SkillItem[] {
   const resolved = resolveRuntimeResources(profile, {
-    repoRoot: process.cwd(),
+    repoRoot: options?.repoRoot ?? process.cwd(),
+    ...(options?.desktopRootLayout ? { desktopRootLayout: options.desktopRootLayout } : {}),
   });
 
   const seenPaths = new Set<string>();
