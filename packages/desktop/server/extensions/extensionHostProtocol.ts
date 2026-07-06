@@ -1,3 +1,5 @@
+import type { DesktopRootLayout } from '@neon-pilot/core';
+
 import type { ExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
 import type { ExtensionHostToolContextSnapshot } from './extensionHostToolContext.js';
 
@@ -11,6 +13,7 @@ export interface ExtensionHostBackendServerContext {
   materializeWebRuntimeConfig?: (profile: string) => unknown;
   getAuthFile?: () => string;
   getStateRoot?: () => string;
+  getDesktopRootLayout?: () => DesktopRootLayout;
 }
 
 export interface ExtensionHostToolContext {

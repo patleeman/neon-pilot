@@ -1,5 +1,7 @@
 import { dirname } from 'node:path';
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
+
 import { createRuntimeState, type RuntimeState } from '../app/runtimeState.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import type { ExtensionHostBackendServerContext } from './extensionHostProtocol.js';
@@ -11,6 +13,7 @@ export interface ExtensionHostServerContextSnapshot {
   settingsFile?: string;
   authFile?: string;
   stateRoot?: string;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 export function createExtensionHostServerContextSnapshot(
@@ -24,6 +27,7 @@ export function createExtensionHostServerContextSnapshot(
     ...(authFile ? { authFile, agentDir: dirname(authFile) } : {}),
     ...(context.getSettingsFile ? { settingsFile: context.getSettingsFile() } : {}),
     ...(context.getStateRoot ? { stateRoot: context.getStateRoot() } : {}),
+    ...(context.getDesktopRootLayout ? { desktopRootLayout: context.getDesktopRootLayout() } : {}),
   };
 }
 
@@ -51,6 +55,7 @@ export function createExtensionBackendServerContextFromSnapshot(
     ...(snapshot.settingsFile ? { getSettingsFile: () => snapshot.settingsFile as string } : {}),
     ...(snapshot.authFile ? { getAuthFile: () => snapshot.authFile as string } : {}),
     ...(snapshot.stateRoot ? { getStateRoot: () => snapshot.stateRoot as string } : {}),
+    ...(snapshot.desktopRootLayout ? { getDesktopRootLayout: () => snapshot.desktopRootLayout as DesktopRootLayout } : {}),
     materializeWebRuntimeConfig: () => getRuntimeState().materializeRuntimeResources(),
     buildLiveSessionResourceOptions: () => getRuntimeState().buildLiveSessionResourceOptions(),
   };

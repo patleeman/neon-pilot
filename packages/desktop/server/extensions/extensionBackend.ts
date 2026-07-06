@@ -430,7 +430,13 @@ export type ExtensionBackendServerContext = Pick<ServerRouteContext, 'getRuntime
   Partial<
     Pick<
       ServerRouteContext,
-      'buildLiveSessionResourceOptions' | 'getRepoRoot' | 'getSettingsFile' | 'materializeWebRuntimeConfig' | 'getAuthFile' | 'getStateRoot'
+      | 'buildLiveSessionResourceOptions'
+      | 'getRepoRoot'
+      | 'getSettingsFile'
+      | 'materializeWebRuntimeConfig'
+      | 'getAuthFile'
+      | 'getStateRoot'
+      | 'getDesktopRootLayout'
     >
   >;
 
