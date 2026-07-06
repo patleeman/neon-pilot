@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -216,6 +219,14 @@ describe('ExtensionManagerPage', () => {
 
     expect(await screen.findByRole('status', { name: 'Loading apps' })).toBeTruthy();
     expect(screen.queryByText('Loading apps...')).toBeNull();
+  });
+
+  it('keeps the lazy loading fallback windowed-only', () => {
+    const source = readFileSync(join(process.cwd(), 'extensions/system-extension-manager/src/frontend.tsx'), 'utf8');
+
+    expect(source).toContain('return <WindowedLoadingState label={label} />');
+    expect(source).not.toContain('QuietLoadingState');
+    expect(source).not.toContain("shellPresentation === 'windowed'");
   });
 
   it('keeps the row actions menu focused on opening the package folder without extension actions', async () => {
