@@ -1054,6 +1054,15 @@ const { records, total } = await ctx.documents.listDocuments({
   collection: 'tasks',
   limit: 20,
 });
+
+// Backend action handler: grant another app read access to a collection
+await ctx.documents.setGrant({
+  owner: ctx.extensionId,
+  collection: 'tasks',
+  granteeAppId: 'system-inbox',
+  canRead: true,
+  canWrite: false,
+});
 ```
 
 Key differences from per-extension storage:
@@ -1091,7 +1100,9 @@ Declare the required permission in `extension.json`:
 ```
 
 Available grants: `documents:read`, `documents:write`, `documents:readwrite`.
-An extension always has full access to its own collections.
+An extension always has full access to its own collections. Collection owners
+can manage explicit grants with `ctx.documents.listGrants`, `getGrant`,
+`setGrant`, and `deleteGrant`.
 
 See [`docs/extensions.md`](../../docs/extensions.md) for complete convention
 guidance, owner/collection/id rules, and cross-app access patterns.

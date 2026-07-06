@@ -698,6 +698,8 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
       'upsertCollection',
       'putDocument',
       'deleteDocument',
+      'setGrant',
+      'deleteGrant',
     ]);
   }
 
@@ -2467,10 +2469,11 @@ function assertCanWriteDocumentCollection(
 }
 
 async function publishDocumentMutation(payload: {
-  type: 'collection.updated' | 'document.updated' | 'document.deleted';
+  type: 'collection.updated' | 'document.updated' | 'document.deleted' | 'grant.updated' | 'grant.deleted';
   owner: string;
   collection: string;
   id?: string;
+  granteeAppId?: string;
   body?: unknown;
 }): Promise<void> {
   invalidateAppTopics('documents');
@@ -2527,6 +2530,42 @@ async function dispatchDocumentsCapability(
     const limit = typeof input.limit === 'number' ? input.limit : undefined;
     const offset = typeof input.offset === 'number' ? input.offset : undefined;
     return store.listDocuments(owner, collection, { limit, offset });
+  }
+
+  // ── Grants ────────────────────────────────────────────────────────
+
+  if (request.operation === 'listGrants') {
+    assertCanManageDocumentCollection(callerAppId, owner);
+    return store.listGrants(owner, collection);
+  }
+
+  if (request.operation === 'getGrant') {
+    const granteeAppId = requireString(input.granteeAppId, 'Documents granteeAppId');
+    // Allow an app to inspect its own grant
+    if (callerAppId !== granteeAppId) {
+      assertCanManageDocumentCollection(callerAppId, owner);
+    }
+    return store.getGrant(owner, collection, granteeAppId);
+  }
+
+  if (request.operation === 'setGrant') {
+    assertCanManageDocumentCollection(callerAppId, owner);
+    const granteeAppId = requireString(input.granteeAppId, 'Documents granteeAppId');
+    const canRead = optionalBoolean(input.canRead, 'Documents grant canRead') ?? false;
+    const canWrite = optionalBoolean(input.canWrite, 'Documents grant canWrite') ?? false;
+    const result = store.setGrant(owner, collection, granteeAppId, canRead, canWrite);
+    await publishDocumentMutation({ type: 'grant.updated', owner, collection, granteeAppId });
+    return result;
+  }
+
+  if (request.operation === 'deleteGrant') {
+    assertCanManageDocumentCollection(callerAppId, owner);
+    const granteeAppId = requireString(input.granteeAppId, 'Documents granteeAppId');
+    const deleted = store.deleteGrant(owner, collection, granteeAppId);
+    if (deleted) {
+      await publishDocumentMutation({ type: 'grant.deleted', owner, collection, granteeAppId });
+    }
+    return { deleted };
   }
 
   const id = requireString(input.id, 'Documents id');

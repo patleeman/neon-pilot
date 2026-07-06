@@ -1852,6 +1852,142 @@ describe('extension backend capability dispatcher', () => {
     ).toThrow('Extension "ext" requires permission documents:read to use documents.listCollections.');
   });
 
+  it('dispatches documents collection grant management capability calls', async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'extension-documents-grant-test-'));
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['documents:readwrite'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ documents: { stateRoot: tmpDir } });
+
+    try {
+      // Owner can list grants (read operation, manage-gated)
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 1,
+            kind: 'capabilityRequest',
+            extensionId: 'app-owner',
+            capability: 'documents',
+            operation: 'listGrants',
+            input: { owner: 'app-owner', collection: 'col' },
+          }),
+        ),
+      ).resolves.toEqual([]);
+
+      // Non-owner cannot list grants
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 2,
+            kind: 'capabilityRequest',
+            extensionId: 'other-app',
+            capability: 'documents',
+            operation: 'listGrants',
+            input: { owner: 'app-owner', collection: 'col' },
+          }),
+        ),
+      ).rejects.toThrow('Document collection access denied');
+
+      // Owner can get own grant by name (grantee matches caller)
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 3,
+            kind: 'capabilityRequest',
+            extensionId: 'app-owner',
+            capability: 'documents',
+            operation: 'getGrant',
+            input: { owner: 'app-owner', collection: 'col', granteeAppId: 'app-owner' },
+          }),
+        ),
+      ).resolves.toBeNull();
+
+      // Non-owner can inspect its own grant (grantee matches caller)
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 4,
+            kind: 'capabilityRequest',
+            extensionId: 'other-app',
+            capability: 'documents',
+            operation: 'getGrant',
+            input: { owner: 'app-owner', collection: 'col', granteeAppId: 'other-app' },
+          }),
+        ),
+      ).resolves.toBeNull();
+
+      // Non-owner cannot get another app's grant
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 5,
+            kind: 'capabilityRequest',
+            extensionId: 'other-app',
+            capability: 'documents',
+            operation: 'getGrant',
+            input: { owner: 'app-owner', collection: 'col', granteeAppId: 'some-other-app' },
+          }),
+        ),
+      ).rejects.toThrow('Document collection access denied');
+
+      // Owner can set a grant
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 6,
+            kind: 'capabilityRequest',
+            extensionId: 'app-owner',
+            capability: 'documents',
+            operation: 'setGrant',
+            input: { owner: 'app-owner', collection: 'col', granteeAppId: 'other-app', canRead: true, canWrite: false },
+          }),
+        ),
+      ).resolves.toMatchObject({ granteeAppId: 'other-app', canRead: true, canWrite: false });
+
+      // Non-owner cannot set a grant
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 7,
+            kind: 'capabilityRequest',
+            extensionId: 'other-app',
+            capability: 'documents',
+            operation: 'setGrant',
+            input: { owner: 'app-owner', collection: 'col', granteeAppId: 'nobody', canRead: true, canWrite: false },
+          }),
+        ),
+      ).rejects.toThrow('Document collection access denied');
+
+      // Owner can delete a grant
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 8,
+            kind: 'capabilityRequest',
+            extensionId: 'app-owner',
+            capability: 'documents',
+            operation: 'deleteGrant',
+            input: { owner: 'app-owner', collection: 'col', granteeAppId: 'other-app' },
+          }),
+        ),
+      ).resolves.toEqual({ deleted: true });
+
+      // Non-owner cannot delete a grant
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 9,
+            kind: 'capabilityRequest',
+            extensionId: 'other-app',
+            capability: 'documents',
+            operation: 'deleteGrant',
+            input: { owner: 'app-owner', collection: 'col', granteeAppId: 'other-app' },
+          }),
+        ),
+      ).rejects.toThrow('Document collection access denied');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('dispatches extension-scoped secrets capability calls', async () => {
     const secrets = {
       get: vi.fn(() => 'stored-secret'),

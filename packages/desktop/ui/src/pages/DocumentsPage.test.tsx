@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../client/api';
 import { useApi } from '../hooks/useApi';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
-import type { CollectionListResult, DocumentCollection, DocumentRecord, ListDocumentsResult } from '../shared/types';
+import type { CollectionGrant, CollectionListResult, DocumentCollection, DocumentRecord, ListDocumentsResult } from '../shared/types';
 import { DocumentsPage } from './DocumentsPage';
 
 vi.mock('../hooks/useApi', () => ({
@@ -55,19 +55,19 @@ function renderDocumentsPage() {
 }
 
 function setupCollectionsOnly(collectionsResult: CollectionListResult) {
-  // Two useApi calls: first for collections, second for records (empty initially)
-  mockApiCalls(
-    buildUseApiResult({ loading: false, error: null, data: collectionsResult }),
-    buildUseApiResult({ loading: false, error: null, data: { records: [], total: 0 } }),
-  );
+  setupCollectionsAndRecords(collectionsResult, { records: [], total: 0 });
 }
 
 function setupCollectionsAndRecords(collectionsResult: CollectionListResult, recordsResult: ListDocumentsResult) {
-  // Two useApi calls on initial render
-  mockApiCalls(
-    buildUseApiResult({ loading: false, error: null, data: collectionsResult }),
-    buildUseApiResult({ loading: false, error: null, data: recordsResult }),
-  );
+  mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+    if (key === 'documents-collections') {
+      return buildUseApiResult({ loading: false, error: null, data: collectionsResult });
+    }
+    if (key.startsWith('documents-grants-')) {
+      return buildUseApiResult({ loading: false, error: null, data: { grants: [] } });
+    }
+    return buildUseApiResult({ loading: false, error: null, data: recordsResult });
+  }) as typeof useApi);
 }
 
 function makeCollection(overrides: Partial<DocumentCollection> & { collection: string }): DocumentCollection {
@@ -93,6 +93,19 @@ function makeRecord(overrides: Partial<DocumentRecord> & { id: string }): Docume
   };
 }
 
+function makeGrant(overrides: Partial<CollectionGrant> & { granteeAppId: string }): CollectionGrant {
+  return {
+    id: `${overrides.granteeAppId}-grant-id`,
+    owner: 'host',
+    collection: 'test-collection',
+    canRead: true,
+    canWrite: false,
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
 describe('DocumentsPage', () => {
   afterEach(() => {
     cleanup();
@@ -107,9 +120,10 @@ describe('DocumentsPage', () => {
     expect(useInvalidateOnTopicsMock).toHaveBeenCalledWith(['documents'], expect.any(Function));
   });
 
-  it('refetches collections and selected records when documents are invalidated', async () => {
+  it('refetches collections, grants, and selected records when documents are invalidated', async () => {
     const refetchCollections = vi.fn().mockResolvedValue(undefined);
     const refetchRecords = vi.fn().mockResolvedValue(undefined);
+    const refetchGrants = vi.fn().mockResolvedValue(undefined);
     const collectionsResult: CollectionListResult = {
       collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
     };
@@ -126,6 +140,9 @@ describe('DocumentsPage', () => {
       if (key === 'documents-collections') {
         return buildUseApiResult({ loading: false, data: collectionsResult, refetch: refetchCollections });
       }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({ loading: false, data: { grants: [] }, refetch: refetchGrants });
+      }
       return buildUseApiResult({ loading: false, data: recordsResult, refetch: refetchRecords });
     }) as typeof useApi);
 
@@ -136,6 +153,7 @@ describe('DocumentsPage', () => {
 
     expect(refetchCollections).toHaveBeenCalledWith({ resetLoading: false });
     expect(refetchRecords).toHaveBeenCalledWith({ resetLoading: false });
+    expect(refetchGrants).toHaveBeenCalledWith({ resetLoading: false });
   });
 
   it('shows loading state for collections', () => {
@@ -211,7 +229,9 @@ describe('DocumentsPage', () => {
     renderDocumentsPage();
     fireEvent.click(screen.getByRole('tab', { name: 'ext-1/bar' }));
 
-    const recordsFetcher = mockUseApi.mock.calls.at(-1)?.[0] as (() => Promise<ListDocumentsResult>) | undefined;
+    const recordsFetcher = mockUseApi.mock.calls.find(([, key]) => key === 'documents-records-ext-1-bar-1')?.[0] as
+      | (() => Promise<ListDocumentsResult>)
+      | undefined;
     expect(recordsFetcher).toBeTruthy();
     await recordsFetcher?.();
 
@@ -662,5 +682,282 @@ describe('DocumentsPage', () => {
     fireEvent.click(screen.getAllByText('doc-1')[0]);
 
     expect(screen.queryByText('Record Detail')).toBeNull();
+  });
+
+  // ── Grants tests ─────────────────────────────────────────────────────────
+
+  it('shows grants section when a collection is selected', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+    const grantsResult = { grants: [makeGrant({ granteeAppId: 'my-app' })] };
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({ loading: false, data: grantsResult });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    expect(screen.getByText('my-app')).toBeTruthy();
+  });
+
+  it('shows empty state when no grants exist', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({ loading: false, data: { grants: [] } });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    expect(screen.getByText('No grants yet')).toBeTruthy();
+  });
+
+  it('shows loading state for grants', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({ loading: true, data: null });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    expect(screen.getByLabelText('Loading grants')).toBeTruthy();
+  });
+
+  it('shows grants error when fetch fails', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({ loading: false, error: 'Grants unavailable', data: null });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    expect(screen.getByText('Grants unavailable')).toBeTruthy();
+  });
+
+  it('can open add grant form and validates empty grant app ID', () => {
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({ loading: false, data: { grants: [] } });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    // Click Add grant button
+    fireEvent.click(screen.getByText('Add grant'));
+
+    // Submit without filling in the app ID
+    fireEvent.click(screen.getByText('Grant'));
+
+    expect(screen.getByText('Grant app ID is required')).toBeTruthy();
+  });
+
+  it('calls setGrant when adding a new grant', async () => {
+    const setGrantSpy = vi.spyOn(api.documents, 'setGrant').mockResolvedValue({
+      grant: makeGrant({ granteeAppId: 'new-app' }),
+    });
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+    const refetchGrants = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult, refetch: vi.fn() });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({ loading: false, data: { grants: [] }, refetch: refetchGrants });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    // Open add grant form
+    fireEvent.click(screen.getByText('Add grant'));
+
+    // Fill in the grant app ID
+    const appIdInput = screen.getByPlaceholderText('com.example.extension');
+    fireEvent.change(appIdInput, { target: { value: 'new-app' } });
+
+    // Submit
+    fireEvent.click(screen.getByText('Grant'));
+
+    await waitFor(() => {
+      expect(setGrantSpy).toHaveBeenCalledWith('host', 'test-collection', 'new-app', {
+        canRead: true,
+        canWrite: false,
+      });
+    });
+  });
+
+  it('toggles grant read permission', async () => {
+    const setGrantSpy = vi.spyOn(api.documents, 'setGrant').mockResolvedValue({
+      grant: makeGrant({ granteeAppId: 'my-app' }),
+    });
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+    const refetchGrants = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult, refetch: vi.fn() });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({
+          loading: false,
+          data: {
+            grants: [makeGrant({ granteeAppId: 'my-app', canRead: true, canWrite: false })],
+          },
+          refetch: refetchGrants,
+        });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    // Click the Read switch for my-app
+    fireEvent.click(screen.getByLabelText('Read access for my-app'));
+
+    await waitFor(() => {
+      expect(setGrantSpy).toHaveBeenCalledWith('host', 'test-collection', 'my-app', {
+        canRead: false,
+      });
+    });
+  });
+
+  it('toggles grant write permission', async () => {
+    const setGrantSpy = vi.spyOn(api.documents, 'setGrant').mockResolvedValue({
+      grant: makeGrant({ granteeAppId: 'my-app' }),
+    });
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+    const refetchGrants = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult, refetch: vi.fn() });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({
+          loading: false,
+          data: {
+            grants: [makeGrant({ granteeAppId: 'my-app', canRead: false, canWrite: true })],
+          },
+          refetch: refetchGrants,
+        });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    // Click the Write switch for my-app
+    fireEvent.click(screen.getByLabelText('Write access for my-app'));
+
+    await waitFor(() => {
+      expect(setGrantSpy).toHaveBeenCalledWith('host', 'test-collection', 'my-app', {
+        canWrite: false,
+      });
+    });
+  });
+
+  it('deletes a grant', async () => {
+    const deleteGrantSpy = vi.spyOn(api.documents, 'deleteGrant').mockResolvedValue({ deleted: true });
+    const collectionsResult: CollectionListResult = {
+      collections: [makeCollection({ collection: 'test-collection', owner: 'host' })],
+    };
+    const recordsResult: ListDocumentsResult = { records: [], total: 0 };
+    const refetchRecords = vi.fn().mockResolvedValue(undefined);
+    const refetchGrants = vi.fn().mockResolvedValue(undefined);
+
+    mockUseApi.mockImplementation(((_fetcher: unknown, key: string) => {
+      if (key === 'documents-collections') {
+        return buildUseApiResult({ loading: false, data: collectionsResult, refetch: vi.fn() });
+      }
+      if (key.startsWith('documents-grants-')) {
+        return buildUseApiResult({
+          loading: false,
+          data: {
+            grants: [makeGrant({ granteeAppId: 'my-app' })],
+          },
+          refetch: refetchGrants,
+        });
+      }
+      return buildUseApiResult({ loading: false, data: recordsResult, refetch: refetchRecords });
+    }) as typeof useApi);
+
+    renderDocumentsPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'host/test-collection' }));
+
+    // Click the remove button for my-app
+    fireEvent.click(screen.getByLabelText('Remove grant my-app'));
+
+    await waitFor(() => {
+      expect(deleteGrantSpy).toHaveBeenCalledWith('host', 'test-collection', 'my-app');
+    });
   });
 });

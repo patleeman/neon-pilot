@@ -59,6 +59,36 @@ export interface UpsertCollectionOptions {
   defaultGrantWrite?: 'owner' | 'all' | 'none';
 }
 
+export interface CollectionGrant {
+  id: string;
+  owner: string;
+  collection: string;
+  granteeAppId: string;
+  canRead: boolean;
+  canWrite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListGrantsOptions {
+  owner: string;
+  collection: string;
+}
+
+export interface SetGrantOptions {
+  owner: string;
+  collection: string;
+  granteeAppId: string;
+  canRead: boolean;
+  canWrite: boolean;
+}
+
+export interface DeleteGrantOptions {
+  owner: string;
+  collection: string;
+  granteeAppId: string;
+}
+
 // ── Stub functions (replaced by host runtime) ──────────────────────────
 
 export const listCollections = (..._args: unknown[]): unknown => hostResolved();
@@ -68,3 +98,7 @@ export const listDocuments = (..._args: unknown[]): unknown => hostResolved();
 export const getDocument = (..._args: unknown[]): unknown => hostResolved();
 export const putDocument = (..._args: unknown[]): unknown => hostResolved();
 export const deleteDocument = (..._args: unknown[]): unknown => hostResolved();
+export const listGrants = (..._args: unknown[]): unknown => hostResolved();
+export const getGrant = (..._args: unknown[]): unknown => hostResolved();
+export const setGrant = (..._args: unknown[]): unknown => hostResolved();
+export const deleteGrant = (..._args: unknown[]): unknown => hostResolved();

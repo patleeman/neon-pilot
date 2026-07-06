@@ -31,11 +31,15 @@ vi.mock('./serverModuleResolver.js', () => ({
 
 import {
   deleteDocument,
+  deleteGrant,
   getCollection,
   getDocument,
+  getGrant,
   listCollections,
   listDocuments,
+  listGrants,
   putDocument,
+  setGrant,
   upsertCollection,
 } from './documents-store.js';
 
@@ -50,6 +54,9 @@ describe('documents-store backend API', () => {
     putDocument: ReturnType<typeof vi.fn>;
     deleteDocument: ReturnType<typeof vi.fn>;
     getGrant: ReturnType<typeof vi.fn>;
+    listGrants: ReturnType<typeof vi.fn>;
+    setGrant: ReturnType<typeof vi.fn>;
+    deleteGrant: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -65,6 +72,9 @@ describe('documents-store backend API', () => {
       putDocument: vi.fn(),
       deleteDocument: vi.fn(),
       getGrant: vi.fn(),
+      listGrants: vi.fn(),
+      setGrant: vi.fn(),
+      deleteGrant: vi.fn(),
     };
     getDocumentsStoreMock.mockReturnValue(store);
 
@@ -354,6 +364,179 @@ describe('documents-store backend API', () => {
         'documents',
         expect.objectContaining({ type: 'document.deleted' }),
       );
+    });
+  });
+
+  // ── listGrants ─────────────────────────────────────────────────────
+
+  describe('listGrants', () => {
+    it('rejects anonymous callers', async () => {
+      await expect(listGrants('app', 'col')).rejects.toThrow('documents.listGrants requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('allows owner to list grants', async () => {
+      store.listGrants.mockReturnValue([
+        {
+          id: 'g1',
+          owner: 'my-app',
+          collection: 'col',
+          granteeAppId: 'other',
+          canRead: true,
+          canWrite: false,
+          createdAt: '',
+          updatedAt: '',
+        },
+      ]);
+
+      const result = await listGrants('my-app', 'col', 'my-app');
+      expect(result).toHaveLength(1);
+      expect(result[0].granteeAppId).toBe('other');
+    });
+
+    it('denies non-owner app to list grants', async () => {
+      store.listGrants.mockReturnValue([]);
+
+      await expect(listGrants('owner-app', 'col', 'other-app')).rejects.toThrow('Document grant management denied');
+    });
+  });
+
+  // ── getGrant ───────────────────────────────────────────────────────
+
+  describe('getGrant', () => {
+    it('rejects anonymous callers', async () => {
+      await expect(getGrant('app', 'col', 'grantee')).rejects.toThrow('documents.getGrant requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('allows owner to get any grant', async () => {
+      store.getGrant.mockReturnValue({
+        id: 'g1',
+        owner: 'my-app',
+        collection: 'col',
+        granteeAppId: 'other-app',
+        canRead: true,
+        canWrite: false,
+        createdAt: '',
+        updatedAt: '',
+      });
+
+      const result = await getGrant('my-app', 'col', 'other-app', 'my-app');
+      expect(result).not.toBeNull();
+      expect(result!.granteeAppId).toBe('other-app');
+    });
+
+    it('allows an app to inspect its own grant', async () => {
+      store.getGrant.mockReturnValue({
+        id: 'g1',
+        owner: 'owner-app',
+        collection: 'col',
+        granteeAppId: 'my-app',
+        canRead: true,
+        canWrite: false,
+        createdAt: '',
+        updatedAt: '',
+      });
+
+      const result = await getGrant('owner-app', 'col', 'my-app', 'my-app');
+      expect(result).not.toBeNull();
+      expect(result!.granteeAppId).toBe('my-app');
+    });
+
+    it("denies non-owner app to look up another app's grant", async () => {
+      store.getGrant.mockReturnValue(null);
+
+      await expect(getGrant('owner-app', 'col', 'some-other-app', 'my-app')).rejects.toThrow('Document grant management denied');
+    });
+
+    it('returns null for missing grant', async () => {
+      store.getGrant.mockReturnValue(null);
+
+      const result = await getGrant('my-app', 'col', 'nobody', 'my-app');
+      expect(result).toBeNull();
+    });
+  });
+
+  // ── setGrant ───────────────────────────────────────────────────────
+
+  describe('setGrant', () => {
+    it('rejects anonymous callers', async () => {
+      await expect(setGrant('app', 'col', 'grantee', true, false)).rejects.toThrow('documents.setGrant requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('allows owner to set a grant', async () => {
+      store.setGrant.mockReturnValue({
+        id: 'g1',
+        owner: 'my-app',
+        collection: 'col',
+        granteeAppId: 'other-app',
+        canRead: true,
+        canWrite: false,
+        createdAt: '',
+        updatedAt: '',
+      });
+
+      const result = await setGrant('my-app', 'col', 'other-app', true, false, 'my-app');
+      expect(result.granteeAppId).toBe('other-app');
+      expect(result.canRead).toBe(true);
+      expect(result.canWrite).toBe(false);
+      expect(store.setGrant).toHaveBeenCalledWith('my-app', 'col', 'other-app', true, false);
+      expect(callServerModuleExportMock).toHaveBeenCalledWith('../../shared/appEvents.js', 'invalidateAppTopics', 'documents');
+      expect(callServerModuleExportMock).toHaveBeenCalledWith(
+        '../../extensions/extensionSubscriptions.js',
+        'publishExtensionHostEvent',
+        'documents',
+        { type: 'grant.updated', owner: 'my-app', collection: 'col', granteeAppId: 'other-app' },
+      );
+    });
+
+    it('denies non-owner app to set a grant', async () => {
+      await expect(setGrant('owner-app', 'col', 'some-app', true, false, 'other-app')).rejects.toThrow('Document grant management denied');
+      expect(store.setGrant).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── deleteGrant ────────────────────────────────────────────────────
+
+  describe('deleteGrant', () => {
+    it('rejects anonymous callers', async () => {
+      await expect(deleteGrant('app', 'col', 'grantee')).rejects.toThrow('documents.deleteGrant requires callerAppId');
+      expect(getDocumentsStoreMock).not.toHaveBeenCalled();
+    });
+
+    it('allows owner to delete a grant', async () => {
+      store.deleteGrant.mockReturnValue(true);
+
+      const result = await deleteGrant('my-app', 'col', 'other-app', 'my-app');
+      expect(result.deleted).toBe(true);
+      expect(store.deleteGrant).toHaveBeenCalledWith('my-app', 'col', 'other-app');
+      expect(callServerModuleExportMock).toHaveBeenCalledWith('../../shared/appEvents.js', 'invalidateAppTopics', 'documents');
+      expect(callServerModuleExportMock).toHaveBeenCalledWith(
+        '../../extensions/extensionSubscriptions.js',
+        'publishExtensionHostEvent',
+        'documents',
+        { type: 'grant.deleted', owner: 'my-app', collection: 'col', granteeAppId: 'other-app' },
+      );
+    });
+
+    it('returns false when deleting non-existent grant', async () => {
+      store.deleteGrant.mockReturnValue(false);
+
+      const result = await deleteGrant('my-app', 'col', 'ghost', 'my-app');
+      expect(result.deleted).toBe(false);
+      expect(callServerModuleExportMock).not.toHaveBeenCalledWith('../../shared/appEvents.js', 'invalidateAppTopics', 'documents');
+      expect(callServerModuleExportMock).not.toHaveBeenCalledWith(
+        '../../extensions/extensionSubscriptions.js',
+        'publishExtensionHostEvent',
+        'documents',
+        expect.objectContaining({ type: 'grant.deleted' }),
+      );
+    });
+
+    it('denies non-owner app to delete a grant', async () => {
+      await expect(deleteGrant('owner-app', 'col', 'some-app', 'other-app')).rejects.toThrow('Document grant management denied');
+      expect(store.deleteGrant).not.toHaveBeenCalled();
     });
   });
 });

@@ -105,8 +105,9 @@ Available permissions:
 
 An extension can always read and write its own collections. Reading another
 extension's collections requires either the target collection's
-`defaultGrantRead: "all"` or an explicit grant. See the backend store API docs
-for grant management.
+`defaultGrantRead: "all"` or an explicit grant. Collection owners can manage
+explicit grants through `ctx.documents.listGrants`, `getGrant`, `setGrant`,
+and `deleteGrant`.
 
 ## API surface
 
@@ -142,6 +143,16 @@ export async function getTask(input: { id: string }, ctx: ExtensionBackendContex
     id: input.id,
   });
 }
+
+export async function grantTaskRead(input: { granteeAppId: string }, ctx: ExtensionBackendContext) {
+  return ctx.documents.setGrant({
+    owner: ctx.extensionId,
+    collection: 'tasks',
+    granteeAppId: input.granteeAppId,
+    canRead: true,
+    canWrite: false,
+  });
+}
 ```
 
 ### Direct seam import (backend modules)
@@ -171,7 +182,8 @@ If your extension needs to read data owned by another first-party app:
 
 1. Check whether the target collection has `defaultGrantRead: "all"`.
 2. If not, coordinate with the owning extension to add your extension id to
-   the collection's explicit grant list.
+   the collection's explicit grant list. The owning extension can call
+   `ctx.documents.setGrant({ owner, collection, granteeAppId, canRead, canWrite })`.
 3. Prefer the `ctx.documents` API with the correct owner and collection.
 4. Declare `documents:read` in your manifest.
 

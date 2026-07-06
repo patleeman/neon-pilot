@@ -17,9 +17,11 @@ import {
   DataTableToolbar,
   ErrorState,
   FieldError,
+  IconButton,
   InlineTextInput,
   KeyValueTable,
   QuietLoadingState,
+  Switch,
   TabButton,
   TabList,
   Textarea,
@@ -27,7 +29,7 @@ import {
 } from '../components/ui';
 import { useApi } from '../hooks/useApi';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
-import type { DocumentCollection, DocumentRecord, ListDocumentsResult } from '../shared/types';
+import type { CollectionGrant, DocumentCollection, DocumentRecord, GrantListResult, ListDocumentsResult } from '../shared/types';
 
 const PAGE_SIZE = 50;
 
@@ -88,6 +90,13 @@ export function DocumentsPage() {
   const [newColDescription, setNewColDescription] = useState('');
   const [newColError, setNewColError] = useState<string | null>(null);
   const [isCreatingCol, setIsCreatingCol] = useState(false);
+  const [showNewGrant, setShowNewGrant] = useState(false);
+  const [newGrantAppId, setNewGrantAppId] = useState('');
+  const [newGrantRead, setNewGrantRead] = useState(true);
+  const [newGrantWrite, setNewGrantWrite] = useState(false);
+  const [newGrantError, setNewGrantError] = useState<string | null>(null);
+  const [isAddingGrant, setIsAddingGrant] = useState(false);
+  const [grantError, setGrantError] = useState<string | null>(null);
   const bodyEditedRef = useRef(false);
   const collectionsFetcher = useCallback(async () => {
     return api.documents.collections();
@@ -112,6 +121,18 @@ export function DocumentsPage() {
     error: recordsError,
     refetch: refetchRecords,
   } = useApi(recordsFetcher, `documents-records-${owner}-${collection}-${page}`);
+
+  const grantsFetcher = useCallback(async (): Promise<GrantListResult> => {
+    if (!collection) return { grants: [] };
+    return api.documents.listGrants(owner, collection);
+  }, [owner, collection]);
+
+  const {
+    data: grantsData,
+    loading: grantsLoading,
+    error: grantsError,
+    refetch: refetchGrants,
+  } = useApi(grantsFetcher, `documents-grants-${owner}-${collection}`);
 
   const collections: DocumentCollection[] = collectionsData?.collections ?? [];
   const records: DocumentRecord[] = recordsData?.records ?? [];
@@ -138,6 +159,9 @@ export function DocumentsPage() {
     setShowDeleteConfirm(false);
     setDeleteError(null);
     setNewColError(null);
+    setShowNewGrant(false);
+    setNewGrantError(null);
+    setGrantError(null);
   };
 
   const handleSelectDocument = (doc: DocumentRecord) => {
@@ -164,8 +188,9 @@ export function DocumentsPage() {
     await refetchCollections({ resetLoading: false });
     if (collection) {
       await refetchRecords({ resetLoading: false });
+      await refetchGrants({ resetLoading: false });
     }
-  }, [refetchCollections, refetchRecords, collection]);
+  }, [refetchCollections, refetchRecords, refetchGrants, collection]);
 
   useInvalidateOnTopics(['documents'], refetchData);
 
@@ -296,6 +321,60 @@ export function DocumentsPage() {
       setIsCreatingCol(false);
     }
   }, [newColOwner, newColName, newColDescription, refetchData]);
+
+  const handleAddGrant = useCallback(async () => {
+    if (!selectedCollection) return;
+    setNewGrantError(null);
+    if (!newGrantAppId.trim()) {
+      setNewGrantError('Grant app ID is required');
+      return;
+    }
+    setIsAddingGrant(true);
+    try {
+      await api.documents.setGrant(selectedCollection.owner, selectedCollection.collection, newGrantAppId.trim(), {
+        canRead: newGrantRead,
+        canWrite: newGrantWrite,
+      });
+      setNewGrantAppId('');
+      setNewGrantRead(true);
+      setNewGrantWrite(false);
+      setShowNewGrant(false);
+      setNewGrantError(null);
+      await refetchData();
+    } catch (err: unknown) {
+      setNewGrantError(err instanceof Error ? err.message : 'Add grant failed');
+    } finally {
+      setIsAddingGrant(false);
+    }
+  }, [selectedCollection, newGrantAppId, newGrantRead, newGrantWrite, refetchData]);
+
+  const handleToggleGrant = useCallback(
+    async (granteeAppId: string, changes: { canRead?: boolean; canWrite?: boolean }) => {
+      if (!selectedCollection) return;
+      setGrantError(null);
+      try {
+        await api.documents.setGrant(selectedCollection.owner, selectedCollection.collection, granteeAppId, changes);
+        await refetchData();
+      } catch (err: unknown) {
+        setGrantError(err instanceof Error ? err.message : 'Update grant failed');
+      }
+    },
+    [selectedCollection, refetchData],
+  );
+
+  const handleDeleteGrant = useCallback(
+    async (granteeAppId: string) => {
+      if (!selectedCollection) return;
+      setGrantError(null);
+      try {
+        await api.documents.deleteGrant(selectedCollection.owner, selectedCollection.collection, granteeAppId);
+        await refetchData();
+      } catch (err: unknown) {
+        setGrantError(err instanceof Error ? err.message : 'Delete grant failed');
+      }
+    },
+    [selectedCollection, refetchData],
+  );
 
   return (
     <AppPageLayout
@@ -462,6 +541,28 @@ export function DocumentsPage() {
           />
         ) : (
           <>
+            <CollectionGrantsSection
+              grants={grantsData?.grants ?? []}
+              loading={grantsLoading}
+              error={grantsError ?? grantError}
+              showNewGrant={showNewGrant}
+              newGrantAppId={newGrantAppId}
+              newGrantRead={newGrantRead}
+              newGrantWrite={newGrantWrite}
+              newGrantError={newGrantError}
+              isAddingGrant={isAddingGrant}
+              onShowNewGrantChange={setShowNewGrant}
+              onNewGrantAppIdChange={setNewGrantAppId}
+              onNewGrantReadChange={setNewGrantRead}
+              onNewGrantWriteChange={setNewGrantWrite}
+              onAddGrant={handleAddGrant}
+              onCancelAddGrant={() => {
+                setShowNewGrant(false);
+                setNewGrantError(null);
+              }}
+              onToggleGrant={handleToggleGrant}
+              onDeleteGrant={handleDeleteGrant}
+            />
             {isCreating ? (
               <div className="mb-2 rounded-sm border border-border-subtle bg-bg-subtle p-3">
                 <div className="mb-2 flex items-center justify-between">
@@ -728,5 +829,181 @@ function RecordsTable({
         )}
       </DataTableBody>
     </DataTable>
+  );
+}
+
+function RemoveGrantIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v5" />
+      <path d="M14 11v5" />
+    </svg>
+  );
+}
+
+function CollectionGrantsSection({
+  grants,
+  loading,
+  error,
+  showNewGrant,
+  newGrantAppId,
+  newGrantRead,
+  newGrantWrite,
+  newGrantError,
+  isAddingGrant,
+  onShowNewGrantChange,
+  onNewGrantAppIdChange,
+  onNewGrantReadChange,
+  onNewGrantWriteChange,
+  onAddGrant,
+  onCancelAddGrant,
+  onToggleGrant,
+  onDeleteGrant,
+}: {
+  grants: CollectionGrant[];
+  loading: boolean;
+  error: string | null;
+  showNewGrant: boolean;
+  newGrantAppId: string;
+  newGrantRead: boolean;
+  newGrantWrite: boolean;
+  newGrantError: string | null;
+  isAddingGrant: boolean;
+  onShowNewGrantChange: (value: boolean) => void;
+  onNewGrantAppIdChange: (value: string) => void;
+  onNewGrantReadChange: (value: boolean) => void;
+  onNewGrantWriteChange: (value: boolean) => void;
+  onAddGrant: () => void;
+  onCancelAddGrant: () => void;
+  onToggleGrant: (granteeAppId: string, changes: { canRead?: boolean; canWrite?: boolean }) => void;
+  onDeleteGrant: (granteeAppId: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[11px] font-medium uppercase tracking-wide text-secondary">Grants</h3>
+        {!showNewGrant ? (
+          <ToolbarButton type="button" onClick={() => onShowNewGrantChange(true)}>
+            Add grant
+          </ToolbarButton>
+        ) : null}
+      </div>
+
+      {showNewGrant ? (
+        <div className="rounded-sm border border-border-subtle bg-bg-subtle p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-[11px] font-medium uppercase tracking-wide text-secondary">Add grant</h3>
+            <div className="flex gap-2">
+              <ToolbarButton type="button" disabled={isAddingGrant} onClick={onAddGrant}>
+                {isAddingGrant ? 'Adding...' : 'Grant'}
+              </ToolbarButton>
+              <ToolbarButton type="button" onClick={onCancelAddGrant}>
+                Cancel
+              </ToolbarButton>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-medium text-secondary">Grant App ID</label>
+            <InlineTextInput
+              className="w-full"
+              value={newGrantAppId}
+              onChange={(e) => onNewGrantAppIdChange(e.target.value)}
+              placeholder="com.example.extension"
+            />
+          </div>
+          <div className="mt-2 flex items-center gap-4">
+            <div className="flex items-center gap-2 text-[11px] text-secondary">
+              <Switch checked={newGrantRead} aria-label="Grant read access" onClick={() => onNewGrantReadChange(!newGrantRead)} />
+              <span>Read</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-secondary">
+              <Switch checked={newGrantWrite} aria-label="Grant write access" onClick={() => onNewGrantWriteChange(!newGrantWrite)} />
+              <span>Write</span>
+            </div>
+          </div>
+          {newGrantError ? <FieldError className="mt-1">{newGrantError}</FieldError> : null}
+        </div>
+      ) : null}
+
+      <DataTable>
+        <DataTableHead>
+          <DataTableRow>
+            <DataTableHeaderCell>Grant App ID</DataTableHeaderCell>
+            <DataTableHeaderCell style={{ width: '5rem' }}>Read</DataTableHeaderCell>
+            <DataTableHeaderCell style={{ width: '5rem' }}>Write</DataTableHeaderCell>
+            <DataTableHeaderCell style={{ width: '3rem' }} />
+          </DataTableRow>
+        </DataTableHead>
+        <DataTableBody>
+          {loading ? (
+            <DataTableEmptyRow colSpan={4}>
+              <QuietLoadingState label="Loading grants" />
+            </DataTableEmptyRow>
+          ) : error && grants.length === 0 ? (
+            <DataTableEmptyRow colSpan={4}>
+              <ErrorState message={error} />
+            </DataTableEmptyRow>
+          ) : grants.length > 0 ? (
+            grants.map((grant) => (
+              <DataTableRow key={grant.granteeAppId}>
+                <DataTableCell className="align-middle">
+                  <span className="inline-block rounded-sm bg-bg-subtle px-1.5 py-0.5 text-[10px] font-medium leading-tight tracking-wide">
+                    {grant.granteeAppId}
+                  </span>
+                </DataTableCell>
+                <DataTableCell className="align-middle">
+                  <Switch
+                    checked={grant.canRead}
+                    aria-label={`Read access for ${grant.granteeAppId}`}
+                    onClick={() => onToggleGrant(grant.granteeAppId, { canRead: !grant.canRead })}
+                  />
+                </DataTableCell>
+                <DataTableCell className="align-middle">
+                  <Switch
+                    checked={grant.canWrite}
+                    aria-label={`Write access for ${grant.granteeAppId}`}
+                    onClick={() => onToggleGrant(grant.granteeAppId, { canWrite: !grant.canWrite })}
+                  />
+                </DataTableCell>
+                <DataTableCell className="align-middle">
+                  <IconButton
+                    compact
+                    type="button"
+                    className="text-danger"
+                    aria-label={`Remove grant ${grant.granteeAppId}`}
+                    title="Remove grant"
+                    onClick={() => onDeleteGrant(grant.granteeAppId)}
+                  >
+                    <RemoveGrantIcon />
+                  </IconButton>
+                </DataTableCell>
+              </DataTableRow>
+            ))
+          ) : (
+            <DataTableEmptyRow colSpan={4}>
+              <AppPageEmptyState
+                title="No grants yet"
+                body="Grants control which apps can read or write documents in this collection."
+                steps={['Add a grantee app ID to grant access to this collection']}
+                align="start"
+              />
+            </DataTableEmptyRow>
+          )}
+        </DataTableBody>
+      </DataTable>
+    </div>
   );
 }

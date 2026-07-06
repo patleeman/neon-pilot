@@ -57,10 +57,11 @@ interface UCO {
 }
 
 interface DocumentMutationPayload {
-  type: 'collection.updated' | 'document.updated' | 'document.deleted';
+  type: 'collection.updated' | 'document.updated' | 'document.deleted' | 'grant.updated' | 'grant.deleted';
   owner: string;
   collection: string;
   id?: string;
+  granteeAppId?: string;
   body?: unknown;
 }
 
@@ -79,7 +80,10 @@ async function getStore(): Promise<{
   getDocument(owner: string, collection: string, id: string): DR | null;
   putDocument(owner: string, collection: string, id: string, body: unknown): DR;
   deleteDocument(owner: string, collection: string, id: string): boolean;
-  getGrant(owner: string, collection: string, granteeAppId: string): { canRead: boolean; canWrite: boolean } | null;
+  listGrants(owner: string, collection: string): CG[];
+  getGrant(owner: string, collection: string, granteeAppId: string): CG | null;
+  setGrant(owner: string, collection: string, granteeAppId: string, canRead: boolean, canWrite: boolean): CG;
+  deleteGrant(owner: string, collection: string, granteeAppId: string): boolean;
 }> {
   const stateRoot = resolveStateRoot();
   return callMod('../../documents/store.js', 'getDocumentsStore', stateRoot);
@@ -244,6 +248,85 @@ export async function deleteDocument(owner: string, collection: string, id: stri
   const deleted = store.deleteDocument(owner, collection, id);
   if (deleted) {
     await publishDocumentsMutation({ type: 'document.deleted', owner, collection, id });
+  }
+  return { deleted };
+}
+
+// ── Grants ────────────────────────────────────────────────────────────
+
+interface CG {
+  id: string;
+  owner: string;
+  collection: string;
+  granteeAppId: string;
+  canRead: boolean;
+  canWrite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function assertCanManageCollection(c: Caller, owner: string): void {
+  if (c.kind === 'host') return;
+  if (c.appId === owner) return;
+  throw new Error('Document grant management denied: caller is not the collection owner');
+}
+
+function isOwnGrantLookup(c: Caller, granteeAppId: string): boolean {
+  return c.kind === 'app' && c.appId === granteeAppId;
+}
+
+export async function listGrants(owner: string, collection: string, callerAppId?: string): Promise<CG[]> {
+  const appId = requireCallerAppId(callerAppId, 'documents.listGrants');
+  await assertPermission(appId, 'documents:read', 'documents.listGrants');
+  const store = await getStore();
+  assertCanManageCollection(makeCaller(appId), owner);
+  return store.listGrants(owner, collection);
+}
+
+export async function getGrant(owner: string, collection: string, granteeAppId: string, callerAppId?: string): Promise<CG | null> {
+  const appId = requireCallerAppId(callerAppId, 'documents.getGrant');
+  await assertPermission(appId, 'documents:read', 'documents.getGrant');
+  const c = makeCaller(appId);
+  // An app may inspect its own grant row
+  if (!isOwnGrantLookup(c, granteeAppId)) {
+    assertCanManageCollection(c, owner);
+  }
+  const store = await getStore();
+  return store.getGrant(owner, collection, granteeAppId);
+}
+
+export async function setGrant(
+  owner: string,
+  collection: string,
+  granteeAppId: string,
+  canRead: boolean,
+  canWrite: boolean,
+  callerAppId?: string,
+): Promise<CG> {
+  const appId = requireCallerAppId(callerAppId, 'documents.setGrant');
+  await assertPermission(appId, 'documents:write', 'documents.setGrant');
+  const c = makeCaller(appId);
+  assertCanManageCollection(c, owner);
+  const store = await getStore();
+  const result = store.setGrant(owner, collection, granteeAppId, canRead, canWrite);
+  await publishDocumentsMutation({ type: 'grant.updated', owner, collection, granteeAppId });
+  return result;
+}
+
+export async function deleteGrant(
+  owner: string,
+  collection: string,
+  granteeAppId: string,
+  callerAppId?: string,
+): Promise<{ deleted: boolean }> {
+  const appId = requireCallerAppId(callerAppId, 'documents.deleteGrant');
+  await assertPermission(appId, 'documents:write', 'documents.deleteGrant');
+  const c = makeCaller(appId);
+  assertCanManageCollection(c, owner);
+  const store = await getStore();
+  const deleted = store.deleteGrant(owner, collection, granteeAppId);
+  if (deleted) {
+    await publishDocumentsMutation({ type: 'grant.deleted', owner, collection, granteeAppId });
   }
   return { deleted };
 }

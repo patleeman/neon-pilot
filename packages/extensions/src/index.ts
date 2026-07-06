@@ -1510,6 +1510,10 @@ export interface ExtensionBackendContext {
     getDocument(input: { owner: string; collection: string; id: string }): Promise<unknown>;
     putDocument(input: { owner: string; collection: string; id: string; body: unknown }): Promise<unknown>;
     deleteDocument(input: { owner: string; collection: string; id: string }): Promise<unknown>;
+    listGrants(input: { owner: string; collection: string }): Promise<unknown>;
+    getGrant(input: { owner: string; collection: string; granteeAppId: string }): Promise<unknown>;
+    setGrant(input: { owner: string; collection: string; granteeAppId: string; canRead: boolean; canWrite: boolean }): Promise<unknown>;
+    deleteGrant(input: { owner: string; collection: string; granteeAppId: string }): Promise<unknown>;
   };
   attention: {
     enqueue(input: {
