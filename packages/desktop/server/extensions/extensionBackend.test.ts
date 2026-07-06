@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +19,9 @@ import {
 } from './extensionBackend.js';
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
 import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
+import { closeExtensionDatabaseManagersForTests } from './extensionDatabase.js';
 import { invalidateExtensionRegistryReadCaches, isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
+import { closeExtensionStateDbs } from './extensionStorage.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
 
@@ -153,6 +156,85 @@ describe('extension backend action invocation', () => {
 
     expect(context.runtimeDir).toBe('/state-root/neon-pilot-runtime');
     expect(context.runtimeSettingsFilePath).toBe('/runtime/from-route/settings.json');
+  });
+
+  it('threads DesktopRootLayout to storage, database, and filesystem in createBackendContext', async () => {
+    const dbRoot = join(tmpdir(), `ext-backend-layout-${randomUUID()}`);
+    const stateRoot = join(tmpdir(), `ext-backend-layout-state-${randomUUID()}`);
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+
+    const layout = {
+      root: dbRoot,
+      apps: join(dbRoot, 'apps'),
+      data: join(dbRoot, 'data'),
+      dataApps: join(dbRoot, 'data', 'apps'),
+      dataDocuments: join(dbRoot, 'data', 'documents'),
+      documents: join(dbRoot, 'documents'),
+      agents: join(dbRoot, 'agents'),
+      logs: join(dbRoot, 'logs'),
+      logsDesktop: join(dbRoot, 'logs', 'desktop'),
+      logsDaemon: join(dbRoot, 'logs', 'daemon'),
+      logsTelemetry: join(dbRoot, 'logs', 'telemetry'),
+      system: join(dbRoot, 'system'),
+      systemAgents: join(dbRoot, 'system', 'agents'),
+      systemApps: join(dbRoot, 'system', 'apps'),
+      systemCache: join(dbRoot, 'system', 'cache'),
+      systemConfig: join(dbRoot, 'system', 'config'),
+      systemConversations: join(dbRoot, 'system', 'conversations'),
+      systemSessions: join(dbRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(dbRoot, 'system', 'daemon'),
+      systemElectron: join(dbRoot, 'system', 'electron'),
+      systemElectronUserData: join(dbRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(dbRoot, 'system', 'observability'),
+      systemRuntime: join(dbRoot, 'system', 'runtime'),
+      systemSecrets: join(dbRoot, 'system', 'secrets'),
+      systemState: join(dbRoot, 'system', 'state'),
+    };
+
+    installTestExtension(stateRoot, 'layout-test-ext');
+    const extRoot = join(stateRoot, 'extensions', 'layout-test-ext');
+    writeFileSync(
+      join(extRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'layout-test-ext',
+        name: 'Layout Test Ext',
+        permissions: ['storage:readwrite', 'filesystem:readwrite'],
+        backend: { entry: 'dist/backend.mjs', actions: [] },
+      }),
+    );
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const context = createBackendContext('layout-test-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => layout,
+    });
+
+    try {
+      // Storage DB created at layout.systemState
+      await context.storage.put('layout-key', { test: true });
+      const stored = await context.storage.get<{ test: boolean }>('layout-key');
+      expect(stored).toEqual({ test: true });
+      expect(existsSync(join(layout.systemState, 'app-state.sqlite'))).toBe(true);
+
+      // Database created at layout.dataApps/<extensionId>/databases/
+      const db = await context.database.open('layout-db');
+      db.exec('CREATE TABLE IF NOT EXISTS items (id TEXT)');
+      await context.database.close('layout-db');
+      expect(existsSync(join(layout.dataApps, 'layout-test-ext', 'databases', 'layout-db.sqlite'))).toBe(true);
+
+      // Filesystem app dir created at layout.dataApps/<extensionId>/files/
+      await context.filesystem.app();
+      expect(existsSync(join(layout.dataApps, 'layout-test-ext', 'files'))).toBe(true);
+    } finally {
+      await context.database.closeAll();
+      closeExtensionStateDbs();
+      closeExtensionDatabaseManagersForTests();
+      rmSync(dbRoot, { recursive: true, force: true });
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
   });
 
   it('requires mcp write permission for host-run runtime MCP refresh', () => {

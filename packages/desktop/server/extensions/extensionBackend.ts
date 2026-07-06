@@ -1,7 +1,7 @@
 import { join, resolve } from 'node:path';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getStateRoot, queryAppTelemetryEvents } from '@neon-pilot/core';
+import { type DesktopRootLayout, getPiAgentRuntimeDir, getStateRoot, queryAppTelemetryEvents } from '@neon-pilot/core';
 
 import { registerFileSystemAuthorityHostEvents } from '../filesystem/filesystemAuthority.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from '../routes/context.js';
@@ -395,7 +395,10 @@ function isHostCommandAction(action: string): boolean {
   return isKnownHostCommand(action);
 }
 
-function createStorage(extensionId: string, options: { enforceManifestPermissions?: boolean } = {}): ExtensionBackendContext['storage'] {
+function createStorage(
+  extensionId: string,
+  options: { enforceManifestPermissions?: boolean; layout?: DesktopRootLayout } = {},
+): ExtensionBackendContext['storage'] {
   const assertStoragePermission = (kind: 'read' | 'write', capability: string) => {
     if (!options.enforceManifestPermissions) return;
     assertExtensionAnyPermission(
@@ -405,23 +408,24 @@ function createStorage(extensionId: string, options: { enforceManifestPermission
     );
   };
 
+  const { layout } = options;
   return {
     async get<T = unknown>(key: string): Promise<T | null> {
       assertStoragePermission('read', 'storage.get');
-      return readExtensionState<T>(extensionId, key)?.value ?? null;
+      return readExtensionState<T>(extensionId, key, layout)?.value ?? null;
     },
     async put(key: string, value: unknown, opts?: { expectedVersion?: number }): Promise<{ ok: true }> {
       assertStoragePermission('write', 'storage.put');
-      writeExtensionState(extensionId, key, value, opts ? { expectedVersion: opts.expectedVersion } : {});
+      writeExtensionState(extensionId, key, value, opts ? { expectedVersion: opts.expectedVersion } : {}, layout);
       return { ok: true };
     },
     async delete(key: string): Promise<{ ok: true; deleted: boolean }> {
       assertStoragePermission('write', 'storage.delete');
-      return deleteExtensionState(extensionId, key);
+      return deleteExtensionState(extensionId, key, layout);
     },
     async list<T = unknown>(prefix = ''): Promise<Array<{ key: string; value: T }>> {
       assertStoragePermission('read', 'storage.list');
-      return listExtensionState<T>(extensionId, prefix).map((document) => ({ key: document.key, value: document.value }));
+      return listExtensionState<T>(extensionId, prefix, layout).map((document) => ({ key: document.key, value: document.value }));
     },
   };
 }
@@ -472,6 +476,7 @@ export function createBackendContext(
   const extensionBinDirs = () =>
     liveSessionResourceOptions().additionalExtensionPaths.map((extensionPath) => resolve(extensionPath, 'bin'));
   const shell = createExtensionShellCapability({ pathDirs: extensionBinDirs() });
+  const desktopRootLayout = serverContext?.getDesktopRootLayout?.();
   return {
     extensionId,
     runtimeScope,
@@ -491,8 +496,8 @@ export function createBackendContext(
         });
       },
     },
-    storage: createStorage(extensionId, { enforceManifestPermissions: true }),
-    database: createExtensionDatabaseManager(extensionId),
+    storage: createStorage(extensionId, { enforceManifestPermissions: true, layout: desktopRootLayout }),
+    database: createExtensionDatabaseManager(extensionId, desktopRootLayout ? { layout: desktopRootLayout } : undefined),
     documents: {
       listCollections: (input = {}) =>
         documentsDispatcher({
@@ -564,7 +569,10 @@ export function createBackendContext(
     models: createExtensionModelsCapability(serverContext, extensionId),
     knowledge: createExtensionKnowledgeCapability(extensionId, { enforceManifestPermissions: true }),
     conversations: createExtensionConversationsCapability(serverContext, extensionId, { enforceManifestPermissions: true }),
-    filesystem: createExtensionFilesystemCapability(extensionId, toolContext, { enforceManifestPermissions: true }),
+    filesystem: createExtensionFilesystemCapability(extensionId, toolContext, {
+      enforceManifestPermissions: true,
+      layout: desktopRootLayout,
+    }),
     workspace: createExtensionWorkspaceCapability(extensionId, toolContext, { enforceManifestPermissions: true }),
     git: createExtensionGitCapability(extensionId, { enforceManifestPermissions: true }),
     shell: {
