@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   buildPiResourceArgs,
@@ -15,11 +15,24 @@ import {
   resolveRuntimeResources,
 } from './index.js';
 
-const originalEnv = process.env;
+const originalEnv = { ...process.env };
 const tempDirs: string[] = [];
 
+function replaceEnv(nextEnv: NodeJS.ProcessEnv): void {
+  for (const key of Object.keys(process.env)) {
+    delete process.env[key];
+  }
+  Object.assign(process.env, nextEnv);
+}
+
+beforeEach(() => {
+  const home = mkdtempSync(join(tmpdir(), 'neon-pilot-home-'));
+  tempDirs.push(home);
+  replaceEnv({ ...originalEnv, HOME: home, NEON_PILOT_CONFIG_FILE: join(home, 'config', 'config.json') });
+});
+
 afterEach(async () => {
-  process.env = originalEnv;
+  replaceEnv(originalEnv);
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
@@ -124,6 +137,32 @@ describe('runtime resource loader', () => {
       join(syncRoot, 'AGENTS.md'),
       join(repo, 'custom-instructions.md'),
     ]);
+  });
+
+  it('loads shared agent instructions from the configured desktop root agents directory', () => {
+    const repo = createTempRepo();
+    const runtimeConfigRoot = createTempRuntimeConfigRoot();
+    const desktopRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-desktop-root-'));
+    const configRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-config-'));
+    tempDirs.push(desktopRoot, configRoot);
+
+    writeFile(join(repo, 'defaults/agent/AGENTS.md'), '# Shared\n');
+    writeFile(join(desktopRoot, 'agents', 'AGENTS.md'), '# Shared desktop agents\n');
+    writeFile(
+      join(configRoot, 'config.json'),
+      JSON.stringify({
+        desktopRoot,
+      }),
+    );
+    process.env.NEON_PILOT_CONFIG_FILE = join(configRoot, 'config.json');
+
+    const resolved = resolveRuntimeResources('shared', {
+      repoRoot: repo,
+      runtimeConfigRoot,
+      localRuntimeConfigDir: join(repo, '.local-profile'),
+    });
+
+    expect(resolved.agentsFiles).toEqual([join(repo, 'defaults/agent/AGENTS.md'), join(desktopRoot, 'agents', 'AGENTS.md')]);
   });
 
   it('discovers project instruction files from repo root to cwd', () => {

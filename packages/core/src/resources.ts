@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 
 import { readMachineInstructionFiles, readMachineSkillDirs, readMachineSystemPromptTemplate } from './machine-config.js';
 import { listUnifiedSkillNodeDirs } from './nodes.js';
+import { resolveDesktopRootLayout } from './runtime/desktop-root.js';
 import {
   getDurableAgentFilePath,
   getDurableRuntimeConfigRoot as getCanonicalRuntimeConfigRoot,
@@ -679,6 +680,7 @@ function resolvePromptThemeResources(localLayers: ResourceLayer[]): {
 function resolveInstructionFiles(input: {
   repoDefaultsAgentDir: string | undefined;
   durableAgentFiles: string[];
+  desktopAgentsDir: string;
   repoRoot: string;
   cwd: string | undefined;
   localLayers: ResourceLayer[];
@@ -686,6 +688,7 @@ function resolveInstructionFiles(input: {
   return dedupe([
     ...collectLayerFiles(input.repoDefaultsAgentDir ? [{ name: 'defaults', agentDir: input.repoDefaultsAgentDir }] : [], 'AGENTS.md'),
     ...input.durableAgentFiles,
+    ...collectLayerFiles([{ name: 'desktop-root-agents', agentDir: input.desktopAgentsDir }], 'AGENTS.md'),
     ...resolveConfiguredInstructionFiles(),
     ...collectProjectInstructionFiles(input.repoRoot, input.cwd ?? process.cwd()),
     ...collectLayerFiles(input.localLayers, 'AGENTS.md'),
@@ -720,6 +723,7 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
   const repoRoot = getRepoRoot(options.repoRoot);
   const knowledgeRoot = resolveKnowledgeRoot(options);
   const runtimeConfigRoot = resolveRuntimeConfigRoot(options);
+  const desktopRootLayout = resolveDesktopRootLayout();
 
   const repoDefaultsAgentDir = existingDir(getRepoDefaultsAgentDir(repoRoot));
 
@@ -774,7 +778,14 @@ export function resolveRuntimeResources(name: string, options: ResolveResourceOp
     promptEntries,
     themeDirs,
     themeEntries,
-    agentsFiles: resolveInstructionFiles({ repoDefaultsAgentDir, durableAgentFiles, repoRoot, cwd: options.cwd, localLayers }),
+    agentsFiles: resolveInstructionFiles({
+      repoDefaultsAgentDir,
+      durableAgentFiles,
+      desktopAgentsDir: desktopRootLayout.agents,
+      repoRoot,
+      cwd: options.cwd,
+      localLayers,
+    }),
     appendSystemFiles: collectLayerFiles(
       layers.filter((layer) => layer.name !== 'durable'),
       'APPEND_SYSTEM.md',
