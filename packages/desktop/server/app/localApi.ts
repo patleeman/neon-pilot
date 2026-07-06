@@ -945,6 +945,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     getRepoRoot: context.getRepoRoot,
     getSettingsFile: context.getSettingsFile,
     getSavedUiPreferences: context.getSavedUiPreferences,
+    getDesktopRootLayout: context.getDesktopRootLayout,
   });
   const capabilityContextAtMs = performance.now();
 
@@ -2717,8 +2718,9 @@ export async function createDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
+  const layout = (await getLocalServerRouteContext()).getDesktopRootLayout();
   return withDesktopScheduledTaskMutationInvalidation(() =>
-    createScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, normalizeDesktopScheduledTaskCreateInput(input)),
+    createScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, normalizeDesktopScheduledTaskCreateInput(input), layout),
   );
 }
 
@@ -2747,19 +2749,22 @@ export async function updateDesktopScheduledTask(input: {
   threadConversationId?: string | null;
 }) {
   await getLocalRoutes();
-  return withDesktopScheduledTaskMutationInvalidation(() => updateScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, input));
+  const layout = (await getLocalServerRouteContext()).getDesktopRootLayout();
+  return withDesktopScheduledTaskMutationInvalidation(() => updateScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, input, layout));
 }
 
 export async function runDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return withDesktopScheduledTaskMutationInvalidation(() => runScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId), {
+  const layout = (await getLocalServerRouteContext()).getDesktopRootLayout();
+  return withDesktopScheduledTaskMutationInvalidation(() => runScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId, layout), {
     includeRuns: true,
   });
 }
 
 export async function deleteDesktopScheduledTask(taskId: string) {
   await getLocalRoutes();
-  return withDesktopScheduledTaskMutationInvalidation(() => deleteScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId));
+  const layout = (await getLocalServerRouteContext()).getDesktopRootLayout();
+  return withDesktopScheduledTaskMutationInvalidation(() => deleteScheduledTaskCapability(DESKTOP_SCHEDULED_TASK_PROFILE, taskId, layout));
 }
 
 export async function markDesktopConversationAttention(input: { conversationId: string; read?: boolean }) {
