@@ -1,6 +1,6 @@
 {
   "extensionId": "system-desktop-tools",
-  "builtAt": "2026-07-06T03:12:39.997Z",
+  "builtAt": "2026-07-06T14:17:30.213Z",
   "frontendEntry": null,
   "backendEntry": "dist/backend.mjs",
   "sourceHashes": [
@@ -16,12 +16,8 @@
   "outputs": [
     {
       "path": "dist/backend.mjs",
-      "bytes": 8687,
-      "imports": [
-        "node:fs",
-        "node:path",
-        "node:url"
-      ]
+      "bytes": 3097,
+      "imports": []
     },
     {
       "path": "dist/package.json",
