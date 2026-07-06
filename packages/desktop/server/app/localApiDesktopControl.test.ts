@@ -43,6 +43,26 @@ describe('localApiDesktopControl', () => {
     unsubscribe();
   });
 
+  it('replays pending commands to late renderer subscribers', async () => {
+    const pending = issueDesktopControlCommand({ action: 'focus', windowId: 'chat:draft', timeoutMs: 500 });
+    const listener = vi.fn();
+    const unsubscribe = subscribeDesktopControlCommands(listener);
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: expect.stringMatching(/^desktop-control-/),
+        action: 'focus',
+        windowId: 'chat:draft',
+      }),
+    );
+    const commandId = listener.mock.calls[0]?.[0]?.id as string;
+
+    acknowledgeDesktopControlCommand({ commandId, ok: true });
+    await expect(pending).resolves.toMatchObject({ ok: true, commandId, status: 'completed' });
+
+    unsubscribe();
+  });
+
   it('rejects malformed commands before they reach subscribers', async () => {
     const listener = vi.fn();
     subscribeDesktopControlCommands(listener);

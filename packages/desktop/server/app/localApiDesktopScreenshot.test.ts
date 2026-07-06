@@ -50,6 +50,25 @@ describe('localApiDesktopScreenshot', () => {
     unsubscribe();
   });
 
+  it('replays pending requests to late renderer subscribers', async () => {
+    const pending = issueDesktopScreenshotRequest({ windowId: 'chat:draft', timeoutMs: 500 });
+    const listener = vi.fn();
+    const unsubscribe = subscribeDesktopScreenshotRequests(listener);
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: expect.stringMatching(/^desktop-screenshot-/),
+        windowId: 'chat:draft',
+      }),
+    );
+    const requestId = listener.mock.calls[0]?.[0]?.id as string;
+
+    acknowledgeDesktopScreenshotRequest({ requestId, ok: true, image });
+    await expect(pending).resolves.toMatchObject({ ok: true, requestId, status: 'completed' });
+
+    unsubscribe();
+  });
+
   it('rejects successful acknowledgements without a valid image', async () => {
     const listener = vi.fn();
     subscribeDesktopScreenshotRequests(listener);
