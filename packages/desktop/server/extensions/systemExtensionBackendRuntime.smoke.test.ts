@@ -130,6 +130,34 @@ globalThis[Symbol.for('neon-pilot.extensionHostCapabilityBridge')] = async (capa
     if (operation === 'readTrace' || operation === 'queryApp') return [];
     throw new Error('Unsupported smoke telemetry operation: ' + operation);
   }
+  if (capability === 'desktop') {
+    if (operation === 'control') {
+      return {
+        ok: true,
+        commandId: 'smoke-desktop-control',
+        action: input.action,
+        status: 'completed',
+        windowId: input.windowId ?? null,
+        appId: input.appId ?? null,
+      };
+    }
+    if (operation === 'screenshot') {
+      return {
+        ok: true,
+        requestId: 'smoke-desktop-screenshot',
+        status: 'completed',
+        image: {
+          mimeType: 'image/png',
+          data: 'c21va2UtcG5n',
+          width: 320,
+          height: 200,
+          capturedAt: '2026-07-06T00:00:00.000Z',
+          windowId: input.windowId,
+        },
+      };
+    }
+    throw new Error('Unsupported smoke desktop operation: ' + operation);
+  }
   if (capability !== 'terminal') throw new Error('Unsupported smoke capability: ' + capability);
   if (operation === 'create') {
     const id = 'terminal-smoke-' + (terminalSessions.size + 1);
@@ -538,6 +566,20 @@ const smokes = {
     assert(Array.isArray(details?.windows), 'desktop_state details did not return windows');
     assert(result.content?.[0]?.type === 'text', 'desktop_state did not return text content');
     assert(result.content[0].text.includes('"windows"'), 'desktop_state content did not include semantic state');
+
+    const control = await module.desktopControl({ action: 'open', appId: 'browser' }, ctx);
+    assert(control.details?.commandId === 'smoke-desktop-control', 'desktop_control did not reach the capability bridge');
+    assert(control.details?.appId === 'browser', 'desktop_control did not preserve appId input');
+    assert(control.content?.[0]?.text.includes('smoke-desktop-control'), 'desktop_control content did not include bridge result');
+
+    const screenshot = await module.desktopScreenshot({ windowId: 'browser:main' }, ctx);
+    assert(screenshot.details?.requestId === 'smoke-desktop-screenshot', 'desktop_screenshot did not reach the capability bridge');
+    assert(screenshot.details?.image?.windowId === 'browser:main', 'desktop_screenshot did not preserve windowId input');
+    assert(!screenshot.content?.[0]?.text.includes('c21va2UtcG5n'), 'desktop_screenshot text leaked image data');
+    assert(
+      screenshot.content?.[1]?.type === 'image' && screenshot.content[1].data === 'c21va2UtcG5n',
+      'desktop_screenshot did not include PNG image content',
+    );
   },
   async 'system-context-hardening'() {
     await smokeAgentFactory('createContextHardeningAgentExtension');
