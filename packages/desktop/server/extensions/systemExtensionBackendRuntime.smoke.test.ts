@@ -580,6 +580,11 @@ const smokes = {
       screenshot.content?.[1]?.type === 'image' && screenshot.content[1].data === 'c21va2UtcG5n',
       'desktop_screenshot did not include PNG image content',
     );
+
+    const windowEvents = await module.desktopWindowEvents({ lastEventId: 'smoke-previous-event', limit: 5 }, ctx);
+    assert(Array.isArray(windowEvents.details), 'desktop_window_events details did not return an event list');
+    assert(windowEvents.content?.[0]?.type === 'text', 'desktop_window_events did not return text content');
+    assert(windowEvents.content[0].text === '[]', 'desktop_window_events empty event list text was unexpected');
   },
   async 'system-context-hardening'() {
     await smokeAgentFactory('createContextHardeningAgentExtension');

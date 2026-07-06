@@ -203,7 +203,7 @@ describe('registerToolsRoutes', () => {
         body: {
           name: 'desktop_screenshot',
           input: { windowId: 'browser:main' },
-          directToolNames: [' desktop_state ', 'desktop_control', 'desktop_screenshot', 42, ''],
+          directToolNames: [' desktop_state ', 'desktop_control', 'desktop_screenshot', 'desktop_window_events', 42, ''],
           toolContext: { conversationId: 'conv-1', cwd: '/repo' },
         },
       },
@@ -217,7 +217,7 @@ describe('registerToolsRoutes', () => {
         runtime: {
           runtimeScope: 'shared',
           repoRoot: '/repo',
-          directToolNames: ['desktop_state', 'desktop_control', 'desktop_screenshot'],
+          directToolNames: ['desktop_state', 'desktop_control', 'desktop_screenshot', 'desktop_window_events'],
         },
         toolContext: { conversationId: 'conv-1', cwd: '/repo' },
       },

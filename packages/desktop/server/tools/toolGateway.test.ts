@@ -281,13 +281,31 @@ describe('tool gateway', () => {
         },
         priority: 0,
       },
+      {
+        id: 'system-desktop-tools/desktop-window-events',
+        name: 'desktop_window_events',
+        description: 'Read user action events from the Windowed OS desktop',
+        inputSchema: { type: 'object' },
+        raw: {
+          extensionId: 'system-desktop-tools',
+          packageType: 'system',
+          id: 'desktop-window-events',
+          name: 'desktop_window_events',
+          action: 'desktopWindowEvents',
+          description: 'Read user action events from the Windowed OS desktop',
+          inputSchema: { type: 'object' },
+        },
+        priority: 0,
+      },
     ]);
+
+    const desktopDirectToolNames = ['desktop_control', 'desktop_screenshot', 'desktop_state', 'desktop_window_events'];
 
     await expect(
       listInvocableExtensionTools({
         modelRef: 'ds4/deepseek-v4-flash',
         repoRoot: '/repo',
-        directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
+        directToolNames: desktopDirectToolNames,
       }),
     ).resolves.toEqual([
       expect.objectContaining({
@@ -314,6 +332,14 @@ describe('tool gateway', () => {
           action: 'desktopState',
         },
       }),
+      expect.objectContaining({
+        name: 'desktop_window_events',
+        source: {
+          extensionId: 'system-desktop-tools',
+          toolId: 'desktop-window-events',
+          action: 'desktopWindowEvents',
+        },
+      }),
     ]);
 
     await expect(
@@ -323,7 +349,7 @@ describe('tool gateway', () => {
         runtime: {
           modelRef: 'ds4/deepseek-v4-flash',
           repoRoot: '/repo',
-          directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
+          directToolNames: desktopDirectToolNames,
         },
         toolContext: { conversationId: 'conv-1', cwd: '/repo' },
       }),
@@ -344,7 +370,7 @@ describe('tool gateway', () => {
         runtime: {
           modelRef: 'ds4/deepseek-v4-flash',
           repoRoot: '/repo',
-          directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
+          directToolNames: desktopDirectToolNames,
         },
       }),
     ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
@@ -363,7 +389,7 @@ describe('tool gateway', () => {
         runtime: {
           modelRef: 'ds4/deepseek-v4-flash',
           repoRoot: '/repo',
-          directToolNames: ['desktop_control', 'desktop_screenshot', 'desktop_state'],
+          directToolNames: desktopDirectToolNames,
         },
       }),
     ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
@@ -372,6 +398,26 @@ describe('tool gateway', () => {
       extensionId: 'system-desktop-tools',
       actionId: 'desktopState',
       input: {},
+      serverContextSnapshot: undefined,
+      toolContextSnapshot: undefined,
+    });
+
+    await expect(
+      invokeExtensionToolByName({
+        name: 'desktop_window_events',
+        input: { lastEventId: 'desktop-user-action-1', limit: 5 },
+        runtime: {
+          modelRef: 'ds4/deepseek-v4-flash',
+          repoRoot: '/repo',
+          directToolNames: desktopDirectToolNames,
+        },
+      }),
+    ).resolves.toEqual({ content: [{ type: 'text', text: 'done' }], details: { text: 'done' } });
+
+    expect(extensionHostClient.invokeAction).toHaveBeenLastCalledWith({
+      extensionId: 'system-desktop-tools',
+      actionId: 'desktopWindowEvents',
+      input: { lastEventId: 'desktop-user-action-1', limit: 5 },
       serverContextSnapshot: undefined,
       toolContextSnapshot: undefined,
     });
