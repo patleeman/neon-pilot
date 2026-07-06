@@ -138,6 +138,26 @@ afterEach(() => {
 });
 
 describe('sessions', () => {
+  it('lists sessions from an explicit sessions directory', () => {
+    const envSessionsDir = createTempSessionsDir();
+    const layoutSessionsDir = createTempSessionsDir();
+    configureSessionEnv(envSessionsDir);
+
+    writeSessionFile({
+      sessionsDir: envSessionsDir,
+      sessionId: 'env-session',
+      title: 'Env session',
+    });
+    writeSessionFile({
+      sessionsDir: layoutSessionsDir,
+      sessionId: 'layout-session',
+      title: 'Layout session',
+    });
+
+    expect(listSessions(layoutSessionsDir).map((session) => session.id)).toEqual(['layout-session']);
+    expect(listSessions().map((session) => session.id)).toEqual(['env-session']);
+  });
+
   it('deletes persisted sessions by id, dedupes input, and reports missing ids', () => {
     const sessionsDir = createTempSessionsDir();
     configureSessionEnv(sessionsDir);

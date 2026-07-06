@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+
 import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -392,6 +394,7 @@ describe('conversationService', () => {
 
     listConversationSessionsSnapshot();
 
+    expect(listSessionsMock).toHaveBeenCalledWith(layout.systemSessions);
     expect(loadProfileActivityReadStateMock).toHaveBeenCalledWith({
       repoRoot: '/repo',
       profile: 'assistant',
@@ -407,6 +410,23 @@ describe('conversationService', () => {
       profile: 'assistant',
       activityId: 'activity-1',
     });
+  });
+
+  it('uses the desktop layout for stored conversation metadata fallback reads', () => {
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-test-desktop' });
+    readSessionMetaMock.mockReturnValue({
+      id: 'conversation-1',
+      file: join(layout.systemSessions, 'conversation-1.jsonl'),
+      timestamp: '2026-04-09T00:00:00.000Z',
+      cwd: '/repo',
+      cwdSlug: '-repo',
+      model: 'gpt-5',
+      title: 'Layout conversation',
+      messageCount: 1,
+    });
+
+    expect(readConversationSessionMeta('conversation-1')).toEqual(expect.objectContaining({ id: 'conversation-1' }));
+    expect(readSessionMetaMock).toHaveBeenCalledWith('conversation-1', layout.systemSessions);
   });
 
   it('resets desktop layout context to fail-fast when getDesktopRootLayout is omitted', () => {

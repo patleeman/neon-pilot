@@ -509,11 +509,13 @@ function elapsedMsSince(startedAt: bigint): number {
 
 // ── Parsing ────────────────────────────────────────────────────────────────────
 
-function resolveSessionsDir(): string {
+function resolveSessionsDir(sessionsDirOverride?: string): string {
+  if (sessionsDirOverride) return sessionsDirOverride;
   return resolveSessionsDirValue({ envSessionsDir: process.env.PA_SESSIONS_DIR, defaultSessionsDir: DEFAULT_SESSIONS_DIR });
 }
 
-function resolveSessionsIndexFile(): string {
+function resolveSessionsIndexFile(sessionsDirOverride?: string): string {
+  if (sessionsDirOverride) return join(dirname(sessionsDirOverride), 'session-meta-index.json');
   return resolveSessionsIndexFileValue({
     envSessionsIndexFile: process.env.PA_SESSIONS_INDEX_FILE,
     envSessionsDir: process.env.PA_SESSIONS_DIR,
@@ -2101,9 +2103,9 @@ function loadPersistentSessionIndexEntry(value: unknown): PersistentSessionIndex
   return loadPersistentSessionIndexEntryFromValue(value) as PersistentSessionIndexEntry | null;
 }
 
-function ensurePersistentIndexLoaded(): void {
-  const sessionsDir = resolveSessionsDir();
-  const indexFile = resolveSessionsIndexFile();
+function ensurePersistentIndexLoaded(sessionsDirOverride?: string): void {
+  const sessionsDir = resolveSessionsDir(sessionsDirOverride);
+  const indexFile = resolveSessionsIndexFile(sessionsDirOverride);
   const indexKey = buildSessionIndexKey({ sessionsDir, indexFile });
 
   if (!shouldReloadPersistentSessionIndex({ loadedIndexKey: loadedPersistentIndexKey, nextIndexKey: indexKey })) {
@@ -2152,7 +2154,7 @@ function ensurePersistentIndexLoaded(): void {
   }
 }
 
-function persistSessionIndex(): void {
+function persistSessionIndex(sessionsDirOverride?: string): void {
   // Skip the expensive JSON build-and-compare if the cache hasn't changed since
   // the last persist. This is called on every listSessions() which fires in tight
   // loops (e.g. the search indexer batch loop), so avoiding redundant work here
@@ -2161,8 +2163,8 @@ function persistSessionIndex(): void {
     return;
   }
 
-  const sessionsDir = resolveSessionsDir();
-  const indexFile = resolveSessionsIndexFile();
+  const sessionsDir = resolveSessionsDir(sessionsDirOverride);
+  const indexFile = resolveSessionsIndexFile(sessionsDirOverride);
   const nextJson = serializePersistentSessionIndex(buildPersistentSessionIndexDocument(sessionsDir));
   if (!didSessionIndexJsonChange({ nextJson, persistedIndexJson })) {
     sessionCacheDirty = false;
@@ -2209,10 +2211,10 @@ function readCachedSessionMeta(filePath: string, cwdSlug: string): SessionMeta |
   return meta;
 }
 
-function scanSessionMetas(): SessionMeta[] {
-  ensurePersistentIndexLoaded();
+function scanSessionMetas(sessionsDirOverride?: string): SessionMeta[] {
+  ensurePersistentIndexLoaded(sessionsDirOverride);
 
-  const sessionsDir = resolveSessionsDir();
+  const sessionsDir = resolveSessionsDir(sessionsDirOverride);
   if (!existsSync(sessionsDir)) {
     sessionMetaCache.clear();
     sessionFileById.clear();
@@ -2246,16 +2248,16 @@ function scanSessionMetas(): SessionMeta[] {
   sessionFileById = nextSessionFileById;
   metas.sort((left, right) => right.timestamp.localeCompare(left.timestamp));
   const decoratedMetas = decorateSessionParentIds(metas);
-  persistSessionIndex();
+  persistSessionIndex(sessionsDirOverride);
   return decoratedMetas;
 }
 
-function resolveSessionMetaByConventionalFileName(sessionId: string): SessionMeta | null {
+function resolveSessionMetaByConventionalFileName(sessionId: string, sessionsDirOverride?: string): SessionMeta | null {
   if (!sessionId || sessionId.includes('/') || sessionId.includes('\\')) {
     return null;
   }
 
-  const sessionsDir = resolveSessionsDir();
+  const sessionsDir = resolveSessionsDir(sessionsDirOverride);
   if (!existsSync(sessionsDir)) {
     return null;
   }
@@ -2287,8 +2289,8 @@ function resolveSessionMetaByConventionalFileName(sessionId: string): SessionMet
   return null;
 }
 
-function resolveSessionMeta(sessionId: string): SessionMeta | null {
-  ensurePersistentIndexLoaded();
+function resolveSessionMeta(sessionId: string, sessionsDirOverride?: string): SessionMeta | null {
+  ensurePersistentIndexLoaded(sessionsDirOverride);
 
   const cachedFilePath = sessionFileById.get(sessionId);
   if (cachedFilePath) {
@@ -2298,12 +2300,12 @@ function resolveSessionMeta(sessionId: string): SessionMeta | null {
     }
   }
 
-  const conventionalMeta = resolveSessionMetaByConventionalFileName(sessionId);
+  const conventionalMeta = resolveSessionMetaByConventionalFileName(sessionId, sessionsDirOverride);
   if (conventionalMeta) {
     return conventionalMeta;
   }
 
-  const metas = scanSessionMetas();
+  const metas = scanSessionMetas(sessionsDirOverride);
   return metas.find((meta) => meta.id === sessionId) ?? null;
 }
 
@@ -2381,12 +2383,12 @@ export function buildDisplayMessageEntriesFromSessionEntries(entries: SessionEnt
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
-export function listSessions(): SessionMeta[] {
-  return scanSessionMetas();
+export function listSessions(sessionsDir?: string): SessionMeta[] {
+  return scanSessionMetas(sessionsDir);
 }
 
-export function readSessionMeta(sessionId: string): SessionMeta | null {
-  return resolveSessionMeta(sessionId);
+export function readSessionMeta(sessionId: string, sessionsDir?: string): SessionMeta | null {
+  return resolveSessionMeta(sessionId, sessionsDir);
 }
 
 export interface DeleteSessionsResult {
@@ -2394,12 +2396,12 @@ export interface DeleteSessionsResult {
   missing: string[];
 }
 
-export function deleteSessions(sessionIds: string[]): DeleteSessionsResult {
+export function deleteSessions(sessionIds: string[], sessionsDir?: string): DeleteSessionsResult {
   const deleted: Array<{ id: string; file: string }> = [];
   const missing: string[] = [];
   const normalizedSessionIds = [...new Set(sessionIds.map((id) => id.trim()).filter(Boolean))];
   for (const sessionId of normalizedSessionIds) {
-    const meta = resolveSessionMeta(sessionId);
+    const meta = resolveSessionMeta(sessionId, sessionsDir);
     if (!meta?.file) {
       missing.push(sessionId);
       continue;
@@ -2417,7 +2419,7 @@ export function deleteSessions(sessionIds: string[]): DeleteSessionsResult {
     sessionCacheDirty = true;
   }
   deleteConversationCatalogSessions(normalizedSessionIds);
-  persistSessionIndex();
+  persistSessionIndex(sessionsDir);
   return { deleted, missing };
 }
 
@@ -2427,6 +2429,7 @@ export function pruneSessionsByRetention(input: {
   archivedConversationIds?: string[];
   archivedOnly?: boolean;
   dryRun?: boolean;
+  sessionsDir?: string;
 }): {
   ok: true;
   dryRun: boolean;
@@ -2438,7 +2441,7 @@ export function pruneSessionsByRetention(input: {
   const nowMs = input.now?.getTime() ?? Date.now();
   const cutoffMs = nowMs - input.olderThanMs;
   const archivedIds = new Set((input.archivedConversationIds ?? []).map((id) => id.trim()).filter(Boolean));
-  const allSessions = listSessions();
+  const allSessions = listSessions(input.sessionsDir);
   const candidates = allSessions
     .filter((meta) => {
       if (input.archivedOnly && !archivedIds.has(meta.id)) return false;
@@ -2446,7 +2449,12 @@ export function pruneSessionsByRetention(input: {
       return Number.isFinite(timestampMs) && timestampMs < cutoffMs;
     })
     .map((meta) => ({ id: meta.id, file: meta.file, timestamp: meta.lastActivityAt ?? meta.timestamp }));
-  const deleted = input.dryRun ? [] : deleteSessions(candidates.map((candidate) => candidate.id)).deleted;
+  const deleted = input.dryRun
+    ? []
+    : deleteSessions(
+        candidates.map((candidate) => candidate.id),
+        input.sessionsDir,
+      ).deleted;
   return {
     ok: true,
     dryRun: Boolean(input.dryRun),
@@ -2538,8 +2546,8 @@ export function readSessionSearchTextForMeta(meta: Pick<SessionMeta, 'file'>, ma
   }
 }
 
-export function readSessionSearchText(sessionId: string, maxCharacters = 12_000): string | null {
-  const meta = resolveSessionMeta(sessionId);
+export function readSessionSearchText(sessionId: string, maxCharacters = 12_000, sessionsDir?: string): string | null {
+  const meta = resolveSessionMeta(sessionId, sessionsDir);
   if (!meta) {
     return null;
   }
@@ -2557,10 +2565,10 @@ export function readSessionMetaByFile(filePath: string): SessionMeta | null {
   return mergeResolvedParentSessionMetadata(meta, { parentSessionFile, parentSessionId });
 }
 
-export function renameStoredSession(sessionId: string, name: string): SessionMeta {
+export function renameStoredSession(sessionId: string, name: string, sessionsDir?: string): SessionMeta {
   const rename = resolveStoredSessionRename(name);
 
-  const meta = resolveSessionMeta(sessionId);
+  const meta = resolveSessionMeta(sessionId, sessionsDir);
   if (!meta) {
     throw buildMissingSessionRenameError(sessionId);
   }
@@ -2572,7 +2580,7 @@ export function renameStoredSession(sessionId: string, name: string): SessionMet
     throw buildReloadSessionAfterRenameError(sessionId);
   }
 
-  persistSessionIndex();
+  persistSessionIndex(sessionsDir);
   return updatedMeta;
 }
 
@@ -2826,18 +2834,18 @@ export function readSessionBlocksByFile(filePath: string, options?: { tailBlocks
 
 export function readSessionBlocksWithTelemetry(
   sessionId: string,
-  options?: { tailBlocks?: number },
+  options?: { tailBlocks?: number; sessionsDir?: string },
 ): { detail: SessionDetail | null; telemetry: SessionDetailReadTelemetry | null } {
-  const meta = resolveSessionMeta(sessionId);
+  const meta = resolveSessionMeta(sessionId, options?.sessionsDir);
   return meta ? readSessionBlocksByFileWithTelemetry(meta.file, options) : { detail: null, telemetry: null };
 }
 
-export function readSessionBlocks(sessionId: string, options?: { tailBlocks?: number }): SessionDetail | null {
+export function readSessionBlocks(sessionId: string, options?: { tailBlocks?: number; sessionsDir?: string }): SessionDetail | null {
   return readSessionBlocksWithTelemetry(sessionId, options).detail;
 }
 
-export function readSessionBlock(sessionId: string, blockId: string): DisplayBlock | null {
-  const meta = resolveSessionMeta(sessionId);
+export function readSessionBlock(sessionId: string, blockId: string, sessionsDir?: string): DisplayBlock | null {
+  const meta = resolveSessionMeta(sessionId, sessionsDir);
   if (!meta) {
     return null;
   }
@@ -2865,8 +2873,8 @@ export function readSessionBlock(sessionId: string, blockId: string): DisplayBlo
   return blocks.find((block) => block.id.startsWith(`${blockPrefix}-${blockKind}`)) ?? null;
 }
 
-export function readSessionEntryBlocks(sessionId: string, entryIds: string[]): DisplayBlock[] | null {
-  const meta = resolveSessionMeta(sessionId);
+export function readSessionEntryBlocks(sessionId: string, entryIds: string[], sessionsDir?: string): DisplayBlock[] | null {
+  const meta = resolveSessionMeta(sessionId, sessionsDir);
   if (!meta) {
     return null;
   }
@@ -2892,8 +2900,9 @@ export function readSessionImageAsset(
   sessionId: string,
   blockId: string,
   imageIndex?: number,
+  sessionsDir?: string,
 ): { mimeType: string; data: Buffer; fileName?: string } | null {
-  const meta = resolveSessionMeta(sessionId);
+  const meta = resolveSessionMeta(sessionId, sessionsDir);
   if (!meta) {
     return null;
   }

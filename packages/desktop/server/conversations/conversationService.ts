@@ -122,6 +122,14 @@ function resolveAppActivityRoot(): ActivityStoreOptions {
   }
 }
 
+function resolveLayoutSessionsDir(): string | undefined {
+  try {
+    return getDesktopRootLayoutFn().systemSessions;
+  } catch {
+    return undefined;
+  }
+}
+
 function listActivityStores(): ActivityStoreOptions[] {
   const stores: ActivityStoreOptions[] = [resolveAppActivityRoot()];
   try {
@@ -453,7 +461,9 @@ export function listConversationSessionsSnapshot(options: { includeLive?: boolea
   const catalogComplete = isConversationCatalogComplete();
   const catalogHasRows = hasConversationCatalogRows();
   const limit = Number.isSafeInteger(options.limit) && typeof options.limit === 'number' && options.limit > 0 ? options.limit : null;
-  const storedSessions = catalogHasRows ? listConversationCatalogSessions({ ...(limit === null ? {} : { limit }) }) : listSessions();
+  const storedSessions = catalogHasRows
+    ? listConversationCatalogSessions({ ...(limit === null ? {} : { limit }) })
+    : listSessions(resolveLayoutSessionsDir());
   if (!catalogComplete && !catalogHasRows) {
     upsertConversationCatalogSessions(storedSessions);
     markConversationCatalogComplete();
@@ -772,7 +782,7 @@ export function readConversationSessionSignatureWithTelemetry(conversationId: st
 export function readConversationSessionMeta(conversationId: string, options: { profile?: string } = {}) {
   const profile = options.profile?.trim() || getRuntimeScopeFn();
   const deferredResumesBySessionFile = listDeferredResumeSummariesBySessionFile();
-  const storedSession = readConversationCatalogSession(conversationId) ?? readSessionMeta(conversationId);
+  const storedSession = readConversationCatalogSession(conversationId) ?? readSessionMeta(conversationId, resolveLayoutSessionsDir());
   const decoratedSession = storedSession
     ? (decorateSessionsWithAttention(profile, [storedSession], deferredResumesBySessionFile)[0] ?? null)
     : null;
