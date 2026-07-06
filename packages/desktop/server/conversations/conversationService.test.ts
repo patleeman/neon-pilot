@@ -361,6 +361,54 @@ describe('conversationService', () => {
     expect(parseTailBlocksQuery('50000')).toBe(10000);
   });
 
+  it('uses the desktop layout for app-root conversation activity reads', () => {
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-test-desktop' });
+    listSessionsMock.mockReturnValue([
+      {
+        id: 'conversation-1',
+        file: '/sessions/conversation-1.jsonl',
+        timestamp: '2026-04-09T00:00:00.000Z',
+        cwd: '/repo',
+        cwdSlug: '-repo',
+        model: 'gpt-5',
+        title: 'Conversation title',
+        messageCount: 1,
+      },
+    ]);
+    listProfileActivityEntriesMock.mockReturnValue([
+      {
+        path: '/activity/activity-1.json',
+        entry: {
+          id: 'activity-1',
+          createdAt: '2026-04-09T01:00:00.000Z',
+          profile: 'assistant',
+          kind: 'conversation_renamed',
+          summary: 'Conversation renamed',
+          notificationState: 'none',
+        },
+      },
+    ]);
+    getActivityConversationLinkMock.mockReturnValue({ relatedConversationIds: ['conversation-1'] });
+
+    listConversationSessionsSnapshot();
+
+    expect(loadProfileActivityReadStateMock).toHaveBeenCalledWith({
+      repoRoot: '/repo',
+      profile: 'assistant',
+      layout,
+    });
+    expect(listProfileActivityEntriesMock).toHaveBeenCalledWith({
+      repoRoot: '/repo',
+      profile: 'assistant',
+      layout,
+    });
+    expect(getActivityConversationLinkMock).toHaveBeenCalledWith({
+      stateRoot: undefined,
+      profile: 'assistant',
+      activityId: 'activity-1',
+    });
+  });
+
   it('resets desktop layout context to fail-fast when getDesktopRootLayout is omitted', () => {
     readSessionMetaMock.mockReturnValue({ title: 'Test' });
     renameStoredSessionMock.mockReturnValue({

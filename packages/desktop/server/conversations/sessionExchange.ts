@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 
-import { getDurableSessionsDir, getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getDurableSessionsDir, getStateRoot } from '@neon-pilot/core';
 
 import { invalidateAppTopics } from '../shared/appEvents.js';
 import { readConversationSessionMeta } from './conversationService.js';
@@ -82,7 +82,10 @@ function readExistingSessionIds(): Set<string> {
   return new Set(listTranscriptBackedConversationSessions().map((session) => session.id));
 }
 
-export function exportConversationSession(input: { conversationId?: unknown; sessionTitle?: unknown }): ExportConversationSessionResult {
+export function exportConversationSession(
+  input: { conversationId?: unknown; sessionTitle?: unknown },
+  layout?: DesktopRootLayout,
+): ExportConversationSessionResult {
   const conversationId = typeof input.conversationId === 'string' ? input.conversationId.trim() : '';
   if (!conversationId) {
     throw new Error('Conversation id is required.');
@@ -93,7 +96,7 @@ export function exportConversationSession(input: { conversationId?: unknown; ses
     throw new Error(`Conversation ${conversationId} not found.`);
   }
 
-  const exportDir = join(getStateRoot(), 'exports', 'sessions');
+  const exportDir = layout ? join(layout.dataExports, 'sessions') : join(getStateRoot(), 'exports', 'sessions');
   mkdirSync(exportDir, { recursive: true });
 
   const title = typeof input.sessionTitle === 'string' && input.sessionTitle.trim() ? input.sessionTitle : meta.title;

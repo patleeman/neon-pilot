@@ -40,6 +40,7 @@ describe('desktop root layout', () => {
       data: '/Users/example/Agent Desktop/data',
       dataApps: '/Users/example/Agent Desktop/data/apps',
       dataDocuments: '/Users/example/Agent Desktop/data/documents',
+      dataExports: '/Users/example/Agent Desktop/data/exports',
       documents: '/Users/example/Agent Desktop/documents',
       agents: '/Users/example/Agent Desktop/agents',
       logs: '/Users/example/Agent Desktop/logs',

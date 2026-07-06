@@ -10,6 +10,7 @@ export interface DesktopRootLayout {
   data: string;
   dataApps: string;
   dataDocuments: string;
+  dataExports: string;
   documents: string;
   agents: string;
   logs: string;
@@ -81,6 +82,7 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
     data,
     dataApps: join(data, 'apps'),
     dataDocuments: join(data, 'documents'),
+    dataExports: join(data, 'exports'),
     documents: join(root, 'documents'),
     agents: join(root, 'agents'),
     logs,

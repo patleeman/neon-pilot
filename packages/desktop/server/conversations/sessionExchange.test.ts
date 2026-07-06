@@ -43,6 +43,63 @@ describe('conversation session exchange', () => {
     vi.setSystemTime(new Date('2026-05-22T12:34:56.789Z'));
   });
 
+  it('uses layout.dataExports when a DesktopRootLayout is provided', () => {
+    sessions.readSessionMeta.mockReturnValueOnce({ id: 'conv-2', title: 'Layout Test', file: '/sessions/conv-2.jsonl' });
+    fs.files.set('/sessions/conv-2.jsonl', '{"type":"session","id":"conv-2"}\n');
+
+    const layout = {
+      root: '/custom/root',
+      data: '/custom/root/data',
+      dataExports: '/custom/root/data/exports',
+      dataApps: '/custom/root/data/apps',
+      dataDocuments: '/custom/root/data/documents',
+      documents: '/custom/root/documents',
+      apps: '/custom/root/apps',
+      agents: '/custom/root/agents',
+      logs: '/custom/root/logs',
+      logsDesktop: '/custom/root/logs/desktop',
+      logsDaemon: '/custom/root/logs/daemon',
+      logsTelemetry: '/custom/root/logs/telemetry',
+      system: '/custom/root/system',
+      systemAgents: '/custom/root/system/agents',
+      systemApps: '/custom/root/system/apps',
+      systemCache: '/custom/root/system/cache',
+      systemConfig: '/custom/root/system/config',
+      systemConversations: '/custom/root/system/conversations',
+      systemSessions: '/custom/root/system/conversations/sessions',
+      systemDaemon: '/custom/root/system/daemon',
+      systemElectron: '/custom/root/system/electron',
+      systemElectronUserData: '/custom/root/system/electron/user-data',
+      systemObservability: '/custom/root/system/observability',
+      systemRuntime: '/custom/root/system/runtime',
+      systemSecrets: '/custom/root/system/secrets',
+      systemState: '/custom/root/system/state',
+    };
+
+    expect(exportConversationSession({ conversationId: 'conv-2' }, layout)).toEqual({
+      ok: true,
+      conversationId: 'conv-2',
+      exportPath: '/custom/root/data/exports/sessions/Layout-Test-conv-2-2026-05-22T12-34-56-789Z.jsonl',
+    });
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/custom/root/data/exports/sessions', { recursive: true });
+    expect(fs.copyFileSync).toHaveBeenCalledWith(
+      '/sessions/conv-2.jsonl',
+      '/custom/root/data/exports/sessions/Layout-Test-conv-2-2026-05-22T12-34-56-789Z.jsonl',
+    );
+  });
+
+  it('falls back to legacy getStateRoot path when no layout is provided', () => {
+    sessions.readSessionMeta.mockReturnValueOnce({ id: 'conv-3', title: 'Legacy Fallback', file: '/sessions/conv-3.jsonl' });
+    fs.files.set('/sessions/conv-3.jsonl', '{"type":"session","id":"conv-3"}\n');
+
+    expect(exportConversationSession({ conversationId: 'conv-3' })).toEqual({
+      ok: true,
+      conversationId: 'conv-3',
+      exportPath: '/state/exports/sessions/Legacy-Fallback-conv-3-2026-05-22T12-34-56-789Z.jsonl',
+    });
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/state/exports/sessions', { recursive: true });
+  });
+
   it('exports a conversation session using sanitized title, id, and timestamp', () => {
     sessions.readSessionMeta.mockReturnValueOnce({ id: 'conv-1', title: 'My / Session: Title!', file: '/sessions/conv-1.jsonl' });
     fs.files.set('/sessions/conv-1.jsonl', '{"type":"session","id":"conv-1"}\n');

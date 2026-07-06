@@ -108,19 +108,35 @@ function resolveDaemonRoot(): string {
   return resolveDaemonPaths(loadDaemonConfig().ipc.socketPath).root;
 }
 
-function listActivityStateRoots(): Array<string | undefined> {
+type ActivityStoreOptions = {
+  layout?: DesktopRootLayout;
+  stateRoot?: string;
+};
+
+function resolveAppActivityRoot(): ActivityStoreOptions {
   try {
-    return [undefined, resolveDaemonRoot()];
+    return { layout: getDesktopRootLayoutFn() };
   } catch {
-    return [undefined];
+    // Desktop layout not initialized; keep default stateRoot for activity read/list
+    return {};
   }
 }
 
-function loadReadState(stateRoot: string | undefined, profile = getRuntimeScopeFn()): Set<string> {
+function listActivityStores(): ActivityStoreOptions[] {
+  const stores: ActivityStoreOptions[] = [resolveAppActivityRoot()];
+  try {
+    stores.push({ stateRoot: resolveDaemonRoot() });
+  } catch {
+    // daemon unavailable
+  }
+  return stores;
+}
+
+function loadReadState(store: ActivityStoreOptions, profile = getRuntimeScopeFn()): Set<string> {
   return loadProfileActivityReadState({
     repoRoot: getRepoRootFn(),
-    stateRoot,
     profile,
+    ...store,
   });
 }
 
@@ -158,14 +174,14 @@ function attachActivityConversationLinks(
 function listActivityRecordsForProfile(profile = getRuntimeScopeFn()): ActivityRecord[] {
   const records: ActivityRecord[] = [];
 
-  for (const stateRoot of listActivityStateRoots()) {
-    const readState = loadReadState(stateRoot, profile);
-    const entries = listProfileActivityEntries({ repoRoot: getRepoRootFn(), stateRoot, profile });
+  for (const store of listActivityStores()) {
+    const readState = loadReadState(store, profile);
+    const entries = listProfileActivityEntries({ repoRoot: getRepoRootFn(), profile, ...store });
 
     for (const { entry } of entries) {
       records.push({
-        stateRoot,
-        entry: attachActivityConversationLinks(profile, entry, stateRoot),
+        stateRoot: store.stateRoot,
+        entry: attachActivityConversationLinks(profile, entry, store.stateRoot),
         read: readState.has(entry.id),
       });
     }
