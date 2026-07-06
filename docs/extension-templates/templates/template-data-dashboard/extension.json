@@ -22,6 +22,15 @@
     ]
   },
   "contributes": {
+    "appearance": {
+      "accent": "apps",
+      "aliases": ["Data Dashboard"],
+      "window": {
+        "defaultWidth": 1000,
+        "defaultHeight": 700
+      },
+      "singleton": true
+    },
     "views": [
       {
         "id": "page",

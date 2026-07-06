@@ -29,7 +29,7 @@ pnpm run extension:build -- ~/.local/state/neon-pilot/extensions/my-extension
 
 After copying a template, replace every template-scoped identifier before the first build:
 
-- `extension.json`: `id`, `name`, `description`, route, nav label, component export names, action ids, handler names, permissions, and settings component ids when present.
+- `extension.json`: `id`, `name`, `description`, route, nav label, component export names, action ids, handler names, permissions, appearance accent and aliases, window defaults, and settings component ids when present.
 - `package.json`: package name when a package name is present, plus any runtime dependencies the extension imports.
 - `src/backend.ts`: domain types, input validation, persistence, action return shapes, and notification/error text.
 - `src/frontend.tsx`: exported component name, `pa.extension.invoke(...)` ids, visible labels, empty/error/loading states, and any action source strings passed to `pa.ui.notify`.
@@ -59,6 +59,7 @@ than a full page; the host handles layout. Good for integration config and toggl
 
 ## Shared patterns across templates
 
+- `contributes.appearance` — page-based templates include a default `appearance` block with a desktop accent (`"apps"`), Start menu/search `aliases`, window size defaults, and a `singleton` flag. Customize these for your extension's identity; the accent should match the primary surface kind (`"apps"`, `"chat"`, `"automations"`, `"drawing"`, `"settings"`, `"telemetry"`).
 - `AppPageLayout` + `AppPageIntro` — standard page chrome (`max-w-[72rem]`, consistent header)
 - `AppPageSection` / `AppPageEmptyState` — standard page sections and feature-aware empty page states
 - `LoadingState` / `ErrorState` / `EmptyState` — unified feedback components

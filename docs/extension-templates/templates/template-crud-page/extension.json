@@ -18,6 +18,15 @@
     ]
   },
   "contributes": {
+    "appearance": {
+      "accent": "apps",
+      "aliases": ["Items"],
+      "window": {
+        "defaultWidth": 1000,
+        "defaultHeight": 700
+      },
+      "singleton": false
+    },
     "views": [
       {
         "id": "page",
