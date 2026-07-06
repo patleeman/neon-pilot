@@ -44,21 +44,11 @@ function runtimeResult(cwd: string, capabilities: unknown[] = []) {
   };
 }
 
-function renderPage({
-  cwd,
-  invoke,
-  callAction,
-  shellPresentation,
-}: {
-  cwd: string;
-  invoke: ReturnType<typeof vi.fn>;
-  callAction?: ReturnType<typeof vi.fn>;
-  shellPresentation?: 'windowed';
-}) {
+function renderPage({ cwd, invoke, callAction }: { cwd: string; invoke: ReturnType<typeof vi.fn>; callAction?: ReturnType<typeof vi.fn> }) {
   return (
     <PromptAssemblyPage
       pa={{ extension: { invoke }, extensions: callAction ? { callAction } : undefined } as never}
-      context={{ cwd, pathname: '', search: '', hash: '', shellPresentation }}
+      context={{ cwd, pathname: '', search: '', hash: '' }}
       surface={
         {
           id: 'prompt-assembly',
@@ -103,17 +93,20 @@ describe('PromptAssemblyPage', () => {
     expect(screen.queryByText(/\/repo\/one/)).toBeNull();
   });
 
-  it('keeps the initial Prompt Assembly loading state visually quiet', () => {
+  it('renders a structured windowed loading state while runtime data loads', () => {
     const load = deferred<ReturnType<typeof runtimeResult>>();
     const callAction = vi.fn().mockReturnValue(load.promise);
 
     render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction }));
 
-    expect(screen.getByRole('status', { name: 'Loading prompt assembly' })).toBeTruthy();
-    expect(screen.queryByText('Loading prompt assembly…')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Prompt Assembly' })).toBeTruthy();
+    expect(screen.getByText('Loading Prompt Assembly')).toBeTruthy();
+    expect(screen.getByText('Reading agent runtime capabilities.')).toBeTruthy();
+    expect(screen.getByText('Status')).toBeTruthy();
+    expect(screen.getByText('Loading')).toBeTruthy();
   });
 
-  it('renders a native windowed settings surface without stable page chrome', async () => {
+  it('renders the canonical settings surface without stable page chrome', async () => {
     const callAction = vi.fn().mockResolvedValue(
       runtimeResult('/repo', [
         {
@@ -137,7 +130,7 @@ describe('PromptAssemblyPage', () => {
       ]),
     );
 
-    const { container } = render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction, shellPresentation: 'windowed' }));
+    const { container } = render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction }));
 
     expect(await screen.findByRole('heading', { name: 'Prompt Assembly' })).toBeTruthy();
     expect(container.querySelector('.prompt-assembly-page-windowed')).toBeTruthy();
@@ -161,7 +154,7 @@ describe('PromptAssemblyPage', () => {
     const pendingRuntime = deferred<ReturnType<typeof runtimeResult>>();
     const pendingCallAction = vi.fn().mockReturnValue(pendingRuntime.promise);
 
-    const { unmount } = render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction: pendingCallAction, shellPresentation: 'windowed' }));
+    const { unmount } = render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction: pendingCallAction }));
 
     expect(screen.getByText('Loading Prompt Assembly').closest('.wos-state-block__title')).toBeTruthy();
     expect(screen.getByText('Reading agent runtime capabilities.').closest('.wos-state-block__body')).toBeTruthy();
@@ -169,7 +162,7 @@ describe('PromptAssemblyPage', () => {
     unmount();
 
     const failingCallAction = vi.fn().mockRejectedValue(new Error('Local API route did not complete for POST /api/extensions/action'));
-    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction: failingCallAction, shellPresentation: 'windowed' }));
+    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction: failingCallAction }));
 
     expect(await screen.findByText('Prompt Assembly unavailable')).toBeTruthy();
     expect(screen.getByText('Could not load Prompt Assembly. Refresh this page or reopen Settings.')).toBeTruthy();
@@ -184,7 +177,7 @@ describe('PromptAssemblyPage', () => {
     };
     const callAction = vi.fn().mockResolvedValue(runtimeResult('/repo'));
 
-    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction, shellPresentation: 'windowed' }));
+    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction }));
 
     expect(await screen.findByText('Loading template')).toBeTruthy();
     expect(screen.getByText('Reading the configured instruction template.')).toBeTruthy();
@@ -266,8 +259,8 @@ describe('PromptAssemblyPage', () => {
 
     render(renderPage({ cwd: '/Users/patrick/workingdir/neon-pilot', invoke: vi.fn(), callAction }));
 
-    expect(await screen.findByText('config.json')).toBeTruthy();
-    expect(screen.getByText('Working directory: .')).toBeTruthy();
+    expect(await screen.findByText('Working directory: .')).toBeTruthy();
+    expect(document.body.textContent).toContain('config.json');
     expect(screen.getByText('./AGENTS.md')).toBeTruthy();
     expect(screen.queryByText('Twitter Bird CLI')).toBeNull();
     expect(screen.queryByText('skills/twitter-bird-cli')).toBeNull();
@@ -301,7 +294,7 @@ describe('PromptAssemblyPage', () => {
       new Error('Local API route did not complete for PATCH /api/system-prompt-template at Module.ep'),
     );
 
-    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction, shellPresentation: 'windowed' }));
+    render(renderPage({ cwd: '/repo', invoke: vi.fn(), callAction }));
 
     const textarea = (await screen.findByDisplayValue('Template')) as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: 'Template\nQA marker' } });

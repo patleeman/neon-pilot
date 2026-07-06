@@ -18,7 +18,7 @@ vi.mock('@neon-pilot/extensions/settings', () => ({
 }));
 
 describe('PromptAssemblySettingsPanel', () => {
-  it('mounts prompt assembly diagnostics from the Settings extension host', async () => {
+  it('mounts prompt assembly diagnostics via the Settings extension host', async () => {
     const callAction = vi.fn().mockResolvedValue({
       repoRoot: '/repo',
       cwd: '/repo',
@@ -47,7 +47,7 @@ describe('PromptAssemblySettingsPanel', () => {
     await waitFor(() => expect(callAction).toHaveBeenCalledWith('system-prompt-assembly', 'inspectAgentRuntime', { cwd: undefined }));
   });
 
-  it('renders native windowed chrome when embedded by windowed Settings', async () => {
+  it('renders prompt assembly settings panel from the Settings extension host', async () => {
     const callAction = vi.fn().mockResolvedValue({
       repoRoot: '/repo',
       cwd: '/repo',
@@ -67,7 +67,7 @@ describe('PromptAssemblySettingsPanel', () => {
     const { container } = render(
       <PromptAssemblySettingsPanel
         pa={{ extensions: { callAction }, extension: { invoke: vi.fn() } } as never}
-        settingsContext={{ sectionId: 'settings-prompt-assembly', shellPresentation: 'windowed' }}
+        settingsContext={{ sectionId: 'settings-prompt-assembly' }}
       />,
     );
 

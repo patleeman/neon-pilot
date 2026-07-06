@@ -21,7 +21,7 @@ export function PromptAssemblySettingsPanel({
   settingsContext,
 }: {
   pa: ExtensionSurfaceProps['pa'];
-  settingsContext?: { sectionId?: string; shellPresentation?: 'windowed' };
+  settingsContext?: { sectionId?: string };
 }) {
   return (
     <PromptAssemblyPage
@@ -31,7 +31,6 @@ export function PromptAssemblySettingsPanel({
         pathname: '/settings',
         search: '',
         hash: settingsContext?.sectionId ? `#${settingsContext.sectionId}` : '#settings-prompt-assembly',
-        shellPresentation: settingsContext?.shellPresentation,
       }}
       surface={{
         id: 'prompt-assembly-settings',
