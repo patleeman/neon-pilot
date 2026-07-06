@@ -7,6 +7,7 @@ import { getStateRoot } from '@neon-pilot/core';
 import { getExtensionCompatibilityError, resolveInstalledAppVersion } from './extensionCompatibility.js';
 import { isForkExcludedExtensionId } from './extensionForkExclusions.js';
 import { deleteRuntimeExtension, importRuntimeExtensionBundle, inspectRuntimeExtensionBundle } from './extensionLifecycle.js';
+import { EXTENSION_PERMISSIONS } from './extensionManifest.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
 import { INSTALLABLE_EXTENSION_CATALOG } from './installableExtensionCatalog.generated.js';
 
@@ -14,6 +15,12 @@ const EXTENSION_SOURCES_SETTING = 'extensions.sources';
 const FIRST_PARTY_SOURCE_ID = 'neon-pilot';
 const FIRST_PARTY_REPO = { owner: 'patleeman', repo: 'neon-pilot-extensions' };
 const MAX_EXTENSION_BUNDLE_BYTES = 80 * 1024 * 1024;
+const KNOWN_EXTENSION_PERMISSIONS = new Set<string>(EXTENSION_PERMISSIONS);
+const LEGACY_EXTENSION_PERMISSION_ALIASES = new Map<string, (typeof EXTENSION_PERMISSIONS)[number]>([
+  ['shell:exec', 'shell:execute'],
+  ['browser:write', 'browser:control'],
+  ['network:write', 'network:read'],
+]);
 
 export { resolveInstalledAppVersion } from './extensionCompatibility.js';
 
@@ -34,6 +41,7 @@ export interface CatalogSeed {
   marketplaceSourceId?: string;
   packageSource?: string;
   sourceRepo?: GithubExtensionSourceRepo;
+  permissions?: string[];
 }
 
 export interface GithubExtensionSourceRepo {
@@ -225,6 +233,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
       const itemTag = item.tag ?? (explicitVersion ? `v${explicitVersion}` : tag);
       const sourceRepo = item.sourceRepo ?? FIRST_PARTY_REPO;
       const updateAvailable = Boolean(explicitVersion && installed?.version && installed.version !== explicitVersion);
+      const permissions = item.permissions !== undefined ? item.permissions : installed?.permissions;
       const staleFallbackReason =
         usingBakedFirstPartyFallback && isFirstPartyRepo(sourceRepo) && itemTag !== tag
           ? `No ${tag} release artifact is published for this extension. The latest catalog points to ${itemTag}.`
@@ -247,6 +256,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
         installed: Boolean(installed),
         ...(installed?.version ? { installedVersion: installed.version } : {}),
         ...(installed ? { enabled: installed.enabled } : {}),
+        ...(permissions !== undefined ? { permissions } : {}),
         ...(explicitVersion ? { availableVersion: explicitVersion } : {}),
         ...(compatibilityReason ? { compatibilityWarning: compatibilityReason } : {}),
         ...(staleFallbackReason ? { unavailableReason: staleFallbackReason } : {}),
@@ -337,6 +347,17 @@ function isFirstPartyRepo(source: GithubExtensionSourceRepo): boolean {
   return source.owner.toLowerCase() === FIRST_PARTY_REPO.owner && source.repo.toLowerCase() === FIRST_PARTY_REPO.repo;
 }
 
+function normalizeCatalogPermissions(value: unknown): { permissions?: string[] } {
+  if (!Array.isArray(value)) return {};
+  const permissions = value.flatMap((entry) => {
+    if (typeof entry !== 'string' || !entry.trim()) return [];
+    const permission = entry.trim();
+    const normalized = LEGACY_EXTENSION_PERMISSION_ALIASES.get(permission) ?? permission;
+    return KNOWN_EXTENSION_PERMISSIONS.has(normalized) ? [normalized] : [];
+  });
+  return { permissions: [...new Set(permissions)] };
+}
+
 function parseGithubRepoUrl(value: string): GithubExtensionSourceRepo | null {
   const trimmed = value.trim();
   const shorthand = trimmed.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
@@ -372,6 +393,7 @@ async function fetchGithubSourceCatalog(source: ExtensionCatalogSource): Promise
         ...(typeof record.tag === 'string' && record.tag.trim() ? { tag: record.tag.trim() } : {}),
         ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : {}),
         ...normalizeCatalogCompatibility(record.compatibility),
+        ...normalizeCatalogPermissions(record.permissions),
         packageType: 'extension',
         ecosystem: 'neon-pilot',
         marketplaceSourceId: source.id,
@@ -432,6 +454,7 @@ async function fetchFirstPartyReleaseCatalog(tag: string): Promise<CatalogSeed[]
         ...(typeof record.artifact === 'string' && record.artifact.trim() ? { artifact: record.artifact.trim() } : {}),
         ...(typeof record.path === 'string' && record.path.trim() ? { path: record.path.trim() } : baked?.path ? { path: baked.path } : {}),
         ...normalizeCatalogCompatibility(record.compatibility ?? baked?.compatibility),
+        ...normalizeCatalogPermissions(record.permissions ?? baked?.permissions),
         packageType: 'extension' as const,
         ecosystem: 'neon-pilot' as const,
         marketplaceSourceId: 'neon-pilot-release',

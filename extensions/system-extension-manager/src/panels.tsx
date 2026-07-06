@@ -88,6 +88,7 @@ interface InstallableExtensionCatalogItem {
   compatibilityWarning?: string;
   unavailableReason?: string;
   updateAvailable?: boolean;
+  permissions?: string[];
 }
 
 interface InstallableExtensionCatalogResponse {
@@ -190,6 +191,23 @@ function formatPermissionLabel(permission: string): string {
     'ui:notify': 'Show notification',
   };
   return labels[permission] ?? permission;
+}
+
+function formatPermissionsSummary(permissions: string[]): string[] {
+  if (!permissions.length) return ['No special capabilities declared'];
+  const labels = permissions.map((p) => formatPermissionLabel(p));
+  const uniqueLabels = [...new Set(labels)];
+  if (uniqueLabels.length <= 3) return uniqueLabels;
+  return [...uniqueLabels.slice(0, 3), `+${uniqueLabels.length - 3} more`];
+}
+
+function formatPermissionsDetail(permissions: string[]): string {
+  if (!permissions.length) return 'No special capabilities declared.';
+  return permissions.map((p) => `  • ${formatPermissionLabel(p)} (${p})`).join('\n');
+}
+
+function permissionsForCatalogAction(catalogItem?: InstallableExtensionCatalogItem, extension?: ExtensionInstallSummary): string[] {
+  return catalogItem?.permissions !== undefined ? catalogItem.permissions : (extension?.permissions ?? []);
 }
 
 function isExtensionSelection(value: unknown): value is { resource: { type: 'extension'; id: string; data?: { extensionId?: string } } } {
@@ -1075,12 +1093,22 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
   const installCatalogExtension = useCallback(
     async (item: InstallableExtensionCatalogItem) => {
+      if (item.packageType && item.packageType !== 'extension') {
+        showActionError('Agent capability packages are installed from Settings → Agent capability packages.');
+        return;
+      }
+      const permissionsDetail = item.permissions?.length
+        ? `\n\nThis app can:\n${formatPermissionsDetail(item.permissions)}`
+        : '\n\nThis app declares no special capabilities.';
+      const confirmed = await pa.ui.confirm({
+        title: `Install ${item.name}`,
+        message: `Install ${item.name}${item.description ? ` — ${item.description}` : ''} from ${item.marketplaceSourceId ?? item.tag}?${permissionsDetail}`,
+      });
+      if (!confirmed) return;
+
       setBusyId(item.id);
       setNotice({ type: 'info', message: `Installing ${item.name} from ${item.marketplaceSourceId ?? item.tag}...` });
       try {
-        if (item.packageType && item.packageType !== 'extension') {
-          throw new Error('Agent capability packages are installed from Settings → Agent capability packages.');
-        }
         await pa.extensions.callAction('system-extension-manager', 'installCatalogExtension', { id: item.id });
         setNotice({ type: 'success', message: `Installed ${item.name}. Enable it from the app list when you're ready.` });
         notifyExtensionRegistryChanged();
@@ -1239,9 +1267,13 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       if (extension.uninstallable !== true && extension.packageType === 'system') return;
       const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
       if (!catalogItem) return;
+      const permissions = permissionsForCatalogAction(catalogItem, extension);
+      const permissionsDetail = permissions.length
+        ? `\n\nThis app can:\n${formatPermissionsDetail(permissions)}`
+        : '\n\nThis app declares no special capabilities.';
       const confirmed = await pa.ui.confirm({
         title: 'Reinstall app',
-        message: `Reinstall ${extension.name}? This removes the current app package and installs it again from ${catalogItem.tag}.`,
+        message: `Reinstall ${extension.name}? This removes the current app package and installs it again from ${catalogItem.tag}.${permissionsDetail}`,
       });
       if (!confirmed) return;
       setBusyId(extension.id);
@@ -1266,9 +1298,13 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
       const catalogItem = catalog?.extensions.find((item) => item.id === extension.id);
       if (!catalogItem?.updateAvailable) return;
       const targetVersion = catalogItem.availableVersion ?? catalogItem.version;
+      const permissions = permissionsForCatalogAction(catalogItem, extension);
+      const permissionsDetail = permissions.length
+        ? `\n\nThis app can:\n${formatPermissionsDetail(permissions)}`
+        : '\n\nThis app declares no special capabilities.';
       const confirmed = await pa.ui.confirm({
         title: 'Update app',
-        message: `Update ${extension.name} from ${extension.version ?? 'installed'} to ${targetVersion} using ${catalogItem.tag}?`,
+        message: `Update ${extension.name} from ${extension.version ?? 'installed'} to ${targetVersion} using ${catalogItem.tag}?${permissionsDetail}`,
       });
       if (!confirmed) return;
       setBusyId(extension.id);
@@ -1345,9 +1381,16 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
 
   const updateAllExtensions = useCallback(async () => {
     if (updatableExtensions.length === 0) return;
+    const permissionedCount = updatableExtensions.filter(
+      ({ catalogItem, extension }) => permissionsForCatalogAction(catalogItem, extension).length > 0,
+    ).length;
+    const permissionsNote =
+      permissionedCount > 0
+        ? `\n\n${permissionedCount} of these apps declare capabilities. Review individual app permissions in Details before updating.`
+        : '';
     const confirmed = await pa.ui.confirm({
       title: 'Update apps',
-      message: `Update ${updatableExtensions.length} app${updatableExtensions.length === 1 ? '' : 's'} now?`,
+      message: `Update ${updatableExtensions.length} app${updatableExtensions.length === 1 ? '' : 's'} now?${permissionsNote}`,
     });
     if (!confirmed) return;
 
@@ -2233,6 +2276,9 @@ function InstallExtensionModal({
                         {item.description || 'Neon Pilot app'}
                         {item.compatibilityWarning ? <span className="block text-warning">{item.compatibilityWarning}</span> : null}
                         {item.unavailableReason ? <span className="block text-warning">{item.unavailableReason}</span> : null}
+                        {item.permissions?.length ? (
+                          <span className="block text-accent">Capabilities: {formatPermissionsSummary(item.permissions).join(' · ')}</span>
+                        ) : null}
                       </>
                     }
                     titleClassName="text-[13px]"
@@ -2396,7 +2442,11 @@ function WindowedInstallExtensionDialog({
                   <WindowedDataRow
                     key={item.id}
                     name={item.name}
-                    meta={item.description || item.id}
+                    meta={
+                      item.permissions?.length
+                        ? `${item.description || item.id} · Capabilities: ${formatPermissionsSummary(item.permissions).join(', ')}`
+                        : item.description || item.id
+                    }
                     status={<WindowedBadge tone={tone}>{state}</WindowedBadge>}
                     action={
                       <WindowedPageButton

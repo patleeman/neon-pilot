@@ -50,7 +50,12 @@ describe('extension catalog', () => {
         json: async () => ({
           packages: [
             { id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' },
-            { id: 'system-suggested-context', tag: 'v0.10.2', artifact: 'system-suggested-context.neon-extension.zip' },
+            {
+              id: 'system-suggested-context',
+              tag: 'v0.10.2',
+              artifact: 'system-suggested-context.neon-extension.zip',
+              permissions: ['conversations:read', 'browser:write'],
+            },
             { id: 'system-ds4', tag: 'v0.10.2', artifact: 'system-ds4.neon-extension.zip' },
             { id: 'system-auto-router', tag: 'v0.10.2', artifact: 'system-auto-router.neon-extension.zip' },
           ],
@@ -87,6 +92,7 @@ describe('extension catalog', () => {
           enabled: true,
           installedVersion: '0.0.1',
           updateAvailable: true,
+          permissions: ['conversations:read', 'browser:control'],
           bundleUrl:
             'https://github.com/patleeman/neon-pilot-extensions/releases/download/v0.10.2/system-suggested-context.neon-extension.zip',
         }),
@@ -336,7 +342,15 @@ describe('extension catalog', () => {
         ok: url.includes('/main/'),
         status: url.includes('/main/') ? 200 : 404,
         json: async () => ({
-          packages: [{ id: 'example-search', name: 'Example Search', description: 'Search from a custom repo.', version: '0.2.0' }],
+          packages: [
+            {
+              id: 'example-search',
+              name: 'Example Search',
+              description: 'Search from a custom repo.',
+              version: '0.2.0',
+              permissions: ['network:read', 'shell:exec', 'unknown:permission'],
+            },
+          ],
         }),
       })),
     );
@@ -353,6 +367,7 @@ describe('extension catalog', () => {
           id: 'example-search',
           version: '0.2.0',
           marketplaceSourceId: 'example-source',
+          permissions: ['network:read', 'shell:execute'],
           bundleUrl: 'https://github.com/example/neon-extensions/releases/download/v0.2.0/example-search.neon-extension.zip',
         }),
       ]),

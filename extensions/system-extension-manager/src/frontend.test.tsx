@@ -945,7 +945,7 @@ describe('ExtensionManagerPage', () => {
     });
 
     renderPageWithPa({
-      ui: { toast: vi.fn(), notify: vi.fn() },
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm: vi.fn().mockResolvedValue(true) },
       commands: { list: vi.fn().mockResolvedValue([]) },
       extensions: { callAction },
     });
@@ -1119,6 +1119,7 @@ describe('ExtensionManagerPage', () => {
               installed: true,
               enabled: true,
               updateAvailable: false,
+              permissions: ['browser:read', 'shell:execute'],
             },
           ],
         };
@@ -1366,5 +1367,331 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('combobox', { name: 'Package type' })).toBeNull();
     expect(screen.getByText('Available apps')).toBeTruthy();
     expect(callAction).not.toHaveBeenCalledWith('system-extension-manager', 'installMarketplacePackage', expect.anything());
+  });
+
+  it('shows a plain-English permissions summary before installing a catalog app', async () => {
+    const confirm = vi.fn().mockResolvedValue(true);
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.9.1-rc.6',
+          tag: 'v0.9.1-rc.6',
+          extensions: [
+            {
+              id: 'capable-app',
+              name: 'Capable App',
+              description: 'An app with permissions.',
+              version: '1.0.0',
+              tag: 'v1.0.0',
+              packageType: 'extension',
+              permissions: ['filesystem:read', 'shell:execute', 'desktop:control'],
+            },
+          ],
+        };
+      }
+      if (action === 'installCatalogExtension') return { ok: true, extension: { id: 'capable-app' } };
+      return { ok: true };
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
+    const dialog = await screen.findByRole('dialog', { name: 'Install app' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => {
+      expect(confirm).toHaveBeenCalled();
+    });
+    const confirmArg = confirm.mock.calls[0][0];
+    expect(confirmArg.title).toBe('Install Capable App');
+    expect(confirmArg.message).toContain('This app can');
+    expect(confirmArg.message).toContain('Read file system');
+    expect(confirmArg.message).toContain('Execute shell commands');
+    expect(confirmArg.message).toContain('Control desktop');
+    expect(confirmArg.message).toContain('filesystem:read');
+    expect(confirmArg.message).toContain('shell:execute');
+    expect(confirmArg.message).toContain('desktop:control');
+  });
+
+  it('shows no-permission apps remain clean during install confirm', async () => {
+    const confirm = vi.fn().mockResolvedValue(true);
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.9.1-rc.6',
+          tag: 'v0.9.1-rc.6',
+          extensions: [
+            {
+              id: 'clean-app',
+              name: 'Clean App',
+              description: 'An app with no permissions.',
+              version: '1.0.0',
+              tag: 'v1.0.0',
+              packageType: 'extension',
+            },
+          ],
+        };
+      }
+      if (action === 'installCatalogExtension') return { ok: true, extension: { id: 'clean-app' } };
+      return { ok: true };
+    });
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Install app' }).at(-1)!);
+    const dialog = await screen.findByRole('dialog', { name: 'Install app' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => {
+      expect(confirm).toHaveBeenCalled();
+    });
+    const confirmArg = confirm.mock.calls[0][0];
+    expect(confirmArg.message).toContain('declares no special capabilities');
+    expect(confirmArg.message).not.toContain('Read file system');
+    expect(confirmArg.message).not.toContain('Execute shell commands');
+  });
+
+  it('includes permission labels in the windowed install dialog catalog items', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.9.1-rc.6',
+          tag: 'v0.9.1-rc.6',
+          extensions: [
+            {
+              id: 'permissioned-app',
+              name: 'Permissioned App',
+              description: 'App with declared permissions.',
+              version: '1.0.0',
+              tag: 'v1.0.0',
+              packageType: 'extension',
+              permissions: ['filesystem:read', 'desktop:control'],
+            },
+            {
+              id: 'simple-app',
+              name: 'Simple App',
+              description: 'App without permissions.',
+              version: '1.0.0',
+              tag: 'v1.0.0',
+              packageType: 'extension',
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      return { ok: true };
+    });
+
+    renderWindowedPage({
+      pa: {
+        ui: { toast: vi.fn(), notify: vi.fn() },
+        commands: { list: vi.fn().mockResolvedValue([]) },
+        extensions: { callAction },
+      },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Install' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Install app' });
+    expect(within(dialog).getByText(/Capabilities: Read file system, Control desktop/)).toBeTruthy();
+    expect(within(dialog).getByText('Simple App')).toBeTruthy();
+  });
+
+  it('includes permissions in the reinstall confirm dialog', async () => {
+    const confirm = vi.fn().mockResolvedValue(true);
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.9.1-rc.6',
+          tag: 'v0.9.1-rc.6',
+          extensions: [
+            {
+              id: 'system-browser',
+              name: 'Browser',
+              description: 'Browse web pages beside a conversation.',
+              version: '0.1.0',
+              availableVersion: '0.1.0',
+              installedVersion: '0.1.0',
+              tag: 'v0.9.1-rc.6',
+              installed: true,
+              enabled: true,
+              updateAvailable: false,
+              permissions: ['browser:read', 'shell:execute'],
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      if (action === 'updateCatalogExtension') return { ok: true, updated: true };
+      return { ok: true };
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        description: 'Browse web pages beside a conversation.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.1.0',
+        permissions: ['browser:read'],
+      } as never,
+    ]);
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Browser')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Reinstall'));
+
+    await waitFor(() => {
+      expect(confirm).toHaveBeenCalled();
+    });
+    const confirmArg = confirm.mock.calls[0][0];
+    expect(confirmArg.title).toBe('Reinstall app');
+    expect(confirmArg.message).toContain('This app can');
+    expect(confirmArg.message).toContain('Read browser');
+    expect(confirmArg.message).toContain('Execute shell commands');
+    expect(confirmArg.message).not.toContain('Control browser');
+  });
+
+  it('includes permissions in the update confirm dialog', async () => {
+    const confirm = vi.fn().mockResolvedValue(true);
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.10.2',
+          tag: 'v0.10.2',
+          extensions: [
+            {
+              id: 'system-browser',
+              name: 'Browser',
+              description: 'Browse web pages beside a conversation.',
+              version: '0.1.0',
+              availableVersion: '0.1.0',
+              installedVersion: '0.0.1',
+              tag: 'v0.10.2',
+              installed: true,
+              enabled: true,
+              updateAvailable: true,
+              permissions: ['browser:read', 'shell:execute'],
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      if (action === 'updateCatalogExtension') return { ok: true, updated: true };
+      return { ok: true };
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        description: 'Browse web pages beside a conversation.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.0.1',
+        permissions: ['browser:read'],
+      } as never,
+    ]);
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect(await screen.findByText('Update available: 0.0.1 -> 0.1.0')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Update'));
+
+    await waitFor(() => {
+      expect(confirm).toHaveBeenCalled();
+    });
+    const confirmArg = confirm.mock.calls[0][0];
+    expect(confirmArg.title).toBe('Update app');
+    expect(confirmArg.message).toContain('This app can');
+    expect(confirmArg.message).toContain('Read browser');
+    expect(confirmArg.message).toContain('Execute shell commands');
+    expect(confirmArg.message).not.toContain('Control browser');
+  });
+
+  it('does not show stale installed permissions when an update declares none', async () => {
+    const confirm = vi.fn().mockResolvedValue(true);
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return {
+          ok: true,
+          version: '0.10.2',
+          tag: 'v0.10.2',
+          extensions: [
+            {
+              id: 'system-browser',
+              name: 'Browser',
+              description: 'Browse web pages beside a conversation.',
+              version: '0.1.0',
+              availableVersion: '0.1.0',
+              installedVersion: '0.0.1',
+              tag: 'v0.10.2',
+              installed: true,
+              enabled: true,
+              updateAvailable: true,
+              permissions: [],
+            },
+          ],
+        };
+      }
+      if (action === 'readExtensionSources') return { sources: [] };
+      if (action === 'updateCatalogExtension') return { ok: true, updated: true };
+      return { ok: true };
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        id: 'system-browser',
+        name: 'Browser',
+        description: 'Browse web pages beside a conversation.',
+        enabled: true,
+        packageType: 'user',
+        version: '0.0.1',
+        permissions: ['shell:execute'],
+      } as never,
+    ]);
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn(), confirm },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect(await screen.findByText('Update available: 0.0.1 -> 0.1.0')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Update'));
+
+    await waitFor(() => {
+      expect(confirm).toHaveBeenCalled();
+    });
+    const confirmArg = confirm.mock.calls[0][0];
+    expect(confirmArg.message).toContain('declares no special capabilities');
+    expect(confirmArg.message).not.toContain('Execute shell commands');
+    expect(confirmArg.message).not.toContain('shell:execute');
   });
 });
