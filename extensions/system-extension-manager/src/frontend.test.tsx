@@ -218,19 +218,39 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByText('Loading apps...')).toBeNull();
   });
 
-  it('keeps the row actions menu focused on opening the package folder', async () => {
+  it('keeps the row actions menu focused on opening the package folder without extension actions', async () => {
     renderPage();
 
     expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByLabelText('More actions'));
 
     expect(screen.getByText('Open folder')).toBeTruthy();
+    expect(screen.queryByText('Diagnose')).toBeNull();
     expect(screen.queryByText('Build')).toBeNull();
     expect(screen.queryByText('Validate')).toBeNull();
     expect(screen.queryByText('Run self-test')).toBeNull();
     expect(screen.queryByText('Snapshot')).toBeNull();
     expect(screen.queryByText('Export')).toBeNull();
     expect(screen.queryByText('Copy diagnostics')).toBeNull();
+  });
+
+  it('shows Diagnose when the extension action bridge is available', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extId: string, action: string) => {
+      if (action === 'listInstallableExtensions') return { ok: true, version: '0.1.0', tag: 'v0.1.0', extensions: [] };
+      if (action === 'readExtensionSources') return { sources: [] };
+      return { ok: true };
+    });
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByLabelText('More actions'));
+
+    expect(screen.getByText('Open folder')).toBeTruthy();
+    expect(screen.getByText('Diagnose')).toBeTruthy();
   });
 
   it('does not render an empty row actions menu for extensions with no actions', async () => {
@@ -1693,5 +1713,128 @@ describe('ExtensionManagerPage', () => {
     expect(confirmArg.message).toContain('declares no special capabilities');
     expect(confirmArg.message).not.toContain('Execute shell commands');
     expect(confirmArg.message).not.toContain('shell:execute');
+  });
+
+  it('calls validate and smoke on Diagnose and shows success when both pass', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extId: string, action: string, _input?: Record<string, unknown>) => {
+      if (action === 'listInstallableExtensions') {
+        return { ok: true, version: '0.1.0', tag: 'v0.1.0', extensions: [] };
+      }
+      if (action === 'readExtensionSources') {
+        return { sources: [] };
+      }
+      if (action === 'validateExtension') {
+        return { ok: true, findings: [], summary: { errors: 0, warnings: 0, info: 1 } };
+      }
+      if (action === 'smokeExtension') {
+        return { ok: true, checks: [{ name: 'manifest', ok: true }], text: 'App package menu-test smoke checks passed.' };
+      }
+      return { ok: true };
+    });
+
+    mocks.extensionInstallations.mockResolvedValue([createExtension()]);
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Diagnose'));
+
+    expect(await screen.findByText('Menu Test is healthy.')).toBeTruthy();
+    expect(screen.getByText('Validation and smoke checks passed.')).toBeTruthy();
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'validateExtension', {
+      id: 'menu-test',
+      packageRoot: '/tmp/menu-test',
+    });
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'smokeExtension', {
+      extensionId: 'menu-test',
+    });
+  });
+
+  it('shows validation errors when Diagnose encounters a validation failure', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extId: string, action: string, _input?: Record<string, unknown>) => {
+      if (action === 'listInstallableExtensions') {
+        return { ok: true, version: '0.1.0', tag: 'v0.1.0', extensions: [] };
+      }
+      if (action === 'readExtensionSources') {
+        return { sources: [] };
+      }
+      if (action === 'validateExtension') {
+        return {
+          ok: true,
+          findings: [{ severity: 'error', message: 'Missing required field: version in extension.json' }],
+          summary: { errors: 1, warnings: 0, info: 0 },
+        };
+      }
+      return { ok: true };
+    });
+
+    mocks.extensionInstallations.mockResolvedValue([createExtension()]);
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Diagnose'));
+
+    expect(await screen.findByText('Validation failed for Menu Test')).toBeTruthy();
+    expect(screen.getByText('Missing required field: version in extension.json')).toBeTruthy();
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'validateExtension', {
+      id: 'menu-test',
+      packageRoot: '/tmp/menu-test',
+    });
+    expect(callAction).not.toHaveBeenCalledWith('system-extension-manager', 'smokeExtension', expect.anything());
+  });
+
+  it('shows smoke failure details when smoke checks fail after validation passes', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extId: string, action: string, _input?: Record<string, unknown>) => {
+      if (action === 'listInstallableExtensions') {
+        return { ok: true, version: '0.1.0', tag: 'v0.1.0', extensions: [] };
+      }
+      if (action === 'readExtensionSources') {
+        return { sources: [] };
+      }
+      if (action === 'validateExtension') {
+        return { ok: true, findings: [], summary: { errors: 0, warnings: 0, info: 1 } };
+      }
+      if (action === 'smokeExtension') {
+        return {
+          ok: false,
+          checks: [{ name: 'manifest', ok: false, error: 'Manifest does not export expected component' }],
+          text: 'App package menu-test smoke checks failed.',
+        };
+      }
+      return { ok: true };
+    });
+
+    mocks.extensionInstallations.mockResolvedValue([createExtension()]);
+
+    renderPageWithPa({
+      ui: { toast: vi.fn(), notify: vi.fn() },
+      commands: { list: vi.fn().mockResolvedValue([]) },
+      extensions: { callAction },
+    });
+
+    expect((await screen.findAllByText('Menu Test')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Diagnose'));
+
+    expect(await screen.findByText('Smoke checks failed for Menu Test')).toBeTruthy();
+    expect(screen.getByText('manifest: Manifest does not export expected component')).toBeTruthy();
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'validateExtension', {
+      id: 'menu-test',
+      packageRoot: '/tmp/menu-test',
+    });
+    expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'smokeExtension', {
+      extensionId: 'menu-test',
+    });
   });
 });

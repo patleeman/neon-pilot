@@ -374,6 +374,7 @@ function ExtensionActionsMenu({
   onDelete,
   onUpdate,
   onReinstall,
+  onDiagnose,
 }: {
   extension: ExtensionInstallSummary;
   busy: boolean;
@@ -381,6 +382,7 @@ function ExtensionActionsMenu({
   onDelete: () => void;
   onUpdate?: () => void;
   onReinstall?: () => void;
+  onDiagnose?: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -453,7 +455,7 @@ function ExtensionActionsMenu({
     action();
   }, []);
   const canDelete = canDeleteExtension(extension);
-  const hasActions = Boolean(extension.packageRoot || onUpdate || onReinstall || canDelete);
+  const hasActions = Boolean(extension.packageRoot || onDiagnose || onUpdate || onReinstall || canDelete);
 
   if (!hasActions) {
     return null;
@@ -495,6 +497,11 @@ function ExtensionActionsMenu({
               {extension.packageRoot ? (
                 <MenuItem disabled={busy} onClick={(event) => run(event, onOpenFolder)}>
                   Open folder
+                </MenuItem>
+              ) : null}
+              {onDiagnose ? (
+                <MenuItem disabled={busy} onClick={(event) => run(event, onDiagnose)}>
+                  Diagnose
                 </MenuItem>
               ) : null}
               {onUpdate ? (
@@ -1338,6 +1345,71 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     });
   }, []);
 
+  const diagnoseExtension = useCallback(
+    async (extension: ExtensionInstallSummary) => {
+      setBusyId(extension.id);
+      setNotice(null);
+      try {
+        const validationResult = (await pa.extensions.callAction('system-extension-manager', 'validateExtension', {
+          id: extension.id,
+          packageRoot: extension.packageRoot,
+        })) as {
+          ok: boolean;
+          findings?: Array<{ severity: string; message: string; path?: string; fix?: string }>;
+          summary?: { errors: number; warnings: number; info: number };
+        };
+
+        const hasErrors = (validationResult.summary?.errors ?? 0) > 0;
+        const errors = (validationResult.findings ?? []).filter((f) => f.severity === 'error');
+        const warnings = (validationResult.findings ?? []).filter((f) => f.severity === 'warning');
+
+        if (hasErrors) {
+          setNotice({
+            type: 'error',
+            message: `Validation failed for ${extension.name}`,
+            details: errors.map((e) => e.message).join('\n') || 'Check the app package manifest for errors.',
+          });
+          return;
+        }
+
+        const smokeResult = (await pa.extensions.callAction('system-extension-manager', 'smokeExtension', {
+          extensionId: extension.id,
+        })) as {
+          ok: boolean;
+          checks?: Array<{ name: string; ok: boolean; error?: string }>;
+          text?: string;
+        };
+
+        if (!smokeResult.ok) {
+          const failedChecks = (smokeResult.checks ?? []).filter((c) => !c.ok);
+          setNotice({
+            type: 'error',
+            message: `Smoke checks failed for ${extension.name}`,
+            details:
+              failedChecks.map((c) => `${c.name}: ${c.error || 'Failed'}`).join('\n') || smokeResult.text || 'Unknown smoke failure.',
+          });
+          return;
+        }
+
+        const warningDetails =
+          warnings.length > 0
+            ? `Validation warnings:\n${warnings.map((w) => w.message).join('\n')}`
+            : 'Validation and smoke checks passed.';
+
+        setNotice({
+          type: 'success',
+          message: `${extension.name} is healthy.`,
+          details: warningDetails,
+        });
+      } catch (err) {
+        showActionError(`Could not diagnose ${extension.name}`, err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [pa.extensions, showActionError],
+  );
+
   const selectExtension = useCallback(
     (extension: ExtensionInstallSummary) => {
       setDetailsExtensionId(extension.id);
@@ -1561,6 +1633,7 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
         onDelete={() => void deleteExtension(extension)}
         onUpdate={catalogItem?.updateAvailable && extension.packageType !== 'system' ? () => void updateExtension(extension) : undefined}
         onReinstall={catalogItem && extension.packageType !== 'system' ? () => void reinstallExtension(extension) : undefined}
+        onDiagnose={extension.packageType !== 'system' && pa.extensions?.callAction ? () => void diagnoseExtension(extension) : undefined}
       />
     </DataTableActionGroup>
   );
@@ -1962,6 +2035,11 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                 {selectedExtension.packageRoot ? (
                   <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => openFolder(selectedExtension)}>
                     Folder
+                  </WindowedPageButton>
+                ) : null}
+                {selectedExtension.packageType !== 'system' && pa.extensions?.callAction ? (
+                  <WindowedPageButton disabled={selectedExtensionBusy} onClick={() => void diagnoseExtension(selectedExtension)}>
+                    Diagnose
                   </WindowedPageButton>
                 ) : null}
                 {selectedExtensionCatalogItem?.updateAvailable && selectedExtension.packageType !== 'system' ? (
