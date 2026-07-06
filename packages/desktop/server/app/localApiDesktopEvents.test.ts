@@ -1,3 +1,9 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { transformSync } from 'esbuild';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -150,5 +156,26 @@ describe('localApiDesktopEvents readDesktopUserActionEvents', () => {
     const reloaded = await import('./localApiDesktopEvents.js');
 
     expect(reloaded.readDesktopUserActionEvents()).toEqual([published.event]);
+  });
+
+  it('preserves events across separately bundled module copies', async () => {
+    const published = publishDesktopUserActionEvent({
+      action: 'focus',
+      windowId: 'chat:draft',
+      createdAt: '2026-07-06T00:00:00.000Z',
+    });
+    const tempDir = mkdtempSync(resolve(tmpdir(), 'desktop-events-bundle-'));
+    const copiedModulePath = resolve(tempDir, 'localApiDesktopEvents.copy.mjs');
+    const source = readFileSync(resolve(process.cwd(), 'packages/desktop/server/app/localApiDesktopEvents.ts'), 'utf-8');
+    const transformed = transformSync(source, { format: 'esm', loader: 'ts', target: 'node20' });
+    writeFileSync(copiedModulePath, transformed.code);
+
+    try {
+      const bundledCopy = (await import(pathToFileURL(copiedModulePath).href)) as typeof import('./localApiDesktopEvents.js');
+
+      expect(bundledCopy.readDesktopUserActionEvents()).toEqual([published.event]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });
