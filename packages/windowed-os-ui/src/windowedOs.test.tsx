@@ -2923,7 +2923,6 @@ describe('Windowed OS Storybook examples', () => {
     expect(source).toContain('<AppManagerPageStory theme="dark" />');
     expect(source).toContain('title="App Manager"');
     expect(source).toContain('data-wos-theme={theme}');
-    expect(source).not.toContain('eyebrow="Dynamic workflows"');
     expect(appManagerSource).not.toContain('title="Inventory"');
     expect(appManagerSource).toContain('title="Catalog"');
     expect(appManagerSource).toContain('title="Installed"');

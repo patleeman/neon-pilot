@@ -308,7 +308,7 @@ function buildSpecificToolPreview(block: Extract<MessageBlock, { type: 'tool_use
       ]
         .filter(Boolean)
         .join(' ');
-      return subject || 'dynamic workflow';
+      return subject || 'workflow';
     }
     case 'goal':
       return excerpt('objective') ?? excerpt('status') ?? '';
