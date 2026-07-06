@@ -110,12 +110,12 @@ vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
 vi.mock('../extensions/ExtensionRouteHost', async () => {
   const { useLocation, useNavigate } = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
-    ExtensionRouteHost: ({ shellPresentation = 'windowed' }: { shellPresentation?: 'stable' | 'windowed' }) => {
+    ExtensionRouteHost: () => {
       const location = useLocation();
       const navigate = useNavigate();
       return (
         <div data-testid="extension-route-host">
-          {`${location.pathname}:${shellPresentation}`}
+          {`${location.pathname}:windowed`}
           <button type="button" aria-label="Navigate within extension app" onClick={() => navigate('/notes/detail')} />
           <button type="button" aria-label="Navigate to settings app" onClick={() => navigate('/settings/providers')} />
         </div>

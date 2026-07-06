@@ -1011,7 +1011,6 @@ function WindowedChatTerminalWindowBody({
           pathname={routeLocationValue.pathname}
           search={routeLocationValue.search}
           hash={routeLocationValue.hash}
-          shellPresentation="windowed"
           cwd={cwd}
           instanceId={parentWindowId ? `${parentWindowId}:terminal` : 'app:terminal'}
         />
@@ -1094,7 +1093,6 @@ function WindowedChatFilesWindowBody({
           pathname={routeLocationValue.pathname}
           search={routeLocationValue.search}
           hash={routeLocationValue.hash}
-          shellPresentation="windowed"
           cwd={cwd}
           instanceId={parentWindowId ? `${parentWindowId}:files` : 'app:files'}
         />
@@ -1132,7 +1130,6 @@ function WindowedChatBrowserWindowBody({
           pathname={routeLocationValue.pathname}
           search={routeLocationValue.search}
           hash={routeLocationValue.hash}
-          shellPresentation="windowed"
           instanceId={parentWindowId ? `${parentWindowId}:browser` : 'app:browser'}
         />
       ) : (
@@ -1257,7 +1254,7 @@ function WindowRouteBody({
         <WindowRouteScope route={route} onNavigate={onNavigate}>
           <Routes>
             <Route path="home" element={<HomePage />} />
-            <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
+            <Route path="*" element={<ExtensionRouteHost />} />
           </Routes>
         </WindowRouteScope>
       </div>
@@ -1298,7 +1295,7 @@ function WindowRouteBody({
                 </Suspense>
               }
             />
-            <Route path="*" element={<ExtensionRouteHost shellPresentation="windowed" />} />
+            <Route path="*" element={<ExtensionRouteHost />} />
           </Route>
         </Routes>
       </WindowRouteScope>

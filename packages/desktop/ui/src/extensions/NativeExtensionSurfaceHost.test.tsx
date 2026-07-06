@@ -171,7 +171,7 @@ describe('NativeExtensionSurfaceHost', () => {
     mountedRoots.push(root);
 
     await act(async () => {
-      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/automations" search="" hash="" shellPresentation="windowed" />);
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/automations" search="" hash="" />);
     });
 
     await vi.waitFor(() => expect(container.textContent).toContain('desktop shell'));
@@ -224,7 +224,7 @@ describe('NativeExtensionSurfaceHost', () => {
     mountedRoots.push(root);
 
     await act(async () => {
-      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/broken" search="" hash="" shellPresentation="windowed" />);
+      root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/broken" search="" hash="" />);
     });
 
     await vi.waitFor(() => expect(container.textContent).toContain('App page failed to load'));

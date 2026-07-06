@@ -162,7 +162,7 @@ describe('ExtensionPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/automations']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 
@@ -191,32 +191,10 @@ describe('ExtensionPage', () => {
     expect(container.querySelector('.wos-state-block')).toBeTruthy();
   });
 
-  it('shows visible registry loading chrome when desktop shell presentation is explicit', () => {
-    vi.mocked(useExtensionRegistry).mockReturnValue({
-      loading: true,
-      error: null,
-      extensions: [],
-      routes: [],
-      surfaces: [],
-    } as never);
-
-    const { container } = render(
-      <MemoryRouter initialEntries={['/skills']}>
-        <ExtensionPage shellPresentation="windowed" />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('status', { name: 'Loading app page' })).toBeTruthy();
-    expect(screen.getByText('Loading app page')).toBeTruthy();
-    expect(screen.getByText('Preparing the window contents.')).toBeTruthy();
-    expect(container.querySelector('.wos-window-route-loading')).toBeTruthy();
-    expect(container.querySelector('.wos-state-block')).toBeTruthy();
-  });
-
   it('shows visible unavailable route chrome in the desktop shell', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/missing-extension-route']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 
@@ -257,7 +235,7 @@ describe('ExtensionPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/home']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 
@@ -277,7 +255,7 @@ describe('ExtensionPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/documents']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 
@@ -296,7 +274,7 @@ describe('ExtensionPage', () => {
     });
     render(
       <MemoryRouter initialEntries={['/inbox']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 
@@ -315,7 +293,7 @@ describe('ExtensionPage', () => {
     });
     render(
       <MemoryRouter initialEntries={['/activity']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 
@@ -342,7 +320,7 @@ describe('ExtensionPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/activity']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 
@@ -369,7 +347,7 @@ describe('ExtensionPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/activity']}>
-        <ExtensionPage shellPresentation="windowed" />
+        <ExtensionPage />
       </MemoryRouter>,
     );
 

@@ -3,7 +3,7 @@ import React, { type ComponentType, lazy, Suspense, useMemo } from 'react';
 
 import { buildApiPath } from '../client/apiBase';
 import { addNotification } from '../components/notifications/notificationStore';
-import { cx, ErrorState, QuietLoadingState } from '../components/ui';
+import { cx } from '../components/ui';
 import { ensureExtensionFrontendReactGlobals } from './extensionFrontendReactGlobals';
 import { getExtensionRegistryRevision } from './extensionRegistryEvents';
 import {
@@ -129,21 +129,18 @@ function lazyHostViewSurfaceComponent(surface: NativeExtensionViewSummary, revis
 
 const EXTENSION_SURFACE_ERROR_MESSAGE = 'This app page could not be loaded.';
 
-function ExtensionSurfaceError({ shellPresentation }: { shellPresentation?: 'stable' | 'windowed' }) {
-  if (shellPresentation === 'windowed') {
-    return (
-      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="App page failed to load">
-        <WindowedStateBlock tone="danger" title="App page failed to load">
-          {EXTENSION_SURFACE_ERROR_MESSAGE}
-        </WindowedStateBlock>
-      </div>
-    );
-  }
-  return <ErrorState message={EXTENSION_SURFACE_ERROR_MESSAGE} className="m-6" />;
+function ExtensionSurfaceError() {
+  return (
+    <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="App page failed to load">
+      <WindowedStateBlock tone="danger" title="App page failed to load">
+        {EXTENSION_SURFACE_ERROR_MESSAGE}
+      </WindowedStateBlock>
+    </div>
+  );
 }
 
-function ExtensionSurfaceErrorComponent({ context }: ExtensionHostViewComponentProps) {
-  return <ExtensionSurfaceError shellPresentation={context.shellPresentation} />;
+function ExtensionSurfaceErrorComponent() {
+  return <ExtensionSurfaceError />;
 }
 
 export function NativeExtensionSurfaceHost({
@@ -151,7 +148,6 @@ export function NativeExtensionSurfaceHost({
   pathname,
   search,
   hash,
-  shellPresentation = 'windowed',
   conversationId,
   cwd,
   instanceId,
@@ -160,7 +156,6 @@ export function NativeExtensionSurfaceHost({
   pathname: string;
   search: string;
   hash: string;
-  shellPresentation?: 'stable' | 'windowed';
   conversationId?: string | null;
   cwd?: string | null;
   instanceId?: string | null;
@@ -169,6 +164,7 @@ export function NativeExtensionSurfaceHost({
 
   const pa = useMemo(() => createNativeExtensionClient(surface.extensionId), [surface.extensionId]);
   const moduleKey = extensionModuleKey(surface);
+  const shellPresentation = 'windowed';
   const Component = useMemo(() => {
     if (isHostViewComponentReference(surface.component)) return lazyHostViewSurfaceComponent(surface, getExtensionRegistryRevision());
     return lazyExtensionComponent(surface, getExtensionRegistryRevision());
@@ -189,7 +185,7 @@ export function NativeExtensionSurfaceHost({
     [conversationId, cwd, hash, instanceId, pathname, search, shellPresentation, surface.extensionId, surface.id, surface.route],
   );
 
-  const isWindowedMainSurface = shellPresentation === 'windowed' && surface.location === 'main';
+  const isWindowedMainSurface = surface.location === 'main';
   const shouldUseTransparentChrome = surface.location === 'sidebar' || surface.location === 'rightRail' || isWindowedMainSurface;
 
   return (
@@ -203,8 +199,8 @@ export function NativeExtensionSurfaceHost({
       data-extension-surface-id={surface.id}
       data-shell-presentation={shellPresentation}
     >
-      <Suspense fallback={<ExtensionSurfaceLoading shellPresentation={shellPresentation} />}>
-        <ExtensionErrorBoundary extensionId={surface.extensionId} shellPresentation={shellPresentation}>
+      <Suspense fallback={<ExtensionSurfaceLoading />}>
+        <ExtensionErrorBoundary extensionId={surface.extensionId}>
           <Component
             pa={pa}
             context={context}
@@ -218,21 +214,15 @@ export function NativeExtensionSurfaceHost({
   );
 }
 
-function ExtensionSurfaceLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
-  if (shellPresentation === 'windowed') {
-    return (
-      <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading app page">
-        <WindowedStateBlock title="Loading app page">Preparing the window contents.</WindowedStateBlock>
-      </div>
-    );
-  }
-  return <QuietLoadingState label="Loading app page" />;
+function ExtensionSurfaceLoading() {
+  return (
+    <div className="wos-window-route-loading" role="status" aria-live="polite" aria-label="Loading app page">
+      <WindowedStateBlock title="Loading app page">Preparing the window contents.</WindowedStateBlock>
+    </div>
+  );
 }
 
-class ExtensionErrorBoundary extends React.Component<
-  { children: React.ReactNode; extensionId: string; shellPresentation: 'stable' | 'windowed' },
-  { message: string | null }
-> {
+class ExtensionErrorBoundary extends React.Component<{ children: React.ReactNode; extensionId: string }, { message: string | null }> {
   state = { message: null };
 
   static getDerivedStateFromError(error: unknown) {
@@ -250,6 +240,6 @@ class ExtensionErrorBoundary extends React.Component<
   }
 
   render() {
-    return this.state.message ? <ExtensionSurfaceError shellPresentation={this.props.shellPresentation} /> : this.props.children;
+    return this.state.message ? <ExtensionSurfaceError /> : this.props.children;
   }
 }

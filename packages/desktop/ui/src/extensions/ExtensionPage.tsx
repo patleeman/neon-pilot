@@ -3,7 +3,6 @@ import { type ReactNode, useEffect, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { addNotification } from '../components/notifications/notificationStore';
-import { ButtonLink, CenteredMessage, ErrorState, QuietLoadingState } from '../components/ui';
 import { ActivityPage } from '../pages/ActivityPage';
 import { DocumentsPage } from '../pages/DocumentsPage';
 import { HomePage } from '../pages/HomePage';
@@ -86,7 +85,7 @@ function extensionSurfaceRouteKey(surface: NativeExtensionViewSummary, pathname:
   return `${surface.extensionId}:${surface.id}:${surface.route ?? ''}:${pathname}${search}${hash}`;
 }
 
-export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresentation?: 'stable' | 'windowed' }) {
+export function ExtensionPage() {
   const location = useLocation();
   const registry = useExtensionRegistry();
   const nativeSurface = useMemo(() => {
@@ -119,7 +118,6 @@ export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresent
         pathname={location.pathname}
         search={location.search}
         hash={location.hash}
-        shellPresentation={shellPresentation}
       />
     );
   }
@@ -129,51 +127,30 @@ export function ExtensionPage({ shellPresentation = 'windowed' }: { shellPresent
   }
 
   if (registry.loading && !nativeSurface) {
-    return <ExtensionPageLoading shellPresentation={shellPresentation} />;
+    return <ExtensionPageLoading />;
   }
 
   if (registry.error && !nativeSurface) {
-    if (shellPresentation === 'windowed') {
-      return (
-        <WindowedExtensionPageState tone="danger" title="Apps unavailable">
-          {registry.error}
-        </WindowedExtensionPageState>
-      );
-    }
-    return <ErrorState message={`Apps unavailable: ${registry.error}`} />;
+    return (
+      <WindowedExtensionPageState tone="danger" title="Apps unavailable">
+        {registry.error}
+      </WindowedExtensionPageState>
+    );
   }
 
   if (staleExtensionRoute) {
     return <Navigate to="/conversations/new" replace />;
   }
 
-  if (shellPresentation === 'windowed') {
-    return (
-      <WindowedExtensionPageState title="No page is registered here">
-        This address does not match a conversation, setting, or installed app page.
-      </WindowedExtensionPageState>
-    );
-  }
-
   return (
-    <CenteredMessage
-      eyebrow="Route unavailable"
-      title="No page is registered here"
-      body="This address does not match a conversation, setting, or installed app page."
-      actions={
-        <ButtonLink href="/conversations/new" variant="action">
-          Go to Chat
-        </ButtonLink>
-      }
-    />
+    <WindowedExtensionPageState title="No page is registered here">
+      This address does not match a conversation, setting, or installed app page.
+    </WindowedExtensionPageState>
   );
 }
 
-function ExtensionPageLoading({ shellPresentation }: { shellPresentation: 'stable' | 'windowed' }) {
-  if (shellPresentation === 'windowed') {
-    return <WindowedExtensionPageState title="Loading app page">Preparing the window contents.</WindowedExtensionPageState>;
-  }
-  return <QuietLoadingState label="Loading app page" />;
+function ExtensionPageLoading() {
+  return <WindowedExtensionPageState title="Loading app page">Preparing the window contents.</WindowedExtensionPageState>;
 }
 
 function WindowedExtensionPageState({
