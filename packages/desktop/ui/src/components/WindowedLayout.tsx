@@ -136,7 +136,7 @@ const DEFAULT_WINDOW_BOTTOM_GUTTER = 56;
 const DEFAULT_CHAT_WORKBENCH_COLLAPSED = true;
 const DESKTOP_SHELL_ACTIVE_ATTRIBUTE = 'data-neon-pilot-desktop-shell-active';
 
-const STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
+const TASKBAR_EXCLUDED_TOP_BAR_ELEMENTS = new Set(['system-onboarding:onboarding-bootstrap']);
 
 function createId(input: Pick<WindowedAppRegistration, 'kind' | 'route' | 'id'>, suffix?: string): string {
   if (input.kind === 'chat') return `chat:${suffix ?? 'draft'}`;
@@ -2356,7 +2356,7 @@ export function WindowedLayout() {
     : [];
   const taskbarItems = shouldGroupChatTaskItems ? routeTaskItems : [...chatTaskItems, ...routeTaskItems];
   const taskbarTopBarElements = extensionRegistry.topBarElements.filter(
-    (element) => !STABLE_SHELL_ONLY_TOP_BAR_ELEMENTS.has(`${element.extensionId}:${element.id}`),
+    (element) => !TASKBAR_EXCLUDED_TOP_BAR_ELEMENTS.has(`${element.extensionId}:${element.id}`),
   );
   const themeControl = (
     <WindowedSegmentedControl

@@ -1677,7 +1677,7 @@ export const CanonicalDensity: Story = {
                 <WindowedField label="Instruction" span="full">
                   <WindowedTextarea
                     aria-label="Instruction"
-                    defaultValue="Keep labels crisp, controls compact, and metadata legible without adding stable-shell page padding."
+                    defaultValue="Keep labels crisp, controls compact, and metadata legible without adding legacy page padding."
                   />
                 </WindowedField>
               </WindowedFormGrid>

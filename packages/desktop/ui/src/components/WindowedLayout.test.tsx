@@ -687,7 +687,7 @@ describe('WindowedLayout route windows', () => {
     expect(within(desktopControls).getByLabelText('Taskbar system controls')).toBeTruthy();
   });
 
-  it('does not render stable-shell-only top-bar bootstraps in the windowed taskbar', () => {
+  it('does not render taskbar-excluded top-bar bootstraps in the windowed taskbar', () => {
     mocks.topBarElements = [
       {
         extensionId: 'system-onboarding',
