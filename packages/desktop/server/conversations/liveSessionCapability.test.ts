@@ -47,6 +47,12 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
   getExtensionHostClient: () => extensionHostClient,
 }));
 
+const buildUnreadInboxContextMock = vi.hoisted(() => vi.fn());
+
+vi.mock('./inboxContext.js', () => ({
+  buildUnreadInboxContext: buildUnreadInboxContextMock,
+}));
+
 vi.mock('../knowledge/promptReferences.js', () => ({
   buildReferencedMemoryDocsContext: vi.fn(() => ''),
   buildReferencedTasksContext: vi.fn(() => ''),
@@ -135,6 +141,7 @@ function createContext() {
   return {
     getRuntimeScope: () => 'assistant',
     getRepoRoot: () => '/repo',
+    getStateRoot: () => '/state',
     getDefaultWebCwd: () => '/repo',
     getDesktopRootLayout: () => resolveDesktopRootLayout({ root: '/desktop-root' }),
     buildLiveSessionResourceOptions: () => ({}),
@@ -179,6 +186,8 @@ beforeEach(() => {
   vi.mocked(readConversationContextDocs).mockReturnValue([]);
   submitLocalPromptSessionMock.mockResolvedValue({ acceptedAs: 'started', completion: Promise.resolve() });
   startParallelPromptSessionMock.mockResolvedValue({ jobId: 'job-1', childConversationId: 'child-1' });
+  buildUnreadInboxContextMock.mockReset();
+  buildUnreadInboxContextMock.mockReturnValue('');
 });
 
 afterEach(async () => {
@@ -532,6 +541,81 @@ describe('liveSessionCapability input validation', () => {
     );
 
     expect(queuePromptContextMock).not.toHaveBeenCalled();
+  });
+
+  it('queues unread inbox context only when explicitly opted in', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-inbox-optin', {
+      cwd: '/repo',
+      title: 'Session with inbox context',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-inbox-optin.jsonl',
+      },
+    });
+    vi.mocked(buildPromptContextPlan).mockImplementation(async (input) => ({
+      contextMessages: input.contextMessages,
+      diagnostics: [],
+    }));
+    buildUnreadInboxContextMock.mockReturnValue('Mocked unread inbox context:\n- Subject: Build complete');
+
+    await submitLiveSessionPromptCapability(
+      { conversationId: 'session-inbox-optin', text: 'hello', includeUnreadInbox: true },
+      createContext(),
+    );
+
+    expect(buildUnreadInboxContextMock).toHaveBeenCalledTimes(1);
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'session-inbox-optin',
+      'referenced_context',
+      expect.stringContaining('Mocked unread inbox context'),
+    );
+  });
+
+  it('does not queue unread inbox context for default capability callers', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-inbox-default', {
+      cwd: '/repo',
+      title: 'Session without inbox context',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-inbox-default.jsonl',
+      },
+    });
+    vi.mocked(buildPromptContextPlan).mockImplementation(async (input) => ({
+      contextMessages: input.contextMessages,
+      diagnostics: [],
+    }));
+    buildUnreadInboxContextMock.mockReturnValue('Should not appear');
+
+    await submitLiveSessionPromptCapability({ conversationId: 'session-inbox-default', text: 'hello' }, createContext());
+
+    expect(buildUnreadInboxContextMock).not.toHaveBeenCalled();
+  });
+
+  it('does not honor smuggled unread inbox flags on parallel prompts', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-inbox-parallel', {
+      cwd: '/repo',
+      title: 'Parallel worker session',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-inbox-parallel.jsonl',
+      },
+    });
+    vi.mocked(buildPromptContextPlan).mockImplementation(async (input) => ({
+      contextMessages: input.contextMessages,
+      diagnostics: [],
+    }));
+    buildUnreadInboxContextMock.mockReturnValue('Should not reach worker');
+    const { submitLiveSessionParallelPromptCapability } = await import('./liveSessionCapability.js');
+
+    await submitLiveSessionParallelPromptCapability(
+      { conversationId: 'session-inbox-parallel', text: 'run a parallel attempt', includeUnreadInbox: true } as never,
+      createContext(),
+    );
+
+    expect(buildUnreadInboxContextMock).not.toHaveBeenCalled();
   });
 
   it('does not honor smuggled persona memory flags on parallel prompts', async () => {

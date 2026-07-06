@@ -29,6 +29,7 @@ import { resolveConversationCwd, resolveNeutralChatCwd } from './conversationCwd
 import { syncWebLiveConversationRun } from './conversationRuns.js';
 import { appendConversationWorkspaceMetadata, readConversationSessionMeta, resolveConversationSessionFile } from './conversationService.js';
 import { queueConversationSummaryRefresh } from './conversationSummaries.js';
+import { buildUnreadInboxContext } from './inboxContext.js';
 import { type InjectedTurnEnvelopeOptions, wrapInjectedTurnMessage } from './injectedTurnEnvelope.js';
 import { computeCanonicalLiveSessionRunning } from './liveSessionRunningState.js';
 import {
@@ -60,6 +61,7 @@ import {
 export interface LiveSessionCapabilityContext {
   getRuntimeScope: () => string;
   getRepoRoot: () => string;
+  getStateRoot: () => string;
   getDefaultWebCwd: () => string;
   buildLiveSessionResourceOptions: (profile?: string) => Record<string, unknown>;
   buildLiveSessionResourceOptionsAsync?: (profile?: string) => Promise<Record<string, unknown>>;
@@ -109,6 +111,8 @@ export interface CreateLiveSessionCapabilityInput {
   reservedSessionFile?: string;
   /** When true, persona memory markdown files from <desktop-root>/agents are queued as prompt context. Direct user chat only. */
   includePersonaMemory?: boolean;
+  /** When true, unread Inbox messages are queued as referenced data context. Direct user-chat only. */
+  includeUnreadInbox?: boolean;
 }
 
 export interface CreateLiveSessionCapabilityResult {
@@ -174,6 +178,8 @@ export interface SubmitLiveSessionPromptCapabilityInput {
   injectedTurn?: InjectedTurnEnvelopeOptions;
   /** When true, persona memory markdown files from <desktop-root>/agents are queued as prompt context. Direct user chat only. */
   includePersonaMemory?: boolean;
+  /** When true, unread Inbox messages are queued as referenced data context. Direct user-chat only. */
+  includeUnreadInbox?: boolean;
 }
 
 export interface SubmitLiveSessionParallelPromptCapabilityInput {
@@ -280,6 +286,7 @@ async function submitInitialPromptForCreatedSession(
       relatedConversationIds: input.relatedConversationIds,
       surfaceId: input.surfaceId,
       ...(input.includePersonaMemory ? { includePersonaMemory: true } : {}),
+      ...(input.includeUnreadInbox ? { includeUnreadInbox: true } : {}),
     },
     context,
   );
@@ -918,7 +925,7 @@ async function prepareLiveSessionPrompt(
     surfaceId?: string;
   },
   context: LiveSessionCapabilityContext,
-  options: { includePersonaMemory?: boolean } = {},
+  options: { includePersonaMemory?: boolean; includeUnreadInbox?: boolean } = {},
 ): Promise<PreparedLiveSessionPrompt> {
   const conversationId = input.conversationId.trim();
   if (!conversationId) {
@@ -1023,9 +1030,13 @@ async function prepareLiveSessionPrompt(
   const attachedConversationContextDocs = readConversationContextDocs(conversationId).filter((doc) => !referencedPaths.has(doc.path));
 
   const personaMemoryContext = options.includePersonaMemory ? buildPersonaMemoryContext(context.getDesktopRootLayout().agents) : '';
+  const unreadInboxContext = options.includeUnreadInbox
+    ? buildUnreadInboxContext(context.getStateRoot(), context.getDesktopRootLayout())
+    : '';
 
   const queuedContextBlocks = [
     personaMemoryContext,
+    unreadInboxContext,
     attachedConversationContextDocs.length > 0 ? buildAttachedConversationContextDocsContext(attachedConversationContextDocs) : '',
     referencedAttachments.length > 0 ? buildConversationAttachmentsContext(referencedAttachments) : '',
     referencedTasks.length > 0 ? buildReferencedTasksContext(referencedTasks, context.getRepoRoot()) : '',
@@ -1080,7 +1091,10 @@ export async function submitLiveSessionPromptCapability(
   perf?: Record<string, number>;
 }> {
   const startedAtMs = performance.now();
-  const prepared = await prepareLiveSessionPrompt(input, context, { includePersonaMemory: input.includePersonaMemory === true });
+  const prepared = await prepareLiveSessionPrompt(input, context, {
+    includePersonaMemory: input.includePersonaMemory === true,
+    includeUnreadInbox: input.includeUnreadInbox === true,
+  });
   const preparedAtMs = performance.now();
   const behavior = normalizePromptBehavior(input.behavior);
   const liveConversationId = await ensureConversationPromptTargetLive(prepared.conversationId, context);

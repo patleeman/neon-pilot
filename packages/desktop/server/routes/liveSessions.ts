@@ -19,6 +19,10 @@ let getRepoRootFn: () => string = () => {
   throw new Error('live session routes not initialized');
 };
 
+let getStateRootFn: () => string = () => {
+  throw new Error('live session routes not initialized');
+};
+
 let getDefaultWebCwdFn: () => string = () => {
   throw new Error('live session routes not initialized');
 };
@@ -69,6 +73,7 @@ function initializeLiveSessionRoutesContext(
     ServerRouteContext,
     | 'getRuntimeScope'
     | 'getRepoRoot'
+    | 'getStateRoot'
     | 'getDefaultWebCwd'
     | 'getDesktopRootLayout'
     | 'buildLiveSessionResourceOptions'
@@ -80,6 +85,7 @@ function initializeLiveSessionRoutesContext(
 ): void {
   getRuntimeScopeFn = context.getRuntimeScope;
   getRepoRootFn = context.getRepoRoot;
+  getStateRootFn = context.getStateRoot;
   getDefaultWebCwdFn = context.getDefaultWebCwd;
   getDesktopRootLayoutFn = context.getDesktopRootLayout;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
@@ -130,6 +136,7 @@ function getLiveSessionCapabilityContext(): LiveSessionCapabilityContext {
   return {
     getRuntimeScope: getRuntimeScopeFn,
     getRepoRoot: getRepoRootFn,
+    getStateRoot: getStateRootFn,
     getDefaultWebCwd: getDefaultWebCwdFn,
     getDesktopRootLayout: getDesktopRootLayoutFn,
     buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
@@ -193,6 +200,7 @@ export async function handleLiveSessionPrompt(req: Request, res: Response): Prom
         relatedConversationIds: req.body?.relatedConversationIds,
         surfaceId: readRequestSurfaceId(req.body),
         includePersonaMemory: true,
+        includeUnreadInbox: true,
       },
       getLiveSessionCapabilityContext(),
     );
@@ -241,6 +249,7 @@ export function registerLiveSessionRoutes(
     ServerRouteContext,
     | 'getRuntimeScope'
     | 'getRepoRoot'
+    | 'getStateRoot'
     | 'getDefaultWebCwd'
     | 'getDesktopRootLayout'
     | 'buildLiveSessionResourceOptions'

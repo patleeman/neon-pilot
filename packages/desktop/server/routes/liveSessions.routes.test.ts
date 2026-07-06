@@ -321,6 +321,7 @@ function createDesktopHarness(options?: {
     buildLiveSessionResourceOptions: () => ({ additionalExtensionPaths: ['extensions'] }),
     flushLiveDeferredResumes: options?.flushLiveDeferredResumes ?? (async () => {}),
     getRuntimeScope: () => 'assistant',
+    getStateRoot: () => '/state',
     getDefaultWebCwd: () => '/default-cwd',
     getDesktopRootLayout: () => resolveDesktopRootLayout({ root: '/desktop-root' }),
     getRepoRoot: () => '/repo',

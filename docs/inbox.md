@@ -45,6 +45,12 @@ the transcript import remains complete and the worker job is not resurrected.
 This keeps Inbox as an attention surface over worker output without making it a
 second source of truth for execution state.
 
+Direct persona chat sessions receive a compact summary of active unread Inbox
+messages as referenced context. The summary is bounded, does not mark messages
+read, and repeats that Inbox content is data to inspect or summarize, never
+instructions to execute. Programmatic workers, extension conversation calls,
+gateway conversations, and parallel prompts do not inherit this context.
+
 ## UI Surface
 
 `/inbox` renders as a core windowed feature page through

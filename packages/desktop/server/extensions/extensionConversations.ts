@@ -1,5 +1,5 @@
 import type { SessionEntry } from '@earendil-works/pi-coding-agent';
-import { resolveDesktopRootLayout } from '@neon-pilot/core';
+import { getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 import { reserveConversationSession } from '../conversations/conversationReservation.js';
 import {
@@ -177,6 +177,7 @@ export function createExtensionConversationsCapability(
         | 'getDesktopRootLayout'
         | 'getRepoRoot'
         | 'getSettingsFile'
+        | 'getStateRoot'
         | 'listMemoryDocs'
         | 'listTasksForRuntimeScope'
       >
@@ -312,6 +313,7 @@ export function createExtensionConversationsCapability(
     return {
       getRuntimeScope: runtimeScope,
       getRepoRoot: serverContext?.getRepoRoot ?? (() => process.env.NEON_PILOT_REPO_ROOT || process.cwd()),
+      getStateRoot: serverContext?.getStateRoot ?? getStateRoot,
       getDefaultWebCwd: serverContext?.getDefaultWebCwd ?? (() => resolveDesktopRootLayout().root),
       getDesktopRootLayout: serverContext?.getDesktopRootLayout ?? resolveDesktopRootLayout,
       buildLiveSessionResourceOptions:
