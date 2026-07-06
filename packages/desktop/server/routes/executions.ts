@@ -1,6 +1,7 @@
 import type { Express, Response } from 'express';
 
 import { getDurableRunLogCursor, readDurableRunLogDelta } from '../automation/durableRuns.js';
+import { type DocumentsStore, getDocumentsStore } from '../documents/store.js';
 import {
   cancelExecution,
   followUpExecution,
@@ -10,8 +11,10 @@ import {
   listConversationExecutions,
   listExecutions,
   rerunExecution,
+  writeExecutionActivityEntry,
 } from '../executions/executionService.js';
 import { invalidateAppTopics, logError } from '../middleware/index.js';
+import type { ServerRouteContext } from './context.js';
 
 function parseLogTail(queryTail: unknown): number | undefined {
   if (typeof queryTail !== 'string') return undefined;
@@ -63,7 +66,30 @@ function formatExecutionActionRejection(err: unknown, action: 'rerun' | 'follow-
   return null;
 }
 
-export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): void {
+// Store lifecycle is optional and drives activity producers when routes
+// are registered with desktop server context.
+
+interface ExecutionRouteContext {
+  getStateRoot: ServerRouteContext['getStateRoot'];
+  getDesktopRootLayout?: ServerRouteContext['getDesktopRootLayout'];
+}
+
+function getStore(context: ExecutionRouteContext | undefined): DocumentsStore | undefined {
+  if (!context) return undefined;
+  const stateRoot = context.getStateRoot?.();
+  if (!stateRoot) return undefined;
+  return getDocumentsStore(stateRoot, context.getDesktopRootLayout?.());
+}
+
+// Lifecycle kind helpers.
+
+function lifecycleKindForStatus(status: string): 'activity' | 'error' {
+  if (status === 'failed' || status === 'cancelled' || status === 'interrupted') return 'error';
+  return 'activity';
+}
+
+export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>, context?: ExecutionRouteContext): void {
+  const store = getStore(context);
   router.get('/api/executions', async (_req, res) => {
     try {
       res.json(await listExecutions());
@@ -169,6 +195,18 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
           const nextStatus = detail.execution.status;
           active = isExecutionActive(detail.execution);
           if (nextStatus !== previousStatus) {
+            // Terminal transitions produce an activity entry.
+            if (
+              store &&
+              active === false &&
+              (nextStatus === 'completed' || nextStatus === 'failed' || nextStatus === 'cancelled' || nextStatus === 'interrupted')
+            ) {
+              try {
+                writeExecutionActivityEntry(store, executionId, detail.execution.title, nextStatus, lifecycleKindForStatus(nextStatus));
+              } catch {
+                // Best-effort; the SSE stream carries on
+              }
+            }
             previousStatus = nextStatus;
             invalidateAppTopics('executions', 'runs');
           }
@@ -240,10 +278,19 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
 
   router.post('/api/executions/:id/cancel', async (req, res) => {
     try {
-      const result = await cancelExecution(req.params.id);
+      const id = req.params.id;
+      const result = await cancelExecution(id);
       if (!result.cancelled) {
         res.status(409).json({ error: result.reason ?? 'Could not cancel execution.' });
         return;
+      }
+      if (store) {
+        const prior = await getExecution(id).catch(() => undefined);
+        if (prior) {
+          writeExecutionActivityEntry(store, id, prior.execution.title, 'cancelled', 'error', {
+            runId: id,
+          });
+        }
       }
       invalidateAppTopics('executions', 'runs');
       res.json(result);
@@ -254,10 +301,20 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
 
   router.post('/api/executions/:id/rerun', async (req, res) => {
     try {
-      const result = await rerunExecution(req.params.id);
+      const sourceId = req.params.id;
+      const result = await rerunExecution(sourceId);
       if (!result.accepted) {
         res.status(409).json({ error: result.reason ?? 'Could not rerun execution.' });
         return;
+      }
+      if (store) {
+        const newDetail = await getExecution(result.runId).catch(() => undefined);
+        if (newDetail) {
+          writeExecutionActivityEntry(store, result.runId, newDetail.execution.title, 'started', 'activity', {
+            sourceRunId: sourceId,
+            rerun: true,
+          });
+        }
       }
       invalidateAppTopics('executions', 'runs');
       res.json(result);
@@ -273,11 +330,21 @@ export function registerExecutionRoutes(router: Pick<Express, 'get' | 'post'>): 
 
   router.post('/api/executions/:id/follow-up', async (req, res) => {
     try {
+      const sourceId = req.params.id;
       const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt : undefined;
-      const result = await followUpExecution(req.params.id, prompt);
+      const result = await followUpExecution(sourceId, prompt);
       if (!result.accepted) {
         res.status(409).json({ error: result.reason ?? 'Could not continue execution.' });
         return;
+      }
+      if (store) {
+        const newDetail = await getExecution(result.runId).catch(() => undefined);
+        if (newDetail) {
+          writeExecutionActivityEntry(store, result.runId, newDetail.execution.title, 'started', 'activity', {
+            sourceRunId: sourceId,
+            followUp: true,
+          });
+        }
       }
       invalidateAppTopics('executions', 'runs');
       res.json(result);

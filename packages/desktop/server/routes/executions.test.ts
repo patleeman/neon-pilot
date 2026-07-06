@@ -11,6 +11,7 @@ const {
   listExecutionsMock,
   logErrorMock,
   rerunExecutionMock,
+  writeExecutionActivityEntryMock,
 } = vi.hoisted(() => ({
   cancelExecutionMock: vi.fn(),
   followUpExecutionMock: vi.fn(),
@@ -28,6 +29,11 @@ const {
   listExecutionsMock: vi.fn(),
   logErrorMock: vi.fn(),
   rerunExecutionMock: vi.fn(),
+  writeExecutionActivityEntryMock: vi.fn(),
+}));
+
+const { getDocumentsStoreMock } = vi.hoisted(() => ({
+  getDocumentsStoreMock: vi.fn(),
 }));
 
 vi.mock('../executions/executionService.js', () => ({
@@ -39,6 +45,11 @@ vi.mock('../executions/executionService.js', () => ({
   listExecutions: listExecutionsMock,
   isExecutionActive: isExecutionActiveMock,
   rerunExecution: rerunExecutionMock,
+  writeExecutionActivityEntry: writeExecutionActivityEntryMock,
+}));
+
+vi.mock('../documents/store.js', () => ({
+  getDocumentsStore: getDocumentsStoreMock,
 }));
 
 vi.mock('../middleware/index.js', () => ({
@@ -60,9 +71,11 @@ describe('registerExecutionRoutes', () => {
     listExecutionsMock.mockReset();
     logErrorMock.mockReset();
     rerunExecutionMock.mockReset();
+    writeExecutionActivityEntryMock.mockReset();
+    getDocumentsStoreMock.mockReset();
   });
 
-  function createHarness() {
+  function createHarness(context?: unknown) {
     const handlers: Record<string, (req: unknown, res: unknown) => Promise<void> | void> = {};
     const router = {
       get: vi.fn((path: string, next: (req: unknown, res: unknown) => Promise<void> | void) => {
@@ -73,7 +86,7 @@ describe('registerExecutionRoutes', () => {
       }),
     };
 
-    registerExecutionRoutes(router as never);
+    registerExecutionRoutes(router as never, context as never);
 
     return {
       listHandler: handlers['GET /api/executions']!,
@@ -165,6 +178,58 @@ describe('registerExecutionRoutes', () => {
 
     expect(invalidateAppTopicsMock).toHaveBeenCalledTimes(3);
     expect(invalidateAppTopicsMock).toHaveBeenCalledWith('executions', 'runs');
+  });
+
+  it('writes an activity entry when cancelling with route context', async () => {
+    const store = { kind: 'documents-store' };
+    getDocumentsStoreMock.mockReturnValue(store);
+    const { cancelHandler } = createHarness({
+      getStateRoot: () => '/state-root',
+      getDesktopRootLayout: () => ({ root: '/desktop-root' }),
+    });
+    cancelExecutionMock.mockResolvedValue({ cancelled: true, runId: 'run-1' });
+    getExecutionMock.mockResolvedValue({ execution: { id: 'run-1', title: 'Long task', status: 'cancelled' } });
+
+    const cancelRes = createJsonResponse();
+    await cancelHandler({ params: { id: 'run-1' } }, cancelRes);
+
+    expect(getDocumentsStoreMock).toHaveBeenCalledWith('/state-root', { root: '/desktop-root' });
+    expect(writeExecutionActivityEntryMock).toHaveBeenCalledWith(store, 'run-1', 'Long task', 'cancelled', 'error', {
+      runId: 'run-1',
+    });
+    expect(cancelRes.json).toHaveBeenCalledWith({ cancelled: true, runId: 'run-1' });
+  });
+
+  it('writes activity entries when rerunning and following up with route context', async () => {
+    const store = { kind: 'documents-store' };
+    getDocumentsStoreMock.mockReturnValue(store);
+    const { followUpHandler, rerunHandler } = createHarness({
+      getStateRoot: () => '/state-root',
+      getDesktopRootLayout: () => ({ root: '/desktop-root' }),
+    });
+    rerunExecutionMock.mockResolvedValue({ accepted: true, runId: 'run-rerun', sourceRunId: 'run-1' });
+    followUpExecutionMock.mockResolvedValue({ accepted: true, runId: 'run-follow-up', sourceRunId: 'run-1' });
+    getExecutionMock
+      .mockResolvedValueOnce({ execution: { id: 'run-rerun', title: 'Rerun task', status: 'queued' } })
+      .mockResolvedValueOnce({ execution: { id: 'run-follow-up', title: 'Follow-up task', status: 'queued' } });
+
+    const rerunRes = createJsonResponse();
+    await rerunHandler({ params: { id: 'run-1' } }, rerunRes);
+
+    expect(writeExecutionActivityEntryMock).toHaveBeenCalledWith(store, 'run-rerun', 'Rerun task', 'started', 'activity', {
+      sourceRunId: 'run-1',
+      rerun: true,
+    });
+    expect(rerunRes.json).toHaveBeenCalledWith({ accepted: true, runId: 'run-rerun', sourceRunId: 'run-1' });
+
+    const followUpRes = createJsonResponse();
+    await followUpHandler({ params: { id: 'run-1' }, body: { prompt: 'Continue' } }, followUpRes);
+
+    expect(writeExecutionActivityEntryMock).toHaveBeenCalledWith(store, 'run-follow-up', 'Follow-up task', 'started', 'activity', {
+      sourceRunId: 'run-1',
+      followUp: true,
+    });
+    expect(followUpRes.json).toHaveBeenCalledWith({ accepted: true, runId: 'run-follow-up', sourceRunId: 'run-1' });
   });
 
   it('returns recoverable rerun and follow-up rejections as conflict responses', async () => {

@@ -1,5 +1,6 @@
 import type { ScannedDurableRun } from '@neon-pilot/daemon';
 
+import { type ActivityEntryBody, type ActivityEntryKind, notifyActivityMutation, writeActivityEntry } from '../activity/activityEntries.js';
 import {
   cancelDurableRun,
   followUpDurableRun,
@@ -8,6 +9,7 @@ import {
   listDurableRuns,
   rerunDurableRun,
 } from '../automation/durableRuns.js';
+import type { DocumentsStore } from '../documents/store.js';
 
 export type ExecutionKind = 'background-command' | 'subagent' | 'scheduled-task' | 'deferred-resume' | 'conversation' | 'unknown';
 export type ExecutionVisibility = 'primary' | 'system' | 'hidden';
@@ -275,6 +277,38 @@ export async function listConversationExecutions(
 export async function getExecution(id: string): Promise<{ execution: ExecutionRecord } | undefined> {
   const result = await getDurableRun(id);
   return result ? { execution: projectExecution(result.run) } : undefined;
+}
+
+/**
+ * Write an activity entry for an execution lifecycle event.
+ *
+ * Uses a deterministic id (`exec_lifecycle_<executionId>_<status>`) so
+ * repeated writes for the same transition are idempotent. Callers are
+ * responsible for providing the {@link DocumentsStore} (typically from
+ * route context).
+ */
+export function writeExecutionActivityEntry(
+  store: DocumentsStore,
+  executionId: string,
+  executionTitle: string,
+  status: string,
+  kind: ActivityEntryKind,
+  extra?: Record<string, unknown>,
+): void {
+  const id = `exec_lifecycle_${executionId}_${status}`;
+  const body: ActivityEntryBody = {
+    type: `execution_${status}`,
+    title: `Execution ${status}: ${executionTitle}`,
+    source: 'Execution Service',
+    kind,
+    metadata: {
+      executionId,
+      status,
+      ...extra,
+    },
+  };
+  const doc = writeActivityEntry(store, body, id);
+  notifyActivityMutation('activity.created', doc.id, doc.body as ActivityEntryBody, { executionId, status });
 }
 
 export {

@@ -47,7 +47,7 @@ export function registerServerRoutes({ app, context }: RegisterServerRoutesInput
 
   registerLiveSessionRoutes(app, context);
 
-  registerExecutionRoutes(app);
+  registerExecutionRoutes(app, context);
 
   registerGlobalActivityRoutes(app, context);
 

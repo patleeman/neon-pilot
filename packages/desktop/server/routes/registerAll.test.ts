@@ -59,7 +59,7 @@ describe('registerServerRoutes', () => {
 
     expect(routeModules.registerAppTelemetryRoutes).toHaveBeenCalledWith(app);
     expect(routeModules.registerDocumentsRoutes).toHaveBeenCalledWith(app, context);
-    expect(routeModules.registerExecutionRoutes).toHaveBeenCalledWith(app);
+    expect(routeModules.registerExecutionRoutes).toHaveBeenCalledWith(app, context);
     expect(routeModules.registerGlobalActivityRoutes).toHaveBeenCalledWith(app, context);
     expect(routeModules.registerInboxRoutes).toHaveBeenCalledWith(app, context);
     expect(routeModules.registerActivityEntriesRoutes).toHaveBeenCalledWith(app, context);
