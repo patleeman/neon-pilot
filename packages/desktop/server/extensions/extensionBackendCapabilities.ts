@@ -161,6 +161,7 @@ interface ExtensionBackendCapabilityNetwork {
     statusText: string;
     headers: Record<string, string>;
     text: string;
+    bodyBase64: string;
     url: string;
   }>;
 }
@@ -3035,7 +3036,7 @@ export function createExtensionBackendCapabilityDispatcher(
           redirect: input.redirect,
           signal: input.timeoutMs ? AbortSignal.timeout(input.timeoutMs) : undefined,
         });
-        const text = await response.text();
+        const body = Buffer.from(await response.arrayBuffer());
         const headers: Record<string, string> = {};
         response.headers.forEach((value, key) => {
           headers[key] = value;
@@ -3045,7 +3046,8 @@ export function createExtensionBackendCapabilityDispatcher(
           status: response.status,
           statusText: response.statusText,
           headers,
-          text,
+          text: body.toString('utf8'),
+          bodyBase64: body.toString('base64'),
           url: response.url,
         };
       },

@@ -2806,6 +2806,7 @@ describe('extension backend capability dispatcher', () => {
         statusText: 'OK',
         headers: { 'content-type': 'text/html' },
         text: '<html>hello</html>',
+        bodyBase64: Buffer.from('<html>hello</html>').toString('base64'),
         url: 'https://example.com',
       })),
     };
@@ -2828,6 +2829,7 @@ describe('extension backend capability dispatcher', () => {
       statusText: 'OK',
       headers: { 'content-type': 'text/html' },
       text: '<html>hello</html>',
+      bodyBase64: Buffer.from('<html>hello</html>').toString('base64'),
       url: 'https://example.com',
     });
 
@@ -2836,6 +2838,44 @@ describe('extension backend capability dispatcher', () => {
       redirect: 'manual',
       timeoutMs: 15000,
     });
+  });
+
+  it('returns byte-preserving network fetch bodies from the default host fetch implementation', async () => {
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['network:read'],
+      },
+    });
+    const body = Buffer.from([0x1f, 0x8b, 0x08, 0xff]);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'application/gzip' },
+      }),
+    );
+    const dispatch = createExtensionBackendCapabilityDispatcher({});
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-skill-search',
+          capability: 'network',
+          operation: 'fetch',
+          input: { url: 'https://example.com/archive.tar.gz' },
+        }),
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      status: 200,
+      headers: { 'content-type': 'application/gzip' },
+      bodyBase64: body.toString('base64'),
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith('https://example.com/archive.tar.gz', expect.objectContaining({ signal: undefined }));
+    fetchSpy.mockRestore();
   });
 
   it('denies network fetch without network:read permission', async () => {

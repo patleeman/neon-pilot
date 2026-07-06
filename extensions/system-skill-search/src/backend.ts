@@ -4,6 +4,7 @@ import { gunzipSync } from 'node:zlib';
 
 import type { ExtensionBackendContext, ExtensionScopedFileSystem } from '@neon-pilot/extensions';
 import { runAgentTask } from '@neon-pilot/extensions/backend/agent';
+import { networkFetch } from '@neon-pilot/extensions/backend/network';
 
 type TrustLevel = 'builtin' | 'trusted' | 'community';
 type SourceKind = 'github' | 'hermes-index';
@@ -1327,15 +1328,42 @@ async function githubJson(url: string, deadline: number): Promise<unknown> {
   return response.json();
 }
 
-async function fetchWithDeadline(url: string, deadline: number, options: { accept: string }): Promise<Response> {
+interface FetchWithDeadlineResponse {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  url: string;
+  bodyBase64?: string;
+  text(): Promise<string>;
+  json(): Promise<unknown>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+async function fetchWithDeadline(url: string, deadline: number, options: { accept: string }): Promise<FetchWithDeadlineResponse> {
   const remaining = Math.max(1, deadline - Date.now());
-  return fetch(url, {
+  const result = await networkFetch(url, {
     headers: {
       Accept: options.accept,
       'User-Agent': 'Neon-Pilot-Skill-Search',
     },
-    signal: AbortSignal.timeout(remaining),
+    timeoutMs: remaining,
   });
+  const body = result.text;
+  return {
+    ok: result.ok,
+    status: result.status,
+    statusText: result.statusText,
+    headers: result.headers,
+    url: result.url,
+    bodyBase64: result.bodyBase64,
+    text: () => Promise.resolve(body),
+    json: () => Promise.resolve(JSON.parse(body)),
+    arrayBuffer: () => {
+      const buffer = result.bodyBase64 ? Buffer.from(result.bodyBase64, 'base64') : Buffer.from(body, 'binary');
+      return Promise.resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
+    },
+  };
 }
 
 function createCandidate(input: {

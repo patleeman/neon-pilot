@@ -10,6 +10,7 @@ export interface NetworkFetchResult {
   statusText: string;
   headers: Record<string, string>;
   text: string;
+  bodyBase64?: string;
   url: string;
 }
 

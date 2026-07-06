@@ -2,8 +2,12 @@ import { gzipSync } from 'node:zlib';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { runAgentTaskMock } = vi.hoisted(() => ({ runAgentTaskMock: vi.fn() }));
+const { networkFetchMock, runAgentTaskMock } = vi.hoisted(() => ({
+  networkFetchMock: vi.fn(),
+  runAgentTaskMock: vi.fn(),
+}));
 vi.mock('@neon-pilot/extensions/backend/agent', () => ({ runAgentTask: runAgentTaskMock }));
+vi.mock('@neon-pilot/extensions/backend/network', () => ({ networkFetch: networkFetchMock }));
 
 import { browseSkills, installSkill, listInstalledSkillContributions, previewSkill, searchSkills } from './backend.js';
 
@@ -12,16 +16,38 @@ interface StoredRow<T = unknown> {
   value: T;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+function statusText(status: number): string {
+  if (status >= 200 && status < 300) return 'OK';
+  if (status === 403) return 'Forbidden';
+  if (status === 404) return 'Not Found';
+  return 'Error';
 }
 
-function textResponse(body: string, status = 200): Response {
-  return new Response(body, { status });
+function networkResult(body: string, status = 200, headers: Record<string, string> = {}) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: statusText(status),
+    headers,
+    text: body,
+    bodyBase64: Buffer.from(body, 'utf8').toString('base64'),
+    url: 'https://example.test/mock',
+  };
 }
 
-function bufferResponse(body: Buffer, status = 200): Response {
-  return new Response(body, { status });
+function jsonResponse(body: unknown, status = 200) {
+  return networkResult(JSON.stringify(body), status, { 'content-type': 'application/json' });
+}
+
+function textResponse(body: string, status = 200) {
+  return networkResult(body, status);
+}
+
+function bufferResponse(body: Buffer, status = 200) {
+  return {
+    ...networkResult(body.toString('utf8'), status, { 'content-type': 'application/gzip' }),
+    bodyBase64: body.toString('base64'),
+  };
 }
 
 function createCtx() {
@@ -75,47 +101,41 @@ function installFetchMock(filesByPath: Record<string, string>) {
   const archive = createTarGz({
     ...Object.fromEntries(Object.entries(filesByPath).map(([path, content]) => [`safe-skill-main/skills/reviewer/${path}`, content])),
   });
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string) => {
-      const textUrl = String(url);
-      if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
-        return bufferResponse(archive);
-      }
-      if (textUrl.includes('/repos/example/safe-skill/git/trees/main')) {
-        return jsonResponse({
-          tree: Object.keys(filesByPath).map((path) => ({ path: `skills/reviewer/${path}`, type: 'blob' })),
-        });
-      }
-      if (textUrl.includes('/repos/example/safe-skill/contents/skills/reviewer/')) {
-        const path = decodeURIComponent(textUrl.split('/contents/skills/reviewer/')[1] ?? '');
-        return textResponse(filesByPath[path] ?? '');
-      }
-      if (textUrl.includes('/repos/example/safe-skill')) {
-        return jsonResponse({ default_branch: 'main' });
-      }
-      return jsonResponse({ tree: [] });
-    }),
-  );
+  networkFetchMock.mockImplementation(async (url: string) => {
+    const textUrl = String(url);
+    if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
+      return bufferResponse(archive);
+    }
+    if (textUrl.includes('/repos/example/safe-skill/git/trees/main')) {
+      return jsonResponse({
+        tree: Object.keys(filesByPath).map((path) => ({ path: `skills/reviewer/${path}`, type: 'blob' })),
+      });
+    }
+    if (textUrl.includes('/repos/example/safe-skill/contents/skills/reviewer/')) {
+      const path = decodeURIComponent(textUrl.split('/contents/skills/reviewer/')[1] ?? '');
+      return textResponse(filesByPath[path] ?? '');
+    }
+    if (textUrl.includes('/repos/example/safe-skill')) {
+      return jsonResponse({ default_branch: 'main' });
+    }
+    return jsonResponse({ tree: [] });
+  });
 }
 
 function installArchiveOnlyFetchMock(filesByPath: Record<string, string>) {
   const archive = createTarGz({
     ...Object.fromEntries(Object.entries(filesByPath).map(([path, content]) => [`safe-skill-main/skills/reviewer/${path}`, content])),
   });
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string) => {
-      const textUrl = String(url);
-      if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
-        return bufferResponse(archive);
-      }
-      if (textUrl.includes('api.github.com/repos/example/safe-skill')) {
-        return jsonResponse({ message: 'API rate limit exceeded' }, 403);
-      }
-      return jsonResponse({ tree: [] });
-    }),
-  );
+  networkFetchMock.mockImplementation(async (url: string) => {
+    const textUrl = String(url);
+    if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
+      return bufferResponse(archive);
+    }
+    if (textUrl.includes('api.github.com/repos/example/safe-skill')) {
+      return jsonResponse({ message: 'API rate limit exceeded' }, 403);
+    }
+    return jsonResponse({ tree: [] });
+  });
 }
 
 function createTarGz(files: Record<string, string>): Buffer {
@@ -143,36 +163,34 @@ function createTarGz(files: Record<string, string>): Buffer {
 
 beforeEach(() => {
   vi.unstubAllGlobals();
+  networkFetchMock.mockReset();
   runAgentTaskMock.mockReset();
   runAgentTaskMock.mockResolvedValue({ text: '{"status":"passed","summary":"No unsafe behavior found."}' });
 });
 
 describe('system-skill-search backend', () => {
   it('browses marketplace skills by source without invoking the discovery reviewer', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const textUrl = String(url);
-        if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
-        if (textUrl.includes('/repos/openai/skills/git/trees/main')) {
-          return jsonResponse({
-            tree: [
-              { path: 'skills/.curated/pdf/SKILL.md', type: 'blob' },
-              { path: 'skills/.system/documents/SKILL.md', type: 'blob' },
-            ],
-          });
-        }
-        if (textUrl.includes('/repos/openai/skills/contents/skills/.curated/pdf/SKILL.md')) {
-          return textResponse('---\nname: pdf\ndescription: Read, inspect, and verify PDF files.\n---\nUse for PDFs.');
-        }
-        if (textUrl.includes('/repos/openai/skills/contents/skills/.system/documents/SKILL.md')) {
-          return textResponse('---\nname: documents\ndescription: Create and edit documents.\n---\nUse for docs.');
-        }
-        if (textUrl.includes('/repos/openai/skills')) return jsonResponse({ default_branch: 'main' });
-        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
-        return jsonResponse({});
-      }),
-    );
+    networkFetchMock.mockImplementation(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+      if (textUrl.includes('/repos/openai/skills/git/trees/main')) {
+        return jsonResponse({
+          tree: [
+            { path: 'skills/.curated/pdf/SKILL.md', type: 'blob' },
+            { path: 'skills/.system/documents/SKILL.md', type: 'blob' },
+          ],
+        });
+      }
+      if (textUrl.includes('/repos/openai/skills/contents/skills/.curated/pdf/SKILL.md')) {
+        return textResponse('---\nname: pdf\ndescription: Read, inspect, and verify PDF files.\n---\nUse for PDFs.');
+      }
+      if (textUrl.includes('/repos/openai/skills/contents/skills/.system/documents/SKILL.md')) {
+        return textResponse('---\nname: documents\ndescription: Create and edit documents.\n---\nUse for docs.');
+      }
+      if (textUrl.includes('/repos/openai/skills')) return jsonResponse({ default_branch: 'main' });
+      if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+      return jsonResponse({});
+    });
     const { ctx, store } = createCtx();
 
     const result = (await browseSkills({ sourceId: 'openai', query: 'pdf', limit: 10 }, ctx as never)) as {
@@ -203,7 +221,7 @@ describe('system-skill-search backend', () => {
       if (textUrl.includes('/repos/openai/skills')) return jsonResponse({ default_branch: 'main' });
       return jsonResponse({});
     });
-    vi.stubGlobal('fetch', fetchMock);
+    networkFetchMock.mockImplementation(fetchMock);
     const { ctx } = createCtx();
 
     const first = (await browseSkills({ sourceId: 'openai', query: 'pdf', limit: 10 }, ctx as never)) as {
@@ -236,7 +254,7 @@ describe('system-skill-search backend', () => {
       if (textUrl.includes('/repos/openai/skills')) return jsonResponse({ default_branch: 'main' });
       return jsonResponse({});
     });
-    vi.stubGlobal('fetch', fetchMock);
+    networkFetchMock.mockImplementation(fetchMock);
     const { ctx, store } = createCtx();
 
     await browseSkills({ sourceId: 'openai', limit: 10 }, ctx as never);
@@ -263,27 +281,24 @@ describe('system-skill-search backend', () => {
   });
 
   it('browses community marketplace records with approval metadata', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const textUrl = String(url);
-        if (textUrl.includes('skills-index.json')) {
-          return jsonResponse({
-            skills: [
-              {
-                name: 'release-qa',
-                description: 'Run a release QA checklist.',
-                trust_level: 'community',
-                repo: 'community/skills',
-                path: 'skills/release-qa',
-              },
-            ],
-          });
-        }
-        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
-        return jsonResponse({});
-      }),
-    );
+    networkFetchMock.mockImplementation(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) {
+        return jsonResponse({
+          skills: [
+            {
+              name: 'release-qa',
+              description: 'Run a release QA checklist.',
+              trust_level: 'community',
+              repo: 'community/skills',
+              path: 'skills/release-qa',
+            },
+          ],
+        });
+      }
+      if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+      return jsonResponse({});
+    });
     const { ctx } = createCtx();
 
     const result = (await browseSkills({ sourceId: 'hermes', limit: 10 }, ctx as never)) as {
@@ -299,45 +314,42 @@ describe('system-skill-search backend', () => {
   });
 
   it('searches trusted and community upstream records and stores candidates', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const textUrl = String(url);
-        if (textUrl.includes('skills-index.json')) {
-          return jsonResponse({
-            skills: [
-              {
-                name: 'review-helper',
-                description: 'Review code changes with a checklist.',
-                trust_level: 'trusted',
-                repo: 'openai/skills',
-                path: 'skills/.curated/review-helper',
-              },
-              {
-                name: 'evil-review',
-                description: 'Review code changes.',
-                trust_level: 'community',
-                repo: 'someone/skills',
-                path: 'skills/evil-review',
-              },
-            ],
-          });
-        }
-        if (textUrl.includes('/repos/openai/skills/git/trees/main')) {
-          return jsonResponse({
-            tree: [
-              { path: 'skills/.curated/reviewer/SKILL.md', type: 'blob' },
-              { path: 'skills/community/other/SKILL.md', type: 'blob' },
-            ],
-          });
-        }
-        if (textUrl.includes('/repos/openai/skills/contents/skills/.curated/reviewer/SKILL.md')) {
-          return textResponse('---\nname: reviewer\ndescription: Review pull requests.\n---\nReview workflow.');
-        }
-        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
-        return jsonResponse({});
-      }),
-    );
+    networkFetchMock.mockImplementation(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) {
+        return jsonResponse({
+          skills: [
+            {
+              name: 'review-helper',
+              description: 'Review code changes with a checklist.',
+              trust_level: 'trusted',
+              repo: 'openai/skills',
+              path: 'skills/.curated/review-helper',
+            },
+            {
+              name: 'evil-review',
+              description: 'Review code changes.',
+              trust_level: 'community',
+              repo: 'someone/skills',
+              path: 'skills/evil-review',
+            },
+          ],
+        });
+      }
+      if (textUrl.includes('/repos/openai/skills/git/trees/main')) {
+        return jsonResponse({
+          tree: [
+            { path: 'skills/.curated/reviewer/SKILL.md', type: 'blob' },
+            { path: 'skills/community/other/SKILL.md', type: 'blob' },
+          ],
+        });
+      }
+      if (textUrl.includes('/repos/openai/skills/contents/skills/.curated/reviewer/SKILL.md')) {
+        return textResponse('---\nname: reviewer\ndescription: Review pull requests.\n---\nReview workflow.');
+      }
+      if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+      return jsonResponse({});
+    });
     const { ctx, store } = createCtx();
 
     const result = (await searchSkills({ intent: 'review pull requests', limit: 10 }, ctx as never)) as {
@@ -361,33 +373,30 @@ describe('system-skill-search backend', () => {
       'safe-skill-main/skills/reviewer/SKILL.md':
         '---\nname: reviewer\ndescription: Review pull requests.\n---\nUse this when reviewing code.',
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const textUrl = String(url);
-        if (textUrl.includes('skills-index.json')) {
-          return jsonResponse({
-            skills: [
-              {
-                name: 'reviewer',
-                description: 'Review pull requests.',
-                trust_level: 'community',
-                repo: 'example/safe-skill',
-                path: 'skills/reviewer',
-              },
-            ],
-          });
-        }
-        if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
-          return bufferResponse(archive);
-        }
-        if (textUrl.includes('/repos/example/safe-skill')) {
-          return jsonResponse({ default_branch: 'main', tree: [] });
-        }
-        if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
-        return jsonResponse({});
-      }),
-    );
+    networkFetchMock.mockImplementation(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) {
+        return jsonResponse({
+          skills: [
+            {
+              name: 'reviewer',
+              description: 'Review pull requests.',
+              trust_level: 'community',
+              repo: 'example/safe-skill',
+              path: 'skills/reviewer',
+            },
+          ],
+        });
+      }
+      if (textUrl.includes('codeload.github.com/example/safe-skill/tar.gz/refs/heads/main')) {
+        return bufferResponse(archive);
+      }
+      if (textUrl.includes('/repos/example/safe-skill')) {
+        return jsonResponse({ default_branch: 'main', tree: [] });
+      }
+      if (textUrl.includes('/repos/')) return jsonResponse({ default_branch: 'main', tree: [] });
+      return jsonResponse({});
+    });
     const { ctx } = createCtx();
     const candidateId = 'f8e8198bea1cf624';
     runAgentTaskMock.mockResolvedValueOnce({
@@ -427,21 +436,18 @@ describe('system-skill-search backend', () => {
       'skills-main/skills/pdf/SKILL.md':
         '---\nname: pdf\ndescription: Read, extract, and process PDF documents.\n---\nUse this for PDF parsing.',
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const textUrl = String(url);
-        if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
-        if (textUrl.includes('api.github.com/repos/anthropics/skills')) {
-          return jsonResponse({ message: 'API rate limit exceeded' }, 403);
-        }
-        if (textUrl.includes('codeload.github.com/anthropics/skills/tar.gz/refs/heads/main')) {
-          return bufferResponse(archive);
-        }
-        if (textUrl.includes('/repos/')) return jsonResponse({ tree: [] });
-        return jsonResponse({});
-      }),
-    );
+    networkFetchMock.mockImplementation(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+      if (textUrl.includes('api.github.com/repos/anthropics/skills')) {
+        return jsonResponse({ message: 'API rate limit exceeded' }, 403);
+      }
+      if (textUrl.includes('codeload.github.com/anthropics/skills/tar.gz/refs/heads/main')) {
+        return bufferResponse(archive);
+      }
+      if (textUrl.includes('/repos/')) return jsonResponse({ tree: [] });
+      return jsonResponse({});
+    });
     const { ctx } = createCtx();
 
     const result = (await searchSkills({ intent: 'read and extract PDF files', limit: 10 }, ctx as never)) as {
@@ -458,21 +464,18 @@ describe('system-skill-search backend', () => {
       'skills-main/skills/research/SKILL.md':
         '---\nname: research\ndescription: |\n  Research papers and summarize findings.\n  Use this for literature review.\n---\nUse this for research workflows.',
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const textUrl = String(url);
-        if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
-        if (textUrl.includes('api.github.com/repos/NVIDIA/skills')) {
-          return jsonResponse({ message: 'API rate limit exceeded' }, 403);
-        }
-        if (textUrl.includes('codeload.github.com/NVIDIA/skills/tar.gz/refs/heads/main')) {
-          return bufferResponse(archive);
-        }
-        if (textUrl.includes('/repos/')) return jsonResponse({ tree: [] });
-        return jsonResponse({});
-      }),
-    );
+    networkFetchMock.mockImplementation(async (url: string) => {
+      const textUrl = String(url);
+      if (textUrl.includes('skills-index.json')) return jsonResponse({ skills: [] });
+      if (textUrl.includes('api.github.com/repos/NVIDIA/skills')) {
+        return jsonResponse({ message: 'API rate limit exceeded' }, 403);
+      }
+      if (textUrl.includes('codeload.github.com/NVIDIA/skills/tar.gz/refs/heads/main')) {
+        return bufferResponse(archive);
+      }
+      if (textUrl.includes('/repos/')) return jsonResponse({ tree: [] });
+      return jsonResponse({});
+    });
     const { ctx } = createCtx();
 
     const result = (await searchSkills({ intent: 'research papers', limit: 10 }, ctx as never)) as {

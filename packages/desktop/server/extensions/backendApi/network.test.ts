@@ -21,6 +21,7 @@ describe('backendApi/network', () => {
       statusText: 'OK',
       headers: { 'content-type': 'text/html' },
       text: '<html>hello</html>',
+      bodyBase64: Buffer.from('<html>hello</html>').toString('base64'),
       url: 'https://example.com',
     }));
     (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
@@ -30,6 +31,7 @@ describe('backendApi/network', () => {
       statusText: 'OK',
       headers: { 'content-type': 'text/html' },
       text: '<html>hello</html>',
+      bodyBase64: Buffer.from('<html>hello</html>').toString('base64'),
       url: 'https://example.com',
     });
     expect(bridge).toHaveBeenCalledWith('network', 'fetch', { url: 'https://example.com' });
@@ -43,6 +45,7 @@ describe('backendApi/network', () => {
       statusText: 'OK',
       headers: {},
       text: 'ok',
+      bodyBase64: Buffer.from('ok').toString('base64'),
       url: 'https://example.com/data',
     }));
     (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
