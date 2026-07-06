@@ -155,6 +155,8 @@ interface ExtensionBackendCapabilityNetwork {
     headers?: Record<string, string>;
     redirect?: 'follow' | 'error' | 'manual';
     timeoutMs?: number;
+    body?: string;
+    bodyBase64?: string;
   }): Promise<{
     ok: boolean;
     status: number;
@@ -1675,6 +1677,11 @@ function dispatchNetworkCapability(network: ExtensionBackendCapabilityNetwork, r
   }
   const input = normalizeRecordInput(request.input, 'Network');
   const url = requireString(input.url, 'Network url');
+
+  if (input.body !== undefined && input.bodyBase64 !== undefined) {
+    throw new Error('Network fetch body must be either body or bodyBase64, not both.');
+  }
+
   return network.fetch({
     url,
     ...(input.method !== undefined ? { method: requireString(input.method, 'Network method') } : {}),
@@ -1685,7 +1692,17 @@ function dispatchNetworkCapability(network: ExtensionBackendCapabilityNetwork, r
       : {}),
     ...(input.redirect !== undefined ? { redirect: normalizeFetchRedirect(input.redirect) } : {}),
     ...(input.timeoutMs !== undefined ? { timeoutMs: requireNumber(input.timeoutMs, 'Network timeoutMs') } : {}),
+    ...(input.body !== undefined ? { body: requireString(input.body, 'Network body') } : {}),
+    ...(input.bodyBase64 !== undefined ? { bodyBase64: requireBase64String(input.bodyBase64, 'Network bodyBase64') } : {}),
   });
+}
+
+function requireBase64String(value: unknown, label: string): string {
+  const body = requireString(value, label);
+  if (body.length > 0 && (body.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(body))) {
+    throw new Error(`${label} must be valid base64.`);
+  }
+  return body;
 }
 
 function requireStringRecord(value: unknown, label: string): Record<string, string> {
@@ -3030,9 +3047,17 @@ export function createExtensionBackendCapabilityDispatcher(
     options.network ??
     ({
       fetch: async (input) => {
+        let fetchBody: BodyInit | undefined;
+        if (input.bodyBase64 !== undefined) {
+          fetchBody = Buffer.from(input.bodyBase64, 'base64');
+        } else if (input.body !== undefined) {
+          fetchBody = input.body;
+        }
+
         const response = await globalThis.fetch(input.url, {
           method: input.method,
           headers: input.headers,
+          body: fetchBody,
           redirect: input.redirect,
           signal: input.timeoutMs ? AbortSignal.timeout(input.timeoutMs) : undefined,
         });

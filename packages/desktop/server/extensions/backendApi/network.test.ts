@@ -66,6 +66,56 @@ describe('backendApi/network', () => {
     });
   });
 
+  it('forwards body string through the bridge', async () => {
+    const network = await import('./network.js');
+    const bridge = vi.fn(async () => ({
+      ok: true,
+      status: 201,
+      statusText: 'Created',
+      headers: { 'content-type': 'application/json' },
+      text: '{"id":1}',
+      bodyBase64: Buffer.from('{"id":1}').toString('base64'),
+      url: 'https://example.com/api',
+    }));
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+
+    await network.networkFetch('https://example.com/api', {
+      method: 'POST',
+      body: '{"hello":"world"}',
+    });
+
+    expect(bridge).toHaveBeenCalledWith('network', 'fetch', {
+      url: 'https://example.com/api',
+      method: 'POST',
+      body: '{"hello":"world"}',
+    });
+  });
+
+  it('forwards bodyBase64 through the bridge', async () => {
+    const network = await import('./network.js');
+    const bridge = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      text: 'ok',
+      bodyBase64: Buffer.from('ok').toString('base64'),
+      url: 'https://example.com/upload',
+    }));
+    (globalThis as Record<symbol, unknown>)[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
+
+    await network.networkFetch('https://example.com/upload', {
+      method: 'PUT',
+      bodyBase64: Buffer.from('binary data').toString('base64'),
+    });
+
+    expect(bridge).toHaveBeenCalledWith('network', 'fetch', {
+      url: 'https://example.com/upload',
+      method: 'PUT',
+      bodyBase64: Buffer.from('binary data').toString('base64'),
+    });
+  });
+
   it('rejects when bridge returns an invalid result', async () => {
     const network = await import('./network.js');
     const bridge = vi.fn(async () => null);

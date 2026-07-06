@@ -2949,4 +2949,207 @@ describe('extension backend capability dispatcher', () => {
       }),
     ).rejects.toThrow('Unsupported network capability operation: listen');
   });
+
+  it('dispatcher passes a text body through to network.fetch', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['network:read'] } });
+    const network = {
+      fetch: vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'application/json' },
+        text: '{"created":true}',
+        bodyBase64: Buffer.from('{"created":true}').toString('base64'),
+        url: 'https://example.com/api',
+      })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ network });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-web-tools',
+          capability: 'network',
+          operation: 'fetch',
+          input: {
+            url: 'https://example.com/api',
+            method: 'POST',
+            body: '{"hello":"world"}',
+          },
+        }),
+      ),
+    ).resolves.toEqual({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { 'content-type': 'application/json' },
+      text: '{"created":true}',
+      bodyBase64: Buffer.from('{"created":true}').toString('base64'),
+      url: 'https://example.com/api',
+    });
+
+    expect(network.fetch).toHaveBeenCalledWith({
+      url: 'https://example.com/api',
+      method: 'POST',
+      body: '{"hello":"world"}',
+    });
+  });
+
+  it('default host fetch sends request body to global fetch', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['network:read'] } });
+    const responseBody = Buffer.from('{"result":"ok"}');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(responseBody, {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const dispatch = createExtensionBackendCapabilityDispatcher({});
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-web-tools',
+          capability: 'network',
+          operation: 'fetch',
+          input: {
+            url: 'https://example.com/api',
+            method: 'PUT',
+            body: '{"key":"value"}',
+          },
+        }),
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      status: 200,
+      bodyBase64: responseBody.toString('base64'),
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://example.com/api',
+      expect.objectContaining({
+        method: 'PUT',
+        body: '{"key":"value"}',
+      }),
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it('default host fetch sends bodyBase64 as decoded binary to global fetch', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['network:read'] } });
+    const responseBody = Buffer.from([0x01, 0x02, 0x03]);
+    const rawBody = 'Hello World';
+    const rawBodyBase64 = Buffer.from(rawBody).toString('base64');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(responseBody, {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'application/octet-stream' },
+      }),
+    );
+    const dispatch = createExtensionBackendCapabilityDispatcher({});
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-web-tools',
+          capability: 'network',
+          operation: 'fetch',
+          input: {
+            url: 'https://example.com/upload',
+            method: 'POST',
+            bodyBase64: rawBodyBase64,
+          },
+        }),
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      status: 200,
+      bodyBase64: responseBody.toString('base64'),
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://example.com/upload',
+      expect.objectContaining({
+        method: 'POST',
+        body: Buffer.from(rawBodyBase64, 'base64'),
+      }),
+    );
+    fetchSpy.mockRestore();
+  });
+
+  it('rejects malformed body input with both body and bodyBase64', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['network:read'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ network: { fetch: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: {
+          url: 'https://example.com/api',
+          method: 'POST',
+          body: 'text body',
+          bodyBase64: Buffer.from('also binary').toString('base64'),
+        },
+      }),
+    ).rejects.toThrow('Network fetch body must be either body or bodyBase64, not both.');
+  });
+
+  it('rejects malformed body type for bodyBase64', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['network:read'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ network: { fetch: vi.fn() } });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: {
+          url: 'https://example.com/api',
+          body: 42,
+        },
+      }),
+    ).rejects.toThrow('Network body must be a string.');
+
+    await expect(async () =>
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: {
+          url: 'https://example.com/api',
+          bodyBase64: 42,
+        },
+      }),
+    ).rejects.toThrow('Network bodyBase64 must be a string.');
+
+    await expect(async () =>
+      dispatch({
+        id: 3,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'network',
+        operation: 'fetch',
+        input: {
+          url: 'https://example.com/api',
+          bodyBase64: 'not base64!',
+        },
+      }),
+    ).rejects.toThrow('Network bodyBase64 must be valid base64.');
+  });
 });

@@ -19,6 +19,8 @@ export interface NetworkFetchInit {
   headers?: Record<string, string>;
   redirect?: 'follow' | 'error' | 'manual';
   timeoutMs?: number;
+  body?: string;
+  bodyBase64?: string;
 }
 
 function getHostCapabilityBridge(): ((capability: string, operation: string, input?: unknown) => Promise<unknown>) | undefined {
