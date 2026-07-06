@@ -72,6 +72,7 @@ vi.mock('../routes/system.js', () => ({
 }));
 
 import { acknowledgeDesktopControlCommand, issueDesktopControlCommand, resetDesktopControlForTests } from './localApiDesktopControl.js';
+import { publishDesktopUserActionEvent, resetDesktopUserActionEventsForTests } from './localApiDesktopEvents.js';
 import {
   acknowledgeDesktopScreenshotRequest,
   issueDesktopScreenshotRequest,
@@ -87,6 +88,7 @@ describe('localApiStreams', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetDesktopControlForTests();
+    resetDesktopUserActionEventsForTests();
     resetDesktopScreenshotForTests();
     existsSyncMock.mockReturnValue(false);
     extensionHostClientMock.invokeRoute.mockReset();
@@ -232,6 +234,46 @@ describe('localApiStreams', () => {
     });
     unsubscribe();
     await expect(pending).resolves.toMatchObject({ ok: true, requestId: request.id, status: 'completed' });
+  });
+
+  it('streams desktop user-action events through the local API stream bridge', async () => {
+    publishDesktopUserActionEvent({
+      action: 'close',
+      windowId: 'route:system-notes:notes',
+      title: 'Notes',
+      createdAt: '2026-07-06T00:00:00.000Z',
+    });
+    const events: unknown[] = [];
+
+    const unsubscribe = await subscribeDesktopLocalApiStreamByUrl(new URL('http://local.test/api/desktop/events/stream'), (event) =>
+      events.push(event),
+    );
+
+    expect(events[0]).toEqual({ type: 'open' });
+    expect(events[1]).toMatchObject({ type: 'message' });
+    expect(JSON.parse((events[1] as { data: string }).data)).toEqual(
+      expect.objectContaining({
+        id: expect.stringMatching(/^desktop-user-action-/),
+        source: 'user',
+        action: 'close',
+        windowId: 'route:system-notes:notes',
+        title: 'Notes',
+      }),
+    );
+
+    publishDesktopUserActionEvent({
+      action: 'minimize',
+      windowId: 'chat:draft',
+      createdAt: '2026-07-06T00:00:01.000Z',
+    });
+    expect(JSON.parse((events.at(-1) as { data: string }).data)).toEqual(
+      expect.objectContaining({
+        action: 'minimize',
+        windowId: 'chat:draft',
+      }),
+    );
+    unsubscribe();
+    expect(events.at(-1)).toEqual({ type: 'close' });
   });
 
   it('stops desktop run stream polling after a terminal snapshot grace period', async () => {

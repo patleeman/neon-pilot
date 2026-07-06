@@ -22,6 +22,8 @@ import type {
   DesktopScreenshotAckResult,
   DesktopStateListResult,
   DesktopStateSnapshot,
+  DesktopUserActionEventInput,
+  DesktopUserActionEventResult,
 } from '../shared/types';
 import type {
   AppTelemetryLogBundleExport,
@@ -602,6 +604,7 @@ export const api = {
       publisherId: string | null;
       ignored?: true;
     }>('/desktop/state', snapshot),
+  publishDesktopUserAction: async (event: DesktopUserActionEventInput) => post<DesktopUserActionEventResult>('/desktop/events', event),
   setModel: async (model: string) =>
     patch<{ currentModel: string | null; currentThinkingLevel?: string | null; currentServiceTier?: string | null }>('/model-preferences', {
       model,

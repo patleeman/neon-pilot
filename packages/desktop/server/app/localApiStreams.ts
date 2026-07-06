@@ -8,6 +8,7 @@ import { buildSnapshotEventsForTopic, readInitialAppEventTopics } from '../route
 import { subscribeAppEvents } from '../shared/appEvents.js';
 import { readWorkspaceRootSnapshot } from '../workspace/workspaceExplorer.js';
 import { subscribeDesktopControlCommands } from './localApiDesktopControl.js';
+import { subscribeDesktopUserActionEvents } from './localApiDesktopEvents.js';
 import { subscribeDesktopScreenshotRequests } from './localApiDesktopScreenshot.js';
 import { shouldCloseProviderOAuthSubscription } from './localApiProviderOAuthSubscription.js';
 
@@ -134,6 +135,17 @@ async function subscribeDesktopControlCommandStream(onEvent: (event: DesktopLoca
   onEvent({ type: 'open' });
   const unsubscribe = subscribeDesktopControlCommands((command) => {
     emitStreamMessage(onEvent, command);
+  });
+  return () => {
+    unsubscribe();
+    onEvent({ type: 'close' });
+  };
+}
+
+async function subscribeDesktopUserActionEventStream(onEvent: (event: DesktopLocalApiStreamEvent) => void): Promise<() => void> {
+  onEvent({ type: 'open' });
+  const unsubscribe = subscribeDesktopUserActionEvents((event) => {
+    emitStreamMessage(onEvent, event);
   });
   return () => {
     unsubscribe();
@@ -521,6 +533,10 @@ export async function subscribeDesktopLocalApiStreamByUrl(
 
   if (url.pathname === '/api/desktop/control/events') {
     return subscribeDesktopControlCommandStream(onEvent);
+  }
+
+  if (url.pathname === '/api/desktop/events/stream') {
+    return subscribeDesktopUserActionEventStream(onEvent);
   }
 
   if (url.pathname === '/api/desktop/screenshot/events') {

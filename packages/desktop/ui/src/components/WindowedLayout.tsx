@@ -56,6 +56,7 @@ import type {
   DesktopScreenshotRequest,
   DesktopStateSnapshot,
   DesktopStateWindow,
+  DesktopUserAction,
   SessionMeta,
 } from '../shared/types';
 import {
@@ -117,6 +118,7 @@ type DragState = {
 };
 
 type ResizeEdge = 'n' | 'e' | 's' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+type DesktopActionSource = 'user' | 'agent' | 'system';
 
 type ResizeState = DragState & {
   edge: ResizeEdge;
@@ -1320,6 +1322,7 @@ export function WindowedLayout() {
   const desktopStateRevisionRef = useRef(0);
   const desktopStatePublisherIdRef = useRef(createDesktopStatePublisherId());
   const lastPublishedDesktopStateSignatureRef = useRef<string | null>(null);
+  const desktopControlCommandInProgressRef = useRef(false);
   const hydratedBrowserRouteRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -1414,6 +1417,24 @@ export function WindowedLayout() {
     }
   }, [desktopStateSnapshotDraft, desktopStateSnapshotSignature]);
 
+  const publishUserActionForWindow = useCallback(
+    (action: DesktopUserAction, windowModel: DesktopWindowModel, source: DesktopActionSource) => {
+      if (source !== 'user' || windowModel.agentTouched !== true || desktopControlCommandInProgressRef.current) return;
+      const pending = api.publishDesktopUserAction({
+        action,
+        windowId: windowModel.id,
+        kind: windowModel.kind,
+        title: windowModel.title,
+        route: windowModel.route,
+        createdAt: new Date().toISOString(),
+      });
+      if (pending && typeof (pending as Promise<unknown>).then === 'function') {
+        void (pending as Promise<unknown>).catch(() => undefined);
+      }
+    },
+    [],
+  );
+
   const reconcileWindowBounds = useCallback(() => {
     const rect = desktopRect(desktopRef.current);
     setWindows((current) => constrainWindowCollectionBounds(current, rect));
@@ -1451,20 +1472,26 @@ export function WindowedLayout() {
     setWindows((current) => reconcileChatWindows(current, chatSessions));
   }, [chatSessions, conversations.loading]);
 
-  const focusWindow = useCallback((windowId: string) => {
-    const focusedWindow = windowsRef.current.find((windowModel) => windowModel.focused);
-    const targetWindow = windowsRef.current.find((windowModel) => windowModel.id === windowId);
-    if (focusedWindow?.id !== windowId) {
-      suspendWindowedBrowserViews();
-    }
-    if (targetWindow?.minimized) {
-      dispatchParentLifecycleForWindow(targetWindow, 'restored');
-    }
-    setWindows((current) => {
-      const focused = withFocusedWindow(current, windowId);
-      return targetWindow?.kind === 'chat' ? restoreChildWindowsForParent(focused, targetWindow.id) : focused;
-    });
-  }, []);
+  const focusWindow = useCallback(
+    (windowId: string, source: DesktopActionSource = 'user') => {
+      const focusedWindow = windowsRef.current.find((windowModel) => windowModel.focused);
+      const targetWindow = windowsRef.current.find((windowModel) => windowModel.id === windowId);
+      if (focusedWindow?.id !== windowId) {
+        suspendWindowedBrowserViews();
+      }
+      if (targetWindow?.minimized) {
+        dispatchParentLifecycleForWindow(targetWindow, 'restored');
+      }
+      if (targetWindow) {
+        publishUserActionForWindow(targetWindow.minimized ? 'restore' : 'focus', targetWindow, source);
+      }
+      setWindows((current) => {
+        const focused = withFocusedWindow(current, windowId);
+        return targetWindow?.kind === 'chat' ? restoreChildWindowsForParent(focused, targetWindow.id) : focused;
+      });
+    },
+    [publishUserActionForWindow],
+  );
 
   const openChildWindow = useCallback((parentWindowId: string, kind: ChildWindowKind) => {
     suspendWindowedBrowserViews();
@@ -1640,35 +1667,45 @@ export function WindowedLayout() {
     return () => window.removeEventListener('neon-pilot-desktop-navigate', handleDesktopNavigate, true);
   }, [openChatWindow, openRouteWindow]);
 
-  const closeWindow = useCallback((windowModel: DesktopWindowModel) => {
-    suspendWindowedBrowserViews();
-    dispatchParentLifecycleForWindow(windowModel, 'closed');
-    setRestoreBounds((current) => {
-      if (!current[windowModel.id]) return current;
-      const next = { ...current };
-      delete next[windowModel.id];
-      return next;
-    });
-    setWindows((current) => {
-      const withoutClosed = current.filter((candidate) => candidate.id !== windowModel.id);
-      const withoutChildren = windowModel.kind === 'chat' ? removeChildWindowsForParent(withoutClosed, windowModel.id) : withoutClosed;
-      return ensureFocusedWindow(withoutChildren);
-    });
-  }, []);
+  const closeWindow = useCallback(
+    (windowModel: DesktopWindowModel, source: DesktopActionSource = 'user') => {
+      suspendWindowedBrowserViews();
+      dispatchParentLifecycleForWindow(windowModel, 'closed');
+      publishUserActionForWindow('close', windowModel, source);
+      setRestoreBounds((current) => {
+        if (!current[windowModel.id]) return current;
+        const next = { ...current };
+        delete next[windowModel.id];
+        return next;
+      });
+      setWindows((current) => {
+        const withoutClosed = current.filter((candidate) => candidate.id !== windowModel.id);
+        const withoutChildren = windowModel.kind === 'chat' ? removeChildWindowsForParent(withoutClosed, windowModel.id) : withoutClosed;
+        return ensureFocusedWindow(withoutChildren);
+      });
+    },
+    [publishUserActionForWindow],
+  );
 
-  const minimizeWindow = useCallback((windowId: string) => {
-    suspendWindowedBrowserViews();
-    const windowModel = windowsRef.current.find((candidate) => candidate.id === windowId);
-    if (windowModel) dispatchParentLifecycleForWindow(windowModel, 'minimized');
-    setWindows((current) =>
-      ensureFocusedWindow(
-        minimizeChildWindowsForParent(
-          current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
-          windowModel?.kind === 'chat' ? windowModel.id : '',
+  const minimizeWindow = useCallback(
+    (windowId: string, source: DesktopActionSource = 'user') => {
+      suspendWindowedBrowserViews();
+      const windowModel = windowsRef.current.find((candidate) => candidate.id === windowId);
+      if (windowModel) {
+        dispatchParentLifecycleForWindow(windowModel, 'minimized');
+        publishUserActionForWindow('minimize', windowModel, source);
+      }
+      setWindows((current) =>
+        ensureFocusedWindow(
+          minimizeChildWindowsForParent(
+            current.map((windowModel) => (windowModel.id === windowId ? { ...windowModel, minimized: true, focused: false } : windowModel)),
+            windowModel?.kind === 'chat' ? windowModel.id : '',
+          ),
         ),
-      ),
-    );
-  }, []);
+      );
+    },
+    [publishUserActionForWindow],
+  );
 
   const selectTaskbarWindow = useCallback(
     (windowModel: DesktopWindowModel) => {
@@ -1682,7 +1719,7 @@ export function WindowedLayout() {
   );
 
   const maximizeWindow = useCallback(
-    (windowModel: DesktopWindowModel) => {
+    (windowModel: DesktopWindowModel, source: DesktopActionSource = 'user') => {
       suspendWindowedBrowserViews();
       const rect = desktopRect(desktopRef.current);
       const maximizedBounds = boundsForSnapTarget('maximize', rect);
@@ -1690,6 +1727,7 @@ export function WindowedLayout() {
 
       if (sameBounds(windowModel.bounds, maximizedBounds)) {
         const restoreTarget = restored ?? fallbackRestoreBounds(windowModel, rect);
+        publishUserActionForWindow('restore', windowModel, source);
         setRestoreBounds((current) => {
           const next = { ...current };
           delete next[windowModel.id];
@@ -1701,6 +1739,7 @@ export function WindowedLayout() {
         return;
       }
 
+      publishUserActionForWindow('maximize', windowModel, source);
       setRestoreBounds((current) => ({ ...current, [windowModel.id]: current[windowModel.id] ?? windowModel.bounds }));
       setWindows((current) =>
         current.map((candidate) =>
@@ -1708,17 +1747,18 @@ export function WindowedLayout() {
         ),
       );
     },
-    [restoreBounds],
+    [publishUserActionForWindow, restoreBounds],
   );
 
   const toggleMaximize = useCallback(
-    (windowModel: DesktopWindowModel) => {
+    (windowModel: DesktopWindowModel, source: DesktopActionSource = 'user') => {
       suspendWindowedBrowserViews();
       const rect = desktopRect(desktopRef.current);
       const maximizedBounds = boundsForSnapTarget('maximize', rect);
       const restored = restoreBounds[windowModel.id];
       if (restored || sameBounds(windowModel.bounds, maximizedBounds)) {
         const restoreTarget = restored ?? fallbackRestoreBounds(windowModel, rect);
+        publishUserActionForWindow('restore', windowModel, source);
         setRestoreBounds((current) => {
           const next = { ...current };
           delete next[windowModel.id];
@@ -1729,6 +1769,7 @@ export function WindowedLayout() {
         );
         return;
       }
+      publishUserActionForWindow('maximize', windowModel, source);
       setRestoreBounds((current) => ({ ...current, [windowModel.id]: windowModel.bounds }));
       setWindows((current) =>
         current.map((candidate) =>
@@ -1736,7 +1777,7 @@ export function WindowedLayout() {
         ),
       );
     },
-    [restoreBounds],
+    [publishUserActionForWindow, restoreBounds],
   );
 
   const executeDesktopControlCommand = useCallback(
@@ -1753,28 +1794,72 @@ export function WindowedLayout() {
         setWindows((current) => current.map((candidate) => (candidate.id === windowId ? { ...candidate, agentTouched: true } : candidate)));
       };
 
-      switch (command.action) {
-        case 'open': {
-          const app = command.appId ? windowedApps.find((candidate) => candidate.id === command.appId) : null;
-          if (app) {
-            openWindowedApp(app);
-            markFocusedWindowAgentTouched();
+      desktopControlCommandInProgressRef.current = true;
+      try {
+        switch (command.action) {
+          case 'open': {
+            const app = command.appId ? windowedApps.find((candidate) => candidate.id === command.appId) : null;
+            if (app) {
+              openWindowedApp(app);
+              markFocusedWindowAgentTouched();
+              return { ok: true };
+            }
+            const route = command.route;
+            if (route && (openChatWindow(route) || openRouteWindow(route))) {
+              markFocusedWindowAgentTouched();
+              return { ok: true };
+            }
+            return fail('desktop_control open requires a known appId or route.');
+          }
+          case 'focus':
+          case 'restore': {
+            const windowModel = findWindow(command.windowId);
+            if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+            if (command.action === 'restore' && restoreBounds[windowModel.id]) {
+              const restoreTarget = restoreBounds[windowModel.id] ?? fallbackRestoreBounds(windowModel, desktopRect(desktopRef.current));
+              setRestoreBounds((current) => {
+                const next = { ...current };
+                delete next[windowModel.id];
+                return next;
+              });
+              setWindows((current) =>
+                withFocusedWindow(
+                  current.map((candidate) =>
+                    candidate.id === windowModel.id
+                      ? { ...candidate, bounds: restoreTarget, minimized: false, agentTouched: true }
+                      : candidate,
+                  ),
+                  windowModel.id,
+                ),
+              );
+              return { ok: true };
+            }
+            focusWindow(windowModel.id, 'agent');
+            markWindowAgentTouched(windowModel.id);
             return { ok: true };
           }
-          const route = command.route;
-          if (route && (openChatWindow(route) || openRouteWindow(route))) {
-            markFocusedWindowAgentTouched();
+          case 'minimize': {
+            const windowModel = findWindow(command.windowId);
+            if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+            markWindowAgentTouched(windowModel.id);
+            minimizeWindow(windowModel.id, 'agent');
             return { ok: true };
           }
-          return fail('desktop_control open requires a known appId or route.');
-        }
-        case 'focus':
-        case 'restore': {
-          const windowModel = findWindow(command.windowId);
-          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
-          if (command.action === 'restore' && restoreBounds[windowModel.id]) {
-            const restoreTarget = restoreBounds[windowModel.id] ?? fallbackRestoreBounds(windowModel, desktopRect(desktopRef.current));
+          case 'close': {
+            const windowModel = findWindow(command.windowId);
+            if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+            closeWindow(windowModel, 'agent');
+            return { ok: true };
+          }
+          case 'move':
+          case 'resize': {
+            const windowModel = findWindow(command.windowId);
+            if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+            if (!command.bounds) return fail(`desktop_control ${command.action} requires bounds.`);
+            suspendWindowedBrowserViews();
+            const bounds = constrainWindowBounds(command.bounds, desktopRect(desktopRef.current));
             setRestoreBounds((current) => {
+              if (!current[windowModel.id]) return current;
               const next = { ...current };
               delete next[windowModel.id];
               return next;
@@ -1782,74 +1867,35 @@ export function WindowedLayout() {
             setWindows((current) =>
               withFocusedWindow(
                 current.map((candidate) =>
-                  candidate.id === windowModel.id
-                    ? { ...candidate, bounds: restoreTarget, minimized: false, agentTouched: true }
-                    : candidate,
+                  candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false, agentTouched: true } : candidate,
                 ),
                 windowModel.id,
               ),
             );
             return { ok: true };
           }
-          focusWindow(windowModel.id);
-          markWindowAgentTouched(windowModel.id);
-          return { ok: true };
-        }
-        case 'minimize': {
-          const windowModel = findWindow(command.windowId);
-          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
-          markWindowAgentTouched(windowModel.id);
-          minimizeWindow(windowModel.id);
-          return { ok: true };
-        }
-        case 'close': {
-          const windowModel = findWindow(command.windowId);
-          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
-          closeWindow(windowModel);
-          return { ok: true };
-        }
-        case 'move':
-        case 'resize': {
-          const windowModel = findWindow(command.windowId);
-          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
-          if (!command.bounds) return fail(`desktop_control ${command.action} requires bounds.`);
-          suspendWindowedBrowserViews();
-          const bounds = constrainWindowBounds(command.bounds, desktopRect(desktopRef.current));
-          setRestoreBounds((current) => {
-            if (!current[windowModel.id]) return current;
-            const next = { ...current };
-            delete next[windowModel.id];
-            return next;
-          });
-          setWindows((current) =>
-            withFocusedWindow(
-              current.map((candidate) =>
-                candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false, agentTouched: true } : candidate,
+          case 'snap': {
+            const windowModel = findWindow(command.windowId);
+            if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
+            if (!command.snapTarget) return fail('desktop_control snap requires snapTarget.');
+            suspendWindowedBrowserViews();
+            const bounds = boundsForSnapTarget(command.snapTarget, desktopRect(desktopRef.current));
+            setRestoreBounds((current) => ({ ...current, [windowModel.id]: current[windowModel.id] ?? windowModel.bounds }));
+            setWindows((current) =>
+              withFocusedWindow(
+                current.map((candidate) =>
+                  candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false, agentTouched: true } : candidate,
+                ),
+                windowModel.id,
               ),
-              windowModel.id,
-            ),
-          );
-          return { ok: true };
+            );
+            return { ok: true };
+          }
+          default:
+            return fail(`Unsupported desktop_control action: ${String(command.action)}`);
         }
-        case 'snap': {
-          const windowModel = findWindow(command.windowId);
-          if (!windowModel) return fail(`Window not found: ${command.windowId ?? ''}`);
-          if (!command.snapTarget) return fail('desktop_control snap requires snapTarget.');
-          suspendWindowedBrowserViews();
-          const bounds = boundsForSnapTarget(command.snapTarget, desktopRect(desktopRef.current));
-          setRestoreBounds((current) => ({ ...current, [windowModel.id]: current[windowModel.id] ?? windowModel.bounds }));
-          setWindows((current) =>
-            withFocusedWindow(
-              current.map((candidate) =>
-                candidate.id === windowModel.id ? { ...candidate, bounds, minimized: false, agentTouched: true } : candidate,
-              ),
-              windowModel.id,
-            ),
-          );
-          return { ok: true };
-        }
-        default:
-          return fail(`Unsupported desktop_control action: ${String(command.action)}`);
+      } finally {
+        desktopControlCommandInProgressRef.current = false;
       }
     },
     [closeWindow, focusWindow, minimizeWindow, openChatWindow, openRouteWindow, openWindowedApp, restoreBounds, windowedApps],
@@ -2019,7 +2065,10 @@ export function WindowedLayout() {
         setSnapTarget(null);
         window.removeEventListener('mousemove', handlePointerMove);
         window.removeEventListener('mouseup', handlePointerEnd);
-        if (!target) return;
+        if (!target) {
+          publishUserActionForWindow('move', windowModel, 'user');
+          return;
+        }
         const bounds = boundsForSnapTarget(target, rect);
         const releasedBounds = constrainWindowBounds(
           {
@@ -2030,6 +2079,7 @@ export function WindowedLayout() {
           rect,
         );
         setRestoreBounds((current) => ({ ...current, [dragState.windowId]: releasedBounds }));
+        publishUserActionForWindow('snap', windowModel, 'user');
         setWindows((current) =>
           current.map((windowModel) => (windowModel.id === dragState.windowId ? { ...windowModel, bounds } : windowModel)),
         );
@@ -2038,7 +2088,7 @@ export function WindowedLayout() {
       window.addEventListener('mousemove', handlePointerMove);
       window.addEventListener('mouseup', handlePointerEnd);
     },
-    [focusWindow, restoreBounds],
+    [focusWindow, publishUserActionForWindow, restoreBounds],
   );
 
   const startResize = useCallback(
@@ -2099,12 +2149,13 @@ export function WindowedLayout() {
         setResize(null);
         window.removeEventListener('mousemove', handlePointerMove);
         window.removeEventListener('mouseup', handlePointerEnd);
+        publishUserActionForWindow('resize', windowModel, 'user');
       };
 
       window.addEventListener('mousemove', handlePointerMove);
       window.addEventListener('mouseup', handlePointerEnd);
     },
-    [focusWindow],
+    [focusWindow, publishUserActionForWindow],
   );
 
   useEffect(() => {

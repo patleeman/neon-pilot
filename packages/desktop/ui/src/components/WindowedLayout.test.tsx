@@ -12,6 +12,7 @@ import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrows
 
 const mocks = vi.hoisted(() => ({
   publishDesktopState: vi.fn(() => Promise.resolve({ ok: true })),
+  publishDesktopUserAction: vi.fn(() => Promise.resolve({ ok: true })),
   acknowledgeDesktopControl: vi.fn(() => Promise.resolve({ ok: true })),
   acknowledgeDesktopScreenshot: vi.fn(() => Promise.resolve({ ok: true })),
   eventSources: [] as Array<{
@@ -144,6 +145,7 @@ vi.mock('../client/api', () => ({
     acknowledgeDesktopControl: mocks.acknowledgeDesktopControl,
     acknowledgeDesktopScreenshot: mocks.acknowledgeDesktopScreenshot,
     publishDesktopState: mocks.publishDesktopState,
+    publishDesktopUserAction: mocks.publishDesktopUserAction,
   },
 }));
 
@@ -252,6 +254,7 @@ describe('WindowedLayout route windows', () => {
     mocks.acknowledgeDesktopScreenshot.mockClear();
     mocks.eventSources = [];
     mocks.publishDesktopState.mockClear();
+    mocks.publishDesktopUserAction.mockClear();
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
@@ -3682,6 +3685,7 @@ describe('WindowedLayout desktop state publishing', () => {
     await screen.findByRole('region', { name: /^notes$/i });
     const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/control/events');
     expect(source).toBeTruthy();
+    mocks.publishDesktopUserAction.mockClear();
 
     act(() => {
       source?.onmessage?.(
@@ -3766,6 +3770,82 @@ describe('WindowedLayout desktop state publishing', () => {
     });
     const notesWindow = screen.getByRole('region', { name: /^notes$/i });
     expect(notesWindow.getAttribute('data-agent-touched')).toBe('true');
+  });
+
+  it('publishes user actions on agent-touched windows for agent notification', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+        agentTouched: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /^notes$/i });
+    fireEvent.click(screen.getByRole('button', { name: /^close notes$/i }));
+
+    await waitFor(() => {
+      expect(mocks.publishDesktopUserAction).toHaveBeenCalledWith({
+        action: 'close',
+        windowId: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        createdAt: expect.any(String),
+      });
+    });
+  });
+
+  it('does not publish symmetric user-action events for agent-originated desktop control', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:system-notes:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+        agentTouched: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /^notes$/i });
+    const source = mocks.eventSources.find((candidate) => candidate.path === '/api/desktop/control/events');
+    expect(source).toBeTruthy();
+    mocks.publishDesktopUserAction.mockClear();
+
+    act(() => {
+      source?.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            id: 'desktop-control-agent-close-test',
+            action: 'close',
+            createdAt: '2026-07-06T00:00:00.000Z',
+            windowId: 'route:system-notes:notes',
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mocks.acknowledgeDesktopControl).toHaveBeenCalledWith({
+        commandId: 'desktop-control-agent-close-test',
+        ok: true,
+      });
+    });
+    expect(mocks.publishDesktopUserAction).not.toHaveBeenCalled();
   });
 
   it('can open an app with desktop control and then screenshot that window by semantic id', async () => {

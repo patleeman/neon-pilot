@@ -199,6 +199,7 @@ import {
 } from './localApiConversationWorkspace.js';
 import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation.js';
 import { acknowledgeDesktopControlCommand } from './localApiDesktopControl.js';
+import { publishDesktopUserActionEvent } from './localApiDesktopEvents.js';
 import { acknowledgeDesktopScreenshotRequest } from './localApiDesktopScreenshot.js';
 import { readDesktopStateSnapshot, storeDesktopStateSnapshot } from './localApiDesktopState.js';
 import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
@@ -1259,6 +1260,7 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
 
   if (
     error.name === 'DesktopControlValidationError' ||
+    error.name === 'DesktopUserActionEventValidationError' ||
     error.name === 'DesktopScreenshotValidationError' ||
     error.name === 'DesktopStateValidationError'
   ) {
@@ -1577,6 +1579,11 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'POST' && path === '/api/desktop/control/ack') {
     return createDesktopLocalApiJsonResponse(
       acknowledgeDesktopControlCommand(input.body as Parameters<typeof acknowledgeDesktopControlCommand>[0]),
+    );
+  }
+  if (method === 'POST' && path === '/api/desktop/events') {
+    return createDesktopLocalApiJsonResponse(
+      publishDesktopUserActionEvent(input.body as Parameters<typeof publishDesktopUserActionEvent>[0]),
     );
   }
   if (method === 'POST' && path === '/api/desktop/screenshot/ack') {

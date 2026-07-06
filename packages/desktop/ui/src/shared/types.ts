@@ -2416,3 +2416,25 @@ export interface DesktopScreenshotAckResult {
   image?: DesktopScreenshotImage;
   error?: string;
 }
+
+export type DesktopUserAction = 'focus' | 'minimize' | 'restore' | 'close' | 'move' | 'resize' | 'maximize' | 'snap';
+
+export interface DesktopUserActionEventInput {
+  action: DesktopUserAction;
+  windowId: string;
+  kind?: string;
+  title?: string;
+  route?: string;
+  createdAt?: string;
+}
+
+export interface DesktopUserActionEvent extends DesktopUserActionEventInput {
+  id: string;
+  source: 'user';
+  createdAt: string;
+}
+
+export interface DesktopUserActionEventResult {
+  ok: true;
+  event: DesktopUserActionEvent;
+}
