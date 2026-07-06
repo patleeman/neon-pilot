@@ -189,6 +189,32 @@ const sentMessages = [];
 let activeTools = [];
 let sessionEntries = [];
 let metadataValue = null;
+const smokeDocumentCollections = new Map();
+const smokeDocuments = new Map();
+
+function collectionKey(owner, collection) {
+  return owner + '/' + collection;
+}
+
+function documentKey(owner, collection, id) {
+  return collectionKey(owner, collection) + '/' + id;
+}
+
+function ensureSmokeCollection(owner, collection) {
+  const key = collectionKey(owner, collection);
+  if (!smokeDocumentCollections.has(key)) {
+    smokeDocumentCollections.set(key, {
+      owner,
+      collection,
+      description: '',
+      defaultGrantRead: 'owner',
+      defaultGrantWrite: 'owner',
+      createdAt: '2026-07-06T00:00:00.000Z',
+      updatedAt: '2026-07-06T00:00:00.000Z',
+    });
+  }
+  return smokeDocumentCollections.get(key);
+}
 
 const ctx = {
   extensionId,
@@ -345,6 +371,55 @@ const ctx = {
       };
       smokeDatabases.set(key, db);
       return db;
+    },
+  },
+  documents: {
+    async listCollections(input = {}) {
+      const collections = Array.from(smokeDocumentCollections.values());
+      return input.owner ? collections.filter((collection) => collection.owner === input.owner) : collections;
+    },
+    async getCollection(input) {
+      return smokeDocumentCollections.get(collectionKey(input.owner, input.collection)) ?? null;
+    },
+    async upsertCollection(input) {
+      const existing = ensureSmokeCollection(input.owner, input.collection);
+      const updated = {
+        ...existing,
+        ...(input.options?.description !== undefined ? { description: input.options.description } : {}),
+        ...(input.options?.defaultGrantRead !== undefined ? { defaultGrantRead: input.options.defaultGrantRead } : {}),
+        ...(input.options?.defaultGrantWrite !== undefined ? { defaultGrantWrite: input.options.defaultGrantWrite } : {}),
+        updatedAt: '2026-07-06T00:00:00.000Z',
+      };
+      smokeDocumentCollections.set(collectionKey(input.owner, input.collection), updated);
+      return updated;
+    },
+    async listDocuments(input) {
+      const records = Array.from(smokeDocuments.values()).filter(
+        (document) => document.owner === input.owner && document.collection === input.collection,
+      );
+      const offset = typeof input.offset === 'number' ? input.offset : 0;
+      const limit = typeof input.limit === 'number' ? input.limit : 100;
+      return { records: records.slice(offset, offset + limit), total: records.length };
+    },
+    async getDocument(input) {
+      return smokeDocuments.get(documentKey(input.owner, input.collection, input.id)) ?? null;
+    },
+    async putDocument(input) {
+      ensureSmokeCollection(input.owner, input.collection);
+      const document = {
+        owner: input.owner,
+        collection: input.collection,
+        id: input.id,
+        body: input.body,
+        createdAt: '2026-07-06T00:00:00.000Z',
+        updatedAt: '2026-07-06T00:00:00.000Z',
+      };
+      smokeDocuments.set(documentKey(input.owner, input.collection, input.id), document);
+      return document;
+    },
+    async deleteDocument(input) {
+      const deleted = smokeDocuments.delete(documentKey(input.owner, input.collection, input.id));
+      return { deleted };
     },
   },
   extensions: {
