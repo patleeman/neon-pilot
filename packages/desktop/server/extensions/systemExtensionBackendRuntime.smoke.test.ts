@@ -528,6 +528,17 @@ const smokes = {
     const result = await module.copyConversationId({ conversationId: 'smoke-conversation' }, ctx);
     assert(result.ok === true && result.conversationId === 'smoke-conversation', 'copyConversationId failed');
   },
+  async 'system-data-tools'() {
+    const result = await module.dataList({}, ctx);
+    assert(Array.isArray(result.collections), 'data_list did not return collections');
+  },
+  async 'system-desktop-tools'() {
+    const result = await module.desktopState({}, ctx);
+    const details = result.details;
+    assert(Array.isArray(details?.windows), 'desktop_state details did not return windows');
+    assert(result.content?.[0]?.type === 'text', 'desktop_state did not return text content');
+    assert(result.content[0].text.includes('"windows"'), 'desktop_state content did not include semantic state');
+  },
   async 'system-context-hardening'() {
     await smokeAgentFactory('createContextHardeningAgentExtension');
     assert(registeredEvents.some((event) => event.eventName === 'message_end'), 'context hardening message_end hook missing');

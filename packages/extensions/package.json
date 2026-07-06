@@ -103,6 +103,10 @@
       "types": "./dist/backend/documents-store.d.ts",
       "default": "./dist/backend/documents-store.js"
     },
+    "./backend/desktop": {
+      "types": "./dist/backend/desktop.d.ts",
+      "default": "./dist/backend/desktop.js"
+    },
     "./backend/compaction": {
       "types": "./dist/backend/compaction.d.ts",
       "default": "./dist/backend/compaction.js"

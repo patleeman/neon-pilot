@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "id": "system-desktop-tools",
+  "name": "Desktop Tools",
+  "packageType": "system",
+  "defaultEnabled": true,
+  "description": "Agent-facing tools over Neon Pilot's own Windowed OS desktop.",
+  "version": "0.1.0",
+  "backend": {
+    "entry": "dist/backend.mjs",
+    "actions": [
+      {
+        "id": "desktopState",
+        "handler": "desktopState",
+        "title": "Read desktop state",
+        "worker": {
+          "enabled": true
+        }
+      }
+    ]
+  },
+  "contributes": {
+    "tools": [
+      {
+        "id": "desktop-state",
+        "name": "desktop_state",
+        "title": "Desktop State",
+        "description": "Read the current semantic Windowed OS desktop state: windows, routes, focus, bounds, z-order, parent windows, workspace cwd, and route metadata.",
+        "action": "desktopState",
+        "promptGuidelines": [
+          "Use this before controlling or inspecting Neon Pilot's own desktop. It is read-only semantic state, not a screenshot or host-OS computer-use capture."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      }
+    ]
+  }
+}

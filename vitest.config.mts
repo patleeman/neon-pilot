@@ -34,6 +34,7 @@ export default defineConfig({
         'packages/desktop/server/extensions/backendApi/documents-store.ts',
       ),
       '@neon-pilot/extensions/backend/documents': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/documents.ts'),
+      '@neon-pilot/extensions/backend/desktop': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/desktop.ts'),
       '@neon-pilot/extensions/backend/events': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/events.ts'),
       '@neon-pilot/extensions/backend/extensions': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/extensions.ts'),
       '@neon-pilot/extensions/backend/images': resolve(repoRoot, 'packages/desktop/server/extensions/backendApi/images.ts'),

@@ -6,6 +6,7 @@ export * from './browser.js';
 export * from './checkpoints.js';
 export * from './cli.js';
 export * from './conversations.js';
+export * from './desktop.js';
 export * from './documents.js';
 export * from './documents-store.js';
 export {

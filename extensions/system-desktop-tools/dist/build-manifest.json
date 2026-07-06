@@ -1,0 +1,37 @@
+{
+  "extensionId": "system-desktop-tools",
+  "builtAt": "2026-07-06T00:43:18.292Z",
+  "frontendEntry": null,
+  "backendEntry": "dist/backend.mjs",
+  "sourceHashes": [
+    {
+      "path": "extension.json",
+      "sha256": "7191cff10edfdd64aa2228e7b25a7d42e723daf979994f51381599c2a1c39d19"
+    },
+    {
+      "path": "src/backend.ts",
+      "sha256": "df388e529aa2c05b2b184f6a99126afcda0cebed2c6b5c7865a6fcfc4a789225"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "dist/package.json",
+      "bytes": 135,
+      "imports": []
+    },
+    {
+      "path": "dist/xhr-sync-worker.js",
+      "bytes": 1641,
+      "imports": []
+    },
+    {
+      "path": "extensions/system-desktop-tools/.dist.tmp-64461-1783298598280/backend.mjs",
+      "bytes": 6155,
+      "imports": [
+        "node:fs",
+        "node:path",
+        "node:url"
+      ]
+    }
+  ]
+}
