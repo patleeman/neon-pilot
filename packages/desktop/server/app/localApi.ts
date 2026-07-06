@@ -130,6 +130,7 @@ import {
   renameSession,
   requestConversationWorkingDirectoryChange,
   resumeSession,
+  setLiveSessionsContext,
 } from '../conversations/liveSessions.js';
 import {
   createSessionFromExisting,
@@ -945,6 +946,9 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     getRepoRoot: context.getRepoRoot,
     getSettingsFile: context.getSettingsFile,
     getSavedUiPreferences: context.getSavedUiPreferences,
+    getDesktopRootLayout: context.getDesktopRootLayout,
+  });
+  setLiveSessionsContext({
     getDesktopRootLayout: context.getDesktopRootLayout,
   });
   const capabilityContextAtMs = performance.now();

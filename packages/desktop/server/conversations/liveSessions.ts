@@ -223,7 +223,18 @@ export type { LiveSessionStateSnapshot } from './liveSessionStateSnapshot.js';
 export const registry = new Map<string, LiveEntry>();
 const pendingConversationWorkingDirectoryChanges = new Map<string, PendingConversationWorkingDirectoryChange>();
 
-const getDesktopRootLayoutFn: () => DesktopRootLayout = resolveDesktopRootLayout;
+let getDesktopRootLayoutFn: () => DesktopRootLayout = resolveDesktopRootLayout;
+
+/**
+ * Override the DesktopRootLayout resolver used by parallel-prompt inbox
+ * paths and any other internal call sites that reference
+ * getDesktopRootLayoutFn. Routes through the existing
+ * ServerRouteContext.getDesktopRootLayout when set; falls back to
+ * resolveDesktopRootLayout if never called.
+ */
+export function setLiveSessionsContext(input: { getDesktopRootLayout?: () => DesktopRootLayout }): void {
+  getDesktopRootLayoutFn = input.getDesktopRootLayout ?? resolveDesktopRootLayout;
+}
 
 function escapeExportHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => {

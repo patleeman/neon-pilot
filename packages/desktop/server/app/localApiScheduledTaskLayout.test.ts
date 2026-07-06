@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { coreMocks, extensionHostClientMocks, scheduledTaskCapabilityMocks } = vi.hoisted(() => {
+const { coreMocks, extensionHostClientMocks, liveSessionMocks, scheduledTaskCapabilityMocks } = vi.hoisted(() => {
   const desktopRootLayout = {
     root: '/tmp/neon-pilot-desktop-root-sentinel',
     apps: '/tmp/neon-pilot-desktop-root-sentinel/apps',
@@ -65,6 +65,9 @@ const { coreMocks, extensionHostClientMocks, scheduledTaskCapabilityMocks } = vi
         startStartupActions: async () => [],
       })),
     },
+    liveSessionMocks: {
+      setLiveSessionsContext: vi.fn(),
+    },
     scheduledTaskCapabilityMocks: {
       createScheduledTaskCapability: vi.fn(async () => ({ ok: true, task: { id: 'task-created' } })),
       deleteScheduledTaskCapability: vi.fn(async () => ({ deleted: true, ok: true })),
@@ -100,6 +103,13 @@ vi.mock('@neon-pilot/core', async () => {
 
 vi.mock('../extensions/extensionHostClient.js', () => extensionHostClientMocks);
 vi.mock('../automation/scheduledTaskCapability.js', () => scheduledTaskCapabilityMocks);
+vi.mock('../conversations/liveSessions.js', async () => {
+  const actual = await vi.importActual<typeof import('../conversations/liveSessions.js')>('../conversations/liveSessions.js');
+  return {
+    ...actual,
+    setLiveSessionsContext: liveSessionMocks.setLiveSessionsContext,
+  };
+});
 
 import { createDesktopScheduledTask, deleteDesktopScheduledTask, runDesktopScheduledTask, updateDesktopScheduledTask } from './localApi.js';
 
@@ -112,6 +122,7 @@ describe('desktop local API scheduled task layout threading', () => {
     for (const mock of Object.values(scheduledTaskCapabilityMocks)) {
       mock.mockClear();
     }
+    liveSessionMocks.setLiveSessionsContext.mockClear();
   });
 
   afterEach(() => {
@@ -141,5 +152,12 @@ describe('desktop local API scheduled task layout threading', () => {
       'task-1',
       coreMocks.desktopRootLayout,
     );
+    expect(liveSessionMocks.setLiveSessionsContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        getDesktopRootLayout: expect.any(Function),
+      }),
+    );
+    const liveSessionContext = liveSessionMocks.setLiveSessionsContext.mock.calls.at(-1)?.[0];
+    expect(liveSessionContext?.getDesktopRootLayout?.()).toBe(coreMocks.desktopRootLayout);
   });
 });
