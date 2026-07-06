@@ -26,7 +26,7 @@ function createBackendContext(): ExtensionBackendContext {
   return {
     runtimeDir: '/runtime',
     runtimeSettingsFilePath: '/runtime/settings.json',
-    extensions: { setEnabled: vi.fn() },
+    extensions: { setEnabled: vi.fn(), setPermissionGranted: vi.fn() },
   } as unknown as ExtensionBackendContext;
 }
 
@@ -84,5 +84,62 @@ describe('system-extension-manager backend', () => {
       reloaded: true,
       message: 'App package registry caches were invalidated; reopen app pages if needed.',
     });
+  });
+
+  it('toggles a declared extension permission through the manageExtension action', async () => {
+    const ctx = createBackendContext();
+
+    const result = await mod.manageExtension(
+      { action: 'togglePermission', extensionId: 'system-browser', permission: 'agent:run', granted: false },
+      ctx,
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      extensionId: 'system-browser',
+      permission: 'agent:run',
+      granted: false,
+      text: 'Revoked permission agent:run for app package system-browser.',
+    });
+    expect(ctx.extensions?.setPermissionGranted).toHaveBeenCalledWith('system-browser', 'agent:run', false);
+  });
+
+  it('grants a previously-revoked permission through the manageExtension action', async () => {
+    const ctx = createBackendContext();
+
+    const result = await mod.manageExtension(
+      { action: 'togglePermission', extensionId: 'system-browser', permission: 'agent:run', granted: true },
+      ctx,
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      extensionId: 'system-browser',
+      permission: 'agent:run',
+      granted: true,
+      text: 'Granted permission agent:run for app package system-browser.',
+    });
+    expect(ctx.extensions?.setPermissionGranted).toHaveBeenCalledWith('system-browser', 'agent:run', true);
+  });
+
+  it('throws when togglePermission is called without a permission string', async () => {
+    const ctx = createBackendContext();
+
+    await expect(mod.manageExtension({ action: 'togglePermission', extensionId: 'system-browser', granted: true }, ctx)).rejects.toThrow(
+      'permission is required.',
+    );
+    expect(ctx.extensions?.setPermissionGranted).not.toHaveBeenCalled();
+  });
+
+  it('forwards async errors from setPermissionGranted', async () => {
+    const ctx = createBackendContext();
+    vi.mocked(ctx.extensions!.setPermissionGranted).mockRejectedValue(
+      new Error('Cannot revoke permission agent:run from system-settings: this extension is required.'),
+    );
+
+    await expect(
+      mod.manageExtension({ action: 'togglePermission', extensionId: 'system-settings', permission: 'agent:run', granted: false }, ctx),
+    ).rejects.toThrow('Cannot revoke permission agent:run from system-settings: this extension is required.');
+    expect(ctx.extensions?.setPermissionGranted).toHaveBeenCalledWith('system-settings', 'agent:run', false);
   });
 });

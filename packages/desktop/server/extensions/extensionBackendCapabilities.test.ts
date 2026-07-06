@@ -593,6 +593,7 @@ describe('extension backend capability dispatcher', () => {
       listActions: vi.fn(() => [{ extensionId: 'ext-a', extensionName: 'Ext A', actions: [{ id: 'run' }] }]),
       getStatus: vi.fn(() => ({ enabled: true, healthy: true })),
       setEnabled: vi.fn(() => undefined),
+      setPermissionGranted: vi.fn(() => undefined),
     };
     const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
 
@@ -631,15 +632,28 @@ describe('extension backend capability dispatcher', () => {
         }),
       ),
     ).resolves.toBeUndefined();
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 4,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'extensions',
+          operation: 'setPermissionGranted',
+          input: { extensionId: 'ext-a', permission: 'storage:read', granted: false },
+        }),
+      ),
+    ).resolves.toBeUndefined();
 
     expect(extensions.listActions).toHaveBeenCalled();
     expect(extensions.getStatus).toHaveBeenCalledWith('ext-a');
     expect(extensions.setEnabled).toHaveBeenCalledWith('ext-a', false);
+    expect(extensions.setPermissionGranted).toHaveBeenCalledWith('ext-a', 'storage:read', false);
   });
 
   it('denies extension registry reads without extensions:read permission', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
-    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn() };
+    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn(), setPermissionGranted: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
 
     await expect(async () =>
@@ -656,7 +670,7 @@ describe('extension backend capability dispatcher', () => {
 
   it('denies extension registry writes without extensions:write permission', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: ['extensions:read'] } });
-    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn() };
+    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn(), setPermissionGranted: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
 
     await expect(async () =>
@@ -670,11 +684,23 @@ describe('extension backend capability dispatcher', () => {
       }),
     ).rejects.toThrow('requires permission extensions:write');
     expect(extensions.setEnabled).not.toHaveBeenCalled();
+
+    await expect(async () =>
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'extensions',
+        operation: 'setPermissionGranted',
+        input: { extensionId: 'ext-a', permission: 'storage:read', granted: false },
+      }),
+    ).rejects.toThrow('requires permission extensions:write');
+    expect(extensions.setPermissionGranted).not.toHaveBeenCalled();
   });
 
   it('rejects malformed extension registry capability inputs', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: ['extensions:write'] } });
-    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn() };
+    const extensions = { listActions: vi.fn(), getStatus: vi.fn(), setEnabled: vi.fn(), setPermissionGranted: vi.fn() };
     const dispatch = createExtensionBackendCapabilityDispatcher({ extensions });
 
     await expect(async () =>
@@ -687,6 +713,17 @@ describe('extension backend capability dispatcher', () => {
         input: { extensionId: 'ext-a', enabled: 'false' },
       }),
     ).rejects.toThrow('Extension enabled must be a boolean.');
+
+    await expect(async () =>
+      dispatch({
+        id: 2,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'extensions',
+        operation: 'setPermissionGranted',
+        input: { extensionId: 'ext-a', permission: 'storage:read', granted: 'false' },
+      }),
+    ).rejects.toThrow('Extension permission granted must be a boolean.');
   });
 
   it('dispatches browser capability calls with declared browser permissions', async () => {

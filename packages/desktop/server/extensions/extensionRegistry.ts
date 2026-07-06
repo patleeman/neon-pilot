@@ -277,6 +277,7 @@ export interface ExtensionInstallSummary {
   uninstallable: boolean;
   manifest: LoadedExtensionManifest;
   permissions: ExtensionManifest['permissions'];
+  permissionState?: Array<{ permission: string; granted: boolean; locked: boolean }>;
   surfaces: ExtensionSurface[];
   backendActions: NonNullable<ExtensionManifest['backend']>['actions'];
   services: NonNullable<ExtensionManifest['backend']>['services'];
@@ -1413,6 +1414,11 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       uninstallable: Boolean(entry.packageRoot && isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot)),
       manifest,
       permissions: manifest.permissions ?? [],
+      permissionState: (manifest.permissions ?? []).map((p) => ({
+        permission: p,
+        granted: required || !(config.revokedPermissions?.[manifest.id] ?? []).includes(p),
+        locked: required,
+      })),
       surfaces,
       backendActions: manifest.backend?.actions ?? [],
       services: manifest.backend?.services ?? [],

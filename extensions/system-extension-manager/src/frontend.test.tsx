@@ -358,6 +358,61 @@ describe('ExtensionManagerPage', () => {
     expect(screen.queryByRole('switch', { name: /Disable Settings panels/ })).toBeNull();
   });
 
+  it('shows permission grants in the windowed details dialog and toggles revocable permissions', async () => {
+    const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {
+      if (action === 'listInstallableExtensions') {
+        return { ok: true, version: '0.1.0', tag: 'v0.1.0', extensions: [] };
+      }
+      return { ok: true };
+    });
+    mocks.extensionInstallations.mockResolvedValue([
+      {
+        ...createExtension(),
+        permissions: ['storage:read', 'shell:execute'],
+        permissionState: [
+          { permission: 'storage:read', granted: true, locked: false },
+          { permission: 'shell:execute', granted: false, locked: false },
+        ],
+      },
+      {
+        ...createRequiredSystemExtension(),
+        permissions: ['settings:read'],
+        permissionState: [{ permission: 'settings:read', granted: true, locked: true }],
+      },
+    ]);
+
+    renderWindowedPage({
+      pa: { ui: { toast: vi.fn(), notify: vi.fn() }, commands: { list: vi.fn().mockResolvedValue([]) }, extensions: { callAction } },
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Details for Menu Test' }));
+    const detailsDialog = await screen.findByRole('dialog', { name: 'Menu Test' });
+
+    expect(within(detailsDialog).getByText('Permissions')).toBeTruthy();
+    expect(within(detailsDialog).getByText('Read storage')).toBeTruthy();
+    expect(within(detailsDialog).getByText('storage:read')).toBeTruthy();
+    expect(within(detailsDialog).getByText('shell:execute')).toBeTruthy();
+    expect(within(detailsDialog).getByText('Revoked')).toBeTruthy();
+
+    fireEvent.click(within(detailsDialog).getByRole('switch', { name: 'Revoke storage:read' }));
+
+    await waitFor(() =>
+      expect(callAction).toHaveBeenCalledWith('system-extension-manager', 'togglePermission', {
+        extensionId: 'menu-test',
+        permission: 'storage:read',
+        granted: false,
+      }),
+    );
+
+    fireEvent.click(within(detailsDialog).getByRole('button', { name: 'Close Menu Test' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Platform/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Details for Settings panels' }));
+
+    const lockedDialog = await screen.findByRole('dialog', { name: 'Settings panels' });
+    expect(within(lockedDialog).getByText('Required by system')).toBeTruthy();
+    expect(within(lockedDialog).queryByRole('switch', { name: 'Revoke settings:read' })).toBeNull();
+  });
+
   it('restores manager actions inside the windowed app details dialog', async () => {
     const confirm = vi.fn().mockResolvedValue(true);
     const callAction = vi.fn().mockImplementation(async (_extensionId: string, action: string) => {

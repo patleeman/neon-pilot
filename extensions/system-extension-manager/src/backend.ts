@@ -170,6 +170,20 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
       text: `${action === 'enable' ? 'Enabled' : 'Disabled'} app package ${extensionId}.`,
     };
   }
+  if (action === 'togglePermission') {
+    const extensionId = requireExtensionId(body);
+    const permission = typeof body.permission === 'string' ? body.permission : '';
+    const granted = body.granted === true;
+    if (!permission) throw new Error('permission is required.');
+    await ctx.extensions.setPermissionGranted(extensionId, permission, granted);
+    return {
+      ok: true,
+      extensionId,
+      permission,
+      granted,
+      text: `${granted ? 'Granted' : 'Revoked'} permission ${permission} for app package ${extensionId}.`,
+    };
+  }
   throw new Error(`Unsupported extension manager action: ${action}`);
 }
 

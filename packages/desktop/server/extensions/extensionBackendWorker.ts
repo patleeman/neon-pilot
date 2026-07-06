@@ -17,6 +17,7 @@ import type {
   ExtensionBackendWorkerResponse,
 } from './extensionBackendWorkerProtocol.js';
 import { type ExtensionHostClient, setExtensionHostClient } from './extensionHostClient.js';
+import type { ExtensionPermission } from './extensionManifest.js';
 import { assertExtensionBackendNativeImportsAllowed, withExtensionProcessGuard } from './extensionProcessGuard.js';
 
 const backendModuleCache = new Map<string, { cacheKey: string; module: Promise<ExtensionBackendModule> }>();
@@ -448,6 +449,8 @@ function createWorkerBackendContext(
         callHostCapability(extensionId, 'extensions', 'getStatus', { extensionId: targetExtensionId }),
       setEnabled: (targetExtensionId: string, enabled: boolean) =>
         callHostCapability(extensionId, 'extensions', 'setEnabled', { extensionId: targetExtensionId, enabled }),
+      setPermissionGranted: (targetExtensionId: string, permission: ExtensionPermission, granted: boolean) =>
+        callHostCapability(extensionId, 'extensions', 'setPermissionGranted', { extensionId: targetExtensionId, permission, granted }),
     },
     git: {
       status: (input: unknown) => callHostCapability(extensionId, 'git', 'status', input),

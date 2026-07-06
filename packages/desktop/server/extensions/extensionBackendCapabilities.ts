@@ -48,7 +48,7 @@ import { createExtensionBackendServerContextFromSnapshot } from './extensionHost
 import type { ExtensionPermission } from './extensionManifest.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
-import { assertExtensionAnyPermission } from './extensionPermissions.js';
+import { assertExtensionAnyPermission, setExtensionPermissionGranted } from './extensionPermissions.js';
 import {
   findExtensionCommandRegistration,
   findExtensionEntry,
@@ -315,6 +315,7 @@ interface ExtensionBackendCapabilityExtensions {
   listStaticContributions(): unknown;
   getStatus(extensionId: string): unknown;
   setEnabled(extensionId: string, enabled: boolean): unknown;
+  setPermissionGranted(extensionId: string, permission: ExtensionPermission, granted: boolean): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityCommands {
@@ -646,7 +647,7 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
   }
 
   if (request.capability === 'extensions') {
-    return request.operation === 'setEnabled' ? ['extensions:write'] : ['extensions:read'];
+    return request.operation === 'setEnabled' || request.operation === 'setPermissionGranted' ? ['extensions:write'] : ['extensions:read'];
   }
 
   if (request.capability === 'browser') {
@@ -1488,6 +1489,18 @@ function dispatchExtensionsCapability(
       throw new Error('Extension enabled must be a boolean.');
     }
     return extensions.setEnabled(requireString(input.extensionId, 'Extension id'), enabled);
+  }
+
+  if (request.operation === 'setPermissionGranted') {
+    const granted = input.granted;
+    if (typeof granted !== 'boolean') {
+      throw new Error('Extension permission granted must be a boolean.');
+    }
+    return extensions.setPermissionGranted(
+      requireString(input.extensionId, 'Extension id'),
+      requireString(input.permission, 'Extension permission') as ExtensionPermission,
+      granted,
+    );
   }
 
   throw new Error(`Unsupported extensions capability operation: ${request.operation}`);
@@ -2747,6 +2760,10 @@ export function createExtensionBackendCapabilityDispatcher(
       };
     },
     setEnabled: (extensionId: string, enabled: boolean) => setExtensionEnabled(extensionId, enabled),
+    setPermissionGranted: async (extensionId: string, permission: ExtensionPermission, granted: boolean) => {
+      setExtensionPermissionGranted(extensionId, permission, granted);
+      await callServerModuleExport('../../extensions/extensionBackend.js', 'reloadExtensionBackend', extensionId);
+    },
   };
   const git = options.git ?? createExtensionGitCapability();
   const image = options.image ?? { generate: generateImageWithInstalledExtension };

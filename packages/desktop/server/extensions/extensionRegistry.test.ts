@@ -1114,4 +1114,121 @@ describe('extension registry', () => {
       }),
     );
   });
+
+  describe('permissionState', () => {
+    it('populates permissionState with granted state for each declared permission', () => {
+      const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+      const extensionRoot = join(stateRoot, 'extensions', 'consent-app');
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(
+        join(extensionRoot, 'extension.json'),
+        JSON.stringify({
+          schemaVersion: 2,
+          id: 'consent-app',
+          name: 'Consent App',
+          permissions: ['storage:read', 'network:read', 'shell:execute'],
+        }),
+      );
+      invalidateExtensionRegistryReadCaches(stateRoot);
+
+      const summary = listExtensionInstallSummaries(stateRoot).find((e) => e.id === 'consent-app');
+      expect(summary?.permissionState).toEqual([
+        { permission: 'storage:read', granted: true, locked: false },
+        { permission: 'network:read', granted: true, locked: false },
+        { permission: 'shell:execute', granted: true, locked: false },
+      ]);
+
+      rmSync(stateRoot, { recursive: true, force: true });
+    });
+
+    it('reflects revoked permissions as not granted', () => {
+      const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+      const extensionRoot = join(stateRoot, 'extensions', 'consent-app');
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(
+        join(extensionRoot, 'extension.json'),
+        JSON.stringify({
+          schemaVersion: 2,
+          id: 'consent-app',
+          name: 'Consent App',
+          permissions: ['storage:read', 'network:read', 'shell:execute'],
+        }),
+      );
+
+      // Write a revoked permission
+      const registryRoot = join(stateRoot, 'extensions');
+      mkdirSync(registryRoot, { recursive: true });
+      writeFileSync(join(registryRoot, 'registry.json'), JSON.stringify({ revokedPermissions: { 'consent-app': ['network:read'] } }));
+      invalidateExtensionRegistryReadCaches(stateRoot);
+
+      const summary = listExtensionInstallSummaries(stateRoot).find((e) => e.id === 'consent-app');
+      expect(summary?.permissionState).toEqual([
+        { permission: 'storage:read', granted: true, locked: false },
+        { permission: 'network:read', granted: false, locked: false },
+        { permission: 'shell:execute', granted: true, locked: false },
+      ]);
+
+      rmSync(stateRoot, { recursive: true, force: true });
+    });
+
+    it('marks locked extension permissions as locked and always granted', () => {
+      const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+      const extensionRoot = join(stateRoot, 'extensions', 'system-settings');
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(
+        join(extensionRoot, 'extension.json'),
+        JSON.stringify({
+          schemaVersion: 2,
+          id: 'system-settings',
+          name: 'Settings Panels',
+          packageType: 'system',
+          permissions: ['settings:read', 'settings:write'],
+        }),
+      );
+
+      // Even if the registry config tries to revoke, locked extensions stay granted
+      const registryRoot = join(stateRoot, 'extensions');
+      mkdirSync(registryRoot, { recursive: true });
+      writeFileSync(join(registryRoot, 'registry.json'), JSON.stringify({ revokedPermissions: { 'system-settings': ['settings:read'] } }));
+      invalidateExtensionRegistryReadCaches(stateRoot);
+
+      const summary = listExtensionInstallSummaries(stateRoot).find((e) => e.id === 'system-settings');
+      expect(summary?.permissionState).toEqual([
+        { permission: 'settings:read', granted: true, locked: true },
+        { permission: 'settings:write', granted: true, locked: true },
+      ]);
+
+      rmSync(stateRoot, { recursive: true, force: true });
+    });
+
+    it('returns an empty array when the extension declares no permissions', () => {
+      const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+      const extensionRoot = join(stateRoot, 'extensions', 'no-perms');
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'no-perms', name: 'No Perms' }));
+      invalidateExtensionRegistryReadCaches(stateRoot);
+
+      const summary = listExtensionInstallSummaries(stateRoot).find((e) => e.id === 'no-perms');
+      expect(summary?.permissionState).toEqual([]);
+
+      rmSync(stateRoot, { recursive: true, force: true });
+    });
+
+    it('is not present on invalid extension summaries', () => {
+      const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+      const extensionRoot = join(stateRoot, 'extensions', 'invalid-perms');
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(
+        join(extensionRoot, 'extension.json'),
+        JSON.stringify({ invalid: true }), // Invalid manifest
+      );
+      invalidateExtensionRegistryReadCaches(stateRoot);
+
+      const summary = listExtensionInstallSummaries(stateRoot).find((e) => e.id === 'invalid-perms');
+      expect(summary?.status).toBe('invalid');
+      expect(summary?.permissionState).toBeUndefined();
+
+      rmSync(stateRoot, { recursive: true, force: true });
+    });
+  });
 });

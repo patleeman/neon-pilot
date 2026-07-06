@@ -189,12 +189,15 @@ describe('extension backend action invocation', () => {
     expect(() => context.extensions.setEnabled('registry-helper-ext', false)).toThrow(
       'Extension "registry-helper-ext" requires permission extensions:write to use extensions.setEnabled.',
     );
+    await expect(context.extensions.setPermissionGranted('registry-helper-ext', 'storage:read', false)).rejects.toThrow(
+      'Extension "registry-helper-ext" requires permission extensions:write to use extensions.setPermissionGranted.',
+    );
     await expect(context.extensions.callAction('registry-helper-ext', 'ensure', {})).rejects.toThrow(
       'Extension "registry-helper-ext" requires permission extensions:read to use extensions.callAction.',
     );
   });
 
-  it('allows declared host-run extension registry writes', () => {
+  it('allows declared host-run extension registry writes', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     installTestExtension(stateRoot, 'registry-writer-ext');
@@ -221,6 +224,7 @@ describe('extension backend action invocation', () => {
 
     expect(() => context.extensions.setEnabled('registry-writer-ext', false)).not.toThrow();
     expect(isExtensionEnabled('registry-writer-ext', stateRoot)).toBe(false);
+    await expect(context.extensions.setPermissionGranted('registry-writer-ext', 'extensions:write', false)).resolves.toBeUndefined();
   });
 
   it('requires command permissions for host-run command helpers', async () => {

@@ -1803,6 +1803,8 @@ export interface ExtensionBackendContext {
     getStatus(extensionId: string): Promise<{ enabled: boolean; healthy: boolean; errors?: string[] }>;
     /** Enable or disable an extension by ID. */
     setEnabled(extensionId: string, enabled: boolean): void;
+    /** Grant or revoke a declared permission for an extension by ID. Requires extensions:write. */
+    setPermissionGranted(extensionId: string, permission: ExtensionPermission, granted: boolean): Promise<void>;
   };
   secrets: {
     /** Resolve a secret registered in this extension's manifest. */

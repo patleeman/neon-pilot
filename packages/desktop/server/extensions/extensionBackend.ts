@@ -29,9 +29,10 @@ import { isLockedExtensionId } from './extensionEnabledConfig.js';
 import { publishExtensionEvent, subscribeExtensionEvents } from './extensionEventBus.js';
 import { createExtensionFilesystemCapability } from './extensionFilesystem.js';
 import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
+import type { ExtensionPermission } from './extensionManifest.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
-import { assertExtensionAnyPermission, assertExtensionPermission } from './extensionPermissions.js';
+import { assertExtensionAnyPermission, assertExtensionPermission, setExtensionPermissionGranted } from './extensionPermissions.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearBuildError,
@@ -176,6 +177,8 @@ export interface ExtensionBackendContext {
     getStatus(extensionId: string): { enabled: boolean; healthy: boolean; errors?: string[] };
     /** Enable or disable an extension by ID. */
     setEnabled(extensionId: string, enabled: boolean): void;
+    /** Grant or revoke a declared permission for an extension by ID. */
+    setPermissionGranted(extensionId: string, permission: ExtensionPermission, granted: boolean): Promise<void>;
   };
   secrets: {
     /** Resolve a secret registered in this extension's manifest. */
@@ -599,6 +602,11 @@ export function createBackendContext(
       setEnabled: (targetExtensionId, enabled) => {
         assertExtensionPermission(extensionId, 'extensions:write', 'extensions.setEnabled');
         return setExtensionEnabled(targetExtensionId, enabled);
+      },
+      setPermissionGranted: async (targetExtensionId, permission, granted) => {
+        assertExtensionPermission(extensionId, 'extensions:write', 'extensions.setPermissionGranted');
+        setExtensionPermissionGranted(targetExtensionId, permission, granted);
+        await reloadExtensionBackend(targetExtensionId);
       },
     },
     secrets: {

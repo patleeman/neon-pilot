@@ -127,6 +127,71 @@ function extensionResourceId(extensionId: string): string {
   return `extension:${extensionId}`;
 }
 
+function formatPermissionLabel(permission: string): string {
+  const labels: Record<string, string> = {
+    'agent:run': 'Run agent',
+    'agent:conversations': 'Agent conversations',
+    'executions:read': 'Read executions',
+    'executions:start': 'Start executions',
+    'executions:cancel': 'Cancel executions',
+    'automations:read': 'Read automations',
+    'automations:write': 'Write automations',
+    'automations:readwrite': 'Manage automations',
+    'automations:run': 'Run automations',
+    'runtimes:read': 'Read runtimes',
+    'attention:read': 'Read attention events',
+    'attention:write': 'Write attention events',
+    'storage:read': 'Read storage',
+    'storage:write': 'Write storage',
+    'storage:readwrite': 'Manage storage',
+    'settings:read': 'Read settings',
+    'settings:write': 'Write settings',
+    'settings:readwrite': 'Manage settings',
+    'workspace:read': 'Read workspace',
+    'workspace:write': 'Write workspace',
+    'workspace:readwrite': 'Manage workspace',
+    'filesystem:read': 'Read file system',
+    'filesystem:write': 'Write file system',
+    'filesystem:readwrite': 'Manage file system',
+    'shell:execute': 'Execute shell commands',
+    'commands:read': 'Read commands',
+    'commands:execute': 'Execute commands',
+    'browser:read': 'Read browser',
+    'browser:control': 'Control browser',
+    'desktop:control': 'Control desktop',
+    'git:read': 'Read Git repos',
+    'secrets:read': 'Read secrets',
+    'extensions:read': 'Read extensions',
+    'extensions:write': 'Manage extensions',
+    'models:read': 'Read AI models',
+    'models:write': 'Write AI models',
+    'models:readwrite': 'Manage AI models',
+    'images:read': 'Read images',
+    'images:write': 'Write images',
+    'videos:read': 'Read videos',
+    'audio:read': 'Read audio',
+    'documents:read': 'Read documents',
+    'documents:write': 'Write documents',
+    'documents:readwrite': 'Manage documents',
+    'knowledge:read': 'Read knowledge',
+    'knowledge:write': 'Write knowledge',
+    'knowledge:readwrite': 'Manage knowledge',
+    'mcp:read': 'Read MCP tools',
+    'mcp:write': 'Write MCP tools',
+    'network:read': 'Read network',
+    'conversations:read': 'Read conversations',
+    'conversations:write': 'Write conversations',
+    'conversations:readwrite': 'Manage conversations',
+    'network:listen': 'Listen on network',
+    'telemetry:read': 'Read telemetry',
+    'telemetry:write': 'Write telemetry',
+    'ui:confirm': 'Show confirm dialog',
+    'ui:invalidate': 'Invalidate UI',
+    'ui:notify': 'Show notification',
+  };
+  return labels[permission] ?? permission;
+}
+
 function isExtensionSelection(value: unknown): value is { resource: { type: 'extension'; id: string; data?: { extensionId?: string } } } {
   if (!value || typeof value !== 'object') return false;
   const resource = (value as { resource?: unknown }).resource;
@@ -1145,6 +1210,30 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
     [location.pathname, navigate, pa.ui, showActionError],
   );
 
+  const togglePermission = useCallback(
+    async (extension: ExtensionInstallSummary, permission: string, granted: boolean) => {
+      setBusyId(`permission:${extension.id}`);
+      setNotice(null);
+      try {
+        await pa.extensions.callAction('system-extension-manager', 'togglePermission', {
+          extensionId: extension.id,
+          permission,
+          granted,
+        });
+        setNotice({ type: 'success', message: `${granted ? 'Granted' : 'Revoked'} permission ${permission} for ${extension.name}.` });
+        await load();
+      } catch (err) {
+        showActionError(
+          `Failed to ${granted ? 'grant' : 'revoke'} permission ${permission} for ${extension.name}`,
+          err instanceof Error ? err.message : String(err),
+        );
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [load, pa.extensions, showActionError],
+  );
+
   const reinstallExtension = useCallback(
     async (extension: ExtensionInstallSummary) => {
       if (extension.uninstallable !== true && extension.packageType === 'system') return;
@@ -1871,6 +1960,42 @@ export function ExtensionManagerPage({ pa, context, embedded = false }: Extensio
                 ]}
               />
               {selectedExtension.description ? <p className="wos-app-detail-description">{selectedExtension.description}</p> : null}
+              {selectedExtension.permissionState && selectedExtension.permissionState.length > 0 ? (
+                <div className="wos-app-detail-permissions">
+                  <span className="wos-field-label">Permissions</span>
+                  <WindowedDataTable
+                    columns={[{ label: 'Permission' }, { label: 'State' }, { label: '', align: 'right' }]}
+                    columnTemplate="minmax(12rem, 1fr) minmax(6rem, 0.35fr) minmax(10rem, 0.5fr)"
+                  >
+                    {selectedExtension.permissionState.map((ps) => {
+                      const busy = selectedExtensionBusy || busyId === `permission:${selectedExtension.id}`;
+                      return (
+                        <WindowedDataRow
+                          key={ps.permission}
+                          name={formatPermissionLabel(ps.permission)}
+                          meta={ps.permission}
+                          status={
+                            <WindowedBadge tone={ps.granted ? 'positive' : 'neutral'}>{ps.granted ? 'Granted' : 'Revoked'}</WindowedBadge>
+                          }
+                          action={
+                            ps.locked ? (
+                              <span className="text-dim text-[11px]">Required by system</span>
+                            ) : (
+                              <WindowedToggle
+                                checked={ps.granted}
+                                disabled={busy}
+                                accent="extensions"
+                                label={`${ps.granted ? 'Revoke' : 'Grant'} ${ps.permission}`}
+                                onChange={() => togglePermission(selectedExtension, ps.permission, !ps.granted)}
+                              />
+                            )
+                          }
+                        />
+                      );
+                    })}
+                  </WindowedDataTable>
+                </div>
+              ) : null}
             </div>
           </WindowedDialog>
         ) : null}

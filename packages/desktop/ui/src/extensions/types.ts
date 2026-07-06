@@ -645,6 +645,7 @@ export interface ExtensionInstallSummary {
   uninstallable?: boolean;
   manifest: ExtensionManifest;
   permissions?: string[];
+  permissionState?: Array<{ permission: string; granted: boolean; locked: boolean }>;
   surfaces: ExtensionSurface[];
   backendActions?: ExtensionBackendActionSummary[];
   services?: Array<{ id: string; handler: string; title?: string; description?: string; healthCheck?: string; restart?: string }>;
