@@ -1,4 +1,4 @@
-import { hydrateProcessEnvFromShell, resolveChildProcessEnv } from '@neon-pilot/core';
+import { hydrateProcessEnvFromShell, resolveChildProcessEnv, resolveDesktopRootLayout } from '@neon-pilot/core';
 import { type ChildProcess } from 'child_process';
 import { closeSync, cpSync, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { createServer, type Server, type Socket } from 'net';
@@ -200,7 +200,7 @@ export class NeonPilotDaemon {
     this.config = options.config ?? loadDaemonConfig();
     this.stopRequestBehavior = options.stopRequestBehavior ?? 'exit-process';
     this.logSink = options.logSink;
-    this.paths = resolveDaemonPaths(this.config.ipc.socketPath);
+    this.paths = resolveDaemonPaths(this.config.ipc.socketPath, undefined, resolveDesktopRootLayout());
     this.runsRoot = resolveDurableRunsRoot(this.paths.root);
     this.startedAt = new Date().toISOString();
     this.pid = process.pid;
