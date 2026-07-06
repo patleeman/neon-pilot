@@ -135,6 +135,52 @@ describe('conversation session exchange', () => {
     expect(appEvents.invalidateAppTopics).toHaveBeenCalledWith('sessions');
   });
 
+  it('uses layout.systemSessions when a DesktopRootLayout is provided for import', () => {
+    fs.files.set('/imports/session.jsonl', '{"type":"session","id":"layout-import","cwd":"/project"}\n{"role":"user"}\n');
+
+    const layout = {
+      root: '/custom/root',
+      data: '/custom/root/data',
+      dataExports: '/custom/root/data/exports',
+      dataApps: '/custom/root/data/apps',
+      dataDocuments: '/custom/root/data/documents',
+      documents: '/custom/root/documents',
+      apps: '/custom/root/apps',
+      agents: '/custom/root/agents',
+      logs: '/custom/root/logs',
+      logsDesktop: '/custom/root/logs/desktop',
+      logsDaemon: '/custom/root/logs/daemon',
+      logsTelemetry: '/custom/root/logs/telemetry',
+      system: '/custom/root/system',
+      systemAgents: '/custom/root/system/agents',
+      systemApps: '/custom/root/system/apps',
+      systemCache: '/custom/root/system/cache',
+      systemConfig: '/custom/root/system/config',
+      systemConversations: '/custom/root/system/conversations',
+      systemSessions: '/custom/root/system/conversations/sessions',
+      systemDaemon: '/custom/root/system/daemon',
+      systemElectron: '/custom/root/system/electron',
+      systemElectronUserData: '/custom/root/system/electron/user-data',
+      systemObservability: '/custom/root/system/observability',
+      systemRuntime: '/custom/root/system/runtime',
+      systemSecrets: '/custom/root/system/secrets',
+      systemState: '/custom/root/system/state',
+    };
+
+    expect(importConversationSession({ filePath: '/imports/session.jsonl' }, layout)).toEqual({
+      ok: true,
+      conversationId: 'layout-import',
+      sessionFile: '/custom/root/system/conversations/sessions/--project--/session.jsonl',
+      importedAsNewId: false,
+    });
+    expect(fs.copyFileSync).toHaveBeenCalledWith(
+      '/imports/session.jsonl',
+      '/custom/root/system/conversations/sessions/--project--/session.jsonl',
+    );
+    expect(fs.mkdirSync).toHaveBeenCalledWith('/custom/root/system/conversations/sessions/--project--', { recursive: true });
+    expect(core.getDurableSessionsDir).not.toHaveBeenCalled();
+  });
+
   it('rewrites imported session ids when the original id already exists and avoids destination collisions', () => {
     sessions.listSessions.mockReturnValueOnce([{ id: 'conv-1' }]);
     fs.files.set('/imports/session.jsonl', '{"type":"session","id":"conv-1","cwd":"/repo"}\n{"role":"user"}\n');

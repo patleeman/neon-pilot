@@ -106,7 +106,7 @@ export function exportConversationSession(
   return { ok: true, conversationId, exportPath };
 }
 
-export function importConversationSession(input: { filePath?: unknown }): ImportConversationSessionResult {
+export function importConversationSession(input: { filePath?: unknown }, layout?: DesktopRootLayout): ImportConversationSessionResult {
   const filePath = typeof input.filePath === 'string' ? input.filePath.trim() : '';
   if (!filePath) {
     throw new Error('Session file path is required.');
@@ -127,7 +127,8 @@ export function importConversationSession(input: { filePath?: unknown }): Import
   const conversationId = importedAsNewId ? randomUUID() : originalSessionId;
   const cwd = typeof header.cwd === 'string' && header.cwd.trim().length > 0 ? header.cwd.trim() : process.cwd();
 
-  const destinationDir = join(getDurableSessionsDir(), cwdToSlug(cwd));
+  const sessionsDir = layout ? layout.systemSessions : getDurableSessionsDir();
+  const destinationDir = join(sessionsDir, cwdToSlug(cwd));
   mkdirSync(destinationDir, { recursive: true });
 
   const sourceStem = sanitizeFileStem(basename(filePath, ext));
