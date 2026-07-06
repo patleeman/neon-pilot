@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { createRuntimeExtension, deleteRuntimeExtension } from './extensionLifecycle.js';
 import type { ExtensionRegistrySnapshot } from './extensionRegistry.js';
 import {
   listExtensionCliCommandRegistrations,
@@ -242,6 +243,53 @@ describe('extension manifests - structural validation', () => {
   it('no system extension is in invalid state', () => {
     const invalid = summaries.filter((s) => s.status === 'invalid' && s.packageType === 'system');
     expect(invalid, 'Invalid system extensions').toEqual([]);
+  });
+
+  it('runtime-created app appearance metadata reaches extension registry summaries', async () => {
+    const result = createRuntimeExtension({
+      id: 'agent-board',
+      name: 'Agent Board',
+      template: 'main-page',
+      appearance: {
+        accent: 'apps',
+        aliases: ['kanban', 'project board'],
+        singleton: false,
+        window: { defaultWidth: 960, defaultHeight: 720 },
+      },
+    });
+
+    try {
+      expect(result.extension).toMatchObject({
+        id: 'agent-board',
+        packageType: 'user',
+        manifest: {
+          contributes: {
+            appearance: {
+              accent: 'apps',
+              aliases: ['kanban', 'project board'],
+              singleton: false,
+              window: { defaultWidth: 960, defaultHeight: 720 },
+            },
+            nav: [expect.objectContaining({ label: 'Agent Board', route: '/ext/agent-board' })],
+          },
+        },
+      });
+      expect(listExtensionInstallSummaries().find((extension) => extension.id === 'agent-board')).toMatchObject({
+        manifest: {
+          contributes: {
+            appearance: {
+              accent: 'apps',
+              aliases: ['kanban', 'project board'],
+              singleton: false,
+              window: { defaultWidth: 960, defaultHeight: 720 },
+            },
+          },
+        },
+      });
+    } finally {
+      await deleteRuntimeExtension('agent-board');
+    }
+    expect(listExtensionInstallSummaries().some((extension) => extension.id === 'agent-board')).toBe(false);
   });
 
   it('no system extensions have unexpected errors or diagnostics', () => {
