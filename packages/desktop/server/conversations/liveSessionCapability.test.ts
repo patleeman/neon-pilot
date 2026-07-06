@@ -1,14 +1,26 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { isLocalLiveMock, liveRegistry, queuePromptContextMock, submitLocalPromptSessionMock, syncWebLiveConversationRunMock } = vi.hoisted(
-  () => ({
-    isLocalLiveMock: vi.fn(),
-    liveRegistry: new Map<string, unknown>(),
-    queuePromptContextMock: vi.fn(),
-    submitLocalPromptSessionMock: vi.fn(),
-    syncWebLiveConversationRunMock: vi.fn(),
-  }),
-);
+const {
+  isLocalLiveMock,
+  liveRegistry,
+  queuePromptContextMock,
+  startParallelPromptSessionMock,
+  submitLocalPromptSessionMock,
+  syncWebLiveConversationRunMock,
+} = vi.hoisted(() => ({
+  isLocalLiveMock: vi.fn(),
+  liveRegistry: new Map<string, unknown>(),
+  queuePromptContextMock: vi.fn(),
+  startParallelPromptSessionMock: vi.fn(),
+  submitLocalPromptSessionMock: vi.fn(),
+  syncWebLiveConversationRunMock: vi.fn(),
+}));
 
 vi.mock('@neon-pilot/daemon', () => ({
   listPendingBackgroundRunResults: vi.fn(() => []),
@@ -102,7 +114,7 @@ vi.mock('./liveSessions.js', () => ({
   reloadSessionResources: vi.fn(),
   restoreQueuedMessage: vi.fn(),
   resumeSession: vi.fn(),
-  startParallelPromptSession: vi.fn(),
+  startParallelPromptSession: startParallelPromptSessionMock,
   submitPromptSession: submitLocalPromptSessionMock,
   takeOverSessionControl: vi.fn(),
   updateLiveSessionModelPreferences: vi.fn(),
@@ -124,6 +136,7 @@ function createContext() {
     getRuntimeScope: () => 'assistant',
     getRepoRoot: () => '/repo',
     getDefaultWebCwd: () => '/repo',
+    getDesktopRootLayout: () => resolveDesktopRootLayout({ root: '/desktop-root' }),
     buildLiveSessionResourceOptions: () => ({}),
     buildLiveSessionExtensionFactories: () => [],
     flushLiveDeferredResumes: vi.fn(async () => undefined),
@@ -132,11 +145,25 @@ function createContext() {
   };
 }
 
+const tempDirs: string[] = [];
+
+function createPersonaMemoryRoot(files: Record<string, string>): ReturnType<typeof resolveDesktopRootLayout> {
+  const root = mkdtempSync(join(tmpdir(), 'persona-memory-context-'));
+  tempDirs.push(root);
+  const layout = resolveDesktopRootLayout({ root });
+  mkdirSync(layout.agents, { recursive: true });
+  for (const [name, content] of Object.entries(files)) {
+    writeFileSync(join(layout.agents, name), content, 'utf-8');
+  }
+  return layout;
+}
+
 beforeEach(() => {
   vi.useRealTimers();
   liveRegistry.clear();
   isLocalLiveMock.mockReset();
   queuePromptContextMock.mockReset();
+  startParallelPromptSessionMock.mockReset();
   submitLocalPromptSessionMock.mockReset();
   syncWebLiveConversationRunMock.mockReset();
   extensionHostClient.publishEvent.mockReset();
@@ -151,11 +178,13 @@ beforeEach(() => {
   vi.mocked(readConversationContextDocs).mockReset();
   vi.mocked(readConversationContextDocs).mockReturnValue([]);
   submitLocalPromptSessionMock.mockResolvedValue({ acceptedAs: 'started', completion: Promise.resolve() });
+  startParallelPromptSessionMock.mockResolvedValue({ jobId: 'job-1', childConversationId: 'child-1' });
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.useRealTimers();
   liveRegistry.clear();
+  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
 describe('createLiveSessionCapability', () => {
@@ -436,6 +465,100 @@ describe('liveSessionCapability input validation', () => {
       'referenced_context',
       'Attached conversation context docs:\n- README.md',
     );
+  });
+
+  it('queues persona memory context only when explicitly opted in', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-persona-memory', {
+      cwd: '/repo',
+      title: 'Session with persona memory',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-persona-memory.jsonl',
+      },
+    });
+    vi.mocked(buildPromptContextPlan).mockImplementation(async (input) => ({
+      contextMessages: input.contextMessages,
+      diagnostics: [],
+    }));
+    const layout = createPersonaMemoryRoot({
+      'preferences.md': '# Preferences\n\nLikes concise implementation notes.',
+      'AGENTS.md': '# Soul\n\nShared instructions are loaded elsewhere.',
+    });
+
+    await submitLiveSessionPromptCapability(
+      { conversationId: 'session-persona-memory', text: 'hello', includePersonaMemory: true },
+      { ...createContext(), getDesktopRootLayout: () => layout },
+    );
+
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'session-persona-memory',
+      'referenced_context',
+      expect.stringContaining('Persona memory:'),
+    );
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'session-persona-memory',
+      'referenced_context',
+      expect.stringContaining('Likes concise implementation notes.'),
+    );
+    expect(queuePromptContextMock).not.toHaveBeenCalledWith(
+      'session-persona-memory',
+      'referenced_context',
+      expect.stringContaining('Shared instructions are loaded elsewhere.'),
+    );
+  });
+
+  it('does not read persona memory for default capability callers', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-worker-default', {
+      cwd: '/repo',
+      title: 'Worker session',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-worker-default.jsonl',
+      },
+    });
+    vi.mocked(buildPromptContextPlan).mockImplementation(async (input) => ({
+      contextMessages: input.contextMessages,
+      diagnostics: [],
+    }));
+    const layout = createPersonaMemoryRoot({
+      'preferences.md': '# Preferences\n\nThis should not be loaded.',
+    });
+
+    await submitLiveSessionPromptCapability(
+      { conversationId: 'session-worker-default', text: 'hello' },
+      { ...createContext(), getDesktopRootLayout: () => layout },
+    );
+
+    expect(queuePromptContextMock).not.toHaveBeenCalled();
+  });
+
+  it('does not honor smuggled persona memory flags on parallel prompts', async () => {
+    isLocalLiveMock.mockReturnValue(true);
+    liveRegistry.set('session-parallel-worker', {
+      cwd: '/repo',
+      title: 'Parallel worker session',
+      session: {
+        isStreaming: false,
+        sessionFile: '/sessions/session-parallel-worker.jsonl',
+      },
+    });
+    vi.mocked(buildPromptContextPlan).mockImplementation(async (input) => ({
+      contextMessages: input.contextMessages,
+      diagnostics: [],
+    }));
+    const layout = createPersonaMemoryRoot({
+      'preferences.md': '# Preferences\n\nThis should not reach worker context.',
+    });
+    const { submitLiveSessionParallelPromptCapability } = await import('./liveSessionCapability.js');
+
+    await submitLiveSessionParallelPromptCapability(
+      { conversationId: 'session-parallel-worker', text: 'run a parallel attempt', includePersonaMemory: true } as never,
+      { ...createContext(), getDesktopRootLayout: () => layout },
+    );
+
+    expect(queuePromptContextMock).not.toHaveBeenCalled();
   });
 
   it('publishes replayable media and context with prompt-submitted events', async () => {

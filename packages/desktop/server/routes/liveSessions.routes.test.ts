@@ -1,3 +1,4 @@
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -112,6 +113,33 @@ vi.mock('node:fs', () => ({
 
 vi.mock('@neon-pilot/core', () => ({
   getStateRoot: vi.fn(() => '/tmp/neon-pilot-state'),
+  resolveDesktopRootLayout: vi.fn(({ root = '/desktop-root' }: { root?: string } = {}) => ({
+    root,
+    apps: `${root}/apps`,
+    data: `${root}/data`,
+    dataApps: `${root}/data/apps`,
+    dataDocuments: `${root}/data/documents`,
+    documents: `${root}/documents`,
+    agents: `${root}/agents`,
+    logs: `${root}/logs`,
+    logsDesktop: `${root}/logs/desktop`,
+    logsDaemon: `${root}/logs/daemon`,
+    logsTelemetry: `${root}/logs/telemetry`,
+    system: `${root}/system`,
+    systemAgents: `${root}/system/agents`,
+    systemApps: `${root}/system/apps`,
+    systemCache: `${root}/system/cache`,
+    systemConfig: `${root}/system/config`,
+    systemConversations: `${root}/system/conversations`,
+    systemSessions: `${root}/system/conversations/sessions`,
+    systemDaemon: `${root}/system/daemon`,
+    systemElectron: `${root}/system/electron`,
+    systemElectronUserData: `${root}/system/electron/user-data`,
+    systemObservability: `${root}/system/observability`,
+    systemRuntime: `${root}/system/runtime`,
+    systemSecrets: `${root}/system/secrets`,
+    systemState: `${root}/system/state`,
+  })),
   resolveConversationAttachmentPromptFiles: resolveConversationAttachmentPromptFilesMock,
   writeAppTelemetryEvent: writeAppTelemetryEventMock,
 }));
@@ -294,6 +322,7 @@ function createDesktopHarness(options?: {
     flushLiveDeferredResumes: options?.flushLiveDeferredResumes ?? (async () => {}),
     getRuntimeScope: () => 'assistant',
     getDefaultWebCwd: () => '/default-cwd',
+    getDesktopRootLayout: () => resolveDesktopRootLayout({ root: '/desktop-root' }),
     getRepoRoot: () => '/repo',
     listMemoryDocs: options?.listMemoryDocs ?? (() => []),
     listTasksForRuntimeScope: options?.listTasksForRuntimeScope ?? (() => []),

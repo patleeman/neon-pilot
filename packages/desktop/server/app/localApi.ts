@@ -925,6 +925,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
     getDefaultWebCwd: context.getDefaultWebCwd,
+    getDesktopRootLayout: context.getDesktopRootLayout,
     buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
     buildLiveSessionResourceOptionsAsync: context.buildLiveSessionResourceOptionsAsync,
     buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
@@ -3371,7 +3372,7 @@ export async function createDesktopLiveSession(input: {
   const startedAtMs = performance.now();
   const { context, perf: contextSetupPerf } = await getLocalLiveSessionCapabilityContextWithPerf();
   const contextReadyAtMs = performance.now();
-  const created = await createLiveSessionCapability(input, context);
+  const created = await createLiveSessionCapability({ ...input, includePersonaMemory: true }, context);
   const createdAtMs = performance.now();
 
   // Log timing to stderr so the user can see where time is spent.
@@ -3442,7 +3443,7 @@ export async function submitDesktopLiveSessionPrompt(input: {
   referencedKnowledgeFileIds: string[];
   referencedAttachmentIds: string[];
 }> {
-  return submitLiveSessionPromptCapability(input, await getLocalLiveSessionCapabilityContext());
+  return submitLiveSessionPromptCapability({ ...input, includePersonaMemory: true }, await getLocalLiveSessionCapabilityContext());
 }
 
 export async function submitDesktopConversationMessage(input: {
@@ -3482,7 +3483,7 @@ export async function submitDesktopConversationMessage(input: {
     targetConversationId = resumed.id || conversationId;
   }
 
-  return submitLiveSessionPromptCapability({ ...input, conversationId: targetConversationId }, context);
+  return submitLiveSessionPromptCapability({ ...input, conversationId: targetConversationId, includePersonaMemory: true }, context);
 }
 
 export async function submitDesktopLiveSessionParallelPrompt(input: {

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { resolveConversationAttachmentPromptFiles } from '@neon-pilot/core';
+import { type DesktopRootLayout, resolveConversationAttachmentPromptFiles } from '@neon-pilot/core';
 import {
   listPendingBackgroundRunResults,
   loadDaemonConfig,
@@ -11,6 +11,7 @@ import {
 } from '@neon-pilot/daemon';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { listPersonaMemoryDocs } from '../knowledge/personaMemoryDocs.js';
 import {
   buildReferencedMemoryDocsContext,
   buildReferencedTasksContext,
@@ -81,6 +82,7 @@ export interface LiveSessionCapabilityContext {
     lastAttemptCount?: number;
   }>;
   listMemoryDocs: () => MemoryDocSummary[];
+  getDesktopRootLayout: () => DesktopRootLayout;
 }
 
 export interface PrewarmLiveSessionCapabilityInput {
@@ -105,6 +107,8 @@ export interface CreateLiveSessionCapabilityInput {
   surfaceId?: string;
   allowedToolNames?: string[];
   reservedSessionFile?: string;
+  /** When true, persona memory markdown files from <desktop-root>/agents are queued as prompt context. Direct user chat only. */
+  includePersonaMemory?: boolean;
 }
 
 export interface CreateLiveSessionCapabilityResult {
@@ -168,6 +172,8 @@ export interface SubmitLiveSessionPromptCapabilityInput {
   relatedConversationIds?: unknown;
   surfaceId?: string;
   injectedTurn?: InjectedTurnEnvelopeOptions;
+  /** When true, persona memory markdown files from <desktop-root>/agents are queued as prompt context. Direct user chat only. */
+  includePersonaMemory?: boolean;
 }
 
 export interface SubmitLiveSessionParallelPromptCapabilityInput {
@@ -273,6 +279,7 @@ async function submitInitialPromptForCreatedSession(
       contextMessages: input.contextMessages,
       relatedConversationIds: input.relatedConversationIds,
       surfaceId: input.surfaceId,
+      ...(input.includePersonaMemory ? { includePersonaMemory: true } : {}),
     },
     context,
   );
@@ -342,6 +349,19 @@ function buildBackgroundRunInternalContext(entries: Array<{ prompt: string }>): 
   }
 
   return lines.join('\n');
+}
+
+function buildPersonaMemoryContext(agentsDir: string): string {
+  const docs = listPersonaMemoryDocs(agentsDir);
+  if (docs.length === 0) return '';
+  return [
+    'Persona memory:',
+    ...docs.map((doc) => {
+      const header = `## ${doc.title}`;
+      const source = `path: ${doc.path}`;
+      return [header, source, '', doc.content.trim()].filter(Boolean).join('\n');
+    }),
+  ].join('\n\n');
 }
 
 function resolveDaemonRoot(): string {
@@ -898,6 +918,7 @@ async function prepareLiveSessionPrompt(
     surfaceId?: string;
   },
   context: LiveSessionCapabilityContext,
+  options: { includePersonaMemory?: boolean } = {},
 ): Promise<PreparedLiveSessionPrompt> {
   const conversationId = input.conversationId.trim();
   if (!conversationId) {
@@ -1001,7 +1022,10 @@ async function prepareLiveSessionPrompt(
   ]);
   const attachedConversationContextDocs = readConversationContextDocs(conversationId).filter((doc) => !referencedPaths.has(doc.path));
 
+  const personaMemoryContext = options.includePersonaMemory ? buildPersonaMemoryContext(context.getDesktopRootLayout().agents) : '';
+
   const queuedContextBlocks = [
+    personaMemoryContext,
     attachedConversationContextDocs.length > 0 ? buildAttachedConversationContextDocsContext(attachedConversationContextDocs) : '',
     referencedAttachments.length > 0 ? buildConversationAttachmentsContext(referencedAttachments) : '',
     referencedTasks.length > 0 ? buildReferencedTasksContext(referencedTasks, context.getRepoRoot()) : '',
@@ -1056,7 +1080,7 @@ export async function submitLiveSessionPromptCapability(
   perf?: Record<string, number>;
 }> {
   const startedAtMs = performance.now();
-  const prepared = await prepareLiveSessionPrompt(input, context);
+  const prepared = await prepareLiveSessionPrompt(input, context, { includePersonaMemory: input.includePersonaMemory === true });
   const preparedAtMs = performance.now();
   const behavior = normalizePromptBehavior(input.behavior);
   const liveConversationId = await ensureConversationPromptTargetLive(prepared.conversationId, context);

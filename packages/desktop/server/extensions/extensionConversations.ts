@@ -174,6 +174,7 @@ export function createExtensionConversationsCapability(
         | 'buildLiveSessionResourceOptionsAsync'
         | 'flushLiveDeferredResumes'
         | 'getDefaultWebCwd'
+        | 'getDesktopRootLayout'
         | 'getRepoRoot'
         | 'getSettingsFile'
         | 'listMemoryDocs'
@@ -312,6 +313,7 @@ export function createExtensionConversationsCapability(
       getRuntimeScope: runtimeScope,
       getRepoRoot: serverContext?.getRepoRoot ?? (() => process.env.NEON_PILOT_REPO_ROOT || process.cwd()),
       getDefaultWebCwd: serverContext?.getDefaultWebCwd ?? (() => resolveDesktopRootLayout().root),
+      getDesktopRootLayout: serverContext?.getDesktopRootLayout ?? resolveDesktopRootLayout,
       buildLiveSessionResourceOptions:
         serverContext?.buildLiveSessionResourceOptions ?? (() => buildLiveSessionResourceOptionsForRuntime()),
       ...(serverContext?.buildLiveSessionResourceOptionsAsync

@@ -53,6 +53,7 @@ Pick the shortest path for what you are doing:
 - [Inbox](inbox.md) — host-owned attention queue backed by the shared documents store
 - [Activity](activity.md) — app-wide feed for conversations, workers, and background work
 - [Activity tree](activity-tree.md) — shared model for conversations, executions, and future sidebar sub-items
+- [Persona memory](persona-memory.md) — Phase 4 file-backed persona memory loading boundary
 - [Performance diagnostics](performance-diagnostics.md) — renderer timing tripwires for conversation load and API latency
 - [SQLite migrations](sqlite-migrations.md) — shared versioned schema migration framework
 - [Setup readiness audit](setup-readiness-audit.md) — readiness indicator contract, registered setup items, and app-path QA expectations

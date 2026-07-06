@@ -23,6 +23,10 @@ let getDefaultWebCwdFn: () => string = () => {
   throw new Error('live session routes not initialized');
 };
 
+let getDesktopRootLayoutFn: ServerRouteContext['getDesktopRootLayout'] = () => {
+  throw new Error('live session routes not initialized');
+};
+
 let buildLiveSessionResourceOptionsFn: (profile?: string) => Record<string, unknown> = () => ({
   additionalExtensionPaths: [],
   additionalSkillPaths: [],
@@ -66,6 +70,7 @@ function initializeLiveSessionRoutesContext(
     | 'getRuntimeScope'
     | 'getRepoRoot'
     | 'getDefaultWebCwd'
+    | 'getDesktopRootLayout'
     | 'buildLiveSessionResourceOptions'
     | 'buildLiveSessionExtensionFactories'
     | 'flushLiveDeferredResumes'
@@ -76,6 +81,7 @@ function initializeLiveSessionRoutesContext(
   getRuntimeScopeFn = context.getRuntimeScope;
   getRepoRootFn = context.getRepoRoot;
   getDefaultWebCwdFn = context.getDefaultWebCwd;
+  getDesktopRootLayoutFn = context.getDesktopRootLayout;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
   buildLiveSessionExtensionFactoriesFn = context.buildLiveSessionExtensionFactories;
   flushLiveDeferredResumesFn = context.flushLiveDeferredResumes;
@@ -125,6 +131,7 @@ function getLiveSessionCapabilityContext(): LiveSessionCapabilityContext {
     getRuntimeScope: getRuntimeScopeFn,
     getRepoRoot: getRepoRootFn,
     getDefaultWebCwd: getDefaultWebCwdFn,
+    getDesktopRootLayout: getDesktopRootLayoutFn,
     buildLiveSessionResourceOptions: buildLiveSessionResourceOptionsFn,
     buildLiveSessionExtensionFactories: buildLiveSessionExtensionFactoriesFn,
     flushLiveDeferredResumes: flushLiveDeferredResumesFn,
@@ -185,6 +192,7 @@ export async function handleLiveSessionPrompt(req: Request, res: Response): Prom
         contextMessages: req.body?.contextMessages,
         relatedConversationIds: req.body?.relatedConversationIds,
         surfaceId: readRequestSurfaceId(req.body),
+        includePersonaMemory: true,
       },
       getLiveSessionCapabilityContext(),
     );
@@ -234,6 +242,7 @@ export function registerLiveSessionRoutes(
     | 'getRuntimeScope'
     | 'getRepoRoot'
     | 'getDefaultWebCwd'
+    | 'getDesktopRootLayout'
     | 'buildLiveSessionResourceOptions'
     | 'buildLiveSessionExtensionFactories'
     | 'flushLiveDeferredResumes'

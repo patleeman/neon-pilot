@@ -227,6 +227,7 @@ function liveSessionContext(context: ServerRouteContext) {
     getRuntimeScope: context.getRuntimeScope,
     getRepoRoot: context.getRepoRoot,
     getDefaultWebCwd: context.getDefaultWebCwd,
+    getDesktopRootLayout: context.getDesktopRootLayout,
     buildLiveSessionResourceOptions: context.buildLiveSessionResourceOptions,
     buildLiveSessionExtensionFactories: context.buildLiveSessionExtensionFactories,
     flushLiveDeferredResumes: context.flushLiveDeferredResumes,
