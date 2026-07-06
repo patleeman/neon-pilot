@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 export type ConversationContextDocKind = 'doc' | 'file';
 
@@ -19,12 +19,30 @@ interface StoredConversationContextDocsDocument {
   attachedContextDocs: ConversationContextDocRef[];
 }
 
-function resolveConversationContextDocsStateRoot(stateRoot: string = getStateRoot()): string {
-  return join(stateRoot, 'pi-agent', 'state', 'conversation-context-docs');
+type ConversationContextDocsRoot = string | DesktopRootLayout;
+
+export function resolveConversationContextDocsDirFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.data, 'conversations', 'context-docs');
 }
 
-function resolveConversationContextDocsPath(conversationId: string, stateRoot?: string): string {
-  return join(resolveConversationContextDocsStateRoot(stateRoot), `${encodeURIComponent(conversationId)}.json`);
+export function resolveConversationContextDocsPathFromLayout(layout: DesktopRootLayout, conversationId: string): string {
+  return join(resolveConversationContextDocsDirFromLayout(layout), `${encodeURIComponent(conversationId)}.json`);
+}
+
+function resolveConversationContextDocsDir(root?: ConversationContextDocsRoot): string {
+  if (root && typeof root !== 'string') {
+    return resolveConversationContextDocsDirFromLayout(root);
+  }
+
+  return join(root ?? getStateRoot(), 'pi-agent', 'state', 'conversation-context-docs');
+}
+
+function resolveConversationContextDocsPath(conversationId: string, root?: ConversationContextDocsRoot): string {
+  if (root && typeof root !== 'string') {
+    return resolveConversationContextDocsPathFromLayout(root, conversationId);
+  }
+
+  return join(resolveConversationContextDocsDir(root), `${encodeURIComponent(conversationId)}.json`);
 }
 
 function normalizeConversationId(value: string): string {
@@ -104,9 +122,9 @@ function readStoredConversationContextDocsDocument(path: string): StoredConversa
   }
 }
 
-export function readConversationContextDocs(conversationIdInput: string, stateRoot?: string): ConversationContextDocRef[] {
+export function readConversationContextDocs(conversationIdInput: string, root?: ConversationContextDocsRoot): ConversationContextDocRef[] {
   const conversationId = normalizeConversationId(conversationIdInput);
-  const path = resolveConversationContextDocsPath(conversationId, stateRoot);
+  const path = resolveConversationContextDocsPath(conversationId, root);
   if (!existsSync(path)) {
     return [];
   }
@@ -122,7 +140,7 @@ export function readConversationContextDocs(conversationIdInput: string, stateRo
 export function writeConversationContextDocs(input: {
   conversationId: string;
   attachedContextDocs: unknown;
-  stateRoot?: string;
+  stateRoot?: ConversationContextDocsRoot;
 }): ConversationContextDocRef[] {
   const conversationId = normalizeConversationId(input.conversationId);
   const attachedContextDocs = normalizeContextDocRefs(input.attachedContextDocs);
@@ -133,7 +151,7 @@ export function writeConversationContextDocs(input: {
     return [];
   }
 
-  mkdirSync(resolveConversationContextDocsStateRoot(input.stateRoot), { recursive: true });
+  mkdirSync(resolveConversationContextDocsDir(input.stateRoot), { recursive: true });
   const document: StoredConversationContextDocsDocument = {
     version: 1,
     conversationId,
