@@ -4,21 +4,25 @@ import { SessionManager } from '@earendil-works/pi-coding-agent';
 import {
   ensureConversationAttentionBaselines,
   getActivityConversationLink,
+  getStateRoot,
   listDeferredResumeRecords,
   listProfileActivityEntries,
   loadDeferredResumeState,
   loadProfileActivityReadState,
   markConversationAttentionRead,
   markConversationAttentionUnread,
+  resolveDesktopRootLayout,
   summarizeConversationAttention,
 } from '@neon-pilot/core';
 import { loadDaemonConfig, resolveDaemonPaths } from '@neon-pilot/daemon';
 
 import { type DeferredResumeSummary } from '../automation/deferredResumes.js';
+import { getDocumentsStore } from '../documents/store.js';
 import { readSavedModelPreferences } from '../models/modelPreferences.js';
 import { publishAppEvent, publishConversationRuntimeState } from '../shared/appEvents.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
 import { type SavedUiPreferences } from '../ui/uiPreferences.js';
+import { writeConversationActivityEntry } from './conversationActivityProducers.js';
 import {
   hasConversationCatalogRows,
   isConversationCatalogComplete,
@@ -643,14 +647,39 @@ export function updateStoredVisibleCustomMessage(input: Parameters<typeof update
 }
 
 export function renameStoredConversation(conversationId: string, nextName: string): ReturnType<typeof renameStoredConversationSession> {
+  const previousMeta = readSessionMeta(conversationId);
+  const previousTitle = previousMeta?.title;
+
   const renamed = renameStoredConversationSession(conversationId, nextName);
   upsertConversationCatalogSession(renamed);
+
+  try {
+    const store = getDocumentsStore(getStateRoot(), resolveDesktopRootLayout());
+    writeConversationActivityEntry(store, conversationId, 'renamed', nextName, {
+      ...(previousTitle ? { previousTitle } : {}),
+    });
+  } catch {
+    // Activity entry is best-effort; rename succeeds regardless.
+  }
+
   return renamed;
 }
 
 export function deleteStoredConversations(conversationIds: string[]): DeleteSessionsResult {
+  const titlesById = new Map(conversationIds.map((id) => [id, readSessionMeta(id)?.title || 'Unknown']));
+
   const result = deleteStoredConversationSessions(conversationIds);
   clearConversationSessionCaches();
+
+  try {
+    const store = getDocumentsStore(getStateRoot(), resolveDesktopRootLayout());
+    for (const deleted of result.deleted) {
+      writeConversationActivityEntry(store, deleted.id, 'deleted', titlesById.get(deleted.id) || 'Unknown');
+    }
+  } catch {
+    // Activity entry is best-effort; delete succeeds regardless.
+  }
+
   return result;
 }
 

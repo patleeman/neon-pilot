@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs';
 
 import { type ExtensionFactory, SessionManager } from '@earendil-works/pi-coding-agent';
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import type { Express } from 'express';
 
+import { writeConversationActivityEntry } from '../conversations/conversationActivityProducers.js';
 import { readConversationAutoModeStateFromSessionManager, writeConversationAutoModeState } from '../conversations/conversationAutoMode.js';
 import { recoverConversationCapability } from '../conversations/conversationRecovery.js';
 import {
@@ -18,6 +20,7 @@ import {
   registry as liveRegistry,
   setLiveSessionAutoModeState,
 } from '../conversations/liveSessions.js';
+import { getDocumentsStore } from '../documents/store.js';
 import { logError } from '../middleware/index.js';
 import { publishAppEvent } from '../shared/appEvents.js';
 import type { LiveSessionResourceOptions, ServerRouteContext } from './context.js';
@@ -38,16 +41,31 @@ let buildLiveSessionExtensionFactoriesFn: () => ExtensionFactory[] = () => [];
 
 let flushLiveDeferredResumesFn: () => Promise<void> = async () => {};
 
+let getStateRootFn: () => string = () => {
+  throw new Error('getStateRoot not initialized for conversation state routes');
+};
+
+let getDesktopRootLayoutFn: () => DesktopRootLayout = () => {
+  throw new Error('getDesktopRootLayout not initialized for conversation state routes');
+};
+
 function initializeConversationStateRoutesContext(
   context: Pick<
     ServerRouteContext,
-    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
+    | 'getRuntimeScope'
+    | 'buildLiveSessionResourceOptions'
+    | 'buildLiveSessionExtensionFactories'
+    | 'flushLiveDeferredResumes'
+    | 'getStateRoot'
+    | 'getDesktopRootLayout'
   >,
 ): void {
   getRuntimeScopeFn = context.getRuntimeScope;
   buildLiveSessionResourceOptionsFn = context.buildLiveSessionResourceOptions;
   buildLiveSessionExtensionFactoriesFn = context.buildLiveSessionExtensionFactories;
   flushLiveDeferredResumesFn = context.flushLiveDeferredResumes;
+  getStateRootFn = context.getStateRoot;
+  getDesktopRootLayoutFn = context.getDesktopRootLayout;
 }
 
 function resolveConversationSource(conversationId: string) {
@@ -72,7 +90,12 @@ export function registerConversationStateRoutes(
   router: Pick<Express, 'get' | 'post' | 'patch'>,
   context: Pick<
     ServerRouteContext,
-    'getRuntimeScope' | 'buildLiveSessionResourceOptions' | 'buildLiveSessionExtensionFactories' | 'flushLiveDeferredResumes'
+    | 'getRuntimeScope'
+    | 'buildLiveSessionResourceOptions'
+    | 'buildLiveSessionExtensionFactories'
+    | 'flushLiveDeferredResumes'
+    | 'getStateRoot'
+    | 'getDesktopRootLayout'
   >,
 ): void {
   initializeConversationStateRoutesContext(context);
@@ -158,6 +181,16 @@ export function registerConversationStateRoutes(
         parentSessionFile: source.sessionFile,
         parentSessionId: conversationId,
       });
+
+      try {
+        const store = getDocumentsStore(getStateRootFn(), getDesktopRootLayoutFn());
+        writeConversationActivityEntry(store, conversationId, 'duplicated', source.meta?.title || 'Unknown', {
+          sourceConversationId: conversationId,
+          newConversationId: result.id,
+        });
+      } catch {
+        // Activity entry is best-effort; duplicate succeeds regardless.
+      }
 
       publishConversationSessionMetaChanged(conversationId, result.id);
       res.json({ newSessionId: result.id, sessionFile: result.sessionFile });

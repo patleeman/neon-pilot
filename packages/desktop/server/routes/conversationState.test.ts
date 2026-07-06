@@ -20,12 +20,16 @@ const live = vi.hoisted(() => ({
 const middleware = vi.hoisted(() => ({ logError: vi.fn() }));
 const appEvents = vi.hoisted(() => ({ publishAppEvent: vi.fn() }));
 const liveRoutes = vi.hoisted(() => ({ ensureRequestControlsLocalLiveConversation: vi.fn() }));
+const activityProducers = vi.hoisted(() => ({ writeConversationActivityEntry: vi.fn() }));
+const docsStore = vi.hoisted(() => ({ getDocumentsStore: vi.fn(() => ({})) }));
 
 vi.mock('node:fs', () => fs);
 vi.mock('@earendil-works/pi-coding-agent', () => ({ SessionManager: sessionManager }));
 vi.mock('../conversations/conversationAutoMode.js', () => autoMode);
 vi.mock('../conversations/conversationRecovery.js', () => recovery);
 vi.mock('../conversations/conversationService.js', () => service);
+vi.mock('../conversations/conversationActivityProducers.js', () => activityProducers);
+vi.mock('../documents/store.js', () => docsStore);
 vi.mock('../conversations/liveSessions.js', () => live);
 vi.mock('../middleware/index.js', () => middleware);
 vi.mock('../shared/appEvents.js', () => appEvents);
@@ -50,6 +54,8 @@ function setupRouter() {
     buildLiveSessionResourceOptionsAsync: vi.fn(async () => ({ resources: 'async' })),
     buildLiveSessionExtensionFactories: vi.fn(() => ['factory']),
     flushLiveDeferredResumes: vi.fn(),
+    getStateRoot: vi.fn(() => '/tmp/test-state-root'),
+    getDesktopRootLayout: vi.fn(() => ({ root: '/tmp/test-desktop-root', dataDocuments: '/tmp/test-docs', dataApps: '/tmp/test-apps' })),
   };
   registerConversationStateRoutes(router, context as never);
   return { routes, context };
@@ -132,7 +138,7 @@ describe('conversationState routes', () => {
   it('duplicates live or persisted conversations and records offshoot metadata', async () => {
     const { routes, context } = setupRouter();
     const handler = routes.get('POST /api/conversations/:id/duplicate')!;
-    service.readConversationSessionMeta.mockReturnValue({ cwd: '/repo', file: '/session.json' });
+    service.readConversationSessionMeta.mockReturnValue({ cwd: '/repo', file: '/session.json', title: 'Source title' });
     live.createSessionFromExisting.mockResolvedValue({ id: 'copy-1', sessionFile: '/copy.json' });
     const response = res();
 
@@ -149,6 +155,13 @@ describe('conversationState routes', () => {
       parentSessionFile: '/session.json',
       parentSessionId: 'conv-1',
     });
+    expect(activityProducers.writeConversationActivityEntry).toHaveBeenCalledWith(
+      expect.any(Object),
+      'conv-1',
+      'duplicated',
+      'Source title',
+      expect.objectContaining({ sourceConversationId: 'conv-1', newConversationId: 'copy-1' }),
+    );
     expect(service.publishConversationSessionMetaChanged).toHaveBeenCalledWith('conv-1', 'copy-1');
     expect(response.json).toHaveBeenCalledWith({ newSessionId: 'copy-1', sessionFile: '/copy.json' });
   });

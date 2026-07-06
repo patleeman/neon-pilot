@@ -39,6 +39,10 @@ const {
   scheduleConversationSearchIndexingMock,
   statSyncMock,
   summarizeConversationAttentionMock,
+  writeConversationActivityEntryMock,
+  getDocumentsStoreMock,
+  deleteStoredConversationsMock,
+  deleteStoredConversationClearCacheMock,
 } = vi.hoisted(() => ({
   SessionManagerOpenMock: vi.fn(),
   ensureConversationAttentionBaselinesMock: vi.fn(),
@@ -78,6 +82,10 @@ const {
   scheduleConversationSearchIndexingMock: vi.fn(),
   statSyncMock: vi.fn(),
   summarizeConversationAttentionMock: vi.fn(),
+  writeConversationActivityEntryMock: vi.fn(),
+  getDocumentsStoreMock: vi.fn(() => ({})),
+  deleteStoredConversationsMock: vi.fn(() => ({ deleted: [], missing: [] })),
+  deleteStoredConversationClearCacheMock: vi.fn(),
 }));
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -135,6 +143,16 @@ vi.mock('./sessions.js', () => ({
   readSessionBlocksWithTelemetry: readSessionBlocksWithTelemetryMock,
   readSessionMeta: readSessionMetaMock,
   renameStoredSession: renameStoredSessionMock,
+  clearSessionCaches: deleteStoredConversationClearCacheMock,
+  deleteSessions: deleteStoredConversationsMock,
+}));
+
+vi.mock('../documents/store.js', () => ({
+  getDocumentsStore: getDocumentsStoreMock,
+}));
+
+vi.mock('./conversationActivityProducers.js', () => ({
+  writeConversationActivityEntry: writeConversationActivityEntryMock,
 }));
 
 vi.mock('./conversationCatalog.js', () => ({
@@ -165,6 +183,7 @@ vi.mock('../models/modelPreferences.js', () => ({
 }));
 
 import {
+  deleteStoredConversations,
   getRuntimeScope,
   listAllLiveSessions,
   listConversationSessionsSnapshot,
@@ -231,6 +250,10 @@ describe('conversationService', () => {
     scheduleConversationSearchIndexingMock.mockReset();
     statSyncMock.mockReset();
     summarizeConversationAttentionMock.mockReset();
+    writeConversationActivityEntryMock.mockReset();
+    getDocumentsStoreMock.mockClear();
+    deleteStoredConversationsMock.mockReset();
+    deleteStoredConversationClearCacheMock.mockReset();
 
     existsSyncMock.mockReturnValue(true);
     getActivityConversationLinkMock.mockReturnValue(undefined);
@@ -244,6 +267,7 @@ describe('conversationService', () => {
     hasConversationCatalogRowsMock.mockReturnValue(false);
     isConversationCatalogCompleteMock.mockReturnValue(false);
     listConversationCatalogSessionsMock.mockReturnValue([]);
+    deleteStoredConversationsMock.mockReturnValue({ deleted: [], missing: [] });
     listSessionsMock.mockReturnValue([]);
     readConversationCatalogSessionMock.mockReturnValue(null);
     loadDaemonConfigMock.mockImplementation(() => {
@@ -518,11 +542,48 @@ describe('conversationService', () => {
       messageCount: 3,
     };
     renameStoredSessionMock.mockReturnValue(renamed);
+    readSessionMetaMock.mockReturnValue({ title: 'Previous conversation' });
 
     expect(renameStoredConversation('conversation-1', 'Renamed conversation')).toBe(renamed);
 
     expect(renameStoredSessionMock).toHaveBeenCalledWith('conversation-1', 'Renamed conversation');
     expect(upsertConversationCatalogSessionMock).toHaveBeenCalledWith(renamed);
+    expect(writeConversationActivityEntryMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      'conversation-1',
+      'renamed',
+      'Renamed conversation',
+      { previousTitle: 'Previous conversation' },
+    );
+  });
+
+  it('writes activity only for stored conversations that were deleted', () => {
+    readSessionMetaMock.mockImplementation((id: string) =>
+      id === 'conversation-1'
+        ? { title: 'Deleted conversation' }
+        : id === 'missing-conversation'
+          ? { title: 'Missing conversation' }
+          : null,
+    );
+    deleteStoredConversationsMock.mockReturnValue({
+      deleted: [{ id: 'conversation-1', file: '/sessions/conversation-1.jsonl' }],
+      missing: ['missing-conversation'],
+    });
+
+    expect(deleteStoredConversations(['conversation-1', 'missing-conversation'])).toEqual({
+      deleted: [{ id: 'conversation-1', file: '/sessions/conversation-1.jsonl' }],
+      missing: ['missing-conversation'],
+    });
+
+    expect(deleteStoredConversationsMock).toHaveBeenCalledWith(['conversation-1', 'missing-conversation']);
+    expect(deleteStoredConversationClearCacheMock).toHaveBeenCalled();
+    expect(writeConversationActivityEntryMock).toHaveBeenCalledTimes(1);
+    expect(writeConversationActivityEntryMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      'conversation-1',
+      'deleted',
+      'Deleted conversation',
+    );
   });
 
   it('passes positive snapshot limits into catalog reads', () => {
