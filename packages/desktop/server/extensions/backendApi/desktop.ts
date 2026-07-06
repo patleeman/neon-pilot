@@ -1,5 +1,3 @@
-import { callServerModuleExport } from './serverModuleResolver.js';
-
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 
 type ExtensionBackendApiGlobal = typeof globalThis & {
@@ -21,9 +19,9 @@ export async function captureDesktopScreenshot(input: unknown): Promise<unknown>
 }
 
 export async function readDesktopState(): Promise<unknown> {
-  return callServerModuleExport('../../desktop/desktopState.js', 'readDesktopStateSnapshot');
+  return requireDesktopCapabilityBridge()('desktop', 'state');
 }
 
 export async function readDesktopUserActionEvents(input?: unknown): Promise<unknown> {
-  return callServerModuleExport('../../desktop/desktopEventReader.js', 'readDesktopUserActionEvents', input);
+  return requireDesktopCapabilityBridge()('desktop', 'events', input);
 }

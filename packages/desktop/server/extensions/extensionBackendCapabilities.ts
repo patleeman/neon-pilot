@@ -2271,6 +2271,12 @@ async function dispatchDesktopCapability(request: ExtensionBackendWorkerCapabili
   if (request.operation === 'screenshot') {
     return callServerModuleExport('../../desktop/desktopScreenshot.js', 'issueDesktopScreenshotRequest', request.input);
   }
+  if (request.operation === 'state') {
+    return callServerModuleExport('../../desktop/desktopState.js', 'readDesktopStateSnapshot');
+  }
+  if (request.operation === 'events') {
+    return callServerModuleExport('../../desktop/desktopEventReader.js', 'readDesktopUserActionEvents', request.input);
+  }
   throw new Error(`Unsupported desktop capability operation: ${request.operation}`);
 }
 

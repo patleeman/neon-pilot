@@ -22,7 +22,14 @@ describe('backendApi/desktop', () => {
     delete extensionBackendApiGlobal[EXTENSION_HOST_CAPABILITY_BRIDGE];
   });
 
-  it('forwards desktop user-action event reads through the server module resolver', async () => {
+  it('requires an active extension capability bridge before desktop user-action event reads', async () => {
+    await expect(readDesktopUserActionEvents({ lastEventId: 'prev-1' })).rejects.toThrow(
+      'Desktop control requires an active extension host capability bridge.',
+    );
+    expect(callServerModuleExport).not.toHaveBeenCalled();
+  });
+
+  it('forwards desktop user-action event reads through the active extension capability bridge', async () => {
     const events = [
       {
         id: 'desktop-user-action-test-1',
@@ -32,15 +39,22 @@ describe('backendApi/desktop', () => {
         createdAt: '2026-07-06T00:00:00.000Z',
       },
     ];
-    callServerModuleExport.mockResolvedValue(events);
+    const bridge = vi.fn().mockResolvedValue(events);
+    extensionBackendApiGlobal[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
 
     await expect(readDesktopUserActionEvents({ lastEventId: 'prev-1' })).resolves.toEqual(events);
-    expect(callServerModuleExport).toHaveBeenCalledWith('../../desktop/desktopEventReader.js', 'readDesktopUserActionEvents', {
+    expect(bridge).toHaveBeenCalledWith('desktop', 'events', {
       lastEventId: 'prev-1',
     });
+    expect(callServerModuleExport).not.toHaveBeenCalled();
   });
 
-  it('forwards desktop state reads through the server module resolver', async () => {
+  it('requires an active extension capability bridge before desktop state reads', async () => {
+    await expect(readDesktopState()).rejects.toThrow('Desktop control requires an active extension host capability bridge.');
+    expect(callServerModuleExport).not.toHaveBeenCalled();
+  });
+
+  it('forwards desktop state reads through the active extension capability bridge', async () => {
     const state = {
       windows: [],
       focusedWindowId: null,
@@ -49,10 +63,12 @@ describe('backendApi/desktop', () => {
       revision: null,
       publisherId: null,
     };
-    callServerModuleExport.mockResolvedValue(state);
+    const bridge = vi.fn().mockResolvedValue(state);
+    extensionBackendApiGlobal[EXTENSION_HOST_CAPABILITY_BRIDGE] = bridge;
 
     await expect(readDesktopState()).resolves.toEqual(state);
-    expect(callServerModuleExport).toHaveBeenCalledWith('../../desktop/desktopState.js', 'readDesktopStateSnapshot');
+    expect(bridge).toHaveBeenCalledWith('desktop', 'state');
+    expect(callServerModuleExport).not.toHaveBeenCalled();
   });
 
   it('requires an active extension capability bridge before desktop control commands', async () => {
