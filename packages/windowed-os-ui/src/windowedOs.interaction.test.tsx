@@ -288,6 +288,27 @@ describe('StartMenu interactions', () => {
 
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
+
+  it('renders app metadata in Start menu tiles', () => {
+    render(
+      <StartMenu
+        open
+        items={[
+          {
+            id: 'knowledge',
+            title: 'Knowledge',
+            accent: 'apps',
+            meta: 'Search and manage your team knowledge base.',
+            onSelect: () => undefined,
+          },
+        ]}
+        onClose={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Knowledge' })).toBeTruthy();
+    expect(screen.getByText('Search and manage your team knowledge base.').getAttribute('aria-hidden')).toBe('true');
+  });
 });
 
 describe('Taskbar interactions', () => {

@@ -268,6 +268,51 @@ describe('windowed app registry', () => {
     expect(app!.window).toEqual({ allowMultiple: true, singleton: false });
   });
 
+  it('propagates extension manifest description to app registration', () => {
+    const apps = buildWindowedAppRegistry(
+      registry([
+        {
+          id: 'knowledge-ext',
+          name: 'Knowledge Base',
+          enabled: true,
+          description: 'Search and manage your team knowledge base.',
+          contributes: {
+            nav: [{ id: 'knowledge', label: 'Knowledge', route: '/knowledge' }],
+          },
+        },
+        {
+          id: 'code-ext',
+          name: 'Code Review',
+          enabled: true,
+          description: 'Review pull requests and manage code patches.',
+          contributes: {
+            views: [{ id: 'reviews', title: 'Reviews', location: 'main', route: '/reviews' }],
+          },
+        },
+        {
+          id: 'no-description-ext',
+          name: 'No Desc',
+          enabled: true,
+          contributes: {
+            nav: [{ id: 'simple', label: 'Simple', route: '/simple' }],
+          },
+        },
+      ]),
+    );
+
+    const knowledgeApp = apps.find((a) => a.title === 'Knowledge');
+    expect(knowledgeApp).toBeDefined();
+    expect(knowledgeApp!.description).toBe('Search and manage your team knowledge base.');
+
+    const reviewsApp = apps.find((a) => a.title === 'Reviews');
+    expect(reviewsApp).toBeDefined();
+    expect(reviewsApp!.description).toBe('Review pull requests and manage code patches.');
+
+    const simpleApp = apps.find((a) => a.title === 'Simple');
+    expect(simpleApp).toBeDefined();
+    expect(simpleApp!.description).toBeUndefined();
+  });
+
   it('preserves current behavior when appearance is omitted', () => {
     const apps = buildWindowedAppRegistry(
       registry([

@@ -1495,6 +1495,7 @@ export interface StartMenuItem {
   id: string;
   title: string;
   aliases?: readonly string[];
+  meta?: string;
   accent?: AppAccent;
   count?: number;
   focused?: boolean;
@@ -1618,7 +1619,7 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
               onFocus={() => setActiveIndex(index)}
               onClick={() => selectItemFromClick(item)}
             >
-              <WindowedAppTile label={item.title} accent={item.accent} count={item.count} />
+              <WindowedAppTile label={item.title} accent={item.accent} count={item.count} meta={item.meta} />
             </button>
           ))
         ) : (

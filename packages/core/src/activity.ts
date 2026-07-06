@@ -34,6 +34,7 @@ export interface ResolveActivityOptions {
   profile: string;
   stateRoot?: string;
   repoRoot?: string;
+  layout?: DesktopRootLayout;
 }
 
 export interface ResolveActivityEntryPathOptions extends ResolveActivityOptions {
@@ -63,6 +64,9 @@ export function validateActivityId(activityId: string): void {
 
 export function resolveProfileActivityStateDir(options: ResolveActivityOptions): string {
   validateProfileName(options.profile);
+  if (options.layout) {
+    return resolveProfileActivityStateDirFromLayout(options.layout, options.profile);
+  }
   return join(getActivityStateRoot(options.stateRoot), 'pi-agent', 'state', 'activity', options.profile);
 }
 
@@ -94,6 +98,9 @@ export function resolveProfileActivityDbPathFromLayout(layout: DesktopRootLayout
 
 export function resolveProfileActivityDir(options: ResolveActivityOptions): string {
   validateProfileName(options.profile);
+  if (options.layout) {
+    return resolveProfileActivityDirFromLayout(options.layout, options.profile);
+  }
   return join(resolveProfileActivityStateDir(options), 'activities');
 }
 
@@ -101,16 +108,25 @@ export function resolveActivityEntryPath(options: ResolveActivityEntryPathOption
   validateProfileName(options.profile);
   validateActivityId(options.activityId);
 
+  if (options.layout) {
+    return resolveActivityEntryPathFromLayout(options.layout, options.profile, options.activityId);
+  }
   return join(resolveProfileActivityDir(options), `${options.activityId}.md`);
 }
 
 export function resolveActivityReadStatePath(options: ResolveActivityOptions): string {
   validateProfileName(options.profile);
+  if (options.layout) {
+    return resolveActivityReadStatePathFromLayout(options.layout, options.profile);
+  }
   return join(resolveProfileActivityStateDir(options), 'read-state.json');
 }
 
 export function resolveProfileActivityDbPath(options: ResolveActivityOptions): string {
   validateProfileName(options.profile);
+  if (options.layout) {
+    return resolveProfileActivityDbPathFromLayout(options.layout, options.profile);
+  }
   return join(resolveProfileActivityStateDir(options), 'runtime.db');
 }
 
@@ -330,6 +346,7 @@ export function writeProfileActivityEntry(options: {
   entry: ProjectActivityEntryDocument;
   stateRoot?: string;
   repoRoot?: string;
+  layout?: DesktopRootLayout;
 }): string {
   validateActivityId(options.entry.id);
   const db = openActivityDb(options, true);
@@ -348,6 +365,7 @@ export function writeProfileActivityEntry(options: {
   ).run(options.entry.id, options.entry.createdAt, serializeActivityEntry(options.entry));
 
   return buildActivityStoragePath({
+    layout: options.layout,
     stateRoot: options.stateRoot,
     profile: options.profile,
     activityId: options.entry.id,
@@ -400,6 +418,7 @@ export function listProfileActivityEntries(options: ResolveActivityOptions): Sto
       entries.push(
         hydrateStoredActivityEntry(
           {
+            layout: options.layout,
             stateRoot: options.stateRoot,
             profile: options.profile,
             activityId: row.id,

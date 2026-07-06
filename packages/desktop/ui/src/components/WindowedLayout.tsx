@@ -2452,6 +2452,7 @@ export function WindowedLayout() {
     return {
       id: app.id,
       title: app.title,
+      meta: app.description,
       aliases: app.aliases ?? canonicalWindowedAppAliases(app.title),
       accent: app.accent,
       count: matchingWindows.length > 1 ? matchingWindows.length : undefined,

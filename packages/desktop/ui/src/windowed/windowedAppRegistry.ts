@@ -14,6 +14,7 @@ export interface WindowedAppRuntimeOwner {
 export interface WindowedAppRegistration {
   id: string;
   title: string;
+  description?: string;
   route: string;
   kind: WindowedLauncherKind;
   source: WindowedAppSource;
@@ -99,6 +100,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
     .filter((extension) => extension.enabled)
     .flatMap((extension) => {
       const appearance = extension.contributes?.appearance ?? null;
+      const description = extension.description;
 
       const navItems = (extension.contributes?.nav ?? []).flatMap((item): WindowedAppRegistration[] => {
         if (!item.route || seenRoutes.has(item.route) || seenTitles.has(item.label)) return [];
@@ -109,6 +111,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
           title: item.label,
           route: item.route,
           appearance,
+          description,
         });
         seenRoutes.add(app.route);
         seenTitles.add(app.title);
@@ -124,6 +127,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
           title: view.title,
           route: view.route,
           appearance,
+          description,
         });
         seenRoutes.add(app.route);
         seenTitles.add(app.title);
@@ -163,6 +167,7 @@ function createAppPackageWindowedAppRegistration(input: {
   title: string;
   route: string;
   appearance?: ExtensionAppearanceContribution | null;
+  description?: string;
 }): WindowedAppRegistration {
   const accent = input.appearance?.accent ?? accentForTitle(input.title);
   const singleton = input.appearance?.singleton ?? true;
@@ -171,6 +176,7 @@ function createAppPackageWindowedAppRegistration(input: {
   return {
     id: `${input.packageId}:${input.id}`,
     title: input.title,
+    description: input.description,
     route: input.route,
     kind: 'route',
     source: 'app-package',
