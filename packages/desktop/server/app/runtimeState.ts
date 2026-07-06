@@ -33,7 +33,7 @@ export interface CreateRuntimeStateOptions {
   settingsFile: string;
   stateRoot: string;
   logger: RuntimeStateLogger;
-  desktopRootLayout?: DesktopRootLayout;
+  desktopRootLayout: DesktopRootLayout;
 }
 
 export interface RuntimeState {
@@ -171,19 +171,19 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries,
-      ...(desktopRootLayout ? { desktopRootLayout } : {}),
+      desktopRootLayout,
     });
     const modelRef = readSavedModelRef(settingsFile);
     const skills = buildSkillInjectionPlan({
       runtimeScope,
       repoRoot,
-      ...(desktopRootLayout ? { desktopRootLayout } : {}),
+      desktopRootLayout,
     });
     const promptTemplates = buildPromptTemplatePlan({
       runtimeScope,
       repoRoot,
       modelRef,
-      ...(desktopRootLayout ? { desktopRootLayout } : {}),
+      desktopRootLayout,
     });
     liveSessionResourceOptionsCache = {
       key: JSON.stringify({ runtimeScope, modelRef, extensionEntries }),
@@ -209,6 +209,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const skills = buildSkillInjectionPlan({
       runtimeScope,
       repoRoot,
+      desktopRootLayout,
     });
     writeRuntimeMcpConfig(skills.skillPaths);
     watchRuntimeMcpConfig(skills.skillPaths);
@@ -414,7 +415,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries,
-      ...(desktopRootLayout ? { desktopRootLayout } : {}),
+      desktopRootLayout,
     });
     const resourcesAtMs = performance.now();
     materializeRuntimeResourcesToAgentDir(resolved, agentDir);
@@ -424,7 +425,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       runtimeScope,
       repoRoot,
       modelRef,
-      ...(desktopRootLayout ? { desktopRootLayout } : {}),
+      desktopRootLayout,
     };
     const skills = buildSkillInjectionPlan(assemblyContext);
     const skillsAtMs = performance.now();
@@ -489,7 +490,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       const resolved = resolveRuntimeResources(runtimeScope, {
         repoRoot,
         extensionEntries,
-        ...(desktopRootLayout ? { desktopRootLayout } : {}),
+        desktopRootLayout,
       });
       const resourcesAtMs = performance.now();
       materializeRuntimeResourcesToAgentDir(resolved, agentDir);
@@ -498,7 +499,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         runtimeScope,
         repoRoot,
         modelRef,
-        ...(desktopRootLayout ? { desktopRootLayout } : {}),
+        desktopRootLayout,
       };
       const skillsPromise = buildSkillInjectionPlanAsync(assemblyContext);
       const skillsDispatchedAtMs = performance.now();
@@ -550,7 +551,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
     const resolved = resolveRuntimeResources(runtimeScope, {
       repoRoot,
       extensionEntries: listRuntimeExtensionBackendEntries(),
-      ...(desktopRootLayout ? { desktopRootLayout } : {}),
+      desktopRootLayout,
     });
     const runtimeAgentDir = mkdtempSync(join(tmpdir(), 'neon-pilot-web-runtime-inspect-'));
     materializeRuntimeResourcesToAgentDir(resolved, runtimeAgentDir);

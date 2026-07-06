@@ -22,6 +22,7 @@ import {
   renderCliCommandHelp,
   renderCliCommandList,
   renderCliUsage,
+  resolveDesktopRootLayout,
   resolveNeonPilotRuntimeChannel,
   selectCliCommandMatch,
   stripCliGlobalFlags,
@@ -85,6 +86,7 @@ function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
     agentDir,
     settingsFile,
     stateRoot,
+    desktopRootLayout: resolveDesktopRootLayout(),
     logger: {
       warn: (message, fields) => {
         const suffix = fields ? ` ${JSON.stringify(fields)}` : '';

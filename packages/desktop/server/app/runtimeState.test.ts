@@ -123,6 +123,34 @@ const resolvedShared = {
   themeEntries: ['/themes/shared.json'],
 } as const;
 
+const desktopRootLayout = {
+  root: '/desktop-root',
+  apps: '/desktop-root/apps',
+  data: '/desktop-root/data',
+  dataApps: '/desktop-root/data/apps',
+  dataDocuments: '/desktop-root/data/documents',
+  documents: '/desktop-root/documents',
+  agents: '/desktop-root/agents',
+  logs: '/desktop-root/logs',
+  logsDesktop: '/desktop-root/logs/desktop',
+  logsDaemon: '/desktop-root/logs/daemon',
+  logsTelemetry: '/desktop-root/logs/telemetry',
+  system: '/desktop-root/system',
+  systemAgents: '/desktop-root/system/agents',
+  systemApps: '/desktop-root/system/apps',
+  systemCache: '/desktop-root/system/cache',
+  systemConfig: '/desktop-root/system/config',
+  systemConversations: '/desktop-root/system/conversations',
+  systemSessions: '/desktop-root/system/conversations/sessions',
+  systemDaemon: '/desktop-root/system/daemon',
+  systemElectron: '/desktop-root/system/electron',
+  systemElectronUserData: '/desktop-root/system/electron/user-data',
+  systemObservability: '/desktop-root/system/observability',
+  systemRuntime: '/desktop-root/system/runtime',
+  systemSecrets: '/desktop-root/system/secrets',
+  systemState: '/desktop-root/system/state',
+} as const;
+
 function createLogger() {
   return {
     warn: vi.fn(),
@@ -135,6 +163,7 @@ function createTestRuntimeState(input: { logger?: ReturnType<typeof createLogger
     agentDir: '/agent-dir',
     settingsFile: '/runtime/settings.json',
     stateRoot: '/state-root',
+    desktopRootLayout,
     logger: input.logger ?? createLogger(),
   });
 }
@@ -412,7 +441,7 @@ describe('createRuntimeState', () => {
     await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
       additionalSkillPaths: ['/skills/after-refresh'],
     });
-    expect(buildSkillInjectionPlanMock).toHaveBeenCalledWith({ runtimeScope: 'shared', repoRoot: '/repo-root' });
+    expect(buildSkillInjectionPlanMock).toHaveBeenCalledWith({ runtimeScope: 'shared', repoRoot: '/repo-root', desktopRootLayout });
     expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(2);
     expect(writeMergedMcpConfigFileMock).toHaveBeenCalledWith(expect.objectContaining({ skillDirs: ['/skills/sync'] }));
   });

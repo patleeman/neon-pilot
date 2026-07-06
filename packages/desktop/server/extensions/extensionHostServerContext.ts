@@ -1,6 +1,6 @@
 import { dirname } from 'node:path';
 
-import type { DesktopRootLayout } from '@neon-pilot/core';
+import { type DesktopRootLayout, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 import { createRuntimeState, type RuntimeState } from '../app/runtimeState.js';
 import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
@@ -45,7 +45,7 @@ export function createExtensionBackendServerContextFromSnapshot(
       agentDir,
       settingsFile,
       stateRoot,
-      ...(snapshot.desktopRootLayout ? { desktopRootLayout: snapshot.desktopRootLayout } : {}),
+      desktopRootLayout: snapshot.desktopRootLayout ?? resolveDesktopRootLayout(),
       logger: { warn: () => undefined },
     });
     return runtimeState;
