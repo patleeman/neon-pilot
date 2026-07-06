@@ -11,6 +11,7 @@ const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
 export interface ResolveActivityConversationLinkOptions {
   profile: string;
   stateRoot?: string;
+  layout?: DesktopRootLayout;
 }
 
 export interface ResolveActivityConversationLinkPathOptions extends ResolveActivityConversationLinkOptions {
@@ -80,6 +81,20 @@ export function resolveActivityConversationLinkPathFromLayout(layout: DesktopRoo
   return join(resolveProfileActivityConversationLinksDirFromLayout(layout, profile), `${activityId}.json`);
 }
 
+function resolveLinkPathWithLayout(options: ResolveActivityConversationLinkPathOptions): string {
+  if (options.layout) {
+    return resolveActivityConversationLinkPathFromLayout(options.layout, options.profile, options.activityId);
+  }
+  return resolveActivityConversationLinkPath(options);
+}
+
+function resolveLinksDirWithLayout(options: ResolveActivityConversationLinkOptions): string {
+  if (options.layout) {
+    return resolveProfileActivityConversationLinksDirFromLayout(options.layout, options.profile);
+  }
+  return resolveProfileActivityConversationLinksDir(options);
+}
+
 export function readActivityConversationLink(path: string): ActivityConversationLinkDocument {
   const parsed = JSON.parse(readFileSync(path, 'utf-8')) as Partial<ActivityConversationLinkDocument>;
   const activityId = typeof parsed.activityId === 'string' ? parsed.activityId.trim() : '';
@@ -97,7 +112,7 @@ export function readActivityConversationLink(path: string): ActivityConversation
 }
 
 export function getActivityConversationLink(options: ResolveActivityConversationLinkPathOptions): ActivityConversationLinkDocument | null {
-  const path = resolveActivityConversationLinkPath(options);
+  const path = resolveLinkPathWithLayout(options);
   if (!existsSync(path)) {
     return null;
   }
@@ -111,13 +126,15 @@ export function getActivityConversationLink(options: ResolveActivityConversation
 
 export function writeActivityConversationLink(options: {
   stateRoot?: string;
+  layout?: DesktopRootLayout;
   profile: string;
   document: ActivityConversationLinkDocument;
 }): string {
   validateProfileName(options.profile);
   validateActivityId(options.document.activityId);
 
-  const path = resolveActivityConversationLinkPath({
+  const path = resolveLinkPathWithLayout({
+    layout: options.layout,
     stateRoot: options.stateRoot,
     profile: options.profile,
     activityId: options.document.activityId,
@@ -129,7 +146,7 @@ export function writeActivityConversationLink(options: {
     relatedConversationIds: normalizeRelatedConversationIds(options.document.relatedConversationIds),
   };
 
-  mkdirSync(resolveProfileActivityConversationLinksDir({ stateRoot: options.stateRoot, profile: options.profile }), {
+  mkdirSync(resolveLinksDirWithLayout({ layout: options.layout, stateRoot: options.stateRoot, profile: options.profile }), {
     recursive: true,
   });
   writeFileSync(path, JSON.stringify(normalized, null, 2) + '\n');
@@ -138,6 +155,7 @@ export function writeActivityConversationLink(options: {
 
 export function setActivityConversationLinks(options: {
   stateRoot?: string;
+  layout?: DesktopRootLayout;
   profile: string;
   activityId: string;
   relatedConversationIds: string[];
@@ -157,14 +175,25 @@ export function setActivityConversationLinks(options: {
 
   writeActivityConversationLink({
     stateRoot: options.stateRoot,
+    layout: options.layout,
     profile: options.profile,
     document,
   });
 
-  return getActivityConversationLink({ stateRoot: options.stateRoot, profile: options.profile, activityId: options.activityId });
+  return getActivityConversationLink({
+    stateRoot: options.stateRoot,
+    layout: options.layout,
+    profile: options.profile,
+    activityId: options.activityId,
+  });
 }
 
-export function clearActivityConversationLinks(options: { stateRoot?: string; profile: string; activityId: string }): void {
-  const path = resolveActivityConversationLinkPath(options);
+export function clearActivityConversationLinks(options: {
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+  profile: string;
+  activityId: string;
+}): void {
+  const path = resolveLinkPathWithLayout(options);
   rmSync(path, { force: true });
 }

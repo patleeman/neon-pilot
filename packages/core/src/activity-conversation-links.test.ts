@@ -101,6 +101,50 @@ describe('activity conversation links', () => {
     });
   });
 
+  it('writes and reads an activity conversation link document with a DesktopRootLayout', () => {
+    const systemState = createTempDir('neon-pilot-activity-conversation-links-layout-state-');
+    const layout = { systemState } as Pick<DesktopRootLayout, 'systemState'>;
+
+    setActivityConversationLinks({
+      layout: layout as DesktopRootLayout,
+      profile: 'assistant',
+      activityId: 'daily-report',
+      relatedConversationIds: ['conv-123', 'conv-456', 'conv-123'],
+      updatedAt: '2026-03-12T11:00:00.000Z',
+    });
+
+    const path = resolveActivityConversationLinkPathFromLayout(layout as DesktopRootLayout, 'assistant', 'daily-report');
+    expect(existsSync(path)).toBe(true);
+    expect(getActivityConversationLink({ layout: layout as DesktopRootLayout, profile: 'assistant', activityId: 'daily-report' })).toEqual({
+      activityId: 'daily-report',
+      updatedAt: '2026-03-12T11:00:00.000Z',
+      relatedConversationIds: ['conv-123', 'conv-456'],
+    });
+  });
+
+  it('clears a DesktopRootLayout-backed activity conversation link document', () => {
+    const systemState = createTempDir('neon-pilot-activity-conversation-links-layout-state-');
+    const layout = { systemState } as Pick<DesktopRootLayout, 'systemState'>;
+
+    setActivityConversationLinks({
+      layout: layout as DesktopRootLayout,
+      profile: 'assistant',
+      activityId: 'daily-report',
+      relatedConversationIds: ['conv-123'],
+      updatedAt: '2026-03-12T11:00:00.000Z',
+    });
+
+    const path = resolveActivityConversationLinkPathFromLayout(layout as DesktopRootLayout, 'assistant', 'daily-report');
+    expect(existsSync(path)).toBe(true);
+
+    clearActivityConversationLinks({ layout: layout as DesktopRootLayout, profile: 'assistant', activityId: 'daily-report' });
+
+    expect(existsSync(path)).toBe(false);
+    expect(
+      getActivityConversationLink({ layout: layout as DesktopRootLayout, profile: 'assistant', activityId: 'daily-report' }),
+    ).toBeNull();
+  });
+
   it('rejects invalid updatedAt values before writing', () => {
     const stateRoot = createTempDir('neon-pilot-activity-conversation-links-state-');
 
