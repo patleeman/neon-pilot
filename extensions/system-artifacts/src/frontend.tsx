@@ -7,11 +7,8 @@ const LazyArtifactDetailPanel = lazy(async () => ({ default: (await import('./pa
 const LazyArtifactTranscriptRenderer = lazy(async () => ({ default: (await import('./panels.js')).ArtifactTranscriptRenderer }));
 const fallback = <QuietLoadingState label="Loading artifacts surface" />;
 
-function loadingFallback(props: ExtensionSurfaceProps, label: string): ReactNode {
-  if (props.context?.shellPresentation === 'windowed') {
-    return <WindowedLoadingState label={label} />;
-  }
-  return <QuietLoadingState label={label} />;
+function loadingFallback(label: string): ReactNode {
+  return <WindowedLoadingState label={label} />;
 }
 
 export function ArtifactTranscriptRenderer(props: never) {
@@ -23,14 +20,14 @@ export function ArtifactTranscriptRenderer(props: never) {
 }
 export function ArtifactsPanel(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={loadingFallback(props, 'Loading artifacts surface')}>
+    <Suspense fallback={loadingFallback('Loading artifacts surface')}>
       <LazyArtifactsPanel {...props} />
     </Suspense>
   );
 }
 export function ArtifactDetailPanel(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={loadingFallback(props, 'Loading artifacts surface')}>
+    <Suspense fallback={loadingFallback('Loading artifacts surface')}>
       <LazyArtifactDetailPanel {...props} />
     </Suspense>
   );

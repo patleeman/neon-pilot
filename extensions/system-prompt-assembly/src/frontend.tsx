@@ -1,19 +1,16 @@
 import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
-import { QuietLoadingState, WindowedLoadingState } from '@neon-pilot/extensions/ui';
+import { WindowedLoadingState } from '@neon-pilot/extensions/ui';
 import React, { lazy, type ReactNode, Suspense } from 'react';
 
 const LazyPromptAssemblyPage = lazy(async () => ({ default: (await import('./page.js')).PromptAssemblyPage }));
 
-function loadingFallback(props: ExtensionSurfaceProps, label: string): ReactNode {
-  if (props.context?.shellPresentation === 'windowed') {
-    return <WindowedLoadingState label={label} />;
-  }
-  return <QuietLoadingState label={label} />;
+function loadingFallback(label: string): ReactNode {
+  return <WindowedLoadingState label={label} />;
 }
 
 export function PromptAssemblyPage(props: ExtensionSurfaceProps) {
   return (
-    <Suspense fallback={loadingFallback(props, 'Loading prompt assembly page')}>
+    <Suspense fallback={loadingFallback('Loading prompt assembly page')}>
       <LazyPromptAssemblyPage {...props} />
     </Suspense>
   );
