@@ -15,6 +15,7 @@ Examples:
 - sessions, session metadata, transcript/detail/bootstrap reads, blocks, search, and summaries
 - conversation assets: artifacts, checkpoints, attachments, attachment downloads, review context, and diffs
 - scheduled tasks, durable runs, execution projections, task/run logs, cancel/rerun/attention mutations
+- read-only semantic desktop state for agent inspection, such as window ids, routes, focus, bounds, z-order, and app metadata
 - models, providers, provider auth, default cwd, conversation workspace layout, title settings, conversation model preferences
 - knowledge/workspace trees, files, searches, diffs, and explicit file mutations
 - extension routes, extension manager operations, OAuth callbacks, downloads, webhooks, and gateway APIs
@@ -22,6 +23,8 @@ Examples:
 HTTP responses must be bounded, paginated, or streamed. Large binary/text payloads should flow as bytes/streams instead of deeply nested objects.
 
 Conversation aggregate reads follow a snapshot-plus-delta contract. The initial route/bootstrap read uses HTTP for the bounded aggregate snapshot. If a realtime subscriber detects a revision gap, it should request the missing range with the aggregate delta HTTP endpoint before refreshing the full snapshot. Snapshot fallback is for expired or intentionally capped delta ranges, not the normal recovery path.
+
+Windowed desktop state is renderer-published and backend-readable through `/api/desktop/state`. The route stores only sanitized, semantic window metadata for agents; it must not expose screenshots, DOM snapshots, raw pixels, or desktop-control verbs. The renderer includes a publisher generation and monotonic revision so the backend can ignore stale in-flight publications while accepting fresh state after a renderer reload.
 
 ### WebSocket: realtime events and control
 

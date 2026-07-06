@@ -15,6 +15,7 @@ import type {
   ExtensionSlashCommandRegistration,
   ExtensionSurfaceSummary,
 } from '../extensions/types';
+import type { DesktopStateListResult, DesktopStateSnapshot } from '../shared/types';
 import type {
   AppTelemetryLogBundleExport,
   AppTelemetryLogDiagnostics,
@@ -581,6 +582,16 @@ export const api = {
     del<ModelProviderState>(`/model-providers/${encodeURIComponent(provider)}/models/${encodeURIComponent(modelId)}`),
   defaultCwd: async () => get<DefaultCwdState>('/default-cwd'),
   tools: async () => get<ToolsState>('/tools'),
+  desktopState: async () => get<DesktopStateListResult>('/desktop/state'),
+  publishDesktopState: async (snapshot: DesktopStateSnapshot) =>
+    post<{
+      ok: true;
+      windows: DesktopStateSnapshot['windows'];
+      publishedAt: string;
+      revision: number | null;
+      publisherId: string | null;
+      ignored?: true;
+    }>('/desktop/state', snapshot),
   setModel: async (model: string) =>
     patch<{ currentModel: string | null; currentThinkingLevel?: string | null; currentServiceTier?: string | null }>('/model-preferences', {
       model,

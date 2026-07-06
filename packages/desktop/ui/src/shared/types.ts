@@ -2271,3 +2271,73 @@ export interface UnifiedSettingsEntry {
   placeholder?: string;
   order: number;
 }
+
+// ── Windowed desktop semantic state (read-only agent slice) ──────────────────
+//
+// `DesktopStateSnapshot` is the renderer-published, agent-readable view of the
+// Windowed OS desktop. The renderer (WindowedLayout) constructs and publishes
+// it; the desktop backend stores the latest snapshot and exposes it read-only
+// to agents through the local API. No control verbs or screenshots here.
+
+export type DesktopStateWindowKind = 'chat' | 'route' | 'terminal' | 'browser' | 'files';
+
+export interface DesktopStateWindowBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DesktopStateWindowRouteMetadata {
+  /** Canonical app id (e.g. "system-notes") for route windows, when known. */
+  appId?: string;
+  /** Chat session id for chat windows, when known. */
+  sessionId?: string;
+  /** Whether the window is a singleton desktop app. */
+  singleton?: boolean;
+}
+
+export interface DesktopStateWindow {
+  id: string;
+  kind: DesktopStateWindowKind;
+  title: string;
+  route: string;
+  bounds: DesktopStateWindowBounds;
+  /** True when the user is currently interacting with this window. */
+  focused: boolean;
+  /** True when the window is collapsed to the taskbar. */
+  minimized: boolean;
+  /** True when the window is currently snapped to the full desktop work area. */
+  maximized: boolean;
+  /** Render z-order; higher paints above lower. 0 when minimized. */
+  zIndex: number;
+  /** Parent window id for tool child windows attached to a chat window. */
+  parentWindowId?: string;
+  parentWindowTitle?: string;
+  /** Working directory the owning chat surface scoped the window to. */
+  workspaceCwd?: string | null;
+  routeMetadata?: DesktopStateWindowRouteMetadata;
+}
+
+export interface DesktopStateSnapshot {
+  windows: DesktopStateWindow[];
+  /** Stable id of the window currently receiving input, when present. */
+  focusedWindowId?: string | null;
+  /** Resolved windowed OS theme applied to the desktop shell. */
+  theme?: 'light' | 'dark';
+  /** ISO timestamp of the most recent renderer publication. */
+  publishedAt: string;
+  /** Monotonic renderer-side sequence number used to ignore stale arrivals. */
+  revision: number;
+  /** Stable id for the current renderer publisher generation. */
+  publisherId: string;
+}
+
+export interface DesktopStateListResult {
+  windows: DesktopStateWindow[];
+  focusedWindowId: string | null;
+  theme: 'light' | 'dark' | null;
+  publishedAt: string | null;
+  revision: number | null;
+  publisherId: string | null;
+}

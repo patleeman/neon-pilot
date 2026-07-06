@@ -11,6 +11,7 @@ import { WindowedLayout } from './WindowedLayout';
 import { WINDOWED_SHELL_BROWSER_SUSPEND_EVENT } from './workbench/workbenchBrowserEvents';
 
 const mocks = vi.hoisted(() => ({
+  publishDesktopState: vi.fn(() => Promise.resolve({ ok: true })),
   layout: vi.fn(({ children }: { children?: ReactNode }) => (
     <div data-testid="embedded-layout">
       embedded layout
@@ -126,6 +127,12 @@ vi.mock('../extensions/useExtensionRegistry', () => ({
   }),
 }));
 
+vi.mock('../client/api', () => ({
+  api: {
+    publishDesktopState: mocks.publishDesktopState,
+  },
+}));
+
 vi.mock('../hooks/useConversations', () => ({
   useConversations: () => ({
     pinnedSessions: mocks.pinnedSessions,
@@ -210,6 +217,7 @@ describe('WindowedLayout route windows', () => {
     delete window.neonPilotDesktop;
     mocks.layout.mockClear();
     mocks.archiveSession.mockClear();
+    mocks.publishDesktopState.mockClear();
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
@@ -3470,5 +3478,181 @@ describe('WindowedLayout route windows', () => {
     expect(screen.getByRole('region', { name: /new conversation/i }).getAttribute('data-focused')).toBe('true');
     expect(screen.queryByRole('region', { name: /notes/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /notes/i })).toBeNull();
+  });
+});
+
+describe('WindowedLayout desktop state publishing', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.history.pushState({}, '', '/');
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+    delete window.neonPilotDesktop;
+    mocks.layout.mockClear();
+    mocks.archiveSession.mockClear();
+    mocks.publishDesktopState.mockClear();
+    mocks.registryLoading = false;
+    mocks.pinnedSessions = [];
+    mocks.tabs = [];
+    mocks.conversationsLoading = false;
+    mocks.topBarElements = [];
+    mocks.surfaces = [];
+    mocks.extensions = [
+      {
+        id: 'system-notes',
+        enabled: true,
+        contributes: {
+          nav: [{ id: 'notes', label: 'Notes', route: '/notes' }],
+        },
+      },
+    ];
+  });
+
+  it('publishes a sanitized semantic desktop state snapshot with the draft chat window', async () => {
+    renderWindowedLayout();
+
+    await waitFor(() => {
+      expect(mocks.publishDesktopState).toHaveBeenCalled();
+    });
+
+    const snapshots = mocks.publishDesktopState.mock.calls.map((call) => call[0]);
+    const lastSnapshot = snapshots[snapshots.length - 1]!;
+    expect(lastSnapshot.theme).toMatch(/^(light|dark)$/);
+    expect(lastSnapshot.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(lastSnapshot.revision).toBeGreaterThanOrEqual(1);
+    expect(lastSnapshot.publisherId).toMatch(/^windowed-layout:/);
+    expect(lastSnapshot.focusedWindowId).toBe('chat:draft');
+    const draftWindow = lastSnapshot.windows.find((window: { id: string }) => window.id === 'chat:draft');
+    expect(draftWindow).toMatchObject({
+      id: 'chat:draft',
+      kind: 'chat',
+      title: 'New conversation',
+      route: '/conversations/new',
+      focused: true,
+      minimized: false,
+      maximized: false,
+      routeMetadata: { sessionId: 'draft' },
+    });
+    expect(draftWindow.bounds).toEqual({
+      x: expect.any(Number),
+      y: expect.any(Number),
+      width: expect.any(Number),
+      height: expect.any(Number),
+    });
+    expect(draftWindow.zIndex).toBeGreaterThan(0);
+    expect(draftWindow.workspaceCwd).toBeNull();
+  });
+
+  it('does not republish when an unrelated rerender leaves the desktop state unchanged', async () => {
+    const { rerender } = render(
+      <BrowserRouter>
+        <WindowedLayout />
+      </BrowserRouter>,
+    );
+
+    await waitFor(() => {
+      expect(mocks.publishDesktopState).toHaveBeenCalled();
+    });
+    const firstSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+    mocks.publishDesktopState.mockClear();
+
+    rerender(
+      <BrowserRouter>
+        <WindowedLayout />
+      </BrowserRouter>,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.publishDesktopState).not.toHaveBeenCalled();
+    expect(firstSnapshot.publisherId).toMatch(/^windowed-layout:/);
+  });
+
+  it('reflects focus and z-order changes in subsequent snapshot publications', async () => {
+    seedWindowedWindows([
+      {
+        id: 'chat:draft',
+        kind: 'chat',
+        title: 'New conversation',
+        route: '/conversations/new',
+        bounds: { x: 42, y: 34, width: 700, height: 500 },
+        minimized: false,
+        focused: false,
+      },
+      {
+        id: 'route:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+
+    await screen.findByRole('region', { name: /^notes$/i });
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      expect(lastSnapshot.focusedWindowId).toBe('route:system-notes:notes');
+      const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
+      const draft = lastSnapshot.windows.find((window: { id: string }) => window.id === 'chat:draft');
+      expect(notes.focused).toBe(true);
+      expect(notes.zIndex).toBeGreaterThan(draft.zIndex);
+      expect(notes.routeMetadata).toEqual({ appId: 'system-notes:notes', singleton: true });
+    });
+
+    fireEvent.pointerDown(screen.getByRole('region', { name: /new conversation/i }));
+
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      expect(lastSnapshot.focusedWindowId).toBe('chat:draft');
+      const draft = lastSnapshot.windows.find((window: { id: string }) => window.id === 'chat:draft');
+      const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
+      expect(draft.focused).toBe(true);
+      expect(draft.zIndex).toBeGreaterThan(notes.zIndex);
+    });
+  });
+
+  it('marks maximized windows and clears the flag when restored', async () => {
+    seedWindowedWindows([
+      {
+        id: 'route:notes',
+        kind: 'route',
+        title: 'Notes',
+        route: '/notes',
+        bounds: { x: 90, y: 70, width: 760, height: 520 },
+        minimized: false,
+        focused: true,
+        singleton: true,
+      },
+    ]);
+
+    renderWindowedLayout();
+    const notesWindow = await screen.findByRole('region', { name: /^notes$/i });
+    await waitFor(() => {
+      expect(mocks.publishDesktopState).toHaveBeenCalled();
+    });
+    mocks.publishDesktopState.mockClear();
+
+    fireEvent.click(within(notesWindow).getByRole('button', { name: /maximize notes/i }));
+
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
+      expect(notes.maximized).toBe(true);
+    });
+
+    mocks.publishDesktopState.mockClear();
+    fireEvent.click(within(notesWindow).getByRole('button', { name: /restore notes/i }));
+
+    await waitFor(() => {
+      const lastSnapshot = mocks.publishDesktopState.mock.calls.at(-1)?.[0];
+      const notes = lastSnapshot.windows.find((window: { id: string }) => window.id === 'route:system-notes:notes');
+      expect(notes.maximized).toBe(false);
+    });
   });
 });

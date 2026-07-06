@@ -39,6 +39,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 
+import { api } from '../client/api';
 import { getDesktopBridge } from '../desktop/desktopBridge';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
@@ -49,7 +50,7 @@ import { useConversations } from '../hooks/useConversations';
 import { getTabSessionKey, readBrowserTabsState } from '../local/workbenchBrowserTabs';
 import { ConversationPage } from '../pages/ConversationPage';
 import { HomePage } from '../pages/HomePage';
-import type { SessionMeta } from '../shared/types';
+import type { DesktopStateSnapshot, DesktopStateWindow, SessionMeta } from '../shared/types';
 import {
   boundsForRestoredDragStart,
   boundsForSnapTarget,
@@ -595,6 +596,13 @@ function chatSessionIdForRoute(route: string): string | null {
   }
 }
 
+type DesktopStateSnapshotDraft = Omit<DesktopStateSnapshot, 'publishedAt' | 'revision' | 'publisherId'>;
+
+function createDesktopStatePublisherId(): string {
+  const randomUuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : null;
+  return `windowed-layout:${randomUuid ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}`;
+}
+
 function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[] {
   if (windows.length === 0 || windows.some((windowModel) => windowModel.focused && !windowModel.minimized)) return windows;
   let lastVisibleIndex = -1;
@@ -605,6 +613,53 @@ function ensureFocusedWindow(windows: DesktopWindowModel[]): DesktopWindowModel[
   });
   const index = lastVisibleIndex >= 0 ? lastVisibleIndex : lastTopLevelIndex >= 0 ? lastTopLevelIndex : windows.length - 1;
   return windows.map((windowModel, candidateIndex) => ({ ...windowModel, focused: candidateIndex === index }));
+}
+
+function buildDesktopStateSnapshotDraft(input: {
+  windows: DesktopWindowModel[];
+  visibleWindows: DesktopWindowModel[];
+  focusedWindowId: string | null;
+  restoreBounds: Record<string, WindowBounds>;
+  windowedApps: WindowedAppRegistration[];
+  resolvedTheme: 'light' | 'dark';
+}): DesktopStateSnapshotDraft {
+  const visibleIndexById = new Map(input.visibleWindows.map((windowModel, index) => [windowModel.id, index]));
+  const windows: DesktopStateWindow[] = input.windows.map((windowModel) => {
+    const minimized = windowModel.minimized;
+    const visibleIndex = visibleIndexById.get(windowModel.id);
+    const zIndex = minimized || visibleIndex === undefined ? 0 : 10 + visibleIndex;
+    const windowRecord: DesktopStateWindow = {
+      id: windowModel.id,
+      kind: windowModel.kind,
+      title: windowModel.title,
+      route: windowModel.route,
+      bounds: { ...windowModel.bounds },
+      focused: windowModel.focused && !minimized,
+      minimized,
+      maximized: minimized ? false : Boolean(input.restoreBounds[windowModel.id]),
+      zIndex,
+    };
+    if (windowModel.parentWindowId) windowRecord.parentWindowId = windowModel.parentWindowId;
+    if (windowModel.parentWindowTitle) windowRecord.parentWindowTitle = windowModel.parentWindowTitle;
+    windowRecord.workspaceCwd = windowModel.workspaceCwd ?? null;
+    const routeMetadata: DesktopStateWindow['routeMetadata'] = {};
+    if (windowModel.kind === 'route') {
+      const app = findWindowedAppForRoute(windowModel.route, input.windowedApps);
+      if (app) routeMetadata.appId = app.id;
+      if (app?.window.singleton || windowModel.singleton) routeMetadata.singleton = true;
+    } else if (windowModel.kind === 'chat') {
+      const sessionId = chatSessionIdForRoute(windowModel.route);
+      if (sessionId) routeMetadata.sessionId = sessionId;
+      if (windowModel.singleton) routeMetadata.singleton = true;
+    }
+    if (Object.keys(routeMetadata).length > 0) windowRecord.routeMetadata = routeMetadata;
+    return windowRecord;
+  });
+  return {
+    windows,
+    focusedWindowId: input.focusedWindowId,
+    theme: input.resolvedTheme,
+  };
 }
 
 function canonicalizeRouteWindows(windows: DesktopWindowModel[], apps: WindowedAppRegistration[]): DesktopWindowModel[] {
@@ -1240,6 +1295,9 @@ export function WindowedLayout() {
     [visibleWindows],
   );
   const windowsRef = useRef(windows);
+  const desktopStateRevisionRef = useRef(0);
+  const desktopStatePublisherIdRef = useRef(createDesktopStatePublisherId());
+  const lastPublishedDesktopStateSignatureRef = useRef<string | null>(null);
   const hydratedBrowserRouteRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -1304,6 +1362,35 @@ export function WindowedLayout() {
     writeStoredWindows(windows);
     windowsRef.current = windows;
   }, [windows]);
+
+  const desktopStateSnapshotDraft = useMemo(
+    () =>
+      buildDesktopStateSnapshotDraft({
+        windows,
+        visibleWindows,
+        focusedWindowId,
+        restoreBounds,
+        windowedApps,
+        resolvedTheme: resolveWindowedOsTheme(windowedTheme),
+      }),
+    [restoreBounds, focusedWindowId, windowedApps, windowedTheme, windows],
+  );
+  const desktopStateSnapshotSignature = useMemo(() => JSON.stringify(desktopStateSnapshotDraft), [desktopStateSnapshotDraft]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (lastPublishedDesktopStateSignatureRef.current === desktopStateSnapshotSignature) return;
+    lastPublishedDesktopStateSignatureRef.current = desktopStateSnapshotSignature;
+    const pending = api.publishDesktopState({
+      ...desktopStateSnapshotDraft,
+      publishedAt: new Date().toISOString(),
+      revision: ++desktopStateRevisionRef.current,
+      publisherId: desktopStatePublisherIdRef.current,
+    });
+    if (pending && typeof (pending as Promise<unknown>).then === 'function') {
+      void (pending as Promise<unknown>).catch(() => undefined);
+    }
+  }, [desktopStateSnapshotDraft, desktopStateSnapshotSignature]);
 
   const reconcileWindowBounds = useCallback(() => {
     const rect = desktopRect(desktopRef.current);

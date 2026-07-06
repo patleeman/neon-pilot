@@ -198,6 +198,7 @@ import {
   validateDesktopConversationWorkspaceUpdate,
 } from './localApiConversationWorkspace.js';
 import { buildDesktopConversationWorkspaceResponse } from './localApiConversationWorkspacePresentation.js';
+import { readDesktopStateSnapshot, storeDesktopStateSnapshot } from './localApiDesktopState.js';
 import { buildCriticalExtensionRegistryResponse } from './localApiExtensionRegistryPresentation.js';
 import { validateDesktopModelPreferenceUpdate } from './localApiModelPreferences.js';
 import { buildRelatedConversationResults } from './localApiRelatedConversations.js';
@@ -1254,6 +1255,10 @@ function getDesktopLocalApiErrorStatus(error: unknown): number {
     return 400;
   }
 
+  if (error.name === 'DesktopStateValidationError') {
+    return 400;
+  }
+
   return /\bnot found\b/i.test(error.message) || error.message === '404 Not Found' ? 404 : 500;
 }
 
@@ -1556,6 +1561,12 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   const providerOAuthMatch = /^\/api\/provider-auth\/oauth\/([^/]+)$/.exec(path);
   if (method === 'GET' && providerOAuthMatch) {
     return createDesktopLocalApiJsonResponse(await readDesktopProviderOAuthLogin(decodeURIComponent(providerOAuthMatch[1] ?? '')));
+  }
+  if (method === 'GET' && path === '/api/desktop/state') {
+    return createDesktopLocalApiJsonResponse(readDesktopStateSnapshot());
+  }
+  if (method === 'POST' && path === '/api/desktop/state') {
+    return createDesktopLocalApiJsonResponse(storeDesktopStateSnapshot(input.body as Parameters<typeof storeDesktopStateSnapshot>[0]));
   }
   if (method === 'GET' && path === '/api/conversation-workspace') {
     return createDesktopLocalApiJsonResponse(await readDesktopConversationWorkspace());
