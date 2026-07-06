@@ -2161,8 +2161,9 @@ async function dispatchShellCapability(
 async function dispatchTerminalCapability(request: ExtensionBackendWorkerCapabilityRequest): Promise<unknown> {
   const input = normalizeRecordInput(request.input, 'Terminal');
   if (request.operation === 'create') {
+    const cwd = input.cwd !== undefined ? optionalString(input.cwd, 'Terminal cwd') : request.context?.desktopRootLayout?.root;
     return createTerminalSession({
-      ...(input.cwd !== undefined ? { cwd: optionalString(input.cwd, 'Terminal cwd') } : {}),
+      ...(cwd ? { cwd } : {}),
     });
   }
   if (request.operation === 'write') {

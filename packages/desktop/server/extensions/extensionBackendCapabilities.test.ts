@@ -2049,6 +2049,50 @@ describe('extension backend capability dispatcher', () => {
     expect(terminalSessions.createTerminalSession).toHaveBeenCalledWith({ cwd: '/repo' });
   });
 
+  it('defaults terminal capability creation to the desktop root when cwd is omitted', async () => {
+    terminalSessions.createTerminalSession.mockClear();
+    const desktopRootLayout = resolveDesktopRootLayout({ root: '/desktop-root' });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'terminal',
+          operation: 'create',
+          input: {},
+          context: { desktopRootLayout },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'term-1', pid: 123, usingPty: true, initialOutput: '' });
+
+    expect(terminalSessions.createTerminalSession).toHaveBeenCalledWith({ cwd: '/desktop-root' });
+  });
+
+  it('preserves explicit terminal cwd over the desktop root default', async () => {
+    terminalSessions.createTerminalSession.mockClear();
+    const desktopRootLayout = resolveDesktopRootLayout({ root: '/desktop-root' });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'terminal',
+          operation: 'create',
+          input: { cwd: '/explicit' },
+          context: { desktopRootLayout },
+        }),
+      ),
+    ).resolves.toEqual({ id: 'term-1', pid: 123, usingPty: true, initialOutput: '' });
+
+    expect(terminalSessions.createTerminalSession).toHaveBeenCalledWith({ cwd: '/explicit' });
+  });
+
   it('dispatches host-owned shell spawn handle capability calls', async () => {
     const handle = {
       pid: 123,
