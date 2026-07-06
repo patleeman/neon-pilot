@@ -15,6 +15,7 @@ export default defineConfig({
       '@neon-pilot/extensions/workbench': resolve(repoRoot, 'packages/desktop/ui/src/extensions/workbench.ts'),
       '@neon-pilot/extensions/workbench-browser': resolve(repoRoot, 'packages/desktop/ui/src/extensions/workbench-browser.ts'),
       '@neon-pilot/extensions/workbench-diffs': resolve(repoRoot, 'packages/desktop/ui/src/extensions/workbench-diffs.ts'),
+      '@neon-pilot/extensions/workbench-files': resolve(repoRoot, 'packages/desktop/ui/src/extensions/workbench-files.ts'),
       '@neon-pilot/extensions/host-view-components': resolve(repoRoot, 'packages/extensions/src/host-view-components.ts'),
       '@neon-pilot/extensions/data': resolve(repoRoot, 'packages/desktop/ui/src/extensions/data.ts'),
       '@neon-pilot/extensions/settings': resolve(repoRoot, 'packages/desktop/ui/src/extensions/settings.ts'),
