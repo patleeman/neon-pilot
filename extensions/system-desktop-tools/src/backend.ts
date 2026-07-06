@@ -1,5 +1,10 @@
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
-import { captureDesktopScreenshot, controlDesktop, readDesktopState } from '@neon-pilot/extensions/backend/desktop';
+import {
+  captureDesktopScreenshot,
+  controlDesktop,
+  readDesktopState,
+  readDesktopUserActionEvents,
+} from '@neon-pilot/extensions/backend/desktop';
 
 type TextContent = { type: 'text'; text: string };
 type ImageContent = { type: 'image'; data: string; mimeType: string };
@@ -51,6 +56,14 @@ export async function desktopState(
 ): Promise<{ content: Array<{ type: 'text'; text: string }>; details: unknown }> {
   const state = await readDesktopState();
   return toolResult(state);
+}
+
+export async function desktopWindowEvents(
+  input: unknown,
+  _ctx: ExtensionBackendContext,
+): Promise<{ content: TextContent[]; details: unknown }> {
+  const events = await readDesktopUserActionEvents(input);
+  return toolResult(events);
 }
 
 export async function desktopScreenshot(

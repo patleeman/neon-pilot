@@ -1,19 +1,28 @@
 {
   "extensionId": "system-desktop-tools",
-  "builtAt": "2026-07-06T01:52:08.615Z",
+  "builtAt": "2026-07-06T03:12:39.997Z",
   "frontendEntry": null,
   "backendEntry": "dist/backend.mjs",
   "sourceHashes": [
     {
       "path": "extension.json",
-      "sha256": "5914d8f36a769926172e10fc6baed935c9d72d933630d928b454a274a5a0ad6a"
+      "sha256": "304620bd886f6f6225e501aac29d1b96922ea67863ad678fd4b4102ebe9f0923"
     },
     {
       "path": "src/backend.ts",
-      "sha256": "3ddec6d41a28014a20ffec5e418423137b328fb059ed0e09f9561b4fbc67dd3a"
+      "sha256": "9786e858658445410f49ccd990c39db3b59a6fa233c5eb13436c308b35dc7339"
     }
   ],
   "outputs": [
+    {
+      "path": "dist/backend.mjs",
+      "bytes": 8687,
+      "imports": [
+        "node:fs",
+        "node:path",
+        "node:url"
+      ]
+    },
     {
       "path": "dist/package.json",
       "bytes": 135,
@@ -23,15 +32,6 @@
       "path": "dist/xhr-sync-worker.js",
       "bytes": 1641,
       "imports": []
-    },
-    {
-      "path": "extensions/system-desktop-tools/.dist.tmp-80295-1783302728605/backend.mjs",
-      "bytes": 8360,
-      "imports": [
-        "node:fs",
-        "node:path",
-        "node:url"
-      ]
     }
   ]
 }

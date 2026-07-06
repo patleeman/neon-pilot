@@ -23,3 +23,7 @@ export async function captureDesktopScreenshot(input: unknown): Promise<unknown>
 export async function readDesktopState(): Promise<unknown> {
   return callServerModuleExport('../../desktop/desktopState.js', 'readDesktopStateSnapshot');
 }
+
+export async function readDesktopUserActionEvents(input?: unknown): Promise<unknown> {
+  return callServerModuleExport('../../desktop/desktopEventReader.js', 'readDesktopUserActionEvents', input);
+}

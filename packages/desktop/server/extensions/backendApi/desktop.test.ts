@@ -8,7 +8,7 @@ vi.mock('./serverModuleResolver.js', () => ({
   callServerModuleExport,
 }));
 
-import { captureDesktopScreenshot, controlDesktop, readDesktopState } from './desktop.js';
+import { captureDesktopScreenshot, controlDesktop, readDesktopState, readDesktopUserActionEvents } from './desktop.js';
 
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 
@@ -20,6 +20,24 @@ describe('backendApi/desktop', () => {
   beforeEach(() => {
     callServerModuleExport.mockReset();
     delete extensionBackendApiGlobal[EXTENSION_HOST_CAPABILITY_BRIDGE];
+  });
+
+  it('forwards desktop user-action event reads through the server module resolver', async () => {
+    const events = [
+      {
+        id: 'desktop-user-action-test-1',
+        source: 'user' as const,
+        action: 'focus',
+        windowId: 'chat:draft',
+        createdAt: '2026-07-06T00:00:00.000Z',
+      },
+    ];
+    callServerModuleExport.mockResolvedValue(events);
+
+    await expect(readDesktopUserActionEvents({ lastEventId: 'prev-1' })).resolves.toEqual(events);
+    expect(callServerModuleExport).toHaveBeenCalledWith('../../desktop/desktopEventReader.js', 'readDesktopUserActionEvents', {
+      lastEventId: 'prev-1',
+    });
   });
 
   it('forwards desktop state reads through the server module resolver', async () => {

@@ -133,6 +133,9 @@ async function captureDesktopScreenshot(input) {
 async function readDesktopState() {
   return callServerModuleExport("../../desktop/desktopState.js", "readDesktopStateSnapshot");
 }
+async function readDesktopUserActionEvents(input) {
+  return callServerModuleExport("../../desktop/desktopEventReader.js", "readDesktopUserActionEvents", input);
+}
 
 // extensions/system-desktop-tools/src/backend.ts
 function toolResult(details) {
@@ -172,6 +175,10 @@ async function desktopState(_input, _ctx) {
   const state = await readDesktopState();
   return toolResult(state);
 }
+async function desktopWindowEvents(input, _ctx) {
+  const events = await readDesktopUserActionEvents(input);
+  return toolResult(events);
+}
 async function desktopScreenshot(input, _ctx) {
   const result = await captureDesktopScreenshot(input);
   const details = screenshotDetails(result);
@@ -190,5 +197,6 @@ async function desktopScreenshot(input, _ctx) {
 export {
   desktopControl,
   desktopScreenshot,
-  desktopState
+  desktopState,
+  desktopWindowEvents
 };

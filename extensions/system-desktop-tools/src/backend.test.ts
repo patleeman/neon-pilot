@@ -4,11 +4,17 @@ vi.mock('@neon-pilot/extensions/backend/desktop', () => ({
   captureDesktopScreenshot: vi.fn(),
   controlDesktop: vi.fn(),
   readDesktopState: vi.fn(),
+  readDesktopUserActionEvents: vi.fn(),
 }));
 
-import { captureDesktopScreenshot, controlDesktop, readDesktopState } from '@neon-pilot/extensions/backend/desktop';
+import {
+  captureDesktopScreenshot,
+  controlDesktop,
+  readDesktopState,
+  readDesktopUserActionEvents,
+} from '@neon-pilot/extensions/backend/desktop';
 
-import { desktopControl, desktopScreenshot, desktopState } from './backend.js';
+import { desktopControl, desktopScreenshot, desktopState, desktopWindowEvents } from './backend.js';
 
 function mockContext() {
   return {
@@ -156,5 +162,69 @@ describe('desktopScreenshot', () => {
 
     expect(output.details).toEqual(result);
     expect(output.content).toEqual([{ type: 'text', text: 'desktop_screenshot failed: Window is minimized: chat:draft' }]);
+  });
+});
+
+describe('desktopWindowEvents', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns the recent user action events as tool content and details', async () => {
+    const events = [
+      {
+        id: 'desktop-user-action-test-1',
+        source: 'user' as const,
+        action: 'focus',
+        windowId: 'chat:draft',
+        title: 'New conversation',
+        route: '/conversations/new',
+        createdAt: '2026-07-06T00:00:00.000Z',
+      },
+      {
+        id: 'desktop-user-action-test-2',
+        source: 'user' as const,
+        action: 'close',
+        windowId: 'route:system-notes:notes',
+        title: 'Notes',
+        route: '/notes',
+        createdAt: '2026-07-06T00:00:01.000Z',
+      },
+    ];
+    vi.mocked(readDesktopUserActionEvents).mockResolvedValue(events);
+
+    const result = await desktopWindowEvents({}, mockContext());
+
+    expect(readDesktopUserActionEvents).toHaveBeenCalledWith({});
+    expect(result.details).toEqual(events);
+    expect(result.content).toEqual([{ type: 'text', text: JSON.stringify(events, null, 2) }]);
+  });
+
+  it('passes lastEventId and limit through to the backend seam', async () => {
+    const events = [
+      {
+        id: 'desktop-user-action-test-2',
+        source: 'user' as const,
+        action: 'close',
+        windowId: 'route:system-notes:notes',
+        createdAt: '2026-07-06T00:00:01.000Z',
+      },
+    ];
+    vi.mocked(readDesktopUserActionEvents).mockResolvedValue(events);
+
+    const input = { lastEventId: 'desktop-user-action-test-1', limit: 5 };
+    const result = await desktopWindowEvents(input, mockContext());
+
+    expect(readDesktopUserActionEvents).toHaveBeenCalledWith(input);
+    expect(result.details).toEqual(events);
+  });
+
+  it('returns an empty array when no events are available', async () => {
+    vi.mocked(readDesktopUserActionEvents).mockResolvedValue([]);
+
+    const result = await desktopWindowEvents({}, mockContext());
+
+    expect(result.details).toEqual([]);
+    expect(result.content).toEqual([{ type: 'text', text: '[]' }]);
   });
 });

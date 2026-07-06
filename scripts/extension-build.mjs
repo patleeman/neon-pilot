@@ -482,7 +482,7 @@ function createJsdomWorkerPlugin() {
 function recordBuildOutputs(buildOutputs, metafile) {
   for (const [outputPath, output] of Object.entries(metafile.outputs ?? {})) {
     buildOutputs.push({
-      path: relativeToPackage(outputPath),
+      path: relativeToPackage(resolve(outputPath)),
       bytes: output.bytes ?? 0,
       imports: (output.imports ?? []).map((item) => item.path).sort(),
     });

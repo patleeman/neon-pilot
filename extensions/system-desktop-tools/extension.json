@@ -33,6 +33,14 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "desktopWindowEvents",
+        "handler": "desktopWindowEvents",
+        "title": "Read desktop window events",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
@@ -132,6 +140,34 @@
         "inputSchema": {
           "type": "object",
           "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "id": "desktop-window-events",
+        "name": "desktop_window_events",
+        "title": "Desktop Window Events",
+        "description": "Read recent user action events on agent-touched windows: focus, minimize, restore, close, move, resize, maximize, and snap actions the user has taken since the agent last read events.",
+        "action": "desktopWindowEvents",
+        "promptGuidelines": [
+          "Use the returned event id as lastEventId on subsequent calls to incrementally read new events without reprocessing old ones.",
+          "Events have a bounded buffer (max 100); old events are evicted. Call frequently enough to avoid gaps.",
+          "This is a request-response read of past user actions, not a live stream. For real-time awareness, poll this tool periodically."
+        ],
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lastEventId": {
+              "type": "string",
+              "description": "Return only events after this event id. Omit to get the most recent events."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum events to return (default 50, max 100)."
+            }
+          },
           "additionalProperties": false
         }
       }

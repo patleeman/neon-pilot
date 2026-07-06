@@ -113,6 +113,23 @@ export interface DesktopScreenshotResult {
   error?: string;
 }
 
+export interface DesktopUserActionEvent {
+  id: string;
+  source: 'user';
+  action: string;
+  windowId: string;
+  kind?: string;
+  title?: string;
+  route?: string;
+  createdAt: string;
+}
+
+export interface ReadDesktopUserActionEventsInput {
+  lastEventId?: string;
+  limit?: number;
+}
+
 export const captureDesktopScreenshot = (_input?: DesktopScreenshotInput): Promise<DesktopScreenshotResult> => hostResolved();
 export const controlDesktop = (_input: DesktopControlInput): Promise<DesktopControlResult> => hostResolved();
 export const readDesktopState = (): Promise<DesktopStateListResult> => hostResolved();
+export const readDesktopUserActionEvents = (_input?: ReadDesktopUserActionEventsInput): Promise<DesktopUserActionEvent[]> => hostResolved();
