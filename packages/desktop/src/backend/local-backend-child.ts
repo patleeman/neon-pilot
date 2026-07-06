@@ -215,7 +215,7 @@ async function handleLocalApiRpcRequest(localApi: LocalApiModule, request: Local
 }
 
 async function startDaemon(): Promise<void> {
-  const logPath = join(getStateRoot(), 'desktop', 'logs', 'daemon.log');
+  const logPath = process.env.NEON_PILOT_DESKTOP_DAEMON_LOG_FILE?.trim() || join(getStateRoot(), 'desktop', 'logs', 'daemon.log');
   mkdirSync(dirname(logPath), { recursive: true, mode: 0o700 });
   const logStream = createWriteStream(logPath, { flags: 'a', encoding: 'utf-8' });
   logStream.on('error', () => undefined);

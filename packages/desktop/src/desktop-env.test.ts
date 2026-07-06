@@ -133,6 +133,53 @@ describe('resolveDesktopRuntimePathsForContext', () => {
     expect(result.webDistDir).toBe(join(repoRoot, 'packages', 'desktop', 'ui', 'dist'));
   });
 
+  it('uses legacy stateRoot-based paths when no desktopRoot is configured', () => {
+    const repoRoot = createTempDir('neon-pilot-desktop-dev-');
+    const stateRoot = createTempDir('neon-pilot-desktop-state-');
+    seedDevRepo(repoRoot);
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+
+    const result = resolveDesktopRuntimePathsForContext({
+      currentDir: join(repoRoot, 'packages', 'desktop', 'dist'),
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NEON_PILOT_NODE_PATH: '/custom/node',
+        NEON_PILOT_REPO_ROOT: repoRoot,
+      },
+      execPath: '/ignored/electron',
+      isPackaged: false,
+    });
+
+    expect(result.desktopStateDir).toBe(join(stateRoot, 'desktop'));
+    expect(result.desktopLogsDir).toBe(join(stateRoot, 'desktop', 'logs'));
+    expect(result.desktopConfigFile).toBe(join(stateRoot, 'desktop', 'config.json'));
+  });
+
+  it('uses DesktopRootLayout paths when desktopRoot is provided in context', () => {
+    const repoRoot = createTempDir('neon-pilot-desktop-dev-');
+    const desktopRoot = createTempDir('neon-pilot-desktop-root-');
+    seedDevRepo(repoRoot);
+
+    const result = resolveDesktopRuntimePathsForContext({
+      currentDir: join(repoRoot, 'packages', 'desktop', 'dist'),
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NEON_PILOT_NODE_PATH: '/custom/node',
+        NEON_PILOT_REPO_ROOT: repoRoot,
+      },
+      execPath: '/ignored/electron',
+      isPackaged: false,
+      desktopRoot,
+    });
+
+    expect(result.desktopStateDir).toBe(join(desktopRoot, 'system', 'state'));
+    expect(result.desktopLogsDir).toBe(join(desktopRoot, 'logs', 'desktop'));
+    expect(result.desktopConfigFile).toBe(join(desktopRoot, 'system', 'config', 'config.json'));
+    expect(existsSync(dirname(result.desktopLogsDir))).toBe(true);
+  });
+
   it('can recover the repo root from a dev app bundle appRoot when cwd is elsewhere', () => {
     const repoRoot = createTempDir('neon-pilot-desktop-dev-app-root-');
     const stateRoot = createTempDir('neon-pilot-desktop-state-');

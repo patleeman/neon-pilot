@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { getStateRoot, readMachineConfig, resolveDesktopRootLayout } from '@neon-pilot/core';
 import { app } from 'electron';
 
 export interface DesktopRuntimePaths {
@@ -34,6 +34,7 @@ interface DesktopRuntimePathContext {
   isPackaged?: boolean;
   appRoot?: string;
   resourcesPath?: string;
+  desktopRoot?: string;
 }
 
 function resolveDevRepoRoot(context: DesktopRuntimePathContext): string {
@@ -96,9 +97,22 @@ export function resolveDesktopRuntimePathsForContext(context: DesktopRuntimePath
   const resourcesRoot = isPackaged ? repoRoot : undefined;
   const appRoot = isPackaged ? resolveAppRoot(context) : repoRoot;
   const stateRoot = getStateRoot();
-  const desktopStateDir = resolve(stateRoot, 'desktop');
-  const desktopLogsDir = resolve(desktopStateDir, 'logs');
-  const desktopConfigFile = resolve(desktopStateDir, 'config.json');
+  const desktopRoot = context.desktopRoot?.trim();
+
+  let desktopStateDir: string;
+  let desktopLogsDir: string;
+  let desktopConfigFile: string;
+
+  if (desktopRoot) {
+    const layout = resolveDesktopRootLayout({ root: desktopRoot });
+    desktopStateDir = layout.systemState;
+    desktopLogsDir = layout.logsDesktop;
+    desktopConfigFile = resolve(layout.systemConfig, 'config.json');
+  } else {
+    desktopStateDir = resolve(stateRoot, 'desktop');
+    desktopLogsDir = resolve(desktopStateDir, 'logs');
+    desktopConfigFile = resolve(desktopStateDir, 'config.json');
+  }
 
   mkdirSync(desktopLogsDir, { recursive: true, mode: 0o700 });
 
@@ -163,6 +177,7 @@ export function resolveDesktopRuntimePaths(): DesktopRuntimePaths {
   }
 
   const forceDevBundle = process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE === '1';
+  const desktopRoot = readMachineConfig().desktopRoot;
 
   cachedDesktopRuntimePaths = resolveDesktopRuntimePathsForContext({
     currentDir: dirname(fileURLToPath(import.meta.url)),
@@ -180,6 +195,7 @@ export function resolveDesktopRuntimePaths(): DesktopRuntimePaths {
           }
         })(),
     resourcesPath: forceDevBundle ? undefined : process.resourcesPath,
+    desktopRoot,
   });
   return cachedDesktopRuntimePaths;
 }
