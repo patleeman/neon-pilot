@@ -51,12 +51,18 @@ export interface InboxMessageBody {
 // The inbox route piggy-backs on the documents store singleton; tests call
 // `resetDocumentsStoreSingleton` (re-exported from documents.ts) to reset it.
 
-function getStore(context?: Pick<ServerRouteContext, 'getStateRoot'>): DocumentsStore {
+interface InboxRouteContext {
+  getStateRoot: ServerRouteContext['getStateRoot'];
+  getDesktopRootLayout?: ServerRouteContext['getDesktopRootLayout'];
+}
+
+function getStore(context?: InboxRouteContext): DocumentsStore {
   const stateRoot = context?.getStateRoot?.();
   if (!stateRoot) {
     throw new Error('getStateRoot not available on route context');
   }
-  return getDocumentsStore(stateRoot);
+  const desktopRootLayout = context?.getDesktopRootLayout?.();
+  return getDocumentsStore(stateRoot, desktopRootLayout);
 }
 
 // ── Type helpers ───────────────────────────────────────────────────────
@@ -352,10 +358,7 @@ function generateMessageId(): string {
 
 // ── Registration ───────────────────────────────────────────────────────
 
-export function registerInboxRoutes(
-  app: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>,
-  context?: Pick<ServerRouteContext, 'getStateRoot'>,
-): void {
+export function registerInboxRoutes(app: Pick<Express, 'get' | 'post' | 'patch' | 'delete'>, context?: InboxRouteContext): void {
   function withStore(handler: (store: DocumentsStore, req: Request, res: Response) => void): (req: Request, res: Response) => void {
     return (req, res) => {
       try {

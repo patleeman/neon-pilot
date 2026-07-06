@@ -1,9 +1,11 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resolveDocumentsDbPathFromLayout } from '../documents/store.js';
 import {
   abortExtensionShellSpawnHandlesForConversation,
   createExtensionBackendCapabilityDispatcher,
@@ -1740,6 +1742,34 @@ describe('extension backend capability dispatcher', () => {
       ).resolves.toEqual([expect.objectContaining({ owner: 'other-owner', collection: 'items' })]);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('uses request context desktop root layout for documents capability calls', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'extension-documents-context-state-'));
+    const desktopRootLayout = resolveDesktopRootLayout({ root: join(stateRoot, 'desktop-root') });
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['documents:readwrite'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher();
+
+    try {
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 1,
+            kind: 'capabilityRequest',
+            extensionId: 'system-data-tools',
+            capability: 'documents',
+            operation: 'putDocument',
+            input: { owner: 'other-owner', collection: 'items', id: 'doc-1', body: { visible: true } },
+            context: { stateRoot, desktopRootLayout },
+          }),
+        ),
+      ).resolves.toMatchObject({ owner: 'other-owner', collection: 'items', id: 'doc-1', body: { visible: true } });
+
+      expect(existsSync(resolveDocumentsDbPathFromLayout(desktopRootLayout))).toBe(true);
+      expect(existsSync(join(stateRoot, 'documents', 'documents.db'))).toBe(false);
+    } finally {
+      rmSync(stateRoot, { recursive: true, force: true });
     }
   });
 

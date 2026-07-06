@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { invalidateAppTopicsMock, logErrorMock, publishExtensionHostEventMock } = vi.hoisted(() => ({
@@ -45,6 +46,7 @@ describe('registerInboxRoutes', () => {
   });
 
   function createHarness() {
+    const desktopRootLayout = resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root') });
     const handlers: Record<string, (req: unknown, res: unknown) => void> = {};
     const router = {
       get: vi.fn((path: string, handler: (req: unknown, res: unknown) => void) => {
@@ -61,9 +63,16 @@ describe('registerInboxRoutes', () => {
       }),
     };
 
-    registerInboxRoutes(router as never, { getStateRoot: () => tmpDir });
+    registerInboxRoutes(router as never, {
+      getStateRoot: () => tmpDir,
+      getDesktopRootLayout: () => desktopRootLayout,
+    });
 
     return handlers;
+  }
+
+  function getHarnessStore(): ReturnType<typeof getDocumentsStore> {
+    return getDocumentsStore(tmpDir, resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root') }));
   }
 
   function createRes() {
@@ -305,7 +314,7 @@ describe('registerInboxRoutes', () => {
       // Use the route to put an inbox message; then directly use the documents
       // store to put a foreign-collection document and confirm it is excluded.
       seedMessage(handlers, { id: 'inbox-1' });
-      const store = getDocumentsStore(tmpDir);
+      const store = getHarnessStore();
       store.putDocument('another-app', 'messages', 'foreign-1', { from: 'x' });
 
       const res = createRes();
@@ -340,7 +349,7 @@ describe('registerInboxRoutes', () => {
 
     it('GET does not return foreign-collection documents', () => {
       const handlers = createHarness();
-      const store = getDocumentsStore(tmpDir);
+      const store = getHarnessStore();
       store.putDocument('another-app', 'messages', 'leak-1', { from: 'x' });
 
       const res = createRes();

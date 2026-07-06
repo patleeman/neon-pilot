@@ -475,21 +475,22 @@ function createWorkerBackendContext(
       isSystemAvailable: () => callHostCapability(extensionId, 'notify', 'isSystemAvailable'),
     },
     documents: {
-      listCollections: (input: { owner?: string } = {}) => callHostCapability(extensionId, 'documents', 'listCollections', input),
-      getCollection: (input: { owner: string; collection: string }) => callHostCapability(extensionId, 'documents', 'getCollection', input),
+      listCollections: (input: { owner?: string } = {}) => callHostCapability(extensionId, 'documents', 'listCollections', input, options),
+      getCollection: (input: { owner: string; collection: string }) =>
+        callHostCapability(extensionId, 'documents', 'getCollection', input, options),
       upsertCollection: (input: {
         owner: string;
         collection: string;
         options?: { description?: string; defaultGrantRead?: string; defaultGrantWrite?: string };
-      }) => callHostCapability(extensionId, 'documents', 'upsertCollection', input),
+      }) => callHostCapability(extensionId, 'documents', 'upsertCollection', input, options),
       listDocuments: (input: { owner: string; collection: string; limit?: number; offset?: number }) =>
-        callHostCapability(extensionId, 'documents', 'listDocuments', input),
+        callHostCapability(extensionId, 'documents', 'listDocuments', input, options),
       getDocument: (input: { owner: string; collection: string; id: string }) =>
-        callHostCapability(extensionId, 'documents', 'getDocument', input),
+        callHostCapability(extensionId, 'documents', 'getDocument', input, options),
       putDocument: (input: { owner: string; collection: string; id: string; body: unknown }) =>
-        callHostCapability(extensionId, 'documents', 'putDocument', input),
+        callHostCapability(extensionId, 'documents', 'putDocument', input, options),
       deleteDocument: (input: { owner: string; collection: string; id: string }) =>
-        callHostCapability(extensionId, 'documents', 'deleteDocument', input),
+        callHostCapability(extensionId, 'documents', 'deleteDocument', input, options),
     },
     storage: {
       get: (key: string) => callHostCapability(extensionId, 'storage', 'get', { key }),

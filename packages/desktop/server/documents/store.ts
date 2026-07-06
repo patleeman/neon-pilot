@@ -8,10 +8,17 @@
  * See to-do/windowed-os.md §D4 for the product intent.
  */
 
-import { mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { applyMigrations, type Migration, openSqliteDatabase, type SqliteDatabase, type SqliteStatement } from '@neon-pilot/core';
+import {
+  applyMigrations,
+  type DesktopRootLayout,
+  type Migration,
+  openSqliteDatabase,
+  type SqliteDatabase,
+  type SqliteStatement,
+} from '@neon-pilot/core';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -67,8 +74,44 @@ export interface UpsertCollectionOptions {
 
 const DOCUMENTS_DB_NAME = 'documents.db';
 
+/**
+ * Resolve the documents DB path under the legacy state root.
+ * Kept for backward compatibility and migration source detection.
+ */
 export function resolveDocumentsDbPath(stateRoot: string): string {
   return join(stateRoot, 'documents', DOCUMENTS_DB_NAME);
+}
+
+/**
+ * Resolve the documents DB path under the canonical desktop root layout.
+ * The database lives at <desktop-root>/data/documents/documents.db.
+ */
+export function resolveDocumentsDbPathFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.dataDocuments, DOCUMENTS_DB_NAME);
+}
+
+/**
+ * Migrate the legacy documents DB from the old state-root location to the
+ * new desktop-root location. The legacy DB is copied (not moved) only when
+ * the new DB does not already exist. The legacy DB is never deleted.
+ */
+export function maybeMigrateLegacyDocumentsDb(legacyStateRoot: string, layout: DesktopRootLayout): void {
+  const newPath = resolveDocumentsDbPathFromLayout(layout);
+  if (existsSync(newPath)) {
+    return;
+  }
+  const legacyPath = resolveDocumentsDbPath(legacyStateRoot);
+  if (!existsSync(legacyPath)) {
+    return;
+  }
+  const legacyDb = openSqliteDatabase(legacyPath);
+  try {
+    legacyDb.pragma('wal_checkpoint(TRUNCATE)');
+  } finally {
+    legacyDb.close();
+  }
+  mkdirSync(dirname(newPath), { recursive: true, mode: 0o700 });
+  copyFileSync(legacyPath, newPath);
 }
 
 // ── Schema ─────────────────────────────────────────────────────────────
@@ -372,12 +415,25 @@ let _singletonStore: DocumentsStore | null = null;
 let _singletonDbPath: string | null = null;
 
 /**
- * Get or create the singleton DocumentsStore for the given state root.
- * Preserves the same singleton semantics as routes/documents.ts.
+ * Get or create the singleton DocumentsStore.
+ *
+ * When a {@link DesktopRootLayout} is provided, the DB is stored at
+ * `<layout.dataDocuments>/documents.db` and an optional legacy migration
+ * from the state root is performed. When only a state root is provided,
+ * the DB is stored at `<stateRoot>/documents/documents.db` (legacy path).
+ *
  * The store is kept alive for the lifetime of the process.
  */
-export function getDocumentsStore(stateRoot: string): DocumentsStore {
-  const dbPath = resolveDocumentsDbPath(stateRoot);
+export function getDocumentsStore(stateRoot: string, desktopRootLayout?: DesktopRootLayout): DocumentsStore {
+  let dbPath: string;
+
+  if (desktopRootLayout) {
+    dbPath = resolveDocumentsDbPathFromLayout(desktopRootLayout);
+    maybeMigrateLegacyDocumentsDb(stateRoot, desktopRootLayout);
+  } else {
+    dbPath = resolveDocumentsDbPath(stateRoot);
+  }
+
   if (_singletonStore && _singletonDbPath === dbPath) {
     return _singletonStore;
   }

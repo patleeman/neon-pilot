@@ -2,13 +2,21 @@
  * Documents Store Tests
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { DocumentsStore, resolveDocumentsDbPath } from './store.js';
+import {
+  DocumentsStore,
+  getDocumentsStore,
+  maybeMigrateLegacyDocumentsDb,
+  resetDocumentsStoreSingleton,
+  resolveDocumentsDbPath,
+  resolveDocumentsDbPathFromLayout,
+} from './store.js';
 
 describe('DocumentsStore', () => {
   let tmpDir: string;
@@ -286,5 +294,148 @@ describe('DocumentsStore', () => {
       const path = resolveDocumentsDbPath('/tmp/test-root');
       expect(path).toMatch(/\/tmp\/test-root\/documents\/documents\.db$/);
     });
+  });
+
+  describe('resolveDocumentsDbPathFromLayout', () => {
+    it('resolves path under desktop root data/documents dir', () => {
+      const layout = resolveDesktopRootLayout({ root: '/desktop-root' });
+      const path = resolveDocumentsDbPathFromLayout(layout);
+      expect(path).toBe('/desktop-root/data/documents/documents.db');
+    });
+  });
+
+  describe('maybeMigrateLegacyDocumentsDb', () => {
+    it('copies legacy DB to new location when new DB is missing', () => {
+      const layout = resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root') });
+      const legacyDbPath = resolveDocumentsDbPath(tmpDir);
+      store.putDocument('legacy-app', 'notes', 'note-1', { text: 'legacy' });
+
+      const newDbPath = resolveDocumentsDbPathFromLayout(layout);
+      expect(existsSync(newDbPath)).toBe(false);
+
+      maybeMigrateLegacyDocumentsDb(tmpDir, layout);
+
+      expect(existsSync(newDbPath)).toBe(true);
+      expect(existsSync(legacyDbPath)).toBe(true);
+
+      const migratedStore = new DocumentsStore(newDbPath);
+      expect(migratedStore.getDocument('legacy-app', 'notes', 'note-1')?.body).toEqual({ text: 'legacy' });
+      migratedStore.close();
+    });
+
+    it('checkpoints WAL data before copying the legacy DB', () => {
+      const layout = resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root-wal') });
+      store.putDocument('legacy-app', 'notes', 'wal-note', { text: 'from wal' });
+
+      const newDbPath = resolveDocumentsDbPathFromLayout(layout);
+      maybeMigrateLegacyDocumentsDb(tmpDir, layout);
+
+      const migratedStore = new DocumentsStore(newDbPath);
+      expect(migratedStore.getDocument('legacy-app', 'notes', 'wal-note')?.body).toEqual({ text: 'from wal' });
+
+      migratedStore.close();
+    });
+
+    it('does not overwrite an existing new DB with legacy DB', () => {
+      const layout = resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root') });
+      const legacyDbPath = resolveDocumentsDbPath(tmpDir);
+      const newDbPath = resolveDocumentsDbPathFromLayout(layout);
+
+      mkdirSync(dirname(legacyDbPath), { recursive: true });
+      writeFileSync(legacyDbPath, 'legacy-content', 'utf-8');
+      mkdirSync(dirname(newDbPath), { recursive: true });
+      writeFileSync(newDbPath, 'new-content', 'utf-8');
+
+      maybeMigrateLegacyDocumentsDb(tmpDir, layout);
+
+      expect(readFileSync(newDbPath, 'utf-8')).toBe('new-content');
+    });
+
+    it('does nothing when no legacy DB exists', () => {
+      const stateRootWithoutLegacyDb = mkdtempSync(join(tmpdir(), 'documents-migration-empty-'));
+      const layout = resolveDesktopRootLayout({ root: join(stateRootWithoutLegacyDb, 'desktop-root') });
+      const newDbPath = resolveDocumentsDbPathFromLayout(layout);
+
+      maybeMigrateLegacyDocumentsDb(stateRootWithoutLegacyDb, layout);
+
+      expect(existsSync(newDbPath)).toBe(false);
+      expect(existsSync(resolveDocumentsDbPath(stateRootWithoutLegacyDb))).toBe(false);
+      rmSync(stateRootWithoutLegacyDb, { recursive: true, force: true });
+    });
+
+    it('creates the data/documents directory when copying legacy DB', () => {
+      const layout = resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root') });
+      store.putDocument('legacy-app', 'notes', 'note-2', { text: 'migrate me' });
+
+      const newDbPath = resolveDocumentsDbPathFromLayout(layout);
+      expect(existsSync(dirname(newDbPath))).toBe(false);
+
+      maybeMigrateLegacyDocumentsDb(tmpDir, layout);
+
+      expect(existsSync(dirname(newDbPath))).toBe(true);
+      expect(existsSync(newDbPath)).toBe(true);
+    });
+  });
+
+  describe('getDocumentsStore with desktop root layout', () => {
+    afterEach(() => {
+      resetDocumentsStoreSingleton();
+    });
+
+    it('resolves DB path under data/documents when layout is provided', () => {
+      const layout = resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root') });
+      const newDbPath = resolveDocumentsDbPathFromLayout(layout);
+      expect(existsSync(newDbPath)).toBe(false);
+
+      const layoutStore = getDocumentsStore(tmpDir, layout);
+
+      expect(existsSync(newDbPath)).toBe(true);
+      expect(layoutStore).toBeInstanceOf(DocumentsStore);
+    });
+
+    it('reuses the same singleton for the same desktop root layout', () => {
+      const layout = resolveDesktopRootLayout({ root: join(tmpDir, 'desktop-root-2') });
+      const firstStore = getDocumentsStore(tmpDir, layout);
+      const secondStore = getDocumentsStore(tmpDir, layout);
+
+      expect(secondStore).toBe(firstStore);
+    });
+  });
+});
+
+describe('DocumentsStore with desktop root layout (routes/inbox compatible)', () => {
+  let layoutRoot: string;
+  let store: DocumentsStore;
+
+  beforeEach(() => {
+    layoutRoot = mkdtempSync(join(tmpdir(), 'documents-layout-store-test-'));
+    const layout = resolveDesktopRootLayout({ root: layoutRoot });
+    store = getDocumentsStore(layoutRoot, layout);
+  });
+
+  afterEach(() => {
+    resetDocumentsStoreSingleton();
+    rmSync(layoutRoot, { recursive: true, force: true });
+  });
+
+  it('persists data under data/documents', () => {
+    const layout = resolveDesktopRootLayout({ root: layoutRoot });
+    const expectedDbPath = resolveDocumentsDbPathFromLayout(layout);
+    expect(existsSync(expectedDbPath)).toBe(true);
+  });
+
+  it('can create collections and documents', () => {
+    store.upsertCollection('app', 'test-col', { description: 'layout test' });
+    store.putDocument('app', 'test-col', 'doc-1', { hello: 'world' });
+
+    const doc = store.getDocument('app', 'test-col', 'doc-1');
+    expect(doc).not.toBeNull();
+    expect(doc!.body).toEqual({ hello: 'world' });
+  });
+
+  it('singleton resolves to the layout-based store', () => {
+    const layout = resolveDesktopRootLayout({ root: layoutRoot });
+    const sameStore = getDocumentsStore(layoutRoot, layout);
+    expect(sameStore).toBe(store);
   });
 });

@@ -1,3 +1,5 @@
+import type { DesktopRootLayout } from '@neon-pilot/core';
+
 import type { ExtensionBackendLoadTarget } from './extensionBackendRunner.js';
 
 export interface ExtensionBackendWorkerBackendContextOptions {
@@ -8,6 +10,7 @@ export interface ExtensionBackendWorkerBackendContextOptions {
   runtimeSettingsFilePath?: string;
   authFile?: string;
   stateRoot?: string;
+  desktopRootLayout?: DesktopRootLayout;
   liveSessionResourceOptions?: Record<string, unknown>;
   toolContext?: {
     conversationId?: string;

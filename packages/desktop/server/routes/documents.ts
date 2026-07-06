@@ -23,6 +23,7 @@ export type DocumentsRouteCaller = { kind: 'host' } | { appId: string; kind: 'ap
 interface DocumentsRouteContext {
   getDocumentsRouteCaller?: (req: Request) => DocumentsRouteCaller;
   getStateRoot: ServerRouteContext['getStateRoot'];
+  getDesktopRootLayout?: ServerRouteContext['getDesktopRootLayout'];
 }
 
 function getCaller(context: DocumentsRouteContext | undefined, req: Request): DocumentsRouteCaller {
@@ -87,12 +88,12 @@ export function resetDocumentsStoreForTests(): void {
   resetDocumentsStoreSingleton();
 }
 
-function getStore(context?: Pick<ServerRouteContext, 'getStateRoot'>): DocumentsStore {
+function getStore(context?: DocumentsRouteContext): DocumentsStore {
   const stateRoot = context?.getStateRoot?.();
   if (!stateRoot) {
     throw new Error('getStateRoot not available on route context');
   }
-  return getDocumentsStore(stateRoot);
+  return getDocumentsStore(stateRoot, context?.getDesktopRootLayout?.());
 }
 
 // ── Handlers ───────────────────────────────────────────────────────────

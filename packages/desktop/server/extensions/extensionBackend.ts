@@ -457,6 +457,12 @@ export function createBackendContext(
   const resolvedPiAgentRuntimeDir = getPiAgentRuntimeDir(stateRoot);
   const runtimeScope = serverContext?.getRuntimeScope() ?? 'shared';
   const runtimeSettingsFilePath = resolveRuntimeSettingsFilePath(resolvedPiAgentRuntimeDir, serverContext);
+  const documentsDispatcher = createExtensionBackendCapabilityDispatcher({
+    documents: {
+      stateRoot,
+      ...(serverContext?.getDesktopRootLayout ? { desktopRootLayout: serverContext.getDesktopRootLayout() } : {}),
+    },
+  });
   const liveSessionResourceOptions = () => {
     if (serverContext?.buildLiveSessionResourceOptions) {
       return serverContext.buildLiveSessionResourceOptions(serverContext.getRuntimeScope());
@@ -489,7 +495,7 @@ export function createBackendContext(
     database: createExtensionDatabaseManager(extensionId),
     documents: {
       listCollections: (input = {}) =>
-        createExtensionBackendCapabilityDispatcher()({
+        documentsDispatcher({
           id: 0,
           kind: 'capabilityRequest',
           extensionId,
@@ -498,7 +504,7 @@ export function createBackendContext(
           input,
         }) as Promise<unknown>,
       getCollection: (input) =>
-        createExtensionBackendCapabilityDispatcher()({
+        documentsDispatcher({
           id: 0,
           kind: 'capabilityRequest',
           extensionId,
@@ -507,7 +513,7 @@ export function createBackendContext(
           input,
         }) as Promise<unknown>,
       upsertCollection: (input) =>
-        createExtensionBackendCapabilityDispatcher()({
+        documentsDispatcher({
           id: 0,
           kind: 'capabilityRequest',
           extensionId,
@@ -516,7 +522,7 @@ export function createBackendContext(
           input,
         }) as Promise<unknown>,
       listDocuments: (input) =>
-        createExtensionBackendCapabilityDispatcher()({
+        documentsDispatcher({
           id: 0,
           kind: 'capabilityRequest',
           extensionId,
@@ -525,7 +531,7 @@ export function createBackendContext(
           input,
         }) as Promise<unknown>,
       getDocument: (input) =>
-        createExtensionBackendCapabilityDispatcher()({
+        documentsDispatcher({
           id: 0,
           kind: 'capabilityRequest',
           extensionId,
@@ -534,7 +540,7 @@ export function createBackendContext(
           input,
         }) as Promise<unknown>,
       putDocument: (input) =>
-        createExtensionBackendCapabilityDispatcher()({
+        documentsDispatcher({
           id: 0,
           kind: 'capabilityRequest',
           extensionId,
@@ -543,7 +549,7 @@ export function createBackendContext(
           input,
         }) as Promise<unknown>,
       deleteDocument: (input) =>
-        createExtensionBackendCapabilityDispatcher()({
+        documentsDispatcher({
           id: 0,
           kind: 'capabilityRequest',
           extensionId,
@@ -986,6 +992,7 @@ function workerBackendContextOptions(
     runtimeSettingsFilePath: resolveRuntimeSettingsFilePath(runtimeDir, serverContext),
     authFile: serverContext?.getAuthFile?.(),
     stateRoot,
+    ...(serverContext?.getDesktopRootLayout ? { desktopRootLayout: serverContext.getDesktopRootLayout() } : {}),
     liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
     toolContext: workerBackendToolContext(toolContext, updateHandleId),
     ...(agentToolContext ? { agentToolContext } : {}),

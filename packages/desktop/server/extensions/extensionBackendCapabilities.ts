@@ -3,7 +3,13 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getStateRoot, queryAppTelemetryEvents, readTraceTelemetryLogEvents } from '@neon-pilot/core';
+import {
+  type DesktopRootLayout,
+  getPiAgentRuntimeDir,
+  getStateRoot,
+  queryAppTelemetryEvents,
+  readTraceTelemetryLogEvents,
+} from '@neon-pilot/core';
 
 import {
   cancelDelayedEvent,
@@ -122,6 +128,7 @@ interface ExtensionBackendCapabilityEvents {
 
 interface ExtensionBackendCapabilityDocuments {
   stateRoot?: string;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 interface ExtensionBackendCapabilityAutomations {
@@ -2379,7 +2386,10 @@ async function dispatchDocumentsCapability(
   request: ExtensionBackendWorkerCapabilityRequest,
 ): Promise<unknown> {
   const input = normalizeRecordInput(request.input ?? {}, 'Documents');
-  const store = getDocumentsStore(documents.stateRoot ?? getStateRoot());
+  const store = getDocumentsStore(
+    request.context?.stateRoot ?? documents.stateRoot ?? getStateRoot(),
+    request.context?.desktopRootLayout ?? documents.desktopRootLayout,
+  );
   const callerAppId = request.extensionId === 'system-data-tools' ? undefined : request.extensionId;
 
   if (request.operation === 'listCollections') {
