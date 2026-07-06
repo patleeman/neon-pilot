@@ -913,11 +913,6 @@ describe('WindowedDialog content primitives', () => {
     expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='automation-edit'],");
     expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='automation-create']");
     expect(stylesSource).toContain('width: min(660px, calc(100% - 88px));');
-    expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='gateway-configuration'],");
-    expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='gateway-access'],");
-    expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='gateway-activity']");
-    expect(stylesSource).toContain('width: min(560px, calc(100% - 112px));');
-    expect(stylesSource).toContain(".wos-dialog[data-windowed-subwindow='gateway-access'] {\n  width: min(640px, calc(100% - 96px));");
     expect(stylesSource).toContain('@media (max-width: 560px) {\n  .wos-dialog-layer {');
     expect(stylesSource).toContain('.wos-dialog__actions {\n    justify-content: flex-start;');
     expect(stylesSource).toContain('.wos-dialog__body {\n    padding: 8px;');

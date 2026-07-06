@@ -1311,17 +1311,6 @@ body:has(.ui-page-search-popover) .windowed-os-shell .wos-composited-frame,
   max-height: min(590px, calc(100% - 104px));
 }
 
-.wos-dialog[data-windowed-subwindow='gateway-configuration'],
-.wos-dialog[data-windowed-subwindow='gateway-access'],
-.wos-dialog[data-windowed-subwindow='gateway-activity'] {
-  width: min(560px, calc(100% - 112px));
-  max-height: min(540px, calc(100% - 120px));
-}
-
-.wos-dialog[data-windowed-subwindow='gateway-access'] {
-  width: min(640px, calc(100% - 96px));
-}
-
 .wos-dialog:focus-visible {
   box-shadow:
     0 0 0 2px var(--wos-surface-0),
@@ -5263,94 +5252,6 @@ button.wos-chat-window-toolbar__status:focus-visible {
     flex-wrap: wrap;
     justify-content: flex-start;
     gap: 4px 8px;
-  }
-}
-
-.wos-gateway-status-message,
-.wos-gateway-empty,
-.wos-gateway-error,
-.wos-gateway-notice {
-  color: var(--wos-ink-500);
-  font-family: system-ui, sans-serif;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.wos-gateway-error {
-  color: var(--wos-telemetry);
-}
-
-.wos-gateway-notice {
-  color: var(--wos-gateway);
-}
-
-.wos-gateway-token-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-}
-
-.wos-gateway-token-actions,
-.wos-gateway-allowlist__form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: end;
-}
-
-.wos-gateway-access-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.wos-gateway-allowlist {
-  min-width: 0;
-  overflow: hidden;
-  border: 1.5px solid var(--wos-ink-900);
-  border-radius: 8px;
-  background: var(--wos-surface-1);
-}
-
-.wos-gateway-allowlist__header {
-  display: flex;
-  min-height: 36px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1.5px solid var(--wos-ink-900);
-  padding: 0 10px;
-}
-
-.wos-gateway-allowlist__header h4 {
-  margin: 0;
-  font-size: 13px;
-}
-
-.wos-gateway-allowlist__header span {
-  color: var(--wos-ink-500);
-  font-family: var(--wos-font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
-.wos-gateway-allowlist__form {
-  padding: 10px;
-}
-
-.wos-gateway-allowlist__form .wos-field {
-  flex: 1 1 190px;
-}
-
-.wos-gateway-allowlist__values {
-  border-top: 1.5px solid var(--wos-ink-900);
-}
-
-@media (max-width: 980px) {
-  .wos-gateway-access-grid,
-  .wos-gateway-token-row {
-    grid-template-columns: 1fr;
   }
 }
 
