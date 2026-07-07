@@ -809,6 +809,46 @@ describe('extension host client', () => {
     expect(extensionRegistry.completeExtensionStartupGuard).toHaveBeenCalled();
   });
 
+  it('threads stateRoot and DesktopRootLayout from serverContextSnapshot through beginStartupGuard', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionRegistry.beginExtensionStartupGuard.mockReturnValueOnce({ safeMode: false, disabledIds: [] });
+
+    await expect(
+      getExtensionHostClient().beginStartupGuard({
+        serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/tmp/neon-pilot-state', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({ safeMode: false, disabledIds: [] });
+
+    expect(extensionRegistry.beginExtensionStartupGuard).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+  });
+
+  it('threads stateRoot and DesktopRootLayout from serverContextSnapshot through completeStartupGuard', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+
+    await expect(
+      getExtensionHostClient().completeStartupGuard({
+        serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/tmp/neon-pilot-state', desktopRootLayout: layout },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(extensionRegistry.completeExtensionStartupGuard).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+  });
+
+  it('falls back to default stateRoot when serverContextSnapshot has no stateRoot in beginStartupGuard', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionRegistry.beginExtensionStartupGuard.mockReturnValueOnce({ safeMode: false, disabledIds: [] });
+
+    await expect(
+      getExtensionHostClient().beginStartupGuard({
+        serverContextSnapshot: { runtimeScope: 'shared' },
+      }),
+    ).resolves.toEqual({ safeMode: false, disabledIds: [] });
+
+    expect(extensionRegistry.beginExtensionStartupGuard).toHaveBeenCalledWith(expect.any(String), undefined);
+  });
+
   it('routes backend health checks through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionBackend.checkEnabledExtensionBackendHealth.mockResolvedValueOnce([{ extensionId: 'ext', ok: true }]);

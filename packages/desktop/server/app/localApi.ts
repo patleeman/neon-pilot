@@ -967,7 +967,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     const startupActionsTimer = setTimeout(() => {
       if (!extensionHostClient) return;
       void extensionHostClient
-        .beginStartupGuard()
+        .beginStartupGuard({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) })
         .then((startupGuard) => {
           if (startupGuard?.safeMode) {
             publishAppEvent({
@@ -998,9 +998,11 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
           });
         })
         .finally(() => {
-          void extensionHostClient?.completeStartupGuard().catch((error) => {
-            logError('extension startup guard completion failed', { message: (error as Error).message });
-          });
+          void extensionHostClient
+            ?.completeStartupGuard({ serverContextSnapshot: createExtensionHostServerContextSnapshot(context) })
+            .catch((error) => {
+              logError('extension startup guard completion failed', { message: (error as Error).message });
+            });
         });
     }, EXTENSION_STARTUP_ACTIONS_DELAY_MS);
     startupActionsTimer.unref?.();

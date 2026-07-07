@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve as resolvePath, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import { extractMentionIds } from '../knowledge/promptReferences.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
@@ -754,11 +754,17 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     }
     if (request.type === 'beginStartupGuard') {
       const { beginExtensionStartupGuard } = await import('./extensionRegistry.js');
-      return { ok: true, startupGuard: beginExtensionStartupGuard() };
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
+      return { ok: true, startupGuard: beginExtensionStartupGuard(stateRoot, layout) };
     }
     if (request.type === 'completeStartupGuard') {
       const { completeExtensionStartupGuard } = await import('./extensionRegistry.js');
-      completeExtensionStartupGuard();
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
+      completeExtensionStartupGuard(stateRoot, layout);
       return { ok: true, startupGuardCompleted: true };
     }
     if (request.type === 'uninstallSubscriptions') {

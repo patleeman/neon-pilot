@@ -374,10 +374,12 @@ export interface ExtensionHostCheckBackendHealthRequest {
 
 export interface ExtensionHostBeginStartupGuardRequest {
   type: 'beginStartupGuard';
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostCompleteStartupGuardRequest {
   type: 'completeStartupGuard';
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostStartStartupActionsRequest {
