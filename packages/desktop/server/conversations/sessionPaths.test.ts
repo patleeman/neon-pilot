@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const core = vi.hoisted(() => ({ getDurableSessionsDir: vi.fn(() => '/durable/sessions') }));
+const core = vi.hoisted(() => ({
+  getDurableSessionsDir: vi.fn(() => '/durable/sessions'),
+  getRuntimeSessionsIndexFilePath: vi.fn(
+    (layout?: { systemConversationsIndex?: string }) => layout?.systemConversationsIndex ?? '/legacy/runtime/session-meta-index.json',
+  ),
+}));
 
 vi.mock('@neon-pilot/core', () => core);
 
@@ -9,6 +14,7 @@ import {
   resolveSessionsDir,
   resolveSessionsIndexFile,
   resolveSystemSessionsDir,
+  resolveSystemSessionsIndexFile,
   setSessionPathsContext,
 } from './sessionPaths';
 
@@ -80,6 +86,51 @@ describe('sessionPaths', () => {
         typeof import('@neon-pilot/core').resolveDesktopRootLayout
       >;
       expect(resolveSystemSessionsDir(explicitLayout)).toBe('/explicit/system/conversations/sessions');
+    });
+  });
+
+  describe('resolveSystemSessionsIndexFile', () => {
+    it('returns layout.systemConversationsIndex when a DesktopRootLayout is provided', () => {
+      const layout = { systemConversationsIndex: '/desktop-root/system/conversations/session-meta-index.json' } as ReturnType<
+        typeof import('@neon-pilot/core').resolveDesktopRootLayout
+      >;
+      expect(resolveSystemSessionsIndexFile(layout)).toBe('/desktop-root/system/conversations/session-meta-index.json');
+    });
+
+    it('falls back to the legacy runtime session index when no layout is provided', () => {
+      expect(resolveSystemSessionsIndexFile()).toBe('/legacy/runtime/session-meta-index.json');
+    });
+
+    it('uses the injected getDesktopRootLayout when set via setSessionPathsContext', () => {
+      setSessionPathsContext({
+        getDesktopRootLayout: () =>
+          ({ systemConversationsIndex: '/context-root/system/conversations/session-meta-index.json' }) as ReturnType<
+            typeof import('@neon-pilot/core').resolveDesktopRootLayout
+          >,
+      });
+      expect(resolveSystemSessionsIndexFile()).toBe('/context-root/system/conversations/session-meta-index.json');
+    });
+
+    it('falls back to the legacy runtime session index when context getter throws', () => {
+      setSessionPathsContext({
+        getDesktopRootLayout: () => {
+          throw new Error('no layout');
+        },
+      });
+      expect(resolveSystemSessionsIndexFile()).toBe('/legacy/runtime/session-meta-index.json');
+    });
+
+    it('layout parameter takes precedence over context', () => {
+      setSessionPathsContext({
+        getDesktopRootLayout: () =>
+          ({ systemConversationsIndex: '/context-root/system/conversations/session-meta-index.json' }) as ReturnType<
+            typeof import('@neon-pilot/core').resolveDesktopRootLayout
+          >,
+      });
+      const explicitLayout = { systemConversationsIndex: '/explicit/system/conversations/session-meta-index.json' } as ReturnType<
+        typeof import('@neon-pilot/core').resolveDesktopRootLayout
+      >;
+      expect(resolveSystemSessionsIndexFile(explicitLayout)).toBe('/explicit/system/conversations/session-meta-index.json');
     });
   });
 

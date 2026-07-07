@@ -1,6 +1,6 @@
 import { dirname, join } from 'node:path';
 
-import { type DesktopRootLayout, getDurableSessionsDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getDurableSessionsDir, getRuntimeSessionsIndexFilePath } from '@neon-pilot/core';
 
 let getDesktopRootLayoutFn: (() => DesktopRootLayout) | null = null;
 
@@ -32,6 +32,27 @@ export function resolveSystemSessionsDir(layout?: DesktopRootLayout): string {
     }
   }
   return getDurableSessionsDir();
+}
+
+/**
+ * Resolve the system session metadata index file.
+ *
+ * When a DesktopRootLayout is available (desktop mode), returns the layout-derived
+ * path `<desktop-root>/system/conversations/session-meta-index.json`. Falls back
+ * to the legacy runtime directory.
+ */
+export function resolveSystemSessionsIndexFile(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return getRuntimeSessionsIndexFilePath(layout);
+  }
+  if (getDesktopRootLayoutFn) {
+    try {
+      return getRuntimeSessionsIndexFilePath(getDesktopRootLayoutFn());
+    } catch {
+      // Fall through to legacy default
+    }
+  }
+  return getRuntimeSessionsIndexFilePath();
 }
 
 export function resolvePersistentSessionDir(cwd: string, options?: { sessionsDir?: string }): string {

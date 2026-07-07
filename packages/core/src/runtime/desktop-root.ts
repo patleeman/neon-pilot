@@ -25,6 +25,7 @@ export interface DesktopRootLayout {
   systemCache: string;
   systemConfig: string;
   systemConversations: string;
+  systemConversationsIndex: string;
   systemSessions: string;
   systemDaemon: string;
   systemElectron: string;
@@ -100,6 +101,7 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
     systemCache: join(system, 'cache'),
     systemConfig: join(system, 'config'),
     systemConversations,
+    systemConversationsIndex: join(systemConversations, 'session-meta-index.json'),
     systemSessions: join(systemConversations, 'sessions'),
     systemDaemon: join(system, 'daemon'),
     systemElectron,
@@ -123,6 +125,20 @@ export function getRuntimeModelsFilePath(layout?: DesktopRootLayout): string {
     return join(layout.systemRuntime, 'models.json');
   }
   return join(getPiAgentRuntimeDir(), 'models.json');
+}
+
+/**
+ * Resolve the conversation session metadata index file path.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/conversations/session-meta-index.json`. Otherwise
+ * falls back to the legacy `<state-root>/neon-pilot-runtime/session-meta-index.json`.
+ */
+export function getRuntimeSessionsIndexFilePath(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return layout.systemConversationsIndex;
+  }
+  return join(getPiAgentRuntimeDir(), 'session-meta-index.json');
 }
 
 const DEFAULT_SOUL_DOC_CONTENT = `\

@@ -118,7 +118,11 @@ import { normalizeSessionName } from './sessionNaming.js';
 import { buildConversationOffshootMetadataData, CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE } from './sessionOffshootMetadataEntry.js';
 import { buildParentBacklinkContent, resolveParentBacklinkLabel } from './sessionParentBacklinkEntry.js';
 import { mergeResolvedParentSessionMetadata } from './sessionParentMetadata.js';
-import { resolveSessionsIndexFile as resolveSessionsIndexFileValue, resolveSystemSessionsDir } from './sessionPaths.js';
+import {
+  resolveSessionsIndexFile as resolveSessionsIndexFileValue,
+  resolveSystemSessionsDir,
+  resolveSystemSessionsIndexFile,
+} from './sessionPaths.js';
 import {
   formatRelatedConversationPointersText,
   formatRelatedThreadsSummaryText,
@@ -517,7 +521,7 @@ function resolveSessionsIndexFile(sessionsDirOverride?: string): string {
   return resolveSessionsIndexFileValue({
     envSessionsIndexFile: process.env.PA_SESSIONS_INDEX_FILE,
     envSessionsDir: process.env.PA_SESSIONS_DIR,
-    defaultSessionsIndexFile: DEFAULT_SESSIONS_INDEX_FILE,
+    defaultSessionsIndexFile: resolveSystemSessionsIndexFile(),
   });
 }
 

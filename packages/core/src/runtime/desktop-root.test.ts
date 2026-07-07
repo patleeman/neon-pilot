@@ -8,6 +8,7 @@ import {
   getDefaultDesktopRoot,
   getDesktopRootDir,
   getRuntimeModelsFilePath,
+  getRuntimeSessionsIndexFilePath,
   resolveDesktopAppDataDir,
   resolveDesktopRootLayout,
 } from './desktop-root.js';
@@ -55,6 +56,7 @@ describe('desktop root layout', () => {
       systemCache: '/Users/example/Agent Desktop/system/cache',
       systemConfig: '/Users/example/Agent Desktop/system/config',
       systemConversations: '/Users/example/Agent Desktop/system/conversations',
+      systemConversationsIndex: '/Users/example/Agent Desktop/system/conversations/session-meta-index.json',
       systemSessions: '/Users/example/Agent Desktop/system/conversations/sessions',
       systemDaemon: '/Users/example/Agent Desktop/system/daemon',
       systemElectron: '/Users/example/Agent Desktop/system/electron',
@@ -89,6 +91,16 @@ describe('desktop root layout', () => {
     const result = getRuntimeModelsFilePath();
     // Uses getPiAgentRuntimeDir() as its base
     expect(result).toMatch(/neon-pilot-runtime\/models\.json$/);
+  });
+
+  it('resolves the session index path from desktop root layout', () => {
+    const layout = resolveDesktopRootLayout({ root: '/desktop' });
+    expect(getRuntimeSessionsIndexFilePath(layout)).toBe('/desktop/system/conversations/session-meta-index.json');
+  });
+
+  it('falls back to legacy pi-agent runtime dir for session index when no layout is provided', () => {
+    const result = getRuntimeSessionsIndexFilePath();
+    expect(result).toMatch(/neon-pilot-runtime\/session-meta-index\.json$/);
   });
 
   it('normalizes app data directories from app ids', () => {

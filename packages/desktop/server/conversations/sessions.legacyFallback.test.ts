@@ -28,6 +28,9 @@ const core = vi.hoisted(() => {
     runtimeDir,
     getDurableSessionsDir: vi.fn(() => legacyDir),
     getPiAgentRuntimeDir: vi.fn(() => runtimeDir),
+    getRuntimeSessionsIndexFilePath: vi.fn(
+      (layout?: { systemConversationsIndex?: string }) => layout?.systemConversationsIndex ?? join(runtimeDir, 'session-meta-index.json'),
+    ),
     getStateRoot: vi.fn(() => legacyDir),
   };
 });
@@ -40,6 +43,7 @@ const tempDirsToClean: string[] = [];
 vi.mock('@neon-pilot/core', () => ({
   getDurableSessionsDir: core.getDurableSessionsDir,
   getPiAgentRuntimeDir: core.getPiAgentRuntimeDir,
+  getRuntimeSessionsIndexFilePath: core.getRuntimeSessionsIndexFilePath,
   getStateRoot: core.getStateRoot,
 }));
 
@@ -112,6 +116,7 @@ describe('legacy session discoverability', () => {
       systemCache: join(layoutDir, 'system', 'cache'),
       systemConfig: join(layoutDir, 'system', 'config'),
       systemConversations: join(layoutDir, 'system', 'conversations'),
+      systemConversationsIndex: join(layoutDir, 'system', 'conversations', 'session-meta-index.json'),
       systemSessions: layoutDir,
       systemDaemon: join(layoutDir, 'system', 'daemon'),
       systemElectron: join(layoutDir, 'system', 'electron'),

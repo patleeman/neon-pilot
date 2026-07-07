@@ -186,6 +186,7 @@ describe('activity layout integration', () => {
       systemCache: join(root, 'system', 'cache'),
       systemConfig: join(root, 'system', 'config'),
       systemConversations: join(root, 'system', 'conversations'),
+      systemConversationsIndex: join(root, 'system', 'conversations', 'session-meta-index.json'),
       systemSessions: join(root, 'system', 'conversations', 'sessions'),
       systemDaemon: join(root, 'system', 'daemon'),
       systemElectron: join(root, 'system', 'electron'),

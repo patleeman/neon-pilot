@@ -13,6 +13,7 @@ export {
   getDefaultDesktopRoot,
   getDesktopRootDir,
   getRuntimeModelsFilePath,
+  getRuntimeSessionsIndexFilePath,
   resolveDesktopAppDataDir,
   resolveDesktopRootLayout,
 } from './desktop-root.js';
