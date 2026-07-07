@@ -332,7 +332,7 @@ describe('extensionLifecycle', () => {
     const imported = importRuntimeExtensionBundle({ zipPath }, stateRoot);
 
     expect(imported).toEqual({ ok: true, extension: { id: 'imported-ext' }, packageRoot: join(runtimeRoot, 'imported-ext') });
-    expect(findExtensionEntry).toHaveBeenCalledWith('imported-ext', stateRoot);
+    expect(findExtensionEntry).toHaveBeenCalledWith('imported-ext', stateRoot, undefined);
     expect(existsSync(join(runtimeRoot, 'imported-ext', 'extension.json'))).toBe(true);
   });
 
@@ -353,7 +353,7 @@ describe('extensionLifecycle', () => {
     findExtensionEntry.mockImplementation((id, root) => (id === 'imported-ext' && root === stateRoot ? { manifest: { id } } : null));
 
     expect(() => importRuntimeExtensionBundle({ zipPath }, stateRoot)).toThrow('Extension id already exists.');
-    expect(findExtensionEntry).toHaveBeenCalledWith('imported-ext', stateRoot);
+    expect(findExtensionEntry).toHaveBeenCalledWith('imported-ext', stateRoot, undefined);
     expect(existsSync(join(runtimeRoot, 'imported-ext'))).toBe(false);
   });
 
@@ -456,7 +456,7 @@ describe('extensionLifecycle', () => {
     expect(stopExtensionServices).toHaveBeenCalledWith('system-hermes-agent');
     expect(unregisterBashProcessWrapper).toHaveBeenCalledWith('system-hermes-agent');
     expect(uninstallExtensionSubscriptions).toHaveBeenCalledWith('system-hermes-agent');
-    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('system-hermes-agent', stateRoot);
+    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('system-hermes-agent', stateRoot, undefined);
   });
 
   it('continues deleting runtime extensions when cleanup steps fail', async () => {
@@ -490,8 +490,8 @@ describe('extensionLifecycle', () => {
       ],
     });
     expect(existsSync(packageRoot)).toBe(false);
-    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('cleanup-fails', stateRoot);
-    expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot);
+    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('cleanup-fails', stateRoot, undefined);
+    expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot, undefined);
   });
 
   it('clears stale registry state instead of throwing when package root is unavailable', async () => {
@@ -505,8 +505,8 @@ describe('extensionLifecycle', () => {
       deleted: false,
       warnings: [{ operation: 'delete extension package', message: 'Extension package root is unavailable.' }],
     });
-    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('missing-root', stateRoot);
-    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('missing-root', stateRoot);
+    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('missing-root', stateRoot, undefined);
+    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('missing-root', stateRoot, undefined);
   });
 
   it('deletes invalid runtime extension packages by id', async () => {
@@ -538,8 +538,8 @@ describe('extensionLifecycle', () => {
       extensionId: 'missing-extension',
       deleted: false,
     });
-    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('missing-extension', stateRoot);
-    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('missing-extension', stateRoot);
+    expect(removeExtensionFromRegistry).toHaveBeenCalledWith('missing-extension', stateRoot, undefined);
+    expect(clearExtensionFailureRecords).toHaveBeenCalledWith('missing-extension', stateRoot, undefined);
   });
 
   it('rejects unsafe or missing extension bundles', () => {

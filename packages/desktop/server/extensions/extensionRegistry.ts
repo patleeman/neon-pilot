@@ -619,13 +619,18 @@ export async function withExtensionRegistryReadCache<T>(fn: () => Promise<T>): P
   return registryReadCache.run({ configs: new Map(), entries: new Map(), invalidEntries: new Map() }, fn);
 }
 
-export function invalidateExtensionRegistryReadCaches(stateRoot: string = getStateRoot()): void {
+function getExtensionRegistryCacheKey(stateRoot: string, layout?: DesktopRootLayout): string {
+  return layout ? getRuntimeExtensionsRootFromLayout(layout) : stateRoot;
+}
+
+export function invalidateExtensionRegistryReadCaches(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  const cacheKey = getExtensionRegistryCacheKey(stateRoot, layout);
   const cache = registryReadCache.getStore();
-  cache?.configs.delete(stateRoot);
-  cache?.entries.delete(stateRoot);
-  cache?.invalidEntries.delete(stateRoot);
-  processRegistryReadCache.entries.delete(stateRoot);
-  processRegistryReadCache.invalidEntries.delete(stateRoot);
+  cache?.configs.delete(cacheKey);
+  cache?.entries.delete(cacheKey);
+  cache?.invalidEntries.delete(cacheKey);
+  processRegistryReadCache.entries.delete(cacheKey);
+  processRegistryReadCache.invalidEntries.delete(cacheKey);
 }
 
 export function getRuntimeExtensionsRoot(stateRoot?: string, layout?: DesktopRootLayout): string {
@@ -633,15 +638,18 @@ export function getRuntimeExtensionsRoot(stateRoot?: string, layout?: DesktopRoo
   return join(stateRoot ?? getStateRoot(), 'extensions');
 }
 
-function getExtensionRegistryConfigPath(stateRoot: string = getStateRoot()): string {
+function getExtensionRegistryConfigPath(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): string {
+  if (layout) return getExtensionRegistryPaths(layout).config;
   return join(getRuntimeExtensionsRoot(stateRoot), 'registry.json');
 }
 
-function getExtensionFailurePath(stateRoot: string = getStateRoot()): string {
+function getExtensionFailurePath(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): string {
+  if (layout) return getExtensionRegistryPaths(layout).failures;
   return join(getRuntimeExtensionsRoot(stateRoot), 'failures.json');
 }
 
-function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot()): string {
+function getExtensionStartupMarkerPath(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): string {
+  if (layout) return getExtensionRegistryPaths(layout).startupMarker;
   return join(getRuntimeExtensionsRoot(stateRoot), 'startup-marker.json');
 }
 
@@ -651,31 +659,35 @@ function candidateDefaultInstalledExtensionRoots(): string[] {
   return [];
 }
 
-export function readExtensionRegistryConfig(stateRoot: string = getStateRoot()): ExtensionRegistryConfig {
+export function readExtensionRegistryConfig(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): ExtensionRegistryConfig {
   const cache = registryReadCache.getStore();
-  const cached = cache?.configs.get(stateRoot);
+  const cacheKey = getExtensionRegistryCacheKey(stateRoot, layout);
+  const cached = cache?.configs.get(cacheKey);
   if (cached) return cached;
 
-  const configPath = getExtensionRegistryConfigPath(stateRoot);
+  const configPath = getExtensionRegistryConfigPath(stateRoot, layout);
   if (!existsSync(configPath)) {
     const empty = {};
-    cache?.configs.set(stateRoot, empty);
+    cache?.configs.set(cacheKey, empty);
     return empty;
   }
 
   try {
     const config = normalizeExtensionRegistryConfig(JSON.parse(readFileSync(configPath, 'utf-8')) as unknown);
-    cache?.configs.set(stateRoot, config);
+    cache?.configs.set(cacheKey, config);
     return config;
   } catch {
     const empty = {};
-    cache?.configs.set(stateRoot, empty);
+    cache?.configs.set(cacheKey, empty);
     return empty;
   }
 }
 
-function readExtensionFailureRecords(stateRoot: string = getStateRoot()): Record<string, ExtensionFailureRecord[]> {
-  const path = getExtensionFailurePath(stateRoot);
+function readExtensionFailureRecords(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): Record<string, ExtensionFailureRecord[]> {
+  const path = getExtensionFailurePath(stateRoot, layout);
   if (!existsSync(path)) return {};
   try {
     return normalizeExtensionFailureRecords(JSON.parse(readFileSync(path, 'utf-8')) as unknown);
@@ -684,10 +696,14 @@ function readExtensionFailureRecords(stateRoot: string = getStateRoot()): Record
   }
 }
 
-function writeExtensionFailureRecords(records: Record<string, ExtensionFailureRecord[]>, stateRoot: string = getStateRoot()): void {
-  const extensionsRoot = getRuntimeExtensionsRoot(stateRoot);
+function writeExtensionFailureRecords(
+  records: Record<string, ExtensionFailureRecord[]>,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): void {
+  const extensionsRoot = getRuntimeExtensionsRoot(stateRoot, layout);
   mkdirSync(extensionsRoot, { recursive: true });
-  writeFileSync(getExtensionFailurePath(stateRoot), `${JSON.stringify(records, null, 2)}\n`);
+  writeFileSync(getExtensionFailurePath(stateRoot, layout), `${JSON.stringify(records, null, 2)}\n`);
 }
 
 function listExtensionContributionDiagnostics(entry: ExtensionRegistryEntry, availableExtensionIds?: string[]): string[] {
@@ -738,17 +754,21 @@ function buildExtensionModelProfileRegistrations(entry: ExtensionRegistryEntry):
   });
 }
 
-export function writeExtensionRegistryConfig(config: ExtensionRegistryConfig, stateRoot: string = getStateRoot()): void {
-  const extensionsRoot = getRuntimeExtensionsRoot(stateRoot);
+export function writeExtensionRegistryConfig(
+  config: ExtensionRegistryConfig,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): void {
+  const extensionsRoot = getRuntimeExtensionsRoot(stateRoot, layout);
   mkdirSync(extensionsRoot, { recursive: true });
-  writeFileSync(getExtensionRegistryConfigPath(stateRoot), serializeExtensionRegistryConfig(config));
-  registryReadCache.getStore()?.configs.delete(stateRoot);
+  writeFileSync(getExtensionRegistryConfigPath(stateRoot, layout), serializeExtensionRegistryConfig(config));
+  registryReadCache.getStore()?.configs.delete(getExtensionRegistryCacheKey(stateRoot, layout));
 }
 
-function ensureDefaultInstalledExtensions(stateRoot: string = getStateRoot()): void {
-  const config = readExtensionRegistryConfig(stateRoot);
+function ensureDefaultInstalledExtensions(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  const config = readExtensionRegistryConfig(stateRoot, layout);
   const removed = new Set(config.removedDefaultInstalledIds ?? []);
-  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
+  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot, layout);
   for (const id of DEFAULT_INSTALLED_EXTENSION_IDS) {
     if (removed.has(id) || existsSync(join(runtimeRoot, id))) continue;
     const sourceRoot = candidateDefaultInstalledExtensionRoots()
@@ -760,9 +780,9 @@ function ensureDefaultInstalledExtensions(stateRoot: string = getStateRoot()): v
   }
 }
 
-export function isExtensionEnabled(extensionId: string, stateRoot: string = getStateRoot()): boolean {
-  const config = readExtensionRegistryConfig(stateRoot);
-  const entry = listExtensionEntries(stateRoot).find((candidate) => candidate.manifest.id === extensionId);
+export function isExtensionEnabled(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): boolean {
+  const config = readExtensionRegistryConfig(stateRoot, layout);
+  const entry = listExtensionEntries(stateRoot, layout).find((candidate) => candidate.manifest.id === extensionId);
   return isExtensionEntryEnabled(entry, config);
 }
 
@@ -776,26 +796,31 @@ function isExtensionEntryEnabled(entry: ExtensionRegistryEntry | undefined, conf
   return true;
 }
 
-export function setExtensionEnabled(extensionId: string, enabled: boolean, stateRoot: string = getStateRoot()): void {
+export function setExtensionEnabled(
+  extensionId: string,
+  enabled: boolean,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): void {
   assertCanSetExtensionEnabled({ extensionId, enabled, lockedExtensionIds: LOCKED_EXTENSION_IDS });
-  const config = readExtensionRegistryConfig(stateRoot);
-  writeExtensionRegistryConfig(buildExtensionEnabledConfigPatch(config, { extensionId, enabled }), stateRoot);
-  invalidateExtensionRegistryReadCaches(stateRoot);
+  const config = readExtensionRegistryConfig(stateRoot, layout);
+  writeExtensionRegistryConfig(buildExtensionEnabledConfigPatch(config, { extensionId, enabled }), stateRoot, layout);
+  invalidateExtensionRegistryReadCaches(stateRoot, layout);
   invalidateAppTopics('extensions', 'notifications');
   if (enabled) {
-    completeExtensionStartupGuard(stateRoot);
+    completeExtensionStartupGuard(stateRoot, layout);
   }
 }
 
-function isRuntimeInstalledPackageRoot(packageRoot: string | undefined, stateRoot: string): boolean {
+function isRuntimeInstalledPackageRoot(packageRoot: string | undefined, stateRoot: string, layout?: DesktopRootLayout): boolean {
   if (!packageRoot) return false;
-  const runtimeRoot = resolve(getRuntimeExtensionsRoot(stateRoot));
+  const runtimeRoot = resolve(getRuntimeExtensionsRoot(stateRoot, layout));
   const resolvedPackageRoot = resolve(packageRoot);
   return resolvedPackageRoot === runtimeRoot || resolvedPackageRoot.startsWith(`${runtimeRoot}${sep}`);
 }
 
-export function removeExtensionFromRegistry(extensionId: string, stateRoot: string = getStateRoot()): void {
-  const config = readExtensionRegistryConfig(stateRoot);
+export function removeExtensionFromRegistry(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  const config = readExtensionRegistryConfig(stateRoot, layout);
   const disabledIds = (config.disabledIds ?? []).filter((id) => id !== extensionId);
   const enabledIds = (config.enabledIds ?? []).filter((id) => id !== extensionId);
   const removedDefaultInstalledIds = DEFAULT_INSTALLED_EXTENSION_IDS.includes(extensionId)
@@ -803,24 +828,31 @@ export function removeExtensionFromRegistry(extensionId: string, stateRoot: stri
     : (config.removedDefaultInstalledIds ?? []);
   const quarantined = { ...(config.quarantined ?? {}) };
   delete quarantined[extensionId];
-  writeExtensionRegistryConfig({ ...config, disabledIds, enabledIds, removedDefaultInstalledIds, quarantined }, stateRoot);
+  writeExtensionRegistryConfig({ ...config, disabledIds, enabledIds, removedDefaultInstalledIds, quarantined }, stateRoot, layout);
 }
 
-export function recordExtensionFailure(input: { extensionId: string; operation: string; error: string; stateRoot?: string }): {
+export function recordExtensionFailure(input: {
+  extensionId: string;
+  operation: string;
+  error: string;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+}): {
   quarantined: boolean;
   failures: number;
 } {
   const stateRoot = input.stateRoot ?? getStateRoot();
+  const layout = input.layout;
   const now = Date.now();
   const cutoff = now - EXTENSION_FAILURE_WINDOW_MS;
-  const records = readExtensionFailureRecords(stateRoot);
+  const records = readExtensionFailureRecords(stateRoot, layout);
   const existing = records[input.extensionId] ?? [];
   const next = [
     ...pruneRecentFailureRecords(existing, cutoff),
     buildFailureRecord({ operation: input.operation, error: input.error, now }),
   ];
   records[input.extensionId] = next;
-  writeExtensionFailureRecords(records, stateRoot);
+  writeExtensionFailureRecords(records, stateRoot, layout);
 
   if (isLockedExtensionId(input.extensionId)) {
     return buildExtensionFailureResponse({ quarantined: false, failures: next.length });
@@ -830,7 +862,7 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
     return buildExtensionFailureResponse({ quarantined: false, failures: next.length });
   }
 
-  const config = readExtensionRegistryConfig(stateRoot);
+  const config = readExtensionRegistryConfig(stateRoot, layout);
   writeExtensionRegistryConfig(
     applyExtensionQuarantine(config, {
       extensionId: input.extensionId,
@@ -839,6 +871,7 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
       failures: next.length,
     }),
     stateRoot,
+    layout,
   );
   publishExtensionQuarantineNotification({
     extensionId: input.extensionId,
@@ -848,33 +881,41 @@ export function recordExtensionFailure(input: { extensionId: string; operation: 
   return buildExtensionFailureResponse({ quarantined: true, failures: next.length });
 }
 
-export function clearExtensionFailureRecords(extensionId: string, stateRoot: string = getStateRoot()): void {
-  const records = readExtensionFailureRecords(stateRoot);
+export function clearExtensionFailureRecords(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  const records = readExtensionFailureRecords(stateRoot, layout);
   if (!(extensionId in records)) return;
   delete records[extensionId];
-  writeExtensionFailureRecords(records, stateRoot);
+  writeExtensionFailureRecords(records, stateRoot, layout);
 }
 
-export function clearExtensionFailureRecordsForOperation(extensionId: string, operation: string, stateRoot: string = getStateRoot()): void {
-  const records = readExtensionFailureRecords(stateRoot);
+export function clearExtensionFailureRecordsForOperation(
+  extensionId: string,
+  operation: string,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): void {
+  const records = readExtensionFailureRecords(stateRoot, layout);
   const existing = records[extensionId];
   if (!existing) return;
   const next = existing.filter((record) => record.operation !== operation);
   if (next.length === existing.length) return;
   if (next.length > 0) records[extensionId] = next;
   else delete records[extensionId];
-  writeExtensionFailureRecords(records, stateRoot);
+  writeExtensionFailureRecords(records, stateRoot, layout);
 }
 
-export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): { safeMode: boolean; disabledIds: string[] } {
-  const markerPath = getExtensionStartupMarkerPath(stateRoot);
+export function beginExtensionStartupGuard(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): { safeMode: boolean; disabledIds: string[] } {
+  const markerPath = getExtensionStartupMarkerPath(stateRoot, layout);
   const safeMode = existsSync(markerPath);
   const disabledIds: string[] = [];
   if (safeMode) {
     const marker = parseExtensionStartupMarker(readFileSync(markerPath, 'utf8'));
-    const config = readExtensionRegistryConfig(stateRoot);
+    const config = readExtensionRegistryConfig(stateRoot, layout);
     const at = new Date().toISOString();
-    const entries = listExtensionEntries(stateRoot);
+    const entries = listExtensionEntries(stateRoot, layout);
     const candidates = entries.map((entry) => ({
       id: entry.manifest.id,
       source: entry.source,
@@ -883,7 +924,7 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
     const suspect = marker?.activeExtensionId ? candidates.find((candidate) => candidate.id === marker.activeExtensionId) : undefined;
     const plan = planStartupGuardQuarantines(config, suspect ? [suspect] : [], at);
     disabledIds.push(...plan.disabledIds);
-    writeExtensionRegistryConfig(plan.config, stateRoot);
+    writeExtensionRegistryConfig(plan.config, stateRoot, layout);
     for (const extensionId of plan.disabledIds) {
       publishExtensionQuarantineNotification({
         extensionId,
@@ -892,13 +933,17 @@ export function beginExtensionStartupGuard(stateRoot: string = getStateRoot()): 
       });
     }
   }
-  mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
+  mkdirSync(getRuntimeExtensionsRoot(stateRoot, layout), { recursive: true });
   writeFileSync(markerPath, buildExtensionStartupMarker(new Date().toISOString()));
   return buildExtensionStartupGuardResult({ safeMode, disabledIds });
 }
 
-export function markExtensionStartupActive(extensionId: string | undefined, stateRoot: string = getStateRoot()): void {
-  const markerPath = getExtensionStartupMarkerPath(stateRoot);
+export function markExtensionStartupActive(
+  extensionId: string | undefined,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): void {
+  const markerPath = getExtensionStartupMarkerPath(stateRoot, layout);
   if (!existsSync(markerPath)) return;
   const existing = parseExtensionStartupMarker(readFileSync(markerPath, 'utf8'));
   writeFileSync(markerPath, buildExtensionStartupMarker(existing?.startedAt ?? new Date().toISOString(), extensionId));
@@ -915,8 +960,8 @@ function publishExtensionQuarantineNotification(input: { extensionId: string; me
   });
 }
 
-export function completeExtensionStartupGuard(stateRoot: string = getStateRoot()): void {
-  rmSync(getExtensionStartupMarkerPath(stateRoot), { force: true });
+export function completeExtensionStartupGuard(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  rmSync(getExtensionStartupMarkerPath(stateRoot, layout), { force: true });
 }
 
 export function setExtensionKeybinding(input: {
@@ -931,9 +976,11 @@ export function setExtensionKeybinding(input: {
   enabled?: boolean;
   reset?: boolean;
   stateRoot?: string;
+  layout?: DesktopRootLayout;
 }): void {
   const stateRoot = input.stateRoot ?? getStateRoot();
-  const config = readExtensionRegistryConfig(stateRoot);
+  const layout = input.layout;
+  const config = readExtensionRegistryConfig(stateRoot, layout);
   if (input.command && input.title) {
     const command = findExtensionCommandRegistration(input.command);
     if (!command) {
@@ -944,7 +991,7 @@ export function setExtensionKeybinding(input: {
     }
   }
 
-  writeExtensionRegistryConfig(applyExtensionKeybindingConfigPatch(config, input), stateRoot);
+  writeExtensionRegistryConfig(applyExtensionKeybindingConfigPatch(config, input), stateRoot, layout);
 }
 
 function validateExtensionContributions(contributes: Record<string, unknown>): void {
@@ -1300,13 +1347,17 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
   return value as unknown as ExtensionManifest;
 }
 
-export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateRoot()): InvalidExtensionEntry[] {
-  ensureDefaultInstalledExtensions(stateRoot);
+export function readInvalidRuntimeExtensionEntries(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): InvalidExtensionEntry[] {
+  ensureDefaultInstalledExtensions(stateRoot, layout);
   const cache = registryReadCache.getStore();
-  const scoped = cache?.invalidEntries.get(stateRoot);
+  const cacheKey = getExtensionRegistryCacheKey(stateRoot, layout);
+  const scoped = cache?.invalidEntries.get(cacheKey);
   if (scoped) return scoped;
 
-  const entries = listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
+  const entries = listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot, layout) })
     .filter((entry) => entry.source === 'external')
     .flatMap((entry): InvalidExtensionEntry[] => {
       const manifestPath = join(entry.packageRoot, 'extension.json');
@@ -1327,13 +1378,13 @@ export function readInvalidRuntimeExtensionEntries(stateRoot: string = getStateR
         ];
       }
     });
-  cache?.invalidEntries.set(stateRoot, entries);
+  cache?.invalidEntries.set(cacheKey, entries);
   return entries;
 }
 
-export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
-  ensureDefaultInstalledExtensions(stateRoot);
-  return listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
+export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): ExtensionRegistryEntry[] {
+  ensureDefaultInstalledExtensions(stateRoot, layout);
+  return listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot, layout) })
     .filter((entry) => entry.source === 'external')
     .flatMap((entry): ExtensionRegistryEntry[] => {
       const manifestPath = join(entry.packageRoot, 'extension.json');
@@ -1346,19 +1397,20 @@ export function readRuntimeExtensionEntries(stateRoot: string = getStateRoot()):
     });
 }
 
-export function listExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
+export function listExtensionEntries(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): ExtensionRegistryEntry[] {
   const cache = registryReadCache.getStore();
-  const scoped = cache?.entries.get(stateRoot);
+  const cacheKey = getExtensionRegistryCacheKey(stateRoot, layout);
+  const scoped = cache?.entries.get(cacheKey);
   if (scoped) return scoped;
-  const cached = processRegistryReadCache.entries.get(stateRoot);
-  if (cached && cachedRuntimePackageRootsMatchDisk(cached, stateRoot)) {
-    cache?.entries.set(stateRoot, cached);
+  const cached = processRegistryReadCache.entries.get(cacheKey);
+  if (cached && cachedRuntimePackageRootsMatchDisk(cached, stateRoot, layout)) {
+    cache?.entries.set(cacheKey, cached);
     return cached;
   }
 
   const entries = [
     ...SYSTEM_EXTENSION_ENTRIES.map((entry) => ({ manifest: entry.manifest, packageRoot: entry.packageRoot, source: 'system' as const })),
-    ...readRuntimeExtensionEntries(stateRoot),
+    ...readRuntimeExtensionEntries(stateRoot, layout),
   ];
   const seen = new Set<string>();
   const filtered = entries.filter((entry) => {
@@ -1366,17 +1418,17 @@ export function listExtensionEntries(stateRoot: string = getStateRoot()): Extens
     seen.add(entry.manifest.id);
     return true;
   });
-  cache?.entries.set(stateRoot, filtered);
-  processRegistryReadCache.entries.set(stateRoot, filtered);
+  cache?.entries.set(cacheKey, filtered);
+  processRegistryReadCache.entries.set(cacheKey, filtered);
   return filtered;
 }
 
-function cachedRuntimePackageRootsMatchDisk(entries: ExtensionRegistryEntry[], stateRoot: string): boolean {
+function cachedRuntimePackageRootsMatchDisk(entries: ExtensionRegistryEntry[], stateRoot: string, layout?: DesktopRootLayout): boolean {
   const cachedRoots = new Set(
     entries.flatMap((entry) => (entry.source === 'runtime' && entry.packageRoot ? [resolve(entry.packageRoot)] : [])),
   );
   const currentRoots = new Set(
-    listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot) })
+    listExtensionPackagePaths({ runtimeRoot: getRuntimeExtensionsRoot(stateRoot, layout) })
       .filter((entry) => entry.source === 'external')
       .map((entry) => resolve(entry.packageRoot)),
   );
@@ -1387,18 +1439,18 @@ function cachedRuntimePackageRootsMatchDisk(entries: ExtensionRegistryEntry[], s
   return true;
 }
 
-export function listEnabledExtensionEntries(stateRoot: string = getStateRoot()): ExtensionRegistryEntry[] {
-  const config = readExtensionRegistryConfig(stateRoot);
-  return listExtensionEntries(stateRoot).filter((entry) => isExtensionEntryEnabled(entry, config));
+export function listEnabledExtensionEntries(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): ExtensionRegistryEntry[] {
+  const config = readExtensionRegistryConfig(stateRoot, layout);
+  return listExtensionEntries(stateRoot, layout).filter((entry) => isExtensionEntryEnabled(entry, config));
 }
 
-export function listExtensions(): LoadedExtensionManifest[] {
-  return listEnabledExtensionEntries().map((entry) => entry.manifest);
+export function listExtensions(stateRoot?: string, layout?: DesktopRootLayout): LoadedExtensionManifest[] {
+  return listEnabledExtensionEntries(stateRoot, layout).map((entry) => entry.manifest);
 }
 
-export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()): ExtensionInstallSummary[] {
-  const entries = listExtensionEntries(stateRoot);
-  const config = readExtensionRegistryConfig(stateRoot);
+export function listExtensionInstallSummaries(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): ExtensionInstallSummary[] {
+  const entries = listExtensionEntries(stateRoot, layout);
+  const config = readExtensionRegistryConfig(stateRoot, layout);
   const availableExtensionIds = entries.map((entry) => entry.manifest.id);
   const valid = entries.map((entry) => {
     const manifest = entry.manifest;
@@ -1408,7 +1460,9 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const diagnostics = listExtensionContributionDiagnostics(entry, availableExtensionIds);
     const buildError = buildErrors.get(manifest.id);
     const healthError = healthErrors.get(manifest.id);
-    const effectivePackageType = isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot) ? 'user' : (manifest.packageType ?? 'user');
+    const effectivePackageType = isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot, layout)
+      ? 'user'
+      : (manifest.packageType ?? 'user');
     const compatibilityDiagnostic = effectivePackageType === 'system' ? null : getExtensionCompatibilityError(manifest);
     const quarantine = config.quarantined?.[manifest.id];
     const required = isLockedExtensionId(manifest.id);
@@ -1429,7 +1483,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
       ...(manifest.description ? { description: manifest.description } : {}),
       ...(manifest.version ? { version: manifest.version } : {}),
       ...(entry.packageRoot ? { packageRoot: entry.packageRoot } : {}),
-      uninstallable: Boolean(entry.packageRoot && isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot)),
+      uninstallable: Boolean(entry.packageRoot && isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot, layout)),
       manifest,
       permissions: manifest.permissions ?? [],
       permissionState: (manifest.permissions ?? []).map((p) => ({
@@ -1450,7 +1504,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     };
   });
   const validIds = new Set(valid.map((extension) => extension.id));
-  const invalid = readInvalidRuntimeExtensionEntries(stateRoot)
+  const invalid = readInvalidRuntimeExtensionEntries(stateRoot, layout)
     .filter((entry) => !validIds.has(entry.id))
     .map((entry): ExtensionInstallSummary => buildInvalidExtensionInstallSummary(entry));
   return [...valid, ...invalid];
@@ -2083,6 +2137,10 @@ export function listExtensionSettingsComponentRegistrations(stateRoot: string = 
   });
 }
 
-export function findExtensionEntry(extensionId: string, stateRoot: string = getStateRoot()): ExtensionRegistryEntry | null {
-  return listExtensionEntries(stateRoot).find((entry) => entry.manifest.id === extensionId) ?? null;
+export function findExtensionEntry(
+  extensionId: string,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionRegistryEntry | null {
+  return listExtensionEntries(stateRoot, layout).find((entry) => entry.manifest.id === extensionId) ?? null;
 }

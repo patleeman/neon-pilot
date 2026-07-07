@@ -202,6 +202,16 @@ function enrichWebappSummary(webapp: ExtensionWebappSummary, context?: { getServ
   };
 }
 
+function getExtensionLifecycleScope(context?: Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getDesktopRootLayout'>>): {
+  stateRoot: string | undefined;
+  layout: ReturnType<ServerRouteContext['getDesktopRootLayout']> | undefined;
+} {
+  return {
+    stateRoot: context?.getStateRoot?.(),
+    layout: context?.getDesktopRootLayout?.(),
+  };
+}
+
 async function listWebappsFromHost(): Promise<ExtensionWebappSummary[]> {
   const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
   return ((snapshot as { webapps?: unknown[] }).webapps ?? []).filter(
@@ -840,7 +850,8 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions', (req, res) => {
     try {
-      const result = createRuntimeExtension(req.body as { id?: unknown; name?: unknown; description?: unknown });
+      const { stateRoot, layout } = getExtensionLifecycleScope(context);
+      const result = createRuntimeExtension(req.body as { id?: unknown; name?: unknown; description?: unknown }, stateRoot, layout);
       if (result?.extension?.id) {
         writeExtensionActivityEntrySafe(
           result.extension.id,
@@ -861,7 +872,8 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/import', (req, res) => {
     try {
-      const result = importRuntimeExtensionBundle(req.body as { zipPath?: unknown });
+      const { stateRoot, layout } = getExtensionLifecycleScope(context);
+      const result = importRuntimeExtensionBundle(req.body as { zipPath?: unknown }, stateRoot, layout);
       if (result?.extension?.id) {
         writeExtensionActivityEntrySafe(
           result.extension.id,
@@ -1336,7 +1348,8 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/snapshot', (req, res) => {
     try {
-      const result = snapshotRuntimeExtension(req.params.id);
+      const { stateRoot, layout } = getExtensionLifecycleScope(context);
+      const result = snapshotRuntimeExtension(req.params.id, stateRoot, layout);
       writeExtensionActivityEntrySafe(req.params.id, 'snapshotted', req.params.id, undefined, context?.getDesktopRootLayout?.());
       res.status(201).json(result);
     } catch (err) {
@@ -1349,7 +1362,8 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/export', (req, res) => {
     try {
-      const result = exportRuntimeExtension(req.params.id);
+      const { stateRoot, layout } = getExtensionLifecycleScope(context);
+      const result = exportRuntimeExtension(req.params.id, stateRoot, layout);
       writeExtensionActivityEntrySafe(req.params.id, 'exported', req.params.id, undefined, context?.getDesktopRootLayout?.());
       res.status(201).json(result);
     } catch (err) {
@@ -1395,7 +1409,8 @@ export function registerExtensionRoutes(
   router.delete('/api/extensions/:id', async (req, res) => {
     try {
       const { deleteRuntimeExtension } = await import('../extensions/extensionLifecycle.js');
-      const result = await deleteRuntimeExtension(req.params.id);
+      const { stateRoot, layout } = getExtensionLifecycleScope(context);
+      const result = await deleteRuntimeExtension(req.params.id, stateRoot, layout);
       if (result.deleted) {
         writeExtensionActivityEntrySafe(req.params.id, 'deleted', req.params.id, undefined, context?.getDesktopRootLayout?.());
       }
@@ -1419,7 +1434,8 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/build', async (req, res) => {
     try {
-      const result = await buildRuntimeExtension(req.params.id);
+      const { stateRoot, layout } = getExtensionLifecycleScope(context);
+      const result = await buildRuntimeExtension(req.params.id, stateRoot, layout);
       await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
       res.json(result);
     } catch (err) {

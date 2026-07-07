@@ -3,7 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, 
 import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import type { ExtensionAppearanceAccent, ExtensionAppearanceContribution, ExtensionManifest } from './extensionManifest.js';
 import { validateExtensionId } from './extensionManifestCoreValidation.js';
@@ -141,11 +141,13 @@ function normalizeExtensionAppearance(value: unknown): ExtensionAppearanceContri
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function getExtensionSnapshotsRoot(stateRoot: string = getStateRoot()): string {
+function getExtensionSnapshotsRoot(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): string {
+  if (layout) return join(layout.apps, 'extensions', 'snapshots');
   return join(stateRoot, 'extension-snapshots');
 }
 
-function getExtensionExportsRoot(stateRoot: string = getStateRoot()): string {
+function getExtensionExportsRoot(stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): string {
+  if (layout) return join(layout.apps, 'extensions', 'exports');
   return join(stateRoot, 'extension-exports');
 }
 
@@ -544,16 +546,16 @@ Dependency:
 `;
 }
 
-export function createRuntimeExtension(input: CreateRuntimeExtensionInput, stateRoot: string = getStateRoot()) {
+export function createRuntimeExtension(input: CreateRuntimeExtensionInput, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {
   const id = normalizeExtensionId(input.id);
   const name = normalizeExtensionName(input.name);
   const description = normalizeOptionalString(input.description);
   const template = normalizeExtensionTemplate(input.template);
-  if (findExtensionEntry(id)) {
+  if (findExtensionEntry(id, stateRoot, layout)) {
     throw new Error('Extension id already exists.');
   }
 
-  const extensionRoot = join(getRuntimeExtensionsRoot(stateRoot), id);
+  const extensionRoot = join(getRuntimeExtensionsRoot(stateRoot, layout), id);
   if (existsSync(extensionRoot)) {
     throw new Error('Extension directory already exists.');
   }
@@ -658,13 +660,13 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
     `${JSON.stringify({ type: 'module', dependencies: { '@neon-pilot/extensions': '*' } }, null, 2)}\n`,
   );
 
-  invalidateExtensionRegistryReadCaches(stateRoot);
-  const summary = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
+  invalidateExtensionRegistryReadCaches(stateRoot, layout);
+  const summary = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === id);
   return { ok: true as const, extension: summary, packageRoot: extensionRoot };
 }
 
-export function snapshotRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {
-  const entry = findExtensionEntry(extensionId);
+export function snapshotRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
   if (!entry) {
     throw new Error('Extension not found.');
   }
@@ -673,7 +675,7 @@ export function snapshotRuntimeExtension(extensionId: string, stateRoot: string 
   }
 
   const timestamp = createSafeTimestamp();
-  const snapshotRoot = join(getExtensionSnapshotsRoot(stateRoot), extensionId);
+  const snapshotRoot = join(getExtensionSnapshotsRoot(stateRoot, layout), extensionId);
   const snapshotPath = join(snapshotRoot, timestamp);
   mkdirSync(snapshotRoot, { recursive: true });
   cpSync(entry.packageRoot, snapshotPath, { recursive: true, errorOnExist: true });
@@ -681,8 +683,8 @@ export function snapshotRuntimeExtension(extensionId: string, stateRoot: string 
   return { ok: true as const, extensionId, snapshotPath };
 }
 
-export async function buildRuntimeExtension(extensionId: string) {
-  const entry = findExtensionEntry(extensionId);
+export async function buildRuntimeExtension(extensionId: string, stateRoot?: string, layout?: DesktopRootLayout) {
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
   if (!entry) {
     throw new Error('Extension not found.');
   }
@@ -699,8 +701,8 @@ export async function buildRuntimeExtension(extensionId: string) {
   );
 }
 
-export function exportRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {
-  const entry = findExtensionEntry(extensionId);
+export function exportRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
   if (!entry) {
     throw new Error('Extension not found.');
   }
@@ -708,7 +710,7 @@ export function exportRuntimeExtension(extensionId: string, stateRoot: string = 
     throw new Error('Extension package root is unavailable.');
   }
 
-  const exportsRoot = getExtensionExportsRoot(stateRoot);
+  const exportsRoot = getExtensionExportsRoot(stateRoot, layout);
   mkdirSync(exportsRoot, { recursive: true });
   const exportPath = join(exportsRoot, `${extensionId}-${createSafeTimestamp()}.zip`);
   const packageRoot = resolve(entry.packageRoot);
@@ -822,7 +824,7 @@ export function inspectRuntimeExtensionBundle(input: { zipPath?: unknown }) {
   };
 }
 
-export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, stateRoot: string = getStateRoot()) {
+export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {
   const zipPath = normalizeOptionalString(input.zipPath);
   if (!zipPath) {
     throw new Error('zipPath is required.');
@@ -840,51 +842,51 @@ export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, state
     const manifest = parseExtensionManifest(JSON.parse(readFileSync(join(packageRoot, 'extension.json'), 'utf-8')));
     assertImportableRuntimeArtifacts(packageRoot, manifest);
     const id = normalizeExtensionId(manifest.id);
-    const destination = join(getRuntimeExtensionsRoot(stateRoot), id);
-    if (existsSync(destination) || findExtensionEntry(id, stateRoot)) {
+    const destination = join(getRuntimeExtensionsRoot(stateRoot, layout), id);
+    if (existsSync(destination) || findExtensionEntry(id, stateRoot, layout)) {
       throw new Error('Extension id already exists.');
     }
 
-    mkdirSync(getRuntimeExtensionsRoot(stateRoot), { recursive: true });
+    mkdirSync(getRuntimeExtensionsRoot(stateRoot, layout), { recursive: true });
     cpSync(packageRoot, destination, { recursive: true, errorOnExist: true });
-    invalidateExtensionRegistryReadCaches(stateRoot);
-    const summary = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
+    const summary = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === id);
     return { ok: true as const, extension: summary, packageRoot: destination };
   } finally {
     rmSync(extractRoot, { recursive: true, force: true });
   }
 }
 
-export async function deleteRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {
+export async function deleteRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {
   const id = normalizeExtensionId(extensionId);
   const warnings: RuntimeExtensionDeleteWarning[] = [];
-  const entry = findExtensionEntry(id, stateRoot);
+  const entry = findExtensionEntry(id, stateRoot, layout);
   if (!entry) {
     const { clearExtensionFailureRecords, readInvalidRuntimeExtensionEntries, removeExtensionFromRegistry } =
       await import('./extensionRegistry.js');
-    const invalidEntry = readInvalidRuntimeExtensionEntries(stateRoot).find((candidate) => candidate.id === id);
-    await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot));
-    await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot));
+    const invalidEntry = readInvalidRuntimeExtensionEntries(stateRoot, layout).find((candidate) => candidate.id === id);
+    await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot, layout));
+    await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot, layout));
     if (!invalidEntry?.packageRoot) {
-      invalidateExtensionRegistryReadCaches(stateRoot);
+      invalidateExtensionRegistryReadCaches(stateRoot, layout);
       return buildDeleteRuntimeExtensionResult(id, false, warnings);
     }
-    const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
+    const runtimeRoot = getRuntimeExtensionsRoot(stateRoot, layout);
     assertInside(runtimeRoot, invalidEntry.packageRoot);
     const deleted = deleteExtensionPackageRootBestEffort(invalidEntry.packageRoot, warnings);
-    invalidateExtensionRegistryReadCaches(stateRoot);
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
     return buildDeleteRuntimeExtensionResult(id, deleted, warnings);
   }
   if (!entry.packageRoot) {
     const { clearExtensionFailureRecords, removeExtensionFromRegistry } = await import('./extensionRegistry.js');
-    await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot));
-    await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot));
+    await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot, layout));
+    await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot, layout));
     warnings.push({ operation: 'delete extension package', message: 'Extension package root is unavailable.' });
-    invalidateExtensionRegistryReadCaches(stateRoot);
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
     return buildDeleteRuntimeExtensionResult(id, false, warnings);
   }
 
-  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot);
+  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot, layout);
   const runtimeInstalled = isInsidePath(runtimeRoot, entry.packageRoot);
   if (entry.manifest.packageType === 'system' && !runtimeInstalled) {
     throw new Error('Packaged system extensions cannot be deleted.');
@@ -905,11 +907,11 @@ export async function deleteRuntimeExtension(extensionId: string, stateRoot: str
   });
 
   const { removeExtensionFromRegistry, clearExtensionFailureRecords } = await import('./extensionRegistry.js');
-  await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot));
-  await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot));
+  await runBestEffortDeleteStep(warnings, 'remove extension registry state', () => removeExtensionFromRegistry(id, stateRoot, layout));
+  await runBestEffortDeleteStep(warnings, 'clear extension failure records', () => clearExtensionFailureRecords(id, stateRoot, layout));
 
   const deleted = deleteExtensionPackageRootBestEffort(entry.packageRoot, warnings);
-  invalidateExtensionRegistryReadCaches(stateRoot);
+  invalidateExtensionRegistryReadCaches(stateRoot, layout);
   return buildDeleteRuntimeExtensionResult(id, deleted, warnings);
 }
 

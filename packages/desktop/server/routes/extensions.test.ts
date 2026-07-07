@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFil
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { setDefaultExtensionBackendWorkerUrl } from '../extensions/extensionBackendWorkerClient.js';
@@ -826,6 +827,30 @@ describe('registerExtensionRoutes', () => {
     });
   });
 
+  it('creates runtime extensions under the desktop root layout when provided', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-legacy-'));
+    const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-route-layout-')) });
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const harness = createHarness({
+      getRuntimeScope: () => 'default',
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => layout,
+    });
+
+    const res = createResponse();
+    harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: 'Agent Board' } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: true,
+        packageRoot: join(layout.apps, 'extensions', 'agent-board'),
+      }),
+    );
+    expect(existsSync(join(layout.apps, 'extensions', 'agent-board', 'extension.json'))).toBe(true);
+    expect(existsSync(join(stateRoot, 'extensions', 'agent-board'))).toBe(false);
+  });
+
   it('exports and imports runtime extension bundles', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
@@ -1284,15 +1309,15 @@ describe('registerExtensionRoutes', () => {
 
   it('writes an activity entry when a runtime extension is created', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-route-layout-')) });
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
-    const desktopRootLayout = { root: '/desktop-root' } as never;
     writeExtensionActivityEntrySafeMock.mockReset();
-    const harness = createHarness({ getRuntimeScope: () => 'shared', getDesktopRootLayout: () => desktopRootLayout });
+    const harness = createHarness({ getRuntimeScope: () => 'shared', getStateRoot: () => stateRoot, getDesktopRootLayout: () => layout });
     const res = createResponse();
     harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: 'Agent Board' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'created', 'Agent Board', undefined, desktopRootLayout);
+    expect(writeExtensionActivityEntrySafeMock).toHaveBeenCalledWith('agent-board', 'created', 'Agent Board', undefined, layout);
   });
 
   it('writes an activity entry when a runtime extension is imported', () => {
