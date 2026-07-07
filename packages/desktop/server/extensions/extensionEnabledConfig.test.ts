@@ -5,11 +5,16 @@ import { assertCanSetExtensionEnabled, buildExtensionEnabledConfigPatch, LOCKED_
 describe('extensionEnabledConfig', () => {
   it('prevents disabling locked extensions', () => {
     expect(LOCKED_EXTENSION_IDS).toContain('system-settings');
-    expect(LOCKED_EXTENSION_IDS).toContain('system-terminal');
+    expect(LOCKED_EXTENSION_IDS).not.toContain('system-terminal');
     expect(() => assertCanSetExtensionEnabled({ extensionId: 'system-settings', enabled: false })).toThrow(
       'Cannot disable system-settings: this extension is required by the application.',
     );
     expect(() => assertCanSetExtensionEnabled({ extensionId: 'system-settings', enabled: true })).not.toThrow();
+  });
+
+  it('allows disabling non-locked extensions such as system-terminal', () => {
+    expect(() => assertCanSetExtensionEnabled({ extensionId: 'system-terminal', enabled: false })).not.toThrow();
+    expect(() => assertCanSetExtensionEnabled({ extensionId: 'system-terminal', enabled: true })).not.toThrow();
   });
 
   it('enables extensions and clears quarantine state', () => {

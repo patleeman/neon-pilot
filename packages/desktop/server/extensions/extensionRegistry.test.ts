@@ -1049,21 +1049,21 @@ describe('extension registry', () => {
 
   it('keeps locked system extensions enabled even when stale config disables them', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
-    const extensionRoot = join(stateRoot, 'extensions', 'system-terminal');
+    const extensionRoot = join(stateRoot, 'extensions', 'system-settings');
     mkdirSync(extensionRoot, { recursive: true });
     writeFileSync(
       join(extensionRoot, 'extension.json'),
       JSON.stringify({
         schemaVersion: 2,
-        id: 'system-terminal',
-        name: 'Terminal',
+        id: 'system-settings',
+        name: 'Settings',
         packageType: 'system',
       }),
     );
-    writeFileSync(join(stateRoot, 'extensions', 'registry.json'), JSON.stringify({ disabledIds: ['system-terminal'] }));
+    writeFileSync(join(stateRoot, 'extensions', 'registry.json'), JSON.stringify({ disabledIds: ['system-settings'] }));
 
-    expect(isExtensionEnabled('system-terminal', stateRoot)).toBe(true);
-    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'system-terminal')).toMatchObject({
+    expect(isExtensionEnabled('system-settings', stateRoot)).toBe(true);
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'system-settings')).toMatchObject({
       enabled: true,
       required: true,
     });

@@ -1,10 +1,4 @@
-export const LOCKED_EXTENSION_IDS = [
-  'system-extension-manager',
-  'system-prompt-assembly',
-  'system-runs',
-  'system-settings',
-  'system-terminal',
-];
+export const LOCKED_EXTENSION_IDS = ['system-extension-manager', 'system-prompt-assembly', 'system-runs', 'system-settings'];
 
 export function isLockedExtensionId(extensionId: string): boolean {
   return LOCKED_EXTENSION_IDS.includes(extensionId);
