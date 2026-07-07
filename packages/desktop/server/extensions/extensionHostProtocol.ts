@@ -348,17 +348,20 @@ export interface ExtensionHostResolveModelProfileRequest {
   type: 'resolveModelProfile';
   provider: string;
   model: string;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostResolveFilePathRequest {
   type: 'resolveFilePath';
   extensionId: string;
   relativePath: string;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostResolvePromptReferencesRequest {
   type: 'resolvePromptReferences';
   text: string;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostInvokeProtocolEntrypointRequest {

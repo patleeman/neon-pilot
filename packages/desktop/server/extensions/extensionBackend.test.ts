@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { resolveDesktopRootLayout } from '@neon-pilot/core';
+import { type DesktopRootLayout, resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -4126,6 +4126,108 @@ describe('extension backend action invocation', () => {
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
     );
     expect(existsSync(join(stateRoot, 'extensions', 'reload-context-ext'))).toBe(false);
+  });
+});
+
+describe('layout-aware registry closures in createBackendContext', () => {
+  it('threads DesktopRootLayout to registry-backed closures', async () => {
+    const stateRoot = join(tmpdir(), `ext-backend-registry-state-${randomUUID()}`);
+    const dbRoot = join(tmpdir(), `ext-backend-registry-layout-${randomUUID()}`);
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+
+    const layout: DesktopRootLayout = {
+      root: dbRoot,
+      apps: join(dbRoot, 'apps'),
+      data: join(dbRoot, 'data'),
+      dataApps: join(dbRoot, 'data', 'apps'),
+      dataDocuments: join(dbRoot, 'data', 'documents'),
+      documents: join(dbRoot, 'documents'),
+      agents: join(dbRoot, 'agents'),
+      logs: join(dbRoot, 'logs'),
+      logsDesktop: join(dbRoot, 'logs', 'desktop'),
+      logsDaemon: join(dbRoot, 'logs', 'daemon'),
+      logsTelemetry: join(dbRoot, 'logs', 'telemetry'),
+      system: join(dbRoot, 'system'),
+      systemAgents: join(dbRoot, 'system', 'agents'),
+      systemApps: join(dbRoot, 'system', 'apps'),
+      systemCache: join(dbRoot, 'system', 'cache'),
+      systemConfig: join(dbRoot, 'system', 'config'),
+      systemConversations: join(dbRoot, 'system', 'conversations'),
+      systemSessions: join(dbRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(dbRoot, 'system', 'daemon'),
+      systemElectron: join(dbRoot, 'system', 'electron'),
+      systemElectronUserData: join(dbRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(dbRoot, 'system', 'observability'),
+      systemRuntime: join(dbRoot, 'system', 'runtime'),
+      systemSecrets: join(dbRoot, 'system', 'secrets'),
+      systemState: join(dbRoot, 'system', 'state'),
+    };
+
+    // Install extension in both the legacy stateRoot path (for permission checks)
+    // and the layout path (for registry listing). The permissions system does not
+    // yet accept layout params, so the legacy path is needed for the calling
+    // extension's own permission assertion.
+    const extId = 'layout-registry-test-ext';
+    const extLegacyRoot = join(stateRoot, 'extensions', extId);
+    const extLayoutRoot = join(layout.apps, 'extensions', extId);
+    for (const root of [extLegacyRoot, extLayoutRoot]) {
+      mkdirSync(join(root, 'dist'), { recursive: true });
+      writeFileSync(
+        join(root, 'extension.json'),
+        JSON.stringify({
+          schemaVersion: 2,
+          id: extId,
+          name: 'Layout Registry Test Ext',
+          permissions: ['extensions:write', 'commands:read', 'commands:execute'],
+          backend: {
+            entry: 'dist/backend.mjs',
+            actions: [{ id: 'noop', handler: 'noop', worker: { enabled: true } }],
+          },
+          contributes: {
+            commands: [{ id: 'layout.test.command', title: 'Layout Test Command', action: 'noop' }],
+          },
+        }),
+      );
+      writeFileSync(join(root, 'dist', 'backend.mjs'), 'export function noop() { return true; }\n');
+    }
+
+    mkdirSync(join(layout.systemApps, 'extensions'), { recursive: true });
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
+    invalidateExtensionRegistryReadCaches(stateRoot);
+
+    const context = createBackendContext(extId, {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => layout,
+    });
+
+    try {
+      // Verify commands.list() sees the layout-backed command contribution
+      const commands = await context.commands.list();
+      expect(commands).toEqual(expect.arrayContaining([expect.objectContaining({ surfaceId: 'layout.test.command', extensionId: extId })]));
+
+      // Verify setEnabled writes registry config under the layout path
+      expect(isExtensionEnabled(extId, stateRoot, layout)).toBe(true);
+
+      // Disable via context
+      context.extensions.setEnabled(extId, false);
+      expect(isExtensionEnabled(extId, stateRoot, layout)).toBe(false);
+
+      // Legacy (no layout) stateRoot should not reflect the change
+      expect(isExtensionEnabled(extId, stateRoot)).toBe(true);
+
+      // Registry config file exists at layout path
+      const layoutConfigPath = join(layout.systemApps, 'extensions', 'registry.json');
+      expect(existsSync(layoutConfigPath)).toBe(true);
+
+      // Re-enable
+      context.extensions.setEnabled(extId, true);
+      expect(isExtensionEnabled(extId, stateRoot, layout)).toBe(true);
+    } finally {
+      rmSync(dbRoot, { recursive: true, force: true });
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
   });
 });
 

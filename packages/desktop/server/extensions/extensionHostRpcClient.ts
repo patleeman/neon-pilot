@@ -447,8 +447,11 @@ export function createExtensionHostRpcClient(options: ExtensionHostRpcClientOpti
       if (!response.ok) throw new Error(response.error);
       if (!('registryMaintained' in response)) throw new Error('Extension host returned invalid registry maintenance response.');
     },
-    async readRegistryPresentation() {
-      const response = await send({ type: 'readRegistryPresentation' });
+    async readRegistryPresentation(serverContextSnapshot) {
+      const response = await send({
+        type: 'readRegistryPresentation',
+        ...(serverContextSnapshot ? { serverContextSnapshot } : {}),
+      });
       if (!response.ok) throw new Error(response.error);
       if (!('registryPresentation' in response)) throw new Error('Extension host returned invalid registry presentation.');
       return response.registryPresentation;

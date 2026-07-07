@@ -705,6 +705,49 @@ describe('extension host RPC client', () => {
     ).rejects.toThrow('pass serializable route data');
   });
 
+  it('forwards serverContextSnapshot through readRegistryPresentation RPC requests', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse({
+        ok: true,
+        registryPresentation: {
+          schema: { manifestVersion: 2 },
+          installSummaries: [],
+          commandRegistrations: [],
+          cliCommandRegistrations: [],
+          keybindingRegistrations: [],
+          slashCommandRegistrations: [],
+          mentionRegistrations: [],
+          quickOpenRegistrations: [],
+          searchProviderRegistrations: [],
+          snapshot: { extensions: [], routes: [], surfaces: [], views: [] },
+        },
+      }),
+    );
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
+
+    await expect(client.readRegistryPresentation({ runtimeScope: 'shared', stateRoot: '/layout-state' })).resolves.toEqual({
+      schema: { manifestVersion: 2 },
+      installSummaries: [],
+      commandRegistrations: [],
+      cliCommandRegistrations: [],
+      keybindingRegistrations: [],
+      slashCommandRegistrations: [],
+      mentionRegistrations: [],
+      quickOpenRegistrations: [],
+      searchProviderRegistrations: [],
+      snapshot: { extensions: [], routes: [], surfaces: [], views: [] },
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: { type: 'readRegistryPresentation', serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/layout-state' } },
+        }),
+      }),
+    );
+  });
+
   it('does not expose live server contexts on startup action client inputs', () => {
     // @ts-expect-error Product callers must pass serverContextSnapshot through the client boundary.
     const input: NonNullable<Parameters<ReturnType<typeof createExtensionHostRpcClient>['startStartupActions']>[0]> = {

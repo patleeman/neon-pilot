@@ -589,7 +589,7 @@ export function createBackendContext(
     commands: {
       execute: async (commandId, args) => {
         assertExtensionPermission(extensionId, 'commands:execute', 'commands.execute');
-        const command = findExtensionCommandRegistration(commandId);
+        const command = findExtensionCommandRegistration(commandId, stateRoot, desktopRootLayout);
         if (command) {
           if (isHostCommandAction(command.action)) {
             return executeHostCommandInRenderer({ command: command.action, args: args ?? command.args, sourceExtensionId: extensionId });
@@ -609,7 +609,7 @@ export function createBackendContext(
       },
       list: async () => {
         assertExtensionPermission(extensionId, 'commands:read', 'commands.list');
-        return listExtensionCommandRegistrations();
+        return listExtensionCommandRegistrations(stateRoot, desktopRootLayout);
       },
     },
     notify: {
@@ -676,17 +676,17 @@ export function createBackendContext(
       listPromptAssemblyContributions: () => {
         assertExtensionPermission(extensionId, 'extensions:read', 'extensions.listPromptAssemblyContributions');
         return {
-          contextProviders: listExtensionPromptContextProviderRegistrations(),
-          assemblyProviders: listExtensionAssemblyProviderRegistrations(),
-          hooks: listExtensionPromptAssemblyHookRegistrations(),
+          contextProviders: listExtensionPromptContextProviderRegistrations(stateRoot, desktopRootLayout),
+          assemblyProviders: listExtensionAssemblyProviderRegistrations(stateRoot, desktopRootLayout),
+          hooks: listExtensionPromptAssemblyHookRegistrations(stateRoot, desktopRootLayout),
         };
       },
       listStaticContributions: () => {
         assertExtensionPermission(extensionId, 'extensions:read', 'extensions.listStaticContributions');
         return {
-          tools: listExtensionToolRegistrations(),
-          skills: listExtensionSkillRegistrations(),
-          modelDiscovery: listEnabledExtensionEntries().flatMap((entry) => {
+          tools: listExtensionToolRegistrations(stateRoot, desktopRootLayout),
+          skills: listExtensionSkillRegistrations(stateRoot, desktopRootLayout),
+          modelDiscovery: listEnabledExtensionEntries(stateRoot, desktopRootLayout).flatMap((entry) => {
             const action = entry.manifest.contributes?.modelDiscovery?.action;
             return typeof action === 'string' ? [{ extensionId: entry.manifest.id, action }] : [];
           }),
@@ -705,7 +705,7 @@ export function createBackendContext(
       },
       setEnabled: (targetExtensionId, enabled) => {
         assertExtensionPermission(extensionId, 'extensions:write', 'extensions.setEnabled');
-        return setExtensionEnabled(targetExtensionId, enabled);
+        return setExtensionEnabled(targetExtensionId, enabled, stateRoot, desktopRootLayout);
       },
       setPermissionGranted: async (targetExtensionId, permission, granted) => {
         assertExtensionPermission(extensionId, 'extensions:write', 'extensions.setPermissionGranted');

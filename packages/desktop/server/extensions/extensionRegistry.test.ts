@@ -25,6 +25,7 @@ import {
   listExtensionKeybindingRegistrations,
   listExtensionModelProfileRegistrations,
   listExtensionPromptAssemblyHookRegistrations,
+  listExtensionPromptReferenceRegistrations,
   listExtensionSkillRegistrations,
   listExtensionToolRegistrations,
   markExtensionStartupActive,
@@ -304,6 +305,93 @@ describe('extension registry', () => {
       kind: 'resolved',
       profile: { id: 'gpt-anywhere' },
     });
+  });
+
+  it('resolves enabled model profiles with DesktopRootLayout', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const layoutRoot = mkdtempSync(join(tmpdir(), 'pa-ext-layout-'));
+    const layout = {
+      root: layoutRoot,
+      apps: join(layoutRoot, 'apps'),
+      systemApps: join(layoutRoot, 'system', 'apps'),
+      systemConfig: join(layoutRoot, 'system', 'config'),
+      systemConversations: join(layoutRoot, 'system', 'conversations'),
+      systemSessions: join(layoutRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(layoutRoot, 'system', 'daemon'),
+      systemElectron: join(layoutRoot, 'system', 'electron'),
+      systemElectronUserData: join(layoutRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(layoutRoot, 'system', 'observability'),
+      systemRuntime: join(layoutRoot, 'system', 'runtime'),
+      systemSecrets: join(layoutRoot, 'system', 'secrets'),
+      systemState: join(layoutRoot, 'system', 'state'),
+    };
+    const registryRoot = join(layout.apps, 'extensions');
+    const extRoot = join(registryRoot, 'layout-profile');
+    mkdirSync(extRoot, { recursive: true });
+    writeFileSync(
+      join(extRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'layout-profile',
+        name: 'Layout Profile',
+        contributes: { modelProfiles: [{ id: 'layout-prof', match: ['layout-provider/*'], priority: 10 }] },
+      }),
+    );
+    setExtensionEnabled('layout-profile', true, stateRoot, layout);
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
+
+    expect(listExtensionModelProfileRegistrations(stateRoot, layout).map((p) => p.id)).toContain('layout-prof');
+    expect(resolveExtensionModelProfile({ provider: 'layout-provider', model: 'v1' }, stateRoot, layout)).toMatchObject({
+      kind: 'resolved',
+      profile: { id: 'layout-prof' },
+    });
+
+    rmSync(stateRoot, { recursive: true, force: true });
+    rmSync(layoutRoot, { recursive: true, force: true });
+  });
+
+  it('resolves prompt references with DesktopRootLayout', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const layoutRoot = mkdtempSync(join(tmpdir(), 'pa-ext-layout-'));
+    const layout = {
+      root: layoutRoot,
+      apps: join(layoutRoot, 'apps'),
+      systemApps: join(layoutRoot, 'system', 'apps'),
+      systemConfig: join(layoutRoot, 'system', 'config'),
+      systemConversations: join(layoutRoot, 'system', 'conversations'),
+      systemSessions: join(layoutRoot, 'system', 'conversations', 'sessions'),
+      systemDaemon: join(layoutRoot, 'system', 'daemon'),
+      systemElectron: join(layoutRoot, 'system', 'electron'),
+      systemElectronUserData: join(layoutRoot, 'system', 'electron', 'user-data'),
+      systemObservability: join(layoutRoot, 'system', 'observability'),
+      systemRuntime: join(layoutRoot, 'system', 'runtime'),
+      systemSecrets: join(layoutRoot, 'system', 'secrets'),
+      systemState: join(layoutRoot, 'system', 'state'),
+    };
+    const registryRoot = join(layout.apps, 'extensions');
+    const extRoot = join(registryRoot, 'layout-ref');
+    mkdirSync(extRoot, { recursive: true });
+    writeFileSync(
+      join(extRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'layout-ref',
+        name: 'Layout Ref',
+        contributes: {
+          promptReferences: [{ id: 'layout-resolver', handler: 'resolveRef' }],
+        },
+      }),
+    );
+    setExtensionEnabled('layout-ref', true, stateRoot, layout);
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
+
+    const registrations = listExtensionPromptReferenceRegistrations(stateRoot, layout);
+    expect(registrations).toContainEqual(
+      expect.objectContaining({ extensionId: 'layout-ref', id: 'layout-resolver', handler: 'resolveRef' }),
+    );
+
+    rmSync(stateRoot, { recursive: true, force: true });
+    rmSync(layoutRoot, { recursive: true, force: true });
   });
 
   it('treats same-priority model profile matches as ambiguous and ignores disabled profiles', () => {

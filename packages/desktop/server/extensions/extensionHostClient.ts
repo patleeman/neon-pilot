@@ -736,18 +736,28 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       };
     }
     if (request.type === 'resolveModelProfile') {
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
       const { resolveExtensionModelProfile } = await import('./extensionRegistry.js');
       return {
         ok: true,
-        modelProfile: resolveExtensionModelProfile({
-          provider: request.provider,
-          model: request.model,
-        }) as ExtensionHostModelProfileResolution,
+        modelProfile: resolveExtensionModelProfile(
+          {
+            provider: request.provider,
+            model: request.model,
+          },
+          stateRoot,
+          layout,
+        ) as ExtensionHostModelProfileResolution,
       };
     }
     if (request.type === 'resolveFilePath') {
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
       const { findExtensionEntry } = await import('./extensionRegistry.js');
-      const entry = findExtensionEntry(request.extensionId);
+      const entry = findExtensionEntry(request.extensionId, stateRoot, layout);
       if (!entry?.packageRoot) {
         throw new Error('Extension files are unavailable for this extension.');
       }
@@ -763,10 +773,13 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       if (mentionIds.length === 0) {
         return { ok: true, promptReferences: { contextBlocks: [], references: [] } };
       }
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
       const { listExtensionPromptReferenceRegistrations } = await import('./extensionRegistry.js');
       const contextBlocks: string[] = [];
       const references: ExtensionHostPromptReferenceResolution['references'] = [];
-      for (const resolver of listExtensionPromptReferenceRegistrations()) {
+      for (const resolver of listExtensionPromptReferenceRegistrations(stateRoot, layout)) {
         const result = await invokeExtensionAction(resolver.extensionId, resolver.handler, { text: request.text, mentionIds });
         if (!result.ok) continue;
         const normalized = normalizePromptReferenceResolution(result.result);

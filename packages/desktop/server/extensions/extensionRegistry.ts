@@ -1760,8 +1760,12 @@ export function listExtensionPromptAssemblyHookRegistrations(
     .sort((left, right) => (left.priority ?? 0) - (right.priority ?? 0) || left.id.localeCompare(right.id));
 }
 
-export function listExtensionPromptReferenceRegistrations(stateRoot: string = getStateRoot()): ExtensionPromptReferenceRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap((entry) =>
+export function listExtensionPromptReferenceRegistrations(
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
+): ExtensionPromptReferenceRegistration[] {
+  const root = stateRoot ?? getStateRoot();
+  return listEnabledExtensionEntries(root, layout).flatMap((entry) =>
     (entry.manifest.contributes?.promptReferences ?? []).flatMap((resolver): ExtensionPromptReferenceRegistration[] => {
       const id = resolver.id.trim();
       const handler = resolver.handler.trim();
@@ -2100,18 +2104,24 @@ export function listExtensionToolRegistrations(
   return registrations;
 }
 
-export function listExtensionModelProfileRegistrations(stateRoot: string = getStateRoot()): ExtensionModelProfileRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionModelProfileRegistrations);
+export function listExtensionModelProfileRegistrations(
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
+): ExtensionModelProfileRegistration[] {
+  const root = stateRoot ?? getStateRoot();
+  return listEnabledExtensionEntries(root, layout).flatMap(buildExtensionModelProfileRegistrations);
 }
 
 export function resolveExtensionModelProfile(
   input: { provider: string; model: string },
-  stateRoot: string = getStateRoot(),
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
 ): ExtensionModelProfileResolution<ExtensionModelProfileRegistration> {
+  const root = stateRoot ?? getStateRoot();
   return resolveExtensionModelProfileFromRegistrations({
     provider: input.provider,
     model: input.model,
-    profiles: listExtensionModelProfileRegistrations(stateRoot),
+    profiles: listExtensionModelProfileRegistrations(root, layout),
   });
 }
 

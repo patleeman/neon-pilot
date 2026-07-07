@@ -729,7 +729,71 @@ describe('extension host client', () => {
       kind: 'resolved',
       profile: { extensionId: 'ext', id: 'gpt' },
     });
-    expect(extensionRegistry.resolveExtensionModelProfile).toHaveBeenCalledWith({ provider: 'openai', model: 'gpt-5' });
+    expect(extensionRegistry.resolveExtensionModelProfile).toHaveBeenCalledWith(
+      { provider: 'openai', model: 'gpt-5' },
+      expect.any(String),
+      undefined,
+    );
+  });
+
+  it('threads DesktopRootLayout from serverContextSnapshot through resolveModelProfile', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionRegistry.resolveExtensionModelProfile.mockReturnValueOnce({
+      kind: 'resolved',
+      profile: { extensionId: 'ext', id: 'layout-gpt' },
+    });
+
+    await expect(
+      getExtensionHostClient().resolveModelProfile({
+        provider: 'openai',
+        model: 'gpt-5',
+        serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/tmp/neon-pilot-state', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({
+      kind: 'resolved',
+      profile: { extensionId: 'ext', id: 'layout-gpt' },
+    });
+
+    expect(extensionRegistry.resolveExtensionModelProfile).toHaveBeenCalledWith(
+      { provider: 'openai', model: 'gpt-5' },
+      '/tmp/neon-pilot-state',
+      layout,
+    );
+  });
+
+  it('threads DesktopRootLayout from serverContextSnapshot through resolveFilePath', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionRegistry.findExtensionEntry.mockReturnValueOnce({ packageRoot: '/extensions/ext' });
+
+    await expect(
+      getExtensionHostClient().resolveFilePath({
+        extensionId: 'ext',
+        relativePath: 'dist/frontend.js',
+        serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/tmp/neon-pilot-state', desktopRootLayout: layout },
+      }),
+    ).resolves.toBe('/extensions/ext/dist/frontend.js');
+
+    expect(extensionRegistry.findExtensionEntry).toHaveBeenCalledWith('ext', '/tmp/neon-pilot-state', layout);
+  });
+
+  it('threads DesktopRootLayout from serverContextSnapshot through resolvePromptReferences', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionRegistry.listExtensionPromptReferenceRegistrations.mockReturnValueOnce([]);
+
+    await expect(
+      getExtensionHostClient().resolvePromptReferences({
+        text: 'Use @note:k1',
+        serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/tmp/neon-pilot-state', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({
+      contextBlocks: [],
+      references: [],
+    });
+
+    expect(extensionRegistry.listExtensionPromptReferenceRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
   });
 
   it('routes extension file path resolution through the extension host request envelope', async () => {
