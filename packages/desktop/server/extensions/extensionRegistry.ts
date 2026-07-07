@@ -1689,9 +1689,10 @@ export function listExtensionSlashCommandRegistrations(
 
 export function listExtensionPromptContextProviderRegistrations(
   stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
 ): ExtensionPromptContextProviderRegistration[] {
   return sortExtensionPromptContextProviderRegistrations(
-    listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionPromptContextProviderRegistrations),
+    listEnabledExtensionEntries(stateRoot, layout).flatMap(buildExtensionPromptContextProviderRegistrations),
   );
 }
 
@@ -1699,14 +1700,17 @@ export function listExtensionRuntimeProviderRegistrations(stateRoot: string = ge
   return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionRuntimeProviderRegistrations);
 }
 
-export function listExtensionAssemblyProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionAssemblyProviderRegistration[] {
+export function listExtensionAssemblyProviderRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionAssemblyProviderRegistration[] {
   const fields = [
     ['skillProviders', 'skills'],
     ['toolProviders', 'tools'],
     ['promptTemplateProviders', 'promptTemplates'],
     ['instructionProviders', 'instructions'],
   ] as const;
-  return listEnabledExtensionEntries(stateRoot)
+  return listEnabledExtensionEntries(stateRoot, layout)
     .flatMap((entry) =>
       fields.flatMap(([field, kind]) =>
         (entry.manifest.contributes?.[field] ?? []).flatMap((provider): ExtensionAssemblyProviderRegistration[] => {
@@ -1732,8 +1736,9 @@ export function listExtensionAssemblyProviderRegistrations(stateRoot: string = g
 
 export function listExtensionPromptAssemblyHookRegistrations(
   stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
 ): ExtensionPromptAssemblyHookRegistration[] {
-  return listEnabledExtensionEntries(stateRoot)
+  return listEnabledExtensionEntries(stateRoot, layout)
     .flatMap((entry) =>
       (entry.manifest.contributes?.promptAssemblyHooks ?? []).flatMap((hook): ExtensionPromptAssemblyHookRegistration[] => {
         const id = hook.id.trim();
@@ -2080,12 +2085,18 @@ export function listExtensionMessageActionRegistrations(stateRoot: string = getS
   );
 }
 
-export function listExtensionSkillRegistrations(stateRoot: string = getStateRoot()): ExtensionSkillRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionSkillRegistrations);
+export function listExtensionSkillRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionSkillRegistration[] {
+  return listEnabledExtensionEntries(stateRoot, layout).flatMap(buildExtensionSkillRegistrations);
 }
 
-export function listExtensionToolRegistrations(stateRoot: string = getStateRoot()): ExtensionToolRegistration[] {
-  const registrations = listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionToolRegistrations);
+export function listExtensionToolRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionToolRegistration[] {
+  const registrations = listEnabledExtensionEntries(stateRoot, layout).flatMap(buildExtensionToolRegistrations);
   return registrations;
 }
 

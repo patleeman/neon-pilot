@@ -351,6 +351,67 @@ describe('extension host RPC client', () => {
     );
   });
 
+  it('threads server context snapshots through static contribution RPC requests', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          promptAssemblyContributions: {
+            contextProviders: [],
+            assemblyProviders: [],
+            hooks: [],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ok: true,
+          staticContributions: {
+            tools: [],
+            skills: [],
+            modelDiscovery: [],
+          },
+        }),
+      );
+    const client = createExtensionHostRpcClient({ baseUrl: 'http://host', token: 'secret', fetchImpl });
+    const serverContextSnapshot = {
+      runtimeScope: 'shared' as const,
+      stateRoot: '/tmp/neon-pilot-state',
+      repoRoot: '/repo',
+    };
+
+    await expect(client.listPromptAssemblyContributions(serverContextSnapshot)).resolves.toEqual({
+      contextProviders: [],
+      assemblyProviders: [],
+      hooks: [],
+    });
+    await expect(client.listStaticContributions(serverContextSnapshot)).resolves.toEqual({
+      tools: [],
+      skills: [],
+      modelDiscovery: [],
+    });
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: { type: 'listPromptAssemblyContributions', serverContextSnapshot },
+        }),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      'http://host/rpc',
+      expect.objectContaining({
+        body: JSON.stringify({
+          request: { type: 'listStaticContributions', serverContextSnapshot },
+        }),
+      }),
+    );
+  });
+
   it('runs extension management operations over RPC', async () => {
     const fetchImpl = vi
       .fn()

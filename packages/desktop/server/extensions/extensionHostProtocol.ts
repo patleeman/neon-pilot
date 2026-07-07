@@ -327,10 +327,12 @@ export interface ExtensionHostStopServicesRequest {
 
 export interface ExtensionHostListPromptAssemblyContributionsRequest {
   type: 'listPromptAssemblyContributions';
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostListStaticContributionsRequest {
   type: 'listStaticContributions';
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostListEventSubscriptionsRequest {

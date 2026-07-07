@@ -132,8 +132,10 @@ export interface ExtensionHostClient {
   listServices(): Promise<ExtensionHostRunningService[]>;
   startServices(input?: ExtensionHostStartServicesInput): Promise<ExtensionHostServiceOperationResult[]>;
   stopServices(extensionId: string): Promise<void>;
-  listPromptAssemblyContributions(): Promise<ExtensionHostPromptAssemblyContributions>;
-  listStaticContributions(): Promise<ExtensionHostStaticContributions>;
+  listPromptAssemblyContributions(
+    serverContextSnapshot?: ExtensionHostServerContextSnapshot,
+  ): Promise<ExtensionHostPromptAssemblyContributions>;
+  listStaticContributions(serverContextSnapshot?: ExtensionHostServerContextSnapshot): Promise<ExtensionHostStaticContributions>;
   listEventSubscriptions(): Promise<ExtensionHostEventSubscription[]>;
   stateOperation(input: ExtensionHostStateOperationInput): Promise<ExtensionHostStateOperationResult>;
   registryMaintenance(input: ExtensionHostRegistryMaintenanceInput): Promise<void>;
@@ -243,14 +245,20 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('servicesStopped' in response)) throw new Error('Extension host returned an invalid service stop response.');
     },
-    async listPromptAssemblyContributions() {
-      const response = await handleInProcessExtensionHostRequest({ type: 'listPromptAssemblyContributions' });
+    async listPromptAssemblyContributions(serverContextSnapshot?: ExtensionHostServerContextSnapshot) {
+      const response = await handleInProcessExtensionHostRequest({
+        type: 'listPromptAssemblyContributions',
+        ...(serverContextSnapshot ? { serverContextSnapshot } : {}),
+      });
       if (!response.ok) throw new Error(response.error);
       if (!('promptAssemblyContributions' in response)) throw new Error('Extension host returned invalid prompt assembly contributions.');
       return response.promptAssemblyContributions;
     },
-    async listStaticContributions() {
-      const response = await handleInProcessExtensionHostRequest({ type: 'listStaticContributions' });
+    async listStaticContributions(serverContextSnapshot?: ExtensionHostServerContextSnapshot) {
+      const response = await handleInProcessExtensionHostRequest({
+        type: 'listStaticContributions',
+        ...(serverContextSnapshot ? { serverContextSnapshot } : {}),
+      });
       if (!response.ok) throw new Error(response.error);
       if (!('staticContributions' in response)) throw new Error('Extension host returned invalid static contributions.');
       return response.staticContributions;
@@ -607,6 +615,9 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, servicesStopped: true };
     }
     if (request.type === 'listPromptAssemblyContributions') {
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
       const {
         listExtensionAssemblyProviderRegistrations,
         listExtensionPromptAssemblyHookRegistrations,
@@ -615,21 +626,24 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return {
         ok: true,
         promptAssemblyContributions: {
-          contextProviders: listExtensionPromptContextProviderRegistrations(),
-          assemblyProviders: listExtensionAssemblyProviderRegistrations(),
-          hooks: listExtensionPromptAssemblyHookRegistrations(),
+          contextProviders: listExtensionPromptContextProviderRegistrations(stateRoot, layout),
+          assemblyProviders: listExtensionAssemblyProviderRegistrations(stateRoot, layout),
+          hooks: listExtensionPromptAssemblyHookRegistrations(stateRoot, layout),
         },
       };
     }
     if (request.type === 'listStaticContributions') {
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
       const { listEnabledExtensionEntries, listExtensionSkillRegistrations, listExtensionToolRegistrations } =
         await import('./extensionRegistry.js');
       return {
         ok: true,
         staticContributions: {
-          tools: listExtensionToolRegistrations(),
-          skills: listExtensionSkillRegistrations(),
-          modelDiscovery: listEnabledExtensionEntries().flatMap((entry) => {
+          tools: listExtensionToolRegistrations(stateRoot, layout),
+          skills: listExtensionSkillRegistrations(stateRoot, layout),
+          modelDiscovery: listEnabledExtensionEntries(stateRoot, layout).flatMap((entry) => {
             const action = entry.manifest.contributes?.modelDiscovery?.action;
             return typeof action === 'string' ? [{ extensionId: entry.manifest.id, action }] : [];
           }),

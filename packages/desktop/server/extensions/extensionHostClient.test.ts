@@ -406,6 +406,54 @@ describe('extension host client', () => {
     });
   });
 
+  it('threads DesktopRootLayout from serverContextSnapshot through listStaticContributions', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionRegistry.listExtensionToolRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionSkillRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listEnabledExtensionEntries.mockReturnValueOnce([]);
+
+    await expect(
+      getExtensionHostClient().listStaticContributions({
+        runtimeScope: 'shared',
+        stateRoot: '/tmp/neon-pilot-state',
+        desktopRootLayout: layout,
+      }),
+    ).resolves.toEqual({
+      tools: [],
+      skills: [],
+      modelDiscovery: [],
+    });
+
+    expect(extensionRegistry.listExtensionToolRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionSkillRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listEnabledExtensionEntries).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+  });
+
+  it('threads DesktopRootLayout from serverContextSnapshot through listPromptAssemblyContributions', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionRegistry.listExtensionPromptContextProviderRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionAssemblyProviderRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionPromptAssemblyHookRegistrations.mockReturnValueOnce([]);
+
+    await expect(
+      getExtensionHostClient().listPromptAssemblyContributions({
+        runtimeScope: 'shared',
+        stateRoot: '/tmp/neon-pilot-state',
+        desktopRootLayout: layout,
+      }),
+    ).resolves.toEqual({
+      contextProviders: [],
+      assemblyProviders: [],
+      hooks: [],
+    });
+
+    expect(extensionRegistry.listExtensionPromptContextProviderRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionAssemblyProviderRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionPromptAssemblyHookRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+  });
+
   it('routes registry presentation reads through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.listExtensionInstallSummaries.mockReturnValueOnce([{ id: 'ext', name: 'Ext' }]);
