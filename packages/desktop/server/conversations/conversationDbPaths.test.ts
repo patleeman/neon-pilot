@@ -6,6 +6,7 @@ import { type DesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  CONVERSATIONS_DB_ENV_KEY,
   ensureConversationsDbFile,
   resolveConversationsDbFile,
   resolveConversationsDbFileFromLayout,
@@ -13,6 +14,7 @@ import {
 } from './conversationDbPaths.js';
 
 const tempRoots: string[] = [];
+const originalConversationsDbEnv = process.env[CONVERSATIONS_DB_ENV_KEY];
 
 function createLayout(): DesktopRootLayout {
   const root = mkdtempSync(join(tmpdir(), 'neon-pilot-conversation-db-layout-'));
@@ -27,6 +29,12 @@ describe('conversation db paths', () => {
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
+    }
+    setConversationsDbLayout(undefined);
+    if (originalConversationsDbEnv === undefined) {
+      delete process.env[CONVERSATIONS_DB_ENV_KEY];
+    } else {
+      process.env[CONVERSATIONS_DB_ENV_KEY] = originalConversationsDbEnv;
     }
   });
 
@@ -59,5 +67,37 @@ describe('conversation db paths', () => {
     } finally {
       setConversationsDbLayout(undefined);
     }
+  });
+
+  describe('env fallback', () => {
+    it('uses env var when no layout and no default layout are set', () => {
+      const envPath = '/env/fallback/conversations.db';
+      process.env[CONVERSATIONS_DB_ENV_KEY] = envPath;
+
+      expect(resolveConversationsDbFile()).toBe(envPath);
+    });
+
+    it('env var is ignored when an explicit layout is provided', () => {
+      const layout = createLayout();
+      const expected = join(layout.systemConversations, 'conversations.db');
+
+      process.env[CONVERSATIONS_DB_ENV_KEY] = '/env/override/should-not-be-used.db';
+
+      expect(resolveConversationsDbFile(layout)).toBe(expected);
+    });
+
+    it('env var is ignored when default layout is set', () => {
+      const layout = createLayout();
+      const expected = join(layout.systemConversations, 'conversations.db');
+
+      process.env[CONVERSATIONS_DB_ENV_KEY] = '/env/override/should-not-be-used.db';
+
+      try {
+        setConversationsDbLayout(layout);
+        expect(resolveConversationsDbFile()).toBe(expected);
+      } finally {
+        setConversationsDbLayout(undefined);
+      }
+    });
   });
 });

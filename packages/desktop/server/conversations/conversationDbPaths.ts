@@ -5,6 +5,13 @@ import { type DesktopRootLayout, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 export const CONVERSATIONS_DB_FILE_NAME = 'conversations.db';
 
+/**
+ * Environment variable key that the parent desktop process sets to propagate
+ * the layout-derived conversations database file path to worker threads that
+ * cannot access getDesktopRootLayout directly.
+ */
+export const CONVERSATIONS_DB_ENV_KEY = 'NEON_PILOT_CONVERSATIONS_DB_FILE';
+
 // Module-level default layout for conversation database path resolution.
 // Set via setConversationsDbLayout (typically from conversationService context).
 let defaultLayout: DesktopRootLayout | undefined;
@@ -33,6 +40,12 @@ export function resolveConversationsDbFile(layout?: DesktopRootLayout): string {
   }
   if (defaultLayout) {
     return resolveConversationsDbFileFromLayout(defaultLayout);
+  }
+  // Environment fallback for worker-thread compatibility when layout context
+  // is not available but the parent process has propagated the resolved path.
+  const envFile = process.env[CONVERSATIONS_DB_ENV_KEY];
+  if (envFile) {
+    return envFile;
   }
   return join(resolveAgentRuntimeDir(), CONVERSATIONS_DB_FILE_NAME);
 }

@@ -14,6 +14,7 @@ import { SessionManager } from '@earendil-works/pi-coding-agent';
 import {
   ensureDesktopRootDir,
   getPiAgentRuntimeDir,
+  getRuntimeSessionsIndexFilePath,
   getStateRoot,
   resolveDesktopRootLayout,
   saveConversationCommitCheckpoint,
@@ -63,6 +64,7 @@ import {
   readRequiredCheckpointString,
 } from '../conversations/conversationCheckpointCommit.js';
 import { resolveNeutralChatCwd, resolveRequestedCwd } from '../conversations/conversationCwd.js';
+import { CONVERSATIONS_DB_ENV_KEY, resolveConversationsDbFileFromLayout } from '../conversations/conversationDbPaths.js';
 import {
   cancelConversationDeferredResumeCapability,
   fireConversationDeferredResumeCapability,
@@ -138,6 +140,7 @@ import {
   getAvailableModelObjects,
   updateLiveSessionModelPreferences,
 } from '../conversations/liveSessions.js';
+import { SYSTEM_SESSIONS_DIR_ENV_KEY, SYSTEM_SESSIONS_INDEX_FILE_ENV_KEY } from '../conversations/sessionPaths.js';
 import { getExecution, getExecutionLog, listConversationExecutions, listExecutions } from '../executions/executionService.js';
 import { createExtensionConversationsCapability } from '../extensions/extensionConversations.js';
 import { getExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
@@ -774,6 +777,16 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   // (e.g. getDefaultWebCwd) can reference it.
   ensureDesktopRootDir();
   const desktopRootLayout = resolveDesktopRootLayout();
+
+  // Propagate layout-derived paths to worker-inherited process env so that
+  // worker threads (e.g. conversationInspectWorker) can resolve the same
+  // conversation DB, sessions directory, and sessions index without access
+  // to getDesktopRootLayout. These env reads are scoped to this worker-thread
+  // compatibility bridge and not used as broad runtime config.
+  process.env[CONVERSATIONS_DB_ENV_KEY] = resolveConversationsDbFileFromLayout(desktopRootLayout);
+  process.env[SYSTEM_SESSIONS_DIR_ENV_KEY] = desktopRootLayout.systemSessions;
+  process.env[SYSTEM_SESSIONS_INDEX_FILE_ENV_KEY] = getRuntimeSessionsIndexFilePath(desktopRootLayout);
+
   const settingsFile = getRuntimeSettingsFilePathFromLayout(desktopRootLayout);
   const pathsAtMs = performance.now();
   process.stderr.write(`[perf] buildLocalContexts: paths ${Math.round(pathsAtMs - startedAtMs)}ms\n`);

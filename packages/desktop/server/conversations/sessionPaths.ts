@@ -5,6 +5,20 @@ import { type DesktopRootLayout, getDurableSessionsDir, getRuntimeSessionsIndexF
 let getDesktopRootLayoutFn: (() => DesktopRootLayout) | null = null;
 
 /**
+ * Environment variable key that the parent desktop process sets to propagate
+ * the layout-derived system sessions directory to worker threads that cannot
+ * access getDesktopRootLayout directly.
+ */
+export const SYSTEM_SESSIONS_DIR_ENV_KEY = 'NEON_PILOT_SYSTEM_SESSIONS_DIR';
+
+/**
+ * Environment variable key that the parent desktop process sets to propagate
+ * the layout-derived system sessions index file path to worker threads that
+ * cannot access getDesktopRootLayout directly.
+ */
+export const SYSTEM_SESSIONS_INDEX_FILE_ENV_KEY = 'NEON_PILOT_SYSTEM_SESSIONS_INDEX_FILE';
+
+/**
  * Override the DesktopRootLayout resolver used by session directory path
  * resolution. Routes through the existing ServerRouteContext.getDesktopRootLayout
  * when set; falls back to resolving from defaults if never called.
@@ -28,8 +42,14 @@ export function resolveSystemSessionsDir(layout?: DesktopRootLayout): string {
     try {
       return getDesktopRootLayoutFn().systemSessions;
     } catch {
-      // Fall through to legacy default
+      // Fall through to env/legacy default
     }
+  }
+  // Environment fallback for worker-thread compatibility when layout context
+  // is not available but the parent process has propagated the resolved path.
+  const envDir = process.env[SYSTEM_SESSIONS_DIR_ENV_KEY];
+  if (envDir) {
+    return envDir;
   }
   return getDurableSessionsDir();
 }
@@ -49,8 +69,14 @@ export function resolveSystemSessionsIndexFile(layout?: DesktopRootLayout): stri
     try {
       return getRuntimeSessionsIndexFilePath(getDesktopRootLayoutFn());
     } catch {
-      // Fall through to legacy default
+      // Fall through to env/legacy default
     }
+  }
+  // Environment fallback for worker-thread compatibility when layout context
+  // is not available but the parent process has propagated the resolved path.
+  const envFile = process.env[SYSTEM_SESSIONS_INDEX_FILE_ENV_KEY];
+  if (envFile) {
+    return envFile;
   }
   return getRuntimeSessionsIndexFilePath();
 }
