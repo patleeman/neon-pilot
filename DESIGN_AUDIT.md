@@ -116,7 +116,7 @@ Neon Pilot has a **well-architected component library** (`@neon-pilot/ui`) with 
 - **Inconsistent borders:** Some use `border-border-subtle`, others write borders inline
 - **Maintenance burden:** Changes require updating hundreds of individual files
 
-#### Example 3: Duplicating Pill Styles (Skills Extension)
+#### Example 3: Duplicating Pill Styles (Skills Extension - user-facing surface archived)
 
 ```tsx
 // ❌ Custom pill styling instead of using <Pill> tone variants:
@@ -221,7 +221,7 @@ function Ico({ d, size = 14 }: { d: string; size?: number }) {
 2. **Incomplete documentation:** Component library README is comprehensive, but actual usage patterns differ
 3. **No enforcement:** No linting or build-time checks for design system usage
 
-**Evidence from system-skills extension:**
+**Evidence from system-skills extension** (user-facing Skills surface archived; Prompt Assembly integration and agent-internal actions remain):
 
 ```tsx
 // Mixing design system (AppPageLayout, ResourceList) with custom classes:
