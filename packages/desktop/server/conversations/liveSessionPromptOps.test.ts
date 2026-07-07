@@ -106,6 +106,15 @@ describe('runPromptOnLiveEntry image probing', () => {
     expect(entry.session.prompt).toHaveBeenCalledWith(expect.stringContaining('No preferred vision model is configured'));
   });
 
+  it('forwards desktopRootLayout to rememberAudioProbeAttachments when audio attachments are present', async () => {
+    const entry = createEntry({ id: 'text-model', input: ['text'] });
+    const audios = [{ type: 'audio' as const, mimeType: 'audio/wav', name: 'recording.wav', path: '/tmp/recording.wav', sizeBytes: 1024 }];
+
+    await runPromptOnLiveEntry(entry, 'What does this say?', undefined, undefined, undefined, audios, undefined, callbacks);
+
+    expect(rememberAudioProbeAttachmentsMock).toHaveBeenCalledWith('session-1', audios, desktopRootLayout);
+  });
+
   it('passes images directly to image-capable models while also storing them for probing', async () => {
     const entry = createEntry({ id: 'vision-model', input: ['text', 'image'] });
     const images = [{ type: 'image' as const, data: 'aGVsbG8=', mimeType: 'image/png', name: 'screen.png' }];

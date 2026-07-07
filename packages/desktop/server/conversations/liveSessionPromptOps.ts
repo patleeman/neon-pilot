@@ -240,7 +240,7 @@ export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>
   const preferredVisionModel = shouldUseTextOnlyImageHandling ? getPreferredVisionModel() : '';
   const storedImages = hasImages && images ? rememberImageProbeAttachments(entry.sessionId, images, entry.desktopRootLayout) : [];
   const storedVideos = hasVideos && videos ? await rememberVideoProbeAttachments(entry.sessionId, videos, entry.desktopRootLayout) : [];
-  const storedAudios = hasAudios && audios ? rememberAudioProbeAttachments(entry.sessionId, audios) : [];
+  const storedAudios = hasAudios && audios ? rememberAudioProbeAttachments(entry.sessionId, audios, entry.desktopRootLayout) : [];
   const storedDocuments =
     hasDocuments && documents ? rememberDocumentProbeAttachments(entry.sessionId, documents, entry.desktopRootLayout) : [];
   const imagePromptText = shouldUseTextOnlyImageHandling ? appendImageProbeNotice(text, storedImages, preferredVisionModel) : text;

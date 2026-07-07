@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { readFile } from 'node:fs/promises';
 import { basename, isAbsolute, join } from 'node:path';
 
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getRuntimeProbeDir } from '@neon-pilot/core';
 import type { AudioProbeTranscriptionResult, StoredAudioProbeAttachment } from '@neon-pilot/extensions/backend/audio';
 
 import type { PromptAudioAttachment } from '../conversations/liveSessionQueue.js';
@@ -28,12 +28,12 @@ function safeFileName(value: string | undefined, fallback: string): string {
   return cleaned || fallback;
 }
 
-function resolveAudioProbeSessionDir(sessionId: string): string {
-  return join(getPiAgentRuntimeDir(), 'audio-probes', safeFileName(sessionId, 'session'));
+function resolveAudioProbeSessionDir(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(getRuntimeProbeDir(layout), 'audio-probes', safeFileName(sessionId, 'session'));
 }
 
-function resolveAudioProbeMetadataPath(sessionId: string): string {
-  return join(resolveAudioProbeSessionDir(sessionId), 'metadata.json');
+function resolveAudioProbeMetadataPath(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(resolveAudioProbeSessionDir(sessionId, layout), 'metadata.json');
 }
 
 function audioIdForFile(path: string, sizeBytes: number, mtimeMs: number): string {
@@ -58,8 +58,8 @@ function normalizeStoredAudio(value: unknown): StoredAudioProbeAttachment | null
   };
 }
 
-function readPersistedAudioProbeAttachments(sessionId: string): Map<string, StoredAudioProbeAttachment> {
-  const metadataPath = resolveAudioProbeMetadataPath(sessionId);
+function readPersistedAudioProbeAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredAudioProbeAttachment> {
+  const metadataPath = resolveAudioProbeMetadataPath(sessionId, layout);
   if (!existsSync(metadataPath)) return new Map();
   try {
     const parsed = JSON.parse(readFileSync(metadataPath, 'utf-8')) as Partial<PersistedAudioProbeAttachmentDocument>;
@@ -74,17 +74,21 @@ function readPersistedAudioProbeAttachments(sessionId: string): Map<string, Stor
   }
 }
 
-function writePersistedAudioProbeAttachments(sessionId: string, attachments: Map<string, StoredAudioProbeAttachment>): void {
-  const metadataPath = resolveAudioProbeMetadataPath(sessionId);
+function writePersistedAudioProbeAttachments(
+  sessionId: string,
+  attachments: Map<string, StoredAudioProbeAttachment>,
+  layout?: DesktopRootLayout,
+): void {
+  const metadataPath = resolveAudioProbeMetadataPath(sessionId, layout);
   const document: PersistedAudioProbeAttachmentDocument = { version: 1, attachments: Array.from(attachments.values()) };
-  mkdirSync(resolveAudioProbeSessionDir(sessionId), { recursive: true });
+  mkdirSync(resolveAudioProbeSessionDir(sessionId, layout), { recursive: true });
   writeFileSync(metadataPath, `${JSON.stringify(document, null, 2)}\n`);
 }
 
-function getSessionAttachments(sessionId: string): Map<string, StoredAudioProbeAttachment> {
+function getSessionAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredAudioProbeAttachment> {
   const cached = attachmentsBySession.get(sessionId);
   if (cached) return cached;
-  const persisted = readPersistedAudioProbeAttachments(sessionId);
+  const persisted = readPersistedAudioProbeAttachments(sessionId, layout);
   attachmentsBySession.set(sessionId, persisted);
   return persisted;
 }
@@ -107,19 +111,23 @@ function normalizeAudioId(value: unknown): string {
   return value.trim();
 }
 
-function resolveAudioById(audioId: string): StoredAudioProbeAttachment {
-  const attachments = getAudioProbeAttachmentsByIdFromAnySession([audioId]);
+function resolveAudioById(audioId: string, layout?: DesktopRootLayout): StoredAudioProbeAttachment {
+  const attachments = getAudioProbeAttachmentsByIdFromAnySession([audioId], layout);
   const attachment = attachments[0];
   if (!attachment) throw new Error(`Unknown audio ID: ${audioId}`);
   return attachment;
 }
 
-export function rememberAudioProbeAttachments(sessionId: string, audios: PromptAudioAttachment[]): StoredAudioProbeAttachment[] {
+export function rememberAudioProbeAttachments(
+  sessionId: string,
+  audios: PromptAudioAttachment[],
+  layout?: DesktopRootLayout,
+): StoredAudioProbeAttachment[] {
   if (audios.length > MAX_AUDIO_PROBE_ATTACHMENTS_PER_PROMPT) {
     throw new Error(`Audio probing supports at most ${MAX_AUDIO_PROBE_ATTACHMENTS_PER_PROMPT} audio files per prompt.`);
   }
 
-  const sessionAttachments = getSessionAttachments(sessionId);
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   const stored = audios.map((audio, index) => {
     const path = readAudioPath(audio.path);
     const stats = statSync(path);
@@ -135,22 +143,26 @@ export function rememberAudioProbeAttachments(sessionId: string, audios: PromptA
     return attachment;
   });
   attachmentsBySession.set(sessionId, sessionAttachments);
-  writePersistedAudioProbeAttachments(sessionId, sessionAttachments);
+  writePersistedAudioProbeAttachments(sessionId, sessionAttachments, layout);
   return stored;
 }
 
-export function getAudioProbeAttachments(sessionId: string): StoredAudioProbeAttachment[] {
-  return Array.from(getSessionAttachments(sessionId).values());
+export function getAudioProbeAttachments(sessionId: string, layout?: DesktopRootLayout): StoredAudioProbeAttachment[] {
+  return Array.from(getSessionAttachments(sessionId, layout).values());
 }
 
-export function getAudioProbeAttachmentsById(sessionId: string, audioIds: string[]): StoredAudioProbeAttachment[] {
-  const sessionAttachments = getSessionAttachments(sessionId);
+export function getAudioProbeAttachmentsById(
+  sessionId: string,
+  audioIds: string[],
+  layout?: DesktopRootLayout,
+): StoredAudioProbeAttachment[] {
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   return audioIds
     .map((id) => sessionAttachments.get(id))
     .filter((attachment): attachment is StoredAudioProbeAttachment => Boolean(attachment));
 }
 
-export function getAudioProbeAttachmentsByIdFromAnySession(audioIds: string[]): StoredAudioProbeAttachment[] {
+export function getAudioProbeAttachmentsByIdFromAnySession(audioIds: string[], layout?: DesktopRootLayout): StoredAudioProbeAttachment[] {
   const found = new Map<string, StoredAudioProbeAttachment>();
   const remaining = new Set(audioIds);
   for (const [, sessionAttachments] of attachmentsBySession) {
@@ -162,11 +174,17 @@ export function getAudioProbeAttachmentsByIdFromAnySession(audioIds: string[]): 
     }
   }
   if (remaining.size > 0) {
-    const probesDir = join(getPiAgentRuntimeDir(), 'audio-probes');
-    if (existsSync(probesDir)) {
+    const probesDirs = [join(getRuntimeProbeDir(layout), 'audio-probes')];
+    if (layout) {
+      // Also scan the legacy path for backward compatibility during migration.
+      probesDirs.push(join(getRuntimeProbeDir(), 'audio-probes'));
+    }
+    for (const probesDir of probesDirs) {
+      if (remaining.size === 0 || !existsSync(probesDir)) continue;
       for (const entry of readdirSync(probesDir, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
         const sessionAttachments = readPersistedAudioProbeAttachments(entry.name);
+        if (sessionAttachments.size === 0) continue;
         attachmentsBySession.set(entry.name, sessionAttachments);
         for (const [id, attachment] of sessionAttachments) {
           if (remaining.has(id)) {
@@ -183,7 +201,7 @@ export function getAudioProbeAttachmentsByIdFromAnySession(audioIds: string[]): 
 
 export async function transcribeAudioAttachment(input: { audioId: string; language?: string }): Promise<AudioProbeTranscriptionResult> {
   const audioId = normalizeAudioId(input.audioId);
-  const attachment = resolveAudioById(audioId);
+  const attachment = resolveAudioById(audioId, undefined);
   const buffer = await readFile(attachment.path);
   const transcription = await transcribeAudio({
     dataBase64: buffer.toString('base64'),
