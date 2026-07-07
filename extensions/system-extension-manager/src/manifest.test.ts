@@ -117,4 +117,31 @@ describe('system-extension-manager manifest', () => {
       argsSchema: { maxItems: 1, description: 'Optional positional args: appPackageId.' },
     });
   });
+
+  it('declares the updateExtension backend action with worker enabled', () => {
+    const actions = manifest.backend.actions;
+    const updateAction = actions.find((action: { id: string }) => action.id === 'updateExtension');
+    expect(updateAction).not.toBeUndefined();
+    expect(updateAction?.handler).toBe('updateExtension');
+    expect(updateAction?.title).toBe('Update app package');
+    expect(updateAction?.worker?.enabled).toBe(true);
+  });
+
+  it('adds update to manageExtension inputActions', () => {
+    const manageAction = manifest.backend.actions.find((action: { id: string }) => action.id === 'manageExtension');
+    expect(manageAction?.worker?.inputActions).toContain('update');
+    expect(manageAction?.worker?.inputActions).toContain('togglePermission');
+  });
+
+  it('declares the extensions edit CLI command with update inputAction', () => {
+    const commands = new Map(manifest.contributes.cliCommands.map((command: { command: string }) => [command.command, command]));
+
+    const editCommand = commands.get('extensions edit');
+    expect(editCommand).not.toBeUndefined();
+    expect(editCommand?.inputAction).toBe('update');
+    expect(editCommand?.argsSchema?.minItems).toBe(1);
+    expect(editCommand?.flagsSchema?.properties).toHaveProperty('name');
+    expect(editCommand?.flagsSchema?.properties).toHaveProperty('frontend-file');
+    expect(editCommand?.flagsSchema?.properties).toHaveProperty('backend-file');
+  });
 });

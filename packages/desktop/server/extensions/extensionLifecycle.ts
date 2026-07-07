@@ -15,6 +15,16 @@ import {
   parseExtensionManifest,
 } from './extensionRegistry.js';
 
+export interface UpdateRuntimeExtensionInput {
+  name?: unknown;
+  description?: unknown;
+  appearance?: unknown;
+  source?: {
+    frontend?: unknown;
+    backend?: unknown;
+  };
+}
+
 export interface CreateRuntimeExtensionInput {
   id?: unknown;
   name?: unknown;
@@ -663,6 +673,85 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
   invalidateExtensionRegistryReadCaches(stateRoot, layout);
   const summary = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === id);
   return { ok: true as const, extension: summary, packageRoot: extensionRoot };
+}
+
+export function updateRuntimeExtension(
+  extensionId: string,
+  input: UpdateRuntimeExtensionInput,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+) {
+  const id = normalizeExtensionId(extensionId);
+  const entry = findExtensionEntry(id, stateRoot, layout);
+  if (!entry) {
+    throw new Error('Extension not found.');
+  }
+  if (!entry.packageRoot) {
+    throw new Error('Extension package root is unavailable.');
+  }
+  if (entry.source === 'system') {
+    throw new Error('System extensions cannot be updated through the runtime lifecycle.');
+  }
+
+  const packageRoot = entry.packageRoot;
+  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot, layout);
+  assertInside(runtimeRoot, packageRoot);
+
+  const manifestPath = join(packageRoot, 'extension.json');
+  let manifest: Record<string, unknown> = {};
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    manifest = { ...entry.manifest } as unknown as Record<string, unknown>;
+  }
+
+  if (input.name !== undefined) {
+    manifest.name = normalizeExtensionName(input.name);
+  }
+  if (input.description !== undefined) {
+    manifest.description = normalizeOptionalString(input.description);
+  }
+  if (input.appearance !== undefined) {
+    const normalizedAppearance = normalizeExtensionAppearance(input.appearance);
+    if (normalizedAppearance) {
+      manifest.contributes = { ...((manifest.contributes as Record<string, unknown>) || {}), appearance: normalizedAppearance };
+    } else {
+      const contributes = { ...((manifest.contributes as Record<string, unknown>) || {}) } as Record<string, unknown>;
+      delete contributes.appearance;
+      manifest.contributes = contributes;
+    }
+  }
+
+  const validatedManifest = parseExtensionManifest(manifest);
+  let frontendSource: string | undefined;
+  let backendSource: string | undefined;
+  if (input.source?.frontend !== undefined) {
+    if (typeof input.source.frontend !== 'string') {
+      throw new Error('Extension frontend source must be a string.');
+    }
+    frontendSource = input.source.frontend;
+  }
+  if (input.source?.backend !== undefined) {
+    if (typeof input.source.backend !== 'string') {
+      throw new Error('Extension backend source must be a string.');
+    }
+    backendSource = input.source.backend;
+  }
+
+  writeFileSync(manifestPath, `${JSON.stringify(validatedManifest, null, 2)}\n`);
+
+  if (frontendSource !== undefined) {
+    mkdirSync(join(packageRoot, 'src'), { recursive: true });
+    writeFileSync(join(packageRoot, 'src', 'frontend.tsx'), frontendSource);
+  }
+  if (backendSource !== undefined) {
+    mkdirSync(join(packageRoot, 'src'), { recursive: true });
+    writeFileSync(join(packageRoot, 'src', 'backend.ts'), backendSource);
+  }
+
+  invalidateExtensionRegistryReadCaches(stateRoot, layout);
+  const summary = listExtensionInstallSummaries(stateRoot, layout).find((ext) => ext.id === id);
+  return { ok: true as const, extension: summary, packageRoot };
 }
 
 export function snapshotRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {

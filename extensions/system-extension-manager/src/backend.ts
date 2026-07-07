@@ -15,6 +15,7 @@ import {
   runExtensionSelfTest,
   snapshotRuntimeExtension,
   updateCatalogExtension as updateCatalogExtensionFromHost,
+  updateRuntimeExtension,
   validateExtensionPackage,
   writeAdditionalExtensionSearchPaths,
   writeExtensionCatalogSources,
@@ -67,6 +68,36 @@ export async function createExtension(input: unknown, _ctx: ExtensionBackendCont
     description: body.description,
     template: body.template,
     appearance: body.appearance,
+  });
+  return { ok: true, ...result };
+}
+
+export async function updateExtension(input: unknown, _ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const extensionId = requireExtensionId(body as ExtensionIdInput);
+  const source: { frontend?: unknown; backend?: unknown } = {};
+
+  if (body.source !== undefined) {
+    const src = asRecord(body.source);
+    if (src.frontend !== undefined) source.frontend = src.frontend;
+    if (src.backend !== undefined) source.backend = src.backend;
+  }
+
+  // Support CLI file path flags
+  const frontendFile = typeof body.frontendFile === 'string' && body.frontendFile ? body.frontendFile : undefined;
+  const backendFile = typeof body.backendFile === 'string' && body.backendFile ? body.backendFile : undefined;
+  if (frontendFile) {
+    source.frontend = readFileSync(frontendFile, 'utf-8');
+  }
+  if (backendFile) {
+    source.backend = readFileSync(backendFile, 'utf-8');
+  }
+
+  const result = await updateRuntimeExtension(extensionId, {
+    name: body.name,
+    description: body.description,
+    appearance: body.appearance,
+    source: Object.keys(source).length > 0 ? source : undefined,
   });
   return { ok: true, ...result };
 }
@@ -146,6 +177,7 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   const action = typeof body.action === 'string' ? body.action : 'list';
   if (action === 'list') return listExtensions(body, ctx);
   if (action === 'create') return createExtension(body, ctx);
+  if (action === 'update') return updateExtension(body, ctx);
   if (action === 'snapshot') return snapshotExtension(body as ExtensionIdInput, ctx);
   if (action === 'delete') return deleteExtension(body as ExtensionIdInput, ctx);
   if (action === 'reload') return reloadExtension(body as ExtensionIdInput, ctx);
@@ -211,6 +243,16 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
       description: flags.description,
       template: flags.template,
       appearance: normalizeCreateAppearanceFlags(flags),
+    };
+  if (command === 'extensions edit')
+    return {
+      ...body,
+      action: 'update',
+      extensionId: args[0],
+      name: flags.name,
+      description: flags.description,
+      frontendFile: flags['frontend-file'] ?? flags.frontendFile,
+      backendFile: flags['backend-file'] ?? flags.backendFile,
     };
   if (command === 'extensions snapshot') return { ...body, action: 'snapshot', extensionId: args[0] };
   if (command === 'extensions delete' || command === 'extensions uninstall') return { ...body, action: 'delete', extensionId: args[0] };

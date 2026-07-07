@@ -29,6 +29,14 @@
         }
       },
       {
+        "id": "updateExtension",
+        "handler": "updateExtension",
+        "title": "Update app package",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "snapshotExtension",
         "handler": "snapshotExtension",
         "title": "Snapshot app package",
@@ -149,6 +157,7 @@
           "inputActions": [
             "list",
             "create",
+            "update",
             "snapshot",
             "delete",
             "reload",
@@ -165,7 +174,8 @@
             "updateExtensionSources",
             "reloadExtensions",
             "enable",
-            "disable"
+            "disable",
+            "togglePermission"
           ]
         }
       }
@@ -344,6 +354,64 @@
         "requiresApp": false,
         "destructive": false,
         "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "extensions-edit",
+        "command": "extensions edit",
+        "description": "Update an installed app package's name, description, appearance, or source files in place: extensions edit <id> [--name <name>] [--description <desc>] [--frontend-file <path>] [--backend-file <path>]",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "update",
+        "usage": "extensions edit <appPackageId> [--name <name>] [--description <desc>] [--frontend-file <path>] [--backend-file <path>] [--json]",
+        "examples": [
+          "neon-pilot extensions edit my-app --name \"My Renamed App\"",
+          "neon-pilot extensions edit my-app --frontend-file ./new-frontend.tsx --json"
+        ],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: appPackageId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            },
+            "dry-run": {
+              "type": "boolean",
+              "description": "Validate and describe the operation without changing app state."
+            },
+            "name": {
+              "type": "string",
+              "description": "New name for the app package."
+            },
+            "description": {
+              "type": "string",
+              "description": "New description for the app package."
+            },
+            "frontend-file": {
+              "type": "string",
+              "description": "Path to a file whose contents replace src/frontend.tsx."
+            },
+            "backend-file": {
+              "type": "string",
+              "description": "Path to a file whose contents replace src/backend.ts."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
         "outputModes": ["text", "json"]

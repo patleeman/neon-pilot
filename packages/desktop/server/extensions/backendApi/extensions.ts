@@ -10,6 +10,7 @@ import { importServerModule } from './serverModuleResolver.js';
 interface ExtensionLifecycleModule {
   buildRuntimeExtension(extensionId: string): unknown;
   createRuntimeExtension(options: RuntimeExtensionCreateOptions): unknown;
+  updateRuntimeExtension(extensionId: string, input: RuntimeExtensionUpdateOptions): unknown;
   snapshotRuntimeExtension(extensionId: string): unknown;
   deleteRuntimeExtension(extensionId: string): unknown;
 }
@@ -46,6 +47,12 @@ interface MarketplacePackageInstallResult {
 }
 
 type RuntimeExtensionCreateOptions = Record<string, unknown>;
+type RuntimeExtensionUpdateOptions = {
+  name?: unknown;
+  description?: unknown;
+  appearance?: unknown;
+  source?: { frontend?: unknown; backend?: unknown };
+};
 type ValidateExtensionPackageOptions = { extensionId?: string; packageRoot?: string };
 type ExtensionSearchPathWriteOptions = { runtimeDir?: string; runtimeSettingsFilePath?: string; paths?: string[] };
 type ExtensionSourceWriteOptions = { runtimeDir?: string; runtimeSettingsFilePath?: string; sources?: unknown[] };
@@ -97,6 +104,11 @@ export async function buildRuntimeExtension(extensionId: string) {
 export async function createRuntimeExtension(options: RuntimeExtensionCreateOptions) {
   const module = await importExtensionLifecycle();
   return module.createRuntimeExtension(options);
+}
+
+export async function updateRuntimeExtension(extensionId: string, input: RuntimeExtensionUpdateOptions) {
+  const module = await importExtensionLifecycle();
+  return module.updateRuntimeExtension(extensionId, input);
 }
 
 export async function snapshotRuntimeExtension(extensionId: string) {

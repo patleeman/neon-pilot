@@ -14,6 +14,7 @@ const extensionBackendApi = vi.hoisted(() => ({
   runExtensionSelfTest: vi.fn(),
   snapshotRuntimeExtension: vi.fn(),
   updateCatalogExtension: vi.fn(),
+  updateRuntimeExtension: vi.fn(),
   validateExtensionPackage: vi.fn(),
   writeAdditionalExtensionSearchPaths: vi.fn(),
   writeExtensionCatalogSources: vi.fn(),
@@ -213,5 +214,50 @@ describe('system-extension-manager backend', () => {
       mod.manageExtension({ action: 'togglePermission', extensionId: 'system-settings', permission: 'agent:run', granted: false }, ctx),
     ).rejects.toThrow('Cannot revoke permission agent:run from system-settings: this extension is required.');
     expect(ctx.extensions?.setPermissionGranted).toHaveBeenCalledWith('system-settings', 'agent:run', false);
+  });
+
+  it('forwards name and description through the update action to updateRuntimeExtension', async () => {
+    extensionBackendApi.updateRuntimeExtension.mockResolvedValue({
+      ok: true,
+      extension: { id: 'my-app', name: 'Updated App' },
+      packageRoot: '/runtime/extensions/my-app',
+    });
+
+    const result = await mod.manageExtension(
+      { action: 'update', extensionId: 'my-app', name: 'Updated App', description: 'A new description' },
+      createBackendContext(),
+    );
+
+    expect(result).toMatchObject({ ok: true, extension: { id: 'my-app', name: 'Updated App' } });
+    expect(extensionBackendApi.updateRuntimeExtension).toHaveBeenCalledWith('my-app', {
+      name: 'Updated App',
+      description: 'A new description',
+      appearance: undefined,
+      source: undefined,
+    });
+  });
+
+  it('forwards source code changes through the update action', async () => {
+    extensionBackendApi.updateRuntimeExtension.mockResolvedValue({
+      ok: true,
+      extension: { id: 'my-app' },
+      packageRoot: '/runtime/extensions/my-app',
+    });
+
+    const result = await mod.updateExtension(
+      {
+        extensionId: 'my-app',
+        source: { frontend: '// new frontend', backend: '// new backend' },
+      },
+      createBackendContext(),
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    expect(extensionBackendApi.updateRuntimeExtension).toHaveBeenCalledWith(
+      'my-app',
+      expect.objectContaining({
+        source: { frontend: '// new frontend', backend: '// new backend' },
+      }),
+    );
   });
 });

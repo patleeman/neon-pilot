@@ -5,6 +5,16 @@ export interface RuntimeExtensionCreateOptions {
   template?: unknown;
 }
 
+export interface RuntimeExtensionUpdateOptions {
+  name?: unknown;
+  description?: unknown;
+  appearance?: unknown;
+  source?: {
+    frontend?: unknown;
+    backend?: unknown;
+  };
+}
+
 export interface RuntimeExtensionResult {
   [key: string]: unknown;
 }
@@ -106,6 +116,10 @@ export async function runExtensionSelfTest(
 }
 
 export async function invalidateExtensionRegistryReadCaches(): Promise<{ ok: true }> {
+  throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
+}
+
+export async function updateRuntimeExtension(_extensionId: string, _input: RuntimeExtensionUpdateOptions): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
