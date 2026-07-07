@@ -212,6 +212,7 @@ export interface ExtensionContributions {
   settings?: Record<string, ExtensionSettingsContribution>;
   secrets?: Record<string, ExtensionSecretContribution>;
   settingsComponent?: ExtensionSettingsComponentContribution;
+  widgets?: ExtensionWidgetContribution[];
   /** Dynamic model discovery. The named action is called at model-list query time. */
   modelDiscovery?: ExtensionModelDiscoveryContribution;
 }
@@ -583,6 +584,14 @@ export interface ExtensionHostComponentReference {
 }
 
 export type ExtensionComponentReference = string | ExtensionHostComponentReference;
+
+export interface ExtensionWidgetContribution {
+  id: string;
+  title: string;
+  component: ExtensionComponentReference;
+  collectionBinding?: string;
+  order?: number;
+}
 
 export interface ExtensionViewContribution {
   id: string;

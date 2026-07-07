@@ -54,7 +54,14 @@ export interface CreateRuntimeExtensionInput {
   };
 }
 
-type RuntimeExtensionTemplate = 'main-page' | 'route-sidebar' | 'route-right-sidebar' | 'route-shell' | 'right-rail' | 'workbench-detail';
+type RuntimeExtensionTemplate =
+  | 'main-page'
+  | 'windowed-app'
+  | 'route-sidebar'
+  | 'route-right-sidebar'
+  | 'route-shell'
+  | 'right-rail'
+  | 'workbench-detail';
 type RuntimeExtensionDeleteWarning = { operation: string; message: string };
 
 function normalizeExtensionId(value: unknown): string {
@@ -84,6 +91,7 @@ function normalizeExtensionTemplate(value: unknown): RuntimeExtensionTemplate {
   if (value === undefined || value === null || value === '') return 'main-page';
   if (
     value === 'main-page' ||
+    value === 'windowed-app' ||
     value === 'route-sidebar' ||
     value === 'route-right-sidebar' ||
     value === 'route-shell' ||
@@ -92,7 +100,7 @@ function normalizeExtensionTemplate(value: unknown): RuntimeExtensionTemplate {
   )
     return value;
   throw new Error(
-    'Extension template must be main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
+    'Extension template must be main-page, windowed-app, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
   );
 }
 
@@ -194,8 +202,85 @@ function starterHelpText(): string {
   return 'Edit <code>src/frontend.tsx</code>, run <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from the neon-pilot repo, then reload extensions.';
 }
 
+function createWindowedAppAliases(name: string): string[] {
+  const normalized = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  if (!normalized) return [];
+  const aliases = new Set<string>([normalized]);
+  for (const part of normalized.split(/\s+/)) {
+    if (part.length >= 3) aliases.add(part);
+  }
+  return Array.from(aliases);
+}
+
+function createWindowedAppAppearance(
+  name: string,
+  appearance: ExtensionAppearanceContribution | undefined,
+): ExtensionAppearanceContribution {
+  const defaultWindow = { defaultWidth: 920, defaultHeight: 680 };
+  const result: ExtensionAppearanceContribution = {
+    accent: 'apps',
+    aliases: createWindowedAppAliases(name),
+    singleton: true,
+    ...appearance,
+  };
+  result.window = { ...defaultWindow, ...(appearance?.window ?? {}) };
+  return result;
+}
+
+function createWindowedAppContributes(
+  id: string,
+  name: string,
+  appearance: ExtensionAppearanceContribution | undefined,
+): NonNullable<ExtensionManifest['contributes']> {
+  return {
+    views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
+    nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
+    widgets: [{ id: 'overview', title: name, component: 'ExtensionWidget', order: 100 }],
+    appearance: createWindowedAppAppearance(name, appearance),
+  };
+}
+
 function createStarterFrontend(name: string, template: RuntimeExtensionTemplate): string {
   const nameLiteral = JSON.stringify(name);
+
+  if (template === 'windowed-app') {
+    return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { WindowedPageButton, WindowedPageMain, WindowedPageSection, WindowedPageShell, WindowedStateBlock } from '@neon-pilot/extensions/ui';
+
+const EXTENSION_NAME = ${nameLiteral};
+
+export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
+  return (
+    <WindowedPageShell layout="standard">
+      <WindowedPageMain
+        title={EXTENSION_NAME}
+        actions={
+          <WindowedPageButton type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+            Test toast
+          </WindowedPageButton>
+        }
+      >
+        <WindowedPageSection title="Getting started" meta="Runtime app">
+          <p className="text-[13px] leading-6 text-secondary">${starterHelpText()}</p>
+        </WindowedPageSection>
+        <WindowedPageSection title="Backend action" meta="Ready">
+          <WindowedStateBlock title="Ping action available">
+            The starter backend exports a ping action that agents can use for smoke checks.
+          </WindowedStateBlock>
+        </WindowedPageSection>
+      </WindowedPageMain>
+    </WindowedPageShell>
+  );
+}
+
+export function ExtensionWidget() {
+  return <WindowedStateBlock title={EXTENSION_NAME}>Open the app from the desktop to finish shaping this widget.</WindowedStateBlock>;
+}
+`;
+  }
 
   if (template === 'right-rail') {
     return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
@@ -641,27 +726,29 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
                   },
                 ],
               }
-            : template === 'workbench-detail'
-              ? {
-                  views: [
-                    {
-                      id: 'rail',
-                      title: name,
-                      location: 'rightRail',
-                      scope: 'conversation',
-                      component: 'ExtensionRail',
-                      icon: 'app',
-                      detailView: 'detail',
-                    },
-                    { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
-                  ],
-                }
-              : {
-                  views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
-                  nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
-                };
+            : template === 'windowed-app'
+              ? createWindowedAppContributes(id, name, appearance)
+              : template === 'workbench-detail'
+                ? {
+                    views: [
+                      {
+                        id: 'rail',
+                        title: name,
+                        location: 'rightRail',
+                        scope: 'conversation',
+                        component: 'ExtensionRail',
+                        icon: 'app',
+                        detailView: 'detail',
+                      },
+                      { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
+                    ],
+                  }
+                : {
+                    views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
+                    nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
+                  };
 
-  const contributes = appearance ? { ...contributesBase, appearance } : contributesBase;
+  const contributes = appearance && template !== 'windowed-app' ? { ...contributesBase, appearance } : contributesBase;
 
   const manifest = parseExtensionManifest({
     schemaVersion: 2,

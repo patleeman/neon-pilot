@@ -343,6 +343,35 @@ describe('extensionLifecycle', () => {
     expect(frontend).not.toContain('<button');
   });
 
+  it('creates a windowed app starter template with desktop appearance and widget metadata', () => {
+    const result = createRuntimeExtension({ id: 'windowed-app-ext', name: 'Windowed App', template: 'windowed-app' }, stateRoot);
+
+    const manifest = JSON.parse(readFileSync(join(result.packageRoot, 'extension.json'), 'utf-8'));
+    expect(manifest.contributes.nav[0]).toMatchObject({
+      route: '/ext/windowed-app-ext',
+      icon: 'app',
+    });
+    expect(manifest.contributes.views).toEqual([
+      expect.objectContaining({ id: 'page', location: 'main', route: '/ext/windowed-app-ext', component: 'ExtensionPage' }),
+    ]);
+    expect(manifest.contributes.appearance).toEqual({
+      accent: 'apps',
+      aliases: ['windowed app', 'windowed', 'app'],
+      singleton: true,
+      window: { defaultWidth: 920, defaultHeight: 680 },
+    });
+    expect(manifest.contributes.widgets).toEqual([{ id: 'overview', title: 'Windowed App', component: 'ExtensionWidget', order: 100 }]);
+
+    const frontend = readFileSync(join(result.packageRoot, 'src', 'frontend.tsx'), 'utf-8');
+    expect(frontend).toContain(
+      "import { WindowedPageButton, WindowedPageMain, WindowedPageSection, WindowedPageShell, WindowedStateBlock } from '@neon-pilot/extensions/ui';",
+    );
+    expect(frontend).toContain('<WindowedPageShell layout="standard">');
+    expect(frontend).toContain('export function ExtensionWidget()');
+    expect(frontend).not.toContain('AppPageLayout');
+    expect(frontend).not.toContain('<button');
+  });
+
   it('generates manifest with appearance metadata when caller provides it', () => {
     const result = createRuntimeExtension(
       {
@@ -402,7 +431,7 @@ describe('extensionLifecycle', () => {
     expect(() => createRuntimeExtension({ id: 'Bad', name: 'Name' }, stateRoot)).toThrow('Extension id must be');
     expect(() => createRuntimeExtension({ id: 'ok-id', name: '   ' }, stateRoot)).toThrow('Extension name is required');
     expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name', template: 'bad' }, stateRoot)).toThrow(
-      'Extension template must be main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
+      'Extension template must be main-page, windowed-app, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
     );
     findExtensionEntry.mockReturnValueOnce({});
     expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name' }, stateRoot)).toThrow('Extension id already exists');

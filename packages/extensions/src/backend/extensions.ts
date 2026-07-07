@@ -3,6 +3,7 @@ export interface RuntimeExtensionCreateOptions {
   name?: unknown;
   description?: unknown;
   template?: unknown;
+  appearance?: unknown;
 }
 
 export interface RuntimeExtensionUpdateOptions {

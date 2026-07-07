@@ -26,7 +26,7 @@ Use this sequence when an agent helps a user create a new extension:
 2. **Write the brief.** Summarize the primary user, job-to-be-done, first-version scope, chosen extension surface, state model, main actions, and validation plan. State any assumptions so the user can correct them.
 3. **Prototype UI when UI matters.** For pages, panels, settings, or workflow surfaces, make a quick artifact or local prototype before implementation. Use Neon Pilot's density, shared primitives, and copy rules so the user reacts to the product shape, not a generic mockup.
 4. **Build the extension.** Create editable source in `src/`, declare contributions in `extension.json`, use the public extension SDK, and keep generated output in `dist/`.
-   For route-based app extensions, include `contributes.appearance` with a desktop accent, useful Start menu aliases, and singleton/window defaults when the app should appear as a durable desktop surface.
+   For route-based desktop apps, prefer the runtime `windowed-app` template. It creates a main route with Windowed OS page primitives, `contributes.appearance` metadata for Start menu/window identity, and a starter Home widget contribution.
 5. **Reload and test in the app.** Build, validate, reload extensions, open the actual contributed surface, and exercise default, empty, loading, error, success, disabled, and long-running states that apply.
 6. **Iterate with the user.** Adjust scope, copy, layout, actions, or state behavior from what the user sees. Checkpoint only when the extension is working through the real app path.
 
@@ -73,6 +73,8 @@ derived from real first-party extensions:
 | [`settings-section`](extension-templates/templates/template-settings-section/) | Section in the shared Settings page. No separate route. Autosaving row-list example. |
 
 Copy the matching folder, rename the extension id, replace domain types, and build.
+
+For agent-built desktop apps created through `neon-pilot extensions create`, use `--template windowed-app` unless the extension specifically needs a legacy route/sidebar/workbench starter shape.
 
 ## Pick the right surface
 
