@@ -43,6 +43,14 @@ export interface WorkspaceDirectoryListing extends WorkspaceRootSnapshot {
   entries: WorkspaceEntry[];
 }
 
+export interface WorkspaceSearchResult extends WorkspaceRootSnapshot {
+  query: string;
+  limit: number;
+  visitedCount: number;
+  truncated: boolean;
+  matches: WorkspaceEntry[];
+}
+
 export interface WorkspaceFileContent extends WorkspaceRootSnapshot {
   path: string;
   name: string;
@@ -77,6 +85,11 @@ export interface WorkspaceDiffOverlay extends WorkspaceRootSnapshot {
 
 const MAX_FILE_BYTES = 1024 * 512;
 const MAX_DIFF_FILE_BYTES = 1024 * 1024;
+const WORKSPACE_SEARCH_DEFAULT_LIMIT = 10;
+const WORKSPACE_SEARCH_MAX_LIMIT = 50;
+const WORKSPACE_SEARCH_MAX_VISITED = 2_500;
+const WORKSPACE_SEARCH_MAX_DEPTH = 8;
+const WORKSPACE_SEARCH_EXCLUDE_NAMES = ['.git', 'node_modules', 'dist', 'build', '.next', '.turbo'];
 const UNCOMMITTED_DIFF_MAX_RENDERED_FILES = 25;
 const UNCOMMITTED_DIFF_MAX_UNTRACKED_FILE_BYTES = 256 * 1024;
 const UNCOMMITTED_DIFF_TIMEOUT_MS = 5_000;
@@ -201,6 +214,67 @@ export async function listWorkspaceDirectory(cwd: string, relativePath?: string 
       return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
     });
   return { ...snapshot, path, entries };
+}
+
+function normalizeWorkspaceSearchLimit(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
+    return WORKSPACE_SEARCH_DEFAULT_LIMIT;
+  }
+  return Math.min(value, WORKSPACE_SEARCH_MAX_LIMIT);
+}
+
+export async function searchWorkspacePaths(cwd: string, query: string, options: { limit?: number } = {}): Promise<WorkspaceSearchResult> {
+  const snapshot = readWorkspaceRootSnapshot(cwd);
+  const normalizedQuery = query.trim().toLowerCase();
+  const limit = normalizeWorkspaceSearchLimit(options.limit);
+  if (!normalizedQuery) {
+    return { ...snapshot, query, limit, visitedCount: 0, truncated: false, matches: [] };
+  }
+
+  const workspaceRoot = await createCoreWorkspaceRoot(snapshot.root, 'search workspace paths', ['list', 'metadata']);
+  const matches: WorkspaceEntry[] = [];
+  const queue: Array<{ path: string; depth: number }> = [{ path: '', depth: 0 }];
+  let visitedCount = 0;
+  let truncated = false;
+
+  while (queue.length > 0 && matches.length < limit) {
+    const current = queue.shift();
+    if (!current) break;
+    if (visitedCount >= WORKSPACE_SEARCH_MAX_VISITED) {
+      truncated = true;
+      break;
+    }
+
+    const entries = await workspaceRoot.list(current.path, { depth: 0, excludeNames: WORKSPACE_SEARCH_EXCLUDE_NAMES });
+    for (const entry of entries) {
+      visitedCount += 1;
+      if (visitedCount > WORKSPACE_SEARCH_MAX_VISITED) {
+        truncated = true;
+        break;
+      }
+
+      const kind = workspaceEntryKindFromStatType(entry.type);
+      const searchText = `${entry.name}\n${entry.path}`.toLowerCase();
+      if (searchText.includes(normalizedQuery)) {
+        matches.push({
+          name: entry.name,
+          path: entry.path,
+          kind,
+          size: entry.size ?? null,
+          modifiedAt: entry.modifiedAt ?? null,
+          gitStatus: statusForPath(snapshot, entry.path),
+          descendantGitStatusCount: kind === 'directory' ? descendantStatusCount(snapshot, entry.path) : 0,
+        });
+        if (matches.length >= limit) break;
+      }
+
+      if (kind === 'directory' && current.depth < WORKSPACE_SEARCH_MAX_DEPTH) {
+        queue.push({ path: entry.path, depth: current.depth + 1 });
+      }
+    }
+  }
+
+  return { ...snapshot, query, limit, visitedCount, truncated: truncated || queue.length > 0, matches };
 }
 
 function looksBinary(buffer: Buffer): boolean {

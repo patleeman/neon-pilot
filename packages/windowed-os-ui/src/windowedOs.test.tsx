@@ -40,6 +40,16 @@ import {
   WindowFrame,
 } from './windowedOs';
 
+describe('StartMenu', () => {
+  it('keeps files as a first-class async search bucket', () => {
+    const source = readFileSync(fileURLToPath(new URL('./windowedOs.tsx', import.meta.url)), 'utf8');
+
+    expect(source).toContain('files: StartMenuSearchResultItem[]');
+    expect(source).toContain('searchData.files.length > 0');
+    expect(source).toContain('wos-start-menu__search-group-label">Files');
+  });
+});
+
 describe('WindowedDataTable', () => {
   it('supports shared metric cells for dense windowed tables', () => {
     const html = renderToStaticMarkup(

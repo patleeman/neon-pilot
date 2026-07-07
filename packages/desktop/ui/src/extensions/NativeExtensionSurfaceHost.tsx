@@ -197,6 +197,7 @@ export function NativeExtensionSurfaceHost({
       )}
       data-extension-id={surface.extensionId}
       data-extension-surface-id={surface.id}
+      data-route-search={search}
       data-shell-presentation={shellPresentation}
     >
       <Suspense fallback={<ExtensionSurfaceLoading />}>

@@ -16,6 +16,7 @@ import {
   readWorkspaceRootSnapshot,
   renameWorkspacePath,
   resolveWorkspacePathLinks,
+  searchWorkspacePaths,
   writeWorkspaceFile,
 } from '../workspace/workspaceExplorer.js';
 import type { ServerRouteContext } from './context.js';
@@ -80,6 +81,18 @@ export function registerWorkspaceExplorerRoutes(
       res.json(await readWorkspaceFile(cwd, path, req.query.force === '1'));
     } catch (error) {
       logError('workspace file request failed', { message: error instanceof Error ? error.message : String(error) });
+      writeWorkspaceError(res, error);
+    }
+  });
+
+  router.get('/api/workspace/search', async (req, res) => {
+    try {
+      const cwd = resolveRequestCwd(context, req.query.cwd);
+      const query = readQueryString(req.query.query)?.trim() ?? '';
+      const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
+      res.json(await searchWorkspacePaths(cwd, query, { limit }));
+    } catch (error) {
+      logError('workspace search request failed', { message: error instanceof Error ? error.message : String(error) });
       writeWorkspaceError(res, error);
     }
   });

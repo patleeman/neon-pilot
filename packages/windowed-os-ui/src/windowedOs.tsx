@@ -1513,6 +1513,7 @@ export interface StartMenuSearchResultItem {
 export interface StartMenuSearchResults {
   conversations: StartMenuSearchResultItem[];
   documents: StartMenuSearchResultItem[];
+  files: StartMenuSearchResultItem[];
   loading: boolean;
 }
 
@@ -1611,14 +1612,17 @@ export function StartMenu({ open, items, onClose, searchResults, onSearchQueryCh
   const searchData = searchResults;
   const hasSearchData = searchData !== undefined;
   const showSearchResultsSection =
-    hasQuery && hasSearchData && (searchData.loading || searchData.conversations.length > 0 || searchData.documents.length > 0);
+    hasQuery &&
+    hasSearchData &&
+    (searchData.loading || searchData.conversations.length > 0 || searchData.documents.length > 0 || searchData.files.length > 0);
   const showSearchEmpty =
     hasQuery &&
     hasSearchData &&
     !searchData.loading &&
     visibleItems.length === 0 &&
     searchData.conversations.length === 0 &&
-    searchData.documents.length === 0;
+    searchData.documents.length === 0 &&
+    searchData.files.length === 0;
 
   return (
     <div className="wos-start-menu" role="dialog" aria-label="Start menu">
@@ -1682,6 +1686,17 @@ export function StartMenu({ open, items, onClose, searchResults, onSearchQueryCh
                 <div className="wos-start-menu__search-group">
                   <div className="wos-start-menu__search-group-label">Documents</div>
                   {searchData!.documents.map((resultItem) => (
+                    <button key={resultItem.id} type="button" className="wos-start-menu__search-item" onClick={resultItem.onSelect}>
+                      <span className="wos-start-menu__search-item-title">{resultItem.title}</span>
+                      {resultItem.subtitle ? <span className="wos-start-menu__search-item-subtitle">{resultItem.subtitle}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {searchData!.files.length > 0 ? (
+                <div className="wos-start-menu__search-group">
+                  <div className="wos-start-menu__search-group-label">Files</div>
+                  {searchData!.files.map((resultItem) => (
                     <button key={resultItem.id} type="button" className="wos-start-menu__search-item" onClick={resultItem.onSelect}>
                       <span className="wos-start-menu__search-item-title">{resultItem.title}</span>
                       {resultItem.subtitle ? <span className="wos-start-menu__search-item-subtitle">{resultItem.subtitle}</span> : null}

@@ -2,7 +2,7 @@ import { watch } from 'node:fs';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('node:fs', () => ({ watch: vi.fn() }));
+vi.mock('node:fs', () => ({ existsSync: vi.fn(() => false), watch: vi.fn() }));
 
 vi.mock('../shared/logging.js', () => ({ logError: vi.fn() }));
 
@@ -19,6 +19,7 @@ vi.mock('../workspace/workspaceExplorer.js', () => ({
   readWorkspaceDiffOverlay: vi.fn(),
   readUncommittedDiffAsync: vi.fn(),
   readWorkspaceRootSnapshot: vi.fn(),
+  searchWorkspacePaths: vi.fn(),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -67,6 +68,7 @@ describe('registerWorkspaceExplorerRoutes', () => {
       .sort();
     expect(paths).toContain('get /api/workspace/tree');
     expect(paths).toContain('get /api/workspace/file');
+    expect(paths).toContain('get /api/workspace/search');
     expect(paths).toContain('post /api/workspace/path-links/resolve');
     expect(paths).toContain('get /api/workspace/diff');
     expect(paths).toContain('get /api/workspace/uncommitted-diff');
@@ -98,6 +100,21 @@ describe('registerWorkspaceExplorerRoutes', () => {
       await h({ query: { cwd: '../escape' } }, res);
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: expect.stringContaining('Unable to resolve') });
+    });
+  });
+
+  describe('GET /api/workspace/search', () => {
+    it('returns bounded workspace path matches', async () => {
+      vi.mocked(workspace.searchWorkspacePaths).mockResolvedValue({ query: 'needle', matches: [{ path: 'src/needle.ts' }] } as unknown);
+      const router = mockRouter();
+      registerWorkspaceExplorerRoutes(router as unknown, mockContext());
+      const h = getHandler(router, 'get', '/api/workspace/search');
+      const res = mockRes();
+
+      await h({ query: { cwd: '/repo', query: 'needle', limit: '7' } }, res);
+
+      expect(workspace.searchWorkspacePaths).toHaveBeenCalledWith('/repo', 'needle', { limit: 7 });
+      expect(res.json).toHaveBeenCalledWith({ query: 'needle', matches: [{ path: 'src/needle.ts' }] });
     });
   });
 

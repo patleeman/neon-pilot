@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   createActivityEntry: vi.fn(() => Promise.resolve({ document: {} })),
   conversationContentSearch: vi.fn(() => Promise.resolve({ matches: [] })),
   documentsSearch: vi.fn(() => Promise.resolve({ query: '', limit: 10, offset: 0, total: 0, records: [] })),
+  workspaceSearch: vi.fn(() => Promise.resolve({ query: '', limit: 10, visitedCount: 0, truncated: false, matches: [] })),
   eventSources: [] as Array<{
     path: string;
     onopen: ((event: Event) => void) | null;
@@ -94,11 +95,13 @@ vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
   NativeExtensionSurfaceHost: ({
     cwd,
     instanceId,
+    search,
     shellPresentation,
     surface,
   }: {
     cwd?: string | null;
     instanceId?: string | null;
+    search?: string;
     shellPresentation?: 'windowed';
     surface: { extensionId: string; id: string };
   }) => (
@@ -107,6 +110,7 @@ vi.mock('../extensions/NativeExtensionSurfaceHost', () => ({
       data-cwd={cwd ?? ''}
       data-extension-id={surface.extensionId}
       data-instance-id={instanceId ?? ''}
+      data-search={search ?? ''}
       data-shell-presentation={shellPresentation ?? 'windowed'}
       data-surface-id={surface.id}
     />
@@ -158,6 +162,7 @@ vi.mock('../client/api', () => ({
     documents: {
       search: mocks.documentsSearch,
     },
+    workspaceSearch: mocks.workspaceSearch,
   },
 }));
 
@@ -274,6 +279,8 @@ describe('WindowedLayout route windows', () => {
     mocks.conversationContentSearch.mockResolvedValue({ matches: [] });
     mocks.documentsSearch.mockClear();
     mocks.documentsSearch.mockResolvedValue({ query: '', limit: 10, offset: 0, total: 0, records: [] });
+    mocks.workspaceSearch.mockClear();
+    mocks.workspaceSearch.mockResolvedValue({ query: '', limit: 10, visitedCount: 0, truncated: false, matches: [] });
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
@@ -759,7 +766,16 @@ describe('WindowedLayout route windows', () => {
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
   });
 
-  it('searches conversations and documents from the Start menu', async () => {
+  it('searches conversations, documents, and files from the Start menu', async () => {
+    mocks.extensions = [
+      ...mocks.extensions,
+      {
+        id: 'system-files',
+        enabled: true,
+        contributes: {},
+      },
+    ];
+    mocks.surfaces = [surfaceForChildTool('files')];
     mocks.conversationContentSearch.mockResolvedValue({
       query: 'needle',
       mode: 'phrase',
@@ -797,8 +813,26 @@ describe('WindowedLayout route windows', () => {
         },
       ],
     });
+    mocks.workspaceSearch.mockResolvedValue({
+      query: 'needle',
+      limit: 10,
+      visitedCount: 12,
+      truncated: false,
+      matches: [
+        {
+          name: 'needle-plan.md',
+          path: 'docs/needle-plan.md',
+          kind: 'file',
+          size: 12,
+          modifiedAt: '2026-07-07T00:00:00.000Z',
+          gitStatus: null,
+          descendantGitStatusCount: 0,
+        },
+      ],
+    });
 
     renderWindowedLayout();
+    await waitFor(() => expect(mocks.defaultCwd).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
     const startMenu = screen.getByRole('dialog', { name: /start menu/i });
@@ -809,15 +843,24 @@ describe('WindowedLayout route windows', () => {
     await waitFor(() => {
       expect(mocks.conversationContentSearch).toHaveBeenCalledWith('needle', 10);
       expect(mocks.documentsSearch).toHaveBeenCalledWith('needle', { limit: 10 });
+      expect(mocks.workspaceSearch).toHaveBeenCalledWith('/Users/patrick/Library/Application Support/Neon Pilot/Desktop', 'needle', {
+        limit: 10,
+      });
     });
     expect(within(startMenu).getByText('Conversations')).toBeTruthy();
     expect(within(startMenu).getByRole('button', { name: /Needle thread/i })).toBeTruthy();
     expect(within(startMenu).getByText('Documents')).toBeTruthy();
+    expect(within(startMenu).getByText('Files')).toBeTruthy();
 
-    fireEvent.click(within(startMenu).getByRole('button', { name: /needle-doc/i }));
+    fireEvent.click(within(startMenu).getByRole('button', { name: /needle-plan.md/i }));
 
-    const documentsWindow = await screen.findByRole('region', { name: 'Documents' });
-    expect(within(documentsWindow).getByTestId('extension-route-host').textContent).toContain('/documents:windowed');
+    const filesWindow = await screen.findByRole('region', { name: 'Files' });
+    expect(within(filesWindow).getByTestId('native-extension-surface').getAttribute('data-cwd')).toBe(
+      '/Users/patrick/Library/Application Support/Neon Pilot/Desktop',
+    );
+    expect(within(filesWindow).getByTestId('native-extension-surface').getAttribute('data-search')).toBe(
+      '?workspaceFile=docs%2Fneedle-plan.md',
+    );
   });
 
   it('opens the highlighted filtered Start menu app with arrow navigation and Enter', async () => {

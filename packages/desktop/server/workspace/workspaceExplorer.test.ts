@@ -18,6 +18,7 @@ import {
   readWorkspaceFile,
   renameWorkspacePath,
   resolveWorkspacePathLinks,
+  searchWorkspacePaths,
   writeWorkspaceFile,
 } from './workspaceExplorer.js';
 
@@ -84,6 +85,20 @@ describe('workspace explorer', () => {
       { targetPath: './tracked.txt', kind: 'workspace', workspacePath: 'tracked.txt' },
       { targetPath: join(repo, 'src', 'app.ts'), kind: 'workspace', workspacePath: 'src/app.ts' },
     ]);
+  });
+
+  it('searches workspace file and folder names without reading file contents', async () => {
+    const repo = createRepo();
+    mkdirSync(join(repo, 'docs'));
+    writeFileSync(join(repo, 'docs', 'needle-plan.md'), 'no content search required\n');
+    writeFileSync(join(repo, 'src', 'another.ts'), 'needle only in content\n');
+
+    const result = await searchWorkspacePaths(repo, 'needle', { limit: 5 });
+
+    expect(result.root).toBe(realpathSync(repo));
+    expect(result.matches.map((match) => match.path)).toEqual(['docs/needle-plan.md']);
+    expect(result.matches[0]?.kind).toBe('file');
+    expect(result.visitedCount).toBeGreaterThan(0);
   });
 
   it('ignores absolute transcript path candidates that cannot be resolved', async () => {

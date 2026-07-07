@@ -380,6 +380,28 @@ describe('api.activity entries', () => {
   });
 });
 
+describe('api.workspace', () => {
+  beforeEach(resetApiTestGlobals);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('searches workspace paths through the shared api path prefix', async () => {
+    const response = { query: 'needle/file', matches: [] };
+    const fetchMock = vi.fn(async () => jsonResponse(response));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.workspaceSearch('/repo root', 'needle/file', { limit: 3 })).resolves.toEqual(response);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/workspace/search?cwd=%2Frepo+root&query=needle%2Ffile&limit=3', {
+      method: 'GET',
+      cache: 'no-store',
+    });
+  });
+});
+
 describe('api.inbox', () => {
   beforeEach(resetApiTestGlobals);
 

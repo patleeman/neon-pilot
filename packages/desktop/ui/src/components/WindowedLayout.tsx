@@ -1757,6 +1757,67 @@ export function WindowedLayout() {
     [windowedApps, writeActivityEntry],
   );
 
+  const openFilesWindowAtPath = useCallback(
+    (path: string) => {
+      const app = windowedApps.find((candidate) => candidate.kind === 'files');
+      if (!app) return false;
+      const route = `/files?workspaceFile=${encodeURIComponent(path)}`;
+      const id = createId(app);
+
+      // Files is a child-window app, so it cannot be opened through route matching.
+      const existingInCurrentState = windowsRef.current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app));
+      if (!existingInCurrentState) {
+        writeActivityEntry({
+          type: 'app_launch',
+          title: app.title,
+          source: 'Window manager',
+          kind: 'activity',
+          metadata: { appId: app.id, appKind: app.kind, route },
+        });
+      }
+
+      suspendWindowedBrowserViews();
+      setLauncherOpen(false);
+      setWindows((current) => {
+        const existing = current.find((windowModel) => routeWindowMatchesWindowedApp(windowModel, id, app));
+        if (existing) {
+          return withFocusedWindow(
+            current.map((windowModel) =>
+              windowModel.id === existing.id
+                ? {
+                    ...windowModel,
+                    title: app.title,
+                    route,
+                    minimized: false,
+                    workspaceCwd: windowModel.workspaceCwd ?? windowedWorkspaceDefaultCwdForApp(app, defaultWorkspaceCwd),
+                  }
+                : windowModel,
+            ),
+            existing.id,
+          );
+        }
+
+        const next: DesktopWindowModel = {
+          id,
+          kind: app.kind,
+          title: app.title,
+          route,
+          bounds: nextDefaultBounds(current.length, app.kind, desktopRef.current, app.title, {
+            width: app.window.defaultWidth,
+            height: app.window.defaultHeight,
+          }),
+          minimized: false,
+          focused: true,
+          singleton: app.window.singleton,
+          workspaceCwd: windowedWorkspaceDefaultCwdForApp(app, defaultWorkspaceCwd),
+        };
+        return [...current.map((windowModel) => ({ ...windowModel, focused: false })), next];
+      });
+      return true;
+    },
+    [defaultWorkspaceCwd, windowedApps, writeActivityEntry],
+  );
+
   const openChatWindow = useCallback(
     (route: string) => {
       const sessionId = chatSessionIdForRoute(route);
@@ -2451,6 +2512,7 @@ export function WindowedLayout() {
   const [startMenuSearchResults, setStartMenuSearchResults] = useState<StartMenuSearchResults>({
     conversations: [],
     documents: [],
+    files: [],
     loading: false,
   });
   const startMenuSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2460,7 +2522,7 @@ export function WindowedLayout() {
     (query: string) => {
       startMenuQueryRef.current = query;
       if (query.trim().length === 0) {
-        setStartMenuSearchResults({ conversations: [], documents: [], loading: false });
+        setStartMenuSearchResults({ conversations: [], documents: [], files: [], loading: false });
         return;
       }
 
@@ -2474,14 +2536,15 @@ export function WindowedLayout() {
       startMenuSearchTimerRef.current = setTimeout(async () => {
         const currentQuery = startMenuQueryRef.current.trim();
         if (!currentQuery) {
-          setStartMenuSearchResults({ conversations: [], documents: [], loading: false });
+          setStartMenuSearchResults({ conversations: [], documents: [], files: [], loading: false });
           return;
         }
 
-        // Fire both searches in parallel, keep app filtering alive if one fails
-        const [conversationResult, documentResult] = await Promise.allSettled([
+        // Fire searches in parallel, keep app filtering alive if one fails.
+        const [conversationResult, documentResult, fileResult] = await Promise.allSettled([
           api.conversationContentSearch(currentQuery, 10),
           api.documents.search(currentQuery, { limit: 10 }),
+          defaultWorkspaceCwd ? api.workspaceSearch(defaultWorkspaceCwd, currentQuery, { limit: 10 }) : Promise.resolve(null),
         ]);
 
         // Only apply if the query hasn't changed since start
@@ -2511,10 +2574,22 @@ export function WindowedLayout() {
               )
             : [];
 
-        setStartMenuSearchResults({ conversations, documents, loading: false });
+        const files =
+          fileResult.status === 'fulfilled' && fileResult.value
+            ? fileResult.value.matches.map(
+                (match): StartMenuSearchResultItem => ({
+                  id: `file:${match.path}`,
+                  title: match.name,
+                  subtitle: match.path,
+                  onSelect: () => openFilesWindowAtPath(match.path),
+                }),
+              )
+            : [];
+
+        setStartMenuSearchResults({ conversations, documents, files, loading: false });
       }, 250);
     },
-    [openChatWindow, openRouteWindow],
+    [defaultWorkspaceCwd, openChatWindow, openFilesWindowAtPath, openRouteWindow],
   );
 
   // Clear search results when launcher closes
@@ -2525,7 +2600,7 @@ export function WindowedLayout() {
         startMenuSearchTimerRef.current = null;
       }
       startMenuQueryRef.current = '';
-      setStartMenuSearchResults({ conversations: [], documents: [], loading: false });
+      setStartMenuSearchResults({ conversations: [], documents: [], files: [], loading: false });
     }
   }, [launcherOpen]);
 

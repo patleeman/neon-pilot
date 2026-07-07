@@ -1892,6 +1892,14 @@ export interface WorkspaceDirectoryListing extends WorkspaceRootSnapshot {
   entries: WorkspaceEntry[];
 }
 
+export interface WorkspaceSearchResult extends WorkspaceRootSnapshot {
+  query: string;
+  limit: number;
+  visitedCount: number;
+  truncated: boolean;
+  matches: WorkspaceEntry[];
+}
+
 export interface WorkspaceFileContent extends WorkspaceRootSnapshot {
   path: string;
   name: string;

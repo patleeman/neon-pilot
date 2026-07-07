@@ -75,6 +75,7 @@ import type {
   WorkspaceDiffOverlay,
   WorkspaceDirectoryListing,
   WorkspaceFileContent,
+  WorkspaceSearchResult,
 } from '../shared/types';
 import { buildApiPath } from './apiBase';
 import { recordApiTiming, recordClientPerfTiming } from './perfDiagnostics';
@@ -899,6 +900,11 @@ export const api = {
     const params = new URLSearchParams({ cwd, path });
     if (options?.force) params.set('force', '1');
     return get<WorkspaceFileContent>(`/workspace/file?${params.toString()}`);
+  },
+  workspaceSearch: async (cwd: string, query: string, options?: { limit?: number }) => {
+    const params = new URLSearchParams({ cwd, query });
+    if (options?.limit !== undefined) params.set('limit', String(options.limit));
+    return get<WorkspaceSearchResult>(`/workspace/search?${params.toString()}`);
   },
   resolveWorkspacePathLinks: async (cwd: string, targets: string[]) =>
     post<{ links: WorkspaceResolvedPathLink[] }>('/workspace/path-links/resolve', { cwd, targets }),
