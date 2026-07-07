@@ -8,6 +8,11 @@ import {
   subscribeDesktopControlCommands,
 } from './localApiDesktopControl.js';
 import {
+  publishDesktopUserActionEvent,
+  readDesktopUserActionEvents,
+  resetDesktopUserActionEventsForTests,
+} from './localApiDesktopEvents.js';
+import {
   acknowledgeDesktopScreenshotRequest,
   type DesktopScreenshotImage,
   type DesktopScreenshotRequest,
@@ -27,6 +32,7 @@ describe('agent-visible desktop-control workflow integration', () => {
     resetDesktopControlForTests();
     resetDesktopScreenshotForTests();
     resetDesktopStateSnapshotForTests();
+    resetDesktopUserActionEventsForTests();
   });
 
   it('chains open command, state publish, and screenshot request as an agent would', async () => {
@@ -288,5 +294,100 @@ describe('agent-visible desktop-control workflow integration', () => {
       publishedAt: '2026-07-05T12:34:56.000Z',
     });
     expect(readDesktopStateSnapshot().windows).toHaveLength(1);
+  });
+
+  it('proves desktop events readback and pagination alongside agent-touched state', async () => {
+    // Step 1: Store semantic desktop state with agent-touched windows.
+    storeDesktopStateSnapshot({
+      windows: [
+        {
+          id: 'chat:draft',
+          kind: 'chat',
+          title: 'New conversation',
+          route: '/conversations/new',
+          bounds: { x: 42, y: 34, width: 700, height: 500 },
+          focused: true,
+          minimized: false,
+          maximized: false,
+          zIndex: 10,
+          agentTouched: true,
+          workspaceCwd: null,
+          routeMetadata: { sessionId: 'draft' },
+        },
+        {
+          id: 'route:system-notes:notes',
+          kind: 'route',
+          title: 'Notes',
+          route: '/notes',
+          bounds: { x: 90, y: 70, width: 760, height: 520 },
+          focused: false,
+          minimized: false,
+          maximized: false,
+          zIndex: 9,
+          agentTouched: true,
+          routeMetadata: { appId: 'system-notes', singleton: true },
+        },
+      ],
+      focusedWindowId: 'chat:draft',
+      theme: 'dark',
+      publishedAt: '2026-07-07T00:00:00.000Z',
+      revision: 1,
+      publisherId: 'windowed-layout:test',
+    });
+
+    // Step 2: Publish renderer-reported user-action events for those windows.
+    const moveEvent = publishDesktopUserActionEvent({
+      action: 'move',
+      windowId: 'chat:draft',
+      kind: 'chat',
+      title: 'New conversation',
+      route: '/conversations/new',
+      createdAt: '2026-07-07T00:01:00.000Z',
+    });
+
+    const resizeEvent = publishDesktopUserActionEvent({
+      action: 'resize',
+      windowId: 'chat:draft',
+      kind: 'chat',
+      title: 'New conversation',
+      route: '/conversations/new',
+      createdAt: '2026-07-07T00:01:01.000Z',
+    });
+
+    const maximizeEvent = publishDesktopUserActionEvent({
+      action: 'maximize',
+      windowId: 'route:system-notes:notes',
+      kind: 'route',
+      title: 'Notes',
+      route: '/notes',
+      createdAt: '2026-07-07T00:01:02.000Z',
+    });
+
+    // Step 3: Agent reads state and confirms the touched windows exist.
+    const snapshot = readDesktopStateSnapshot();
+    expect(snapshot.windows).toHaveLength(2);
+    expect(snapshot.windows.map((w) => w.id)).toEqual(['chat:draft', 'route:system-notes:notes']);
+    expect(snapshot.windows.every((w) => w.agentTouched === true)).toBe(true);
+
+    // Step 4: Agent reads all user-action events
+    const allEvents = readDesktopUserActionEvents({ limit: 10 });
+    expect(allEvents).toHaveLength(3);
+    expect(allEvents[0]).toEqual(moveEvent.event);
+    expect(allEvents[1]).toEqual(resizeEvent.event);
+    expect(allEvents[2]).toEqual(maximizeEvent.event);
+
+    // Step 5: Agent paginates after the first event
+    const afterMove = readDesktopUserActionEvents({ lastEventId: moveEvent.event.id, limit: 10 });
+    expect(afterMove).toHaveLength(2);
+    expect(afterMove[0]).toEqual(resizeEvent.event);
+    expect(afterMove[1]).toEqual(maximizeEvent.event);
+
+    // Step 6: Agent paginates after the last event (empty result)
+    const afterLast = readDesktopUserActionEvents({ lastEventId: maximizeEvent.event.id });
+    expect(afterLast).toEqual([]);
+
+    // Step 7: Agent can still read state independently
+    const refreshedSnapshot = readDesktopStateSnapshot();
+    expect(refreshedSnapshot.windows).toHaveLength(2);
   });
 });

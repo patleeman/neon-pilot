@@ -10,6 +10,7 @@ import {
   publishDesktopUserActionEvent,
   readDesktopUserActionEvents,
   resetDesktopUserActionEventsForTests,
+  subscribeDesktopUserActionEvents,
 } from './localApiDesktopEvents.js';
 
 describe('localApiDesktopEvents readDesktopUserActionEvents', () => {
@@ -143,6 +144,175 @@ describe('localApiDesktopEvents readDesktopUserActionEvents', () => {
 
   it('throws for non-string lastEventId', () => {
     expect(() => readDesktopUserActionEvents({ lastEventId: 42 as unknown as string })).toThrow('lastEventId must be a string.');
+  });
+
+  describe('action type coverage for non-close actions', () => {
+    it.each(['move', 'resize', 'maximize', 'snap', 'restore'] as const)(
+      'accepts and returns %s action with complete event data',
+      (action) => {
+        const result = publishDesktopUserActionEvent({
+          action,
+          windowId: 'chat:draft',
+          title: 'Draft',
+          route: '/conversations/new',
+          createdAt: '2026-07-06T00:00:00.000Z',
+        });
+
+        expect(result.ok).toBe(true);
+        expect(result.event).toMatchObject({
+          source: 'user',
+          action,
+          windowId: 'chat:draft',
+          title: 'Draft',
+          route: '/conversations/new',
+          createdAt: '2026-07-06T00:00:00.000Z',
+        });
+        expect(result.event.id).toMatch(/^desktop-user-action-/);
+
+        const events = readDesktopUserActionEvents();
+        expect(events).toHaveLength(1);
+        expect(events[0]).toEqual(result.event);
+      },
+    );
+  });
+
+  describe('buffer overflow trimming and pagination', () => {
+    it('keeps only the last 100 events when more are published', () => {
+      const ids: string[] = [];
+      for (let i = 0; i < 110; i++) {
+        const result = publishDesktopUserActionEvent({
+          action: 'focus',
+          windowId: `chat:${i}`,
+          createdAt: `2026-07-06T00:00:${String(i).padStart(2, '0')}.000Z`,
+        });
+        ids.push(result.event.id);
+      }
+
+      const events = readDesktopUserActionEvents({ limit: 100 });
+      expect(events).toHaveLength(100);
+      expect(events[0]?.id).toBe(ids[10]);
+      expect(events[99]?.id).toBe(ids[109]);
+    });
+
+    it('falls back to last N events when lastEventId cursor was trimmed', () => {
+      const ids: string[] = [];
+      for (let i = 0; i < 110; i++) {
+        const result = publishDesktopUserActionEvent({
+          action: 'focus',
+          windowId: `chat:${i}`,
+          createdAt: `2026-07-06T00:00:${String(i).padStart(2, '0')}.000Z`,
+        });
+        ids.push(result.event.id);
+      }
+
+      const events = readDesktopUserActionEvents({ lastEventId: ids[0], limit: 3 });
+      expect(events).toHaveLength(3);
+      expect(events[0]?.id).toBe(ids[107]);
+      expect(events[2]?.id).toBe(ids[109]);
+    });
+
+    it('returns empty array for valid cursor at the end of buffer', () => {
+      publishDesktopUserActionEvent({
+        action: 'focus',
+        windowId: 'chat:draft',
+        createdAt: '2026-07-06T00:00:00.000Z',
+      });
+
+      const events = readDesktopUserActionEvents();
+      const lastId = events[0]!.id;
+
+      const afterLast = readDesktopUserActionEvents({ lastEventId: lastId });
+      expect(afterLast).toEqual([]);
+    });
+  });
+
+  describe('subscribeDesktopUserActionEvents', () => {
+    it('receives events published after subscription', () => {
+      const received: unknown[] = [];
+      const unsubscribe = subscribeDesktopUserActionEvents((event) => {
+        received.push(event);
+      });
+
+      const result = publishDesktopUserActionEvent({
+        action: 'maximize',
+        windowId: 'chat:draft',
+        createdAt: '2026-07-06T00:00:00.000Z',
+      });
+
+      expect(received).toHaveLength(1);
+      expect(received[0]).toEqual(result.event);
+      unsubscribe();
+    });
+
+    it('receives catch-up events for events published before subscription', () => {
+      const published = publishDesktopUserActionEvent({
+        action: 'focus',
+        windowId: 'chat:draft',
+        createdAt: '2026-07-06T00:00:00.000Z',
+      });
+
+      const received: unknown[] = [];
+      const unsubscribe = subscribeDesktopUserActionEvents((event) => {
+        received.push(event);
+      });
+
+      expect(received).toHaveLength(1);
+      expect(received[0]).toEqual(published.event);
+
+      publishDesktopUserActionEvent({
+        action: 'resize',
+        windowId: 'chat:draft',
+        createdAt: '2026-07-06T00:00:01.000Z',
+      });
+      expect(received).toHaveLength(2);
+      unsubscribe();
+    });
+
+    it('stops receiving events after unsubscribe', () => {
+      const received: unknown[] = [];
+      const unsubscribe = subscribeDesktopUserActionEvents((event) => {
+        received.push(event);
+      });
+
+      publishDesktopUserActionEvent({
+        action: 'focus',
+        windowId: 'chat:first',
+        createdAt: '2026-07-06T00:00:00.000Z',
+      });
+      expect(received).toHaveLength(1);
+
+      unsubscribe();
+
+      publishDesktopUserActionEvent({
+        action: 'move',
+        windowId: 'chat:second',
+        createdAt: '2026-07-06T00:00:01.000Z',
+      });
+      expect(received).toHaveLength(1);
+    });
+
+    it('supports multiple subscribers receiving the same events', () => {
+      const received1: unknown[] = [];
+      const received2: unknown[] = [];
+      const unsub1 = subscribeDesktopUserActionEvents((e) => received1.push(e));
+      const unsub2 = subscribeDesktopUserActionEvents((e) => received2.push(e));
+
+      const result = publishDesktopUserActionEvent({
+        action: 'snap',
+        windowId: 'chat:draft',
+        createdAt: '2026-07-06T00:00:00.000Z',
+      });
+
+      expect(received1).toHaveLength(1);
+      expect(received1[0]).toEqual(result.event);
+      expect(received2).toHaveLength(1);
+      expect(received2[0]).toEqual(result.event);
+      expect(received1[0]).toBe(received2[0]);
+      expect(received1[0]).toBe(result.event);
+
+      unsub1();
+      unsub2();
+    });
   });
 
   it('preserves events across module reloads for bundled duplicate imports', async () => {
