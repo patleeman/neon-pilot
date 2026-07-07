@@ -8,6 +8,7 @@ import type { DesktopRootLayout } from './runtime/desktop-root.js';
 import {
   clearTaskCallbackBinding,
   getTaskCallbackBinding,
+  resolveTaskCallbackBindingsFile,
   resolveTaskCallbackBindingsFileFromLayout,
   setTaskCallbackBinding,
 } from './task-callback-bindings.js';
@@ -29,6 +30,14 @@ describe('task callback bindings', () => {
     const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
 
     expect(resolveTaskCallbackBindingsFileFromLayout(layout as DesktopRootLayout, 'datadog')).toBe(
+      join(layout.systemState, 'pi-agent', 'state', 'task-callback-bindings', 'shared.json'),
+    );
+  });
+
+  it('resolves the bindings file path from a DesktopRootLayout via the options interface', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+
+    expect(resolveTaskCallbackBindingsFile({ profile: 'datadog', layout: layout as DesktopRootLayout })).toBe(
       join(layout.systemState, 'pi-agent', 'state', 'task-callback-bindings', 'shared.json'),
     );
   });

@@ -3,6 +3,7 @@ import {
   getTaskCallbackBinding,
   loadAttentionEventsState,
   resolveAttentionEventsStateFile,
+  resolveAttentionEventsStateFileFromLayout,
   saveAttentionEventsState,
 } from '@neon-pilot/core';
 import { randomUUID } from 'crypto';
@@ -534,6 +535,7 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     context: {
       logger: { info: (message: string) => void; warn: (message: string) => void };
       paths: { root: string; stateRoot: string };
+      layout?: import('@neon-pilot/core').DesktopRootLayout;
     },
     details: {
       finishedAt: string;
@@ -542,7 +544,12 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
       logPath?: string;
     },
   ): Promise<string[] | undefined> => {
-    const binding = getTaskCallbackBinding({ stateRoot: context.paths.stateRoot, profile: task.profile, taskId: task.id });
+    const binding = getTaskCallbackBinding({
+      stateRoot: context.paths.stateRoot,
+      layout: context.layout,
+      profile: task.profile,
+      taskId: task.id,
+    });
     if (!binding) {
       return undefined;
     }
@@ -560,7 +567,9 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
     ].join('-');
     const notifyLevel = status === 'success' ? binding.notifyOnSuccess : binding.notifyOnFailure;
     const title = status === 'success' ? `Scheduled task @${task.id} completed` : `Scheduled task @${task.id} failed`;
-    const attentionStatePath = resolveAttentionEventsStateFile(context.paths.stateRoot);
+    const attentionStatePath = context.layout
+      ? resolveAttentionEventsStateFileFromLayout(context.layout)
+      : resolveAttentionEventsStateFile(context.paths.stateRoot);
     const attentionState = loadAttentionEventsState(attentionStatePath);
     createReadyAttentionEvent(attentionState, {
       id: wakeupId,

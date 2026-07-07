@@ -5,11 +5,20 @@ import {
   completeAttentionEvents,
   createEmptyAttentionEventsState,
   groupAttentionEventsForDelivery,
+  resolveAttentionEventsStateFileFromLayout,
   retryAttentionEvents,
   scheduleAttentionEvent,
 } from './attention-events.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 
 describe('attention events', () => {
+  it('resolves the attention events state file from a DesktopRootLayout', () => {
+    const layout = { systemState: '/custom/root/system/state' } as Pick<DesktopRootLayout, 'systemState'>;
+    expect(resolveAttentionEventsStateFileFromLayout(layout as DesktopRootLayout)).toBe(
+      '/custom/root/system/state/pi-agent/attention-events-state.json',
+    );
+  });
+
   it('schedules, activates, groups, completes, and retries attention events', () => {
     const state = createEmptyAttentionEventsState();
 

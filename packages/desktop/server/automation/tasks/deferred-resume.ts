@@ -3,6 +3,7 @@ import {
   loadDeferredResumeState,
   readSessionConversationId,
   resolveDeferredResumeStateFile,
+  resolveDeferredResumeStateFileFromLayout,
   withDeferredResumeLock,
 } from '@neon-pilot/core';
 import { join, resolve, sep } from 'path';
@@ -97,7 +98,9 @@ export function createDeferredResumeModule(dependencies: DeferredResumeModuleDep
       updateCounts();
 
       const profileContext = resolveProfileContext(context.config.modules.tasks.taskDir);
-      const deferredResumeStateFile = resolveDeferredResumeStateFile(context.paths.stateRoot);
+      const deferredResumeStateFile = context.layout
+        ? resolveDeferredResumeStateFileFromLayout(context.layout)
+        : resolveDeferredResumeStateFile(context.paths.stateRoot);
       const deferredState = loadDeferredResumeState(deferredResumeStateFile);
       const readyEntries = Object.values(deferredState.resumes).filter((entry) => entry.status === 'ready');
 
@@ -134,7 +137,9 @@ export function createDeferredResumeModule(dependencies: DeferredResumeModuleDep
       state.lastTickAt = now().toISOString();
 
       try {
-        const deferredResumeStateFile = resolveDeferredResumeStateFile(context.paths.stateRoot);
+        const deferredResumeStateFile = context.layout
+          ? resolveDeferredResumeStateFileFromLayout(context.layout)
+          : resolveDeferredResumeStateFile(context.paths.stateRoot);
         const activated = withDeferredResumeLock(
           (deferredState) => activateDueDeferredResumes(deferredState, { at: now() }),
           deferredResumeStateFile,

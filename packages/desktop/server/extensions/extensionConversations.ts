@@ -543,6 +543,7 @@ export function createExtensionConversationsCapability(
             ...(meta?.file ? { sessionFile: meta.file } : {}),
           };
         }),
+        serverContext?.getDesktopRootLayout?.(),
       );
       const result = deleteSessions(conversationIds);
       await removeDeletedConversationWorkspaceReferences(conversationIds);
@@ -575,7 +576,10 @@ export function createExtensionConversationsCapability(
       }
       await destroyLiveConversationsBeforeDeleting(candidates.candidates.map((entry) => entry.id));
       const { cleanupDeletedConversationRuntime } = await import('../conversations/conversationRunCleanup.js');
-      await cleanupDeletedConversationRuntime(candidates.candidates.map((entry) => ({ id: entry.id, sessionFile: entry.file })));
+      await cleanupDeletedConversationRuntime(
+        candidates.candidates.map((entry) => ({ id: entry.id, sessionFile: entry.file })),
+        serverContext?.getDesktopRootLayout?.(),
+      );
       const { deleteSessions } = await import('../conversations/sessions.js');
       const deletedResult = deleteSessions(candidates.candidates.map((entry) => entry.id));
       const result = { ...candidates, dryRun: false, deleted: deletedResult.deleted };

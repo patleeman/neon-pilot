@@ -1,4 +1,10 @@
-import { type AttentionEventRecord, resolveAttentionEventsStateFile, withAttentionEventsLock } from '@neon-pilot/core';
+import {
+  type AttentionEventRecord,
+  type DesktopRootLayout,
+  resolveAttentionEventsStateFile,
+  resolveAttentionEventsStateFileFromLayout,
+  withAttentionEventsLock,
+} from '@neon-pilot/core';
 
 import { cancelDurableRun, clearDurableRunsListCache } from '../automation/durableRuns.js';
 import { loadDaemonConfig } from '../config.js';
@@ -79,13 +85,16 @@ function attentionEventBelongsToDeletedConversation(event: AttentionEventRecord,
   return event.conversationId === id || Boolean(sessionFile && event.sessionFile === sessionFile);
 }
 
-function removeDeletedConversationAttentionEvents(targets: DeletedConversationRuntimeCleanupTarget[]): string[] {
+function removeDeletedConversationAttentionEvents(
+  targets: DeletedConversationRuntimeCleanupTarget[],
+  layout?: DesktopRootLayout,
+): string[] {
   const normalizedTargets = targets.filter((target) => target.id.trim().length > 0);
   if (normalizedTargets.length === 0) {
     return [];
   }
 
-  const statePath = resolveAttentionEventsStateFile();
+  const statePath = layout ? resolveAttentionEventsStateFileFromLayout(layout) : resolveAttentionEventsStateFile();
   return withAttentionEventsLock((state) => {
     const removed: string[] = [];
     for (const [eventId, event] of Object.entries(state.events)) {
@@ -105,6 +114,7 @@ function resolveRunsRoot(): string {
 
 export async function cleanupDeletedConversationRuntime(
   targets: DeletedConversationRuntimeCleanupTarget[],
+  layout?: DesktopRootLayout,
 ): Promise<DeletedConversationRuntimeCleanupResult> {
   const normalizedTargets = targets
     .map((target) => ({
@@ -116,7 +126,7 @@ export async function cleanupDeletedConversationRuntime(
   const result: DeletedConversationRuntimeCleanupResult = {
     deletedRunIds: [],
     cancelledRunIds: [],
-    removedAttentionEventIds: removeDeletedConversationAttentionEvents(normalizedTargets),
+    removedAttentionEventIds: removeDeletedConversationAttentionEvents(normalizedTargets, layout),
     failedCancellationRunIds: [],
   };
 

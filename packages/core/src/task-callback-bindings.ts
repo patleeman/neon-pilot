@@ -102,7 +102,10 @@ function parseBinding(value: unknown): TaskCallbackBinding | undefined {
   };
 }
 
-export function resolveTaskCallbackBindingsFile(options: { profile: string; stateRoot?: string }): string {
+export function resolveTaskCallbackBindingsFile(options: { profile: string; stateRoot?: string; layout?: DesktopRootLayout }): string {
+  if (options.layout) {
+    return resolveTaskCallbackBindingsFileFromLayout(options.layout, options.profile);
+  }
   return join(
     resolveStateRoot(options.stateRoot),
     'pi-agent',
@@ -116,7 +119,11 @@ export function resolveTaskCallbackBindingsFileFromLayout(layout: DesktopRootLay
   return join(layout.systemState, 'pi-agent', 'state', 'task-callback-bindings', `${normalizeRuntimeScope(profile)}.json`);
 }
 
-export function loadTaskCallbackBindings(options: { profile: string; stateRoot?: string }): Record<string, TaskCallbackBinding> {
+export function loadTaskCallbackBindings(options: {
+  profile: string;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+}): Record<string, TaskCallbackBinding> {
   const path = resolveTaskCallbackBindingsFile(options);
   if (!existsSync(path)) {
     return {};
@@ -152,6 +159,7 @@ export function loadTaskCallbackBindings(options: { profile: string; stateRoot?:
 export function saveTaskCallbackBindings(options: {
   profile: string;
   stateRoot?: string;
+  layout?: DesktopRootLayout;
   bindings: Record<string, TaskCallbackBinding>;
 }): string {
   const path = resolveTaskCallbackBindingsFile(options);
@@ -160,7 +168,12 @@ export function saveTaskCallbackBindings(options: {
   return path;
 }
 
-export function getTaskCallbackBinding(options: { profile: string; taskId: string; stateRoot?: string }): TaskCallbackBinding | undefined {
+export function getTaskCallbackBinding(options: {
+  profile: string;
+  taskId: string;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+}): TaskCallbackBinding | undefined {
   return loadTaskCallbackBindings(options)[options.taskId];
 }
 
@@ -168,6 +181,7 @@ export function setTaskCallbackBinding(options: {
   profile: string;
   taskId: string;
   stateRoot?: string;
+  layout?: DesktopRootLayout;
   conversationId: string;
   sessionFile: string;
   deliverOnSuccess?: boolean;
@@ -197,17 +211,27 @@ export function setTaskCallbackBinding(options: {
   };
 
   bindings[options.taskId] = next;
-  saveTaskCallbackBindings({ profile: normalizeRuntimeScope(options.profile), stateRoot: options.stateRoot, bindings });
+  saveTaskCallbackBindings({
+    profile: normalizeRuntimeScope(options.profile),
+    stateRoot: options.stateRoot,
+    layout: options.layout,
+    bindings,
+  });
   return next;
 }
 
-export function clearTaskCallbackBinding(options: { profile: string; taskId: string; stateRoot?: string }): boolean {
+export function clearTaskCallbackBinding(options: {
+  profile: string;
+  taskId: string;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+}): boolean {
   const bindings = loadTaskCallbackBindings(options);
   if (!bindings[options.taskId]) {
     return false;
   }
 
   delete bindings[options.taskId];
-  saveTaskCallbackBindings({ profile: options.profile, stateRoot: options.stateRoot, bindings });
+  saveTaskCallbackBindings({ profile: options.profile, stateRoot: options.stateRoot, layout: options.layout, bindings });
   return true;
 }

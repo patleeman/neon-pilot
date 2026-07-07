@@ -1,6 +1,7 @@
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 
+import { type DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 export const ATTENTION_EVENTS_STATE_FILE_NAME = 'attention-events-state.json';
@@ -200,6 +201,10 @@ export function createEmptyAttentionEventsState(): AttentionEventsStateFile {
 
 export function resolveAttentionEventsStateFile(stateRoot = getStateRoot()): string {
   return join(stateRoot, 'pi-agent', ATTENTION_EVENTS_STATE_FILE_NAME);
+}
+
+export function resolveAttentionEventsStateFileFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.systemState, 'pi-agent', ATTENTION_EVENTS_STATE_FILE_NAME);
 }
 
 export function loadAttentionEventsState(path = resolveAttentionEventsStateFile()): AttentionEventsStateFile {

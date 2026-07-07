@@ -1,4 +1,4 @@
-import { hydrateProcessEnvFromShell, resolveChildProcessEnv, resolveDesktopRootLayout } from '@neon-pilot/core';
+import { type DesktopRootLayout, hydrateProcessEnvFromShell, resolveChildProcessEnv, resolveDesktopRootLayout } from '@neon-pilot/core';
 import { type ChildProcess } from 'child_process';
 import { closeSync, cpSync, createWriteStream, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { createServer, type Server, type Socket } from 'net';
@@ -178,6 +178,7 @@ function isProcessAlive(pid: number): boolean {
 export class NeonPilotDaemon {
   private readonly config: DaemonConfig;
   private readonly paths: DaemonPaths;
+  private readonly desktopRootLayout: DesktopRootLayout;
   private readonly runsRoot: string;
   private readonly bus: EventBus;
   private readonly startedAt: string;
@@ -200,7 +201,8 @@ export class NeonPilotDaemon {
     this.config = options.config ?? loadDaemonConfig();
     this.stopRequestBehavior = options.stopRequestBehavior ?? 'exit-process';
     this.logSink = options.logSink;
-    this.paths = resolveDaemonPaths(this.config.ipc.socketPath, undefined, resolveDesktopRootLayout());
+    this.desktopRootLayout = resolveDesktopRootLayout();
+    this.paths = resolveDaemonPaths(this.config.ipc.socketPath, undefined, this.desktopRootLayout);
     this.runsRoot = resolveDurableRunsRoot(this.paths.root);
     this.startedAt = new Date().toISOString();
     this.pid = process.pid;
@@ -424,6 +426,7 @@ export class NeonPilotDaemon {
     return {
       config: this.config,
       paths: this.paths,
+      layout: this.desktopRootLayout,
       publish: (type: string, payload?: EventPayload): boolean => {
         const event = createDaemonEvent({
           type,
@@ -847,6 +850,7 @@ export class NeonPilotDaemon {
         stateRoot: this.paths.stateRoot,
         runsRoot: this.runsRoot,
         runId: triggerRunId,
+        layout: this.desktopRootLayout,
       });
 
       if (callback.delivered) {

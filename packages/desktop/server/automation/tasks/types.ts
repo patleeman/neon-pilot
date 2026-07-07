@@ -1,3 +1,5 @@
+import type { DesktopRootLayout } from '@neon-pilot/core';
+
 import type { DaemonConfig } from '../../config.js';
 import type { DaemonEvent, DaemonPaths, EventPayload, TimerDefinition } from '../../daemon/types.js';
 
@@ -13,6 +15,7 @@ export interface DaemonModuleContext {
   paths: DaemonPaths;
   publish: (type: string, payload?: EventPayload) => boolean;
   logger: ModuleLogger;
+  layout?: DesktopRootLayout;
 }
 
 export interface DaemonModule {

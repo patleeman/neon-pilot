@@ -2320,6 +2320,7 @@ export async function syncDesktopDeletedConversations(input: { conversationIds?:
         ...(meta?.file ? { sessionFile: meta.file } : {}),
       };
     }),
+    (await getLocalServerRouteContext()).getDesktopRootLayout(),
   );
   const result = deleteStoredConversations(conversationIds);
 
