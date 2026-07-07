@@ -694,6 +694,72 @@ describe('extensionLifecycle', () => {
     });
   });
 
+  it('repairs a runtime extension by fixing broken source through updateRuntimeExtension', async () => {
+    const extId = 'repair-ext';
+    const packageRoot = join(runtimeRoot, extId);
+
+    listExtensionInstallSummaries.mockReturnValue([{ id: extId, name: 'Repairable' }]);
+
+    const created = createRuntimeExtension({ id: extId, name: 'Repairable' }, stateRoot);
+    expect(created.packageRoot).toBe(packageRoot);
+
+    findExtensionEntry.mockReturnValue({
+      manifest: { schemaVersion: 2, id: extId },
+      packageRoot,
+      source: 'runtime',
+    });
+
+    const initial = readRuntimeExtensionSource(extId, stateRoot);
+    expect(initial.source.backend).toContain('export async function ping');
+    expect(initial.source.frontend).toContain('ExtensionPage');
+
+    execFileSync.mockImplementationOnce(() => {
+      throw new Error('Build failed: broken source');
+    });
+
+    const brokenBackend = 'export async function ping(_input: unknown, ctx: any) { throw new Error("internally broken"); }';
+    await expect(updateRuntimeExtension(extId, { source: { backend: brokenBackend } }, stateRoot)).rejects.toThrow(
+      'Build failed: broken source',
+    );
+
+    const brokenRead = readRuntimeExtensionSource(extId, stateRoot);
+    expect(brokenRead.source.backend).toBe(brokenBackend);
+    expect(brokenRead.source.backend).toContain('internally broken');
+
+    expect(reloadExtensionBackend).not.toHaveBeenCalled();
+
+    reloadExtensionBackend.mockClear();
+    invalidateExtensionRegistryReadCaches.mockClear();
+
+    const fixedBackend =
+      [
+        'import type { ExtensionBackendContext } from "@neon-pilot/extensions";',
+        '',
+        'export async function ping(_input: unknown, ctx: ExtensionBackendContext) {',
+        '  ctx.log.info("ping");',
+        '  return { ok: true, at: new Date().toISOString() };',
+        '}',
+      ].join('\n') + '\n';
+
+    const repairResult = await updateRuntimeExtension(extId, { source: { backend: fixedBackend } }, stateRoot);
+
+    expect(repairResult.ok).toBe(true);
+    expect(repairResult.built).toBe(true);
+    expect(repairResult.extension).toEqual({ id: extId, name: 'Repairable' });
+    expect(execFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/)]),
+      expect.any(Object),
+    );
+    expect(reloadExtensionBackend).toHaveBeenCalledWith(extId);
+    expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot, undefined);
+
+    const repaired = readRuntimeExtensionSource(extId, stateRoot);
+    expect(repaired.source.backend).toBe(fixedBackend);
+    expect(repaired.manifest.id).toBe(extId);
+    expect(repaired.manifest.name).toBe('Repairable');
+  });
+
   it('imports safe extension bundles into the runtime extension root', () => {
     const zipPath = join(stateRoot, 'bundle.zip');
     mkdirSync(stateRoot, { recursive: true });
