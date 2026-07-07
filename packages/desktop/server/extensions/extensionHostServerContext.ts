@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { type DesktopRootLayout, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 import { createRuntimeState, type RuntimeState } from '../app/runtimeState.js';
-import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath, getRuntimeSettingsFilePathFromLayout } from '../ui/settingsPersistence.js';
 import type { ExtensionHostBackendServerContext } from './extensionHostProtocol.js';
 
 export interface ExtensionHostServerContextSnapshot {
@@ -36,8 +36,14 @@ export function createExtensionBackendServerContextFromSnapshot(
 ): ExtensionHostBackendServerContext | undefined {
   if (!snapshot) return undefined;
   let runtimeState: RuntimeState | undefined;
+  const hasSettingsFileSource = Boolean(snapshot.settingsFile ?? snapshot.desktopRootLayout ?? snapshot.stateRoot);
+  const resolveSettingsFile = () =>
+    snapshot.settingsFile ??
+    (snapshot.desktopRootLayout
+      ? getRuntimeSettingsFilePathFromLayout(snapshot.desktopRootLayout)
+      : getRuntimeSettingsFilePath(snapshot.stateRoot));
   const getRuntimeState = () => {
-    const settingsFile = snapshot.settingsFile ?? getRuntimeSettingsFilePath(snapshot.stateRoot);
+    const settingsFile = resolveSettingsFile();
     const agentDir = snapshot.agentDir ?? dirname(settingsFile);
     const stateRoot = snapshot.stateRoot ?? dirname(agentDir);
     runtimeState ??= createRuntimeState({
@@ -53,7 +59,7 @@ export function createExtensionBackendServerContextFromSnapshot(
   return {
     getRuntimeScope: () => snapshot.runtimeScope,
     ...(snapshot.repoRoot ? { getRepoRoot: () => snapshot.repoRoot as string } : {}),
-    ...(snapshot.settingsFile ? { getSettingsFile: () => snapshot.settingsFile as string } : {}),
+    ...(hasSettingsFileSource ? { getSettingsFile: resolveSettingsFile } : {}),
     ...(snapshot.authFile ? { getAuthFile: () => snapshot.authFile as string } : {}),
     ...(snapshot.stateRoot ? { getStateRoot: () => snapshot.stateRoot as string } : {}),
     ...(snapshot.desktopRootLayout ? { getDesktopRootLayout: () => snapshot.desktopRootLayout as DesktopRootLayout } : {}),

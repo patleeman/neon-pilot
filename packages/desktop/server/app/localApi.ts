@@ -194,7 +194,7 @@ import { logError, logWarn } from '../shared/logging.js';
 import { isSameOriginUnsafeRequestInput } from '../shared/webSecurity.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
-import { getRuntimeSettingsFilePath, persistSettingsWrite } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePathFromLayout, persistSettingsWrite } from '../ui/settingsPersistence.js';
 import { readSavedUiPreferences, writeSavedUiPreferences } from '../ui/uiPreferences.js';
 import { readGitStatusSummaryWithTelemetry } from '../workspace/gitStatus.js';
 import { pickFolderCapability } from '../workspace/workspaceDesktopCapability.js';
@@ -769,14 +769,14 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   const stateRoot = getStateRoot();
   const agentDir = getPiAgentRuntimeDir(stateRoot);
   const authFile = join(agentDir, 'auth.json');
-  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
-  const pathsAtMs = performance.now();
-  process.stderr.write(`[perf] buildLocalContexts: paths ${Math.round(pathsAtMs - startedAtMs)}ms\n`);
 
   // Ensure the desktop root directory exists before any consumer
   // (e.g. getDefaultWebCwd) can reference it.
   ensureDesktopRootDir();
   const desktopRootLayout = resolveDesktopRootLayout();
+  const settingsFile = getRuntimeSettingsFilePathFromLayout(desktopRootLayout);
+  const pathsAtMs = performance.now();
+  process.stderr.write(`[perf] buildLocalContexts: paths ${Math.round(pathsAtMs - startedAtMs)}ms\n`);
 
   const runtimeState = createRuntimeState({
     repoRoot,

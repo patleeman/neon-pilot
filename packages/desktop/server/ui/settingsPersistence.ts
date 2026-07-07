@@ -1,10 +1,14 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { getConfigRoot, getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getConfigRoot, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 export function getRuntimeSettingsFilePath(stateRoot?: string): string {
   return join(getPiAgentRuntimeDir(stateRoot), 'settings.json');
+}
+
+export function getRuntimeSettingsFilePathFromLayout(layout: DesktopRootLayout): string {
+  return join(layout.systemRuntime, 'settings.json');
 }
 
 function getDefaultLocalRuntimeConfigDir(): string {

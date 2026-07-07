@@ -3,9 +3,15 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getRuntimeSettingsFilePath, persistSettingsWrite, resolveLocalRuntimeSettingsFilePath } from './settingsPersistence.js';
+import {
+  getRuntimeSettingsFilePath,
+  getRuntimeSettingsFilePathFromLayout,
+  persistSettingsWrite,
+  resolveLocalRuntimeSettingsFilePath,
+} from './settingsPersistence.js';
 
 const tempDirs: string[] = [];
 
@@ -45,6 +51,23 @@ describe('resolveLocalRuntimeSettingsFilePath', () => {
 describe('getRuntimeSettingsFilePath', () => {
   it('resolves settings from the explicit state root', () => {
     expect(getRuntimeSettingsFilePath('/state-root')).toBe(join('/state-root', 'neon-pilot-runtime', 'settings.json'));
+  });
+});
+
+describe('getRuntimeSettingsFilePathFromLayout', () => {
+  it('resolves settings from the desktop root layout systemRuntime', () => {
+    const layout = resolveDesktopRootLayout({ root: '/test-root' });
+
+    expect(getRuntimeSettingsFilePathFromLayout(layout)).toBe(join('/test-root/system/runtime', 'settings.json'));
+  });
+
+  it('uses the systemRuntime field from the provided DesktopRootLayout', () => {
+    const layout = {
+      ...resolveDesktopRootLayout({ root: '/custom' }),
+      systemRuntime: '/custom/alternate/runtime',
+    };
+
+    expect(getRuntimeSettingsFilePathFromLayout(layout)).toBe('/custom/alternate/runtime/settings.json');
   });
 });
 

@@ -131,7 +131,7 @@ describe('protocol CLI', () => {
     expect(runtime.createRuntimeState).toHaveBeenCalledWith({
       repoRoot: process.cwd(),
       agentDir: '/agent',
-      settingsFile: '/agent/settings.json',
+      settingsFile: '/var/empty/sentinel-desktop-root/system/runtime/settings.json',
       stateRoot: '/tmp/neon-pilot-protocol-cli-test',
       desktopRootLayout: expect.objectContaining({ root: '/var/empty/sentinel-desktop-root' }),
       logger: { warn: expect.any(Function) },
@@ -144,7 +144,7 @@ describe('protocol CLI', () => {
           runtimeScope: 'shared',
           repoRoot: process.cwd(),
           agentDir: '/agent',
-          settingsFile: '/agent/settings.json',
+          settingsFile: '/var/empty/sentinel-desktop-root/system/runtime/settings.json',
           stateRoot: '/tmp/neon-pilot-protocol-cli-test',
         }),
         stdio: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr },

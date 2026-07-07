@@ -91,4 +91,24 @@ describe('extension host server context snapshots', () => {
 
     expect(context?.getDesktopRootLayout).toBeUndefined();
   });
+
+  it('resolves settingsFile from desktopRootLayout when settingsFile is absent but layout is present', () => {
+    const desktopRootLayout = resolveDesktopRootLayout({ root: '/layout-settings-root' });
+    const context = createExtensionBackendServerContextFromSnapshot({
+      runtimeScope: 'shared',
+      desktopRootLayout,
+    });
+
+    expect(context?.getSettingsFile?.()).toBe('/layout-settings-root/system/runtime/settings.json');
+    expect(context?.getDesktopRootLayout?.()).toEqual(desktopRootLayout);
+  });
+
+  it('falls back to legacy getRuntimeSettingsFilePath when neither settingsFile nor desktopRootLayout is present', () => {
+    const context = createExtensionBackendServerContextFromSnapshot({
+      runtimeScope: 'shared',
+      stateRoot: '/legacy-state',
+    });
+
+    expect(context?.getSettingsFile?.()).toBe('/legacy-state/neon-pilot-runtime/settings.json');
+  });
 });

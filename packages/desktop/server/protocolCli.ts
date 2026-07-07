@@ -42,7 +42,7 @@ import {
 } from './extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from './extensions/extensionHostRpcClient.js';
 import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
-import { getRuntimeSettingsFilePath } from './ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePathFromLayout } from './ui/settingsPersistence.js';
 
 export const PROTOCOL_CLI_EXIT_CODES = NEON_PILOT_CLI_EXIT_CODES;
 
@@ -80,13 +80,14 @@ function buildServerContextSnapshot(): ExtensionHostServerContextSnapshot {
   const repoRoot = resolveCliRepoRoot();
   const stateRoot = getStateRoot();
   const agentDir = getPiAgentRuntimeDir(stateRoot);
-  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
+  const desktopRootLayout = resolveDesktopRootLayout();
+  const settingsFile = getRuntimeSettingsFilePathFromLayout(desktopRootLayout);
   const runtimeState = createRuntimeState({
     repoRoot,
     agentDir,
     settingsFile,
     stateRoot,
-    desktopRootLayout: resolveDesktopRootLayout(),
+    desktopRootLayout,
     logger: {
       warn: (message, fields) => {
         const suffix = fields ? ` ${JSON.stringify(fields)}` : '';
@@ -802,11 +803,12 @@ async function printCliSchema(args: string[], rawArgs = args): Promise<number> {
 function cliPathsResult(): Record<string, unknown> {
   const stateRoot = getStateRoot();
   const agentDir = getPiAgentRuntimeDir(stateRoot);
+  const desktopRootLayout = resolveDesktopRootLayout();
   return {
     repoRoot: process.cwd(),
     stateRoot,
     agentDir,
-    settingsFile: getRuntimeSettingsFilePath(stateRoot),
+    settingsFile: getRuntimeSettingsFilePathFromLayout(desktopRootLayout),
     runtimeChannel: resolveNeonPilotRuntimeChannel(),
   };
 }

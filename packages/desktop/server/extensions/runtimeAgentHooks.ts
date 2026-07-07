@@ -10,7 +10,7 @@ import {
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildPromptAssemblyPlan } from '../prompt-assembly/promptAssembly.js';
 import type { LiveSessionResourceOptions } from '../routes/context.js';
-import { getRuntimeSettingsFilePath } from '../ui/settingsPersistence.js';
+import { getRuntimeSettingsFilePath, getRuntimeSettingsFilePathFromLayout } from '../ui/settingsPersistence.js';
 import { createManifestAgentExtensions } from './extensionAgentExtensions.js';
 import { createManifestToolAgentExtensions } from './manifestToolAgentExtension.js';
 
@@ -27,9 +27,8 @@ export function setRuntimeAgentHookBuilders(builders: {
 
 function buildFallbackLiveSessionResourceOptions(): LiveSessionResourceOptions {
   const runtimeScope = 'shared';
-  const stateRoot = getStateRoot();
-  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const desktopRootLayout = resolveDesktopRootLayout();
+  const settingsFile = getRuntimeSettingsFilePathFromLayout(desktopRootLayout);
   const resolved = resolveRuntimeResources(runtimeScope, {
     ...(process.env.NEON_PILOT_REPO_ROOT ? { repoRoot: process.env.NEON_PILOT_REPO_ROOT } : {}),
     desktopRootLayout,
