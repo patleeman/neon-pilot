@@ -935,8 +935,8 @@ Component-based — requires a frontend entry.
 
 ```json
 {
-  "id": "gateway-badge",
-  "component": "GatewayBadge",
+  "id": "status-indicator",
+  "component": "StatusIndicator",
   "position": "after-title",
   "priority": 10
 }
@@ -1258,9 +1258,9 @@ Add labels in the status bar below the composer. Action-based — no frontend en
 
 ```json
 {
-  "id": "gateway-status",
-  "label": "Gateway",
-  "action": "openGatewayPanel",
+  "id": "connection-status",
+  "label": "Connection",
+  "action": "showConnectionInfo",
   "alignment": "right",
   "priority": 10
 }

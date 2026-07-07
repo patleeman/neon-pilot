@@ -1382,8 +1382,8 @@ ctx.setActiveTools(toolNames: string[]): void;</code></pre>
         <h3 id="conversation-decorators-conversationdecorators">Conversation Decorators (<code>conversationDecorators</code>)</h3>
         <p>Add badges, icons, or indicators on conversation tab items in the sidebar. Component-based — requires a frontend entry.</p>
         <pre><code>{
-  &quot;id&quot;: &quot;gateway-badge&quot;,
-  &quot;component&quot;: &quot;GatewayBadge&quot;,
+  &quot;id&quot;: &quot;status-indicator&quot;,
+  &quot;component&quot;: &quot;StatusIndicator&quot;,
   &quot;position&quot;: &quot;after-title&quot;,
   &quot;priority&quot;: 10
 }</code></pre>
@@ -1725,9 +1725,9 @@ export function HermesSessionInspector({ pa }: ExtensionSurfaceProps) {
         <h3 id="status-bar-items-statusbaritems">Status Bar Items (<code>statusBarItems</code>)</h3>
         <p>Add labels in the status bar below the composer. Action-based — no frontend entry needed.</p>
         <pre><code>{
-  &quot;id&quot;: &quot;gateway-status&quot;,
-  &quot;label&quot;: &quot;Gateway&quot;,
-  &quot;action&quot;: &quot;openGatewayPanel&quot;,
+  &quot;id&quot;: &quot;connection-status&quot;,
+  &quot;label&quot;: &quot;Connection&quot;,
+  &quot;action&quot;: &quot;showConnectionInfo&quot;,
   &quot;alignment&quot;: &quot;right&quot;,
   &quot;priority&quot;: 10
 }</code></pre>
