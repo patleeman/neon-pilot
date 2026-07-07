@@ -117,6 +117,22 @@ describe('resolveNeutralChatCwd', () => {
       rmSync(stateRoot, { recursive: true, force: true });
     }
   });
+
+  it('uses layout systemChatWorkspaces when provided', () => {
+    const layoutRoot = mkdtempSync(join(tmpdir(), 'pa-neutral-chat-cwd-layout-'));
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-neutral-chat-cwd-state-'));
+    try {
+      const layout = { systemChatWorkspaces: join(layoutRoot, 'chat-workspaces') };
+      const expectedCwd = join(layoutRoot, 'chat-workspaces', 'test-profile');
+      const cwd = resolveNeutralChatCwd('test/profile', stateRoot, layout);
+
+      expect(cwd).toBe(expectedCwd);
+      expect(existsSync(cwd)).toBe(true);
+    } finally {
+      rmSync(layoutRoot, { recursive: true, force: true });
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('runtime config path helpers', () => {

@@ -32,6 +32,7 @@ export interface DesktopRootLayout {
   systemElectronUserData: string;
   systemObservability: string;
   systemRuntime: string;
+  systemChatWorkspaces: string;
   systemSecrets: string;
   systemState: string;
 }
@@ -108,9 +109,24 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
     systemElectronUserData: join(systemElectron, 'user-data'),
     systemObservability: join(system, 'observability'),
     systemRuntime: join(system, 'runtime'),
+    systemChatWorkspaces: join(system, 'runtime', 'chat-workspaces'),
     systemSecrets: join(system, 'secrets'),
     systemState: join(system, 'state'),
   };
+}
+
+/**
+ * Resolve the runtime chat workspaces directory.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/runtime/chat-workspaces`. Otherwise falls back to
+ * the legacy `<pi-agent-runtime-dir>/chat-workspaces`.
+ */
+export function getRuntimeChatWorkspacesDir(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return layout.systemChatWorkspaces;
+  }
+  return join(getPiAgentRuntimeDir(), 'chat-workspaces');
 }
 
 /**

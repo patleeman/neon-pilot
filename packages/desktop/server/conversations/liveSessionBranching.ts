@@ -1,5 +1,5 @@
 import { type AgentSession, SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getPiAgentRuntimeDir } from '@neon-pilot/core';
 
 import {
   appendChildConversationTopologyEntry,
@@ -15,6 +15,7 @@ export interface LiveSessionBranchHost {
   sessionId: string;
   cwd: string;
   session: AgentSession;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 export interface LiveSessionBranchCallbacks {
@@ -85,16 +86,21 @@ function resolveBeforeEntryTargetId(sourceManager: SessionManager, sourceEntry: 
   return readEntryParentId(sourceEntry);
 }
 
-function resolveForkedConversationWorkspaceMetadata(input: { sourceSessionFile: string; fallbackCwd: string }): {
+function resolveForkedConversationWorkspaceMetadata(input: {
+  sourceSessionFile: string;
+  fallbackCwd: string;
+  desktopRootLayout?: DesktopRootLayout;
+}): {
   cwd: string;
   workspaceCwd: string | null;
 } {
   const sourceMeta = readConversationSessionMetaByFilePath(input.sourceSessionFile);
   const cwd = sourceMeta?.cwd ?? input.fallbackCwd;
+  const runtimeDir = input.desktopRootLayout?.systemRuntime ?? getPiAgentRuntimeDir();
   const workspaceCwd =
     sourceMeta && Object.prototype.hasOwnProperty.call(sourceMeta, 'workspaceCwd')
       ? (sourceMeta.workspaceCwd ?? null)
-      : isNeutralChatWorkspaceCwd({ cwd, runtimeDir: getPiAgentRuntimeDir() })
+      : isNeutralChatWorkspaceCwd({ cwd, runtimeDir })
         ? null
         : cwd;
   return { cwd, workspaceCwd };
@@ -104,6 +110,7 @@ function appendForkedConversationWorkspaceMetadata(input: {
   sourceSessionFile: string;
   childSessionFile: string;
   fallbackCwd: string;
+  desktopRootLayout?: DesktopRootLayout;
 }): void {
   const workspace = resolveForkedConversationWorkspaceMetadata(input);
   appendConversationWorkspaceMetadata({
@@ -161,6 +168,7 @@ export async function branchLiveSession(
     sourceSessionFile,
     childSessionFile: branchedSessionFile,
     fallbackCwd: entry.cwd,
+    desktopRootLayout: entry.desktopRootLayout,
   });
   const metadataAppendedAtMs = performance.now();
 
@@ -271,6 +279,7 @@ export async function forkLiveSession(
       sourceSessionFile,
       childSessionFile: created.sessionFile,
       fallbackCwd: childCwd,
+      desktopRootLayout: entry.desktopRootLayout,
     });
     const metadataAppendedAtMs = performance.now();
 
@@ -333,6 +342,7 @@ export async function forkLiveSession(
     sourceSessionFile,
     childSessionFile: forkedSessionFile,
     fallbackCwd: childCwd,
+    desktopRootLayout: entry.desktopRootLayout,
   });
   const metadataAppendedAtMs = performance.now();
 

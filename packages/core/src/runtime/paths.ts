@@ -64,9 +64,14 @@ export function getPiAgentRuntimeDir(stateRoot: string = getStateRoot()): string
   return join(stateRoot, 'neon-pilot-runtime');
 }
 
-export function resolveNeutralChatCwd(profile: string, stateRoot: string = getStateRoot()): string {
+export function resolveNeutralChatCwd(
+  profile: string,
+  stateRoot: string = getStateRoot(),
+  layout?: { systemChatWorkspaces: string },
+): string {
   const safeProfile = profile.trim().replace(/[^a-zA-Z0-9._-]+/g, '-') || 'default';
-  const cwd = join(getPiAgentRuntimeDir(stateRoot), 'chat-workspaces', safeProfile);
+  const chatWorkspacesDir = layout?.systemChatWorkspaces ?? join(getPiAgentRuntimeDir(stateRoot), 'chat-workspaces');
+  const cwd = join(chatWorkspacesDir, safeProfile);
   mkdirSync(cwd, { recursive: true });
   return cwd;
 }

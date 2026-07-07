@@ -13,6 +13,7 @@ export {
   getDefaultDesktopRoot,
   getDesktopRootDir,
   getRuntimeAuthFilePath,
+  getRuntimeChatWorkspacesDir,
   getRuntimeModelsFilePath,
   getRuntimeProbeDir,
   getRuntimeSessionsIndexFilePath,

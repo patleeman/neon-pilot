@@ -210,6 +210,32 @@ describe('live session branching', () => {
     });
   });
 
+  it('uses desktopRootLayout for neutral chat workspace detection when provided', async () => {
+    sessions.readSessionMetaByFile.mockReturnValue({ cwd: '/root/system/runtime/chat-workspaces/chat-456' });
+    const sourceManager = manager();
+    agent.managers.set('/sessions/source.jsonl', sourceManager);
+    const resumeSession = vi.fn(async () => ({ id: 'branch-id' }));
+
+    await branchLiveSession(
+      entry({
+        cwd: '/root/system/runtime/chat-workspaces/chat-456',
+        desktopRootLayout: {
+          systemRuntime: '/root/system/runtime',
+          systemChatWorkspaces: '/root/system/runtime/chat-workspaces',
+        },
+      }) as never,
+      'entry-1',
+      { model: 'm1' } as never,
+      { resumeSession },
+    );
+
+    expect(sessions.appendConversationWorkspaceMetadata).toHaveBeenCalledWith({
+      sessionFile: '/sessions/branch.jsonl',
+      cwd: '/root/system/runtime/chat-workspaces/chat-456',
+      workspaceCwd: null,
+    });
+  });
+
   it('forks/rewinds via branched session file, optionally preserving source and topology', async () => {
     agent.managers.set(
       '/sessions/source.jsonl',

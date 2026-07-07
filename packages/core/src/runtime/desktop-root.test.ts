@@ -8,6 +8,7 @@ import {
   getDefaultDesktopRoot,
   getDesktopRootDir,
   getRuntimeAuthFilePath,
+  getRuntimeChatWorkspacesDir,
   getRuntimeModelsFilePath,
   getRuntimeProbeDir,
   getRuntimeSessionsIndexFilePath,
@@ -66,6 +67,7 @@ describe('desktop root layout', () => {
       systemElectronUserData: '/Users/example/Agent Desktop/system/electron/user-data',
       systemObservability: '/Users/example/Agent Desktop/system/observability',
       systemRuntime: '/Users/example/Agent Desktop/system/runtime',
+      systemChatWorkspaces: '/Users/example/Agent Desktop/system/runtime/chat-workspaces',
       systemSecrets: '/Users/example/Agent Desktop/system/secrets',
       systemState: '/Users/example/Agent Desktop/system/state',
     });
@@ -83,6 +85,16 @@ describe('desktop root layout', () => {
     writeFileSync(join(configRoot, 'config.json'), JSON.stringify({ desktopRoot: '/configured/root' }));
 
     expect(getDesktopRootDir({ configRoot, root: '/explicit/root' })).toBe('/explicit/root');
+  });
+
+  it('resolves chat workspaces dir from desktop root layout', () => {
+    const layout = resolveDesktopRootLayout({ root: '/desktop' });
+    expect(getRuntimeChatWorkspacesDir(layout)).toBe('/desktop/system/runtime/chat-workspaces');
+  });
+
+  it('falls back to legacy pi-agent runtime dir for chat workspaces when no layout is provided', () => {
+    const result = getRuntimeChatWorkspacesDir();
+    expect(result).toMatch(/neon-pilot-runtime\/chat-workspaces$/);
   });
 
   it('resolves probe dir from desktop root layout', () => {

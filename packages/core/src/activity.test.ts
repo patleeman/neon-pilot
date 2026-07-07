@@ -193,6 +193,7 @@ describe('activity layout integration', () => {
       systemElectronUserData: join(root, 'system', 'electron', 'user-data'),
       systemObservability: join(root, 'system', 'observability'),
       systemRuntime: join(root, 'system', 'runtime'),
+      systemChatWorkspaces: join(root, 'system', 'runtime', 'chat-workspaces'),
       systemSecrets: join(root, 'system', 'secrets'),
       systemState,
     };
