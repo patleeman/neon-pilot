@@ -38,9 +38,16 @@ import { getLocalhostWebappProxyStatus, trustLocalhostWebappProxyCertificate } f
 import { isSameOriginUnsafeRequest } from '../shared/webSecurity.js';
 import type { ServerRouteContext } from './context.js';
 
-async function readExtensionInstallSummariesWithRuntimeState() {
+type ExtensionRouteContext = Pick<ServerRouteContext, 'getRuntimeScope'> &
+  Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort' | 'getDesktopRootLayout'>>;
+
+async function readRegistryPresentationFromHost(context?: ExtensionRouteContext) {
+  return getExtensionHostClient().readRegistryPresentation(createExtensionHostServerContextSnapshot(context));
+}
+
+async function readExtensionInstallSummariesWithRuntimeState(context?: ExtensionRouteContext) {
   const [{ installSummaries }, runningServices] = await Promise.all([
-    getExtensionHostClient().readRegistryPresentation(),
+    readRegistryPresentationFromHost(context),
     getExtensionHostClient().listServices(),
   ]);
   const running = new Map(runningServices.map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
@@ -55,14 +62,17 @@ async function readExtensionInstallSummariesWithRuntimeState() {
   }));
 }
 
-async function readExtensionManifestFromHost(extensionId: string): Promise<ExtensionManifest | null> {
-  const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
+async function readExtensionManifestFromHost(extensionId: string, context?: ExtensionRouteContext): Promise<ExtensionManifest | null> {
+  const { snapshot } = await readRegistryPresentationFromHost(context);
   const manifest = snapshot.extensions.find((extension) => extension.id === extensionId);
   return (manifest ?? null) as ExtensionManifest | null;
 }
 
-async function readExtensionInstallSummaryFromHost(extensionId: string): Promise<Record<string, unknown> | null> {
-  const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
+async function readExtensionInstallSummaryFromHost(
+  extensionId: string,
+  context?: ExtensionRouteContext,
+): Promise<Record<string, unknown> | null> {
+  const { installSummaries } = await readRegistryPresentationFromHost(context);
   return installSummaries.find((extension) => extension.id === extensionId) ?? null;
 }
 
@@ -212,8 +222,8 @@ function getExtensionLifecycleScope(context?: Partial<Pick<ServerRouteContext, '
   };
 }
 
-async function listWebappsFromHost(): Promise<ExtensionWebappSummary[]> {
-  const { snapshot } = await getExtensionHostClient().readRegistryPresentation();
+async function listWebappsFromHost(context?: ExtensionRouteContext): Promise<ExtensionWebappSummary[]> {
+  const { snapshot } = await readRegistryPresentationFromHost(context);
   return ((snapshot as { webapps?: unknown[] }).webapps ?? []).filter(
     (webapp): webapp is ExtensionWebappSummary =>
       Boolean(webapp) &&
@@ -553,8 +563,9 @@ async function dispatchExtensionWebappBridgeRequest(
 async function readExtensionActionTargetFromHost(
   extensionId: string,
   actionId: string,
+  context?: ExtensionRouteContext,
 ): Promise<{ manifest: ExtensionManifest; action: NonNullable<NonNullable<ExtensionManifest['backend']>['actions']>[number] } | null> {
-  const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
+  const { installSummaries } = await readRegistryPresentationFromHost(context);
   const summary = installSummaries.find((extension) => extension.id === extensionId);
   if (!summary || summary.status !== 'enabled') return null;
   const manifest = (summary as { manifest?: unknown }).manifest as ExtensionManifest | undefined;
@@ -562,8 +573,8 @@ async function readExtensionActionTargetFromHost(
   return manifest && action ? { manifest, action } : null;
 }
 
-async function findExtensionCommandRegistrationFromHost(commandId: string) {
-  const { commandRegistrations } = await getExtensionHostClient().readRegistryPresentation();
+async function findExtensionCommandRegistrationFromHost(commandId: string, context?: ExtensionRouteContext) {
+  const { commandRegistrations } = await readRegistryPresentationFromHost(context);
   const commands = commandRegistrations
     .map((command) => ({
       ...command,
@@ -743,8 +754,7 @@ async function readExtensionFile(req: Request, res: Response): Promise<void> {
 
 export function registerExtensionRoutes(
   router: Pick<Express, 'delete' | 'get' | 'patch' | 'post' | 'put'>,
-  context?: Pick<ServerRouteContext, 'getRuntimeScope'> &
-    Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort' | 'getDesktopRootLayout'>>,
+  context?: ExtensionRouteContext,
 ): void {
   router.get('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
   router.post('/api/extensions/:id/routes/*', (req, res) => dispatchExtensionBackendRoute(req, res, context));
@@ -754,7 +764,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/schema', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).schema);
+      res.json((await readRegistryPresentationFromHost(context)).schema);
     } catch (err) {
       sendRouteError(res, 'extensions schema error', err);
     }
@@ -779,7 +789,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/installed', async (_req, res) => {
     try {
-      res.json(await readExtensionInstallSummariesWithRuntimeState());
+      res.json(await readExtensionInstallSummariesWithRuntimeState(context));
     } catch (err) {
       sendRouteError(res, 'extensions installed error', err);
     }
@@ -788,8 +798,8 @@ export function registerExtensionRoutes(
   router.get('/api/extensions/registry', async (_req, res) => {
     try {
       const [extensions, registryPresentation, settings] = await Promise.all([
-        readExtensionInstallSummariesWithRuntimeState(),
-        getExtensionHostClient().readRegistryPresentation(),
+        readExtensionInstallSummariesWithRuntimeState(context),
+        readRegistryPresentationFromHost(context),
         Promise.resolve(createSettingsStore(context?.getDesktopRootLayout?.() ?? context?.getStateRoot?.()).read()),
       ]);
       const snapshot = registryPresentation.snapshot;
@@ -806,7 +816,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/webapps', async (_req, res) => {
     try {
-      const webapps = await listWebappsFromHost();
+      const webapps = await listWebappsFromHost(context);
       res.json(webapps.map((webapp) => enrichWebappSummary(webapp, context)));
     } catch (err) {
       sendRouteError(res, 'extensions webapps error', err);
@@ -830,7 +840,7 @@ export function registerExtensionRoutes(
     try {
       res.json(
         buildCriticalExtensionRegistryResponse(
-          (await getExtensionHostClient().readRegistryPresentation()).snapshot as unknown as Parameters<
+          (await readRegistryPresentationFromHost(context)).snapshot as unknown as Parameters<
             typeof buildCriticalExtensionRegistryResponse
           >[0],
         ),
@@ -842,7 +852,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).snapshot.extensions);
+      res.json((await readRegistryPresentationFromHost(context)).snapshot.extensions);
     } catch (err) {
       sendRouteError(res, 'extensions list error', err);
     }
@@ -990,7 +1000,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/routes', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).snapshot.routes);
+      res.json((await readRegistryPresentationFromHost(context)).snapshot.routes);
     } catch (err) {
       sendRouteError(res, 'extensions routes error', err);
     }
@@ -998,7 +1008,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/:id/manifest', async (req, res) => {
     try {
-      const manifest = await readExtensionManifestFromHost(req.params.id);
+      const manifest = await readExtensionManifestFromHost(req.params.id, context);
       if (!manifest) {
         res.status(404).json({ error: 'Extension not found.' });
         return;
@@ -1011,7 +1021,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/:id/surfaces', async (req, res) => {
     try {
-      const manifest = await readExtensionManifestFromHost(req.params.id);
+      const manifest = await readExtensionManifestFromHost(req.params.id, context);
       if (!manifest) {
         res.status(404).json({ error: 'Extension not found.' });
         return;
@@ -1050,7 +1060,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/surfaces', async (_req, res) => {
     try {
-      const snapshot = (await getExtensionHostClient().readRegistryPresentation()).snapshot;
+      const snapshot = (await readRegistryPresentationFromHost(context)).snapshot;
       res.json([...snapshot.surfaces, ...snapshot.views]);
     } catch (err) {
       sendRouteError(res, 'extensions surfaces error', err);
@@ -1059,7 +1069,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/commands', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).commandRegistrations);
+      res.json((await readRegistryPresentationFromHost(context)).commandRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions commands error', err);
     }
@@ -1068,7 +1078,7 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/commands/:commandId/execute', async (req, res) => {
     const signal = createExtensionRequestAbortSignal(req, res);
     try {
-      const command = await findExtensionCommandRegistrationFromHost(req.params.commandId);
+      const command = await findExtensionCommandRegistrationFromHost(req.params.commandId, context);
       if (!command) {
         const handled = await executeHostCommandInRenderer({ command: req.params.commandId, args: req.body ?? {} });
         res.json({ ok: true, result: handled });
@@ -1120,7 +1130,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/keybindings', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).keybindingRegistrations);
+      res.json((await readRegistryPresentationFromHost(context)).keybindingRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions keybindings error', err);
     }
@@ -1152,7 +1162,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/slash-commands', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).slashCommandRegistrations);
+      res.json((await readRegistryPresentationFromHost(context)).slashCommandRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions slash commands error', err);
     }
@@ -1160,7 +1170,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/mentions', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).mentionRegistrations);
+      res.json((await readRegistryPresentationFromHost(context)).mentionRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions mentions error', err);
     }
@@ -1168,7 +1178,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/quick-open', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).quickOpenRegistrations);
+      res.json((await readRegistryPresentationFromHost(context)).quickOpenRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions quick-open error', err);
     }
@@ -1176,7 +1186,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/search-providers', async (_req, res) => {
     try {
-      res.json((await getExtensionHostClient().readRegistryPresentation()).searchProviderRegistrations);
+      res.json((await readRegistryPresentationFromHost(context)).searchProviderRegistrations);
     } catch (err) {
       sendRouteError(res, 'extensions search providers error', err);
     }
@@ -1188,7 +1198,7 @@ export function registerExtensionRoutes(
       const query = typeof req.body?.query === 'string' ? req.body.query : '';
       const limit = Number.isInteger(req.body?.limit) ? Math.max(1, Math.min(100, req.body.limit)) : 50;
       const providerId = typeof req.body?.providerId === 'string' ? req.body.providerId : null;
-      const providers = (await getExtensionHostClient().readRegistryPresentation()).searchProviderRegistrations
+      const providers = (await readRegistryPresentationFromHost(context)).searchProviderRegistrations
         .map((provider) => ({
           ...provider,
           id: typeof provider.id === 'string' ? provider.id : '',
@@ -1313,10 +1323,10 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/:id/actions/:actionId', async (req, res) => {
     const signal = createExtensionRequestAbortSignal(req, res);
     try {
-      const actionTarget = await readExtensionActionTargetFromHost(req.params.id, req.params.actionId);
+      const actionTarget = await readExtensionActionTargetFromHost(req.params.id, req.params.actionId, context);
       if (!actionTarget) {
-        const manifest = await readExtensionManifestFromHost(req.params.id);
-        const disabled = (await getExtensionHostClient().readRegistryPresentation()).installSummaries.some(
+        const manifest = await readExtensionManifestFromHost(req.params.id, context);
+        const disabled = (await readRegistryPresentationFromHost(context)).installSummaries.some(
           (summary) => summary.id === req.params.id && summary.status !== 'enabled',
         );
         if (!manifest || disabled) {
@@ -1493,7 +1503,7 @@ export function registerExtensionRoutes(
     try {
       await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
       await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
-      const summary = await readExtensionInstallSummaryFromHost(req.params.id);
+      const summary = await readExtensionInstallSummaryFromHost(req.params.id, context);
       if (!summary) {
         res.status(404).json({ error: 'Extension not found.' });
         return;
@@ -1540,7 +1550,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/actions', async (_req, res) => {
     try {
-      const { installSummaries } = await getExtensionHostClient().readRegistryPresentation();
+      const { installSummaries } = await readRegistryPresentationFromHost(context);
       const summaries = installSummaries
         .filter(
           (extension) => extension.status === 'enabled' && Array.isArray(extension.backendActions) && extension.backendActions.length > 0,
@@ -1568,7 +1578,7 @@ export function registerExtensionRoutes(
 
   router.get('/api/extensions/:id/status', async (req, res) => {
     try {
-      const summary = (await getExtensionHostClient().readRegistryPresentation()).installSummaries.find((e) => e.id === req.params.id);
+      const summary = (await readRegistryPresentationFromHost(context)).installSummaries.find((e) => e.id === req.params.id);
       if (!summary) {
         res.json({ enabled: false, healthy: false, error: 'Extension not found.' });
         return;

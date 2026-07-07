@@ -339,6 +339,7 @@ export interface ExtensionHostListEventSubscriptionsRequest {
 
 export interface ExtensionHostReadRegistryPresentationRequest {
   type: 'readRegistryPresentation';
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostResolveModelProfileRequest {

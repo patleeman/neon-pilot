@@ -10,7 +10,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setDefaultExtensionBackendWorkerUrl } from '../extensions/extensionBackendWorkerClient.js';
 import { clearExtensionHostAuditEvents } from '../extensions/extensionHostAudit.js';
 import { createInProcessExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
-import { listExtensionKeybindingRegistrations, writeExtensionRegistryConfig } from '../extensions/extensionRegistry.js';
+import {
+  invalidateExtensionRegistryReadCaches,
+  listExtensionKeybindingRegistrations,
+  writeExtensionRegistryConfig,
+} from '../extensions/extensionRegistry.js';
 import { createExtensionRequestAbortSignal, readSystemConversationSetTitleMutation, registerExtensionRoutes } from './extensions.js';
 
 const { writeExtensionActivityEntrySafeMock } = vi.hoisted(() => ({
@@ -849,6 +853,71 @@ describe('registerExtensionRoutes', () => {
       }),
     );
     expect(existsSync(join(layout.apps, 'extensions', 'agent-board', 'extension.json'))).toBe(true);
+    expect(existsSync(join(stateRoot, 'extensions', 'agent-board'))).toBe(false);
+  });
+
+  it('reads registry presentation routes from the desktop root layout when provided', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-legacy-'));
+    const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-route-layout-')) });
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(layout.apps, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        enabled: true,
+        backend: { entry: 'dist/backend.mjs', actions: [{ id: 'searchTasks', handler: 'searchTasks' }] },
+        contributes: {
+          commands: [{ id: 'plan', title: 'Plan board sprint', action: 'planSprint' }],
+          keybindings: [{ id: 'plan', title: 'Plan board sprint', command: 'agent-board.plan', keys: ['Meta+P'] }],
+          searchProviders: [{ id: 'tasks', title: 'Tasks', action: 'searchTasks' }],
+          views: [{ id: 'page', title: 'Agent Board', location: 'main', route: '/agent-board', component: 'AgentBoardPage' }],
+        },
+      }),
+    );
+    writeExtensionRegistryConfig({ enabledIds: ['agent-board'] }, stateRoot, layout);
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
+
+    const harness = createHarness({
+      getRuntimeScope: () => 'shared',
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => layout,
+    });
+
+    const extensionsRes = createResponse();
+    await harness.getHandler('/api/extensions')({}, extensionsRes);
+    expect(extensionsRes.json).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ id: 'agent-board' })]));
+
+    const registryRes = createResponse();
+    await harness.getHandler('/api/extensions/registry')({}, registryRes);
+    expect(registryRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensions: expect.arrayContaining([expect.objectContaining({ id: 'agent-board', enabled: true })]),
+        routes: expect.arrayContaining([{ route: '/agent-board', extensionId: 'agent-board', surfaceId: 'page', packageType: 'user' }]),
+      }),
+    );
+
+    const commandsRes = createResponse();
+    await harness.getHandler('/api/extensions/commands')({}, commandsRes);
+    expect(commandsRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ extensionId: 'agent-board', action: 'planSprint' })]),
+    );
+
+    const keybindingsRes = createResponse();
+    await harness.getHandler('/api/extensions/keybindings')({}, keybindingsRes);
+    expect(keybindingsRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ extensionId: 'agent-board', command: 'agent-board.plan' })]),
+    );
+
+    const searchProvidersRes = createResponse();
+    await harness.getHandler('/api/extensions/search-providers')({}, searchProvidersRes);
+    expect(searchProvidersRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ extensionId: 'agent-board', id: 'tasks', action: 'searchTasks' })]),
+    );
+
     expect(existsSync(join(stateRoot, 'extensions', 'agent-board'))).toBe(false);
   });
 

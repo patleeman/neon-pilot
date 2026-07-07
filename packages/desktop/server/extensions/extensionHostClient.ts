@@ -49,6 +49,7 @@ import type {
   ExtensionHostStaticContributions,
 } from './extensionHostProtocol.js';
 import { extensionHostRequestName } from './extensionHostProtocol.js';
+import type { ExtensionHostServerContextSnapshot } from './extensionHostServerContext.js';
 
 function asExtensionBackendServerContext(
   context: ExtensionHostBackendServerContext | undefined,
@@ -136,7 +137,7 @@ export interface ExtensionHostClient {
   listEventSubscriptions(): Promise<ExtensionHostEventSubscription[]>;
   stateOperation(input: ExtensionHostStateOperationInput): Promise<ExtensionHostStateOperationResult>;
   registryMaintenance(input: ExtensionHostRegistryMaintenanceInput): Promise<void>;
-  readRegistryPresentation(): Promise<ExtensionHostRegistryPresentation>;
+  readRegistryPresentation(serverContextSnapshot?: ExtensionHostServerContextSnapshot): Promise<ExtensionHostRegistryPresentation>;
   resolveFilePath(input: ExtensionHostResolveFilePathInput): Promise<string>;
   resolveModelProfile(input: ExtensionHostResolveModelProfileInput): Promise<ExtensionHostModelProfileResolution>;
   resolvePromptReferences(input: ExtensionHostResolvePromptReferencesInput): Promise<ExtensionHostPromptReferenceResolution>;
@@ -271,8 +272,11 @@ export function createInProcessExtensionHostClient(): ExtensionHostClient {
       if (!response.ok) throw new Error(response.error);
       if (!('registryMaintained' in response)) throw new Error('Extension host returned invalid registry maintenance response.');
     },
-    async readRegistryPresentation() {
-      const response = await handleInProcessExtensionHostRequest({ type: 'readRegistryPresentation' });
+    async readRegistryPresentation(serverContextSnapshot?: ExtensionHostServerContextSnapshot) {
+      const response = await handleInProcessExtensionHostRequest({
+        type: 'readRegistryPresentation',
+        ...(serverContextSnapshot ? { serverContextSnapshot } : {}),
+      });
       if (!response.ok) throw new Error(response.error);
       if (!('registryPresentation' in response)) throw new Error('Extension host returned invalid registry presentation.');
       return response.registryPresentation;
@@ -684,6 +688,9 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, registryMaintained: true };
     }
     if (request.type === 'readRegistryPresentation') {
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
       const {
         listExtensionInstallSummaries,
         listExtensionCliCommandRegistrations,
@@ -700,15 +707,17 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         ok: true,
         registryPresentation: {
           schema: readExtensionSchema() as unknown as Record<string, unknown>,
-          installSummaries: listExtensionInstallSummaries() as unknown as Array<Record<string, unknown>>,
-          commandRegistrations: listExtensionCommandRegistrations() as unknown as Array<Record<string, unknown>>,
-          cliCommandRegistrations: listExtensionCliCommandRegistrations() as unknown as Array<Record<string, unknown>>,
-          keybindingRegistrations: listExtensionKeybindingRegistrations() as unknown as Array<Record<string, unknown>>,
-          slashCommandRegistrations: listExtensionSlashCommandRegistrations() as unknown as Array<Record<string, unknown>>,
-          mentionRegistrations: listExtensionMentionRegistrations() as unknown as Array<Record<string, unknown>>,
-          quickOpenRegistrations: listExtensionQuickOpenRegistrations() as unknown as Array<Record<string, unknown>>,
-          searchProviderRegistrations: listExtensionSearchProviderRegistrations() as unknown as Array<Record<string, unknown>>,
-          snapshot: readExtensionRegistrySnapshot() as unknown as ExtensionHostRegistryPresentation['snapshot'],
+          installSummaries: listExtensionInstallSummaries(stateRoot, layout) as unknown as Array<Record<string, unknown>>,
+          commandRegistrations: listExtensionCommandRegistrations(stateRoot, layout) as unknown as Array<Record<string, unknown>>,
+          cliCommandRegistrations: listExtensionCliCommandRegistrations(stateRoot, layout) as unknown as Array<Record<string, unknown>>,
+          keybindingRegistrations: listExtensionKeybindingRegistrations(stateRoot, layout) as unknown as Array<Record<string, unknown>>,
+          slashCommandRegistrations: listExtensionSlashCommandRegistrations(stateRoot, layout) as unknown as Array<Record<string, unknown>>,
+          mentionRegistrations: listExtensionMentionRegistrations(stateRoot, layout) as unknown as Array<Record<string, unknown>>,
+          quickOpenRegistrations: listExtensionQuickOpenRegistrations(stateRoot, layout) as unknown as Array<Record<string, unknown>>,
+          searchProviderRegistrations: listExtensionSearchProviderRegistrations(stateRoot, layout) as unknown as Array<
+            Record<string, unknown>
+          >,
+          snapshot: readExtensionRegistrySnapshot(stateRoot, layout) as unknown as ExtensionHostRegistryPresentation['snapshot'],
         },
       };
     }

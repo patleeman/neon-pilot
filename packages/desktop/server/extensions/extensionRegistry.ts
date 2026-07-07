@@ -1608,8 +1608,8 @@ export function readExtensionRegistrySnapshot(stateRoot?: string, layout?: Deskt
   return { extensions, routes, surfaces, views, webapps };
 }
 
-export function listExtensionMentionRegistrations(): ExtensionMentionRegistration[] {
-  return listEnabledExtensionEntries().flatMap(buildExtensionMentionRegistrations);
+export function listExtensionMentionRegistrations(stateRoot?: string, layout?: DesktopRootLayout): ExtensionMentionRegistration[] {
+  return listEnabledExtensionEntries(stateRoot, layout).flatMap(buildExtensionMentionRegistrations);
 }
 
 export function listExtensionCommandRegistrations(stateRoot?: string, layout?: DesktopRootLayout): ExtensionCommandRegistration[] {
@@ -1620,8 +1620,8 @@ export function listExtensionCommandRegistrations(stateRoot?: string, layout?: D
   });
 }
 
-export function listExtensionCliCommandRegistrations(): ExtensionCliCommandRegistration[] {
-  return readExtensionRegistrySnapshot().extensions.flatMap((extension) =>
+export function listExtensionCliCommandRegistrations(stateRoot?: string, layout?: DesktopRootLayout): ExtensionCliCommandRegistration[] {
+  return readExtensionRegistrySnapshot(stateRoot, layout).extensions.flatMap((extension) =>
     (extension.contributes?.cliCommands ?? []).map((command) => ({
       extensionId: extension.id,
       surfaceId: command.id,
@@ -1679,8 +1679,11 @@ export function findExtensionCommandRegistration(
   return findExtensionCommandRegistrationValue(listExtensionCommandRegistrations(stateRoot, layout), commandId);
 }
 
-export function listExtensionSlashCommandRegistrations(): ExtensionSlashCommandRegistration[] {
-  const snapshot = readExtensionRegistrySnapshot();
+export function listExtensionSlashCommandRegistrations(
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
+): ExtensionSlashCommandRegistration[] {
+  const snapshot = readExtensionRegistrySnapshot(stateRoot, layout);
   return buildNativeExtensionSlashCommandRegistrations(snapshot.extensions);
 }
 
@@ -1771,8 +1774,11 @@ export function listExtensionPromptReferenceRegistrations(stateRoot: string = ge
   );
 }
 
-export function listExtensionQuickOpenRegistrations(stateRoot: string = getStateRoot()): ExtensionQuickOpenRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap((entry) =>
+export function listExtensionQuickOpenRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionQuickOpenRegistration[] {
+  return listEnabledExtensionEntries(stateRoot, layout).flatMap((entry) =>
     (entry.manifest.contributes?.quickOpen ?? []).flatMap((provider): ExtensionQuickOpenRegistration[] => {
       const id = provider.id.trim();
       const resolvedProvider = provider.provider.trim();
@@ -1792,8 +1798,11 @@ export function listExtensionQuickOpenRegistrations(stateRoot: string = getState
   );
 }
 
-export function listExtensionSearchProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionSearchProviderRegistration[] {
-  return listEnabledExtensionEntries(stateRoot)
+export function listExtensionSearchProviderRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionSearchProviderRegistration[] {
+  return listEnabledExtensionEntries(stateRoot, layout)
     .flatMap((entry) =>
       (entry.manifest.contributes?.searchProviders ?? []).flatMap((provider): ExtensionSearchProviderRegistration[] => {
         const id = provider.id.trim();

@@ -438,6 +438,55 @@ describe('extension host client', () => {
     });
   });
 
+  it('threads stateRoot and DesktopRootLayout through registry presentation reads', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionRegistry.listExtensionInstallSummaries.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionCliCommandRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionCommandRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionKeybindingRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionSlashCommandRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionMentionRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionQuickOpenRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.listExtensionSearchProviderRegistrations.mockReturnValueOnce([]);
+    extensionRegistry.readExtensionSchema.mockReturnValueOnce({ manifestVersion: 2 });
+    extensionRegistry.readExtensionRegistrySnapshot.mockReturnValueOnce({
+      extensions: [],
+      routes: [],
+      surfaces: [],
+      views: [],
+    });
+
+    await expect(
+      getExtensionHostClient().readRegistryPresentation({
+        runtimeScope: 'shared',
+        stateRoot: '/tmp/neon-pilot-state',
+        desktopRootLayout: layout,
+      }),
+    ).resolves.toEqual({
+      schema: { manifestVersion: 2 },
+      installSummaries: [],
+      commandRegistrations: [],
+      cliCommandRegistrations: [],
+      keybindingRegistrations: [],
+      slashCommandRegistrations: [],
+      mentionRegistrations: [],
+      quickOpenRegistrations: [],
+      searchProviderRegistrations: [],
+      snapshot: { extensions: [], routes: [], surfaces: [], views: [] },
+    });
+
+    expect(extensionRegistry.listExtensionInstallSummaries).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionCommandRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionCliCommandRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionKeybindingRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionSlashCommandRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionMentionRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionQuickOpenRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.listExtensionSearchProviderRegistrations).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.readExtensionRegistrySnapshot).toHaveBeenCalledWith('/tmp/neon-pilot-state', layout);
+  });
+
   it('routes event subscription listing through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionEventBus.listExtensionEventSubscriptions.mockReturnValueOnce([{ extensionId: 'ext', pattern: 'host:*' }]);
