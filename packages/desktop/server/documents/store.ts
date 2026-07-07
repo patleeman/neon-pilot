@@ -64,6 +64,20 @@ export interface ListDocumentsResult {
   total: number;
 }
 
+export interface SearchDocumentsOptions {
+  limit?: number;
+  offset?: number;
+  collections?: Array<{ owner: string; collection: string }>;
+}
+
+export interface SearchDocumentsResult {
+  query: string;
+  limit: number;
+  offset: number;
+  total: number;
+  records: DocumentRecord[];
+}
+
 export interface DocumentCollectionSummary {
   owner: string;
   collection: string;
@@ -243,6 +257,10 @@ function toCollectionGrant(row: Record<string, unknown>): CollectionGrant {
   };
 }
 
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
 // ── Store ──────────────────────────────────────────────────────────────
 
 export class DocumentsStore {
@@ -396,6 +414,38 @@ export class DocumentsStore {
       throw new Error(`Failed to read back document "${owner}/${collection}/${id}" after put`);
     }
     return result;
+  }
+
+  searchDocuments(query: string, options: SearchDocumentsOptions = {}): SearchDocumentsResult {
+    const limit = options.limit ?? 20;
+    const offset = options.offset ?? 0;
+    const pattern = `%${escapeLikePattern(query)}%`;
+    const collectionFilter = options.collections;
+    if (collectionFilter && collectionFilter.length === 0) {
+      return { query, limit, offset, total: 0, records: [] };
+    }
+
+    const collectionClause = collectionFilter ? ` AND (${collectionFilter.map(() => '(owner = ? AND collection = ?)').join(' OR ')})` : '';
+    const collectionArgs = collectionFilter?.flatMap((collection) => [collection.owner, collection.collection]) ?? [];
+    const whereClause = `(body LIKE ? ESCAPE '\\' OR id LIKE ? ESCAPE '\\' OR owner LIKE ? ESCAPE '\\' OR collection LIKE ? ESCAPE '\\')${collectionClause}`;
+    const searchArgs = [pattern, pattern, pattern, pattern, ...collectionArgs];
+
+    const totalRow = this.db.prepare(`SELECT COUNT(*) AS total FROM documents WHERE ${whereClause}`).get(...searchArgs) as {
+      total: number;
+    };
+    const total = Number(totalRow.total);
+
+    const rows = this.db
+      .prepare(`SELECT * FROM documents WHERE ${whereClause} ORDER BY updated_at DESC LIMIT ? OFFSET ?`)
+      .all(...searchArgs, limit, offset) as Record<string, unknown>[];
+
+    return {
+      query,
+      limit,
+      offset,
+      total,
+      records: rows.map(toDocumentRecord),
+    };
   }
 
   deleteDocument(owner: string, collection: string, id: string): boolean {

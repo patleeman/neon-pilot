@@ -43,6 +43,7 @@ import type {
   DeleteGrantResult,
   DocumentCollection,
   DocumentResult,
+  DocumentSearchResult,
   FilePickerResult,
   GlobalActivityResult,
   GrantListResult,
@@ -1456,6 +1457,12 @@ export const api = {
       return del<{ deleted: boolean }>(
         `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
       );
+    },
+
+    // ── Search ───────────────────────────────────────────────────
+
+    search: async (query: string, options?: { limit?: number; offset?: number }) => {
+      return post<DocumentSearchResult>('/documents/search', { query, ...options });
     },
 
     // ── Grants ───────────────────────────────────────────────────

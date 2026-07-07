@@ -1704,6 +1704,14 @@ export interface DocumentResult {
   document: DocumentRecord;
 }
 
+export interface DocumentSearchResult {
+  query: string;
+  limit: number;
+  offset: number;
+  total: number;
+  records: DocumentRecord[];
+}
+
 export interface CollectionGrant {
   id: string;
   owner: string;

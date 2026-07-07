@@ -1503,10 +1503,29 @@ export interface StartMenuItem {
   onSelect: () => void;
 }
 
+export interface StartMenuSearchResultItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  onSelect: () => void;
+}
+
+export interface StartMenuSearchResults {
+  conversations: StartMenuSearchResultItem[];
+  documents: StartMenuSearchResultItem[];
+  loading: boolean;
+}
+
 export interface StartMenuProps {
   open: boolean;
   items: StartMenuItem[];
   onClose?: () => void;
+  searchResults?: StartMenuSearchResults;
+  /**
+   * Called whenever the search query changes.
+   * Can be used by the parent to perform async searches.
+   */
+  onSearchQueryChange?: (query: string) => void;
 }
 
 function startMenuItemMatchesQuery(item: StartMenuItem, normalizedQuery: string): boolean {
@@ -1515,7 +1534,7 @@ function startMenuItemMatchesQuery(item: StartMenuItem, normalizedQuery: string)
   return item.aliases?.some((alias) => alias.toLowerCase().includes(normalizedQuery)) ?? false;
 }
 
-export function StartMenu({ open, items, onClose }: StartMenuProps) {
+export function StartMenu({ open, items, onClose, searchResults, onSearchQueryChange }: StartMenuProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -1587,6 +1606,20 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
   };
 
   if (!open) return null;
+  const normalizedQuery = query.trim().toLowerCase();
+  const hasQuery = normalizedQuery.length > 0;
+  const searchData = searchResults;
+  const hasSearchData = searchData !== undefined;
+  const showSearchResultsSection =
+    hasQuery && hasSearchData && (searchData.loading || searchData.conversations.length > 0 || searchData.documents.length > 0);
+  const showSearchEmpty =
+    hasQuery &&
+    hasSearchData &&
+    !searchData.loading &&
+    visibleItems.length === 0 &&
+    searchData.conversations.length === 0 &&
+    searchData.documents.length === 0;
+
   return (
     <div className="wos-start-menu" role="dialog" aria-label="Start menu">
       <div className="wos-start-menu__header">
@@ -1597,35 +1630,71 @@ export function StartMenu({ open, items, onClose }: StartMenuProps) {
           ref={searchInputRef}
           type="search"
           value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
+          onChange={(event) => {
+            const nextQuery = event.currentTarget.value;
+            setQuery(nextQuery);
+            onSearchQueryChange?.(nextQuery);
+          }}
           onKeyDown={handleSearchKeyDown}
           placeholder="Search apps..."
           aria-label="Search apps"
         />
       </div>
       <div className="wos-start-menu__grid">
-        {visibleItems.length > 0 ? (
-          visibleItems.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              className="wos-start-menu__item"
-              data-active={index === activeIndex}
-              data-open={item.open ? 'true' : undefined}
-              data-focused={item.focused ? 'true' : undefined}
-              aria-label={item.title}
-              onPointerMove={() => setActiveIndex(index)}
-              onMouseDown={(event) => selectItemFromPress(event, item)}
-              onFocus={() => setActiveIndex(index)}
-              onClick={() => selectItemFromClick(item)}
-            >
-              <WindowedAppTile label={item.title} accent={item.accent} count={item.count} meta={item.meta} />
-            </button>
-          ))
-        ) : (
-          <div className="wos-start-menu__empty">No apps match.</div>
-        )}
+        {visibleItems.length > 0
+          ? visibleItems.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                className="wos-start-menu__item"
+                data-active={index === activeIndex}
+                data-open={item.open ? 'true' : undefined}
+                data-focused={item.focused ? 'true' : undefined}
+                aria-label={item.title}
+                onPointerMove={() => setActiveIndex(index)}
+                onMouseDown={(event) => selectItemFromPress(event, item)}
+                onFocus={() => setActiveIndex(index)}
+                onClick={() => selectItemFromClick(item)}
+              >
+                <WindowedAppTile label={item.title} accent={item.accent} count={item.count} meta={item.meta} />
+              </button>
+            ))
+          : null}
       </div>
+      {showSearchResultsSection ? (
+        <div className="wos-start-menu__search-results">
+          {searchData!.loading ? (
+            <div className="wos-start-menu__search-loading">Searching…</div>
+          ) : (
+            <>
+              {searchData!.conversations.length > 0 ? (
+                <div className="wos-start-menu__search-group">
+                  <div className="wos-start-menu__search-group-label">Conversations</div>
+                  {searchData!.conversations.map((resultItem) => (
+                    <button key={resultItem.id} type="button" className="wos-start-menu__search-item" onClick={resultItem.onSelect}>
+                      <span className="wos-start-menu__search-item-title">{resultItem.title}</span>
+                      {resultItem.subtitle ? <span className="wos-start-menu__search-item-subtitle">{resultItem.subtitle}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {searchData!.documents.length > 0 ? (
+                <div className="wos-start-menu__search-group">
+                  <div className="wos-start-menu__search-group-label">Documents</div>
+                  {searchData!.documents.map((resultItem) => (
+                    <button key={resultItem.id} type="button" className="wos-start-menu__search-item" onClick={resultItem.onSelect}>
+                      <span className="wos-start-menu__search-item-title">{resultItem.title}</span>
+                      {resultItem.subtitle ? <span className="wos-start-menu__search-item-subtitle">{resultItem.subtitle}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
+      {!hasSearchData && visibleItems.length === 0 ? <div className="wos-start-menu__empty">No apps match.</div> : null}
+      {showSearchEmpty ? <div className="wos-start-menu__empty">No results found.</div> : null}
     </div>
   );
 }

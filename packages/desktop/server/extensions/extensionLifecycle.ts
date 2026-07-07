@@ -16,6 +16,15 @@ import {
   parseExtensionManifest,
 } from './extensionRegistry.js';
 
+export interface ReadRuntimeExtensionSourceResult {
+  extensionId: string;
+  manifest: ExtensionManifest;
+  source: {
+    frontend?: string;
+    backend?: string;
+  };
+}
+
 export interface UpdateRuntimeExtensionInput {
   name?: unknown;
   description?: unknown;
@@ -954,6 +963,47 @@ export function inspectRuntimeExtensionBundle(input: { zipPath?: unknown }) {
     name: manifest.name,
     version: manifest.version,
   };
+}
+
+export function readRuntimeExtensionSource(
+  extensionId: string,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ReadRuntimeExtensionSourceResult {
+  const id = normalizeExtensionId(extensionId);
+  const entry = findExtensionEntry(id, stateRoot, layout);
+  if (!entry) {
+    throw new Error('Extension not found.');
+  }
+  if (!entry.packageRoot) {
+    throw new Error('Extension package root is unavailable.');
+  }
+
+  const packageRoot = entry.packageRoot;
+  const runtimeRoot = getRuntimeExtensionsRoot(stateRoot, layout);
+  assertInside(runtimeRoot, packageRoot);
+
+  const manifestPath = join(packageRoot, 'extension.json');
+  let manifest: ExtensionManifest;
+  try {
+    manifest = parseExtensionManifest(JSON.parse(readFileSync(manifestPath, 'utf-8')));
+  } catch {
+    throw new Error('Extension manifest is invalid or unreadable.');
+  }
+
+  const source: { frontend?: string; backend?: string } = {};
+
+  const frontendPath = join(packageRoot, 'src', 'frontend.tsx');
+  if (existsSync(frontendPath)) {
+    source.frontend = readFileSync(frontendPath, 'utf-8');
+  }
+
+  const backendPath = join(packageRoot, 'src', 'backend.ts');
+  if (existsSync(backendPath)) {
+    source.backend = readFileSync(backendPath, 'utf-8');
+  }
+
+  return { extensionId: id, manifest, source };
 }
 
 export function importRuntimeExtensionBundle(input: { zipPath?: unknown }, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {

@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   acknowledgeDesktopControl: vi.fn(() => Promise.resolve({ ok: true })),
   acknowledgeDesktopScreenshot: vi.fn(() => Promise.resolve({ ok: true })),
   createActivityEntry: vi.fn(() => Promise.resolve({ document: {} })),
+  conversationContentSearch: vi.fn(() => Promise.resolve({ matches: [] })),
+  documentsSearch: vi.fn(() => Promise.resolve({ query: '', limit: 10, offset: 0, total: 0, records: [] })),
   eventSources: [] as Array<{
     path: string;
     onopen: ((event: Event) => void) | null;
@@ -152,6 +154,10 @@ vi.mock('../client/api', () => ({
     publishDesktopState: mocks.publishDesktopState,
     publishDesktopUserAction: mocks.publishDesktopUserAction,
     createActivityEntry: mocks.createActivityEntry,
+    conversationContentSearch: mocks.conversationContentSearch,
+    documents: {
+      search: mocks.documentsSearch,
+    },
   },
 }));
 
@@ -264,6 +270,10 @@ describe('WindowedLayout route windows', () => {
     mocks.publishDesktopState.mockClear();
     mocks.publishDesktopUserAction.mockClear();
     mocks.createActivityEntry.mockClear();
+    mocks.conversationContentSearch.mockClear();
+    mocks.conversationContentSearch.mockResolvedValue({ matches: [] });
+    mocks.documentsSearch.mockClear();
+    mocks.documentsSearch.mockResolvedValue({ query: '', limit: 10, offset: 0, total: 0, records: [] });
     mocks.registryLoading = false;
     mocks.pinnedSessions = [];
     mocks.tabs = [];
@@ -747,6 +757,67 @@ describe('WindowedLayout route windows', () => {
     const routeHost = await screen.findByTestId('extension-route-host');
     expect(routeHost.textContent).toBe('/notes:windowed');
     expect(screen.queryByRole('dialog', { name: /start menu/i })).toBeNull();
+  });
+
+  it('searches conversations and documents from the Start menu', async () => {
+    mocks.conversationContentSearch.mockResolvedValue({
+      query: 'needle',
+      mode: 'phrase',
+      scope: 'all',
+      totalMatching: 1,
+      returnedCount: 1,
+      matches: [
+        {
+          conversationId: 'session-needle',
+          title: 'Needle thread',
+          cwd: '',
+          lastActivityAt: '2026-07-07T00:00:00.000Z',
+          isLive: false,
+          isRunning: false,
+          blockId: 'block-1',
+          blockType: 'assistant',
+          blockIndex: 1,
+          snippet: 'A matching conversation snippet',
+        },
+      ],
+    });
+    mocks.documentsSearch.mockResolvedValue({
+      query: 'needle',
+      limit: 10,
+      offset: 0,
+      total: 1,
+      records: [
+        {
+          owner: 'system-documents',
+          collection: 'notes',
+          id: 'needle-doc',
+          body: { title: 'Needle doc' },
+          createdAt: '2026-07-07T00:00:00.000Z',
+          updatedAt: '2026-07-07T00:00:00.000Z',
+        },
+      ],
+    });
+
+    renderWindowedLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: /neon pilot/i }));
+    const startMenu = screen.getByRole('dialog', { name: /start menu/i });
+    const search = within(startMenu).getByRole('searchbox', { name: /search apps/i });
+
+    fireEvent.change(search, { target: { value: 'needle' } });
+
+    await waitFor(() => {
+      expect(mocks.conversationContentSearch).toHaveBeenCalledWith('needle', 10);
+      expect(mocks.documentsSearch).toHaveBeenCalledWith('needle', { limit: 10 });
+    });
+    expect(within(startMenu).getByText('Conversations')).toBeTruthy();
+    expect(within(startMenu).getByRole('button', { name: /Needle thread/i })).toBeTruthy();
+    expect(within(startMenu).getByText('Documents')).toBeTruthy();
+
+    fireEvent.click(within(startMenu).getByRole('button', { name: /needle-doc/i }));
+
+    const documentsWindow = await screen.findByRole('region', { name: 'Documents' });
+    expect(within(documentsWindow).getByTestId('extension-route-host').textContent).toContain('/documents:windowed');
   });
 
   it('opens the highlighted filtered Start menu app with arrow navigation and Enter', async () => {

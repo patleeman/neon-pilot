@@ -282,6 +282,67 @@ describe('api.documents grants', () => {
   });
 });
 
+describe('api.documents search', () => {
+  beforeEach(resetApiTestGlobals);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('searches documents through POST /documents/search', async () => {
+    const searchResult = {
+      query: 'test',
+      limit: 10,
+      offset: 0,
+      total: 2,
+      records: [
+        {
+          owner: 'app',
+          collection: 'col',
+          id: 'doc-1',
+          body: { title: 'test doc' },
+          createdAt: '2026-07-06T00:00:00.000Z',
+          updatedAt: '2026-07-06T00:00:00.000Z',
+        },
+        {
+          owner: 'app',
+          collection: 'col',
+          id: 'doc-2',
+          body: { title: 'another test' },
+          createdAt: '2026-07-06T00:00:00.000Z',
+          updatedAt: '2026-07-06T00:00:00.000Z',
+        },
+      ],
+    };
+    const fetchMock = vi.fn(async () => jsonResponse(searchResult));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.documents.search('test', { limit: 10 })).resolves.toEqual(searchResult);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'test', limit: 10 }),
+    });
+  });
+
+  it('searches documents with default options', async () => {
+    const searchResult = { query: 'hello', limit: 20, offset: 0, total: 0, records: [] };
+    const fetchMock = vi.fn(async () => jsonResponse(searchResult));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.documents.search('hello')).resolves.toEqual(searchResult);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'hello' }),
+    });
+  });
+});
+
 describe('api.activity entries', () => {
   beforeEach(resetApiTestGlobals);
 

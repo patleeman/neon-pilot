@@ -11,6 +11,7 @@ import {
   listExtensionInstallSummaries,
   listInstallableExtensionCatalog as listInstallableExtensionCatalogFromHost,
   readExtensionCatalogSources,
+  readRuntimeExtensionSource,
   reloadExtensionBackend,
   runExtensionSelfTest,
   snapshotRuntimeExtension,
@@ -139,6 +140,12 @@ export async function validateExtension(input: unknown, _ctx: ExtensionBackendCo
   return validateExtensionPackage({ extensionId, packageRoot });
 }
 
+export async function readExtensionSource(input: unknown, _ctx: ExtensionBackendContext) {
+  const body = asRecord(input);
+  const extensionId = requireExtensionId(body as ExtensionIdInput);
+  return { ok: true, ...((await readRuntimeExtensionSource(extensionId)) as object) };
+}
+
 export async function readSearchPaths(_input: unknown, ctx: ExtensionBackendContext) {
   return {
     ok: true,
@@ -193,6 +200,7 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   if (action === 'installFromUrl') return installExtensionFromUrl(body, ctx);
   if (action === 'readSearchPaths') return readSearchPaths(body, ctx);
   if (action === 'updateSearchPaths') return updateSearchPaths(body, ctx);
+  if (action === 'readSource') return readExtensionSource(body, ctx);
   if (action === 'readExtensionSources') return readExtensionSources(body, ctx);
   if (action === 'updateExtensionSources') return updateExtensionSources(body, ctx);
   if (action === 'reloadExtensions') return reloadExtensions(body, ctx);
@@ -268,6 +276,7 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
   if (command === 'extensions validate') return { ...body, action: 'validate', extensionId: args[0], packageRoot };
   if (command === 'extensions reload')
     return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };
+  if (command === 'extensions read-source') return { ...body, action: 'readSource', extensionId: args[0] };
   if (command === 'extensions smoke') return { ...body, action: 'smoke', extensionId: args[0] };
   if (command === 'extensions enable') return { ...body, action: 'enable', extensionId: args[0] };
   if (command === 'extensions disable') return { ...body, action: 'disable', extensionId: args[0] };

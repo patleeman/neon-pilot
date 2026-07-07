@@ -21,6 +21,14 @@
         }
       },
       {
+        "id": "readExtensionSource",
+        "handler": "readExtensionSource",
+        "title": "Read app package source",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "createExtension",
         "handler": "createExtension",
         "title": "Create app package",
@@ -170,6 +178,7 @@
             "installFromUrl",
             "readSearchPaths",
             "updateSearchPaths",
+            "readSource",
             "readExtensionSources",
             "updateExtensionSources",
             "reloadExtensions",
@@ -728,6 +737,41 @@
         "idempotent": true,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "extensions-read-source",
+        "command": "extensions read-source",
+        "description": "Read the source files (frontend.tsx, backend.ts) and manifest of an installed app package.",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "readSource",
+        "usage": "extensions read-source <appPackageId> [--json]",
+        "examples": ["neon-pilot extensions read-source my-app", "neon-pilot extensions read-source system-browser --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Positional args: appPackageId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": {
+              "type": "boolean",
+              "description": "Print structured JSON output."
+            }
+          },
+          "additionalProperties": true
+        },
+        "mode": "read",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
         "outputModes": ["text", "json"]
       },
       {

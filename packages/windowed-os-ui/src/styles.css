@@ -918,6 +918,77 @@
   font-weight: 650;
 }
 
+.wos-start-menu__search-results {
+  border-top: 1px solid var(--wos-ink-700);
+  padding: 4px 8px 8px;
+}
+
+.wos-start-menu__search-loading {
+  color: var(--wos-ink-500);
+  padding: 8px 6px 4px;
+  font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.wos-start-menu__search-group {
+  padding-top: 6px;
+}
+
+.wos-start-menu__search-group-label {
+  color: var(--wos-ink-500);
+  padding: 4px 6px 3px;
+  font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wos-start-menu__search-item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  padding: 5px 6px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--wos-ink-900);
+}
+
+.wos-start-menu__search-item:hover {
+  background: var(--wos-surface-3);
+}
+
+.wos-start-menu__search-item-title {
+  font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.wos-start-menu__search-item-subtitle {
+  color: var(--wos-ink-500);
+  font-family: 'Space Grotesk', 'Geist Variable', Geist, Inter, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .wos-window {
   position: absolute;
   isolation: isolate;

@@ -3,6 +3,8 @@ import {
   CANONICAL_WINDOWED_APP_SIZES,
   StartMenu,
   type StartMenuItem,
+  type StartMenuSearchResultItem,
+  type StartMenuSearchResults,
   Taskbar,
   type TaskbarGroup,
   type TaskbarItem,
@@ -2445,6 +2447,88 @@ export function WindowedLayout() {
   const nativeBrowserBlocked = browserBlockingShellInteraction;
   const rendererFramePaintBlocked = browserBlockingShellInteraction;
 
+  // ── Start menu search ────────────────────────────────────────────────
+  const [startMenuSearchResults, setStartMenuSearchResults] = useState<StartMenuSearchResults>({
+    conversations: [],
+    documents: [],
+    loading: false,
+  });
+  const startMenuSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startMenuQueryRef = useRef('');
+
+  const handleStartMenuSearchQuery = useCallback(
+    (query: string) => {
+      startMenuQueryRef.current = query;
+      if (query.trim().length === 0) {
+        setStartMenuSearchResults({ conversations: [], documents: [], loading: false });
+        return;
+      }
+
+      if (startMenuSearchTimerRef.current) {
+        clearTimeout(startMenuSearchTimerRef.current);
+      }
+
+      // Show loading state immediately
+      setStartMenuSearchResults((prev) => ({ ...prev, loading: true }));
+
+      startMenuSearchTimerRef.current = setTimeout(async () => {
+        const currentQuery = startMenuQueryRef.current.trim();
+        if (!currentQuery) {
+          setStartMenuSearchResults({ conversations: [], documents: [], loading: false });
+          return;
+        }
+
+        // Fire both searches in parallel, keep app filtering alive if one fails
+        const [conversationResult, documentResult] = await Promise.allSettled([
+          api.conversationContentSearch(currentQuery, 10),
+          api.documents.search(currentQuery, { limit: 10 }),
+        ]);
+
+        // Only apply if the query hasn't changed since start
+        if (startMenuQueryRef.current.trim() !== currentQuery) return;
+
+        const conversations =
+          conversationResult.status === 'fulfilled'
+            ? conversationResult.value.matches.map(
+                (match): StartMenuSearchResultItem => ({
+                  id: `conv:${match.conversationId}:${match.blockId}`,
+                  title: match.title || 'Untitled conversation',
+                  subtitle: match.snippet.slice(0, 120),
+                  onSelect: () => openChatWindow(`/conversations/${encodeURIComponent(match.conversationId)}`),
+                }),
+              )
+            : [];
+
+        const documents =
+          documentResult.status === 'fulfilled'
+            ? documentResult.value.records.map(
+                (record): StartMenuSearchResultItem => ({
+                  id: `doc:${record.owner}:${record.collection}:${record.id}`,
+                  title: record.id,
+                  subtitle: `${record.owner}/${record.collection}`,
+                  onSelect: () => openRouteWindow('/documents'),
+                }),
+              )
+            : [];
+
+        setStartMenuSearchResults({ conversations, documents, loading: false });
+      }, 250);
+    },
+    [openChatWindow, openRouteWindow],
+  );
+
+  // Clear search results when launcher closes
+  useEffect(() => {
+    if (!launcherOpen) {
+      if (startMenuSearchTimerRef.current) {
+        clearTimeout(startMenuSearchTimerRef.current);
+        startMenuSearchTimerRef.current = null;
+      }
+      startMenuQueryRef.current = '';
+      setStartMenuSearchResults({ conversations: [], documents: [], loading: false });
+    }
+  }, [launcherOpen]);
+
   useWindowedBrowserSuppression(nativeBrowserBlocked);
   const startMenuItems = windowedApps.map((app): StartMenuItem => {
     const matchingWindows =
@@ -2559,7 +2643,13 @@ export function WindowedLayout() {
       data-native-browser-blocked={nativeBrowserBlocked ? 'true' : undefined}
       data-frame-paint-blocked={rendererFramePaintBlocked ? 'true' : undefined}
     >
-      <StartMenu open={launcherOpen} items={startMenuItems} onClose={() => setLauncherOpen(false)} />
+      <StartMenu
+        open={launcherOpen}
+        items={startMenuItems}
+        onClose={() => setLauncherOpen(false)}
+        searchResults={startMenuSearchResults}
+        onSearchQueryChange={handleStartMenuSearchQuery}
+      />
       <main
         ref={desktopRef}
         className="wos-desktop"

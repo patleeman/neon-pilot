@@ -472,9 +472,39 @@ function handleDeleteGrant(store: DocumentsStore, caller: DocumentsRouteCaller, 
   }
 }
 
+// POST /api/documents/search
+function handleSearchDocuments(store: DocumentsStore, caller: DocumentsRouteCaller, req: Request, res: Response): void {
+  try {
+    const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
+    const query = readString(body.query);
+    if (!query) {
+      res.status(400).json({ error: 'Query is required' });
+      return;
+    }
+
+    const limit = Math.min(readPositiveInt(body.limit) ?? 20, 50);
+    const offset = readPositiveInt(body.offset) ?? 0;
+    const collections =
+      caller.kind === 'host'
+        ? undefined
+        : store
+            .listCollections()
+            .filter((collection) => canReadCollection(store, caller, collection.owner, collection.collection))
+            .map((collection) => ({ owner: collection.owner, collection: collection.collection }));
+
+    const result = store.searchDocuments(query, { limit, offset, collections });
+    res.json(result);
+  } catch (error) {
+    sendError(res, error);
+  }
+}
+
 // ── Registration ───────────────────────────────────────────────────────
 
-export function registerDocumentsRoutes(app: Pick<Express, 'get' | 'put' | 'delete' | 'patch'>, context?: DocumentsRouteContext): void {
+export function registerDocumentsRoutes(
+  app: Pick<Express, 'get' | 'post' | 'put' | 'delete' | 'patch'>,
+  context?: DocumentsRouteContext,
+): void {
   function withStore(
     handler: (store: DocumentsStore, caller: DocumentsRouteCaller, req: Request, res: Response) => void,
   ): (req: Request, res: Response) => void {
@@ -499,6 +529,9 @@ export function registerDocumentsRoutes(app: Pick<Express, 'get' | 'put' | 'dele
   app.get('/api/documents/collections/:owner/:collection/grants', withStore(handleListGrants));
   app.put('/api/documents/collections/:owner/:collection/grants/:granteeAppId', withStore(handleSetGrant));
   app.delete('/api/documents/collections/:owner/:collection/grants/:granteeAppId', withStore(handleDeleteGrant));
+
+  // Search
+  app.post('/api/documents/search', withStore(handleSearchDocuments));
 
   // Documents CRUD
   app.get('/api/documents/collections/:owner/:collection', withStore(handleListDocuments));

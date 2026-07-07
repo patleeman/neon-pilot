@@ -60,6 +60,9 @@ describe('registerDocumentsRoutes', () => {
       delete: vi.fn((path: string, handler: (req: unknown, res: unknown) => void) => {
         handlers[`DELETE ${path}`] = handler;
       }),
+      post: vi.fn((path: string, handler: (req: unknown, res: unknown) => void) => {
+        handlers[`POST ${path}`] = handler;
+      }),
       patch: vi.fn(),
     };
 
@@ -83,6 +86,9 @@ describe('registerDocumentsRoutes', () => {
       }),
       delete: vi.fn((path: string) => {
         registrations.push(`DELETE ${path}`);
+      }),
+      post: vi.fn((path: string) => {
+        registrations.push(`POST ${path}`);
       }),
       patch: vi.fn(),
     };
@@ -879,6 +885,120 @@ describe('registerDocumentsRoutes', () => {
     });
   });
 
+  describe('search endpoint', () => {
+    it('POST /api/documents/search searches by body content', () => {
+      const handlers = createHarness();
+
+      // Seed documents
+      handlers['PUT /api/documents/collections/:owner/:collection/:id'](
+        { params: { owner: 'app', collection: 'col', id: 'doc-1' }, body: { title: 'hello world' } },
+        createRes(),
+      );
+      handlers['PUT /api/documents/collections/:owner/:collection/:id'](
+        { params: { owner: 'app', collection: 'col', id: 'doc-2' }, body: { title: 'goodbye moon' } },
+        createRes(),
+      );
+
+      const handler = handlers['POST /api/documents/search'];
+      const res = createRes();
+      handler({ body: { query: 'hello' } }, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: 'hello',
+          total: 1,
+          records: expect.arrayContaining([expect.objectContaining({ id: 'doc-1' })]),
+        }),
+      );
+    });
+
+    it('returns validation error for empty query', () => {
+      const handlers = createHarness();
+      const handler = handlers['POST /api/documents/search'];
+      const res = createRes();
+
+      handler({ body: { query: '' } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Query is required' });
+    });
+
+    it('returns validation error for missing query', () => {
+      const handlers = createHarness();
+      const handler = handlers['POST /api/documents/search'];
+      const res = createRes();
+
+      handler({ body: {} }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Query is required' });
+    });
+
+    it('respects limit and offset', () => {
+      const handlers = createHarness();
+
+      for (let i = 0; i < 5; i++) {
+        handlers['PUT /api/documents/collections/:owner/:collection/:id'](
+          { params: { owner: 'app', collection: 'col', id: `doc-${i}` }, body: { data: `val-${i}` } },
+          createRes(),
+        );
+      }
+
+      const handler = handlers['POST /api/documents/search'];
+      const res = createRes();
+      handler({ body: { query: 'val-', limit: 2, offset: 1 } }, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: 'val-',
+          limit: 2,
+          offset: 1,
+          total: 5,
+          records: expect.arrayContaining([expect.objectContaining({ id: expect.any(String) })]),
+        }),
+      );
+    });
+
+    it('caps limit at 50', () => {
+      const handlers = createHarness();
+      const handler = handlers['POST /api/documents/search'];
+      const res = createRes();
+
+      handler({ body: { query: 'anything', limit: 999 } }, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          limit: 50,
+        }),
+      );
+    });
+
+    it('only returns documents readable by the app caller', () => {
+      const handlers = createHarness();
+
+      handlers['PUT /api/documents/collections/:owner/:collection/:id'](
+        { params: { owner: 'app-a', collection: 'private', id: 'private-doc' }, body: { text: 'shared keyword' } },
+        createRes(),
+      );
+      handlers['PUT /api/documents/collections/:owner/:collection/:id'](
+        { params: { owner: 'app-b', collection: 'own', id: 'own-doc' }, body: { text: 'shared keyword' } },
+        createRes(),
+      );
+
+      caller = { kind: 'app', appId: 'app-b' };
+      const handler = handlers['POST /api/documents/search'];
+      const res = createRes();
+      handler({ body: { query: 'shared keyword' } }, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          total: 1,
+          records: [expect.objectContaining({ owner: 'app-b', collection: 'own', id: 'own-doc' })],
+        }),
+      );
+    });
+  });
+
   describe('error handling', () => {
     it('handles missing context gracefully', () => {
       logErrorMock.mockReset();
@@ -889,6 +1009,7 @@ describe('registerDocumentsRoutes', () => {
         }),
         put: vi.fn(),
         delete: vi.fn(),
+        post: vi.fn(),
         patch: vi.fn(),
       };
 

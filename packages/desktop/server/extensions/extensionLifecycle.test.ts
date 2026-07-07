@@ -56,6 +56,7 @@ const {
   exportRuntimeExtension,
   inspectRuntimeExtensionBundle,
   importRuntimeExtensionBundle,
+  readRuntimeExtensionSource,
   snapshotRuntimeExtension,
   updateRuntimeExtension,
 } = await import('./extensionLifecycle.js');
@@ -135,6 +136,91 @@ describe('extensionLifecycle', () => {
     expect(frontend).toContain('AppPageIntro');
     expect(frontend).not.toContain('text-[34px]');
     expect(readFileSync(join(runtimeRoot, 'my-extension', 'src', 'backend.ts'), 'utf-8')).toContain('export async function ping');
+  });
+
+  it('reads source of a created runtime extension', () => {
+    createRuntimeExtension({ id: 'readable-ext', name: 'Readable', description: 'Can read source', template: 'main-page' }, stateRoot);
+
+    findExtensionEntry.mockReturnValue({
+      manifest: { schemaVersion: 2, id: 'readable-ext' },
+      packageRoot: join(runtimeRoot, 'readable-ext'),
+      source: 'runtime',
+    });
+
+    const result = readRuntimeExtensionSource('readable-ext', stateRoot);
+
+    expect(result.extensionId).toBe('readable-ext');
+    expect(result.manifest).toBeDefined();
+    expect(result.manifest.id).toBe('readable-ext');
+    expect(result.manifest.packageType).toBe('user');
+    expect(result.source.frontend).toBeDefined();
+    expect(result.source.frontend).toContain('ExtensionPage');
+    expect(result.source.backend).toBeDefined();
+    expect(result.source.backend).toContain('export async function ping');
+  });
+
+  it('reads source of a created runtime extension with no source files', () => {
+    const packageRoot = join(runtimeRoot, 'source-optional');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(
+      join(packageRoot, 'extension.json'),
+      JSON.stringify({
+        id: 'source-optional',
+        name: 'Source Optional',
+        packageType: 'user',
+        backend: { entry: 'dist/backend.mjs' },
+        contributes: {},
+      }),
+    );
+    findExtensionEntry.mockReturnValue({
+      manifest: { schemaVersion: 2, id: 'source-optional' },
+      packageRoot,
+      source: 'runtime',
+    });
+
+    const result = readRuntimeExtensionSource('source-optional', stateRoot);
+
+    expect(result.extensionId).toBe('source-optional');
+    expect(result.manifest.id).toBe('source-optional');
+    expect(result.source.frontend).toBeUndefined();
+    expect(result.source.backend).toBeUndefined();
+  });
+
+  it('throws when reading source for a missing extension', () => {
+    expect(() => readRuntimeExtensionSource('missing-ext', stateRoot)).toThrow('Extension not found');
+  });
+
+  it('throws when reading source for an extension without a package root', () => {
+    findExtensionEntry.mockReturnValue({ manifest: { id: 'no-root' }, source: 'runtime' });
+    expect(() => readRuntimeExtensionSource('no-root', stateRoot)).toThrow('Extension package root is unavailable');
+  });
+
+  it('throws when reading source for an extension with unreadable manifest', () => {
+    const packageRoot = join(runtimeRoot, 'bad-manifest');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(join(packageRoot, 'extension.json'), '{bad json');
+    findExtensionEntry.mockReturnValue({
+      manifest: { id: 'bad-manifest' },
+      packageRoot,
+      source: 'runtime',
+    });
+
+    expect(() => readRuntimeExtensionSource('bad-manifest', stateRoot)).toThrow('Extension manifest is invalid or unreadable');
+  });
+
+  it('throws when reading source for an extension whose package root escapes', () => {
+    // Package root outside the runtime root simulates an escape attempt; set up entry
+    // so the root is outside the expected runtime root.
+    const outsideRoot = join(stateRoot, 'outside');
+    mkdirSync(outsideRoot, { recursive: true });
+    writeFileSync(join(outsideRoot, 'extension.json'), JSON.stringify({ id: 'escape-ext', name: 'Escape' }));
+    findExtensionEntry.mockReturnValue({
+      manifest: { id: 'escape-ext' },
+      packageRoot: outsideRoot,
+      source: 'runtime',
+    });
+
+    expect(() => readRuntimeExtensionSource('escape-ext', stateRoot)).toThrow('Path escapes extension root');
   });
 
   it('creates rightRail and workbench detail templates', () => {

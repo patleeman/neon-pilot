@@ -8,6 +8,8 @@ export {
   StartMenu,
   type StartMenuItem,
   type StartMenuProps,
+  type StartMenuSearchResultItem,
+  type StartMenuSearchResults,
   Taskbar,
   type TaskbarGroup,
   type TaskbarItem,

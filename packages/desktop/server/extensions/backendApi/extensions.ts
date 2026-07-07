@@ -10,6 +10,7 @@ import { importServerModule } from './serverModuleResolver.js';
 interface ExtensionLifecycleModule {
   buildRuntimeExtension(extensionId: string): unknown;
   createRuntimeExtension(options: RuntimeExtensionCreateOptions): unknown;
+  readRuntimeExtensionSource(extensionId: string): unknown;
   updateRuntimeExtension(extensionId: string, input: RuntimeExtensionUpdateOptions): unknown;
   snapshotRuntimeExtension(extensionId: string): unknown;
   deleteRuntimeExtension(extensionId: string): unknown;
@@ -105,6 +106,11 @@ export async function buildRuntimeExtension(extensionId: string) {
 export async function createRuntimeExtension(options: RuntimeExtensionCreateOptions) {
   const module = await importExtensionLifecycle();
   return module.createRuntimeExtension(options);
+}
+
+export async function readRuntimeExtensionSource(extensionId: string) {
+  const module = await importExtensionLifecycle();
+  return module.readRuntimeExtensionSource(extensionId);
 }
 
 export async function updateRuntimeExtension(extensionId: string, input: RuntimeExtensionUpdateOptions) {

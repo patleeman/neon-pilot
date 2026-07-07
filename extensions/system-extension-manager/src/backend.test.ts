@@ -10,6 +10,7 @@ const extensionBackendApi = vi.hoisted(() => ({
   listExtensionInstallSummaries: vi.fn(),
   listInstallableExtensionCatalog: vi.fn(),
   readExtensionCatalogSources: vi.fn(),
+  readRuntimeExtensionSource: vi.fn(),
   reloadExtensionBackend: vi.fn(),
   runExtensionSelfTest: vi.fn(),
   snapshotRuntimeExtension: vi.fn(),
@@ -235,6 +236,47 @@ describe('system-extension-manager backend', () => {
       appearance: undefined,
       source: undefined,
     });
+  });
+
+  it('rejects readSource manageExtension action without extension id', async () => {
+    await expect(mod.manageExtension({ action: 'readSource' }, createBackendContext())).rejects.toThrow('extension id is required.');
+    expect(extensionBackendApi.readRuntimeExtensionSource).not.toHaveBeenCalled();
+  });
+
+  it('reads source through the manageExtension readSource action', async () => {
+    extensionBackendApi.readRuntimeExtensionSource.mockResolvedValue({
+      extensionId: 'my-app',
+      manifest: { id: 'my-app', name: 'My App', packageType: 'user' },
+      source: { frontend: '// frontend code', backend: '// backend code' },
+    });
+
+    const result = await mod.manageExtension({ action: 'readSource', extensionId: 'my-app' }, createBackendContext());
+
+    expect(result).toMatchObject({
+      ok: true,
+      extensionId: 'my-app',
+      manifest: { id: 'my-app' },
+      source: { frontend: '// frontend code', backend: '// backend code' },
+    });
+    expect(extensionBackendApi.readRuntimeExtensionSource).toHaveBeenCalledWith('my-app');
+  });
+
+  it('reads source through the direct readExtensionSource handler', async () => {
+    extensionBackendApi.readRuntimeExtensionSource.mockResolvedValue({
+      extensionId: 'direct-app',
+      manifest: { id: 'direct-app', name: 'Direct' },
+      source: { frontend: '// a' },
+    });
+
+    const result = await mod.readExtensionSource({ extensionId: 'direct-app' }, createBackendContext());
+
+    expect(result).toMatchObject({
+      ok: true,
+      extensionId: 'direct-app',
+      manifest: { id: 'direct-app' },
+      source: { frontend: '// a' },
+    });
+    expect(extensionBackendApi.readRuntimeExtensionSource).toHaveBeenCalledWith('direct-app');
   });
 
   it('forwards source code changes through the update action', async () => {

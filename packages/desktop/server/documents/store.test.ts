@@ -303,6 +303,114 @@ describe('DocumentsStore', () => {
     });
   });
 
+  describe('searchDocuments', () => {
+    it('finds documents by body content', () => {
+      store.putDocument('app', 'col', 'doc-1', { title: 'hello world', count: 1 });
+      store.putDocument('app', 'col', 'doc-2', { title: 'goodbye world', count: 2 });
+      store.putDocument('app', 'other', 'doc-3', { title: 'hello there', count: 3 });
+
+      const result = store.searchDocuments('hello');
+      expect(result.total).toBe(2);
+      expect(result.records.map((r) => r.id).sort()).toEqual(['doc-1', 'doc-3']);
+      expect(result.query).toBe('hello');
+      expect(result.limit).toBe(20);
+      expect(result.offset).toBe(0);
+    });
+
+    it('finds documents by id', () => {
+      store.putDocument('app', 'col', 'special-doc', { value: 1 });
+      store.putDocument('app', 'col', 'other-doc', { value: 2 });
+
+      const result = store.searchDocuments('special');
+      expect(result.total).toBe(1);
+      expect(result.records[0].id).toBe('special-doc');
+    });
+
+    it('finds documents by owner', () => {
+      store.putDocument('my-team', 'col', 'doc-a', { data: 1 });
+      store.putDocument('other-team', 'col', 'doc-b', { data: 2 });
+
+      const result = store.searchDocuments('my-team');
+      expect(result.total).toBe(1);
+      expect(result.records[0].owner).toBe('my-team');
+    });
+
+    it('finds documents by collection name', () => {
+      store.putDocument('app', 'notes', 'doc-1', { text: 'hello' });
+      store.putDocument('app', 'todos', 'doc-2', { text: 'world' });
+
+      const result = store.searchDocuments('notes');
+      expect(result.total).toBe(1);
+      expect(result.records[0].collection).toBe('notes');
+    });
+
+    it('returns empty results for no match', () => {
+      store.putDocument('app', 'col', 'doc-1', { text: 'hello' });
+
+      const result = store.searchDocuments('zzzzz_nonexistent');
+      expect(result.total).toBe(0);
+      expect(result.records).toHaveLength(0);
+    });
+
+    it('respects limit and offset', () => {
+      for (let i = 0; i < 10; i++) {
+        store.putDocument('app', 'col', `doc-${i}`, { index: i, label: `item-${i}` });
+      }
+
+      const all = store.searchDocuments('item-');
+      expect(all.total).toBe(10);
+      expect(all.records).toHaveLength(10);
+
+      const page = store.searchDocuments('item-', { limit: 3, offset: 2 });
+      expect(page.total).toBe(10);
+      expect(page.records).toHaveLength(3);
+      expect(page.limit).toBe(3);
+      expect(page.offset).toBe(2);
+    });
+
+    it('orders results by updated_at descending', () => {
+      store.putDocument('app', 'col', 'first', { label: 'alpha' });
+      store.putDocument('app', 'col', 'second', { label: 'beta' });
+      store.putDocument('app', 'col', 'third', { label: 'gamma' });
+
+      // Re-update 'first' to bring it to top via updated_at
+      store.putDocument('app', 'col', 'first', { label: 'alpha-updated' });
+
+      const result = store.searchDocuments('alpha');
+      expect(result.total).toBeGreaterThanOrEqual(1);
+      // 'alpha-updated' body contains 'alpha', so it matches
+      expect(result.records[0].id).toBe('first');
+    });
+
+    it('uses default limit when not specified', () => {
+      for (let i = 0; i < 30; i++) {
+        store.putDocument('app', 'col', `doc-${i}`, { label: `bulk-${i}` });
+      }
+
+      const result = store.searchDocuments('bulk-');
+      expect(result.total).toBe(30);
+      expect(result.records).toHaveLength(20);
+    });
+
+    it('handles JSON body content matching', () => {
+      store.putDocument('app', 'col', 'json-doc', { deep: { nested: 'searchable-value' } });
+
+      const result = store.searchDocuments('searchable-value');
+      expect(result.total).toBe(1);
+      expect(result.records[0].id).toBe('json-doc');
+    });
+
+    it('treats LIKE wildcard characters as literal query text', () => {
+      store.putDocument('app', 'col', 'percent-doc', { text: '100% ready' });
+      store.putDocument('app', 'col', 'plain-doc', { text: 'plain ready' });
+
+      const result = store.searchDocuments('%');
+
+      expect(result.total).toBe(1);
+      expect(result.records[0].id).toBe('percent-doc');
+    });
+  });
+
   describe('multi-owner isolation', () => {
     it('keeps documents isolated by owner+collection', () => {
       store.putDocument('app-a', 'items', '1', { owner: 'a' });
