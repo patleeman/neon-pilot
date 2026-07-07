@@ -1,45 +1,53 @@
-import { useCallback, useState } from 'react';
+import {
+  WindowedBadge,
+  WindowedDataRow,
+  WindowedDataTable,
+  WindowedEmptyState,
+  WindowedLoadingState,
+  WindowedPageButton,
+  WindowedPageSection,
+  WindowedTimeline,
+  WindowedTimelineItem,
+  WindowedToolbar,
+} from '@neon-pilot/windowed-os-ui';
+import { useCallback, useMemo, useState } from 'react';
 
 import { api } from '../client/api';
-import {
-  AppPageEmptyState,
-  AppPageIntro,
-  AppPageLayout,
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableEmptyRow,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-  DataTableToolbar,
-  ErrorState,
-  QuietLoadingState,
-  StatusDot,
-  TabButton,
-  TabList,
-  ToolbarButton,
-} from '../components/ui';
+import { AppPageIntro, AppPageLayout } from '../components/ui';
 import { useApi } from '../hooks/useApi';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import type { GlobalActivityItem, GlobalActivityResult } from '../shared/types';
 
 type ActivityFilter = 'all' | 'active' | 'conversation' | 'execution';
+type ColorTone = 'neutral' | 'positive' | 'warning' | 'danger';
 
-function statusTone(status: GlobalActivityItem['status']): 'success' | 'warning' | 'danger' | 'muted' | 'accent' {
+function statusTone(status: GlobalActivityItem['status']): ColorTone {
   switch (status) {
     case 'running':
-      return 'accent';
+      return 'warning';
     case 'queued':
-      return 'muted';
+      return 'neutral';
     case 'completed':
-      return 'success';
+      return 'positive';
     case 'failed':
       return 'danger';
     case 'cancelled':
-      return 'muted';
+      return 'neutral';
     case 'unknown':
-      return 'muted';
+      return 'neutral';
+  }
+}
+
+function timelineTone(status: GlobalActivityItem['status']): ColorTone {
+  switch (status) {
+    case 'completed':
+      return 'positive';
+    case 'failed':
+      return 'danger';
+    case 'cancelled':
+      return 'neutral';
+    default:
+      return 'neutral';
   }
 }
 
@@ -64,13 +72,19 @@ function itemIsActive(item: GlobalActivityItem): boolean {
   return Boolean(item.active) || item.status === 'running' || item.status === 'queued';
 }
 
-/** User-facing source label for a row. Falls back to a kind label when the
- * backend did not provide one (e.g. older cached responses). */
+/** User-facing source label for a row. */
 function itemSourceLabel(item: GlobalActivityItem): string {
   if (item.source) return item.source;
   if (item.kind === 'conversation') return 'Conversation';
   if (item.kind === 'entry') return 'Activity';
   return 'Worker';
+}
+
+/** Compact worker display: workerName > title > id fallback. */
+function workerDisplayName(item: GlobalActivityItem): string {
+  if (item.workerName) return item.workerName;
+  if (item.title) return item.title;
+  return item.id;
 }
 
 function timeAgoShort(iso: string | undefined): string {
@@ -92,19 +106,6 @@ function filterItems(items: GlobalActivityItem[], filter: ActivityFilter): Globa
   return items.filter((item) => item.kind === filter);
 }
 
-function ActivityEmptyState() {
-  return (
-    <DataTableEmptyRow colSpan={4}>
-      <AppPageEmptyState
-        title="No activity yet"
-        body="Conversations, background commands, subagents, and scheduled tasks appear here as they run."
-        steps={['Start or resume a conversation', 'Run a terminal command in chat', 'Delegate work to a subagent or schedule a task']}
-        align="start"
-      />
-    </DataTableEmptyRow>
-  );
-}
-
 export function ActivityPage() {
   const [filter, setFilter] = useState<ActivityFilter>('all');
 
@@ -112,96 +113,115 @@ export function ActivityPage() {
     return api.activity({ limit: 200 });
   }, []);
 
-  const { data, loading, refreshing, error, refetch } = useApi(fetcher, 'global-activity');
+  const { data, loading, error, refetch } = useApi(fetcher, 'global-activity');
   useInvalidateOnTopics(['sessions', 'executions', 'activity'], refetch);
 
   const allItems = data ? data.items : [];
-  const items = filterItems(allItems, filter);
+  const filtered = useMemo(() => filterItems(allItems, filter), [allItems, filter]);
+  const activeItems = useMemo(() => filtered.filter(itemIsActive), [filtered]);
+  const timelineItems = useMemo(() => filtered.filter((i) => !itemIsActive(i)), [filtered]);
+
   const conversationCount = allItems.filter((i) => i.kind === 'conversation').length;
   const executionCount = allItems.filter((i) => i.kind === 'execution').length;
   const activeCount = allItems.filter(itemIsActive).length;
 
+  const hasData = Boolean(data && allItems.length > 0);
+  const isLoading = loading && !data;
+  const isError = Boolean(error && !data);
+
   return (
     <AppPageLayout>
       <div className="flex min-h-0 flex-col gap-4">
-        <AppPageIntro
-          title="Activity"
-          summary="Conversations and background workers running across the app."
-          actions={
-            <ToolbarButton type="button" disabled={loading && !data} onClick={() => refetch({ resetLoading: false })}>
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </ToolbarButton>
-          }
-        />
+        <AppPageIntro title="Activity" />
 
-        <DataTableToolbar
-          tabs={
-            <TabList ariaLabel="Filter activity">
-              <TabButton active={filter === 'all'} onClick={() => setFilter('all')}>
-                All{data ? ` ${data.total}` : ''}
-              </TabButton>
-              <TabButton active={filter === 'active'} onClick={() => setFilter('active')}>
-                Active{activeCount > 0 ? ` ${activeCount}` : ''}
-              </TabButton>
-              <TabButton active={filter === 'conversation'} onClick={() => setFilter('conversation')}>
-                Conversations{conversationCount > 0 ? ` ${conversationCount}` : ''}
-              </TabButton>
-              <TabButton active={filter === 'execution'} onClick={() => setFilter('execution')}>
-                Workers{executionCount > 0 ? ` ${executionCount}` : ''}
-              </TabButton>
-            </TabList>
-          }
-          summary={error && !data ? <span className="text-[11px] text-danger">Failed to load</span> : undefined}
-        />
+        <WindowedToolbar>
+          <WindowedPageButton tone={filter === 'all' ? 'accent' : 'neutral'} onClick={() => setFilter('all')}>
+            All{data ? ` ${data.total}` : ''}
+          </WindowedPageButton>
+          <WindowedPageButton tone={filter === 'active' ? 'accent' : 'neutral'} onClick={() => setFilter('active')}>
+            Active{activeCount > 0 ? ` ${activeCount}` : ''}
+          </WindowedPageButton>
+          <WindowedPageButton tone={filter === 'conversation' ? 'accent' : 'neutral'} onClick={() => setFilter('conversation')}>
+            Conversations{conversationCount > 0 ? ` ${conversationCount}` : ''}
+          </WindowedPageButton>
+          <WindowedPageButton tone={filter === 'execution' ? 'accent' : 'neutral'} onClick={() => setFilter('execution')}>
+            Workers{executionCount > 0 ? ` ${executionCount}` : ''}
+          </WindowedPageButton>
+        </WindowedToolbar>
 
-        <DataTable>
-          <DataTableHead>
-            <DataTableRow>
-              <DataTableHeaderCell style={{ width: '2rem' }} />
-              <DataTableHeaderCell>Item</DataTableHeaderCell>
-              <DataTableHeaderCell style={{ width: '8rem' }}>Source</DataTableHeaderCell>
-              <DataTableHeaderCell style={{ width: '6rem' }}>When</DataTableHeaderCell>
-            </DataTableRow>
-          </DataTableHead>
-          <DataTableBody>
-            {loading && !data ? (
-              <DataTableEmptyRow colSpan={4}>
-                <QuietLoadingState label="Loading activity" />
-              </DataTableEmptyRow>
-            ) : error && !data ? (
-              <DataTableEmptyRow colSpan={4}>
-                <ErrorState message={error} />
-              </DataTableEmptyRow>
-            ) : items.length === 0 ? (
-              <ActivityEmptyState />
-            ) : (
-              items.map((item) => (
-                <DataTableRow key={item.id}>
-                  <DataTableCell className="align-middle">
-                    <StatusDot tone={statusTone(item.status)} size="sm" title={statusLabel(item.status)} />
-                  </DataTableCell>
-                  <DataTableCell className="max-w-0 align-middle">
-                    <div className="truncate">
-                      <span className="text-[13px] font-medium">{item.title}</span>
-                      {item.subtitle ? <span className="text-[11px] text-tertiary"> / {item.subtitle}</span> : null}
-                    </div>
-                    {item.conversationTitle && item.kind === 'execution' ? (
-                      <div className="truncate text-[10px] text-tertiary leading-tight">in {item.conversationTitle}</div>
-                    ) : null}
-                  </DataTableCell>
-                  <DataTableCell className="align-middle">
-                    <span className="inline-block rounded-sm bg-bg-subtle px-1.5 py-0.5 text-[10px] font-medium uppercase leading-tight tracking-wide text-secondary">
-                      {itemSourceLabel(item)}
-                    </span>
-                  </DataTableCell>
-                  <DataTableCell className="whitespace-nowrap align-middle text-[11px] text-tertiary">
-                    {timeAgoShort(item.updatedAt)}
-                  </DataTableCell>
-                </DataTableRow>
-              ))
-            )}
-          </DataTableBody>
-        </DataTable>
+        {isLoading ? (
+          <WindowedPageSection title="Active Work">
+            <WindowedLoadingState label="Loading activity" />
+          </WindowedPageSection>
+        ) : isError ? (
+          <WindowedPageSection title="Active Work">
+            <WindowedEmptyState title="Failed to load activity">
+              <p>{error}</p>
+            </WindowedEmptyState>
+          </WindowedPageSection>
+        ) : !hasData ? (
+          <WindowedPageSection>
+            <WindowedEmptyState title="No activity yet">
+              <p>Conversations, background commands, subagents, and scheduled tasks appear here as they run.</p>
+            </WindowedEmptyState>
+          </WindowedPageSection>
+        ) : (
+          <>
+            <WindowedPageSection title="Active" meta={activeCount > 0 ? `${activeCount} running` : undefined}>
+              {activeItems.length === 0 ? (
+                <WindowedEmptyState title="No active work">
+                  <p>All workers and conversations are idle.</p>
+                </WindowedEmptyState>
+              ) : (
+                <WindowedDataTable
+                  columns={[{ label: 'Worker' }, { label: 'Source' }, { label: 'Status' }, { label: 'When', align: 'right' }]}
+                >
+                  {activeItems.map((item) => (
+                    <WindowedDataRow
+                      key={item.id}
+                      name={workerDisplayName(item)}
+                      meta={item.subtitle}
+                      cells={[
+                        itemSourceLabel(item),
+                        <WindowedBadge tone={statusTone(item.status as GlobalActivityItem['status'])} key="status">
+                          {statusLabel(item.status as GlobalActivityItem['status'])}
+                        </WindowedBadge>,
+                        timeAgoShort(item.updatedAt),
+                      ]}
+                    />
+                  ))}
+                </WindowedDataTable>
+              )}
+            </WindowedPageSection>
+
+            <WindowedPageSection title="Recent" meta={timelineItems.length > 0 ? `${timelineItems.length} entries` : undefined}>
+              {timelineItems.length === 0 ? (
+                <WindowedEmptyState title="No recent activity">
+                  <p>Completed work appears here as a timeline.</p>
+                </WindowedEmptyState>
+              ) : (
+                <WindowedTimeline>
+                  {timelineItems.map((item) => (
+                    <WindowedTimelineItem
+                      key={item.id}
+                      title={item.title}
+                      meta={timeAgoShort(item.updatedAt)}
+                      tone={timelineTone(item.status as GlobalActivityItem['status'])}
+                    >
+                      <p>
+                        {itemSourceLabel(item)}
+                        {item.subtitle ? ` / ${item.subtitle}` : ''}
+                      </p>
+                      {item.conversationTitle && item.kind === 'execution' ? (
+                        <p className="text-tertiary">in {item.conversationTitle}</p>
+                      ) : null}
+                    </WindowedTimelineItem>
+                  ))}
+                </WindowedTimeline>
+              )}
+            </WindowedPageSection>
+          </>
+        )}
       </div>
     </AppPageLayout>
   );

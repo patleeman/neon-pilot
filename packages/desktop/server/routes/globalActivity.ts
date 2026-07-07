@@ -3,7 +3,7 @@ import type { Express, Response } from 'express';
 import { ACTIVITY_COLLECTION, ACTIVITY_OWNER, type ActivityEntryBody } from '../activity/activityEntries.js';
 import { listConversationSessionsSnapshot } from '../conversations/conversationService.js';
 import { type DocumentsStore, getDocumentsStore } from '../documents/store.js';
-import type { ExecutionKind, ExecutionVisibility } from '../executions/executionService.js';
+import type { ExecutionKind, ExecutionVisibility, ExecutionWorkerRole } from '../executions/executionService.js';
 import { listExecutions } from '../executions/executionService.js';
 import { logError } from '../middleware/index.js';
 import type { ServerRouteContext } from './context.js';
@@ -37,6 +37,10 @@ export interface GlobalActivityItem {
   updatedAt?: string;
   /** Activity entry type for entry-kind items. */
   entryType?: string;
+  /** Stable human-readable name for worker executions. */
+  workerName?: string;
+  /** Non-persona worker role for background/programmatic runs. */
+  workerRole?: ExecutionWorkerRole;
 }
 
 export interface GlobalActivityResult {
@@ -189,6 +193,8 @@ export function registerGlobalActivityRoutes(router: Pick<Express, 'get'>, conte
           conversationTitle: e.conversationId ? sessionTitleById.get(e.conversationId) : undefined,
           createdAt: e.createdAt,
           updatedAt: e.updatedAt ?? e.completedAt ?? e.startedAt ?? e.createdAt,
+          workerName: e.workerName,
+          workerRole: e.workerRole,
         };
       });
 

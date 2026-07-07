@@ -3,9 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../client/api';
 import {
   AppPageEmptyState,
-  AppPageIntro,
   AppPageLayout,
   Button,
+  ContextRail,
+  ContextRailBody,
+  ContextRailHeader,
+  ContextRailSection,
   DataTable,
   DataTableBody,
   DataTableCell,
@@ -26,6 +29,8 @@ import {
   TabList,
   Textarea,
   ToolbarButton,
+  WorkbenchHeader,
+  WorkbenchShell,
 } from '../components/ui';
 import { useApi } from '../hooks/useApi';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
@@ -380,90 +385,97 @@ export function DocumentsPage() {
     <AppPageLayout
       aside={
         selectedDoc ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="ui-app-page-intro">
-                <h2 className="ui-app-page-title text-sm">Record Detail</h2>
-              </div>
-              {!showDeleteConfirm ? (
-                <ToolbarButton
-                  type="button"
-                  className="text-danger hover:bg-danger/10"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  aria-label="Delete record"
-                  title="Delete"
-                >
-                  Delete
-                </ToolbarButton>
-              ) : null}
-            </div>
-            <KeyValueTable
-              columns={1}
-              items={[
-                { label: 'Owner', value: selectedDoc.owner },
-                { label: 'Collection', value: selectedDoc.collection },
-                { label: 'ID', value: selectedDoc.id, valueClassName: 'font-mono text-[11px]' },
-                { label: 'Created', value: formatTimestamp(selectedDoc.createdAt) },
-                { label: 'Updated', value: formatTimestamp(selectedDoc.updatedAt) },
-              ]}
-            />
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <h3 className="text-[11px] font-medium uppercase tracking-wide text-secondary">Body</h3>
-                <ToolbarButton type="button" disabled={isSaving || !hasUnsavedEdit} onClick={handleSave}>
-                  {isSaving ? 'Saving...' : 'Save'}
-                </ToolbarButton>
-              </div>
-              <Textarea
-                className="min-h-[120px] w-full resize-y rounded-sm border border-border-subtle bg-bg-subtle p-2 font-mono text-[11px] leading-relaxed"
-                value={editBody}
-                onChange={(e) => {
-                  const nextBody = e.target.value;
-                  setEditBody(nextBody);
-                  setEditError(null);
-                  bodyEditedRef.current = nextBody !== selectedDocJson;
-                }}
-                placeholder="{}"
-              />
-              {editError ? <FieldError className="mt-1">{editError}</FieldError> : null}
-            </div>
-            {showDeleteConfirm ? (
-              <div className="rounded-sm border border-danger/30 bg-bg-subtle p-2">
-                <p className="mb-2 text-[11px] text-danger">
-                  Delete <span className="font-mono">{selectedDoc.id}</span>?
-                </p>
-                <div className="flex gap-2">
-                  <Button tone="danger" disabled={isDeleting} onClick={handleDelete}>
-                    {isDeleting ? 'Deleting...' : 'Confirm'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={isDeleting}
-                    onClick={() => {
-                      setShowDeleteConfirm(false);
-                      setDeleteError(null);
-                    }}
+          <ContextRail>
+            <ContextRailHeader
+              title="Record Detail"
+              subtitle={`${selectedDoc.owner}/${selectedDoc.collection}`}
+              actions={
+                !showDeleteConfirm ? (
+                  <ToolbarButton
+                    type="button"
+                    tone="danger"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    aria-label="Delete record"
+                    title="Delete"
                   >
-                    Cancel
-                  </Button>
+                    Delete
+                  </ToolbarButton>
+                ) : undefined
+              }
+            />
+            <ContextRailBody>
+              <ContextRailSection title="Metadata">
+                <KeyValueTable
+                  columns={1}
+                  items={[
+                    { label: 'ID', value: selectedDoc.id, valueClassName: 'font-mono text-[11px]' },
+                    { label: 'Owner', value: selectedDoc.owner },
+                    { label: 'Created', value: formatTimestamp(selectedDoc.createdAt) },
+                    { label: 'Updated', value: formatTimestamp(selectedDoc.updatedAt) },
+                  ]}
+                />
+              </ContextRailSection>
+              <ContextRailSection
+                title="Body"
+                actions={
+                  <ToolbarButton type="button" disabled={isSaving || !hasUnsavedEdit} onClick={handleSave}>
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </ToolbarButton>
+                }
+              >
+                <Textarea
+                  className="min-h-[120px] w-full resize-y rounded-sm border border-border-subtle bg-bg-subtle p-2 font-mono text-[11px] leading-relaxed"
+                  value={editBody}
+                  onChange={(e) => {
+                    const nextBody = e.target.value;
+                    setEditBody(nextBody);
+                    setEditError(null);
+                    bodyEditedRef.current = nextBody !== selectedDocJson;
+                  }}
+                  placeholder="{}"
+                />
+                {editError ? <FieldError className="mt-1">{editError}</FieldError> : null}
+              </ContextRailSection>
+              {showDeleteConfirm ? (
+                <div className="rounded-sm border border-danger/30 bg-bg-subtle p-2">
+                  <p className="mb-2 text-[11px] text-danger">
+                    Delete <span className="font-mono">{selectedDoc.id}</span>?
+                  </p>
+                  <div className="flex gap-2">
+                    <Button tone="danger" disabled={isDeleting} onClick={handleDelete}>
+                      {isDeleting ? 'Deleting...' : 'Confirm'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={isDeleting}
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteError(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  {deleteError ? <FieldError className="mt-1">{deleteError}</FieldError> : null}
                 </div>
-                {deleteError ? <FieldError className="mt-1">{deleteError}</FieldError> : null}
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </ContextRailBody>
+          </ContextRail>
         ) : undefined
       }
     >
-      <div className="flex min-h-0 flex-col gap-4">
-        <AppPageIntro
-          title="Documents"
-          actions={
-            <ToolbarButton type="button" disabled={(collectionsLoading || recordsLoading) && !collectionsData} onClick={handleRefresh}>
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </ToolbarButton>
-          }
-        />
-
+      <WorkbenchShell
+        header={
+          <WorkbenchHeader
+            title="Documents"
+            actions={
+              <ToolbarButton type="button" disabled={(collectionsLoading || recordsLoading) && !collectionsData} onClick={handleRefresh}>
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </ToolbarButton>
+            }
+          />
+        }
+      >
         <DataTableToolbar
           tabs={
             <TabList ariaLabel="Filter by collection">
@@ -612,7 +624,7 @@ export function DocumentsPage() {
             />
           </>
         )}
-      </div>
+      </WorkbenchShell>
     </AppPageLayout>
   );
 }

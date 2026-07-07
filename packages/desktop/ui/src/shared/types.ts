@@ -624,6 +624,10 @@ export interface GlobalActivityItem {
   updatedAt?: string;
   /** Activity entry type for durable entry rows. */
   entryType?: string;
+  /** Stable human-readable name for worker executions. */
+  workerName?: string;
+  /** Non-persona worker role for background/programmatic runs. */
+  workerRole?: string;
 }
 
 export interface GlobalActivityResult {

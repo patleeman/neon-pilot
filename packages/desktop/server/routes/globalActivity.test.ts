@@ -434,6 +434,39 @@ describe('registerGlobalActivityRoutes', () => {
     expect(call.items[2].id).toBe('conversation:conv-old');
   });
 
+  it('propagates workerName and workerRole from execution records', async () => {
+    const { activityHandler } = createHarness();
+    listConversationSessionsSnapshotMock.mockReturnValue([]);
+    listExecutionsMock.mockResolvedValue({
+      executions: [
+        execution('run-1', {
+          kind: 'subagent',
+          status: 'running',
+          workerName: 'code-review-bot',
+          workerRole: 'worker',
+          updatedAt: '2026-06-19T15:00:00.000Z',
+        }),
+        execution('run-2', {
+          kind: 'background-command',
+          status: 'completed',
+          updatedAt: '2026-06-19T14:00:00.000Z',
+        }),
+      ],
+    });
+
+    const res = createJsonResponse();
+    await activityHandler({ query: {} }, res);
+
+    const call = res.json.mock.calls[0][0] as { items: Array<Record<string, unknown>> };
+    const withWorker = call.items.find((i) => i.id === 'execution:run-1') as Record<string, unknown>;
+    const withoutWorker = call.items.find((i) => i.id === 'execution:run-2') as Record<string, unknown>;
+
+    expect(withWorker.workerName).toBe('code-review-bot');
+    expect(withWorker.workerRole).toBe('worker');
+    expect(withoutWorker.workerName).toBeUndefined();
+    expect(withoutWorker.workerRole).toBeUndefined();
+  });
+
   it('uses conversationTitle from session metadata', async () => {
     const { activityHandler } = createHarness();
     listConversationSessionsSnapshotMock.mockReturnValue([session('conv-1', { title: 'My Awesome Chat' })]);

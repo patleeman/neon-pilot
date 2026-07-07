@@ -64,12 +64,13 @@ describe('ActivityPage', () => {
   it('shows loading state while data is being fetched', () => {
     vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: true }));
     renderActivityPage();
-    expect(screen.getByLabelText('Loading activity')).toBeTruthy();
+    expect(screen.getByText('Loading activity')).toBeTruthy();
   });
 
   it('shows error state when fetch fails', () => {
     vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: 'Network error', data: null }));
     renderActivityPage();
+    expect(screen.getByText('Failed to load activity')).toBeTruthy();
     expect(screen.getByText('Network error')).toBeTruthy();
   });
 
@@ -80,7 +81,7 @@ describe('ActivityPage', () => {
     expect(screen.getByText('No activity yet')).toBeTruthy();
   });
 
-  it('renders activity items in the table', () => {
+  it('renders active items in the Active section and done items in Recent', () => {
     const items: GlobalActivityItem[] = [
       makeItem({
         id: 'conversation:a',
@@ -113,7 +114,7 @@ describe('ActivityPage', () => {
     expect(screen.getByRole('heading', { name: 'Activity' })).toBeTruthy();
   });
 
-  it('shows kind counts in filter tabs', () => {
+  it('shows kind counts in filter buttons', () => {
     const items: GlobalActivityItem[] = [
       makeItem({ id: 'conversation:a', title: 'Chat A', kind: 'conversation', status: 'completed' }),
       makeItem({ id: 'conversation:b', title: 'Chat B', kind: 'conversation', status: 'completed' }),
@@ -123,17 +124,13 @@ describe('ActivityPage', () => {
     vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
     renderActivityPage();
 
-    // All tab should show total
     expect(screen.getByText('All 3')).toBeTruthy();
-    // Active tab should show the running worker count
     expect(screen.getByText('Active 1')).toBeTruthy();
-    // Conversations tab should show count
     expect(screen.getByText('Conversations 2')).toBeTruthy();
-    // Workers tab (formerly Executions) should show count
     expect(screen.getByText('Workers 1')).toBeTruthy();
   });
 
-  it('filters items when a kind tab is selected', () => {
+  it('filters items when a kind button is selected', () => {
     const items: GlobalActivityItem[] = [
       makeItem({ id: 'conversation:a', title: 'Chat only', kind: 'conversation', status: 'completed' }),
       makeItem({ id: 'execution:b', title: 'Run only', kind: 'execution', status: 'completed' }),
@@ -145,7 +142,7 @@ describe('ActivityPage', () => {
     expect(screen.getByText('Chat only')).toBeTruthy();
     expect(screen.getByText('Run only')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Workers 1' }));
+    fireEvent.click(screen.getByText('Workers 1'));
 
     expect(screen.queryByText('Chat only')).toBeNull();
     expect(screen.getByText('Run only')).toBeTruthy();
@@ -165,7 +162,7 @@ describe('ActivityPage', () => {
     }
   });
 
-  it('filters to active workers when the Active tab is selected', () => {
+  it('filters to active items when the Active filter is selected', () => {
     const items: GlobalActivityItem[] = [
       makeItem({ id: 'conversation:a', title: 'Live chat', kind: 'conversation', status: 'running', active: true }),
       makeItem({ id: 'execution:b', title: 'Done worker', kind: 'execution', status: 'completed' }),
@@ -175,7 +172,7 @@ describe('ActivityPage', () => {
     vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
     renderActivityPage();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Active 2' }));
+    fireEvent.click(screen.getByText('Active 2'));
 
     expect(screen.getByText('Live chat')).toBeTruthy();
     expect(screen.getByText('Running worker')).toBeTruthy();
@@ -197,7 +194,7 @@ describe('ActivityPage', () => {
     expect(screen.getByText('Conversation')).toBeTruthy();
   });
 
-  it('shows conversation context for execution items', () => {
+  it('shows conversation context for execution items in timeline', () => {
     const items: GlobalActivityItem[] = [
       makeItem({
         id: 'execution:a',
@@ -213,5 +210,61 @@ describe('ActivityPage', () => {
     renderActivityPage();
 
     expect(screen.getByText((content) => content.includes('Main session'))).toBeTruthy();
+  });
+
+  it('shows workerName when available in active section', () => {
+    const items: GlobalActivityItem[] = [
+      makeItem({
+        id: 'execution:a',
+        title: 'npm run build',
+        kind: 'execution',
+        status: 'running',
+        active: true,
+        workerName: 'build-bot',
+        workerRole: 'worker',
+        source: 'Background command',
+      }),
+    ];
+    const result: GlobalActivityResult = { items, total: 1 };
+    vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
+    renderActivityPage();
+
+    expect(screen.getByText('build-bot')).toBeTruthy();
+  });
+
+  it('shows section headers Active and Recent', () => {
+    const items: GlobalActivityItem[] = [
+      makeItem({
+        id: 'execution:a',
+        title: 'Running task',
+        kind: 'execution',
+        status: 'running',
+        active: true,
+        updatedAt: new Date().toISOString(),
+      }),
+      makeItem({
+        id: 'execution:b',
+        title: 'Done task',
+        kind: 'execution',
+        status: 'completed',
+        updatedAt: new Date(Date.now() - 60000).toISOString(),
+      }),
+    ];
+    const result: GlobalActivityResult = { items, total: 2 };
+    vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
+    renderActivityPage();
+
+    expect(screen.getByText('Active')).toBeTruthy();
+    expect(screen.getByText('Recent')).toBeTruthy();
+  });
+
+  it('shows empty state for active section when no active items', () => {
+    const items: GlobalActivityItem[] = [makeItem({ id: 'execution:a', title: 'Done task', kind: 'execution', status: 'completed' })];
+    const result: GlobalActivityResult = { items, total: 1 };
+    vi.mocked(useApi).mockReturnValue(buildUseApiResult({ loading: false, error: null, data: result }));
+    renderActivityPage();
+
+    expect(screen.getByText('No active work')).toBeTruthy();
+    expect(screen.getByText('Done task')).toBeTruthy();
   });
 });
