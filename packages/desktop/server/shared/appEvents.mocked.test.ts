@@ -20,6 +20,7 @@ const {
   logWarnMock,
   readKnownSessionIdByFilePathMock,
   readdirSyncMock,
+  getRuntimeSettingsFilePathFromLayoutMock,
   resolveConversationAttentionStatePathFromLayoutMock,
   resolveConversationAttentionStatePathMock,
   resolveDaemonPathsMock,
@@ -102,6 +103,7 @@ const {
     logWarnMock: vi.fn(),
     readKnownSessionIdByFilePathMock: vi.fn((filePath: string) => (filePath.includes('conv-1') ? ' conv-1 ' : undefined)),
     readdirSyncMock,
+    getRuntimeSettingsFilePathFromLayoutMock: vi.fn((layout: { systemRuntime: string }) => `${layout.systemRuntime}/settings.json`),
     resolveConversationAttentionStatePathFromLayoutMock: vi.fn(
       (_layout: { systemState: string }, profile: string) => `/layout-attention/${profile}.json`,
     ),
@@ -191,6 +193,10 @@ vi.mock('./logging.js', () => ({
   logWarn: logWarnMock,
 }));
 
+vi.mock('../ui/settingsPersistence.js', () => ({
+  getRuntimeSettingsFilePathFromLayout: getRuntimeSettingsFilePathFromLayoutMock,
+}));
+
 import { invalidateAppTopics, publishAppEvent, startAppEventMonitor, stopAppEventMonitor, subscribeAppEvents } from './appEvents.js';
 
 function markDirectory(path: string): void {
@@ -241,6 +247,8 @@ function seedBaseFs(): void {
   markFile('/layout-attention/assistant.json');
   markFile('/layout/deferred.json');
   markFile('/layout-alerts/assistant.json');
+  markDirectory('/layout/runtime');
+  markFile('/layout/runtime/settings.json');
   markFile('/config/profile.json');
 }
 
@@ -269,6 +277,7 @@ describe('appEvents mocked behavior', () => {
     logWarnMock.mockReset();
     readKnownSessionIdByFilePathMock.mockClear();
     readdirSyncMock.mockClear();
+    getRuntimeSettingsFilePathFromLayoutMock.mockClear();
     resolveConversationAttentionStatePathFromLayoutMock.mockClear();
     resolveConversationAttentionStatePathMock.mockClear();
     resolveDaemonPathsMock.mockClear();
@@ -537,7 +546,11 @@ describe('appEvents mocked behavior', () => {
       taskStateFile: '/state/daemon/task-state.json',
       profileConfigFile: '/config/profile.json',
       getRuntimeScope: () => 'assistant',
-      getDesktopRootLayout: () => ({ systemState: '/layout' }) as Pick<DesktopRootLayout, 'systemState'> as DesktopRootLayout,
+      getDesktopRootLayout: () =>
+        ({ systemState: '/layout', systemRuntime: '/layout/runtime' }) as Pick<
+          DesktopRootLayout,
+          'systemState' | 'systemRuntime'
+        > as DesktopRootLayout,
     });
 
     // Layout-aware path resolvers are called when layout is available
@@ -563,6 +576,9 @@ describe('appEvents mocked behavior', () => {
       'assistant',
     );
 
+    // Workspace settings path is derived from layout
+    expect(getRuntimeSettingsFilePathFromLayoutMock).toHaveBeenCalledWith(expect.objectContaining({ systemRuntime: '/layout/runtime' }));
+
     // Non-layout path resolvers are NOT called when layout is available
     expect(resolveConversationAttentionStatePathMock).not.toHaveBeenCalled();
     expect(resolveDeferredResumeStateFileMock).not.toHaveBeenCalled();
@@ -579,6 +595,9 @@ describe('appEvents mocked behavior', () => {
     expect(getLatestWatch('/layout-commit-checkpoints/assistant', (r) => r.options.recursive)).toBeDefined();
     expect(getLatestWatch('/layout-attachments/assistant', (r) => r.options.recursive)).toBeDefined();
     expect(getLatestWatch('/layout-alerts', (r) => !r.options.recursive)).toBeDefined();
+
+    // Workspace settings watch uses layout-derived path
+    expect(getLatestWatch('/layout/runtime', (r) => !r.options.recursive)).toBeDefined();
     unsubscribe();
   });
 

@@ -25,6 +25,7 @@ import { clearDurableRunsListCache } from '../automation/durableRuns.js';
 import { readKnownConversationIdByFilePath } from '../conversations/conversationService.js';
 import type { ParallelPromptPreview } from '../conversations/liveSessionParallelJobs.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
+import { getRuntimeSettingsFilePathFromLayout } from '../ui/settingsPersistence.js';
 import { logWarn } from './logging.js';
 
 export type AppEventTopic =
@@ -434,7 +435,12 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
       { path: getDaemonConfigFilePath(), kind: 'file' },
       { path: daemonPaths.socketPath, kind: 'file' },
     ],
-    workspace: [{ path: join(getPiAgentRuntimeDir(), 'settings.json'), kind: 'file' }],
+    workspace: [
+      {
+        path: layout ? getRuntimeSettingsFilePathFromLayout(layout) : join(getPiAgentRuntimeDir(), 'settings.json'),
+        kind: 'file',
+      },
+    ],
     documents: [],
     activity: [],
     knowledgeBase: [],
