@@ -1,3 +1,4 @@
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ─────────────────────────────────────────────────────────────
@@ -71,6 +72,30 @@ describe('registerSettingsRoutes', () => {
       handler({} as never, res as never);
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: 'Error: boom' });
+    });
+
+    it('uses desktop root layout when available', () => {
+      const localRoutes = new Map<string, (req: Record<string, unknown>, res: Record<string, unknown>) => void>();
+      const localRouter = {
+        get: (path: string, ...handlers: Array<(...args: unknown[]) => void>) => {
+          const handler = handlers[handlers.length - 1];
+          if (handler) localRoutes.set(`get:${path}`, handler as never);
+        },
+        patch: (path: string, ...handlers: Array<(...args: unknown[]) => void>) => {
+          const handler = handlers[handlers.length - 1];
+          if (handler) localRoutes.set(`patch:${path}`, handler as never);
+        },
+      };
+      const layout = resolveDesktopRootLayout({ root: '/desktop-root' });
+      registerSettingsRoutes(localRouter as never, { getStateRoot: () => '/legacy-state-root', getDesktopRootLayout: () => layout });
+      mockRead.mockReturnValue({ 'app.timeout': 60 });
+
+      const handler = localRoutes.get('get:/api/settings')!;
+      const res = mockRes();
+      handler({} as never, res as never);
+
+      expect(mockCreateSettingsStore).toHaveBeenCalledWith(layout);
+      expect(res.json).toHaveBeenCalledWith({ 'app.timeout': 60 });
     });
   });
 

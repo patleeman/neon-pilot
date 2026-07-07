@@ -18,8 +18,11 @@ function publishHostEvent(source: string, payload: unknown): void {
   });
 }
 
-export function registerSettingsRoutes(router: Pick<Express, 'get' | 'patch'>, context?: Pick<ServerRouteContext, 'getStateRoot'>): void {
-  const createRouteSettingsStore = () => createSettingsStore(context?.getStateRoot?.());
+export function registerSettingsRoutes(
+  router: Pick<Express, 'get' | 'patch'>,
+  context?: Pick<ServerRouteContext, 'getStateRoot'> & Partial<Pick<ServerRouteContext, 'getDesktopRootLayout'>>,
+): void {
+  const createRouteSettingsStore = () => createSettingsStore(context?.getDesktopRootLayout?.() ?? context?.getStateRoot?.());
 
   // GET /api/settings — returns all current values (merged with defaults)
   router.get('/api/settings', (_req, res) => {

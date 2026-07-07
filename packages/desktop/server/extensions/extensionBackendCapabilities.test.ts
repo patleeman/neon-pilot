@@ -1633,6 +1633,31 @@ describe('extension backend capability dispatcher', () => {
     expect(settings.reset).toHaveBeenCalledWith(['caffeinate.autoStart'], '/state-root');
   });
 
+  it('dispatches extension settings through the desktop root layout when available', async () => {
+    const layout = resolveDesktopRootLayout({ root: join(tmpdir(), 'settings-layout') });
+    const settings = {
+      read: vi.fn(() => ({ 'caffeinate.autoStart': true })),
+      readSchema: vi.fn(() => [{ key: 'caffeinate.autoStart', type: 'boolean' }]),
+      update: vi.fn(() => ({ 'caffeinate.autoStart': false })),
+      reset: vi.fn(() => ({ 'caffeinate.autoStart': true })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ settings });
+
+    await Promise.resolve(
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'system-caffeinate',
+        capability: 'settings',
+        operation: 'update',
+        input: { overrides: { 'caffeinate.autoStart': false } },
+        context: { stateRoot: '/legacy-state-root', desktopRootLayout: layout },
+      }),
+    );
+
+    expect(settings.update).toHaveBeenCalledWith({ 'caffeinate.autoStart': false }, layout);
+  });
+
   it('rejects unsupported capabilities and malformed log inputs', async () => {
     const dispatch = createExtensionBackendCapabilityDispatcher({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
 

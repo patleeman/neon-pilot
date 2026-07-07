@@ -106,10 +106,10 @@ interface ExtensionBackendCapabilityRuntime {
 }
 
 interface ExtensionBackendCapabilitySettings {
-  read(stateRoot?: string): Promise<unknown> | unknown;
-  readSchema(stateRoot?: string): Promise<unknown> | unknown;
-  update(overrides: Record<string, unknown>, stateRoot?: string): Promise<unknown> | unknown;
-  reset(keys: string[], stateRoot?: string): Promise<unknown> | unknown;
+  read(root?: string | DesktopRootLayout): Promise<unknown> | unknown;
+  readSchema(root?: string | DesktopRootLayout): Promise<unknown> | unknown;
+  update(overrides: Record<string, unknown>, root?: string | DesktopRootLayout): Promise<unknown> | unknown;
+  reset(keys: string[], root?: string | DesktopRootLayout): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilityEvents {
@@ -1964,25 +1964,25 @@ function dispatchSettingsCapability(
   settings: ExtensionBackendCapabilitySettings,
   request: ExtensionBackendWorkerCapabilityRequest,
 ): unknown {
-  const stateRoot = request.context?.stateRoot?.trim() || undefined;
+  const root = request.context?.desktopRootLayout ?? request.context?.stateRoot?.trim() ?? undefined;
 
   if (request.operation === 'read') {
-    return settings.read(stateRoot);
+    return settings.read(root);
   }
   if (request.operation === 'readSchema') {
-    return settings.readSchema(stateRoot);
+    return settings.readSchema(root);
   }
   if (request.operation === 'update') {
     const input = normalizeRecordInput(request.input, 'Settings');
     const overrides = optionalRecord(input.overrides, 'Settings overrides');
     if (!overrides) throw new Error('Settings overrides must be an object.');
-    return settings.update(overrides, stateRoot);
+    return settings.update(overrides, root);
   }
   if (request.operation === 'reset') {
     const input = normalizeRecordInput(request.input, 'Settings');
     const keys = optionalStringArray(input.keys, 'Settings reset keys');
     if (!keys) throw new Error('Settings reset keys must be an array of strings.');
-    return settings.reset(keys, stateRoot);
+    return settings.reset(keys, root);
   }
 
   throw new Error(`Unsupported settings capability operation: ${request.operation}`);
@@ -3147,10 +3147,10 @@ export function createExtensionBackendCapabilityDispatcher(
   };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const settings = options.settings ?? {
-    read: (stateRoot?: string) => createSettingsStore(stateRoot).read(),
-    readSchema: (stateRoot?: string) => createSettingsStore(stateRoot).readSchema(),
-    update: (overrides: Record<string, unknown>, stateRoot?: string) => createSettingsStore(stateRoot).update(overrides),
-    reset: (keys: string[], stateRoot?: string) => createSettingsStore(stateRoot).reset(keys),
+    read: (root?: string | DesktopRootLayout) => createSettingsStore(root).read(),
+    readSchema: (root?: string | DesktopRootLayout) => createSettingsStore(root).readSchema(),
+    update: (overrides: Record<string, unknown>, root?: string | DesktopRootLayout) => createSettingsStore(root).update(overrides),
+    reset: (keys: string[], root?: string | DesktopRootLayout) => createSettingsStore(root).reset(keys),
   };
   const shell = options.shell ?? createExtensionShellCapability({ pathDirs: listEnabledExtensionBinDirs() });
   const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnRecord>();

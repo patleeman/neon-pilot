@@ -1,51 +1,55 @@
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mock extension registry ───────────────────────────────────────────
 
-const mockRegistrations = [
-  {
-    extensionId: 'ext-a',
-    packageType: 'system',
-    key: 'app.timeout',
-    type: 'number',
-    default: 30,
-    group: 'App',
-    description: 'Timeout',
-    order: 1,
-    enum: undefined,
-    placeholder: undefined,
-  },
-  {
-    extensionId: 'ext-b',
-    packageType: 'system',
-    key: 'app.featureX',
-    type: 'boolean',
-    default: false,
-    group: 'App',
-    description: 'Enable feature',
-    order: 2,
-    enum: undefined,
-    placeholder: undefined,
-  },
-  {
-    extensionId: 'ext-c',
-    packageType: 'system',
-    key: 'app.mode',
-    type: 'string',
-    default: 'auto',
-    group: 'App',
-    description: 'Mode',
-    order: 3,
-    enum: undefined,
-    placeholder: undefined,
-  },
-];
+const { listExtensionSettingsRegistrationsMock } = vi.hoisted(() => {
+  const mockRegistrations = [
+    {
+      extensionId: 'ext-a',
+      packageType: 'system',
+      key: 'app.timeout',
+      type: 'number',
+      default: 30,
+      group: 'App',
+      description: 'Timeout',
+      order: 1,
+      enum: undefined,
+      placeholder: undefined,
+    },
+    {
+      extensionId: 'ext-b',
+      packageType: 'system',
+      key: 'app.featureX',
+      type: 'boolean',
+      default: false,
+      group: 'App',
+      description: 'Enable feature',
+      order: 2,
+      enum: undefined,
+      placeholder: undefined,
+    },
+    {
+      extensionId: 'ext-c',
+      packageType: 'system',
+      key: 'app.mode',
+      type: 'string',
+      default: 'auto',
+      group: 'App',
+      description: 'Mode',
+      order: 3,
+      enum: undefined,
+      placeholder: undefined,
+    },
+  ];
+  return { listExtensionSettingsRegistrationsMock: vi.fn(() => mockRegistrations) };
+});
 
 vi.mock('../extensions/extensionRegistry.js', () => ({
-  listExtensionSettingsRegistrations: vi.fn(() => mockRegistrations),
+  listExtensionSettingsRegistrations: listExtensionSettingsRegistrationsMock,
   listExtensionSecretRegistrations: vi.fn(() => []),
 }));
 
@@ -72,6 +76,7 @@ describe('SettingsStore', () => {
 
   beforeEach(() => {
     stateRoot = testStateRoot();
+    listExtensionSettingsRegistrationsMock.mockClear();
   });
 
   afterEach(() => {
@@ -177,6 +182,22 @@ describe('SettingsStore', () => {
       const raw = JSON.parse(readFileSync(join(stateRoot, 'settings.json'), 'utf-8')) as Record<string, unknown>;
       expect(raw).toEqual({ 'app.timeout': 60, 'app.featureX': true });
       expect(statSync(join(stateRoot, 'settings.json')).mode & 0o777).toBe(0o600);
+    });
+
+    it('persists layout-backed overrides under systemConfig and reads extension settings through layout', () => {
+      const layout = resolveDesktopRootLayout({ root: join(stateRoot, 'desktop-root') });
+      const store = createSettingsStore(layout);
+
+      expect(store.update({ 'app.timeout': 90 })).toEqual({
+        'app.timeout': 90,
+        'app.featureX': false,
+        'app.mode': 'auto',
+      });
+
+      const layoutSettingsFile = join(layout.systemConfig, 'settings.json');
+      expect(JSON.parse(readFileSync(layoutSettingsFile, 'utf-8'))).toEqual({ 'app.timeout': 90 });
+      expect(existsSync(join(stateRoot, 'settings.json'))).toBe(false);
+      expect(listExtensionSettingsRegistrationsMock).toHaveBeenCalledWith(layout.systemState, layout);
     });
 
     it('updates existing overrides', () => {

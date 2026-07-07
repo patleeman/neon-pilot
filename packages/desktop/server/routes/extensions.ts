@@ -790,7 +790,7 @@ export function registerExtensionRoutes(
       const [extensions, registryPresentation, settings] = await Promise.all([
         readExtensionInstallSummariesWithRuntimeState(),
         getExtensionHostClient().readRegistryPresentation(),
-        Promise.resolve(createSettingsStore(context?.getStateRoot?.()).read()),
+        Promise.resolve(createSettingsStore(context?.getDesktopRootLayout?.() ?? context?.getStateRoot?.()).read()),
       ]);
       const snapshot = registryPresentation.snapshot;
       res.json({

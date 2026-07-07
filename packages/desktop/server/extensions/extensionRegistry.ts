@@ -2100,8 +2100,11 @@ export function listExtensionAgentRegistrations(stateRoot: string = getStateRoot
   });
 }
 
-export function listExtensionSettingsRegistrations(stateRoot: string = getStateRoot()): ExtensionSettingsRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionSettingsRegistrations);
+export function listExtensionSettingsRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionSettingsRegistration[] {
+  return listEnabledExtensionEntries(stateRoot, layout).flatMap(buildExtensionSettingsRegistrations);
 }
 
 export function listExtensionSecretRegistrations(stateRoot: string = getStateRoot()): ExtensionSecretRegistration[] {

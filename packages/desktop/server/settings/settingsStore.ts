@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import { type ExtensionSettingsRegistration, listExtensionSettingsRegistrations } from '../extensions/extensionRegistry.js';
 import { migrateSecretBackend, type SecretBackendId } from '../secrets/secretStore.js';
@@ -101,23 +101,49 @@ function isSecretBackendId(value: unknown): value is SecretBackendId {
   return value === 'keychain' || value === 'file' || value === 'env-only';
 }
 
+// ── Layout-aware resolution ────────────────────────────────────────────
+
+export function resolveSettingsRoot(root?: string | DesktopRootLayout): string {
+  if (root && typeof root === 'object' && 'systemConfig' in root) {
+    return root.systemConfig;
+  }
+  return root ?? getStateRoot();
+}
+
+function resolveExtensionSettingsScope(root?: string | DesktopRootLayout): { stateRoot: string; layout?: DesktopRootLayout } {
+  if (root && typeof root === 'object') {
+    return { stateRoot: root.systemState, layout: root };
+  }
+  return { stateRoot: root ?? getStateRoot() };
+}
+
 // ── Factory ────────────────────────────────────────────────────────────
 
-export function createSettingsStore(stateRoot: string = getStateRoot()): SettingsStore {
+/**
+ * Create a settings store.
+ *
+ * @param root - Either a `DesktopRootLayout` (settings go under `systemConfig`,
+ *   extension registry reads use `systemState`), a legacy `stateRoot` string,
+ *   or `undefined` to use the default `getStateRoot()`.
+ */
+export function createSettingsStore(root?: string | DesktopRootLayout): SettingsStore {
+  const settingsRoot = resolveSettingsRoot(root);
+  const extensionSettingsScope = resolveExtensionSettingsScope(root);
+  const readSettingsSchema = () => listExtensionSettingsRegistrations(extensionSettingsScope.stateRoot, extensionSettingsScope.layout);
   return {
     read(): Record<string, unknown> {
-      const schema = listExtensionSettingsRegistrations(stateRoot);
-      const overrides = readMigratedOverrides(stateRoot, schema);
+      const schema = readSettingsSchema();
+      const overrides = readMigratedOverrides(settingsRoot, schema);
       return mergeDefaults(overrides, schema);
     },
 
     readOverrides(): Record<string, unknown> {
-      return readMigratedOverrides(stateRoot, listExtensionSettingsRegistrations(stateRoot));
+      return readMigratedOverrides(settingsRoot, readSettingsSchema());
     },
 
     update(updates: Record<string, unknown>): Record<string, unknown> {
-      const schema = listExtensionSettingsRegistrations(stateRoot);
-      const overrides = readMigratedOverrides(stateRoot, schema);
+      const schema = readSettingsSchema();
+      const overrides = readMigratedOverrides(settingsRoot, schema);
       const schemaByKey = new Map(schema.map((s) => [s.key, s]));
 
       if (Object.prototype.hasOwnProperty.call(updates, 'secrets.provider')) {
@@ -125,7 +151,7 @@ export function createSettingsStore(stateRoot: string = getStateRoot()): Setting
         if (!isSecretBackendId(nextBackend)) {
           throw new Error(`Invalid value for setting "secrets.provider": ${JSON.stringify(nextBackend)}`);
         }
-        migrateSecretBackend(nextBackend, stateRoot);
+        migrateSecretBackend(nextBackend, root);
       }
 
       for (const [key, value] of Object.entries(updates)) {
@@ -143,22 +169,22 @@ export function createSettingsStore(stateRoot: string = getStateRoot()): Setting
         }
       }
 
-      writeOverrides(overrides, stateRoot);
+      writeOverrides(overrides, settingsRoot);
       return mergeDefaults(overrides, schema);
     },
 
     reset(keys: string[]): Record<string, unknown> {
-      const schema = listExtensionSettingsRegistrations(stateRoot);
-      const overrides = readMigratedOverrides(stateRoot, schema);
+      const schema = readSettingsSchema();
+      const overrides = readMigratedOverrides(settingsRoot, schema);
       for (const key of keys.map((entry) => entry.trim()).filter(Boolean)) {
         delete overrides[key];
       }
-      writeOverrides(overrides, stateRoot);
+      writeOverrides(overrides, settingsRoot);
       return mergeDefaults(overrides, schema);
     },
 
     readSchema(): ExtensionSettingsRegistration[] {
-      return listExtensionSettingsRegistrations(stateRoot);
+      return readSettingsSchema();
     },
   };
 }
