@@ -861,6 +861,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
     serverPort: 0,
     getDefaultWebCwd: () => desktopRootLayout.root,
     getDesktopRootLayout: () => desktopRootLayout,
+    publishDesktopAppEvent: publishDesktopAppEventFromExtensionHost,
     resolveRequestedCwd,
     buildLiveSessionResourceOptions: runtimeState.buildLiveSessionResourceOptions,
     buildLiveSessionResourceOptionsAsync: runtimeState.buildLiveSessionResourceOptionsAsync,

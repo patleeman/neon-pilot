@@ -6,7 +6,11 @@ export function getExtensionRegistryRevision(): number {
   return extensionRegistryRevision;
 }
 
-export function notifyExtensionRegistryChanged(): void {
+export function notifyExtensionRegistryChanged(options?: { source?: string }): void {
   extensionRegistryRevision += 1;
-  window.dispatchEvent(new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT, { detail: { revision: extensionRegistryRevision } }));
+  window.dispatchEvent(
+    new CustomEvent(EXTENSION_REGISTRY_CHANGED_EVENT, {
+      detail: { revision: extensionRegistryRevision, source: options?.source },
+    }),
+  );
 }

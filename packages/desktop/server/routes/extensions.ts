@@ -34,12 +34,13 @@ import { createExtensionRunsCapability } from '../extensions/extensionRuns.js';
 import { listPendingExtensionUiConfirms, resolveExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
 import { logError } from '../middleware/index.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
+import { invalidateAppTopics } from '../shared/appEvents.js';
 import { getLocalhostWebappProxyStatus, trustLocalhostWebappProxyCertificate } from '../shared/localhostWebappProxy.js';
 import { isSameOriginUnsafeRequest } from '../shared/webSecurity.js';
 import type { ServerRouteContext } from './context.js';
 
 type ExtensionRouteContext = Pick<ServerRouteContext, 'getRuntimeScope'> &
-  Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort' | 'getDesktopRootLayout'>>;
+  Partial<Pick<ServerRouteContext, 'getStateRoot' | 'getServerPort' | 'getDesktopRootLayout' | 'publishDesktopAppEvent'>>;
 
 async function readRegistryPresentationFromHost(context?: ExtensionRouteContext) {
   return getExtensionHostClient().readRegistryPresentation(createExtensionHostServerContextSnapshot(context));
@@ -60,6 +61,11 @@ async function readExtensionInstallSummariesWithRuntimeState(context?: Extension
       return { id: serviceId, running: Boolean(status), startedAt: status?.startedAt ?? null };
     }),
   }));
+}
+
+async function publishExtensionRegistryChanged(context?: ExtensionRouteContext): Promise<void> {
+  invalidateAppTopics('extensions');
+  await context?.publishDesktopAppEvent?.({ type: 'invalidate', topics: ['extensions'] });
 }
 
 async function readExtensionManifestFromHost(extensionId: string, context?: ExtensionRouteContext): Promise<ExtensionManifest | null> {
@@ -1439,6 +1445,7 @@ export function registerExtensionRoutes(
   router.post('/api/extensions/reload', async (_req, res) => {
     try {
       await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
+      await publishExtensionRegistryChanged(context);
       res.json({ ok: true, reloaded: true, message: 'Extension registry caches were invalidated; reopen contributed routes if needed.' });
     } catch (err) {
       sendRouteError(res, 'extension reload error', err);
@@ -1450,10 +1457,12 @@ export function registerExtensionRoutes(
       const { stateRoot, layout } = getExtensionLifecycleScope(context);
       const result = await buildRuntimeExtension(req.params.id, stateRoot, layout);
       await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
+      await publishExtensionRegistryChanged(context);
       res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await getExtensionHostClient().registryMaintenance({ operation: 'setBuildError', extensionId: req.params.id, error: message });
+      await publishExtensionRegistryChanged(context);
       const status = /not found/i.test(message)
         ? 404
         : /package root|schemaVersion|manifest|contributes|frontend|backend|surfaces|permissions|no longer builds|outside the app|compile extensions at runtime|prebuild dist\/frontend\.js and dist\/backend\.mjs/i.test(
@@ -1511,6 +1520,7 @@ export function registerExtensionRoutes(
       }
       const manifest = (summary as { manifest?: unknown } | null)?.manifest as ExtensionManifest | undefined;
       if (!manifest?.backend?.entry) {
+        await publishExtensionRegistryChanged(context);
         res.json({ ok: true, id: req.params.id, reloaded: true, message: 'Extension registry caches were invalidated.' });
         return;
       }
@@ -1518,6 +1528,7 @@ export function registerExtensionRoutes(
         extensionId: req.params.id,
         serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
       });
+      await publishExtensionRegistryChanged(context);
       res.json({
         ok: true,
         id: req.params.id,

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppEventsContext, INITIAL_APP_EVENT_VERSIONS } from '../app/contexts';
 import { api } from '../client/api';
 import { INITIAL_CONVERSATION_SCOPED_EVENT_VERSIONS } from '../conversation/conversationEventVersions';
+import { EXTENSION_REGISTRY_CHANGED_EVENT } from './extensionRegistryEvents';
 import { ExtensionRegistryProvider, useExtensionRegistry } from './useExtensionRegistry';
 
 vi.mock('../client/api', () => ({
@@ -474,6 +475,120 @@ describe('useExtensionRegistry', () => {
     await waitFor(() => expect(result.current.extensions.map((entry) => entry.id)).toEqual(['next-extension']));
     expect(api.extensionRegistry).toHaveBeenCalledTimes(2);
     expect(api.extensionCriticalRegistry).toHaveBeenCalledTimes(2);
+  });
+
+  it('notifies extension registry consumers after loading without reloading itself', async () => {
+    const events: CustomEvent[] = [];
+    const listener = (event: Event) => events.push(event as CustomEvent);
+    window.addEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, listener);
+    mockExtensionRegistryState({
+      extensions: [
+        {
+          id: 'broadcast-extension',
+          name: 'Broadcast Extension',
+          enabled: true,
+          status: 'enabled',
+          manifest: { schemaVersion: 2, id: 'broadcast-extension', name: 'Broadcast Extension' },
+        },
+      ],
+    });
+
+    try {
+      const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await waitFor(() => expect(events.length).toBeGreaterThan(0));
+      expect(events.at(-1)?.detail).toEqual(
+        expect.objectContaining({
+          revision: expect.any(Number),
+          source: 'extension-registry-loader',
+        }),
+      );
+      expect(api.extensionCriticalRegistry).toHaveBeenCalledTimes(1);
+      expect(api.extensionRegistry).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener(EXTENSION_REGISTRY_CHANGED_EVENT, listener);
+    }
+  });
+
+  it('reloads when app invalidation includes extensions', async () => {
+    vi.mocked(api.extensionCriticalRegistry)
+      .mockResolvedValueOnce({
+        extensions: [
+          {
+            id: 'before-extension',
+            name: 'Before Extension',
+            enabled: true,
+            status: 'enabled',
+            manifest: { schemaVersion: 2, id: 'before-extension', name: 'Before Extension' },
+          },
+        ],
+        routes: [],
+        surfaces: [],
+        settings: {},
+      } as never)
+      .mockResolvedValueOnce({
+        extensions: [
+          {
+            id: 'after-extension',
+            name: 'After Extension',
+            enabled: true,
+            status: 'enabled',
+            manifest: { schemaVersion: 2, id: 'after-extension', name: 'After Extension' },
+          },
+        ],
+        routes: [],
+        surfaces: [],
+        settings: {},
+      } as never);
+    vi.mocked(api.extensionRegistry)
+      .mockResolvedValueOnce({
+        extensions: [
+          {
+            id: 'before-extension',
+            name: 'Before Extension',
+            enabled: true,
+            status: 'enabled',
+            manifest: { schemaVersion: 2, id: 'before-extension', name: 'Before Extension' },
+          },
+        ],
+        routes: [],
+        surfaces: [],
+        settings: {},
+      } as never)
+      .mockResolvedValueOnce({
+        extensions: [
+          {
+            id: 'after-extension',
+            name: 'After Extension',
+            enabled: true,
+            status: 'enabled',
+            manifest: { schemaVersion: 2, id: 'after-extension', name: 'After Extension' },
+          },
+        ],
+        routes: [],
+        surfaces: [],
+        settings: {},
+      } as never);
+
+    const { result } = renderHook(() => useExtensionRegistry(), { wrapper: extensionRegistryWrapper });
+
+    await waitFor(() => expect(result.current.extensions.map((entry) => entry.id)).toEqual(['before-extension']));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: ['tasks'] } }));
+    });
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(api.extensionCriticalRegistry).toHaveBeenCalledTimes(1);
+    expect(api.extensionRegistry).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-app-invalidate', { detail: { topics: ['extensions'] } }));
+    });
+
+    await waitFor(() => expect(result.current.extensions.map((entry) => entry.id)).toEqual(['after-extension']));
+    expect(api.extensionCriticalRegistry).toHaveBeenCalledTimes(2);
+    expect(api.extensionRegistry).toHaveBeenCalledTimes(2);
   });
 
   it('keeps registry arrays defined when the extension API is unavailable', async () => {

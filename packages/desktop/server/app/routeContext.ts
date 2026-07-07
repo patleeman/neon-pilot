@@ -20,6 +20,7 @@ interface CreateServerRouteContextOptions {
   getDefaultWebCwd: () => string;
   resolveRequestedCwd: (cwd: string | null | undefined, defaultCwd?: string) => string | undefined;
   getDesktopRootLayout?: () => DesktopRootLayout;
+  publishDesktopAppEvent?: ServerRouteContext['publishDesktopAppEvent'];
   buildLiveSessionResourceOptions: ServerRouteContext['buildLiveSessionResourceOptions'];
   buildLiveSessionResourceOptionsAsync?: ServerRouteContext['buildLiveSessionResourceOptionsAsync'];
   buildLiveSessionExtensionFactories: ServerRouteContext['buildLiveSessionExtensionFactories'];
@@ -46,6 +47,7 @@ export function createServerRouteContext(options: CreateServerRouteContextOption
     getDefaultWebCwd: options.getDefaultWebCwd,
     resolveRequestedCwd: options.resolveRequestedCwd,
     getDesktopRootLayout: options.getDesktopRootLayout ?? resolveDesktopRootLayout,
+    publishDesktopAppEvent: options.publishDesktopAppEvent ?? (async () => ({ ok: true })),
     buildLiveSessionResourceOptions: options.buildLiveSessionResourceOptions,
     ...(options.buildLiveSessionResourceOptionsAsync
       ? { buildLiveSessionResourceOptionsAsync: options.buildLiveSessionResourceOptionsAsync }

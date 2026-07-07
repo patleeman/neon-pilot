@@ -15,6 +15,7 @@ import {
   listExtensionKeybindingRegistrations,
   writeExtensionRegistryConfig,
 } from '../extensions/extensionRegistry.js';
+import * as appEvents from '../shared/appEvents.js';
 import { createExtensionRequestAbortSignal, readSystemConversationSetTitleMutation, registerExtensionRoutes } from './extensions.js';
 
 const { writeExtensionActivityEntrySafeMock } = vi.hoisted(() => ({
@@ -113,7 +114,8 @@ describe('registerExtensionRoutes', () => {
   });
 
   it('serves extension schema, registry, routes, and surfaces', async () => {
-    const harness = createHarness();
+    const publishDesktopAppEvent = vi.fn(async () => ({ ok: true as const }));
+    const harness = createHarness({ getRuntimeScope: () => 'shared', publishDesktopAppEvent });
 
     const schemaRes = createResponse();
     await harness.getHandler('/api/extensions/schema')({}, schemaRes);
@@ -219,7 +221,8 @@ describe('registerExtensionRoutes', () => {
       join(extensionRoot, 'dist', 'backend.mjs'),
       'export function status(req) { return { status: 201, body: { ok: true, q: req.query.q } }; }',
     );
-    const harness = createHarness();
+    const publishDesktopAppEvent = vi.fn(async () => ({ ok: true as const }));
+    const harness = createHarness({ getRuntimeScope: () => 'shared', publishDesktopAppEvent });
 
     const res = createResponse();
     await harness.getHandler('/api/extensions/:id/routes/*')(
@@ -261,7 +264,8 @@ describe('registerExtensionRoutes', () => {
       join(extensionRoot, 'dist', 'backend.mjs'),
       'export function events() { return { status: 200, stream: "sse", events: (async function* () { yield { event: "ready", data: { ok: true } }; })() }; }',
     );
-    const harness = createHarness();
+    const publishDesktopAppEvent = vi.fn(async () => ({ ok: true as const }));
+    const harness = createHarness({ getRuntimeScope: () => 'shared', publishDesktopAppEvent });
     const res = createResponse();
 
     await harness.getHandler('/api/extensions/:id/*')({ method: 'GET', params: { id: 'agent-board', 0: 'events' }, query: {} }, res);
@@ -818,16 +822,19 @@ describe('registerExtensionRoutes', () => {
     harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: "Patrick's <Tool>", description: 'Track work' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith({
-      ok: true,
-      packageRoot: join(stateRoot, 'extensions', 'agent-board'),
-      extension: expect.objectContaining({
-        id: 'agent-board',
-        name: "Patrick's <Tool>",
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        built: true,
+        ok: true,
         packageRoot: join(stateRoot, 'extensions', 'agent-board'),
-        routes: [{ route: '/ext/agent-board', surfaceId: 'page' }],
+        extension: expect.objectContaining({
+          id: 'agent-board',
+          name: "Patrick's <Tool>",
+          packageRoot: join(stateRoot, 'extensions', 'agent-board'),
+          routes: [{ route: '/ext/agent-board', surfaceId: 'page' }],
+        }),
       }),
-    });
+    );
 
     const frontend = readFileSync(join(stateRoot, 'extensions', 'agent-board', 'src', 'frontend.tsx'), 'utf-8');
     expect(frontend).toContain(`const EXTENSION_NAME = "Patrick's <Tool>";`);
@@ -847,12 +854,12 @@ describe('registerExtensionRoutes', () => {
     const res = createResponse();
     await harness.postHandler('/api/extensions/:id/validate')({ params: { id: 'agent-board' } }, res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        ok: false,
+        ok: true,
         extensionId: 'agent-board',
-        findings: expect.arrayContaining([expect.objectContaining({ code: 'missing-frontend-dist' })]),
+        findings: [],
       }),
     );
   });
@@ -866,22 +873,25 @@ describe('registerExtensionRoutes', () => {
     harness.postHandler('/api/extensions')({ body: { id: 'agent-board', name: 'Agent Board', template: 'workbench-detail' } }, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith({
-      ok: true,
-      packageRoot: join(stateRoot, 'extensions', 'agent-board'),
-      extension: expect.objectContaining({
-        id: 'agent-board',
-        routes: [],
-        manifest: expect.objectContaining({
-          contributes: expect.objectContaining({
-            views: expect.arrayContaining([
-              expect.objectContaining({ id: 'rail', location: 'rightRail', detailView: 'detail' }),
-              expect.objectContaining({ id: 'detail', location: 'workbench' }),
-            ]),
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        built: true,
+        ok: true,
+        packageRoot: join(stateRoot, 'extensions', 'agent-board'),
+        extension: expect.objectContaining({
+          id: 'agent-board',
+          routes: [],
+          manifest: expect.objectContaining({
+            contributes: expect.objectContaining({
+              views: expect.arrayContaining([
+                expect.objectContaining({ id: 'rail', location: 'rightRail', detailView: 'detail' }),
+                expect.objectContaining({ id: 'detail', location: 'workbench' }),
+              ]),
+            }),
           }),
         }),
       }),
-    });
+    );
   });
 
   it('creates runtime extensions under the desktop root layout when provided', () => {
@@ -1399,7 +1409,7 @@ describe('registerExtensionRoutes', () => {
     expect(statusRes.json).toHaveBeenCalledWith({ enabled: true, healthy: true });
   });
 
-  it('rejects runtime extension builds', async () => {
+  it('publishes registry invalidation after runtime extension builds', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
@@ -1416,16 +1426,16 @@ describe('registerExtensionRoutes', () => {
     );
     writeFileSync(join(extensionRoot, 'src', 'frontend.tsx'), 'export function AgentBoard() { return null; }');
     writeFileSync(join(extensionRoot, 'src', 'backend.ts'), 'export async function ping() { return { ok: true }; }');
-    setPackagedResourcesPath();
-
-    const harness = createHarness();
+    const publishDesktopAppEvent = vi.fn(async () => ({ ok: true as const }));
+    const harness = createHarness({ getRuntimeScope: () => 'shared', publishDesktopAppEvent });
     const res = createResponse();
+    const invalidateAppTopics = vi.spyOn(appEvents, 'invalidateAppTopics');
+    invalidateAppTopics.mockClear();
     await harness.postHandler('/api/extensions/:id/build')({ params: { id: 'agent-board' } }, res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      error: expect.stringContaining('The app no longer builds extensions at runtime.'),
-    });
+    expect(res.json).toHaveBeenCalledWith({ ok: true, extensionId: 'agent-board', built: true });
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
+    expect(publishDesktopAppEvent).toHaveBeenCalledWith({ type: 'invalidate', topics: ['extensions'] });
   });
 
   it('reloads prebuilt runtime extension backends without rebuilding in packaged desktop mode', async () => {
@@ -1445,8 +1455,11 @@ describe('registerExtensionRoutes', () => {
     writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export async function ping() { return { ok: true }; }');
     setPackagedResourcesPath();
 
-    const harness = createHarness();
+    const publishDesktopAppEvent = vi.fn(async () => ({ ok: true as const }));
+    const harness = createHarness({ getRuntimeScope: () => 'shared', publishDesktopAppEvent });
     const res = createResponse();
+    const invalidateAppTopics = vi.spyOn(appEvents, 'invalidateAppTopics');
+    invalidateAppTopics.mockClear();
     await harness.postHandler('/api/extensions/:id/reload')({ params: { id: 'agent-board' } }, res);
 
     expect(res.json).toHaveBeenCalledWith({
@@ -1455,10 +1468,15 @@ describe('registerExtensionRoutes', () => {
       reloaded: true,
       message: 'Extension backend reloaded.',
     });
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
+    expect(publishDesktopAppEvent).toHaveBeenCalledWith({ type: 'invalidate', topics: ['extensions'] });
   });
 
   it('accepts explicit reload calls for runtime manifests', async () => {
-    const harness = createHarness();
+    const publishDesktopAppEvent = vi.fn(async () => ({ ok: true as const }));
+    const harness = createHarness({ getRuntimeScope: () => 'shared', publishDesktopAppEvent });
+    const invalidateAppTopics = vi.spyOn(appEvents, 'invalidateAppTopics');
+    invalidateAppTopics.mockClear();
     const reloadAllRes = createResponse();
     await harness.postHandler('/api/extensions/reload')({}, reloadAllRes);
     expect(reloadAllRes.json).toHaveBeenCalledWith({
@@ -1466,7 +1484,11 @@ describe('registerExtensionRoutes', () => {
       reloaded: true,
       message: 'Extension registry caches were invalidated; reopen contributed routes if needed.',
     });
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
+    expect(publishDesktopAppEvent).toHaveBeenCalledWith({ type: 'invalidate', topics: ['extensions'] });
 
+    invalidateAppTopics.mockClear();
+    publishDesktopAppEvent.mockClear();
     const reloadOneRes = createResponse();
     await harness.postHandler('/api/extensions/:id/reload')({ params: { id: 'system-extension-manager' } }, reloadOneRes);
     expect(reloadOneRes.json).toHaveBeenCalledWith({
@@ -1475,6 +1497,8 @@ describe('registerExtensionRoutes', () => {
       reloaded: true,
       message: 'Extension backend reloaded.',
     });
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
+    expect(publishDesktopAppEvent).toHaveBeenCalledWith({ type: 'invalidate', topics: ['extensions'] });
   }, 30000);
 
   it('returns not found when reloading an unknown extension', async () => {
