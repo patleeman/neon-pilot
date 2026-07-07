@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { type DesktopRootLayout, getConfigRoot, getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getConfigRoot, getPiAgentRuntimeDir, resolveDesktopRootLayout } from '@neon-pilot/core';
 
 export function getRuntimeSettingsFilePath(stateRoot?: string): string {
   return join(getPiAgentRuntimeDir(stateRoot), 'settings.json');
@@ -48,7 +48,7 @@ export interface PersistSettingsWriteOptions {
 
 export function persistSettingsWrite<T>(writeSettingsFile: (settingsFile: string) => T, options: PersistSettingsWriteOptions = {}): T {
   const localSettingsFile = options.localSettingsFile ?? resolveLocalRuntimeSettingsFilePath(options.localRuntimeConfigDir);
-  const runtimeSettingsFile = options.runtimeSettingsFile ?? getRuntimeSettingsFilePath();
+  const runtimeSettingsFile = options.runtimeSettingsFile ?? getRuntimeSettingsFilePathFromLayout(resolveDesktopRootLayout());
 
   writeSettingsFile(localSettingsFile);
   return writeSettingsFile(runtimeSettingsFile);

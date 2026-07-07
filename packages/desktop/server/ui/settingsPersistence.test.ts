@@ -90,6 +90,27 @@ describe('persistSettingsWrite', () => {
     expect(result).toBe('/tmp/runtime-settings.json');
   });
 
+  it('defaults runtime path to the layout-derived path when runtimeSettingsFile is omitted', () => {
+    const layout = resolveDesktopRootLayout();
+    const expectedRuntimeFile = join(layout.systemRuntime, 'settings.json');
+    const writes: string[] = [];
+
+    const result = persistSettingsWrite(
+      (settingsFile) => {
+        writes.push(settingsFile);
+        return settingsFile;
+      },
+      {
+        localSettingsFile: '/tmp/local-settings.json',
+      },
+    );
+
+    // First write is local, second is the layout-derived runtime path
+    expect(writes[0]).toBe('/tmp/local-settings.json');
+    expect(writes[1]).toBe(expectedRuntimeFile);
+    expect(result).toBe(expectedRuntimeFile);
+  });
+
   it('does not attempt runtime write when local write fails', () => {
     const writes: string[] = [];
 
