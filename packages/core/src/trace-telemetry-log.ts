@@ -33,7 +33,8 @@ export interface TraceTelemetryLogEvent {
   payload: Record<string, unknown>;
 }
 
-export function resolveTraceTelemetryLogDir(stateRoot?: string): string {
+export function resolveTraceTelemetryLogDir(stateRoot?: string, layout?: DesktopRootLayout): string {
+  if (layout) return layout.logsTelemetry;
   return join(stateRoot ?? getStateRoot(), 'logs', LOG_DIR);
 }
 
@@ -48,9 +49,9 @@ function resolveMaxLogFileBytes(): number {
   return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : DEFAULT_MAX_LOG_FILE_BYTES;
 }
 
-export function resolveTraceTelemetryLogPath(ts: string, stateRoot?: string, lineBytes = 0): string {
+export function resolveTraceTelemetryLogPath(ts: string, stateRoot?: string, lineBytes = 0, layout?: DesktopRootLayout): string {
   const day = resolveTraceTelemetryLogDay(ts);
-  const dir = resolveTraceTelemetryLogDir(stateRoot);
+  const dir = resolveTraceTelemetryLogDir(stateRoot, layout);
   const basePath = join(dir, `${LOG_PREFIX}${day}${LOG_SUFFIX}`);
   const maxBytes = resolveMaxLogFileBytes();
 
@@ -110,8 +111,13 @@ function parseTraceTelemetryLogEvent(line: string): TraceTelemetryLogEvent | nul
   }
 }
 
-export function readTraceTelemetryLogEvents(input: { since: string; limit?: number; stateRoot?: string }): TraceTelemetryLogEvent[] {
-  const dir = resolveTraceTelemetryLogDir(input.stateRoot);
+export function readTraceTelemetryLogEvents(input: {
+  since: string;
+  limit?: number;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+}): TraceTelemetryLogEvent[] {
+  const dir = resolveTraceTelemetryLogDir(input.stateRoot, input.layout);
   if (!existsSync(dir)) return [];
   const limit = input.limit ?? 50_000;
   const events: TraceTelemetryLogEvent[] = [];
@@ -149,21 +155,21 @@ export function getTraceTelemetryLogDir(layout?: DesktopRootLayout): string {
   return resolveTraceTelemetryLogDir();
 }
 
-export function writeTraceTelemetryLogEvent(event: TraceTelemetryLogEvent, stateRoot?: string): void {
+export function writeTraceTelemetryLogEvent(event: TraceTelemetryLogEvent, stateRoot?: string, layout?: DesktopRootLayout): void {
   const line = `${JSON.stringify(event)}\n`;
   try {
-    const dir = resolveTraceTelemetryLogDir(stateRoot);
+    const dir = resolveTraceTelemetryLogDir(stateRoot, layout);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    const path = resolveTraceTelemetryLogPath(event.ts, stateRoot, Buffer.byteLength(line, 'utf-8'));
+    const path = resolveTraceTelemetryLogPath(event.ts, stateRoot, Buffer.byteLength(line, 'utf-8'), layout);
     appendFileSync(path, line, 'utf-8');
-    maybePruneTraceTelemetryLogs(stateRoot);
+    maybePruneTraceTelemetryLogs(stateRoot, layout);
   } catch (error) {
     logTraceTelemetryStorageError('failed to write trace telemetry JSONL event', error);
   }
 }
 
-function maybePruneTraceTelemetryLogs(stateRoot?: string): void {
-  const dir = resolveTraceTelemetryLogDir(stateRoot);
+function maybePruneTraceTelemetryLogs(stateRoot?: string, layout?: DesktopRootLayout): void {
+  const dir = resolveTraceTelemetryLogDir(stateRoot, layout);
   const count = (writeCounts.get(dir) ?? 0) + 1;
   writeCounts.set(dir, count);
   if (count % PRUNE_EVERY_WRITES !== 0) return;

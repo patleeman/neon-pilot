@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { resolveObservabilityDbPath } from './observability-db.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 import { closeTraceTelemetryLogs, resolveTraceTelemetryLogDir, writeTraceTelemetryLogEvent } from './trace-telemetry-log.js';
 
 export interface TraceDbMaintenanceResult {
@@ -16,8 +17,8 @@ export function closeTraceDbs(): void {
   closeTraceTelemetryLogs();
 }
 
-export function maintainTraceDb(stateRoot?: string): TraceDbMaintenanceResult {
-  return { dbPath: resolveObservabilityDbPath(stateRoot), maxRowsPerTable: 0, deletedRows: {}, vacuumed: false };
+export function maintainTraceDb(stateRoot?: string, layout?: DesktopRootLayout): TraceDbMaintenanceResult {
+  return { dbPath: resolveObservabilityDbPath(stateRoot, layout), maxRowsPerTable: 0, deletedRows: {}, vacuumed: false };
 }
 
 function id(): string {
@@ -74,28 +75,33 @@ export function writeTraceStats(params: {
   stepCount?: number;
   durationMs?: number;
   profile?: string;
+  layout?: DesktopRootLayout;
 }): void {
   const eventTs = ts();
-  writeTraceTelemetryLogEvent({
-    schemaVersion: 1,
-    id: id(),
-    ts: eventTs,
-    type: 'stats',
-    sessionId: params.sessionId,
-    runId: params.runId ?? null,
-    profile: params.profile ?? '',
-    payload: {
-      modelId: params.modelId ?? null,
-      tokensInput: tokenCount(params.tokensInput),
-      tokensOutput: tokenCount(params.tokensOutput),
-      tokensCachedInput: tokenCount(params.tokensCachedInput),
-      tokensCachedWrite: tokenCount(params.tokensCachedWrite),
-      cost: finiteNumber(params.cost),
-      turnCount: tokenCount(params.turnCount),
-      stepCount: tokenCount(params.stepCount),
-      durationMs: tokenCount(params.durationMs),
+  writeTraceTelemetryLogEvent(
+    {
+      schemaVersion: 1,
+      id: id(),
+      ts: eventTs,
+      type: 'stats',
+      sessionId: params.sessionId,
+      runId: params.runId ?? null,
+      profile: params.profile ?? '',
+      payload: {
+        modelId: params.modelId ?? null,
+        tokensInput: tokenCount(params.tokensInput),
+        tokensOutput: tokenCount(params.tokensOutput),
+        tokensCachedInput: tokenCount(params.tokensCachedInput),
+        tokensCachedWrite: tokenCount(params.tokensCachedWrite),
+        cost: finiteNumber(params.cost),
+        turnCount: tokenCount(params.turnCount),
+        stepCount: tokenCount(params.stepCount),
+        durationMs: tokenCount(params.durationMs),
+      },
     },
-  });
+    undefined,
+    params.layout,
+  );
 }
 
 export function writeTraceToolCall(params: {
@@ -109,27 +115,32 @@ export function writeTraceToolCall(params: {
   errorMessage?: string;
   conversationTitle?: string;
   profile?: string;
+  layout?: DesktopRootLayout;
 }): void {
   const command = readBashCommand(params.toolName, params.toolInput, params.bashCommand);
-  writeTraceTelemetryLogEvent({
-    schemaVersion: 1,
-    id: id(),
-    ts: ts(),
-    type: 'tool_call',
-    sessionId: params.sessionId,
-    runId: params.runId ?? null,
-    profile: params.profile ?? '',
-    payload: {
-      toolName: params.toolName,
-      toolInputJson: stringifyToolInput(params.toolInput),
-      bashCommand: command,
-      bashCommandLabel: bashCommandLabel(command),
-      durationMs: typeof params.durationMs === 'number' && Number.isFinite(params.durationMs) ? params.durationMs : null,
-      status: params.status,
-      errorMessage: params.errorMessage ?? null,
-      conversationTitle: params.conversationTitle ?? null,
+  writeTraceTelemetryLogEvent(
+    {
+      schemaVersion: 1,
+      id: id(),
+      ts: ts(),
+      type: 'tool_call',
+      sessionId: params.sessionId,
+      runId: params.runId ?? null,
+      profile: params.profile ?? '',
+      payload: {
+        toolName: params.toolName,
+        toolInputJson: stringifyToolInput(params.toolInput),
+        bashCommand: command,
+        bashCommandLabel: bashCommandLabel(command),
+        durationMs: typeof params.durationMs === 'number' && Number.isFinite(params.durationMs) ? params.durationMs : null,
+        status: params.status,
+        errorMessage: params.errorMessage ?? null,
+        conversationTitle: params.conversationTitle ?? null,
+      },
     },
-  });
+    undefined,
+    params.layout,
+  );
 }
 
 export function writeTraceContext(params: {
@@ -145,28 +156,33 @@ export function writeTraceContext(params: {
   segSummary?: number;
   systemPromptTokens?: number;
   profile?: string;
+  layout?: DesktopRootLayout;
 }): void {
-  writeTraceTelemetryLogEvent({
-    schemaVersion: 1,
-    id: id(),
-    ts: ts(),
-    type: 'context',
-    sessionId: params.sessionId,
-    runId: null,
-    profile: params.profile ?? '',
-    payload: {
-      modelId: params.modelId ?? null,
-      totalTokens: tokenCount(params.totalTokens),
-      contextWindow: tokenCount(params.contextWindow),
-      pct: finiteNumber(params.pct),
-      segSystem: tokenCount(params.segSystem),
-      segUser: tokenCount(params.segUser),
-      segAssistant: tokenCount(params.segAssistant),
-      segTool: tokenCount(params.segTool),
-      segSummary: tokenCount(params.segSummary),
-      systemPromptTokens: tokenCount(params.systemPromptTokens),
+  writeTraceTelemetryLogEvent(
+    {
+      schemaVersion: 1,
+      id: id(),
+      ts: ts(),
+      type: 'context',
+      sessionId: params.sessionId,
+      runId: null,
+      profile: params.profile ?? '',
+      payload: {
+        modelId: params.modelId ?? null,
+        totalTokens: tokenCount(params.totalTokens),
+        contextWindow: tokenCount(params.contextWindow),
+        pct: finiteNumber(params.pct),
+        segSystem: tokenCount(params.segSystem),
+        segUser: tokenCount(params.segUser),
+        segAssistant: tokenCount(params.segAssistant),
+        segTool: tokenCount(params.segTool),
+        segSummary: tokenCount(params.segSummary),
+        systemPromptTokens: tokenCount(params.systemPromptTokens),
+      },
     },
-  });
+    undefined,
+    params.layout,
+  );
 }
 
 export function writeTraceCompaction(params: {
@@ -176,48 +192,72 @@ export function writeTraceCompaction(params: {
   tokensAfter: number;
   tokensSaved: number;
   profile?: string;
+  layout?: DesktopRootLayout;
 }): void {
-  writeTraceTelemetryLogEvent({
-    schemaVersion: 1,
-    id: id(),
-    ts: ts(),
-    type: 'compaction',
-    sessionId: params.sessionId,
-    runId: null,
-    profile: params.profile ?? '',
-    payload: {
-      reason: params.reason,
-      tokensBefore: tokenCount(params.tokensBefore),
-      tokensAfter: tokenCount(params.tokensAfter),
-      tokensSaved: tokenCount(params.tokensSaved),
+  writeTraceTelemetryLogEvent(
+    {
+      schemaVersion: 1,
+      id: id(),
+      ts: ts(),
+      type: 'compaction',
+      sessionId: params.sessionId,
+      runId: null,
+      profile: params.profile ?? '',
+      payload: {
+        reason: params.reason,
+        tokensBefore: tokenCount(params.tokensBefore),
+        tokensAfter: tokenCount(params.tokensAfter),
+        tokensSaved: tokenCount(params.tokensSaved),
+      },
     },
-  });
+    undefined,
+    params.layout,
+  );
 }
 
-export function writeTraceAutoMode(params: { sessionId: string; enabled: boolean; stopReason?: string | null; profile?: string }): void {
-  writeTraceTelemetryLogEvent({
-    schemaVersion: 1,
-    id: id(),
-    ts: ts(),
-    type: 'auto_mode',
-    sessionId: params.sessionId,
-    runId: null,
-    profile: params.profile ?? '',
-    payload: { enabled: params.enabled ? 1 : 0, stopReason: params.stopReason ?? null },
-  });
+export function writeTraceAutoMode(params: {
+  sessionId: string;
+  enabled: boolean;
+  stopReason?: string | null;
+  profile?: string;
+  layout?: DesktopRootLayout;
+}): void {
+  writeTraceTelemetryLogEvent(
+    {
+      schemaVersion: 1,
+      id: id(),
+      ts: ts(),
+      type: 'auto_mode',
+      sessionId: params.sessionId,
+      runId: null,
+      profile: params.profile ?? '',
+      payload: { enabled: params.enabled ? 1 : 0, stopReason: params.stopReason ?? null },
+    },
+    undefined,
+    params.layout,
+  );
 }
 
-export function writeTraceSuggestedContext(params: { sessionId: string; pointerIds: string[]; profile?: string }): void {
-  writeTraceTelemetryLogEvent({
-    schemaVersion: 1,
-    id: id(),
-    ts: ts(),
-    type: 'suggested_context',
-    sessionId: params.sessionId,
-    runId: null,
-    profile: params.profile ?? '',
-    payload: { pointerIds: params.pointerIds.join(','), pointerCount: params.pointerIds.length },
-  });
+export function writeTraceSuggestedContext(params: {
+  sessionId: string;
+  pointerIds: string[];
+  profile?: string;
+  layout?: DesktopRootLayout;
+}): void {
+  writeTraceTelemetryLogEvent(
+    {
+      schemaVersion: 1,
+      id: id(),
+      ts: ts(),
+      type: 'suggested_context',
+      sessionId: params.sessionId,
+      runId: null,
+      profile: params.profile ?? '',
+      payload: { pointerIds: params.pointerIds.join(','), pointerCount: params.pointerIds.length },
+    },
+    undefined,
+    params.layout,
+  );
 }
 
 function parseSuggestedPointerIds(value: unknown): string[] {
@@ -232,12 +272,12 @@ function parseSuggestedPointerIds(value: unknown): string[] {
 
 export function querySessionSuggestedPointerIds(
   sessionId: string,
-  options?: { since?: string; limit?: number; stateRoot?: string },
+  options?: { since?: string; limit?: number; stateRoot?: string; layout?: DesktopRootLayout },
 ): Set<string> {
   const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : '';
   if (!normalizedSessionId) return new Set();
 
-  const dir = resolveTraceTelemetryLogDir(options?.stateRoot);
+  const dir = resolveTraceTelemetryLogDir(options?.stateRoot, options?.layout);
   if (!existsSync(dir)) return new Set();
 
   const since = options?.since ?? '1970-01-01T00:00:00.000Z';
@@ -278,15 +318,20 @@ export function writeTraceContextPointerInspect(params: {
   inspectedConversationId: string;
   wasSuggested: boolean;
   profile?: string;
+  layout?: DesktopRootLayout;
 }): void {
-  writeTraceTelemetryLogEvent({
-    schemaVersion: 1,
-    id: id(),
-    ts: ts(),
-    type: 'context_pointer_inspect',
-    sessionId: params.sessionId,
-    runId: null,
-    profile: params.profile ?? '',
-    payload: { inspectedConversationId: params.inspectedConversationId, wasSuggested: params.wasSuggested ? 1 : 0 },
-  });
+  writeTraceTelemetryLogEvent(
+    {
+      schemaVersion: 1,
+      id: id(),
+      ts: ts(),
+      type: 'context_pointer_inspect',
+      sessionId: params.sessionId,
+      runId: null,
+      profile: params.profile ?? '',
+      payload: { inspectedConversationId: params.inspectedConversationId, wasSuggested: params.wasSuggested ? 1 : 0 },
+    },
+    undefined,
+    params.layout,
+  );
 }

@@ -8,6 +8,7 @@
 
 import { parentPort } from 'node:worker_threads';
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import {
   writeTraceAutoMode,
   writeTraceCompaction,
@@ -18,14 +19,21 @@ import {
   writeTraceToolCall,
 } from '@neon-pilot/core';
 
+export interface TraceWorkerMessageBase {
+  layout?: DesktopRootLayout;
+}
+
 export type TraceWorkerMessage =
-  | ({ type: 'stats' } & Parameters<typeof writeTraceStats>[0])
-  | ({ type: 'tool_call' } & Parameters<typeof writeTraceToolCall>[0])
-  | ({ type: 'context' } & Parameters<typeof writeTraceContext>[0])
-  | ({ type: 'compaction' } & Parameters<typeof writeTraceCompaction>[0])
-  | ({ type: 'auto_mode' } & Parameters<typeof writeTraceAutoMode>[0])
-  | ({ type: 'suggested_context' } & Parameters<typeof writeTraceSuggestedContext>[0])
-  | ({ type: 'context_pointer_inspect' } & Parameters<typeof writeTraceContextPointerInspect>[0]);
+  | ({ type: 'stats'; layout?: DesktopRootLayout } & Omit<Parameters<typeof writeTraceStats>[0], 'layout'>)
+  | ({ type: 'tool_call'; layout?: DesktopRootLayout } & Omit<Parameters<typeof writeTraceToolCall>[0], 'layout'>)
+  | ({ type: 'context'; layout?: DesktopRootLayout } & Omit<Parameters<typeof writeTraceContext>[0], 'layout'>)
+  | ({ type: 'compaction'; layout?: DesktopRootLayout } & Omit<Parameters<typeof writeTraceCompaction>[0], 'layout'>)
+  | ({ type: 'auto_mode'; layout?: DesktopRootLayout } & Omit<Parameters<typeof writeTraceAutoMode>[0], 'layout'>)
+  | ({ type: 'suggested_context'; layout?: DesktopRootLayout } & Omit<Parameters<typeof writeTraceSuggestedContext>[0], 'layout'>)
+  | ({ type: 'context_pointer_inspect'; layout?: DesktopRootLayout } & Omit<
+      Parameters<typeof writeTraceContextPointerInspect>[0],
+      'layout'
+    >);
 
 if (!parentPort) {
   throw new Error('traceWorker must run as a worker thread.');

@@ -77,4 +77,27 @@ describe('trace persistence hooks', () => {
       tokensSaved: 60,
     });
   });
+
+  it('forwards layout through trace persistence hooks', () => {
+    const layout = { root: '/test', logsTelemetry: '/test/logs/telemetry', systemObservability: '/test/system/observability' } as never;
+
+    persistTraceStats({ sessionId: 's1', tokensInput: 1, tokensOutput: 2, cost: 0.1, layout });
+    expect(traceWorkerClient.traceWorkerStats).toHaveBeenCalledWith({
+      sessionId: 's1',
+      tokensInput: 1,
+      tokensOutput: 2,
+      cost: 0.1,
+      layout,
+    });
+
+    persistTraceCompaction({ sessionId: 's2', reason: 'overflow', tokensBefore: 100, tokensAfter: 50, tokensSaved: 50, layout });
+    expect(traceWorkerClient.traceWorkerCompaction).toHaveBeenCalledWith({
+      sessionId: 's2',
+      reason: 'overflow',
+      tokensBefore: 100,
+      tokensAfter: 50,
+      tokensSaved: 50,
+      layout,
+    });
+  });
 });

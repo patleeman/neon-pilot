@@ -156,6 +156,7 @@ export function broadcastContextUsage(
       segTool: toolSeg?.tokens ?? 0,
       segSummary: summarySeg?.tokens ?? 0,
       systemPromptTokens,
+      layout: entry.desktopRootLayout,
     });
   }
   broadcastLiveSessionContextUsage(entry, (event) => broadcast(entry, event), force);

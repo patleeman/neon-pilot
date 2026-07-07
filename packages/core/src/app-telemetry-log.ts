@@ -30,7 +30,8 @@ export interface AppTelemetryLogEvent {
   metadata: Record<string, unknown> | null;
 }
 
-export function resolveAppTelemetryLogDir(stateRoot?: string): string {
+export function resolveAppTelemetryLogDir(stateRoot?: string, layout?: DesktopRootLayout): string {
+  if (layout) return layout.logsTelemetry;
   return join(stateRoot ?? getStateRoot(), 'logs', LOG_DIR);
 }
 
@@ -45,9 +46,9 @@ function resolveMaxLogFileBytes(): number {
   return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : DEFAULT_MAX_LOG_FILE_BYTES;
 }
 
-export function resolveAppTelemetryLogPath(ts: string, stateRoot?: string, lineBytes = 0): string {
+export function resolveAppTelemetryLogPath(ts: string, stateRoot?: string, lineBytes = 0, layout?: DesktopRootLayout): string {
   const day = resolveAppTelemetryLogDay(ts);
-  const dir = resolveAppTelemetryLogDir(stateRoot);
+  const dir = resolveAppTelemetryLogDir(stateRoot, layout);
   const basePath = join(dir, `${LOG_PREFIX}${day}${LOG_SUFFIX}`);
   const maxBytes = resolveMaxLogFileBytes();
 
@@ -112,21 +113,21 @@ function logTelemetryStorageError(message: string, error: unknown): void {
   );
 }
 
-export function writeAppTelemetryLogEvent(event: AppTelemetryLogEvent, stateRoot?: string): void {
+export function writeAppTelemetryLogEvent(event: AppTelemetryLogEvent, stateRoot?: string, layout?: DesktopRootLayout): void {
   const line = `${JSON.stringify(event)}\n`;
   try {
-    const dir = resolveAppTelemetryLogDir(stateRoot);
+    const dir = resolveAppTelemetryLogDir(stateRoot, layout);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    const path = resolveAppTelemetryLogPath(event.ts, stateRoot, Buffer.byteLength(line, 'utf-8'));
+    const path = resolveAppTelemetryLogPath(event.ts, stateRoot, Buffer.byteLength(line, 'utf-8'), layout);
     appendFileSync(path, line, 'utf-8');
-    maybePruneAppTelemetryLogs(stateRoot);
+    maybePruneAppTelemetryLogs(stateRoot, layout);
   } catch (error) {
     logTelemetryStorageError('failed to write app telemetry JSONL event', error);
   }
 }
 
-function maybePruneAppTelemetryLogs(stateRoot?: string): void {
-  const dir = resolveAppTelemetryLogDir(stateRoot);
+function maybePruneAppTelemetryLogs(stateRoot?: string, layout?: DesktopRootLayout): void {
+  const dir = resolveAppTelemetryLogDir(stateRoot, layout);
   const count = (writeCounts.get(dir) ?? 0) + 1;
   writeCounts.set(dir, count);
   if (count % PRUNE_EVERY_WRITES !== 0) return;
@@ -184,8 +185,8 @@ export interface AppTelemetryLogBundleExport {
   sizeBytes: number;
 }
 
-export function listAppTelemetryLogFiles(stateRoot?: string): AppTelemetryLogFileSummary[] {
-  const dir = resolveAppTelemetryLogDir(stateRoot);
+export function listAppTelemetryLogFiles(stateRoot?: string, layout?: DesktopRootLayout): AppTelemetryLogFileSummary[] {
+  const dir = resolveAppTelemetryLogDir(stateRoot, layout);
   if (!existsSync(dir)) return [];
 
   try {
@@ -202,8 +203,10 @@ export function listAppTelemetryLogFiles(stateRoot?: string): AppTelemetryLogFil
   }
 }
 
-export function exportAppTelemetryLogBundle(input: { since?: string; stateRoot?: string } = {}): AppTelemetryLogBundleExport {
-  const files = listAppTelemetryLogFiles(input.stateRoot);
+export function exportAppTelemetryLogBundle(
+  input: { since?: string; stateRoot?: string; layout?: DesktopRootLayout } = {},
+): AppTelemetryLogBundleExport {
+  const files = listAppTelemetryLogFiles(input.stateRoot, input.layout);
   const exportDir = join(input.stateRoot ?? getStateRoot(), 'exports', 'telemetry');
   mkdirSync(exportDir, { recursive: true });
 
@@ -237,8 +240,13 @@ export function exportAppTelemetryLogBundle(input: { since?: string; stateRoot?:
   return { path, fileCount, eventCount: lines.length, sizeBytes: stat.size };
 }
 
-export function readAppTelemetryLogEvents(input: { since: string; limit: number; stateRoot?: string }): AppTelemetryLogEvent[] {
-  const dir = resolveAppTelemetryLogDir(input.stateRoot);
+export function readAppTelemetryLogEvents(input: {
+  since: string;
+  limit: number;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+}): AppTelemetryLogEvent[] {
+  const dir = resolveAppTelemetryLogDir(input.stateRoot, input.layout);
   if (!existsSync(dir)) return [];
 
   const events: AppTelemetryLogEvent[] = [];

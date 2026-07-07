@@ -100,4 +100,16 @@ describe('app telemetry persistence queue', () => {
     telemetry.persistAppTelemetryEvent({ source: 'ui', category: 'flush', name: 'two' });
     expect(() => telemetry.persistAppTelemetryEvent({ source: 'ui', category: 'flush', name: 'three' })).not.toThrow();
   });
+
+  it('carries layout through the queue to writeAppTelemetryEvent', async () => {
+    const telemetry = await loadModule();
+    const layout = { root: '/test', logsTelemetry: '/test/logs/telemetry', systemObservability: '/test/system/observability' } as never;
+
+    telemetry.persistAppTelemetryEvent({ source: 'system', category: 'test', name: 'layout-event' }, layout);
+    await vi.runAllTimersAsync();
+
+    expect(core.writeAppTelemetryEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'system', category: 'test', name: 'layout-event', layout }),
+    );
+  });
 });

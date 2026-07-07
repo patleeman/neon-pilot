@@ -62,6 +62,15 @@ describe('traceWorkerClient', () => {
     expect(workerThreads.instances[0].postMessage).toHaveBeenNthCalledWith(2, { type: 'tool_call', sessionId: 's1', toolName: 'bash' });
   });
 
+  it('forwards layout through the worker message', async () => {
+    const client = await loadClient();
+    const layout = { root: '/test', logsTelemetry: '/test/logs/telemetry', systemObservability: '/test/system/observability' } as never;
+
+    client.traceWorkerStats({ sessionId: 's1', layout } as never);
+
+    expect(workerThreads.instances[0].postMessage).toHaveBeenCalledWith({ type: 'stats', sessionId: 's1', layout });
+  });
+
   it('uses the bundled backend worker path when the sibling worker is absent', async () => {
     fs.existsSync.mockImplementation((path: string) => path.endsWith('/server/traces/traceWorker.js'));
     const client = await loadClient();
@@ -88,12 +97,31 @@ describe('traceWorkerClient', () => {
     client.traceWorkerStats({ sessionId: 's1' } as never);
 
     workerThreads.instances[0].handlers.error?.(new Error('worker failed'));
-    client.traceWorkerAutoMode({ sessionId: 's2' } as never);
-    client.traceWorkerSuggestedContext({ sessionId: 's3' } as never);
+    client.traceWorkerAutoMode({ sessionId: 's2', enabled: true } as never);
+    client.traceWorkerSuggestedContext({ sessionId: 's3', pointerIds: [] } as never);
     await vi.runAllTimersAsync();
 
-    expect(core.writeTraceAutoMode).toHaveBeenCalledWith({ type: 'auto_mode', sessionId: 's2' });
-    expect(core.writeTraceSuggestedContext).toHaveBeenCalledWith({ type: 'suggested_context', sessionId: 's3' });
+    expect(core.writeTraceAutoMode).toHaveBeenCalledWith(expect.objectContaining({ type: 'auto_mode', sessionId: 's2', enabled: true }));
+    expect(core.writeTraceSuggestedContext).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'suggested_context', sessionId: 's3', pointerIds: [] }),
+    );
+    vi.useRealTimers();
+  });
+
+  it('forwards layout through direct fallback writes', async () => {
+    vi.useFakeTimers();
+    const client = await loadClient();
+    const layout = { root: '/test', logsTelemetry: '/test/logs/telemetry', systemObservability: '/test/system/observability' } as never;
+
+    // Force worker fallback by making constructor throw
+    workerThreads.Worker.mockImplementationOnce(() => {
+      throw new Error('constructor failed');
+    });
+
+    client.traceWorkerStats({ sessionId: 's1', layout } as never);
+    await vi.runAllTimersAsync();
+
+    expect(core.writeTraceStats).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 's1', layout }));
     vi.useRealTimers();
   });
 
@@ -111,7 +139,7 @@ describe('traceWorkerClient', () => {
     client.traceWorkerContextPointerInspect({ sessionId: 's1' } as never);
     await vi.runAllTimersAsync();
 
-    expect(core.writeTraceContextPointerInspect).toHaveBeenCalledWith({ type: 'context_pointer_inspect', sessionId: 's1' });
+    expect(core.writeTraceContextPointerInspect).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 's1' }));
     expect(errorSpy).toHaveBeenCalledWith('[telemetry] direct trace write failed', expect.any(Error));
     vi.useRealTimers();
   });

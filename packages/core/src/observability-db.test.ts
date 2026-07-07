@@ -98,5 +98,26 @@ describe('observability-db', () => {
       // Both should resolve to the same default state root
       expect(getObservabilityDbPath().endsWith('observability/observability.db')).toBe(true);
     });
+
+    it('resolveObservabilityDbPath returns layout-derived path when layout is provided', () => {
+      expect(resolveObservabilityDbPath(undefined, testLayout)).toBe('/custom/desktop/system/observability/observability.db');
+    });
+
+    it('ensureObservabilityDbDir creates layout-derived directory when layout is provided', () => {
+      const layoutRoot = join(tmpdir(), 'obs-ensure-layout-test');
+      rmSync(layoutRoot, { recursive: true, force: true });
+      const systemObservability = join(layoutRoot, 'system', 'observability');
+      const testLayoutWithDir = { ...testLayout, systemObservability };
+
+      const dir = ensureObservabilityDbDir(undefined, testLayoutWithDir);
+      expect(existsSync(dir)).toBe(true);
+      expect(dir).toBe(systemObservability);
+
+      // Idempotent
+      const dir2 = ensureObservabilityDbDir(undefined, testLayoutWithDir);
+      expect(dir2).toBe(dir);
+
+      rmSync(layoutRoot, { recursive: true, force: true });
+    });
   });
 });

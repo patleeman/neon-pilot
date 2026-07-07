@@ -13,11 +13,8 @@ import {
   readAppTelemetryLogEvents,
   writeAppTelemetryLogEvent,
 } from './app-telemetry-log.js';
-import {
-  applyObservabilityMigrations,
-  ensureObservabilityDbDir,
-  resolveObservabilityDbPath,
-} from './observability-db.js';
+import { applyObservabilityMigrations, ensureObservabilityDbDir, resolveObservabilityDbPath } from './observability-db.js';
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 import { openSqliteDatabase, type SqliteDatabase } from './sqlite.js';
 import type { Migration } from './sqlite-migrations.js';
 
@@ -61,8 +58,8 @@ export function closeAppTelemetryDbs(): void {
   closeAppTelemetryLogs();
 }
 
-function resolveAppTelemetryDbPath(stateRoot?: string): string {
-  return resolveObservabilityDbPath(stateRoot);
+function resolveAppTelemetryDbPath(stateRoot?: string, layout?: DesktopRootLayout): string {
+  return resolveObservabilityDbPath(stateRoot, layout);
 }
 
 function logTelemetryStorageError(message: string, error: unknown): void {
@@ -72,12 +69,12 @@ function logTelemetryStorageError(message: string, error: unknown): void {
   );
 }
 
-function getAppTelemetryDb(stateRoot?: string): SqliteDatabase {
-  const path = resolveAppTelemetryDbPath(stateRoot);
+function getAppTelemetryDb(stateRoot?: string, layout?: DesktopRootLayout): SqliteDatabase {
+  const path = resolveAppTelemetryDbPath(stateRoot, layout);
   const cached = dbCache.get(path);
   if (cached) return cached;
 
-  ensureObservabilityDbDir(stateRoot);
+  ensureObservabilityDbDir(stateRoot, layout);
 
   const db = openSqliteDatabase(path);
   db.exec(SCHEMA);
@@ -102,6 +99,7 @@ export interface AppTelemetryEventInput {
   value?: number;
   metadata?: Record<string, unknown>;
   stateRoot?: string;
+  layout?: DesktopRootLayout;
 }
 
 export interface AppTelemetryEventRow {
@@ -211,9 +209,9 @@ function insertAppTelemetryEvent(db: SqliteDatabase, event: AppTelemetryLogEvent
   );
 }
 
-function indexAppTelemetryLogs(db: SqliteDatabase, stateRoot?: string): void {
+function indexAppTelemetryLogs(db: SqliteDatabase, stateRoot?: string, layout?: DesktopRootLayout): void {
   const maxEvents = resolveMaxEvents();
-  const events = readAppTelemetryLogEvents({ since: '0000-01-01T00:00:00.000Z', limit: maxEvents + 1000, stateRoot });
+  const events = readAppTelemetryLogEvents({ since: '0000-01-01T00:00:00.000Z', limit: maxEvents + 1000, stateRoot, layout });
   const insertMany = db.transaction((items: AppTelemetryLogEvent[]) => {
     for (const event of items) insertAppTelemetryEvent(db, event);
   });
@@ -244,6 +242,7 @@ export function writeAppTelemetryEvent(input: AppTelemetryEventInput): void {
         metadata: normalizeMetadata(input.metadata),
       },
       input.stateRoot,
+      input.layout,
     );
   } catch (error) {
     logTelemetryStorageError('failed to normalize app telemetry event', error);
@@ -258,10 +257,10 @@ export interface AppTelemetryDbMaintenanceResult {
   vacuumed: boolean;
 }
 
-export function maintainAppTelemetryDb(stateRoot?: string): AppTelemetryDbMaintenanceResult {
-  const dbPath = resolveAppTelemetryDbPath(stateRoot);
-  const db = getAppTelemetryDb(stateRoot);
-  indexAppTelemetryLogs(db, stateRoot);
+export function maintainAppTelemetryDb(stateRoot?: string, layout?: DesktopRootLayout): AppTelemetryDbMaintenanceResult {
+  const dbPath = resolveAppTelemetryDbPath(stateRoot, layout);
+  const db = getAppTelemetryDb(stateRoot, layout);
+  indexAppTelemetryLogs(db, stateRoot, layout);
   const before = countAppTelemetryEvents(db);
   maybePruneAppTelemetryEvents(db, dbPath, { force: true });
   const after = countAppTelemetryEvents(db);
@@ -287,9 +286,14 @@ function mapEventRow(row: Record<string, unknown>): AppTelemetryEventRow {
   };
 }
 
-export function queryAppTelemetryEvents(input: { since: string; limit?: number; stateRoot?: string }): AppTelemetryEventRow[] {
+export function queryAppTelemetryEvents(input: {
+  since: string;
+  limit?: number;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
+}): AppTelemetryEventRow[] {
   const limit = Math.max(1, Math.min(input.limit ?? 200, 1000));
-  const loggedEvents = readAppTelemetryLogEvents({ since: input.since, limit, stateRoot: input.stateRoot });
+  const loggedEvents = readAppTelemetryLogEvents({ since: input.since, limit, stateRoot: input.stateRoot, layout: input.layout });
   if (loggedEvents.length > 0) {
     return loggedEvents.map((event) => ({
       id: event.id,
@@ -308,7 +312,7 @@ export function queryAppTelemetryEvents(input: { since: string; limit?: number; 
     }));
   }
 
-  const rows = getAppTelemetryDb(input.stateRoot)
+  const rows = getAppTelemetryDb(input.stateRoot, input.layout)
     .prepare(
       `
     SELECT * FROM app_telemetry_events

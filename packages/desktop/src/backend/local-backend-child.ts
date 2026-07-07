@@ -271,6 +271,12 @@ async function shutdown(server: ReturnType<typeof createServer>): Promise<void> 
   );
   await localhostWebappProxy?.close().catch(() => undefined);
   localhostWebappProxy = undefined;
+  try {
+    const { closeTraceWorker } = await import('../../server/traces/traceWorkerClient.js');
+    closeTraceWorker();
+  } catch {
+    // Trace worker import is best-effort during shutdown.
+  }
   await stopDaemon();
   process.exit(0);
 }

@@ -217,4 +217,54 @@ describe('app-telemetry-log layout-aware helpers', () => {
     const result = getAppTelemetryExportDir();
     expect(result).toMatch(/exports\/telemetry$/);
   });
+
+  it('writes app telemetry events to the layout-derived directory when layout is provided', () => {
+    const layoutRoot = join(tmpdir(), `app-telemetry-layout-test-${randomUUID()}`);
+    const layout = {
+      root: layoutRoot,
+      apps: join(layoutRoot, 'apps'),
+      data: join(layoutRoot, 'data'),
+      dataApps: join(layoutRoot, 'data/apps'),
+      dataDocuments: join(layoutRoot, 'data/documents'),
+      dataExports: join(layoutRoot, 'data/exports'),
+      documents: join(layoutRoot, 'documents'),
+      agents: join(layoutRoot, 'agents'),
+      soulDoc: join(layoutRoot, 'agents/soul.md'),
+      logs: join(layoutRoot, 'logs'),
+      logsDesktop: join(layoutRoot, 'logs/desktop'),
+      logsDaemon: join(layoutRoot, 'logs/daemon'),
+      logsTelemetry: join(layoutRoot, 'logs/telemetry'),
+      system: join(layoutRoot, 'system'),
+      systemAgents: join(layoutRoot, 'system/agents'),
+      systemApps: join(layoutRoot, 'system/apps'),
+      systemCache: join(layoutRoot, 'system/cache'),
+      systemConfig: join(layoutRoot, 'system/config'),
+      systemConversations: join(layoutRoot, 'system/conversations'),
+      systemConversationsIndex: join(layoutRoot, 'system/conversations/session-meta-index.json'),
+      systemSessions: join(layoutRoot, 'system/conversations/sessions'),
+      systemDaemon: join(layoutRoot, 'system/daemon'),
+      systemElectron: join(layoutRoot, 'system/electron'),
+      systemElectronUserData: join(layoutRoot, 'system/electron/user-data'),
+      systemObservability: join(layoutRoot, 'system/observability'),
+      systemRuntime: join(layoutRoot, 'system/runtime'),
+      systemChatWorkspaces: join(layoutRoot, 'system/runtime/chat-workspaces'),
+      systemSecrets: join(layoutRoot, 'system/secrets'),
+      systemState: join(layoutRoot, 'system/state'),
+    };
+
+    writeAppTelemetryLogEvent(event({ id: 'layout-event', ts: '2026-06-01T12:00:00.000Z' }), undefined, layout);
+
+    const files = listAppTelemetryLogFiles(undefined, layout);
+    expect(files).toHaveLength(1);
+    expect(files[0].path).toMatch(new RegExp(layout.logsTelemetry.replace(/[/\\]/g, '\\$&')));
+
+    const events = readAppTelemetryLogEvents({ since: '2026-06-01T00:00:00.000Z', limit: 10, layout });
+    expect(events.map((item) => item.id)).toEqual(['layout-event']);
+
+    const bundle = exportAppTelemetryLogBundle({ since: '2026-06-01T00:00:00.000Z', layout });
+    expect(bundle.eventCount).toBe(1);
+    expect(bundle.fileCount).toBe(1);
+
+    rmSync(layoutRoot, { recursive: true, force: true });
+  });
 });

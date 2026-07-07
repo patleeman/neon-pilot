@@ -550,6 +550,7 @@ function wireSession(id: string, session: AgentSession, cwd: string) {
           turnCount: traceRun.turnCount,
           stepCount: traceRun.stepCount,
           durationMs: traceRun.durationMs,
+          layout: getDesktopRootLayoutFn(),
         });
       },
       clearContextUsageTimer,

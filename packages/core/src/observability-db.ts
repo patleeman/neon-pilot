@@ -6,7 +6,8 @@ import { getStateRoot } from './runtime/paths.js';
 import type { SqliteDatabase } from './sqlite.js';
 import type { Migration } from './sqlite-migrations.js';
 
-export function resolveObservabilityDbPath(stateRoot?: string): string {
+export function resolveObservabilityDbPath(stateRoot?: string, layout?: DesktopRootLayout): string {
+  if (layout) return join(layout.systemObservability, 'observability.db');
   return join(stateRoot ?? getStateRoot(), 'observability', 'observability.db');
 }
 
@@ -34,8 +35,8 @@ export function getObservabilityDbPath(layout?: DesktopRootLayout): string {
   return resolveObservabilityDbPath();
 }
 
-export function ensureObservabilityDbDir(stateRoot?: string): string {
-  const dbPath = resolveObservabilityDbPath(stateRoot);
+export function ensureObservabilityDbDir(stateRoot?: string, layout?: DesktopRootLayout): string {
+  const dbPath = resolveObservabilityDbPath(stateRoot, layout);
   const dir = dirname(dbPath);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });

@@ -5,6 +5,8 @@
  * All writes are dispatched to the trace worker thread — never blocks the session loop.
  */
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
+
 import {
   traceWorkerAutoMode,
   traceWorkerCompaction,
@@ -29,6 +31,7 @@ export function persistTraceStats(params: {
   turnCount?: number;
   stepCount?: number;
   durationMs?: number;
+  layout?: DesktopRootLayout;
 }): void {
   traceWorkerStats(params);
 }
@@ -47,6 +50,7 @@ export function persistTraceContext(params: {
   segTool?: number;
   segSummary?: number;
   systemPromptTokens?: number;
+  layout?: DesktopRootLayout;
 }): void {
   traceWorkerContext(params);
 }
@@ -63,6 +67,7 @@ export function persistTraceToolCall(params: {
   status: 'ok' | 'error';
   errorMessage?: string;
   conversationTitle?: string;
+  layout?: DesktopRootLayout;
 }): void {
   traceWorkerToolCall(params);
 }
@@ -75,6 +80,7 @@ export function persistTraceCompaction(params: {
   tokensBefore?: number;
   tokensAfter?: number;
   tokensSaved?: number;
+  layout?: DesktopRootLayout;
 }): void {
   traceWorkerCompaction({
     sessionId: params.sessionId,
@@ -82,18 +88,24 @@ export function persistTraceCompaction(params: {
     tokensBefore: params.tokensBefore ?? 0,
     tokensAfter: params.tokensAfter ?? 0,
     tokensSaved: params.tokensSaved ?? 0,
+    layout: params.layout,
   });
 }
 
 // ── Auto mode hook ────────────────────────────────────────────────────────────
 
-export function persistTraceAutoMode(params: { sessionId: string; enabled: boolean; stopReason?: string | null }): void {
+export function persistTraceAutoMode(params: {
+  sessionId: string;
+  enabled: boolean;
+  stopReason?: string | null;
+  layout?: DesktopRootLayout;
+}): void {
   traceWorkerAutoMode(params);
 }
 
 // ── Suggested context hook ────────────────────────────────────────────────────
 
-export function persistTraceSuggestedContext(params: { sessionId: string; pointerIds: string[] }): void {
+export function persistTraceSuggestedContext(params: { sessionId: string; pointerIds: string[]; layout?: DesktopRootLayout }): void {
   traceWorkerSuggestedContext(params);
 }
 
@@ -103,6 +115,7 @@ export function persistTraceContextPointerInspect(params: {
   sessionId: string;
   inspectedConversationId: string;
   wasSuggested: boolean;
+  layout?: DesktopRootLayout;
 }): void {
   traceWorkerContextPointerInspect(params);
 }

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent';
+import type { AppTelemetryEventInput, DesktopRootLayout } from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { persistAppTelemetryEvent } from '../traces/appTelemetry.js';
@@ -314,9 +315,14 @@ function readToolInputMetadata(toolName: string, toolInput: unknown): Record<str
   return metadata;
 }
 
+function telemetryEvent(event: AppTelemetryEventInput, layout?: DesktopRootLayout): void {
+  persistAppTelemetryEvent(event, layout);
+}
+
 export interface LiveSessionEventHost {
   sessionId: string;
   session: AgentSession;
+  desktopRootLayout?: DesktopRootLayout;
   title: string;
   currentTurnError?: string | null;
   currentAssistantMessageText?: string;
@@ -407,6 +413,7 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
   event: AgentSessionEvent,
   callbacks: LiveSessionEventCallbacks<TEntry>,
 ): void {
+  const layout = entry.desktopRootLayout;
   const activeStaleTurnCustomType = clearQueuedStaleTurn(entry, event);
   if (activeStaleTurnCustomType) {
     entry.activeStaleTurnCustomType = activeStaleTurnCustomType;
@@ -415,15 +422,18 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
 
   if (event.type === 'turn_end') {
     entry.traceRunTurnCount = (entry.traceRunTurnCount ?? 0) + 1;
-    persistAppTelemetryEvent({
-      source: 'agent',
-      category: 'conversation_loop',
-      name: 'turn_end',
-      sessionId: entry.sessionId,
-      runId: entry.traceRunId ?? undefined,
-      count: entry.traceRunTurnCount,
-      metadata: { staleTurnCustomType: activeStaleTurnCustomType },
-    });
+    telemetryEvent(
+      {
+        source: 'agent',
+        category: 'conversation_loop',
+        name: 'turn_end',
+        sessionId: entry.sessionId,
+        runId: entry.traceRunId ?? undefined,
+        count: entry.traceRunTurnCount,
+        metadata: { staleTurnCustomType: activeStaleTurnCustomType },
+      },
+      layout,
+    );
 
     if (entry.pendingAutoModeContinuation) {
       entry.pendingAutoModeContinuation = false;
@@ -455,15 +465,18 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
     if (!entry.traceRunFirstToolAtMs) {
       const now = Date.now();
       entry.traceRunFirstToolAtMs = now;
-      persistAppTelemetryEvent({
-        source: 'agent',
-        category: 'conversation_latency',
-        name: 'first_tool',
-        sessionId: entry.sessionId,
-        runId: entry.traceRunId ?? undefined,
-        durationMs: entry.traceRunStartedAtMs ? now - entry.traceRunStartedAtMs : undefined,
-        metadata: { toolName: event.toolName },
-      });
+      telemetryEvent(
+        {
+          source: 'agent',
+          category: 'conversation_latency',
+          name: 'first_tool',
+          sessionId: entry.sessionId,
+          runId: entry.traceRunId ?? undefined,
+          durationMs: entry.traceRunStartedAtMs ? now - entry.traceRunStartedAtMs : undefined,
+          metadata: { toolName: event.toolName },
+        },
+        layout,
+      );
     }
   }
 
@@ -495,22 +508,26 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
       status: event.isError ? 'error' : 'ok',
       errorMessage,
       conversationTitle: entry.title,
+      layout,
     });
-    persistAppTelemetryEvent({
-      source: 'agent',
-      category: 'tool_execution',
-      name: event.toolName,
-      sessionId: entry.sessionId,
-      runId: entry.traceRunId ?? undefined,
-      durationMs,
-      count: entry.traceRunStepCount ?? 0,
-      status: event.isError ? 500 : 200,
-      metadata: {
-        isError: event.isError,
-        errorMessage: errorMessage?.slice(0, 500),
-        ...readToolInputMetadata(event.toolName, toolInput),
+    telemetryEvent(
+      {
+        source: 'agent',
+        category: 'tool_execution',
+        name: event.toolName,
+        sessionId: entry.sessionId,
+        runId: entry.traceRunId ?? undefined,
+        durationMs,
+        count: entry.traceRunStepCount ?? 0,
+        status: event.isError ? 500 : 200,
+        metadata: {
+          isError: event.isError,
+          errorMessage: errorMessage?.slice(0, 500),
+          ...readToolInputMetadata(event.toolName, toolInput),
+        },
       },
-    });
+      layout,
+    );
   }
 
   if (event.type === 'agent_start') {
@@ -522,14 +539,17 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
     entry.traceRunFirstAssistantAtMs = null;
     entry.traceRunFirstToolAtMs = null;
     entry.currentTurnError = null;
-    persistAppTelemetryEvent({
-      source: 'agent',
-      category: 'conversation_loop',
-      name: 'agent_start',
-      sessionId: entry.sessionId,
-      runId: entry.traceRunId,
-      metadata: { title: entry.title },
-    });
+    telemetryEvent(
+      {
+        source: 'agent',
+        category: 'conversation_loop',
+        name: 'agent_start',
+        sessionId: entry.sessionId,
+        runId: entry.traceRunId,
+        metadata: { title: entry.title },
+      },
+      layout,
+    );
     void callbacks.syncDurableConversationRun(entry, 'running');
   }
 
@@ -539,16 +559,19 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
       error: entry.currentTurnError ?? undefined,
       runId: entry.traceRunId ?? undefined,
     });
-    persistAppTelemetryEvent({
-      source: 'agent',
-      category: 'conversation_loop',
-      name: 'agent_end',
-      sessionId: entry.sessionId,
-      runId: entry.traceRunId ?? undefined,
-      durationMs: entry.traceRunStartedAtMs ? Date.now() - entry.traceRunStartedAtMs : undefined,
-      count: entry.traceRunStepCount ?? 0,
-      metadata: { turnCount: entry.traceRunTurnCount ?? 0, currentTurnError: entry.currentTurnError },
-    });
+    telemetryEvent(
+      {
+        source: 'agent',
+        category: 'conversation_loop',
+        name: 'agent_end',
+        sessionId: entry.sessionId,
+        runId: entry.traceRunId ?? undefined,
+        durationMs: entry.traceRunStartedAtMs ? Date.now() - entry.traceRunStartedAtMs : undefined,
+        count: entry.traceRunStepCount ?? 0,
+        metadata: { turnCount: entry.traceRunTurnCount ?? 0, currentTurnError: entry.currentTurnError },
+      },
+      layout,
+    );
     void callbacks.syncDurableConversationRun(entry, 'waiting');
   }
 
@@ -577,14 +600,17 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
         error: errorMessage,
         runId: entry.traceRunId ?? undefined,
       });
-      persistAppTelemetryEvent({
-        source: 'agent',
-        category: 'conversation_outcome',
-        name: 'assistant_error',
-        sessionId: entry.sessionId,
-        runId: entry.traceRunId ?? undefined,
-        metadata: { message: errorMessage },
-      });
+      telemetryEvent(
+        {
+          source: 'agent',
+          category: 'conversation_outcome',
+          name: 'assistant_error',
+          sessionId: entry.sessionId,
+          runId: entry.traceRunId ?? undefined,
+          metadata: { message: errorMessage },
+        },
+        layout,
+      );
     } else if (!entry.currentAssistantMessageHadDelta) {
       const finalText = extractAssistantTextContent(event.message.content);
       if (finalText && !suppressLiveEvent) {
@@ -598,15 +624,18 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
   if (event.type === 'message_start' && event.message.role === 'assistant' && !entry.traceRunFirstAssistantAtMs) {
     const now = Date.now();
     entry.traceRunFirstAssistantAtMs = now;
-    persistAppTelemetryEvent({
-      source: 'agent',
-      category: 'conversation_latency',
-      name: 'first_assistant_message',
-      sessionId: entry.sessionId,
-      runId: entry.traceRunId ?? undefined,
-      durationMs: entry.traceRunStartedAtMs ? now - entry.traceRunStartedAtMs : undefined,
-      metadata: { title: entry.title },
-    });
+    telemetryEvent(
+      {
+        source: 'agent',
+        category: 'conversation_latency',
+        name: 'first_assistant_message',
+        sessionId: entry.sessionId,
+        runId: entry.traceRunId ?? undefined,
+        durationMs: entry.traceRunStartedAtMs ? now - entry.traceRunStartedAtMs : undefined,
+        metadata: { title: entry.title },
+      },
+      layout,
+    );
   }
 
   if (event.type === 'queue_update') {
@@ -694,6 +723,7 @@ export function handleLiveSessionEvent<TEntry extends LiveSessionEventHost>(
         sessionId: entry.sessionId,
         reason: event.reason,
         tokensBefore: event.result.tokensBefore ?? 0,
+        layout,
       });
 
       if (compactionReason && !event.aborted && event.result) {
