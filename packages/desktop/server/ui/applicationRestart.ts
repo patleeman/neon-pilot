@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import { getStateRoot } from '@neon-pilot/core';
 
 const RESTART_LOCK_MAX_AGE_MS = 30 * 60 * 1000;
@@ -28,11 +29,17 @@ export interface ApplicationCommandRequestResult {
 
 export type ApplicationRestartRequestResult = ApplicationCommandRequestResult;
 
-function resolveApplicationCommandLockFile(): string {
+function resolveApplicationCommandLockFile(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return join(layout.systemState, 'app-restart.lock.json');
+  }
   return join(getStateRoot(), 'web', 'app-restart.lock.json');
 }
 
-function resolveApplicationCommandLogFile(): string {
+function resolveApplicationCommandLogFile(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return join(layout.logsDesktop, 'application-command.log');
+  }
   return join(getStateRoot(), 'desktop', 'logs', 'application-command.log');
 }
 
@@ -89,9 +96,12 @@ function buildRequestMessage(action: ApplicationCommand): string {
   return 'Application restart requested. Rebuilding packages and restarting background services.';
 }
 
-function buildNotificationEnv(input: { action: ApplicationCommand; profile?: string; requestedAt: string }): Record<string, string> {
+function buildNotificationEnv(
+  input: { action: ApplicationCommand; profile?: string; requestedAt: string },
+  layout?: DesktopRootLayout,
+): Record<string, string> {
   const shared = {
-    NEON_PILOT_OPERATIONAL_ACTIVITY_STATE_ROOT: join(getStateRoot(), 'daemon'),
+    NEON_PILOT_OPERATIONAL_ACTIVITY_STATE_ROOT: layout ? layout.systemDaemon : join(getStateRoot(), 'daemon'),
   };
 
   if (input.action === 'update') {
@@ -155,6 +165,7 @@ function requestApplicationCommand(input: {
   repoRoot: string;
   profile?: string;
   action: ApplicationCommand;
+  layout?: DesktopRootLayout;
 }): ApplicationCommandRequestResult {
   const repoRoot = resolve(input.repoRoot);
   const profile = input.profile?.trim() ?? '';
@@ -167,11 +178,11 @@ function requestApplicationCommand(input: {
     throw new Error(`CLI entrypoint is not built: ${cliEntryFile}`);
   }
 
-  const lockFile = resolveApplicationCommandLockFile();
+  const lockFile = resolveApplicationCommandLockFile(input.layout);
   mkdirSync(dirname(lockFile), { recursive: true });
   ensureApplicationCommandNotRunning(lockFile);
 
-  const logFile = resolveApplicationCommandLogFile();
+  const logFile = resolveApplicationCommandLogFile(input.layout);
   mkdirSync(dirname(logFile), { recursive: true });
 
   const requestedAt = new Date().toISOString();
@@ -207,11 +218,14 @@ function requestApplicationCommand(input: {
       env: {
         ...process.env,
         NEON_PILOT_REPO_ROOT: repoRoot,
-        ...buildNotificationEnv({
-          action: input.action,
-          profile,
-          requestedAt,
-        }),
+        ...buildNotificationEnv(
+          {
+            action: input.action,
+            profile,
+            requestedAt,
+          },
+          input.layout,
+        ),
       },
     });
 
@@ -255,7 +269,11 @@ function requestApplicationCommand(input: {
   };
 }
 
-export function requestApplicationRestart(input: { repoRoot: string; profile: string }): ApplicationCommandRequestResult {
+export function requestApplicationRestart(input: {
+  repoRoot: string;
+  profile: string;
+  layout?: DesktopRootLayout;
+}): ApplicationCommandRequestResult {
   return requestApplicationCommand({
     ...input,
     action: 'restart',
