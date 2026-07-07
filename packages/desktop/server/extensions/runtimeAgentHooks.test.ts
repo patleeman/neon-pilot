@@ -53,6 +53,14 @@ vi.mock('@neon-pilot/core', async (importOriginal) => {
   };
 });
 
+const { writePersonaInboxMessageMock } = vi.hoisted(() => ({
+  writePersonaInboxMessageMock: vi.fn(),
+}));
+
+vi.mock('../inbox/personaInboxWriter.js', () => ({
+  writePersonaInboxMessage: writePersonaInboxMessageMock,
+}));
+
 vi.mock('../prompt-assembly/promptAssembly.js', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../prompt-assembly/promptAssembly.js')>();
   return {
@@ -141,12 +149,13 @@ describe('createPersonaMemoryAgentExtension', () => {
     return tool;
   }
 
-  it('registers all persona memory tools', () => {
+  it('registers all persona memory and inbox tools', () => {
     expect([...registeredTools.keys()].sort()).toEqual([
       'persona_append_to_memory',
       'persona_forget',
       'persona_list_memories',
       'persona_remember',
+      'persona_send_to_inbox',
     ]);
   });
 
@@ -226,6 +235,86 @@ describe('createPersonaMemoryAgentExtension', () => {
     expect(result.isError).not.toBe(true);
     expect(result.content[0]?.text).toContain('alpha');
     expect(result.content[0]?.text).toContain('bravo');
+  });
+
+  it('persona_send_to_inbox calls writePersonaInboxMessage with subject/body/kind', async () => {
+    writePersonaInboxMessageMock.mockReturnValueOnce({
+      messageId: 'msg_test_abc123',
+      subject: 'Test subject',
+      kind: 'note',
+    });
+
+    const result = await getTool('persona_send_to_inbox').execute('call-1', {
+      subject: 'Test subject',
+      body: 'Test body content.',
+      kind: 'note',
+    });
+
+    expect(writePersonaInboxMessageMock).toHaveBeenCalledWith({
+      subject: 'Test subject',
+      body: 'Test body content.',
+      kind: 'note',
+      refId: undefined,
+    });
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('Test subject');
+    expect(result.content[0]?.text).toContain('msg_test_abc123');
+  });
+
+  it('persona_send_to_inbox forwards refId', async () => {
+    writePersonaInboxMessageMock.mockReturnValueOnce({
+      messageId: 'msg_ref_xyz789',
+      subject: 'Ref subject',
+      kind: 'result',
+    });
+
+    const result = await getTool('persona_send_to_inbox').execute('call-1', {
+      subject: 'Ref subject',
+      body: 'Some body',
+      kind: 'result',
+      refId: 'child-conv-42',
+    });
+
+    expect(writePersonaInboxMessageMock).toHaveBeenCalledWith({
+      subject: 'Ref subject',
+      body: 'Some body',
+      kind: 'result',
+      refId: 'child-conv-42',
+    });
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('msg_ref_xyz789');
+  });
+
+  it('persona_send_to_inbox returns tool error when validation fails', async () => {
+    writePersonaInboxMessageMock.mockImplementationOnce(() => {
+      const err = new Error('Subject is required and must not be empty.');
+      err.name = 'PersonaInboxValidationError';
+      throw err;
+    });
+
+    const result = await getTool('persona_send_to_inbox').execute('call-1', {
+      subject: '',
+      body: 'body',
+      kind: 'note',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('Subject is required');
+  });
+
+  it('persona_send_to_inbox returns tool error for generic errors', async () => {
+    writePersonaInboxMessageMock.mockImplementationOnce(() => {
+      throw new Error('Something unexpected happened.');
+    });
+
+    const result = await getTool('persona_send_to_inbox').execute('call-1', {
+      subject: 'subject',
+      body: 'body',
+      kind: 'alert',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('Something unexpected happened');
   });
 
   it('returns tool errors for invalid ids and reserved soul doc', async () => {

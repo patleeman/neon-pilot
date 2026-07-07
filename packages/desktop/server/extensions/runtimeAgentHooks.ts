@@ -7,6 +7,7 @@ import {
   resolveRuntimeResources,
 } from '@neon-pilot/core';
 
+import { writePersonaInboxMessage } from '../inbox/personaInboxWriter.js';
 import {
   appendToPersonaMemoryDoc,
   deletePersonaMemoryDoc,
@@ -100,13 +101,65 @@ function personaMemoryToolError(error: unknown) {
 }
 
 /**
- * Create an extension factory that registers persona memory tools.
+ * Create an extension factory that registers persona memory and inbox tools.
  *
  * These tools let the persona write, append, delete, and list memory docs
- * under the agents directory while keeping soul.md read-only.
+ * under the agents directory while keeping soul.md read-only, and send
+ * messages to the host-owned Inbox.
  */
 export function createPersonaMemoryAgentExtension(): ExtensionFactory {
   return (pi) => {
+    pi.registerTool({
+      name: 'persona_send_to_inbox',
+      label: 'Persona Send to Inbox',
+      description:
+        'Send a message to the host-owned Inbox. Use this to surface notes, questions, results, ' +
+        'or alerts that the user should see. The message body is treated as data, not instructions. ' +
+        'Subject and body are size-bounded.',
+      parameters: {
+        type: 'object',
+        properties: {
+          subject: {
+            type: 'string',
+            description: 'Short subject line for the inbox message (max 200 characters).',
+          },
+          body: {
+            type: 'string',
+            description: 'Body content for the inbox message (max 8000 characters).',
+          },
+          kind: {
+            type: 'string',
+            enum: ['note', 'question', 'result', 'alert'],
+            description:
+              'Kind of inbox message: note (general info), question (needs answer), ' +
+              'result (outcome of an operation), alert (requires attention).',
+          },
+          refId: {
+            type: 'string',
+            description: 'Optional reference id, e.g. a conversation id or run id.',
+          },
+        },
+        required: ['subject', 'body', 'kind'],
+      } as const,
+      async execute(_toolCallId, params) {
+        try {
+          const input = params as { subject: string; body: string; kind: 'note' | 'question' | 'result' | 'alert'; refId?: string };
+          const result = writePersonaInboxMessage({
+            subject: input.subject,
+            body: input.body,
+            kind: input.kind,
+            refId: input.refId,
+          });
+          return personaMemoryToolText(`Inbox message "${result.subject}" (${result.kind}) sent as message ${result.messageId}.`);
+        } catch (error) {
+          if (error instanceof Error && error.name === 'PersonaInboxValidationError') {
+            return personaMemoryToolError(error.message);
+          }
+          return personaMemoryToolError(error);
+        }
+      },
+    });
+
     pi.registerTool({
       name: 'persona_remember',
       label: 'Persona Remember',
