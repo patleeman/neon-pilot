@@ -13,9 +13,8 @@ import { join } from 'node:path';
 
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// DEFAULT_SESSIONS_DIR in sessions.ts is a module-level const computed
-// from getDurableSessionsDir(). We pre-create a temp legacy dir here so
-// the constant captures it and tests can write legacy sessions into it.
+// sessions.ts resolves the default durable sessions dir from getDurableSessionsDir().
+// We pre-create a temp legacy dir here so tests can write legacy sessions into it.
 
 const core = vi.hoisted(() => {
   const { mkdtempSync } = require('node:fs');

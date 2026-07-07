@@ -152,10 +152,9 @@ import {
   readLegacyToolWorkspaceMetadata as readLegacyToolWorkspaceMetadataFromMessage,
 } from './sessionWorkspaceMetadata.js';
 
-const DEFAULT_SESSIONS_DIR = getDurableSessionsDir();
-export const SESSIONS_DIR = DEFAULT_SESSIONS_DIR;
-const DEFAULT_SESSIONS_INDEX_FILE = join(getPiAgentRuntimeDir(), 'session-meta-index.json');
-export const SESSIONS_INDEX_FILE = DEFAULT_SESSIONS_INDEX_FILE;
+export function resolveDefaultSessionsDir(): string {
+  return getDurableSessionsDir();
+}
 
 // ── Raw JSONL types ────────────────────────────────────────────────────────────
 
@@ -526,7 +525,7 @@ function resolveSessionsIndexFile(sessionsDirOverride?: string): string {
 }
 
 function shouldScanLegacySessionsDir(sessionsDir: string): boolean {
-  if (process.env.PA_SESSIONS_DIR || sessionsDir === DEFAULT_SESSIONS_DIR) {
+  if (process.env.PA_SESSIONS_DIR || sessionsDir === resolveDefaultSessionsDir()) {
     return false;
   }
 
@@ -542,7 +541,7 @@ function resolveSessionScanDirs(sessionsDir: string): string[] {
     return [sessionsDir];
   }
 
-  return [sessionsDir, DEFAULT_SESSIONS_DIR];
+  return [sessionsDir, resolveDefaultSessionsDir()];
 }
 
 function parseJsonLine(rawLine: string): RawLine | null {
