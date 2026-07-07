@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import { getExtensionCompatibilityError, resolveInstalledAppVersion } from './extensionCompatibility.js';
 import { isForkExcludedExtensionId } from './extensionForkExclusions.js';
@@ -178,7 +178,10 @@ function mergeLocalPackagedFirstPartySeeds(seeds: CatalogSeed[]): CatalogSeed[] 
   return [...byId.values()];
 }
 
-export async function listInstallableExtensionCatalog(stateRoot: string = getStateRoot()): Promise<{
+export async function listInstallableExtensionCatalog(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): Promise<{
   ok: true;
   version: string;
   tag: string;
@@ -189,9 +192,9 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
 }> {
   const version = resolveInstalledAppVersion();
   const tag = `v${version}`;
-  const summaries = listExtensionInstallSummaries(stateRoot);
+  const summaries = listExtensionInstallSummaries(stateRoot, layout);
   const installedById = new Map(summaries.map((summary) => [summary.id, summary]));
-  const configured = readConfiguredExtensionCatalogSources(stateRoot);
+  const configured = readConfiguredExtensionCatalogSources(stateRoot, layout);
   const enabledConfigured = configured.filter((source) => source.enabled);
   const sourceErrors: Array<{ sourceId: string; message: string }> = [];
   let usingBakedFirstPartyFallback = false;
@@ -223,7 +226,7 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
     .filter((item) => {
       const installed = installedById.get(item.id);
       if (installed?.packageType === 'system') return false;
-      const registryEntry = findExtensionEntry(item.id, stateRoot);
+      const registryEntry = findExtensionEntry(item.id, stateRoot, layout);
       return registryEntry?.manifest.packageType !== 'system';
     })
     .map((item) => {
@@ -291,8 +294,12 @@ export async function listInstallableExtensionCatalog(stateRoot: string = getSta
   };
 }
 
-export function readConfiguredExtensionCatalogSources(stateRoot: string = getStateRoot()): ExtensionCatalogSource[] {
-  const configured = normalizeExtensionCatalogSources(readJson(join(stateRoot, 'settings.json'))?.[EXTENSION_SOURCES_SETTING]).filter(
+export function readConfiguredExtensionCatalogSources(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionCatalogSource[] {
+  const settingsPath = layout ? join(layout.systemConfig, 'settings.json') : join(stateRoot, 'settings.json');
+  const configured = normalizeExtensionCatalogSources(readJson(settingsPath)?.[EXTENSION_SOURCES_SETTING]).filter(
     (source) => !isFirstPartyRepo(source),
   );
   return mergeExtensionCatalogSources([defaultExtensionCatalogSource(), ...configured]);
@@ -510,17 +517,21 @@ function assertBundleExpectedId(zipPath: string, expectedId: string | undefined,
   }
 }
 
-function importAndDisableExtensionBundle(zipPath: string, stateRoot?: string) {
-  const result = importRuntimeExtensionBundle({ zipPath }, stateRoot);
+function importAndDisableExtensionBundle(zipPath: string, stateRoot?: string, layout?: DesktopRootLayout) {
+  const result = importRuntimeExtensionBundle({ zipPath }, stateRoot, layout);
   if (result.extension?.id) {
-    setExtensionEnabled(result.extension.id, false, stateRoot);
-    const disabled = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
+    setExtensionEnabled(result.extension.id, false, stateRoot, layout);
+    const disabled = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === result.extension?.id);
     return { ...result, extension: disabled ?? result.extension };
   }
   return result;
 }
 
-export async function installExtensionBundleFromUrl(input: { url?: unknown; expectedId?: unknown }, stateRoot?: string) {
+export async function installExtensionBundleFromUrl(
+  input: { url?: unknown; expectedId?: unknown },
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
+) {
   const rawUrl = typeof input.url === 'string' ? input.url.trim() : '';
   if (!rawUrl) throw new Error('url is required.');
   const expectedId = typeof input.expectedId === 'string' && input.expectedId.trim() ? input.expectedId.trim() : undefined;
@@ -530,13 +541,17 @@ export async function installExtensionBundleFromUrl(input: { url?: unknown; expe
   try {
     await downloadBundle(url, zipPath);
     assertBundleExpectedId(zipPath, expectedId, 'Downloaded extension');
-    return importAndDisableExtensionBundle(zipPath, stateRoot);
+    return importAndDisableExtensionBundle(zipPath, stateRoot, layout);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
 }
 
-export function installExtensionBundleFromPath(input: { path?: unknown; expectedId?: unknown }, stateRoot?: string) {
+export function installExtensionBundleFromPath(
+  input: { path?: unknown; expectedId?: unknown },
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
+) {
   const rawPath = typeof input.path === 'string' ? input.path.trim() : '';
   if (!rawPath) throw new Error('path is required.');
   const expectedId = typeof input.expectedId === 'string' && input.expectedId.trim() ? input.expectedId.trim() : undefined;
@@ -544,28 +559,28 @@ export function installExtensionBundleFromPath(input: { path?: unknown; expected
   if (!existsSync(zipPath)) throw new Error(`Extension bundle not found: ${zipPath}`);
   if (!zipPath.endsWith('.neon-extension.zip')) throw new Error('Extension bundle path must end with .neon-extension.zip.');
   assertBundleExpectedId(zipPath, expectedId);
-  return importAndDisableExtensionBundle(zipPath, stateRoot);
+  return importAndDisableExtensionBundle(zipPath, stateRoot, layout);
 }
 
-export async function installCatalogExtension(input: { id?: unknown }, stateRoot?: string) {
+export async function installCatalogExtension(input: { id?: unknown }, stateRoot?: string, layout?: DesktopRootLayout) {
   const id = typeof input.id === 'string' ? input.id.trim() : '';
   if (!id) throw new Error('id is required.');
-  const item = (await listInstallableExtensionCatalog(stateRoot)).extensions.find((candidate) => candidate.id === id);
+  const item = (await listInstallableExtensionCatalog(stateRoot, layout)).extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
-  if (findExtensionEntry(id, stateRoot)) throw new Error(`Extension ${id} is already installed.`);
+  if (findExtensionEntry(id, stateRoot, layout)) throw new Error(`Extension ${id} is already installed.`);
   const localBundlePath = localFallbackBundlePathFor(item);
-  if (localBundlePath) return installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot);
+  if (localBundlePath) return installExtensionBundleFromPath({ path: localBundlePath, expectedId: id }, stateRoot, layout);
   if (item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
-  return installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot);
+  return installExtensionBundleFromUrl({ url: item.bundleUrl, expectedId: id }, stateRoot, layout);
 }
 
-export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?: string) {
+export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?: string, layout?: DesktopRootLayout) {
   const id = typeof input.id === 'string' ? input.id.trim() : '';
   if (!id) throw new Error('id is required.');
-  const installed = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === id);
+  const installed = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === id);
   if (installed?.packageType === 'system') throw new Error('Packaged system extensions cannot be updated from the catalog.');
-  const catalog = await listInstallableExtensionCatalog(stateRoot);
+  const catalog = await listInstallableExtensionCatalog(stateRoot, layout);
   const item = catalog.extensions.find((candidate) => candidate.id === id);
   if (!item) throw new Error(`Unknown installable extension: ${id}`);
   if (item.packageType !== 'extension' || !item.bundleUrl) throw new Error(`Marketplace package ${id} is not an extension bundle.`);
@@ -575,11 +590,11 @@ export async function updateCatalogExtension(input: { id?: unknown }, stateRoot?
   if (!localBundlePath && item.unavailableReason) throw new Error(`Extension ${id} is not installable: ${item.unavailableReason}`);
 
   const finalizeUpdate = async (zipPath: string) => {
-    await deleteRuntimeExtension(id, stateRoot);
-    const result = importAndDisableExtensionBundle(zipPath, stateRoot);
+    await deleteRuntimeExtension(id, stateRoot, layout);
+    const result = importAndDisableExtensionBundle(zipPath, stateRoot, layout);
     if (result.extension?.id) {
-      setExtensionEnabled(result.extension.id, wasEnabled, stateRoot);
-      const updated = listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === result.extension?.id);
+      setExtensionEnabled(result.extension.id, wasEnabled, stateRoot, layout);
+      const updated = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === result.extension?.id);
       return { ...result, updated: true as const, extension: updated ?? result.extension };
     }
     return { ...result, updated: true as const };

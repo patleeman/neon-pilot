@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const summaries = vi.fn(() => []);
@@ -170,7 +171,7 @@ describe('extension catalog', () => {
       extension: { id: 'system-suggested-context', enabled: false },
     });
 
-    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined, undefined);
     rmSync(repoRoot, { recursive: true, force: true });
   });
 
@@ -295,7 +296,7 @@ describe('extension catalog', () => {
     const { installCatalogExtension } = await import('./extensionCatalog.js');
     const result = await installCatalogExtension({ id: 'system-suggested-context' });
 
-    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith({ zipPath: bundlePath }, undefined, undefined);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(result.extension).toMatchObject({ id: 'system-suggested-context', enabled: false });
     rmSync(repoRoot, { recursive: true, force: true });
@@ -422,7 +423,7 @@ describe('extension catalog', () => {
       expectedId: 'system-browser',
     });
 
-    expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', false, undefined);
+    expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', false, undefined, undefined);
     expect(result.extension).toMatchObject({ id: 'system-browser', enabled: false });
   });
 
@@ -585,7 +586,7 @@ describe('extension catalog', () => {
       ok: true,
       updated: true,
     });
-    expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-writing-studio', undefined);
+    expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-writing-studio', undefined, undefined);
     expect(importRuntimeExtensionBundle).toHaveBeenCalled();
   });
 
@@ -629,11 +630,133 @@ describe('extension catalog', () => {
     const { updateCatalogExtension } = await import('./extensionCatalog.js');
     const result = await updateCatalogExtension({ id: 'system-browser' });
 
-    expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-browser', undefined);
-    expect(importRuntimeExtensionBundle).not.toHaveBeenCalledWith({ zipPath: bundlePath }, undefined);
+    expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-browser', undefined, undefined);
+    expect(importRuntimeExtensionBundle).not.toHaveBeenCalledWith({ zipPath: bundlePath }, undefined, undefined);
     expect(fetch).toHaveBeenCalledTimes(2);
-    expect(setExtensionEnabled).toHaveBeenLastCalledWith('system-browser', true, undefined);
+    expect(setExtensionEnabled).toHaveBeenLastCalledWith('system-browser', true, undefined, undefined);
     expect(result).toMatchObject({ ok: true, updated: true, extension: { id: 'system-browser', enabled: true, version: '0.1.0' } });
     rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  it('reads catalog sources from layout.systemConfig/settings.json when a layout is provided', async () => {
+    const layoutRoot = mkdtempSync(join(tmpdir(), 'np-layout-sources-'));
+    const layout = resolveDesktopRootLayout({ root: layoutRoot });
+    mkdirSync(layout.systemConfig, { recursive: true });
+    writeFileSync(
+      join(layout.systemConfig, 'settings.json'),
+      JSON.stringify({
+        'extensions.sources': [{ id: 'layout-source', owner: 'layout-owner', repo: 'layout-extensions', enabled: true }],
+      }),
+    );
+
+    const { readConfiguredExtensionCatalogSources } = await import('./extensionCatalog.js');
+    const sources = readConfiguredExtensionCatalogSources(undefined, layout);
+
+    expect(sources).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'layout-source', owner: 'layout-owner', repo: 'layout-extensions' })]),
+    );
+    rmSync(layoutRoot, { recursive: true, force: true });
+  });
+
+  it('falls back to stateRoot/settings.json when layout is not provided for source reads', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'np-legacy-sources-'));
+    writeFileSync(
+      join(stateRoot, 'settings.json'),
+      JSON.stringify({
+        'extensions.sources': [{ id: 'legacy-source', owner: 'legacy', repo: 'extensions', enabled: true }],
+      }),
+    );
+
+    const { readConfiguredExtensionCatalogSources } = await import('./extensionCatalog.js');
+    const sources = readConfiguredExtensionCatalogSources(stateRoot);
+
+    expect(sources).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'legacy-source', owner: 'legacy', repo: 'extensions' })]),
+    );
+    rmSync(stateRoot, { recursive: true, force: true });
+  });
+
+  it('threads layout to registry calls during installExtensionBundleFromUrl', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        headers: new Headers({ 'content-length': '4' }),
+        arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
+      })),
+    );
+    importRuntimeExtensionBundle.mockReturnValue({
+      ok: true,
+      extension: { id: 'system-browser', enabled: true },
+      packageRoot: '/tmp/ext',
+    });
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: false, version: '1.0.0' }]);
+
+    const layoutRoot = mkdtempSync(join(tmpdir(), 'np-threading-'));
+    const layout = resolveDesktopRootLayout({ root: layoutRoot });
+
+    const { installExtensionBundleFromUrl } = await import('./extensionCatalog.js');
+
+    await installExtensionBundleFromUrl(
+      {
+        url: 'https://github.com/patleeman/neon-pilot-extensions/releases/download/v1.0.0/system-browser.neon-extension.zip',
+        expectedId: 'system-browser',
+      },
+      undefined,
+      layout,
+    );
+
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith(
+      { zipPath: expect.stringContaining('system-browser.neon-extension.zip') },
+      undefined,
+      layout,
+    );
+    expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', false, undefined, layout);
+    expect(summaries).toHaveBeenCalledWith(undefined, layout);
+    rmSync(layoutRoot, { recursive: true, force: true });
+  });
+
+  it('threads layout to registry calls during updateCatalogExtension', async () => {
+    summaries.mockReturnValue([{ id: 'system-browser', name: 'Browser', enabled: true, version: '0.0.1', packageType: 'user' }]);
+    deleteRuntimeExtension.mockResolvedValue({ ok: true, extensionId: 'system-browser', deleted: true });
+    importRuntimeExtensionBundle.mockReturnValue({
+      ok: true,
+      extension: { id: 'system-browser', enabled: false },
+      packageRoot: '/tmp/ext',
+    });
+    inspectRuntimeExtensionBundle.mockReturnValue({ id: 'system-browser', name: 'Browser' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string | URL) =>
+        String(url).endsWith('/neon-extension-catalog.json')
+          ? {
+              ok: true,
+              json: async () => ({
+                packages: [{ id: 'system-browser', tag: 'v0.10.2', artifact: 'system-browser.neon-extension.zip' }],
+              }),
+            }
+          : {
+              ok: true,
+              headers: new Headers({ 'content-length': '4' }),
+              arrayBuffer: async () => new Uint8Array([1, 2, 3, 4]).buffer,
+            },
+      ),
+    );
+
+    const layoutRoot = mkdtempSync(join(tmpdir(), 'np-update-threading-'));
+    const layout = resolveDesktopRootLayout({ root: layoutRoot });
+
+    const { updateCatalogExtension } = await import('./extensionCatalog.js');
+
+    await updateCatalogExtension({ id: 'system-browser' }, undefined, layout);
+
+    expect(deleteRuntimeExtension).toHaveBeenCalledWith('system-browser', undefined, layout);
+    expect(importRuntimeExtensionBundle).toHaveBeenCalledWith(
+      { zipPath: expect.stringContaining('system-browser.neon-extension.zip') },
+      undefined,
+      layout,
+    );
+    expect(setExtensionEnabled).toHaveBeenCalledWith('system-browser', true, undefined, layout);
+    rmSync(layoutRoot, { recursive: true, force: true });
   });
 });
