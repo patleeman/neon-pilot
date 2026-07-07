@@ -1696,8 +1696,11 @@ export function listExtensionPromptContextProviderRegistrations(
   );
 }
 
-export function listExtensionRuntimeProviderRegistrations(stateRoot: string = getStateRoot()): ExtensionRuntimeProviderRegistration[] {
-  return listEnabledExtensionEntries(stateRoot).flatMap(buildExtensionRuntimeProviderRegistrations);
+export function listExtensionRuntimeProviderRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionRuntimeProviderRegistration[] {
+  return listEnabledExtensionEntries(stateRoot, layout).flatMap(buildExtensionRuntimeProviderRegistrations);
 }
 
 export function listExtensionAssemblyProviderRegistrations(

@@ -259,8 +259,9 @@ async function listExtensionRuntimes(
   agentToolContext?: unknown,
 ): Promise<ExtensionRuntimeSummary[]> {
   const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
   const runtimes: ExtensionRuntimeSummary[] = [];
-  for (const provider of listExtensionRuntimeProviderRegistrations(stateRoot)) {
+  for (const provider of listExtensionRuntimeProviderRegistrations(stateRoot, layout)) {
     const result = await invokeExtensionAction(provider.extensionId, provider.handler, {}, serverContext, toolContext, agentToolContext);
     if (!result.ok) {
       runtimes.push({
