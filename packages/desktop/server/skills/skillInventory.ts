@@ -1,14 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
-import { type DesktopRootLayout, getDurableSkillsDir, getStateRoot, resolveRuntimeResources } from '@neon-pilot/core';
+import { type DesktopRootLayout, getDurableSkillsDir, getSkillsRegistryFilePath, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listExtensionSkillRegistrations } from '../extensions/extensionRegistry.js';
 import { invokePromptAssemblyProvider, isRecord, type PromptAssemblyProviderRef } from '../prompt-assembly/providerRuntime.js';
 import { getAssemblyRuntimeScope } from '../prompt-assembly/runtimeScope.js';
-
-const REGISTRY_FILE = 'skills-registry.json';
 
 export type SkillSourceKind = 'extension' | 'knowledge' | 'configured-folder';
 
@@ -73,8 +71,8 @@ export function registerSkillRuntimeHook(hook: SkillRuntimeHook): () => void {
   };
 }
 
-export function readDisabledSkillIds(): Set<string> {
-  const registryPath = skillsRegistryPath();
+export function readDisabledSkillIds(layout?: DesktopRootLayout): Set<string> {
+  const registryPath = skillsRegistryPath(layout);
   if (!existsSync(registryPath)) return new Set();
   try {
     const parsed = JSON.parse(readFileSync(registryPath, 'utf-8')) as unknown;
@@ -87,11 +85,11 @@ export function readDisabledSkillIds(): Set<string> {
   }
 }
 
-export function setSkillEnabled(id: string, enabled: boolean): void {
-  const disabled = readDisabledSkillIds();
+export function setSkillEnabled(id: string, enabled: boolean, layout?: DesktopRootLayout): void {
+  const disabled = readDisabledSkillIds(layout);
   if (enabled) disabled.delete(id);
   else disabled.add(id);
-  writeSkillsRegistry(disabled);
+  writeSkillsRegistry(disabled, layout);
 }
 
 export function listSkillDefinitions(ctx: SkillRuntimeContext): SkillDefinition[] {
@@ -147,7 +145,7 @@ function isSkillDefinitionLike(value: unknown): value is SkillDefinition {
 }
 
 export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {
-  const disabled = readDisabledSkillIds();
+  const disabled = readDisabledSkillIds(ctx.desktopRootLayout);
   let skills = listSkillDefinitions(ctx).map((skill, index): RuntimeSkill => {
     const diagnostics = validateSkill(skill);
     return {
@@ -164,7 +162,7 @@ export function buildSkillInventory(ctx: SkillRuntimeContext): RuntimeSkill[] {
 }
 
 export async function buildSkillInventoryAsync(ctx: SkillRuntimeContext): Promise<RuntimeSkill[]> {
-  const disabled = readDisabledSkillIds();
+  const disabled = readDisabledSkillIds(ctx.desktopRootLayout);
   const { definitions } = await listSkillDefinitionsWithDiagnosticsAsync(ctx);
   let skills = definitions.map((skill, index): RuntimeSkill => {
     const diagnostics = validateSkill(skill);
@@ -187,7 +185,7 @@ export function buildSkillInjectionPlan(ctx: SkillRuntimeContext): RuntimeSkillI
 
 export async function buildSkillInjectionPlanAsync(ctx: SkillRuntimeContext): Promise<RuntimeSkillInjectionPlan> {
   const { definitions, diagnostics } = await listSkillDefinitionsWithDiagnosticsAsync(ctx);
-  const disabled = readDisabledSkillIds();
+  const disabled = readDisabledSkillIds(ctx.desktopRootLayout);
   let skills = definitions.map((skill, index): RuntimeSkill => {
     const diagnostics = validateSkill(skill);
     return {
@@ -222,8 +220,8 @@ function buildSkillInjectionPlanFromRuntimeSkills(skills: RuntimeSkill[], ctx: S
   return plan;
 }
 
-export function buildFilteredSkillPaths(skillDirs: string[], extensionSkillDirs: string[]): string[] {
-  const disabled = readDisabledSkillIds();
+export function buildFilteredSkillPaths(skillDirs: string[], extensionSkillDirs: string[], layout?: DesktopRootLayout): string[] {
+  const disabled = readDisabledSkillIds(layout);
   const configured = listSkillDefinitionsFromParents(skillDirs, 'configured-folder').filter((skill) => !disabled.has(skill.id));
   const extension = extensionSkillDirs
     .map((dir) => ({ id: basename(dir), dir }))
@@ -373,12 +371,12 @@ function readSkillMetadata(filePath: string): { name: string; description: strin
   }
 }
 
-function skillsRegistryPath(): string {
-  return join(getStateRoot(), REGISTRY_FILE);
+function skillsRegistryPath(layout?: DesktopRootLayout): string {
+  return getSkillsRegistryFilePath(layout);
 }
 
-function writeSkillsRegistry(disabledSkillIds: Set<string>): void {
-  const registryPath = skillsRegistryPath();
+function writeSkillsRegistry(disabledSkillIds: Set<string>, layout?: DesktopRootLayout): void {
+  const registryPath = skillsRegistryPath(layout);
   mkdirSync(dirname(registryPath), { recursive: true });
   writeFileSync(registryPath, `${JSON.stringify({ disabledSkillIds: [...disabledSkillIds].sort() }, null, 2)}\n`);
 }

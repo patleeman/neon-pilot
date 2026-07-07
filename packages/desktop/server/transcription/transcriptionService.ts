@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot, resolveDesktopRootLayout } from '@neon-pilot/core';
 import type {
   TranscriptionAudioInput,
   TranscriptionInstallInput,
@@ -31,14 +31,20 @@ function readRequiredBase64(value: unknown, label: string): Buffer {
   return decoded;
 }
 
-function resolveTranscriptionModelRoot(): string {
+function resolveTranscriptionModelRoot(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return join(layout.systemState, 'transcription-models');
+  }
   return join(getStateRoot(), 'transcription-models');
 }
 
-function createLocalProvider(model: string | undefined): LocalWhisperTranscriptionProvider {
+function createLocalProvider(
+  model: string | undefined,
+  layout: DesktopRootLayout = resolveDesktopRootLayout(),
+): LocalWhisperTranscriptionProvider {
   return new LocalWhisperTranscriptionProvider({
     model: readOptionalString(model) ?? DEFAULT_TRANSCRIPTION_MODEL,
-    modelRootPath: resolveTranscriptionModelRoot(),
+    modelRootPath: resolveTranscriptionModelRoot(layout),
     audioConverter: convertAudioWithFfmpeg,
   });
 }

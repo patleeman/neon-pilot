@@ -10,6 +10,7 @@ import {
   getRuntimeAuthFilePath,
   getRuntimeModelsFilePath,
   getRuntimeSessionsIndexFilePath,
+  getSkillsRegistryFilePath,
   resolveDesktopAppDataDir,
   resolveDesktopRootLayout,
 } from './desktop-root.js';
@@ -112,6 +113,16 @@ describe('desktop root layout', () => {
   it('falls back to legacy pi-agent runtime dir for auth when no layout is provided', () => {
     const result = getRuntimeAuthFilePath();
     expect(result).toMatch(/neon-pilot-runtime\/auth\.json$/);
+  });
+
+  it('resolves skillsRegistryFilePath from desktop root layout', () => {
+    const layout = resolveDesktopRootLayout({ root: '/desktop' });
+    expect(getSkillsRegistryFilePath(layout)).toBe('/desktop/system/state/skills-registry.json');
+  });
+
+  it('falls back to legacy state root for skills registry when no layout is provided', () => {
+    const result = getSkillsRegistryFilePath();
+    expect(result).toMatch(/skills-registry\.json$/);
   });
 
   it('normalizes app data directories from app ids', () => {

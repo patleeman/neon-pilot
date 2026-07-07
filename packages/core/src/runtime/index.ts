@@ -15,6 +15,7 @@ export {
   getRuntimeAuthFilePath,
   getRuntimeModelsFilePath,
   getRuntimeSessionsIndexFilePath,
+  getSkillsRegistryFilePath,
   resolveDesktopAppDataDir,
   resolveDesktopRootLayout,
 } from './desktop-root.js';

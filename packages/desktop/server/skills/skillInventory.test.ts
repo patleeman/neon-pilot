@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import type { DesktopRootLayout } from '@neon-pilot/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@neon-pilot/core', async () => {
@@ -147,5 +148,30 @@ describe('buildSkillInventory', () => {
     expect(plan.skillPaths).toEqual(
       expect.arrayContaining([join(extensionRoot, 'skills', 'alpha'), join(extensionRoot, 'skills', 'beta')]),
     );
+  });
+
+  it('uses the desktop root layout skills registry when filtering enabled skills', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-skill-inventory-layout-'));
+    stateRoot = join(root, 'state');
+    durableSkillsDir = join(root, 'knowledge', 'skills');
+    extensionRoot = join(root, 'extension');
+    const layout = {
+      root: join(root, 'desktop-root'),
+      systemState: join(root, 'desktop-root', 'system', 'state'),
+    } as unknown as DesktopRootLayout;
+    mkdirSync(join(extensionRoot, 'skills', 'alpha'), { recursive: true });
+    mkdirSync(join(extensionRoot, 'skills', 'beta'), { recursive: true });
+    mkdirSync(layout.systemState, { recursive: true });
+    writeFileSync(join(extensionRoot, 'skills', 'alpha', 'SKILL.md'), '---\nname: Alpha\ndescription: Alpha skill\n---\n');
+    writeFileSync(join(extensionRoot, 'skills', 'beta', 'SKILL.md'), '---\nname: Beta\ndescription: Beta skill\n---\n');
+    writeFileSync(join(layout.systemState, 'skills-registry.json'), JSON.stringify({ disabledSkillIds: ['alpha'] }));
+
+    const { buildSkillInventory } = await import('./skillInventory.js');
+
+    expect(
+      buildSkillInventory({ runtimeScope: 'test', repoRoot: root, desktopRootLayout: layout })
+        .filter((skill) => !skill.enabled)
+        .map((skill) => skill.id),
+    ).toEqual(['alpha']);
   });
 });

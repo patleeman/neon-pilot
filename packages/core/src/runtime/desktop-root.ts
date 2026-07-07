@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { type MachineConfigOptions, readMachineConfig } from '../machine-config.js';
-import { getPiAgentRuntimeDir } from './paths.js';
+import { getPiAgentRuntimeDir, getStateRoot } from './paths.js';
 
 export interface DesktopRootLayout {
   root: string;
@@ -153,6 +153,22 @@ export function getRuntimeAuthFilePath(layout?: DesktopRootLayout): string {
     return join(layout.systemRuntime, 'auth.json');
   }
   return join(getPiAgentRuntimeDir(), 'auth.json');
+}
+
+const SKILLS_REGISTRY_FILE = 'skills-registry.json';
+
+/**
+ * Resolve the skills registry file path.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/state/skills-registry.json`. Otherwise falls back to
+ * the legacy `<state-root>/skills-registry.json`.
+ */
+export function getSkillsRegistryFilePath(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return join(layout.systemState, SKILLS_REGISTRY_FILE);
+  }
+  return join(getStateRoot(), SKILLS_REGISTRY_FILE);
 }
 
 const DEFAULT_SOUL_DOC_CONTENT = `\
