@@ -87,6 +87,9 @@ interface ExtensionBackendContextLike {
   extensionId?: string;
   toolContext?: { cwd?: string };
   agentToolContext?: unknown;
+  runtime?: {
+    getLiveSessionResourceOptions?: () => Record<string, unknown>;
+  };
   conversations?: {
     create(input?: {
       cwd?: string;
@@ -206,6 +209,12 @@ function resolveOptionalAgentToolContext(ctx: ExtensionBackendContextLike): Reco
   const raw = ctx.agentToolContext;
   const candidate = isRecord(raw) && isRecord(raw.toolContext) ? raw.toolContext : raw;
   return isRecord(candidate) ? candidate : undefined;
+}
+
+function resolveRuntimeModelsFilePath(ctx: ExtensionBackendContextLike): string | undefined {
+  const options = ctx.runtime?.getLiveSessionResourceOptions?.();
+  const modelsFilePath = options?.modelsFilePath;
+  return typeof modelsFilePath === 'string' && modelsFilePath.trim() ? modelsFilePath : undefined;
 }
 
 function modelAcceptsImages(model: unknown): boolean {
@@ -460,7 +469,9 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
   const authStorage = pi.AuthStorage.create(join(runtimeDir, 'auth.json'));
   const modelRegistry =
     (agentCtx?.modelRegistry as { getAvailable(): unknown[] } | undefined) ??
-    (pi.ModelRegistry.create(authStorage, join(runtimeDir, 'models.json')) as { getAvailable(): unknown[] });
+    (pi.ModelRegistry.create(authStorage, resolveRuntimeModelsFilePath(ctx) ?? join(runtimeDir, 'models.json')) as {
+      getAvailable(): unknown[];
+    });
   const model = input.modelRef
     ? resolveModel(modelRegistry.getAvailable(), input.modelRef)
     : (agentCtx?.model ?? modelRegistry.getAvailable()[0]);

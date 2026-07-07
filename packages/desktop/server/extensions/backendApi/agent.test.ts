@@ -118,19 +118,22 @@ function installImporter(options?: { session?: ReturnType<typeof createSession>;
   const session = options?.session ?? createSession();
   serverModuleMocks.permissions = options?.permissions ?? ['agent:run', 'agent:conversations'];
   const createAgentSession = vi.fn(async () => ({ session }));
+  const authStorageCreate = vi.fn((path: string) => ({ path }));
+  const modelRegistryCreate = vi.fn(() => ({ getAvailable: () => [{ provider: 'openai', id: 'fallback-model', input: ['text'] }] }));
+  const sessionManagerInMemory = vi.fn((cwd: string) => ({ cwd }));
   const importer = vi.fn(async (specifier: string) => {
     if (specifier === '@earendil-works/pi-coding-agent') {
       return {
         createAgentSession,
-        AuthStorage: { create: vi.fn((path: string) => ({ path })) },
-        ModelRegistry: { create: vi.fn(() => ({ getAvailable: () => [{ provider: 'openai', id: 'fallback-model', input: ['text'] }] })) },
-        SessionManager: { inMemory: vi.fn((cwd: string) => ({ cwd })) },
+        AuthStorage: { create: authStorageCreate },
+        ModelRegistry: { create: modelRegistryCreate },
+        SessionManager: { inMemory: sessionManagerInMemory },
       };
     }
     throw new Error(`unexpected import: ${specifier}`);
   });
   setExtensionAgentDynamicImportForTests(importer as never);
-  return { createAgentSession, importer, session };
+  return { authStorageCreate, createAgentSession, importer, modelRegistryCreate, session, sessionManagerInMemory };
 }
 
 function createCtx(overrides?: Record<string, unknown>) {
@@ -428,6 +431,32 @@ describe('extension agent backend API', () => {
     expect(sent.text).toBe('probe result');
     expect(createAgentSession).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/workspace', noTools: 'all' }));
     expect(session.prompt).toHaveBeenCalledWith('fallback', undefined);
+  });
+
+  it('uses layout-derived runtime models path for direct fallback sessions', async () => {
+    serverModuleMocks.disableLiveSessionCreate = true;
+    const { modelRegistryCreate } = installImporter();
+    const ctx = createCtx({
+      agentToolContext: {
+        cwd: '/agent-cwd',
+        model: { provider: 'openai', id: 'fallback-model', input: ['text'] },
+      },
+      runtime: {
+        getLiveSessionResourceOptions: () => ({
+          additionalExtensionPaths: [],
+          additionalSkillPaths: [],
+          additionalPromptTemplatePaths: [],
+          additionalThemePaths: [],
+          modelsFilePath: '/desktop/system/runtime/models.json',
+        }),
+      },
+    });
+
+    await expect(createAgentConversation({ title: 'Direct fallback', tools: 'none' }, ctx)).resolves.toMatchObject({
+      model: 'fallback-model',
+    });
+
+    expect(modelRegistryCreate).toHaveBeenCalledWith({ path: '/runtime/auth.json' }, '/desktop/system/runtime/models.json');
   });
 
   it('rejects streaming visible saved conversations because they use host live-session events', async () => {

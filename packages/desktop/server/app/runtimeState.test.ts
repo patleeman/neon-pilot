@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   getRuntimeConfigRootMock,
+  getRuntimeModelsFilePathMock,
   getStateRootMock,
   getDurableSkillsDirMock,
   getDurableSessionsDirMock,
@@ -33,6 +34,7 @@ const {
 
   return {
     getRuntimeConfigRootMock: vi.fn(() => '/profiles-root'),
+    getRuntimeModelsFilePathMock: vi.fn(() => '/desktop-root/system/runtime/models.json'),
     getStateRootMock: vi.fn(() => '/state-root'),
     getDurableSkillsDirMock: vi.fn(() => '/durable-skills'),
     getDurableSessionsDirMock: vi.fn(() => '/durable-sessions'),
@@ -58,6 +60,7 @@ const {
 
 vi.mock('@neon-pilot/core', () => ({
   getRuntimeConfigRoot: getRuntimeConfigRootMock,
+  getRuntimeModelsFilePath: getRuntimeModelsFilePathMock,
   getStateRoot: getStateRootMock,
   getDurableSkillsDir: getDurableSkillsDirMock,
   getDurableSessionsDir: getDurableSessionsDirMock,
@@ -173,6 +176,8 @@ function createTestRuntimeState(input: { logger?: ReturnType<typeof createLogger
 describe('createRuntimeState', () => {
   beforeEach(() => {
     getRuntimeConfigRootMock.mockClear();
+    getRuntimeModelsFilePathMock.mockClear();
+    getRuntimeModelsFilePathMock.mockReturnValue('/desktop-root/system/runtime/models.json');
     getStateRootMock.mockClear();
     getDurableSkillsDirMock.mockClear();
     materializeRuntimeResourcesToAgentDirMock.mockReset();
@@ -232,6 +237,7 @@ describe('createRuntimeState', () => {
       additionalSkillPaths: expect.any(Array),
       additionalPromptTemplatePaths: expect.any(Array),
       additionalThemePaths: ['/themes/shared.json'],
+      modelsFilePath: '/desktop-root/system/runtime/models.json',
     });
 
     const factories = state.buildLiveSessionExtensionFactories();
@@ -371,12 +377,14 @@ describe('createRuntimeState', () => {
         additionalSkillPaths: ['/skills/async'],
         additionalPromptTemplatePaths: ['/prompts/async.md'],
         additionalThemePaths: ['/themes/shared.json'],
+        modelsFilePath: '/desktop-root/system/runtime/models.json',
       },
       {
         additionalExtensionPaths: ['/ext/shared'],
         additionalSkillPaths: ['/skills/async'],
         additionalPromptTemplatePaths: ['/prompts/async.md'],
         additionalThemePaths: ['/themes/shared.json'],
+        modelsFilePath: '/desktop-root/system/runtime/models.json',
       },
     ]);
     expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, '/agent-dir');
@@ -426,6 +434,7 @@ describe('createRuntimeState', () => {
       additionalSkillPaths: ['/skills/sync'],
       additionalPromptTemplatePaths: ['/prompts/sync.md'],
       additionalThemePaths: ['/themes/shared.json'],
+      modelsFilePath: '/desktop-root/system/runtime/models.json',
     });
     expect(buildSkillInjectionPlanAsyncMock).not.toHaveBeenCalled();
     expect(buildPromptTemplatePlanAsyncMock).not.toHaveBeenCalled();

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 import { AuthStorage, type ExtensionAPI, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getRuntimeConfigRoot, writeMergedMcpConfigFile } from '@neon-pilot/core';
+import { getRuntimeConfigRoot, getRuntimeModelsFilePath, writeMergedMcpConfigFile } from '@neon-pilot/core';
 import { type DesktopRootLayout, materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { ensureNeonPilotCliLauncher, prependNeonPilotCliBin } from '../cliEnvironment.js';
@@ -38,6 +38,8 @@ export interface CreateRuntimeStateOptions {
 
 export interface RuntimeState {
   getRuntimeScope: () => string;
+  /** Layout-derived path to models.json, or legacy fallback if no layout context. */
+  modelsFilePath: string;
   materializeRuntimeResources: () => void;
   refreshSkillRuntimeResources: () => void;
   buildLiveSessionExtensionFactories: () => ExtensionFactory[];
@@ -76,6 +78,7 @@ export function refreshRegisteredSkillRuntimeResources(input: { runtimeScope?: s
 
 export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeState {
   const { repoRoot, agentDir, settingsFile, stateRoot, logger, desktopRootLayout } = options;
+  const modelsFilePath = getRuntimeModelsFilePath(desktopRootLayout);
   const runtimeScope = DEFAULT_RUNTIME_SCOPE;
   const mcpConfigWatchers: FSWatcher[] = [];
   let mcpConfigReloadTimer: NodeJS.Timeout | null = null;
@@ -194,6 +197,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
           additionalSkillPaths: skills.skillPaths,
           additionalPromptTemplatePaths: promptTemplates.templatePaths,
           additionalThemePaths: resolved.themeEntries,
+          modelsFilePath,
         },
         { cacheHit: 0 },
       ),
@@ -439,6 +443,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         additionalSkillPaths: skills.skillPaths,
         additionalPromptTemplatePaths: promptTemplates.templatePaths,
         additionalThemePaths: resolved.themeEntries,
+        modelsFilePath,
       },
       {
         cacheHit: 0,
@@ -518,6 +523,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
           additionalSkillPaths: skills.skillPaths,
           additionalPromptTemplatePaths: promptTemplates.templatePaths,
           additionalThemePaths: resolved.themeEntries,
+          modelsFilePath,
           ...(systemPromptSupplement ? { systemPromptSupplement } : {}),
         },
         {
@@ -564,6 +570,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   return {
     getRuntimeScope,
+    modelsFilePath,
     materializeRuntimeResources,
     refreshSkillRuntimeResources,
     buildLiveSessionExtensionFactories,

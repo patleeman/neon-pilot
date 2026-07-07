@@ -60,6 +60,21 @@ describe('model registry helpers', () => {
     expect(modelRegistryCreateMock).toHaveBeenCalledWith(authStorage, '/runtime/neon-pilot-runtime/models.json');
   });
 
+  it('uses an explicit runtime models file path when provided', () => {
+    const authStorage = { kind: 'auth-storage' };
+    const registry = {
+      getAll: vi.fn(() => []),
+      getAvailable: vi.fn(() => []),
+      find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
+    };
+    modelRegistryCreateMock.mockReturnValue(registry);
+
+    expect(createRuntimeModelRegistry(authStorage as never, '/desktop/system/runtime/models.json')).toBe(registry);
+    expect(getPiAgentRuntimeDirMock).not.toHaveBeenCalled();
+    expect(modelRegistryCreateMock).toHaveBeenCalledWith(authStorage, '/desktop/system/runtime/models.json');
+  });
+
   it('includes models backed by Neon Pilot provider secrets in runtime registries', async () => {
     const authStorage = { kind: 'auth-storage' };
     const secretBackedModel = { id: 'secret-model', provider: 'opencode-go', contextWindow: 128_000 };

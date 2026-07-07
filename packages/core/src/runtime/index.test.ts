@@ -16,6 +16,7 @@ describe('core runtime barrel', () => {
         getDurableSessionsDir: expect.any(Function),
         getDurableSkillsDir: expect.any(Function),
         getPiAgentRuntimeDir: expect.any(Function),
+        getRuntimeModelsFilePath: expect.any(Function),
         getStateRoot: expect.any(Function),
         getSyncRoot: expect.any(Function),
         getKnowledgeRoot: expect.any(Function),

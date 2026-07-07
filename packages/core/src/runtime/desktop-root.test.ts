@@ -7,6 +7,7 @@ import {
   ensureDesktopRootDir,
   getDefaultDesktopRoot,
   getDesktopRootDir,
+  getRuntimeModelsFilePath,
   resolveDesktopAppDataDir,
   resolveDesktopRootLayout,
 } from './desktop-root.js';
@@ -77,6 +78,17 @@ describe('desktop root layout', () => {
     writeFileSync(join(configRoot, 'config.json'), JSON.stringify({ desktopRoot: '/configured/root' }));
 
     expect(getDesktopRootDir({ configRoot, root: '/explicit/root' })).toBe('/explicit/root');
+  });
+
+  it('resolves modelsFilePath from desktop root layout', () => {
+    const layout = resolveDesktopRootLayout({ root: '/desktop' });
+    expect(getRuntimeModelsFilePath(layout)).toBe('/desktop/system/runtime/models.json');
+  });
+
+  it('falls back to legacy pi-agent runtime dir when no layout is provided', () => {
+    const result = getRuntimeModelsFilePath();
+    // Uses getPiAgentRuntimeDir() as its base
+    expect(result).toMatch(/neon-pilot-runtime\/models\.json$/);
   });
 
   it('normalizes app data directories from app ids', () => {

@@ -103,6 +103,8 @@ export interface LiveSessionLoaderOptions {
   initialModel?: string | null;
   initialThinkingLevel?: string | null;
   initialServiceTier?: string | null;
+  /** Layout-derived path to models.json (overrides legacy default). */
+  modelsFilePath?: string;
   /** When set, only these tool names are exposed to the agent session. */
   allowedToolNames?: string[];
   /** When set, skills are not loaded into the prompt up front. */

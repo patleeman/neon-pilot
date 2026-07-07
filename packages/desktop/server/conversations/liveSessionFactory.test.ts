@@ -100,7 +100,13 @@ describe('live session factory', () => {
     expect(makeAuth('/agent')).toEqual({ path: '/agent/auth.json' });
     const auth = { path: '/agent/auth.json' } as never;
     expect(makeRegistry(auth)).toEqual({ getAvailable: expect.any(Function) });
-    expect(modelRegistry.createRuntimeModelRegistry).toHaveBeenCalledWith(auth);
+    expect(modelRegistry.createRuntimeModelRegistry).toHaveBeenCalledWith(auth, undefined);
+  });
+
+  it('forwards modelsFilePath to runtime model registry', () => {
+    const auth = { path: '/agent/auth.json' } as never;
+    expect(makeRegistry(auth, undefined, '/desktop/system/runtime/models.json')).toEqual({ getAvailable: expect.any(Function) });
+    expect(modelRegistry.createRuntimeModelRegistry).toHaveBeenCalledWith(auth, '/desktop/system/runtime/models.json');
   });
 
   it('warms and caches extension tool selection for the same runtime/model key', async () => {

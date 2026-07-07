@@ -12,6 +12,7 @@ export interface LiveSessionResourceOptions extends Record<string, unknown> {
   additionalPromptTemplatePaths: string[];
   additionalThemePaths: string[];
   systemPromptSupplement?: string;
+  modelsFilePath?: string;
   [LIVE_SESSION_RESOURCE_OPTIONS_PERF]?: Record<string, number>;
 }
 

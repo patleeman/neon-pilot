@@ -75,8 +75,8 @@ function applyNeonPilotRegistryOverrides(registry: ModelRegistry): ModelRegistry
   return registry;
 }
 
-export function createRuntimeModelRegistry(authStorage: AuthStorage): ModelRegistry {
-  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, join(getPiAgentRuntimeDir(), 'models.json')));
+export function createRuntimeModelRegistry(authStorage: AuthStorage, modelsFilePath?: string): ModelRegistry {
+  return applyNeonPilotRegistryOverrides(ModelRegistry.create(authStorage, modelsFilePath ?? join(getPiAgentRuntimeDir(), 'models.json')));
 }
 
 export function createModelRegistryForAuthFile(authFile: string): ModelRegistry {

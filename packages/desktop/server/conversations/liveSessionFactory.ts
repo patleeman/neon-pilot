@@ -106,8 +106,8 @@ export function makeAuth(agentDir: string): AuthStorage {
   return AuthStorage.create(`${agentDir}/auth.json`);
 }
 
-export function makeRegistry(auth: AuthStorage, _extensionFactories?: ExtensionFactory[]): ModelRegistry {
-  return createRuntimeModelRegistry(auth);
+export function makeRegistry(auth: AuthStorage, _extensionFactories?: ExtensionFactory[], modelsFilePath?: string): ModelRegistry {
+  return createRuntimeModelRegistry(auth, modelsFilePath);
 }
 
 function createDesktopConversationSettingsManager(cwd: string, agentDir: string): SettingsManager {
@@ -263,7 +263,7 @@ export async function createPreparedLiveAgentSession(input: {
   const agentDir = options.agentDir ?? input.agentDir;
   const auth = makeAuth(agentDir);
   const authAtMs = performance.now();
-  const modelRegistry = makeRegistry(auth, options.extensionFactories);
+  const modelRegistry = makeRegistry(auth, options.extensionFactories, options.modelsFilePath);
   const registryAtMs = performance.now();
   const settingsManager = createDesktopConversationSettingsManager(input.cwd, agentDir);
   const settingsAtMs = performance.now();

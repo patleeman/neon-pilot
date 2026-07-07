@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { type MachineConfigOptions, readMachineConfig } from '../machine-config.js';
+import { getPiAgentRuntimeDir } from './paths.js';
 
 export interface DesktopRootLayout {
   root: string;
@@ -108,6 +109,20 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
     systemSecrets: join(system, 'secrets'),
     systemState: join(system, 'state'),
   };
+}
+
+/**
+ * Resolve the runtime models.json file path.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/runtime/models.json`. Otherwise falls back to
+ * the legacy `<state-root>/neon-pilot-runtime/models.json`.
+ */
+export function getRuntimeModelsFilePath(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return join(layout.systemRuntime, 'models.json');
+  }
+  return join(getPiAgentRuntimeDir(), 'models.json');
 }
 
 const DEFAULT_SOUL_DOC_CONTENT = `\

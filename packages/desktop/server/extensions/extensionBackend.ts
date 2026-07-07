@@ -982,6 +982,7 @@ function workerLiveSessionResourceOptions(serverContext?: ExtensionBackendServer
     additionalSkillPaths: options.additionalSkillPaths,
     additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
     additionalThemePaths: options.additionalThemePaths,
+    ...(typeof options.modelsFilePath === 'string' && options.modelsFilePath.trim() ? { modelsFilePath: options.modelsFilePath } : {}),
   };
 }
 
