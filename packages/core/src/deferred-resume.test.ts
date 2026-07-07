@@ -10,6 +10,7 @@ import {
   createEmptyDeferredResumeState,
   getDueScheduledSessionDeferredResumeEntries,
   getReadySessionDeferredResumeEntries,
+  loadDeferredResumeEntries,
   loadDeferredResumeState,
   mergeDeferredResumeStateDocuments,
   parseDeferredResumeDelayMs,
@@ -42,6 +43,91 @@ describe('deferred resume state', () => {
     expect(resolveDeferredResumeStateFileFromLayout(layout as DesktopRootLayout)).toBe(
       '/custom/root/system/state/pi-agent/deferred-resumes-state.json',
     );
+  });
+
+  it('loads deferred resume state from a DesktopRootLayout', () => {
+    const dir = createTempDir('deferred-resume-layout-');
+    const layout = { systemState: dir } as Pick<DesktopRootLayout, 'systemState'>;
+
+    const state = loadDeferredResumeState(layout as DesktopRootLayout);
+    expect(state).toEqual(createEmptyDeferredResumeState());
+
+    scheduleDeferredResume(state, {
+      id: 'resume-layout-1',
+      sessionFile: '/tmp/sessions/layout.jsonl',
+      prompt: 'continue from layout',
+      dueAt: '2026-06-01T12:00:00.000Z',
+      createdAt: '2026-06-01T11:50:00.000Z',
+      attempts: 0,
+    });
+    saveDeferredResumeState(state, layout as DesktopRootLayout);
+
+    const loaded = loadDeferredResumeState(layout as DesktopRootLayout);
+    expect(loaded.resumes['resume-layout-1']).toMatchObject({
+      id: 'resume-layout-1',
+      status: 'scheduled',
+    });
+  });
+
+  it('uses layout-derived path consistently across load and save', () => {
+    const dir = createTempDir('deferred-resume-consistency-');
+    const layout = { systemState: dir } as Pick<DesktopRootLayout, 'systemState'>;
+    const layoutArg = layout as DesktopRootLayout;
+
+    const expectedPath = resolveDeferredResumeStateFileFromLayout(layoutArg);
+
+    const state = createEmptyDeferredResumeState();
+    saveDeferredResumeState(state, layoutArg);
+
+    const loaded = loadDeferredResumeState(layoutArg);
+    expect(loaded).toEqual(createEmptyDeferredResumeState());
+
+    const viaPath = loadDeferredResumeState(expectedPath);
+    expect(viaPath).toEqual(createEmptyDeferredResumeState());
+  });
+
+  it('uses layout in withDeferredResumeLock', () => {
+    const dir = createTempDir('deferred-resume-lock-layout-');
+    const layout = { systemState: dir } as Pick<DesktopRootLayout, 'systemState'>;
+    const layoutArg = layout as DesktopRootLayout;
+
+    const result = withDeferredResumeLock((state) => {
+      scheduleDeferredResume(state, {
+        id: 'resume-lock-layout',
+        sessionFile: '/tmp/sessions/lock.jsonl',
+        prompt: 'continue',
+        dueAt: '2026-06-01T12:00:00.000Z',
+        createdAt: '2026-06-01T11:50:00.000Z',
+        attempts: 0,
+      });
+      return 'done';
+    }, layoutArg);
+
+    expect(result).toBe('done');
+
+    const loaded = loadDeferredResumeState(layoutArg);
+    expect(loaded.resumes['resume-lock-layout']).toMatchObject({ id: 'resume-lock-layout', status: 'scheduled' });
+  });
+
+  it('loads deferred resume entries from a DesktopRootLayout', () => {
+    const dir = createTempDir('deferred-resume-entries-layout-');
+    const layout = { systemState: dir } as Pick<DesktopRootLayout, 'systemState'>;
+    const layoutArg = layout as DesktopRootLayout;
+
+    const state = createEmptyDeferredResumeState();
+    scheduleDeferredResume(state, {
+      id: 'resume-entries-1',
+      sessionFile: '/tmp/sessions/e1.jsonl',
+      prompt: 'entry 1',
+      dueAt: '2026-06-01T12:00:00.000Z',
+      createdAt: '2026-06-01T11:50:00.000Z',
+      attempts: 0,
+    });
+    saveDeferredResumeState(state, layoutArg);
+
+    const entries = loadDeferredResumeEntries(layoutArg);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].sessionFile).toBe('/tmp/sessions/e1.jsonl');
   });
 
   it('resolves the deferred resume state file path', () => {

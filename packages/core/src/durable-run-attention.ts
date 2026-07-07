@@ -6,6 +6,7 @@ import { getPiAgentStateDir, getStateRoot } from './runtime/paths.js';
 
 export interface DurableRunAttentionStateOptions {
   stateRoot?: string;
+  layout?: DesktopRootLayout;
 }
 
 export interface DurableRunAttentionRecord {
@@ -112,6 +113,9 @@ function sortRuns(runs: Record<string, DurableRunAttentionRecord>): Record<strin
 }
 
 export function resolveDurableRunAttentionStatePath(options: DurableRunAttentionStateOptions = {}): string {
+  if (options.layout) {
+    return resolveDurableRunAttentionStatePathFromLayout(options.layout);
+  }
   return join(getPiAgentStateDir(resolveAttentionStateRoot(options.stateRoot)), 'state', 'durable-run-attention.json');
 }
 
@@ -175,6 +179,7 @@ export function markDurableRunAttentionRead(
 
   saveDurableRunAttentionState({
     stateRoot: options.stateRoot,
+    layout: options.layout,
     document,
   });
 
@@ -191,6 +196,7 @@ export function markDurableRunAttentionUnread(
     delete document.runs[runId];
     saveDurableRunAttentionState({
       stateRoot: options.stateRoot,
+      layout: options.layout,
       document,
     });
   }

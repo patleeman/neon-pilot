@@ -383,7 +383,14 @@ export function resolveDeferredResumeStateFileFromLayout(layout: DesktopRootLayo
   return join(layout.systemState, 'pi-agent', DEFERRED_RESUME_STATE_FILE_NAME);
 }
 
-export function loadDeferredResumeState(path = resolveDeferredResumeStateFile()): DeferredResumeStateFile {
+export function loadDeferredResumeState(): DeferredResumeStateFile;
+export function loadDeferredResumeState(path: string): DeferredResumeStateFile;
+export function loadDeferredResumeState(layout: DesktopRootLayout): DeferredResumeStateFile;
+export function loadDeferredResumeState(pathOrLayout?: string | DesktopRootLayout): DeferredResumeStateFile {
+  const path =
+    typeof pathOrLayout === 'object'
+      ? resolveDeferredResumeStateFileFromLayout(pathOrLayout)
+      : (pathOrLayout ?? resolveDeferredResumeStateFile());
   if (!existsSync(path)) {
     return createEmptyDeferredResumeState();
   }
@@ -418,7 +425,14 @@ export function loadDeferredResumeState(path = resolveDeferredResumeStateFile())
   }
 }
 
-export function saveDeferredResumeState(state: DeferredResumeStateFile, path = resolveDeferredResumeStateFile()): void {
+export function saveDeferredResumeState(state: DeferredResumeStateFile): void;
+export function saveDeferredResumeState(state: DeferredResumeStateFile, path: string): void;
+export function saveDeferredResumeState(state: DeferredResumeStateFile, layout: DesktopRootLayout): void;
+export function saveDeferredResumeState(state: DeferredResumeStateFile, pathOrLayout?: string | DesktopRootLayout): void {
+  const path =
+    typeof pathOrLayout === 'object'
+      ? resolveDeferredResumeStateFileFromLayout(pathOrLayout)
+      : (pathOrLayout ?? resolveDeferredResumeStateFile());
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   writeFileSync(
     path,
@@ -515,8 +529,14 @@ function acquireDeferredResumeLock(lockPath: string): { release: () => void } {
  * Load state, apply a mutation, and save — all while holding an exclusive
  * file lock to prevent concurrent-process write loss.
  */
-export function withDeferredResumeLock<T>(fn: (state: DeferredResumeStateFile) => T, path?: string): T {
-  const statePath = path ?? resolveDeferredResumeStateFile();
+export function withDeferredResumeLock<T>(fn: (state: DeferredResumeStateFile) => T): T;
+export function withDeferredResumeLock<T>(fn: (state: DeferredResumeStateFile) => T, path: string): T;
+export function withDeferredResumeLock<T>(fn: (state: DeferredResumeStateFile) => T, layout: DesktopRootLayout): T;
+export function withDeferredResumeLock<T>(fn: (state: DeferredResumeStateFile) => T, pathOrLayout?: string | DesktopRootLayout): T {
+  const statePath =
+    typeof pathOrLayout === 'object'
+      ? resolveDeferredResumeStateFileFromLayout(pathOrLayout)
+      : (pathOrLayout ?? resolveDeferredResumeStateFile());
   const lockPath = `${statePath}.lock`;
   const lock = acquireDeferredResumeLock(lockPath);
 
@@ -530,7 +550,14 @@ export function withDeferredResumeLock<T>(fn: (state: DeferredResumeStateFile) =
   }
 }
 
-export function loadDeferredResumeEntries(stateFile = resolveDeferredResumeStateFile()): Array<{ sessionFile: string }> {
+export function loadDeferredResumeEntries(): Array<{ sessionFile: string }>;
+export function loadDeferredResumeEntries(stateFile: string): Array<{ sessionFile: string }>;
+export function loadDeferredResumeEntries(layout: DesktopRootLayout): Array<{ sessionFile: string }>;
+export function loadDeferredResumeEntries(stateFileOrLayout?: string | DesktopRootLayout): Array<{ sessionFile: string }> {
+  const stateFile =
+    typeof stateFileOrLayout === 'object'
+      ? resolveDeferredResumeStateFileFromLayout(stateFileOrLayout)
+      : (stateFileOrLayout ?? resolveDeferredResumeStateFile());
   const state = loadDeferredResumeState(stateFile);
   return Object.values(state.resumes).map((record) => ({ sessionFile: record.sessionFile }));
 }
