@@ -146,7 +146,7 @@ import { resolveStableSessionTitle } from './liveSessionTitle.js';
 import { type BeforeAgentStartProbeMessage, inspectAvailableLiveSessionTools } from './liveSessionToolInspection.js';
 import { repairLiveSessionTranscriptTail as repairLiveSessionTranscriptTailWithCallbacks } from './liveSessionTranscriptRepair.js';
 import { getAssistantErrorDisplayMessage } from './sessionAssistantErrors.js';
-import { resolvePersistentSessionDir } from './sessionPaths.js';
+import { resolvePersistentSessionDir, setSessionPathsContext } from './sessionPaths.js';
 
 export function registerLiveSessionLifecycleHandler(handler: LiveSessionLifecycleHandler): () => void {
   const unregisterDefault = registerDefaultLiveSessionLifecycleHandler(handler);
@@ -227,6 +227,7 @@ let getDesktopRootLayoutFn: () => DesktopRootLayout = resolveDesktopRootLayout;
  */
 export function setLiveSessionsContext(input: { getDesktopRootLayout?: () => DesktopRootLayout }): void {
   getDesktopRootLayoutFn = input.getDesktopRootLayout ?? resolveDesktopRootLayout;
+  setSessionPathsContext({ getDesktopRootLayout: getDesktopRootLayoutFn });
 }
 
 function escapeExportHtml(value: string): string {
