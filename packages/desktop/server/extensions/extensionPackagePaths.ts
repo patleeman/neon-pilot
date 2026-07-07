@@ -1,10 +1,9 @@
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { DesktopRootLayout } from '@neon-pilot/core';
 
-import { isForkExcludedExtensionId } from './extensionForkExclusions.js';
 import { readConfiguredExtensionPaths, readEnvironmentExtensionPaths } from './extensionSearchPaths.js';
 
 /**
@@ -39,11 +38,6 @@ function candidateBundledExtensionRoots(): string[] {
   ].filter((value): value is string => Boolean(value));
 }
 
-function shouldLoadBundledExtension(packageRoot: string, source: ExtensionPackagePath['source']): boolean {
-  if (source !== 'bundled') return true;
-  return !isForkExcludedExtensionId(basename(packageRoot));
-}
-
 function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath['source']): ExtensionPackagePath[] {
   const root = resolve(rootOrPackage);
   if (!existsSync(root) || !statSync(root).isDirectory()) {
@@ -51,7 +45,7 @@ function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath
   }
 
   if (existsSync(resolve(root, 'extension.json'))) {
-    return shouldLoadBundledExtension(root, source) ? [{ packageRoot: root, source }] : [];
+    return [{ packageRoot: root, source }];
   }
 
   return readdirSync(root)
@@ -61,7 +55,7 @@ function expandExtensionPath(rootOrPackage: string, source: ExtensionPackagePath
       if (!statSync(packageRoot).isDirectory() || !existsSync(resolve(packageRoot, 'extension.json'))) {
         return [];
       }
-      return shouldLoadBundledExtension(packageRoot, source) ? [{ packageRoot, source }] : [];
+      return [{ packageRoot, source }];
     });
 }
 

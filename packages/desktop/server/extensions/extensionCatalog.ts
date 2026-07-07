@@ -5,7 +5,6 @@ import { basename, join, resolve } from 'node:path';
 import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 import { getExtensionCompatibilityError, resolveInstalledAppVersion } from './extensionCompatibility.js';
-import { isForkExcludedExtensionId } from './extensionForkExclusions.js';
 import { deleteRuntimeExtension, importRuntimeExtensionBundle, inspectRuntimeExtensionBundle } from './extensionLifecycle.js';
 import { EXTENSION_PERMISSIONS } from './extensionManifest.js';
 import { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } from './extensionRegistry.js';
@@ -166,7 +165,6 @@ function localFallbackBundlePathFor(item: InstallableExtensionCatalogItem): stri
 function mergeLocalPackagedFirstPartySeeds(seeds: CatalogSeed[]): CatalogSeed[] {
   const byId = new Map(seeds.map((item) => [item.id, item]));
   for (const item of INSTALLABLE_EXTENSION_CATALOG) {
-    if (isForkExcludedExtensionId(item.id)) continue;
     if (byId.has(item.id) || !localBundlePathFor(item.id)) continue;
     byId.set(item.id, {
       ...item,
@@ -222,7 +220,6 @@ export async function listInstallableExtensionCatalog(
     )
   ).flat();
   const packages: InstallableExtensionCatalogItem[] = [...firstPartySeeds, ...remoteSeeds]
-    .filter((item) => !isForkExcludedExtensionId(item.id))
     .filter((item) => {
       const installed = installedById.get(item.id);
       if (installed?.packageType === 'system') return false;
