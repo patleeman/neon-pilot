@@ -33,7 +33,12 @@ import { createExtensionKnowledgeCapability } from './extensionKnowledge.js';
 import type { ExtensionPermission } from './extensionManifest.js';
 import { createExtensionModelsCapability } from './extensionModels.js';
 import { isSystemNotificationAvailable, sendNotifyAsSystemNotification, setExtensionBadge } from './extensionNotifications.js';
-import { assertExtensionAnyPermission, assertExtensionPermission, setExtensionPermissionGranted } from './extensionPermissions.js';
+import {
+  assertExtensionAnyPermission,
+  assertExtensionPermission,
+  ExtensionPermissionError,
+  setExtensionPermissionGranted,
+} from './extensionPermissions.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
   clearBuildError,
@@ -391,7 +396,24 @@ export class ExtensionLoadError extends Error {
   }
 }
 
-export type ExtensionActionInvokeResult = { ok: true; result: unknown } | { ok: false; error: string };
+export type ExtensionActionInvokeResult =
+  | { ok: true; result: unknown }
+  | { ok: false; error: string; deniedCapability?: string; capabilityContext?: string };
+
+function permissionDenialFields(error: unknown): { deniedCapability?: string; capabilityContext?: string } {
+  if (error instanceof ExtensionPermissionError) {
+    return {
+      deniedCapability: error.permission,
+      capabilityContext: error.capabilityContext,
+    };
+  }
+  if (!error || typeof error !== 'object') return {};
+  const candidate = error as { deniedCapability?: unknown; capabilityContext?: unknown };
+  return {
+    ...(typeof candidate.deniedCapability === 'string' ? { deniedCapability: candidate.deniedCapability } : {}),
+    ...(typeof candidate.capabilityContext === 'string' ? { capabilityContext: candidate.capabilityContext } : {}),
+  };
+}
 
 function isHostCommandAction(action: string): boolean {
   return isKnownHostCommand(action);
@@ -639,9 +661,11 @@ export function createBackendContext(
     },
     events: {
       publish: async (input) => {
+        assertExtensionAnyPermission(extensionId, ['automations:write', 'automations:readwrite'], 'events.publish');
         await publishExtensionEvent(extensionId, input.event, input.payload);
       },
       subscribe: (pattern, handler) => {
+        assertExtensionAnyPermission(extensionId, ['automations:read', 'automations:readwrite'], 'events.subscribe');
         return subscribeExtensionEvents(extensionId, pattern, handler);
       },
     },
@@ -1351,7 +1375,7 @@ export async function invokeExtensionAction(
       at: new Date().toISOString(),
       error: message,
     });
-    return { ok: false, error: message };
+    return { ok: false, error: message, ...permissionDenialFields(error) };
   }
 }
 

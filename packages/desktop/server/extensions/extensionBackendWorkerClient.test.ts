@@ -48,6 +48,7 @@ import {
   ExtensionBackendWorkerPool,
   setDefaultExtensionBackendWorkerUrl,
 } from './extensionBackendWorkerClient.js';
+import { ExtensionPermissionError } from './extensionPermissions.js';
 
 async function flushPromises(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve));
@@ -388,6 +389,57 @@ describe('ExtensionBackendWorkerClient', () => {
       kind: 'capabilityResponse',
       ok: false,
       error: 'capability denied',
+    });
+  });
+
+  it('returns structured permission dispatcher errors to the worker', async () => {
+    const capabilityDispatcher = vi.fn(async () => {
+      throw new ExtensionPermissionError('ext', 'documents:read', 'documents.listCollections');
+    });
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js'), capabilityDispatcher });
+
+    const load = client.loadModule('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' });
+    const worker = workerThreads.instances[0]!;
+    worker.emit('message', { id: 1, ok: true });
+    await load;
+
+    worker.emit('message', {
+      id: 100,
+      kind: 'capabilityRequest',
+      extensionId: 'ext',
+      capability: 'documents',
+      operation: 'listCollections',
+      input: {},
+    });
+    await flushPromises();
+
+    expect(worker.postMessage).toHaveBeenLastCalledWith({
+      id: 100,
+      kind: 'capabilityResponse',
+      ok: false,
+      error: 'Extension "ext" requires permission documents:read to use documents.listCollections.',
+      deniedCapability: 'documents:read',
+      capabilityContext: 'documents.listCollections',
+    });
+  });
+
+  it('preserves structured permission metadata from worker export responses', async () => {
+    const client = new ExtensionBackendWorkerClient({ workerUrl: new URL('file:///worker.js') });
+    const run = client.runExport('ext', { path: '/tmp/backend.mjs', hash: 'hash-1' }, 'doThing', []);
+    const worker = workerThreads.instances[0]!;
+
+    worker.emit('message', {
+      id: 1,
+      ok: false,
+      error: 'Extension "ext" requires permission documents:read to use documents.listCollections.',
+      deniedCapability: 'documents:read',
+      capabilityContext: 'documents.listCollections',
+    });
+
+    await expect(run).rejects.toMatchObject({
+      message: 'Extension "ext" requires permission documents:read to use documents.listCollections.',
+      deniedCapability: 'documents:read',
+      capabilityContext: 'documents.listCollections',
     });
   });
 

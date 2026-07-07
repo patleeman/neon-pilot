@@ -63,6 +63,10 @@ export type ExtensionBackendWorkerResponse =
       id: number;
       ok: false;
       error: string;
+      /** For permission-denied errors, the denied permission name. */
+      deniedCapability?: string;
+      /** For permission-denied errors, the capability context (e.g., "storage.get"). */
+      capabilityContext?: string;
     };
 
 export interface ExtensionBackendWorkerCapabilityRequest {
@@ -87,6 +91,10 @@ export type ExtensionBackendWorkerCapabilityResponse =
       kind: 'capabilityResponse';
       ok: false;
       error: string;
+      /** For permission-denied errors, the denied permission name. */
+      deniedCapability?: string;
+      /** For permission-denied errors, the capability context (e.g., "storage.get"). */
+      capabilityContext?: string;
     };
 
 export interface ExtensionBackendWorkerCapabilityEvent {

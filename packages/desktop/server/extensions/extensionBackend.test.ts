@@ -589,6 +589,66 @@ describe('extension backend action invocation', () => {
     );
   });
 
+  it('requires automation permissions for host-run event helpers', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'events-helper-ext');
+    const context = createBackendContext('events-helper-ext', {
+      getRuntimeScope: () => 'shared',
+      getRepoRoot: () => '/repo',
+      getStateRoot: () => stateRoot,
+    });
+
+    await expect(context.events.publish({ event: 'demo.updated', payload: { ok: true } })).rejects.toThrow(
+      'Extension "events-helper-ext" requires permission automations:write to use events.publish.',
+    );
+    expect(() => context.events.subscribe('*', () => undefined)).toThrow(
+      'Extension "events-helper-ext" requires permission automations:read to use events.subscribe.',
+    );
+  });
+
+  it('returns structured permission denial metadata from worker actions', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    installTestExtension(stateRoot, 'denied-action-ext');
+    const workerError = new Error('Extension "denied-action-ext" requires permission documents:read to use documents.listCollections.');
+    Object.assign(workerError, {
+      deniedCapability: 'documents:read',
+      capabilityContext: 'documents.listCollections',
+    });
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => {
+        throw workerError;
+      }),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    await expect(
+      invokeExtensionAction(
+        'denied-action-ext',
+        'ensure',
+        {},
+        {
+          getRuntimeScope: () => 'shared',
+          getRepoRoot: () => '/repo',
+          getStateRoot: () => stateRoot,
+        },
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error:
+        'Extension "denied-action-ext" action "ensure" failed: Extension "denied-action-ext" requires permission documents:read to use documents.listCollections.',
+      deniedCapability: 'documents:read',
+      capabilityContext: 'documents.listCollections',
+    });
+  });
+
   it('passes the server route settings file into worker action contexts', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),

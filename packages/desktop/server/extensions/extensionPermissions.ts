@@ -13,12 +13,14 @@ function readPermissionRegistryConfig(stateRoot?: string): { revokedPermissions?
 export class ExtensionPermissionError extends Error {
   readonly extensionId: string;
   readonly permission: ExtensionPermission;
+  readonly capabilityContext: string;
 
   constructor(extensionId: string, permission: ExtensionPermission, capability: string) {
     super(`Extension "${extensionId}" requires permission ${permission} to use ${capability}.`);
     this.name = 'ExtensionPermissionError';
     this.extensionId = extensionId;
     this.permission = permission;
+    this.capabilityContext = capability;
   }
 }
 

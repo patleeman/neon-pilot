@@ -80,9 +80,19 @@ describe('extensionPermissions', () => {
       findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
       readExtensionRegistryConfig.mockReturnValue({});
 
-      expect(() => assertExtensionPermission('ext', 'attention:write', 'attention events')).toThrow(
-        'Extension "ext" requires permission attention:write to use attention events.',
-      );
+      let thrown: unknown;
+      try {
+        assertExtensionPermission('ext', 'attention:write', 'attention events');
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toMatchObject({
+        message: 'Extension "ext" requires permission attention:write to use attention events.',
+        extensionId: 'ext',
+        permission: 'attention:write',
+        capabilityContext: 'attention events',
+      });
       expect(listExtensionHostAuditEvents()).toEqual([
         expect.objectContaining({
           requestType: 'permission',

@@ -44,6 +44,8 @@ const extensionCapabilityScope = new AsyncLocalStorage<{
 const EXTENSION_HOST_CAPABILITY_BRIDGE = Symbol.for('neon-pilot.extensionHostCapabilityBridge');
 const EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS = Symbol.for('neon-pilot.extensionHostCapabilityEventHandlers');
 
+type PermissionDenialMetadata = Pick<ExtensionBackendWorkerResponse & { ok: false }, 'deniedCapability' | 'capabilityContext'>;
+
 type ExtensionBackendWorkerGlobal = typeof globalThis & {
   [EXTENSION_HOST_CAPABILITY_BRIDGE]?: (capability: string, operation: string, input?: unknown) => Promise<unknown>;
   [EXTENSION_HOST_CAPABILITY_EVENT_HANDLERS]?: Set<(event: ExtensionBackendWorkerCapabilityEvent) => void>;
@@ -167,7 +169,21 @@ function handleCapabilityResponse(response: ExtensionBackendWorkerCapabilityResp
   pendingCapabilities.delete(response.id);
 
   if (response.ok) pending.resolve(response.result);
-  else pending.reject(new Error(response.error));
+  else {
+    const error = new Error(response.error);
+    if (response.deniedCapability) (error as { deniedCapability?: string }).deniedCapability = response.deniedCapability;
+    if (response.capabilityContext) (error as { capabilityContext?: string }).capabilityContext = response.capabilityContext;
+    pending.reject(error);
+  }
+}
+
+function permissionDenialMetadata(error: unknown): PermissionDenialMetadata {
+  if (!error || typeof error !== 'object') return {};
+  const candidate = error as { deniedCapability?: unknown; capabilityContext?: unknown };
+  return {
+    ...(typeof candidate.deniedCapability === 'string' ? { deniedCapability: candidate.deniedCapability } : {}),
+    ...(typeof candidate.capabilityContext === 'string' ? { capabilityContext: candidate.capabilityContext } : {}),
+  };
 }
 
 function handleCapabilityEvent(event: ExtensionBackendWorkerCapabilityEvent): void {
@@ -735,7 +751,7 @@ async function handleRequest(request: ExtensionBackendWorkerRequest): Promise<Ex
     const _exhaustive: never = request;
     return _exhaustive;
   } catch (error) {
-    return { id: request.id, ok: false, error: error instanceof Error ? error.message : String(error) };
+    return { id: request.id, ok: false, error: error instanceof Error ? error.message : String(error), ...permissionDenialMetadata(error) };
   }
 }
 

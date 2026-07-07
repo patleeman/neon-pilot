@@ -14,6 +14,7 @@ import type {
   ExtensionBackendWorkerResponse,
   ExtensionBackendWorkerRouteStreamEvent,
 } from './extensionBackendWorkerProtocol.js';
+import { ExtensionPermissionError } from './extensionPermissions.js';
 
 interface PendingRequest {
   resolve: (response: ExtensionBackendWorkerResponse & { ok: true }) => void;
@@ -196,7 +197,12 @@ export class ExtensionBackendWorkerClient {
     pending.cleanup?.();
 
     if (response.ok) pending.resolve(response);
-    else pending.reject(new Error(response.error));
+    else {
+      const error = new Error(response.error);
+      if ('deniedCapability' in response) (error as { deniedCapability?: string }).deniedCapability = response.deniedCapability;
+      if ('capabilityContext' in response) (error as { capabilityContext?: string }).capabilityContext = response.capabilityContext;
+      pending.reject(error);
+    }
   }
 
   private async handleCapabilityRequest(request: ExtensionBackendWorkerCapabilityRequest): Promise<void> {
@@ -217,11 +223,13 @@ export class ExtensionBackendWorkerClient {
       const result = await this.options.capabilityDispatcher(request, (event) => this.worker?.postMessage(event));
       return { id: request.id, kind: 'capabilityResponse', ok: true, result };
     } catch (error) {
+      const isPermissionError = error instanceof ExtensionPermissionError;
       return {
         id: request.id,
         kind: 'capabilityResponse',
         ok: false,
         error: error instanceof Error ? error.message : String(error),
+        ...(isPermissionError ? { deniedCapability: error.permission, capabilityContext: error.capabilityContext } : {}),
       };
     }
   }
