@@ -1,0 +1,33 @@
+{
+  "extensionId": "system-documents-counter-sample",
+  "builtAt": "2026-07-07T07:01:27.728Z",
+  "frontendEntry": null,
+  "backendEntry": "src/backend.ts",
+  "sourceHashes": [
+    {
+      "path": "extension.json",
+      "sha256": "4afb152d0c1ab97f9e257370c7800cb3ec5a233405ab0ae48b0a113d15e2a8aa"
+    },
+    {
+      "path": "src/backend.ts",
+      "sha256": "8d126b86fa47a0552d401e7ff5f412ce2e4157da22b84afceb85ea036b6503af"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "dist/backend.mjs",
+      "bytes": 1864,
+      "imports": []
+    },
+    {
+      "path": "dist/package.json",
+      "bytes": 135,
+      "imports": []
+    },
+    {
+      "path": "dist/xhr-sync-worker.js",
+      "bytes": 1641,
+      "imports": []
+    }
+  ]
+}

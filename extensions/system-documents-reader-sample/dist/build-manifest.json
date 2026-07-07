@@ -1,0 +1,33 @@
+{
+  "extensionId": "system-documents-reader-sample",
+  "builtAt": "2026-07-07T07:01:27.852Z",
+  "frontendEntry": null,
+  "backendEntry": "src/backend.ts",
+  "sourceHashes": [
+    {
+      "path": "extension.json",
+      "sha256": "d056f494bccb56a42dd9472dfbb5b9138b1d34612ddb77bfcafb07a72b0f705e"
+    },
+    {
+      "path": "src/backend.ts",
+      "sha256": "6b0d9314202d8dc0807372e4baa096dc626ae0c405ecdc1e345485264073c3dc"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "dist/backend.mjs",
+      "bytes": 1125,
+      "imports": []
+    },
+    {
+      "path": "dist/package.json",
+      "bytes": 135,
+      "imports": []
+    },
+    {
+      "path": "dist/xhr-sync-worker.js",
+      "bytes": 1641,
+      "imports": []
+    }
+  ]
+}

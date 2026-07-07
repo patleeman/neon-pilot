@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 2,
+  "id": "system-documents-counter-sample",
+  "name": "Doc Counter Sample",
+  "packageType": "system",
+  "description": "Phase 3 sample: writes incrementing heartbeat documents into a shared Documents collection so other extensions can observe cross-extension data flow.",
+  "version": "0.1.0",
+  "permissions": ["documents:readwrite"],
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "writeBeat",
+        "handler": "writeBeat",
+        "title": "Write heartbeat beat",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "resetBeat",
+        "handler": "resetBeat",
+        "title": "Reset heartbeat counter",
+        "worker": { "enabled": true }
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "system-documents-reader-sample",
+  "name": "Doc Reader Sample",
+  "packageType": "system",
+  "description": "Phase 3 sample: reads the shared heartbeat document from system-documents-counter-sample and records document update events via the extension subscription system.",
+  "version": "0.1.0",
+  "permissions": ["documents:read"],
+  "backend": {
+    "entry": "src/backend.ts",
+    "actions": [
+      {
+        "id": "readBeat",
+        "handler": "readBeat",
+        "title": "Read heartbeat document",
+        "worker": { "enabled": true }
+      },
+      {
+        "id": "getEvents",
+        "handler": "getEvents",
+        "title": "Get recorded document events",
+        "worker": { "enabled": true }
+      }
+    ]
+  },
+  "contributes": {
+    "subscriptions": [
+      {
+        "id": "documents",
+        "source": "documents",
+        "handler": "onDocumentChanged"
+      }
+    ]
+  }
+}
