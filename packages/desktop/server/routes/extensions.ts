@@ -626,11 +626,7 @@ export function createExtensionRequestAbortSignal(req: Request, res: Response): 
   return abort.signal;
 }
 
-async function dispatchExtensionBackendRoute(
-  req: Request,
-  res: Response,
-  context?: Pick<ServerRouteContext, 'getRuntimeScope'>,
-): Promise<void> {
+async function dispatchExtensionBackendRoute(req: Request, res: Response, context?: ExtensionRouteContext): Promise<void> {
   const signal = createExtensionRequestAbortSignal(req, res);
   try {
     const extensionId = req.params.id;

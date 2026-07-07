@@ -139,6 +139,7 @@ interface ExtensionBackendCapabilityImage {
   generate(
     extensionId: string,
     input: { input: unknown; toolContext?: { preferredVisionModel?: string; sessionFile?: string } },
+    options?: { stateRoot?: string; desktopRootLayout?: DesktopRootLayout },
   ): Promise<unknown>;
 }
 
@@ -1619,8 +1620,11 @@ function parseModelRef(modelRef: unknown): { provider: string; modelId: string }
 async function generateImageWithInstalledExtension(
   extensionId: string,
   input: { input: unknown; toolContext?: { preferredVisionModel?: string; sessionFile?: string } },
+  options?: { stateRoot?: string; desktopRootLayout?: DesktopRootLayout },
 ): Promise<unknown> {
-  const entry = findExtensionEntry(extensionId);
+  const stateRoot = options?.stateRoot ?? getStateRoot();
+  const layout = options?.desktopRootLayout;
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
   const backendEntry = entry?.manifest.backend?.entry;
   if (!entry || !backendEntry) {
     throw new Error(`Extension "${extensionId}" has no backend entry for image generation.`);
@@ -1655,12 +1659,17 @@ function dispatchImageCapability(image: ExtensionBackendCapabilityImage, request
     throw new Error(`Unsupported image capability operation: ${request.operation}`);
   }
   const input = normalizeRecordInput(request.input, 'Image');
-  return image.generate(request.extensionId, {
+  const imageOptions: { stateRoot?: string; desktopRootLayout?: DesktopRootLayout } = {};
+  if (request.context?.stateRoot) imageOptions.stateRoot = request.context.stateRoot;
+  if (request.context?.desktopRootLayout) imageOptions.desktopRootLayout = request.context.desktopRootLayout;
+  const hasImageOptions = Object.keys(imageOptions).length > 0;
+  const imageInput = {
     input: input.input,
     ...(input.toolContext && typeof input.toolContext === 'object' && !Array.isArray(input.toolContext)
       ? { toolContext: input.toolContext as { preferredVisionModel?: string; sessionFile?: string } }
       : {}),
-  });
+  };
+  return hasImageOptions ? image.generate(request.extensionId, imageInput, imageOptions) : image.generate(request.extensionId, imageInput);
 }
 
 function dispatchVideoCapability(video: ExtensionBackendCapabilityVideo, request: ExtensionBackendWorkerCapabilityRequest): unknown {

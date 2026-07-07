@@ -1,3 +1,5 @@
+import { getStateRoot } from '@neon-pilot/core';
+
 import { publishAppEvent } from '../shared/appEvents.js';
 import { logError, logInfo } from '../shared/logging.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
@@ -138,10 +140,12 @@ async function startOneExtensionService(
 export async function startExtensionServices(
   serverContext?: ExtensionBackendServerContext,
 ): Promise<Array<{ extensionId: string; serviceId: string; ok: boolean; error?: string }>> {
-  const enabled = listExtensionInstallSummaries().filter((s) => s.status === 'enabled');
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
+  const enabled = listExtensionInstallSummaries(stateRoot, layout).filter((s) => s.status === 'enabled');
   const results = await Promise.all(
     enabled.flatMap((summary) => {
-      const entry = findExtensionEntry(summary.id);
+      const entry = findExtensionEntry(summary.id, stateRoot, layout);
       return (entry?.manifest.backend?.services ?? []).map((service) => startOneExtensionService(summary.id, service, serverContext));
     }),
   );
@@ -152,17 +156,21 @@ export async function startServicesForExtension(
   extensionId: string,
   serverContext?: ExtensionBackendServerContext,
 ): Promise<Array<{ extensionId: string; serviceId: string; ok: boolean; error?: string }>> {
-  const summary = listExtensionInstallSummaries().find((s) => s.id === extensionId);
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
+  const summary = listExtensionInstallSummaries(stateRoot, layout).find((s) => s.id === extensionId);
   if (summary?.status !== 'enabled') return [];
-  const entry = findExtensionEntry(extensionId);
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
   const services = entry?.manifest.backend?.services ?? [];
   return Promise.all(services.map((service) => startOneExtensionService(extensionId, service, serverContext)));
 }
 
 export async function runExtensionServiceHealthChecks(serverContext?: ExtensionBackendServerContext): Promise<void> {
-  for (const summary of listExtensionInstallSummaries()) {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
+  for (const summary of listExtensionInstallSummaries(stateRoot, layout)) {
     if (summary.status !== 'enabled') continue;
-    const entry = findExtensionEntry(summary.id);
+    const entry = findExtensionEntry(summary.id, stateRoot, layout);
     for (const service of entry?.manifest.backend?.services ?? []) {
       if (!service.healthCheck) continue;
       const key = serviceKey(summary.id, service.id);

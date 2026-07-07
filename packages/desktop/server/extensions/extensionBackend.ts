@@ -258,8 +258,9 @@ async function listExtensionRuntimes(
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
 ): Promise<ExtensionRuntimeSummary[]> {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
   const runtimes: ExtensionRuntimeSummary[] = [];
-  for (const provider of listExtensionRuntimeProviderRegistrations()) {
+  for (const provider of listExtensionRuntimeProviderRegistrations(stateRoot)) {
     const result = await invokeExtensionAction(provider.extensionId, provider.handler, {}, serverContext, toolContext, agentToolContext);
     if (!result.ok) {
       runtimes.push({
@@ -646,7 +647,7 @@ export function createBackendContext(
     extensions: {
       callAction: async (targetExtensionId, actionId, input) => {
         assertExtensionPermission(extensionId, 'extensions:read', 'extensions.callAction');
-        const entry = findExtensionEntry(targetExtensionId);
+        const entry = findExtensionEntry(targetExtensionId, stateRoot, desktopRootLayout);
         if (!entry) throw new Error(`Extension "${targetExtensionId}" not found.`);
         const action = entry.manifest.backend?.actions?.find((candidate) => candidate.id === actionId);
         if (!action) throw new Error(`Action "${actionId}" not found on extension "${targetExtensionId}".`);
@@ -660,7 +661,7 @@ export function createBackendContext(
       },
       listActions: () => {
         assertExtensionPermission(extensionId, 'extensions:read', 'extensions.listActions');
-        return listExtensionInstallSummaries()
+        return listExtensionInstallSummaries(stateRoot, desktopRootLayout)
           .filter((summary) => summary.status === 'enabled' && (summary.backendActions?.length ?? 0) > 0)
           .map((summary) => ({
             extensionId: summary.id,
@@ -693,7 +694,7 @@ export function createBackendContext(
       },
       getStatus: (targetExtensionId) => {
         assertExtensionPermission(extensionId, 'extensions:read', 'extensions.getStatus');
-        const summary = listExtensionInstallSummaries().find((e) => e.id === targetExtensionId);
+        const summary = listExtensionInstallSummaries(stateRoot, desktopRootLayout).find((e) => e.id === targetExtensionId);
         if (!summary) return { enabled: false, healthy: false };
         const enabled = summary.status === 'enabled';
         return {
@@ -1227,8 +1228,10 @@ export async function invokeExtensionRoute(
   request: ExtensionRouteRequest,
   serverContext?: ExtensionBackendServerContext,
 ): Promise<ExtensionRouteResponse> {
-  const entry = findExtensionEntry(extensionId);
-  if (!entry || !isExtensionEnabled(extensionId)) {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
+  if (!entry || !isExtensionEnabled(extensionId, stateRoot, layout)) {
     return { status: 404, body: { error: 'Extension route not found.' } };
   }
   const route = entry.manifest.backend?.routes?.find((candidate) => candidate.method === method && candidate.path === routePath);
@@ -1271,10 +1274,12 @@ export async function invokeExtensionAction(
   agentToolContext?: unknown,
   signal?: AbortSignal,
 ): Promise<ExtensionActionInvokeResult> {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
   const started = Date.now();
   let actionHandlerStarted = false;
   try {
-    const entry = findExtensionEntry(extensionId);
+    const entry = findExtensionEntry(extensionId, stateRoot, layout);
     if (!entry) {
       throw new ExtensionLoadError({
         extensionId,
@@ -1282,7 +1287,7 @@ export async function invokeExtensionAction(
         message: `Cannot invoke action "${actionId}": extension "${extensionId}" is not installed.`,
       });
     }
-    if (!isExtensionEnabled(extensionId)) {
+    if (!isExtensionEnabled(extensionId, stateRoot, layout)) {
       throw new ExtensionLoadError({
         extensionId,
         code: 'extension_disabled',
@@ -1357,9 +1362,11 @@ export async function invokeExtensionProtocolEntrypoint(
     signal: AbortSignal;
   },
 ): Promise<void> {
-  const enabled = listExtensionInstallSummaries().filter((summary) => summary.status === 'enabled');
+  const stateRoot = options.serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = options.serverContext?.getDesktopRootLayout?.();
+  const enabled = listExtensionInstallSummaries(stateRoot, layout).filter((summary) => summary.status === 'enabled');
   const matches = enabled.flatMap((summary) => {
-    const entry = findExtensionEntry(summary.id);
+    const entry = findExtensionEntry(summary.id, stateRoot, layout);
     const manifestEntrypoints = entry?.manifest.backend?.protocolEntrypoints ?? [];
     return manifestEntrypoints
       .filter((entrypoint) => entrypoint.id === protocolId)
@@ -1511,14 +1518,16 @@ let extensionServiceHealthTimer: NodeJS.Timeout | null = null;
 export async function startExtensionStartupActions(
   serverContext?: ExtensionBackendServerContext,
 ): Promise<Array<{ extensionId: string; ok: boolean; error?: string }>> {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
   const results: Array<{ extensionId: string; ok: boolean; error?: string }> = [];
 
-  for (const summary of listExtensionInstallSummaries()) {
+  for (const summary of listExtensionInstallSummaries(stateRoot, layout)) {
     if (summary.status !== 'enabled') {
       continue;
     }
 
-    const entry = findExtensionEntry(summary.id);
+    const entry = findExtensionEntry(summary.id, stateRoot, layout);
     const startupActionId = entry?.manifest.backend?.startupAction;
     if (!startupActionId) {
       continue;

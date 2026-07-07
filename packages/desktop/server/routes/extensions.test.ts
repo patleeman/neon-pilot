@@ -311,6 +311,58 @@ describe('registerExtensionRoutes', () => {
     expect(res.end).toHaveBeenCalled();
   });
 
+  it('includes stateRoot and desktopRootLayout in the backend route server context snapshot', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-ctx-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        enabled: true,
+        backend: {
+          entry: 'dist/backend.mjs',
+          routes: [{ method: 'GET', path: '/status', handler: 'status', worker: { enabled: true } }],
+        },
+      }),
+    );
+    writeFileSync(
+      join(extensionRoot, 'dist', 'backend.mjs'),
+      'export function status(req) { return { status: 200, body: { ok: true } }; }',
+    );
+
+    const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-route-ctx-layout-')) });
+    const invokeRouteSpy = vi.fn(async () => ({ status: 200, body: { ok: true } }));
+    const baseClient = createInProcessExtensionHostClient();
+    setExtensionHostClient({
+      ...baseClient,
+      invokeRoute: invokeRouteSpy,
+    });
+
+    const harness = createHarness({
+      getRuntimeScope: () => 'shared',
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => layout,
+    });
+
+    const res = createResponse();
+    await harness.getHandler('/api/extensions/:id/routes/*')({ method: 'GET', params: { id: 'agent-board', 0: 'status' }, query: {} }, res);
+
+    expect(invokeRouteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extensionId: 'agent-board',
+        serverContextSnapshot: expect.objectContaining({
+          runtimeScope: 'shared',
+          stateRoot,
+          desktopRootLayout: layout,
+        }),
+      }),
+    );
+  });
+
   it('lists and serves extension webapps from package assets', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-webapp-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

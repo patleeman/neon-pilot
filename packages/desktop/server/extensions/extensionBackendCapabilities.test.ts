@@ -2742,6 +2742,47 @@ describe('extension backend capability dispatcher', () => {
     });
   });
 
+  it('passes stateRoot/desktopRootLayout from request context to image generation', async () => {
+    const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-image-cap-layout-')) });
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['images:write'],
+      },
+    });
+    const image = { generate: vi.fn(async () => ({ text: 'generated' })) };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ image });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-codex-profile',
+          capability: 'image',
+          operation: 'generate',
+          input: {
+            input: { prompt: 'draw smoke' },
+          },
+          context: {
+            stateRoot: '/tmp/test-state',
+            desktopRootLayout: layout,
+          },
+        }),
+      ),
+    ).resolves.toEqual({ text: 'generated' });
+
+    expect(image.generate).toHaveBeenCalledWith(
+      'system-codex-profile',
+      {
+        input: { prompt: 'draw smoke' },
+      },
+      {
+        stateRoot: '/tmp/test-state',
+        desktopRootLayout: layout,
+      },
+    );
+  });
+
   it('passes active session context to video frame extraction capabilities', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: ['videos:read'] } });
     const video = {
