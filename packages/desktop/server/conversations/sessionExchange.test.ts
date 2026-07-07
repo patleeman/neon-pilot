@@ -66,6 +66,7 @@ describe('conversation session exchange', () => {
       systemCache: '/custom/root/system/cache',
       systemConfig: '/custom/root/system/config',
       systemConversations: '/custom/root/system/conversations',
+      systemConversationsIndex: '/custom/root/system/conversations/session-meta-index.json',
       systemSessions: '/custom/root/system/conversations/sessions',
       systemDaemon: '/custom/root/system/daemon',
       systemElectron: '/custom/root/system/electron',
@@ -157,6 +158,7 @@ describe('conversation session exchange', () => {
       systemCache: '/custom/root/system/cache',
       systemConfig: '/custom/root/system/config',
       systemConversations: '/custom/root/system/conversations',
+      systemConversationsIndex: '/custom/root/system/conversations/session-meta-index.json',
       systemSessions: '/custom/root/system/conversations/sessions',
       systemDaemon: '/custom/root/system/daemon',
       systemElectron: '/custom/root/system/electron',
@@ -197,6 +199,55 @@ describe('conversation session exchange', () => {
       '{"type":"session","id":"new-session-id","cwd":"/repo"}\n{"role":"user"}\n',
       'utf-8',
     );
+  });
+
+  it('imports with layout-aware session set rewrites conflicting legacy session id', () => {
+    sessions.listSessions.mockReturnValueOnce([{ id: 'conflict-legacy-session', title: 'Legacy' }]);
+    fs.files.set('/imports/conflict.jsonl', '{"type":"session","id":"conflict-legacy-session","cwd":"/repo"}\n{"role":"user"}\n');
+    fs.files.set('/custom/root/system/conversations/sessions/--repo--/session.jsonl', 'existing');
+
+    const layout = {
+      root: '/custom/root',
+      data: '/custom/root/data',
+      dataExports: '/custom/root/data/exports',
+      dataApps: '/custom/root/data/apps',
+      dataDocuments: '/custom/root/data/documents',
+      documents: '/custom/root/documents',
+      apps: '/custom/root/apps',
+      agents: '/custom/root/agents',
+      logs: '/custom/root/logs',
+      logsDesktop: '/custom/root/logs/desktop',
+      logsDaemon: '/custom/root/logs/daemon',
+      logsTelemetry: '/custom/root/logs/telemetry',
+      system: '/custom/root/system',
+      systemAgents: '/custom/root/system/agents',
+      systemApps: '/custom/root/system/apps',
+      systemCache: '/custom/root/system/cache',
+      systemConfig: '/custom/root/system/config',
+      systemConversations: '/custom/root/system/conversations',
+      systemConversationsIndex: '/custom/root/system/conversations/session-meta-index.json',
+      systemSessions: '/custom/root/system/conversations/sessions',
+      systemDaemon: '/custom/root/system/daemon',
+      systemElectron: '/custom/root/system/electron',
+      systemElectronUserData: '/custom/root/system/electron/user-data',
+      systemObservability: '/custom/root/system/observability',
+      systemRuntime: '/custom/root/system/runtime',
+      systemSecrets: '/custom/root/system/secrets',
+      systemState: '/custom/root/system/state',
+    };
+
+    expect(importConversationSession({ filePath: '/imports/conflict.jsonl' }, layout)).toEqual({
+      ok: true,
+      conversationId: 'new-session-id',
+      sessionFile: '/custom/root/system/conversations/sessions/--repo--/conflict.jsonl',
+      importedAsNewId: true,
+    });
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      '/custom/root/system/conversations/sessions/--repo--/conflict.jsonl',
+      expect.stringContaining('"id":"new-session-id"'),
+      'utf-8',
+    );
+    expect(core.getDurableSessionsDir).not.toHaveBeenCalled();
   });
 
   it('validates import path, extension, and session header', () => {

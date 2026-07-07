@@ -48,7 +48,7 @@ vi.mock('@neon-pilot/core', () => ({
 }));
 
 import { setSessionPathsContext } from './sessionPaths.js';
-import { clearSessionCaches, listSessions } from './sessions.js';
+import { clearSessionCaches, listSessions, readSessionMeta, readSessionSearchText } from './sessions.js';
 
 function createTempSessionsDir(): string {
   const dir = mkdtempSync(join(tmpdir(), 'neon-pilot-legacy-sessions-'));
@@ -209,5 +209,45 @@ describe('legacy session discoverability', () => {
       .sort();
     expect(fromOverride).toContain('layout-override');
     expect(fromOverride).toContain('legacy-override');
+  });
+
+  it('readSessionMeta finds sessions from legacy dir', () => {
+    writeSessionFile(sharedLegacyDir, 'legacy-meta', 'Legacy meta session');
+
+    const meta = readSessionMeta('legacy-meta');
+    expect(meta).not.toBeNull();
+    expect(meta!.id).toBe('legacy-meta');
+    expect(meta!.title).toBe('Legacy meta session');
+  });
+
+  it('readSessionMeta prefers layout session on ID conflict', () => {
+    writeSessionFile(layoutDir, 'conflict-meta', 'Layout title');
+    writeSessionFile(sharedLegacyDir, 'conflict-meta', 'Legacy title');
+
+    const meta = readSessionMeta('conflict-meta');
+    expect(meta).not.toBeNull();
+    expect(meta!.id).toBe('conflict-meta');
+    expect(meta!.title).toBe('Layout title');
+  });
+
+  it('readSessionSearchText returns text for legacy sessions', () => {
+    writeSessionFile(sharedLegacyDir, 'legacy-search', 'Legacy search session');
+
+    const searchText = readSessionSearchText('legacy-search');
+    expect(searchText).not.toBeNull();
+    expect(searchText ?? '').toContain('Legacy search session');
+  });
+
+  it('legacy sessions remain discoverable after cache clear', () => {
+    writeSessionFile(sharedLegacyDir, 'cache-clear', 'After clear session');
+    // First scan populates cache
+    const before = listSessions().find((s) => s.id === 'cache-clear');
+    expect(before).toBeDefined();
+
+    // Clear cache and re-scan
+    clearSessionCaches();
+    const after = listSessions().find((s) => s.id === 'cache-clear');
+    expect(after).toBeDefined();
+    expect(after!.title).toBe('After clear session');
   });
 });
