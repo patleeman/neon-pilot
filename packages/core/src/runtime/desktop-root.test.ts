@@ -7,6 +7,7 @@ import {
   ensureDesktopRootDir,
   getDefaultDesktopRoot,
   getDesktopRootDir,
+  getRuntimeAuthFilePath,
   getRuntimeModelsFilePath,
   getRuntimeSessionsIndexFilePath,
   resolveDesktopAppDataDir,
@@ -101,6 +102,16 @@ describe('desktop root layout', () => {
   it('falls back to legacy pi-agent runtime dir for session index when no layout is provided', () => {
     const result = getRuntimeSessionsIndexFilePath();
     expect(result).toMatch(/neon-pilot-runtime\/session-meta-index\.json$/);
+  });
+
+  it('resolves authFilePath from desktop root layout', () => {
+    const layout = resolveDesktopRootLayout({ root: '/desktop' });
+    expect(getRuntimeAuthFilePath(layout)).toBe('/desktop/system/runtime/auth.json');
+  });
+
+  it('falls back to legacy pi-agent runtime dir for auth when no layout is provided', () => {
+    const result = getRuntimeAuthFilePath();
+    expect(result).toMatch(/neon-pilot-runtime\/auth\.json$/);
   });
 
   it('normalizes app data directories from app ids', () => {

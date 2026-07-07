@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { SessionManager } from '@earendil-works/pi-coding-agent';
 import {
   type DesktopRootLayout,
-  getPiAgentRuntimeDir,
+  getRuntimeAuthFilePath,
   getStateRoot,
   queryAppTelemetryEvents,
   readTraceTelemetryLogEvents,
@@ -1642,7 +1642,7 @@ async function generateImageWithInstalledExtension(
     throw new Error(`Extension "${extensionId}" does not export generateImageForHost.`);
   }
 
-  const authFile = join(getPiAgentRuntimeDir(), 'auth.json');
+  const authFile = getRuntimeAuthFilePath(layout);
   const modelRegistry = createModelRegistryForAuthFile(authFile);
   const preferred = parseModelRef(input.toolContext?.preferredVisionModel);
   const model = preferred ? modelRegistry.find(preferred.provider, preferred.modelId) : undefined;

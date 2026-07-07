@@ -12,6 +12,7 @@ export {
   ensureDesktopRootDir,
   getDefaultDesktopRoot,
   getDesktopRootDir,
+  getRuntimeAuthFilePath,
   getRuntimeModelsFilePath,
   getRuntimeSessionsIndexFilePath,
   resolveDesktopAppDataDir,

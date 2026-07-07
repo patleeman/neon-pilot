@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 import { AuthStorage, type ExtensionAPI, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
-import { getRuntimeConfigRoot, getRuntimeModelsFilePath, writeMergedMcpConfigFile } from '@neon-pilot/core';
+import { getRuntimeAuthFilePath, getRuntimeConfigRoot, getRuntimeModelsFilePath, writeMergedMcpConfigFile } from '@neon-pilot/core';
 import { type DesktopRootLayout, materializeRuntimeResourcesToAgentDir, resolveRuntimeResources } from '@neon-pilot/core';
 
 import { ensureNeonPilotCliLauncher, prependNeonPilotCliBin } from '../cliEnvironment.js';
@@ -232,7 +232,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
 
   function hasOpenAiImageProvider(): boolean {
     try {
-      const auth = AuthStorage.create(join(agentDir, 'auth.json'));
+      const auth = AuthStorage.create(getRuntimeAuthFilePath(desktopRootLayout));
       return auth.hasAuth('openai') || auth.hasAuth('openai-codex');
     } catch {
       return false;

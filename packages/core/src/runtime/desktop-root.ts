@@ -141,6 +141,20 @@ export function getRuntimeSessionsIndexFilePath(layout?: DesktopRootLayout): str
   return join(getPiAgentRuntimeDir(), 'session-meta-index.json');
 }
 
+/**
+ * Resolve the runtime auth.json file path.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/runtime/auth.json`. Otherwise falls back to the
+ * legacy `<state-root>/neon-pilot-runtime/auth.json`.
+ */
+export function getRuntimeAuthFilePath(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return join(layout.systemRuntime, 'auth.json');
+  }
+  return join(getPiAgentRuntimeDir(), 'auth.json');
+}
+
 const DEFAULT_SOUL_DOC_CONTENT = `\
 # Neon Pilot Persona
 

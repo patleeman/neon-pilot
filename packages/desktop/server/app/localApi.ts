@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainThread } from 'node:worker_threads';
 
@@ -14,6 +14,7 @@ import { SessionManager } from '@earendil-works/pi-coding-agent';
 import {
   ensureDesktopRootDir,
   getPiAgentRuntimeDir,
+  getRuntimeAuthFilePath,
   getRuntimeSessionsIndexFilePath,
   getStateRoot,
   resolveDesktopRootLayout,
@@ -771,12 +772,21 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   const repoRoot = resolveRepoRoot();
   const stateRoot = getStateRoot();
   const agentDir = getPiAgentRuntimeDir(stateRoot);
-  const authFile = join(agentDir, 'auth.json');
+  const legacyAuthFile = join(agentDir, 'auth.json');
 
   // Ensure the desktop root directory exists before any consumer
   // (e.g. getDefaultWebCwd) can reference it.
   ensureDesktopRootDir();
   const desktopRootLayout = resolveDesktopRootLayout();
+
+  // Migrate auth file from legacy path to layout-derived runtime path.
+  // If the layout path does not exist and the legacy file does, copy it
+  // once so existing provider credentials survive the migration.
+  const authFile = getRuntimeAuthFilePath(desktopRootLayout);
+  if (!existsSync(authFile) && existsSync(legacyAuthFile)) {
+    mkdirSync(dirname(authFile), { recursive: true, mode: 0o700 });
+    copyFileSync(legacyAuthFile, authFile);
+  }
 
   // Propagate layout-derived paths to worker-inherited process env so that
   // worker threads (e.g. conversationInspectWorker) can resolve the same
