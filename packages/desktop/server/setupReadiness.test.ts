@@ -205,4 +205,40 @@ describe('setupReadiness', () => {
     });
     expect(snapshot.counts).toMatchObject({ incomplete: 1, unknown: 1 });
   });
+
+  it('passes a server context snapshot to readRegistryPresentation for readiness reads', async () => {
+    const root = tempRoot();
+    const host = client();
+
+    await readSetupReadiness(context(root), { extensionHostClient: host });
+
+    expect(host.readRegistryPresentation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runtimeScope: 'test',
+        repoRoot: '/repo',
+        authFile: '/auth.json',
+        settingsFile: '/settings.json',
+        stateRoot: root,
+        desktopRootLayout: expect.objectContaining({ root: join(root, 'desktop-root') }),
+      }),
+    );
+  });
+
+  it('passes a server context snapshot to readRegistryPresentation for action lookup', async () => {
+    const root = tempRoot();
+    const host = client({ statusResult: { status: 'ready', detail: 'Installed.' } });
+    const ctx = context(root);
+
+    await runSetupReadinessAction(ctx, { extensionId: 'ext', itemId: 'item', actionId: 'install' }, { extensionHostClient: host });
+
+    expect(host.readRegistryPresentation).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        runtimeScope: 'test',
+        repoRoot: '/repo',
+        stateRoot: root,
+        desktopRootLayout: expect.objectContaining({ root: join(root, 'desktop-root') }),
+      }),
+    );
+  });
 });

@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import type { DesktopRootLayout } from '@neon-pilot/core';
 
 import { type ExtensionHostClient, getExtensionHostClient } from './extensions/extensionHostClient.js';
+import type { ExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 import { createExtensionHostServerContextSnapshot } from './extensions/extensionHostServerContext.js';
 import type {
   ExtensionManifest,
@@ -182,7 +183,7 @@ export async function readSetupReadiness(context: ServerRouteContext, deps: Setu
   const checkedAt = now.toISOString();
   const statePath = deps.stateFile ?? resolveSetupReadinessStateFile(context.getDesktopRootLayout());
   const state = readState(statePath);
-  const { installSummaries } = await client.readRegistryPresentation();
+  const { installSummaries } = await client.readRegistryPresentation(createExtensionHostServerContextSnapshot(context));
   const items: SetupReadinessItem[] = [];
 
   for (const summary of installSummaries) {
@@ -247,8 +248,9 @@ async function findSetupItem(input: {
   client: ExtensionHostClient;
   extensionId: string;
   itemId: string;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }): Promise<{ manifest: ExtensionManifest; contribution: ExtensionSetupItemContribution } | null> {
-  const { installSummaries } = await input.client.readRegistryPresentation();
+  const { installSummaries } = await input.client.readRegistryPresentation(input.serverContextSnapshot);
   const summary = installSummaries.find((candidate) => candidate.id === input.extensionId && candidate.status === 'enabled');
   const manifest = summary && isRecord(summary) ? asManifest(summary) : null;
   const contribution = manifest?.contributes?.setupItems?.find((item) => item.id === input.itemId);
@@ -261,7 +263,12 @@ export async function runSetupReadinessAction(
   deps: SetupReadinessDeps = {},
 ): Promise<SetupReadinessSnapshot> {
   const client = deps.extensionHostClient ?? getExtensionHostClient();
-  const found = await findSetupItem({ client, extensionId: input.extensionId, itemId: input.itemId });
+  const found = await findSetupItem({
+    client,
+    extensionId: input.extensionId,
+    itemId: input.itemId,
+    serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+  });
   const action = found?.contribution.actions?.find((candidate) => candidate.id === input.actionId);
   if (!found || !action) throw new Error(`Setup action "${input.actionId}" is not declared for "${input.extensionId}:${input.itemId}".`);
   if (!action.action)
