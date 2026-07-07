@@ -1232,6 +1232,7 @@ export function registerExtensionRoutes(
         operation: 'list',
         extensionId: req.params.id,
         prefix: typeof req.query.prefix === 'string' ? req.query.prefix : '',
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
       });
       res.json(state.operation === 'list' ? state.documents : []);
     } catch (err) {
@@ -1245,6 +1246,7 @@ export function registerExtensionRoutes(
         operation: 'read',
         extensionId: req.params.id,
         key: (req.params as Record<string, string>)['0'],
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
       });
       const document = state.operation === 'read' ? state.document : null;
       if (!document) {
@@ -1268,6 +1270,7 @@ export function registerExtensionRoutes(
         key: (req.params as Record<string, string>)['0'],
         value: body.value,
         expectedVersion,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
       });
       res.json(state.operation === 'write' ? state.document : null);
     } catch (err) {
@@ -1286,6 +1289,7 @@ export function registerExtensionRoutes(
         operation: 'delete',
         extensionId: req.params.id,
         key: (req.params as Record<string, string>)['0'],
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
       });
       res.json({ ok: true, deleted: state.operation === 'delete' ? state.deleted : false });
     } catch (err) {

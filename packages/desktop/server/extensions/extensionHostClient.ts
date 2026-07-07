@@ -636,16 +636,18 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     }
     if (request.type === 'stateOperation') {
       const { deleteExtensionState, listExtensionState, readExtensionState, writeExtensionState } = await import('./extensionStorage.js');
+      const serverContext = await resolveRequestServerContext(request);
+      const layout = serverContext?.getDesktopRootLayout?.();
       if (request.operation === 'list') {
         return {
           ok: true,
-          state: { operation: 'list', documents: listExtensionState(request.extensionId, request.prefix ?? '') },
+          state: { operation: 'list', documents: listExtensionState(request.extensionId, request.prefix ?? '', layout) },
         };
       }
       if (request.operation === 'read') {
         return {
           ok: true,
-          state: { operation: 'read', document: readExtensionState(request.extensionId, request.key) },
+          state: { operation: 'read', document: readExtensionState(request.extensionId, request.key, layout) },
         };
       }
       if (request.operation === 'write') {
@@ -653,13 +655,19 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
           ok: true,
           state: {
             operation: 'write',
-            document: writeExtensionState(request.extensionId, request.key, request.value, { expectedVersion: request.expectedVersion }),
+            document: writeExtensionState(
+              request.extensionId,
+              request.key,
+              request.value,
+              { expectedVersion: request.expectedVersion },
+              layout,
+            ),
           },
         };
       }
       return {
         ok: true,
-        state: { operation: 'delete', deleted: deleteExtensionState(request.extensionId, request.key).deleted },
+        state: { operation: 'delete', deleted: deleteExtensionState(request.extensionId, request.key, layout).deleted },
       };
     }
     if (request.type === 'registryMaintenance') {

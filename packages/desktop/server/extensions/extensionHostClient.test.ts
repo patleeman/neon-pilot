@@ -662,10 +662,78 @@ describe('extension host client', () => {
       deleted: true,
     });
 
-    expect(extensionStorage.listExtensionState).toHaveBeenCalledWith('ext', 'tasks/');
-    expect(extensionStorage.readExtensionState).toHaveBeenCalledWith('ext', 'tasks/one');
-    expect(extensionStorage.writeExtensionState).toHaveBeenCalledWith('ext', 'tasks/one', { title: 'Done' }, { expectedVersion: 1 });
-    expect(extensionStorage.deleteExtensionState).toHaveBeenCalledWith('ext', 'tasks/one');
+    expect(extensionStorage.listExtensionState).toHaveBeenCalledWith('ext', 'tasks/', undefined);
+    expect(extensionStorage.readExtensionState).toHaveBeenCalledWith('ext', 'tasks/one', undefined);
+    expect(extensionStorage.writeExtensionState).toHaveBeenCalledWith(
+      'ext',
+      'tasks/one',
+      { title: 'Done' },
+      { expectedVersion: 1 },
+      undefined,
+    );
+    expect(extensionStorage.deleteExtensionState).toHaveBeenCalledWith('ext', 'tasks/one', undefined);
+  });
+
+  it('threads DesktopRootLayout from serverContextSnapshot to extension storage functions', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    extensionStorage.listExtensionState.mockReturnValueOnce([{ key: 'k1', value: 'v1', version: 1 }]);
+    extensionStorage.readExtensionState.mockReturnValueOnce({ key: 'k1', value: 'v1', version: 1 });
+    extensionStorage.writeExtensionState.mockReturnValueOnce({ key: 'k1', value: 'v2', version: 2 });
+    extensionStorage.deleteExtensionState.mockReturnValueOnce({ ok: true, deleted: true });
+
+    await expect(
+      getExtensionHostClient().stateOperation({
+        operation: 'list',
+        extensionId: 'ext',
+        prefix: 'tasks/',
+        serverContextSnapshot: { runtimeScope: 'shared', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({
+      operation: 'list',
+      documents: [{ key: 'k1', value: 'v1', version: 1 }],
+    });
+    expect(extensionStorage.listExtensionState).toHaveBeenCalledWith('ext', 'tasks/', layout);
+
+    await expect(
+      getExtensionHostClient().stateOperation({
+        operation: 'read',
+        extensionId: 'ext',
+        key: 'k1',
+        serverContextSnapshot: { runtimeScope: 'shared', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({
+      operation: 'read',
+      document: { key: 'k1', value: 'v1', version: 1 },
+    });
+    expect(extensionStorage.readExtensionState).toHaveBeenCalledWith('ext', 'k1', layout);
+
+    await expect(
+      getExtensionHostClient().stateOperation({
+        operation: 'write',
+        extensionId: 'ext',
+        key: 'k1',
+        value: 'v2',
+        serverContextSnapshot: { runtimeScope: 'shared', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({
+      operation: 'write',
+      document: { key: 'k1', value: 'v2', version: 2 },
+    });
+    expect(extensionStorage.writeExtensionState).toHaveBeenCalledWith('ext', 'k1', 'v2', { expectedVersion: undefined }, layout);
+
+    await expect(
+      getExtensionHostClient().stateOperation({
+        operation: 'delete',
+        extensionId: 'ext',
+        key: 'k1',
+        serverContextSnapshot: { runtimeScope: 'shared', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({
+      operation: 'delete',
+      deleted: true,
+    });
+    expect(extensionStorage.deleteExtensionState).toHaveBeenCalledWith('ext', 'k1', layout);
   });
 
   it('routes registry maintenance through the extension host request envelope', async () => {

@@ -111,12 +111,14 @@ export type ExtensionHostStateOperationRequest =
       operation: 'list';
       extensionId: string;
       prefix?: string;
+      serverContextSnapshot?: ExtensionHostServerContextSnapshot;
     }
   | {
       type: 'stateOperation';
       operation: 'read';
       extensionId: string;
       key: string;
+      serverContextSnapshot?: ExtensionHostServerContextSnapshot;
     }
   | {
       type: 'stateOperation';
@@ -125,12 +127,14 @@ export type ExtensionHostStateOperationRequest =
       key: string;
       value: unknown;
       expectedVersion?: number;
+      serverContextSnapshot?: ExtensionHostServerContextSnapshot;
     }
   | {
       type: 'stateOperation';
       operation: 'delete';
       extensionId: string;
       key: string;
+      serverContextSnapshot?: ExtensionHostServerContextSnapshot;
     };
 
 export type ExtensionHostStateOperationResult =
