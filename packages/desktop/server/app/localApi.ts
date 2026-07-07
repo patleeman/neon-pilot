@@ -142,7 +142,10 @@ import { getExecution, getExecutionLog, listConversationExecutions, listExecutio
 import { createExtensionConversationsCapability } from '../extensions/extensionConversations.js';
 import { getExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostRpcClient } from '../extensions/extensionHostRpcClient.js';
-import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
+import {
+  createExtensionHostServerContextSnapshot,
+  type ExtensionHostServerContextSnapshot,
+} from '../extensions/extensionHostServerContext.js';
 import { notifyExtensionStartupStatus } from '../extensions/extensionNotifications.js';
 import { requestExtensionUiConfirm } from '../extensions/extensionUiConfirmBridge.js';
 import { setWorkbenchBrowserToolHost, type WorkbenchBrowserToolHost } from '../extensions/workbenchBrowserToolHost.js';
@@ -1289,9 +1292,9 @@ function parseDesktopLocalApiLogTail(value: string | null): number | undefined {
   return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(1000, parsed) : undefined;
 }
 
-async function readExtensionInstallSummariesWithRuntimeStateForLocalApi() {
+async function readExtensionInstallSummariesWithRuntimeStateForLocalApi(serverContextSnapshot?: ExtensionHostServerContextSnapshot) {
   const [{ installSummaries }, runningServices] = await Promise.all([
-    getExtensionHostClient().readRegistryPresentation(),
+    getExtensionHostClient().readRegistryPresentation(serverContextSnapshot),
     getExtensionHostClient().listServices(),
   ]);
   const running = new Map(runningServices.map((service) => [`${service.extensionId}:${service.serviceId}`, service]));
@@ -1436,10 +1439,16 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   if (method === 'POST' && path === '/api/models/refresh') return createDesktopLocalApiJsonResponse(await refreshDesktopModels());
   if (method === 'GET' && path === '/api/model-preferences') return createDesktopLocalApiJsonResponse(await readDesktopModelPreferences());
   if (method === 'GET' && path === '/api/extensions/slash-commands') {
-    return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).slashCommandRegistrations);
+    const serverContextSnapshot = createExtensionHostServerContextSnapshot(await getLocalServerRouteContext());
+    return createDesktopLocalApiJsonResponse(
+      (await getExtensionHostClient().readRegistryPresentation(serverContextSnapshot)).slashCommandRegistrations,
+    );
   }
   if (method === 'GET' && path === '/api/extensions/mentions') {
-    return createDesktopLocalApiJsonResponse((await getExtensionHostClient().readRegistryPresentation()).mentionRegistrations);
+    const serverContextSnapshot = createExtensionHostServerContextSnapshot(await getLocalServerRouteContext());
+    return createDesktopLocalApiJsonResponse(
+      (await getExtensionHostClient().readRegistryPresentation(serverContextSnapshot)).mentionRegistrations,
+    );
   }
   if (method === 'GET' && path === '/api/extensions/webapps/localhost-proxy') {
     return createDesktopLocalApiJsonResponse(getLocalhostWebappProxyStatus() ?? { running: false });
@@ -1451,9 +1460,10 @@ async function dispatchDesktopLocalProductApiRequest(input: {
       : createDesktopLocalApiJsonResponse({ ok: false, error: 'Neon Pilot localhost webapp proxy is not running.' }, 503);
   }
   if (method === 'GET' && path === '/api/extensions/registry/critical') {
+    const serverContextSnapshot = createExtensionHostServerContextSnapshot(await getLocalServerRouteContext());
     return createDesktopLocalApiJsonResponse(
       buildCriticalExtensionRegistryResponse(
-        (await getExtensionHostClient().readRegistryPresentation()).snapshot as unknown as Parameters<
+        (await getExtensionHostClient().readRegistryPresentation(serverContextSnapshot)).snapshot as unknown as Parameters<
           typeof buildCriticalExtensionRegistryResponse
         >[0],
       ),
@@ -1461,9 +1471,10 @@ async function dispatchDesktopLocalProductApiRequest(input: {
   }
   if (method === 'GET' && path === '/api/extensions/registry') {
     const context = await getLocalServerRouteContext();
+    const serverContextSnapshot = createExtensionHostServerContextSnapshot(context);
     const [extensions, registryPresentation, settings] = await Promise.all([
-      readExtensionInstallSummariesWithRuntimeStateForLocalApi(),
-      getExtensionHostClient().readRegistryPresentation(),
+      readExtensionInstallSummariesWithRuntimeStateForLocalApi(serverContextSnapshot),
+      getExtensionHostClient().readRegistryPresentation(serverContextSnapshot),
       Promise.resolve(createSettingsStore(context.getStateRoot()).read()),
     ]);
     const snapshot = registryPresentation.snapshot;

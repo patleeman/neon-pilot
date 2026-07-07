@@ -10,6 +10,7 @@ import {
   abortExtensionShellSpawnHandlesForConversation,
   createExtensionBackendCapabilityDispatcher,
 } from './extensionBackendCapabilities.js';
+import { listExtensionCommandRegistrations, setExtensionEnabled } from './extensionRegistry.js';
 
 const findExtensionEntry = vi.hoisted(() =>
   vi.fn(() => ({
@@ -675,6 +676,45 @@ describe('extension backend capability dispatcher', () => {
     expect(extensions.getStatus).toHaveBeenCalledWith('ext-a');
     expect(extensions.setEnabled).toHaveBeenCalledWith('ext-a', false);
     expect(extensions.setPermissionGranted).toHaveBeenCalledWith('ext-a', 'storage:read', false);
+  });
+
+  it('threads configured layout context through default registry-backed capability closures', async () => {
+    findExtensionEntry.mockReturnValue({
+      manifest: {
+        permissions: ['commands:read', 'extensions:write'],
+      },
+    });
+    const stateRoot = '/layout-state-root';
+    const desktopRootLayout = resolveDesktopRootLayout({ root: '/layout-root' });
+    vi.mocked(listExtensionCommandRegistrations).mockReturnValueOnce([]);
+    const dispatch = createExtensionBackendCapabilityDispatcher({ stateRoot, desktopRootLayout });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'commands',
+          operation: 'list',
+        }),
+      ),
+    ).resolves.toEqual([]);
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 2,
+          kind: 'capabilityRequest',
+          extensionId: 'ext',
+          capability: 'extensions',
+          operation: 'setEnabled',
+          input: { extensionId: 'target-ext', enabled: false },
+        }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(listExtensionCommandRegistrations).toHaveBeenCalledWith(stateRoot, desktopRootLayout);
+    expect(setExtensionEnabled).toHaveBeenCalledWith('target-ext', false, stateRoot, desktopRootLayout);
   });
 
   it('denies extension registry reads without extensions:read permission', async () => {

@@ -566,6 +566,8 @@ export async function abortExtensionShellSpawnHandlesForConversation(conversatio
 }
 
 export interface ExtensionBackendCapabilityDispatcherOptions {
+  stateRoot?: string;
+  desktopRootLayout?: DesktopRootLayout;
   automations?: ExtensionBackendCapabilityAutomations;
   commands?: ExtensionBackendCapabilityCommands;
   conversations?: ExtensionBackendCapabilityConversations;
@@ -590,8 +592,8 @@ export interface ExtensionBackendCapabilityDispatcherOptions {
   workspace?: ExtensionBackendCapabilityWorkspace;
 }
 
-function listEnabledExtensionBinDirs(): string[] {
-  return listExtensionInstallSummaries()
+function listEnabledExtensionBinDirs(stateRoot?: string, layout?: DesktopRootLayout): string[] {
+  return listExtensionInstallSummaries(stateRoot, layout)
     .filter((summary) => summary.status === 'enabled' && summary.packageRoot)
     .map((summary) => join(summary.packageRoot!, 'bin'));
 }
@@ -2823,11 +2825,13 @@ export function createExtensionBackendCapabilityDispatcher(
   options: ExtensionBackendCapabilityDispatcherOptions = {},
 ): ExtensionBackendCapabilityDispatcher {
   const filesystemHandles = new Map<string, ScopedFileSystem>();
+  const stateRoot = options.stateRoot ?? getStateRoot();
+  const desktopRootLayout = options.desktopRootLayout;
   const automations = options.automations ?? createDefaultAutomationsCapability();
   const commands = options.commands ?? {
-    list: () => listExtensionCommandRegistrations(),
+    list: () => listExtensionCommandRegistrations(stateRoot, desktopRootLayout),
     execute: async (extensionId: string, commandId: string, args?: unknown) => {
-      const command = findExtensionCommandRegistration(commandId);
+      const command = findExtensionCommandRegistration(commandId, stateRoot, desktopRootLayout);
       if (command) {
         if (isHostCommandAction(command.action)) {
           return executeHostCommandInRenderer({ command: command.action, args: args ?? command.args, sourceExtensionId: extensionId });
@@ -3036,7 +3040,7 @@ export function createExtensionBackendCapabilityDispatcher(
       return invokeExtensionAction(input.extensionId, input.actionId, input.input);
     },
     listActions: () =>
-      listExtensionInstallSummaries()
+      listExtensionInstallSummaries(stateRoot, desktopRootLayout)
         .filter((summary) => summary.status === 'enabled' && (summary.backendActions?.length ?? 0) > 0)
         .map((summary) => ({
           extensionId: summary.id,
@@ -3048,20 +3052,20 @@ export function createExtensionBackendCapabilityDispatcher(
           })),
         })),
     listPromptAssemblyContributions: () => ({
-      contextProviders: listExtensionPromptContextProviderRegistrations(),
-      assemblyProviders: listExtensionAssemblyProviderRegistrations(),
-      hooks: listExtensionPromptAssemblyHookRegistrations(),
+      contextProviders: listExtensionPromptContextProviderRegistrations(stateRoot, desktopRootLayout),
+      assemblyProviders: listExtensionAssemblyProviderRegistrations(stateRoot, desktopRootLayout),
+      hooks: listExtensionPromptAssemblyHookRegistrations(stateRoot, desktopRootLayout),
     }),
     listStaticContributions: () => ({
-      tools: listExtensionToolRegistrations(),
-      skills: listExtensionSkillRegistrations(),
-      modelDiscovery: listEnabledExtensionEntries().flatMap((entry) => {
+      tools: listExtensionToolRegistrations(stateRoot, desktopRootLayout),
+      skills: listExtensionSkillRegistrations(stateRoot, desktopRootLayout),
+      modelDiscovery: listEnabledExtensionEntries(stateRoot, desktopRootLayout).flatMap((entry) => {
         const action = entry.manifest.contributes?.modelDiscovery?.action;
         return typeof action === 'string' ? [{ extensionId: entry.manifest.id, action }] : [];
       }),
     }),
     getStatus: (extensionId: string) => {
-      const summary = listExtensionInstallSummaries().find((item) => item.id === extensionId);
+      const summary = listExtensionInstallSummaries(stateRoot, desktopRootLayout).find((item) => item.id === extensionId);
       if (!summary) return { enabled: false, healthy: false };
       const enabled = summary.status === 'enabled';
       return {
@@ -3070,9 +3074,9 @@ export function createExtensionBackendCapabilityDispatcher(
         ...(summary.errors?.length ? { errors: summary.errors } : {}),
       };
     },
-    setEnabled: (extensionId: string, enabled: boolean) => setExtensionEnabled(extensionId, enabled),
+    setEnabled: (extensionId: string, enabled: boolean) => setExtensionEnabled(extensionId, enabled, stateRoot, desktopRootLayout),
     setPermissionGranted: async (extensionId: string, permission: ExtensionPermission, granted: boolean) => {
-      setExtensionPermissionGranted(extensionId, permission, granted);
+      setExtensionPermissionGranted(extensionId, permission, granted, stateRoot);
       await callServerModuleExport('../../extensions/extensionBackend.js', 'reloadExtensionBackend', extensionId);
     },
   };
@@ -3161,7 +3165,7 @@ export function createExtensionBackendCapabilityDispatcher(
     update: (overrides: Record<string, unknown>, root?: string | DesktopRootLayout) => createSettingsStore(root).update(overrides),
     reset: (keys: string[], root?: string | DesktopRootLayout) => createSettingsStore(root).reset(keys),
   };
-  const shell = options.shell ?? createExtensionShellCapability({ pathDirs: listEnabledExtensionBinDirs() });
+  const shell = options.shell ?? createExtensionShellCapability({ pathDirs: listEnabledExtensionBinDirs(stateRoot, desktopRootLayout) });
   const shellSpawnHandles = new Map<string, ExtensionBackendShellSpawnRecord>();
   shellSpawnHandleMaps.add(shellSpawnHandles);
   const telemetry = options.telemetry ?? {
@@ -3207,14 +3211,20 @@ export function createExtensionBackendCapabilityDispatcher(
     ) => createExtensionFilesystemCapability(extensionId, input.cwd ? { cwd: input.cwd } : undefined).requestRoot(input),
   };
   const storage = options.storage ?? {
-    get: (extensionId: string, key: string) => readExtensionState(extensionId, key)?.value ?? null,
+    get: (extensionId: string, key: string) => readExtensionState(extensionId, key, desktopRootLayout)?.value ?? null,
     put: (extensionId: string, key: string, value: unknown, storageOptions?: { expectedVersion?: number }) => {
-      writeExtensionState(extensionId, key, value, storageOptions ? { expectedVersion: storageOptions.expectedVersion } : {});
+      writeExtensionState(
+        extensionId,
+        key,
+        value,
+        storageOptions ? { expectedVersion: storageOptions.expectedVersion } : {},
+        desktopRootLayout,
+      );
       return { ok: true };
     },
-    delete: (extensionId: string, key: string) => deleteExtensionState(extensionId, key),
+    delete: (extensionId: string, key: string) => deleteExtensionState(extensionId, key, desktopRootLayout),
     list: (extensionId: string, prefix = '') =>
-      listExtensionState(extensionId, prefix).map((document) => ({ key: document.key, value: document.value })),
+      listExtensionState(extensionId, prefix, desktopRootLayout).map((document) => ({ key: document.key, value: document.value })),
   };
   return (request, emit) => {
     assertExtensionBackendCapabilityPermission(request);
