@@ -52,6 +52,7 @@ type RuntimeExtensionUpdateOptions = {
   description?: unknown;
   appearance?: unknown;
   source?: { frontend?: unknown; backend?: unknown };
+  autoBuild?: boolean;
 };
 type ValidateExtensionPackageOptions = { extensionId?: string; packageRoot?: string };
 type ExtensionSearchPathWriteOptions = { runtimeDir?: string; runtimeSettingsFilePath?: string; paths?: string[] };

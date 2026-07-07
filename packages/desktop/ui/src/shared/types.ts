@@ -1689,6 +1689,17 @@ export interface ListDocumentsResult {
   total: number;
 }
 
+export interface DocumentCollectionSummary {
+  owner: string;
+  collection: string;
+  count: number;
+  latestUpdatedAt: string | null;
+}
+
+export interface CollectionSummaryResult {
+  summary: DocumentCollectionSummary;
+}
+
 export interface DocumentResult {
   document: DocumentRecord;
 }

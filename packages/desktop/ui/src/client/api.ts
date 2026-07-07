@@ -27,6 +27,7 @@ import type {
 } from '../shared/types';
 import type {
   CollectionListResult,
+  CollectionSummaryResult,
   ConversationAggregateDeltaListResult,
   ConversationAggregateState,
   ConversationAttachmentAssetData,
@@ -1427,6 +1428,9 @@ export const api = {
         `/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}`,
         options ?? {},
       );
+    },
+    summary: async (owner: string, collection: string) => {
+      return get<CollectionSummaryResult>(`/documents/collections/${encodeURIComponent(owner)}/${encodeURIComponent(collection)}/summary`);
     },
     list: async (owner: string, collection: string, options?: { limit?: number; offset?: number }) => {
       const params = new URLSearchParams();

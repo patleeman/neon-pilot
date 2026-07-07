@@ -93,11 +93,14 @@ export async function updateExtension(input: unknown, _ctx: ExtensionBackendCont
     source.backend = readFileSync(backendFile, 'utf-8');
   }
 
+  const autoBuild = typeof body.autoBuild === 'boolean' ? body.autoBuild : undefined;
+
   const result = await updateRuntimeExtension(extensionId, {
     name: body.name,
     description: body.description,
     appearance: body.appearance,
     source: Object.keys(source).length > 0 ? source : undefined,
+    autoBuild,
   });
   return { ok: true, ...result };
 }
@@ -253,6 +256,7 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
       description: flags.description,
       frontendFile: flags['frontend-file'] ?? flags.frontendFile,
       backendFile: flags['backend-file'] ?? flags.backendFile,
+      autoBuild: normalizeAutoBuildFlag(flags['auto-build'] ?? flags.autoBuild),
     };
   if (command === 'extensions snapshot') return { ...body, action: 'snapshot', extensionId: args[0] };
   if (command === 'extensions delete' || command === 'extensions uninstall') return { ...body, action: 'delete', extensionId: args[0] };
@@ -363,6 +367,16 @@ function normalizeBooleanFlag(value: unknown): unknown {
   if (normalized === 'true') return true;
   if (normalized === 'false') return false;
   return value;
+}
+
+function normalizeAutoBuildFlag(value: unknown): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true') return true;
+  if (normalized === 'false') return false;
+  return undefined;
 }
 
 function normalizeNumberFlag(value: unknown): unknown {

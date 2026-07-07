@@ -212,6 +212,17 @@ interface ExtensionTopBarElementContribution {
   label?: string;
 }
 
+interface ExtensionWidgetContribution {
+  id: string;
+  title: string;
+  /** Extension frontend component reference, following existing component reference conventions. */
+  component: ExtensionComponentReference;
+  /** Optional collection binding for document-aware widgets, e.g. "owner/collection". */
+  collectionBinding?: string;
+  /** Sort order among widgets. Lower renders first. Default 0. */
+  order?: number;
+}
+
 type ExtensionSetupItemSeverity = 'required' | 'recommended' | 'optional';
 type ExtensionSetupItemActionTone = 'default' | 'primary' | 'danger';
 
@@ -476,6 +487,7 @@ interface ExtensionContributions {
   subscriptions?: ExtensionSubscriptionContribution[];
   threadHeaderActions?: ExtensionThreadHeaderActionContribution[];
   statusBarItems?: ExtensionStatusBarItemContribution[];
+  widgets?: ExtensionWidgetContribution[];
   conversationHeaderElements?: ExtensionConversationHeaderContribution[];
   conversationDecorators?: ExtensionConversationDecoratorContribution[];
   activityTreeItemElements?: ExtensionActivityTreeItemElementContribution[];

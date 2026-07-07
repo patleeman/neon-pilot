@@ -64,6 +64,13 @@ export interface ListDocumentsResult {
   total: number;
 }
 
+export interface DocumentCollectionSummary {
+  owner: string;
+  collection: string;
+  count: number;
+  latestUpdatedAt: string | null;
+}
+
 export interface UpsertCollectionOptions {
   description?: string;
   defaultGrantRead?: GrantLevel;
@@ -246,6 +253,7 @@ export class DocumentsStore {
   private prepareUpsertCollection: SqliteStatement;
   private prepareListDocuments: SqliteStatement;
   private prepareCountDocuments: SqliteStatement;
+  private prepareCollectionSummary: SqliteStatement;
   private prepareGetDocument: SqliteStatement;
   private preparePutDocument: SqliteStatement;
   private prepareDeleteDocument: SqliteStatement;
@@ -270,6 +278,9 @@ export class DocumentsStore {
     `);
     this.prepareListDocuments = this.db.prepare('SELECT * FROM documents WHERE owner = ? AND collection = ? ORDER BY id LIMIT ? OFFSET ?');
     this.prepareCountDocuments = this.db.prepare('SELECT COUNT(*) AS total FROM documents WHERE owner = ? AND collection = ?');
+    this.prepareCollectionSummary = this.db.prepare(
+      'SELECT COUNT(*) AS count, MAX(updated_at) AS latest_updated_at FROM documents WHERE owner = ? AND collection = ?',
+    );
     this.prepareGetDocument = this.db.prepare('SELECT * FROM documents WHERE owner = ? AND collection = ? AND id = ?');
     this.preparePutDocument = this.db.prepare(`
       INSERT INTO documents (owner, collection, id, body, created_at, updated_at)
@@ -334,6 +345,18 @@ export class DocumentsStore {
   }
 
   // ── Documents ──────────────────────────────────────────────────────
+
+  getCollectionSummary(owner: string, collection: string): DocumentCollectionSummary | null {
+    const collectionRow = this.getCollection(owner, collection);
+    if (!collectionRow) return null;
+    const row = this.prepareCollectionSummary.get(owner, collection) as { count: number; latest_updated_at: string | null };
+    return {
+      owner,
+      collection,
+      count: Number(row.count),
+      latestUpdatedAt: row.latest_updated_at ?? null,
+    };
+  }
 
   listDocuments(owner: string, collection: string, options: ListDocumentsOptions = {}): ListDocumentsResult {
     const limit = options.limit ?? 100;

@@ -37,6 +37,11 @@ vi.mock('./extensionSubscriptions.js', () => ({
   uninstallExtensionSubscriptions,
 }));
 
+const reloadExtensionBackend = vi.fn().mockResolvedValue({ ok: true, extensionId: 'test', rebuilt: false });
+vi.mock('./extensionBackend.js', () => ({
+  reloadExtensionBackend,
+}));
+
 type ExecFileSync = typeof import('node:child_process').execFileSync;
 const execFileSync = vi.fn<Parameters<ExecFileSync>, ReturnType<ExecFileSync>>();
 vi.mock('node:child_process', async (importOriginal) => {
@@ -80,6 +85,9 @@ describe('extensionLifecycle', () => {
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
     execFileSync.mockImplementation((command, args) => {
+      if (String(args?.[0] ?? '').includes('extension-build.mjs')) {
+        return Buffer.from('Build succeeded');
+      }
       if (command === 'zipinfo') return safeBundleZipInfo as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
         const extractRoot = String(args?.[3]);
@@ -309,7 +317,7 @@ describe('extensionLifecycle', () => {
     expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name' }, stateRoot)).toThrow('Extension directory already exists');
   });
 
-  it('updates runtime extension name, description, appearance, and source files in place', () => {
+  it('updates runtime extension name, description, appearance, and source files in place', async () => {
     const packageRoot = join(runtimeRoot, 'my-extension');
     mkdirSync(join(packageRoot, 'src'), { recursive: true });
     writeFileSync(
@@ -325,10 +333,10 @@ describe('extensionLifecycle', () => {
     );
     writeFileSync(join(packageRoot, 'src', 'frontend.tsx'), '// original frontend');
     writeFileSync(join(packageRoot, 'src', 'backend.ts'), '// original backend');
-    findExtensionEntry.mockReturnValue({ manifest: { id: 'my-extension' }, packageRoot, source: 'runtime' });
+    findExtensionEntry.mockReturnValue({ manifest: { schemaVersion: 2, id: 'my-extension' }, packageRoot, source: 'runtime' });
     listExtensionInstallSummaries.mockReturnValue([{ id: 'my-extension', name: 'Updated Name' }]);
 
-    const result = updateRuntimeExtension(
+    const result = await updateRuntimeExtension(
       'my-extension',
       {
         name: 'Updated Name',
@@ -346,6 +354,7 @@ describe('extensionLifecycle', () => {
       ok: true,
       extension: { id: 'my-extension', name: 'Updated Name' },
       packageRoot,
+      built: true,
     });
 
     const manifest = JSON.parse(readFileSync(join(packageRoot, 'extension.json'), 'utf-8'));
@@ -356,9 +365,15 @@ describe('extensionLifecycle', () => {
     expect(readFileSync(join(packageRoot, 'src', 'frontend.tsx'), 'utf-8')).toBe('// updated frontend');
     expect(readFileSync(join(packageRoot, 'src', 'backend.ts'), 'utf-8')).toBe('// updated backend');
     expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot, undefined);
+    expect(execFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/)]),
+      expect.any(Object),
+    );
+    expect(reloadExtensionBackend).toHaveBeenCalledWith('my-extension');
   });
 
-  it('updates only provided fields on a runtime extension', () => {
+  it('updates only provided fields on a runtime extension', async () => {
     const packageRoot = join(runtimeRoot, 'partial-update');
     mkdirSync(join(packageRoot, 'src'), { recursive: true });
     writeFileSync(
@@ -373,25 +388,27 @@ describe('extensionLifecycle', () => {
       }),
     );
     writeFileSync(join(packageRoot, 'src', 'backend.ts'), '// keep this backend');
-    findExtensionEntry.mockReturnValue({ manifest: { id: 'partial-update' }, packageRoot, source: 'runtime' });
+    findExtensionEntry.mockReturnValue({ manifest: { schemaVersion: 2, id: 'partial-update' }, packageRoot, source: 'runtime' });
     listExtensionInstallSummaries.mockReturnValue([{ id: 'partial-update', name: 'Partial Updated' }]);
 
-    const result = updateRuntimeExtension(
+    const result = await updateRuntimeExtension(
       'partial-update',
       { name: 'Partial Updated', source: { frontend: '// new frontend' } },
       stateRoot,
     );
 
     expect(result.ok).toBe(true);
+    expect(result.built).toBe(true);
     const manifest = JSON.parse(readFileSync(join(packageRoot, 'extension.json'), 'utf-8'));
     expect(manifest.name).toBe('Partial Updated');
     expect(manifest.description).toBe('Will keep this');
     expect(existsSync(join(packageRoot, 'src', 'frontend.tsx'))).toBe(true);
     expect(readFileSync(join(packageRoot, 'src', 'frontend.tsx'), 'utf-8')).toBe('// new frontend');
     expect(readFileSync(join(packageRoot, 'src', 'backend.ts'), 'utf-8')).toBe('// keep this backend');
+    expect(reloadExtensionBackend).toHaveBeenCalledWith('partial-update');
   });
 
-  it('validates source values before writing manifest changes', () => {
+  it('validates source values before writing manifest changes', async () => {
     const packageRoot = join(runtimeRoot, 'invalid-source');
     mkdirSync(join(packageRoot, 'src'), { recursive: true });
     const originalManifest = JSON.stringify({
@@ -403,7 +420,7 @@ describe('extensionLifecycle', () => {
     writeFileSync(join(packageRoot, 'extension.json'), originalManifest);
     findExtensionEntry.mockReturnValue({ manifest: { id: 'invalid-source' }, packageRoot, source: 'runtime' });
 
-    expect(() => updateRuntimeExtension('invalid-source', { name: 'Changed', source: { frontend: 123 } }, stateRoot)).toThrow(
+    await expect(updateRuntimeExtension('invalid-source', { name: 'Changed', source: { frontend: 123 } }, stateRoot)).rejects.toThrow(
       'Extension frontend source must be a string.',
     );
 
@@ -411,20 +428,20 @@ describe('extensionLifecycle', () => {
     expect(invalidateExtensionRegistryReadCaches).not.toHaveBeenCalled();
   });
 
-  it('rejects update for non-existent, system, or rootless extensions', () => {
+  it('rejects update for non-existent, system, or rootless extensions', async () => {
     findExtensionEntry.mockReturnValue(null);
-    expect(() => updateRuntimeExtension('missing-ext', {}, stateRoot)).toThrow('Extension not found');
+    await expect(updateRuntimeExtension('missing-ext', {}, stateRoot)).rejects.toThrow('Extension not found');
 
     findExtensionEntry.mockReturnValue({ manifest: { id: 'system-ext' }, packageRoot: '/some/root', source: 'system' });
-    expect(() => updateRuntimeExtension('system-ext', { name: 'X' }, stateRoot)).toThrow(
+    await expect(updateRuntimeExtension('system-ext', { name: 'X' }, stateRoot)).rejects.toThrow(
       'System extensions cannot be updated through the runtime lifecycle.',
     );
 
     findExtensionEntry.mockReturnValue({ manifest: { id: 'no-root' }, source: 'runtime' });
-    expect(() => updateRuntimeExtension('no-root', { name: 'X' }, stateRoot)).toThrow('Extension package root is unavailable');
+    await expect(updateRuntimeExtension('no-root', { name: 'X' }, stateRoot)).rejects.toThrow('Extension package root is unavailable');
   });
 
-  it('removes appearance from manifest when update sets it to undefined', () => {
+  it('removes appearance from manifest when update sets it to undefined', async () => {
     const packageRoot = join(runtimeRoot, 'remove-appearance');
     mkdirSync(packageRoot, { recursive: true });
     writeFileSync(
@@ -436,17 +453,18 @@ describe('extensionLifecycle', () => {
         contributes: { appearance: { accent: 'chat' } },
       }),
     );
-    findExtensionEntry.mockReturnValue({ manifest: { id: 'remove-appearance' }, packageRoot, source: 'runtime' });
+    findExtensionEntry.mockReturnValue({ manifest: { schemaVersion: 2, id: 'remove-appearance' }, packageRoot, source: 'runtime' });
     listExtensionInstallSummaries.mockReturnValue([{ id: 'remove-appearance', name: 'Remove Appearance' }]);
 
-    // Setting appearance with no valid accent should remove it from the manifest
-    const result = updateRuntimeExtension('remove-appearance', { appearance: {} }, stateRoot);
+    // Setting appearance with no valid accent should remove it from the manifest; no source change so no build
+    const result = await updateRuntimeExtension('remove-appearance', { appearance: {} }, stateRoot);
     expect(result.ok).toBe(true);
+    expect(result.built).toBeUndefined();
     const manifest = JSON.parse(readFileSync(join(packageRoot, 'extension.json'), 'utf-8'));
     expect(manifest.contributes.appearance).toBeUndefined();
   });
 
-  it('snapshots, exports, and rejects invalid build targets', async () => {
+  it('snapshots and exports runtime extensions', async () => {
     const packageRoot = join(stateRoot, 'source-ext');
     mkdirSync(packageRoot, { recursive: true });
     writeFileSync(join(packageRoot, 'extension.json'), '{}');
@@ -458,7 +476,136 @@ describe('extensionLifecycle', () => {
 
     expect(exportRuntimeExtension('ext', stateRoot).exportPath).toContain(join(stateRoot, 'extension-exports', 'ext-'));
     expect(execFileSync).toHaveBeenCalledWith('zip', expect.arrayContaining(['-qry']), { cwd: stateRoot });
-    await expect(buildRuntimeExtension('ext')).rejects.toThrow('no longer builds extensions at runtime');
+  });
+
+  it('builds a valid runtime extension', async () => {
+    const packageRoot = join(stateRoot, 'buildable-ext');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(join(packageRoot, 'extension.json'), JSON.stringify({ id: 'buildable-ext', schemaVersion: 2 }));
+    findExtensionEntry.mockReturnValue({ packageRoot, manifest: { schemaVersion: 2 } });
+
+    const result = await buildRuntimeExtension('buildable-ext', stateRoot);
+    expect(result).toEqual({ ok: true, extensionId: 'buildable-ext', built: true });
+    expect(execFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/), packageRoot]),
+      expect.objectContaining({ cwd: expect.any(String), stdio: 'pipe' }),
+    );
+  });
+
+  it('rejects build for missing extension', async () => {
+    await expect(buildRuntimeExtension('nonexistent', stateRoot)).rejects.toThrow('Extension not found');
+  });
+
+  it('rejects build for extension without package root', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { schemaVersion: 2 } });
+    await expect(buildRuntimeExtension('noroot', stateRoot)).rejects.toThrow('Extension package root is unavailable');
+  });
+
+  it('rejects build for extension with old schema version', async () => {
+    const packageRoot = join(stateRoot, 'old-ext');
+    mkdirSync(packageRoot, { recursive: true });
+    writeFileSync(join(packageRoot, 'extension.json'), JSON.stringify({ id: 'old-ext', schemaVersion: 1 }));
+    findExtensionEntry.mockReturnValue({ packageRoot, manifest: { schemaVersion: 1 } });
+    await expect(buildRuntimeExtension('old-ext', stateRoot)).rejects.toThrow(
+      'Only native extension manifest schemaVersion 2 can be built',
+    );
+  });
+
+  describe('autoBuild behavior in updateRuntimeExtension', () => {
+    function setupExtension(id: string): string {
+      const packageRoot = join(runtimeRoot, id);
+      mkdirSync(join(packageRoot, 'src'), { recursive: true });
+      writeFileSync(
+        join(packageRoot, 'extension.json'),
+        JSON.stringify({
+          id,
+          schemaVersion: 2,
+          name: 'Test Extension',
+          packageType: 'user',
+          backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping' }] },
+          contributes: {},
+        }),
+      );
+      writeFileSync(join(packageRoot, 'src', 'frontend.tsx'), '// original');
+      writeFileSync(join(packageRoot, 'src', 'backend.ts'), '// original');
+      findExtensionEntry.mockReturnValue({ manifest: { schemaVersion: 2, id }, packageRoot, source: 'runtime' });
+      listExtensionInstallSummaries.mockReturnValue([{ id, name: 'Test Extension' }]);
+      return packageRoot;
+    }
+
+    beforeEach(() => {
+      reloadExtensionBackend.mockClear();
+    });
+
+    it('builds and reloads when source files change with autoBuild defaulting to true', async () => {
+      setupExtension('auto-build-default');
+
+      const result = await updateRuntimeExtension('auto-build-default', { source: { frontend: '// changed' } }, stateRoot);
+
+      expect(result.built).toBe(true);
+      expect(execFileSync).toHaveBeenCalledWith(
+        process.execPath,
+        expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/)]),
+        expect.any(Object),
+      );
+      expect(reloadExtensionBackend).toHaveBeenCalledWith('auto-build-default');
+    });
+
+    it('skips build when autoBuild is explicitly false', async () => {
+      setupExtension('auto-build-false');
+
+      const result = await updateRuntimeExtension('auto-build-false', { source: { frontend: '// changed' }, autoBuild: false }, stateRoot);
+
+      expect(result.built).toBeUndefined();
+      expect(execFileSync).not.toHaveBeenCalledWith(
+        process.execPath,
+        expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/)]),
+        expect.any(Object),
+      );
+      expect(reloadExtensionBackend).not.toHaveBeenCalled();
+    });
+
+    it('skips build for manifest-only updates (no source changes)', async () => {
+      setupExtension('manifest-only');
+
+      const result = await updateRuntimeExtension('manifest-only', { name: 'Renamed', description: 'New description' }, stateRoot);
+
+      expect(result.built).toBeUndefined();
+      expect(execFileSync).not.toHaveBeenCalledWith(
+        process.execPath,
+        expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/)]),
+        expect.any(Object),
+      );
+      expect(reloadExtensionBackend).not.toHaveBeenCalled();
+    });
+
+    it('builds and reloads when both frontend and backend source change', async () => {
+      setupExtension('both-source-change');
+
+      const result = await updateRuntimeExtension(
+        'both-source-change',
+        { source: { frontend: '// new frontend', backend: '// new backend' } },
+        stateRoot,
+      );
+
+      expect(result.built).toBe(true);
+      expect(execFileSync).toHaveBeenCalled();
+      expect(reloadExtensionBackend).toHaveBeenCalledWith('both-source-change');
+    });
+
+    it('throws build error when buildRuntimeExtension fails', async () => {
+      setupExtension('build-fails');
+      execFileSync.mockImplementationOnce(() => {
+        throw new Error('esbuild build failed');
+      });
+
+      await expect(updateRuntimeExtension('build-fails', { source: { frontend: '// broken' } }, stateRoot)).rejects.toThrow(
+        'esbuild build failed',
+      );
+
+      expect(reloadExtensionBackend).not.toHaveBeenCalled();
+    });
   });
 
   it('imports safe extension bundles into the runtime extension root', () => {

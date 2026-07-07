@@ -13,6 +13,7 @@ export interface RuntimeExtensionUpdateOptions {
     frontend?: unknown;
     backend?: unknown;
   };
+  autoBuild?: boolean;
 }
 
 export interface RuntimeExtensionResult {

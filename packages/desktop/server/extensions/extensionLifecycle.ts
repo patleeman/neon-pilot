@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join, resolve, sep } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
@@ -23,6 +24,8 @@ export interface UpdateRuntimeExtensionInput {
     frontend?: unknown;
     backend?: unknown;
   };
+  /** When true (default if source files changed), build and reload the extension backend after writing source files. */
+  autoBuild?: boolean;
 }
 
 export interface CreateRuntimeExtensionInput {
@@ -675,7 +678,7 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
   return { ok: true as const, extension: summary, packageRoot: extensionRoot };
 }
 
-export function updateRuntimeExtension(
+export async function updateRuntimeExtension(
   extensionId: string,
   input: UpdateRuntimeExtensionInput,
   stateRoot: string = getStateRoot(),
@@ -751,7 +754,17 @@ export function updateRuntimeExtension(
 
   invalidateExtensionRegistryReadCaches(stateRoot, layout);
   const summary = listExtensionInstallSummaries(stateRoot, layout).find((ext) => ext.id === id);
-  return { ok: true as const, extension: summary, packageRoot };
+
+  const sourceChanged = frontendSource !== undefined || backendSource !== undefined;
+  const shouldBuild = sourceChanged && input.autoBuild !== false;
+
+  if (shouldBuild) {
+    await buildRuntimeExtension(id, stateRoot, layout);
+    const { reloadExtensionBackend } = await import('./extensionBackend.js');
+    await reloadExtensionBackend(id);
+  }
+
+  return { ok: true as const, extension: summary, packageRoot, ...(shouldBuild ? { built: true as const } : {}) };
 }
 
 export function snapshotRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {
@@ -772,6 +785,25 @@ export function snapshotRuntimeExtension(extensionId: string, stateRoot: string 
   return { ok: true as const, extensionId, snapshotPath };
 }
 
+function findExtensionBuildRepoRoot(): string | null {
+  const candidates = [process.cwd(), dirname(fileURLToPath(import.meta.url))];
+  for (const candidate of candidates) {
+    let current = resolve(candidate);
+    let parent = dirname(current);
+    while (parent !== current) {
+      if (existsSync(join(current, 'scripts', 'extension-build.mjs'))) {
+        return current;
+      }
+      current = parent;
+      parent = dirname(current);
+    }
+    if (existsSync(join(current, 'scripts', 'extension-build.mjs'))) {
+      return current;
+    }
+  }
+  return null;
+}
+
 export async function buildRuntimeExtension(extensionId: string, stateRoot?: string, layout?: DesktopRootLayout) {
   const entry = findExtensionEntry(extensionId, stateRoot, layout);
   if (!entry) {
@@ -781,13 +813,24 @@ export async function buildRuntimeExtension(extensionId: string, stateRoot?: str
     throw new Error('Extension package root is unavailable.');
   }
   if (entry.manifest.schemaVersion !== 2) {
-    throw new Error('Only native extension manifest schemaVersion 2 can be validated/reloaded.');
+    throw new Error('Only native extension manifest schemaVersion 2 can be built.');
   }
 
-  throw new Error(
-    `The app no longer builds extensions at runtime. Build "${extensionId}" outside the app with ` +
-      '`pnpm run extension:build -- <extension-dir>` or `neon-pilot-extension build <extension-dir>`, then validate/reload it.',
-  );
+  const packageRoot = entry.packageRoot;
+  const repoRoot = findExtensionBuildRepoRoot();
+  if (!repoRoot) {
+    throw new Error('Extension build script not found. Run this action from a Neon Pilot source checkout.');
+  }
+  const buildScript = join(repoRoot, 'scripts', 'extension-build.mjs');
+
+  execFileSync(process.execPath, [buildScript, packageRoot], {
+    cwd: repoRoot,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+
+  return { ok: true as const, extensionId, built: true };
 }
 
 export function exportRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout) {

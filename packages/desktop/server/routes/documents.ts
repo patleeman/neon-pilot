@@ -179,6 +179,35 @@ function handleUpsertCollection(store: DocumentsStore, caller: DocumentsRouteCal
   }
 }
 
+// GET /api/documents/collections/:owner/:collection/summary
+function handleCollectionSummary(store: DocumentsStore, caller: DocumentsRouteCaller, req: Request, res: Response): void {
+  try {
+    const owner = readString(req.params.owner);
+    const collection = readString(req.params.collection);
+    if (!owner) {
+      res.status(400).json({ error: 'Owner is required' });
+      return;
+    }
+    if (!collection) {
+      res.status(400).json({ error: 'Collection name is required' });
+      return;
+    }
+    if (!canReadCollection(store, caller, owner, collection)) {
+      forbid(res);
+      return;
+    }
+
+    const summary = store.getCollectionSummary(owner, collection);
+    if (!summary) {
+      res.status(404).json({ error: 'Collection not found' });
+      return;
+    }
+    res.json({ summary });
+  } catch (error) {
+    sendError(res, error);
+  }
+}
+
 // GET /api/documents/collections/:owner/:collection
 function handleListDocuments(store: DocumentsStore, caller: DocumentsRouteCaller, req: Request, res: Response): void {
   try {
@@ -462,6 +491,9 @@ export function registerDocumentsRoutes(app: Pick<Express, 'get' | 'put' | 'dele
   // Collections
   app.get('/api/documents/collections', withStore(handleListCollections));
   app.put('/api/documents/collections/:owner/:collection', withStore(handleUpsertCollection));
+
+  // Summary route before document-id routes to prevent "summary" from being treated as an id.
+  app.get('/api/documents/collections/:owner/:collection/summary', withStore(handleCollectionSummary));
 
   // Grants must be registered before document-id routes so "grants" is not treated as an id.
   app.get('/api/documents/collections/:owner/:collection/grants', withStore(handleListGrants));

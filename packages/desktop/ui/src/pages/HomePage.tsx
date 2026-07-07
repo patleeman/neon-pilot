@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { Fragment, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api } from '../client/api';
@@ -19,6 +19,8 @@ import {
   type StatusDotTone,
   ToolbarButton,
 } from '../components/ui';
+import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
+import { WidgetHost } from '../extensions/WidgetHost';
 import { useApi } from '../hooks/useApi';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import type { DocumentCollection, DocumentRecord, GlobalActivityItem, GlobalActivityStatus, InboxMessageBody } from '../shared/types';
@@ -144,6 +146,8 @@ export function HomePage() {
     ]);
   }, [refetchCollections, refetchInbox, refetchActivity]);
 
+  const { widgets } = useExtensionRegistry();
+
   useInvalidateOnTopics(['documents', 'inbox', 'executions', 'sessions'], refreshAll);
 
   const collections: DocumentCollection[] = collectionsData?.collections ?? [];
@@ -217,6 +221,18 @@ export function HomePage() {
         ) : (
           <>
             {metricTiles}
+
+            {widgets.length > 0 && (
+              <AppPageSection title="Widgets" layout="stacked">
+                <div className="grid min-h-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {widgets.map((widget) => (
+                    <Fragment key={`${widget.extensionId}:${widget.id}`}>
+                      <WidgetHost registration={widget} />
+                    </Fragment>
+                  ))}
+                </div>
+              </AppPageSection>
+            )}
 
             <div className="grid min-h-0 gap-4 xl:grid-cols-3">
               <AppPageSection

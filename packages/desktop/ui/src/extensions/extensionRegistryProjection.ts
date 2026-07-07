@@ -1,5 +1,15 @@
 import type { ExtensionInstallSummary, ExtensionManifest, ExtensionRouteSummary, ExtensionSurfaceSummary } from './types';
 
+export interface ExtensionWidgetRegistration {
+  extensionId: string;
+  id: string;
+  title: string;
+  component: string;
+  collectionBinding?: string;
+  order?: number;
+  frontendEntry?: string;
+}
+
 export interface ExtensionTopBarElementRegistration {
   extensionId: string;
   id: string;
@@ -229,6 +239,7 @@ export const EMPTY_EXTENSION_REGISTRY_STATE: ExtensionRegistryState = {
   routes: [],
   surfaces: [],
   topBarElements: [],
+  widgets: [],
   messageActions: [],
   composerShelves: [],
   newConversationPanels: [],
@@ -265,6 +276,7 @@ export interface ExtensionRegistryState {
   routes: ExtensionRouteSummary[];
   surfaces: ExtensionSurfaceSummary[];
   topBarElements: ExtensionTopBarElementRegistration[];
+  widgets: ExtensionWidgetRegistration[];
   messageActions: ExtensionMessageActionRegistration[];
   composerShelves: ExtensionComposerShelfRegistration[];
   newConversationPanels: ExtensionNewConversationPanelRegistration[];
@@ -289,6 +301,28 @@ export interface ExtensionRegistryState {
   activityTreeItemActions: ExtensionActivityTreeItemActionRegistration[];
   loading: boolean;
   error: string | null;
+}
+
+function normalizeWidgets(extensions: ExtensionManifest[]): ExtensionWidgetRegistration[] {
+  const result: ExtensionWidgetRegistration[] = [];
+  for (const extension of extensions) {
+    const contributed = extension.contributes?.widgets;
+    if (!contributed?.length) continue;
+    for (const widget of contributed) {
+      const component = typeof widget.component === 'string' ? widget.component : ((widget.component as { host?: string })?.host ?? '');
+      result.push({
+        extensionId: extension.id,
+        id: widget.id,
+        title: widget.title,
+        component,
+        ...(widget.collectionBinding ? { collectionBinding: widget.collectionBinding } : {}),
+        ...(typeof widget.order === 'number' ? { order: widget.order } : {}),
+        frontendEntry: extension.frontend?.entry,
+      });
+    }
+  }
+  result.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  return result;
 }
 
 function normalizeTopBarElements(extensions: ExtensionManifest[]): ExtensionTopBarElementRegistration[] {
@@ -788,6 +822,7 @@ export function normalizeExtensionRegistryState(
     routes: routes.filter((route) => enabledExtensionIds.has(route.extensionId)),
     surfaces: surfaces.filter((surface) => enabledExtensionIds.has(surface.extensionId)),
     topBarElements: normalizeTopBarElements(enabledRegistryExtensions),
+    widgets: normalizeWidgets(enabledRegistryExtensions),
     messageActions: normalizeMessageActions(enabledRegistryExtensions),
     composerShelves: normalizeComposerShelves(enabledRegistryExtensions),
     newConversationPanels: normalizeNewConversationPanels(enabledRegistryExtensions),

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useApi } from '../hooks/useApi';
 import { useInvalidateOnTopics } from '../hooks/useInvalidateOnTopics';
 import type { CollectionListResult, GlobalActivityItem, GlobalActivityResult, InboxListResult } from '../shared/types';
@@ -15,6 +16,16 @@ vi.mock('../hooks/useApi', () => ({
 
 vi.mock('../hooks/useInvalidateOnTopics', () => ({
   useInvalidateOnTopics: vi.fn(),
+}));
+
+vi.mock('../extensions/useExtensionRegistry', () => ({
+  useExtensionRegistry: vi.fn(() => ({ widgets: [] })),
+}));
+
+vi.mock('../extensions/WidgetHost', () => ({
+  WidgetHost: ({ registration }: { registration: { id: string; extensionId: string; title: string } }) => (
+    <div data-testid={`widget-${registration.extensionId}-${registration.id}`}>{registration.title}</div>
+  ),
 }));
 
 interface UseApiResult {
@@ -228,6 +239,55 @@ describe('HomePage', () => {
     expect(refetchCollections).toHaveBeenCalled();
     expect(refetchInbox).toHaveBeenCalled();
     expect(refetchActivity).toHaveBeenCalled();
+  });
+
+  it('renders Widgets section when widgets exist', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      widgets: [
+        {
+          extensionId: 'ext-a',
+          id: 'widget-1',
+          title: 'Widget One',
+          component: 'WidgetOne',
+          frontendEntry: '/ext/ext-a/index.js',
+          order: 1,
+        },
+        {
+          extensionId: 'ext-b',
+          id: 'widget-2',
+          title: 'Widget Two',
+          component: 'WidgetTwo',
+          frontendEntry: '/ext/ext-b/index.js',
+          order: 0,
+        },
+      ],
+    } as ReturnType<typeof useExtensionRegistry>);
+
+    vi.mocked(useApi)
+      .mockReturnValueOnce(buildUseApiResult({ loading: false, data: { collections: [] } }))
+      .mockReturnValueOnce(buildUseApiResult({ loading: false, data: { records: [], total: 0 } }))
+      .mockReturnValueOnce(buildUseApiResult({ loading: false, data: { items: [], total: 0 } }));
+
+    renderHomePage();
+
+    expect(screen.getByRole('heading', { name: 'Widgets' })).toBeTruthy();
+    expect(screen.getByText('Widget One')).toBeTruthy();
+    expect(screen.getByText('Widget Two')).toBeTruthy();
+  });
+
+  it('does not render Widgets section when no widgets exist', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      widgets: [],
+    } as ReturnType<typeof useExtensionRegistry>);
+
+    vi.mocked(useApi)
+      .mockReturnValueOnce(buildUseApiResult({ loading: false, data: { collections: [] } }))
+      .mockReturnValueOnce(buildUseApiResult({ loading: false, data: { records: [], total: 0 } }))
+      .mockReturnValueOnce(buildUseApiResult({ loading: false, data: { items: [], total: 0 } }));
+
+    renderHomePage();
+
+    expect(screen.queryByRole('heading', { name: 'Widgets' })).toBeNull();
   });
 
   it('renders navigation links to Documents, Inbox, and Activity apps', () => {

@@ -154,6 +154,32 @@ describe('DocumentsStore', () => {
       expect(store.getDocument('app', 'col', 'missing')).toBeNull();
     });
 
+    it('getCollectionSummary returns null for non-existent collection', () => {
+      const result = store.getCollectionSummary('app', 'ghost');
+      expect(result).toBeNull();
+    });
+
+    it('getCollectionSummary returns count and latest timestamp', () => {
+      store.putDocument('app', 'col', 'doc-1', { value: 'a' });
+      store.putDocument('app', 'col', 'doc-2', { value: 'b' });
+
+      const result = store.getCollectionSummary('app', 'col');
+      expect(result).not.toBeNull();
+      expect(result!.owner).toBe('app');
+      expect(result!.collection).toBe('col');
+      expect(result!.count).toBe(2);
+      expect(result!.latestUpdatedAt).toBeTruthy();
+    });
+
+    it('getCollectionSummary returns zero count and null timestamp for empty collection', () => {
+      store.upsertCollection('app', 'empty-col');
+
+      const result = store.getCollectionSummary('app', 'empty-col');
+      expect(result).not.toBeNull();
+      expect(result!.count).toBe(0);
+      expect(result!.latestUpdatedAt).toBeNull();
+    });
+
     it('lists documents with pagination', () => {
       for (let i = 0; i < 25; i++) {
         store.putDocument('app', 'col', `doc-${i}`, { index: i });

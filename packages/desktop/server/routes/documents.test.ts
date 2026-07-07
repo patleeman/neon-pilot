@@ -207,6 +207,97 @@ describe('registerDocumentsRoutes', () => {
     });
   });
 
+  describe('collection summary endpoint', () => {
+    it('GET /api/documents/collections/:owner/:collection/summary returns count and latest timestamp', () => {
+      const handlers = createHarness();
+      // Create a collection and add some documents
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app', collection: 'my-col' }, body: {} },
+        createRes(),
+      );
+      handlers['PUT /api/documents/collections/:owner/:collection/:id'](
+        { params: { owner: 'app', collection: 'my-col', id: 'doc-1' }, body: { val: 1 } },
+        createRes(),
+      );
+      handlers['PUT /api/documents/collections/:owner/:collection/:id'](
+        { params: { owner: 'app', collection: 'my-col', id: 'doc-2' }, body: { val: 2 } },
+        createRes(),
+      );
+
+      const handler = handlers['GET /api/documents/collections/:owner/:collection/summary'];
+      const res = createRes();
+      handler({ params: { owner: 'app', collection: 'my-col' }, query: {} }, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          summary: expect.objectContaining({
+            owner: 'app',
+            collection: 'my-col',
+            count: 2,
+          }),
+        }),
+      );
+      expect((res.json.mock.calls[0][0] as { summary: { latestUpdatedAt?: string } }).summary.latestUpdatedAt).toBeTruthy();
+    });
+
+    it('GET summary returns 404 for non-existent collection', () => {
+      const handlers = createHarness();
+      const handler = handlers['GET /api/documents/collections/:owner/:collection/summary'];
+      const res = createRes();
+
+      handler({ params: { owner: 'app', collection: 'ghost' }, query: {} }, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Collection not found' });
+    });
+
+    it('GET summary denies access to restricted collection', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app-a', collection: 'private' }, body: {} },
+        createRes(),
+      );
+
+      caller = { appId: 'app-b', kind: 'app' };
+      const handler = handlers['GET /api/documents/collections/:owner/:collection/summary'];
+      const res = createRes();
+      handler({ params: { owner: 'app-a', collection: 'private' }, query: {} }, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Document collection access denied' });
+    });
+
+    it('GET summary respects read grant', () => {
+      const handlers = createHarness();
+      handlers['PUT /api/documents/collections/:owner/:collection'](
+        { params: { owner: 'app-a', collection: 'shared' }, body: { defaultGrantRead: 'all' } },
+        createRes(),
+      );
+
+      caller = { appId: 'app-b', kind: 'app' };
+      const handler = handlers['GET /api/documents/collections/:owner/:collection/summary'];
+      const res = createRes();
+      handler({ params: { owner: 'app-a', collection: 'shared' }, query: {} }, res);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          summary: expect.objectContaining({
+            owner: 'app-a',
+            collection: 'shared',
+            count: 0,
+          }),
+        }),
+      );
+    });
+
+    it('summary route is registered before document-id route', () => {
+      const registrations = createOrderedHarness();
+      expect(registrations.indexOf('GET /api/documents/collections/:owner/:collection/summary')).toBeLessThan(
+        registrations.indexOf('GET /api/documents/collections/:owner/:collection/:id'),
+      );
+    });
+  });
+
   describe('document CRUD', () => {
     it('PUT creates a document', () => {
       const handlers = createHarness();

@@ -927,6 +927,17 @@ export interface ExtensionAppearanceContribution {
   singleton?: boolean;
 }
 
+export interface ExtensionWidgetContribution {
+  id: string;
+  title: string;
+  /** Extension frontend component reference, following existing component reference conventions. */
+  component: ExtensionComponentReference;
+  /** Optional collection binding for document-aware widgets, e.g. "owner/collection". */
+  collectionBinding?: string;
+  /** Sort order among widgets. Lower renders first. Default 0. */
+  order?: number;
+}
+
 export interface ExtensionSettingsComponentContribution {
   id: string;
   component: string;
@@ -992,6 +1003,8 @@ export interface ExtensionContributions {
   settings?: Record<string, ExtensionSettingsContribution>;
   secrets?: Record<string, ExtensionSecretContribution>;
   settingsComponent?: ExtensionSettingsComponentContribution;
+  /** Home/Dashboard widgets contributed by this extension. */
+  widgets?: ExtensionWidgetContribution[];
   /** Desktop appearance metadata for the windowed OS app registry (Start menu, launcher, window chrome). */
   appearance?: ExtensionAppearanceContribution;
 }
