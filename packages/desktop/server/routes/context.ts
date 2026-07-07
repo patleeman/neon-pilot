@@ -12,7 +12,11 @@ export interface LiveSessionResourceOptions extends Record<string, unknown> {
   additionalPromptTemplatePaths: string[];
   additionalThemePaths: string[];
   systemPromptSupplement?: string;
+  /** Builtin instruction layers (e.g. persona soul doc), computed from instruction inventory builtin providers. */
+  builtinInstructionSupplement?: string;
   modelsFilePath?: string;
+  /** When true, builtin instruction layers are included in the session system prompt. */
+  includePersonaInstructionLayers?: boolean;
   [LIVE_SESSION_RESOURCE_OPTIONS_PERF]?: Record<string, number>;
 }
 

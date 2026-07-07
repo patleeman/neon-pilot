@@ -14,6 +14,7 @@ import {
 } from '@neon-pilot/core';
 
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { readPersonaSoulDoc } from '../knowledge/personaSoulDoc.js';
 import { invokePromptAssemblyProvider, isRecord } from './providerRuntime.js';
 import { getAssemblyRuntimeScope } from './runtimeScope.js';
 import type { AssemblyDiagnostic, AssemblyRuntimeContext, AssemblySource } from './types.js';
@@ -48,6 +49,11 @@ const instructionProviders: InstructionProvider[] = [
     id: 'runtime-files',
     title: 'Runtime instruction files',
     provide: listFileInstructionLayers,
+  },
+  {
+    id: 'persona-soul-doc',
+    title: 'Persona soul doc',
+    provide: personaSoulDocLayer,
   },
   {
     id: 'runtime-template',
@@ -207,6 +213,26 @@ function readText(path: string): string | null {
   } catch {
     return null;
   }
+}
+
+function personaSoulDocLayer(ctx: AssemblyRuntimeContext): InstructionLayer[] {
+  const soulDocPath = ctx.desktopRootLayout?.soulDoc;
+  if (!soulDocPath) return [];
+  const content = readPersonaSoulDoc(soulDocPath);
+  if (!content.trim()) return [];
+  return [
+    {
+      id: 'builtin:persona-soul-doc',
+      providerId: 'builtin-soul-doc',
+      title: 'Persona soul doc',
+      content: content.trim(),
+      source: { kind: 'builtin', label: 'Persona soul doc' },
+      scope: 'runtime',
+      priority: 50,
+      mutable: true,
+      risk: 'normal',
+    },
+  ];
 }
 
 function isInstructionLayerLike(value: unknown): value is InstructionLayer {

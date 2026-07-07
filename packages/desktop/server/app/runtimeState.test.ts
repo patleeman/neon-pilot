@@ -6,6 +6,7 @@ const {
   getRuntimeConfigRootMock,
   getRuntimeModelsFilePathMock,
   getStateRootMock,
+  resolveDesktopRootLayoutMock,
   getDurableSkillsDirMock,
   getDurableSessionsDirMock,
   getPiAgentRuntimeDirMock,
@@ -36,6 +37,12 @@ const {
     getRuntimeConfigRootMock: vi.fn(() => '/profiles-root'),
     getRuntimeModelsFilePathMock: vi.fn(() => '/desktop-root/system/runtime/models.json'),
     getStateRootMock: vi.fn(() => '/state-root'),
+    resolveDesktopRootLayoutMock: vi.fn(() => ({
+      root: '/desktop-root',
+      apps: '/desktop-root/apps',
+      agents: '/desktop-root/agents',
+      soulDoc: '/desktop-root/agents/soul.md',
+    })),
     getDurableSkillsDirMock: vi.fn(() => '/durable-skills'),
     getDurableSessionsDirMock: vi.fn(() => '/durable-sessions'),
     getPiAgentRuntimeDirMock: vi.fn(() => '/pi-agent-runtime'),
@@ -62,6 +69,7 @@ vi.mock('@neon-pilot/core', () => ({
   getRuntimeConfigRoot: getRuntimeConfigRootMock,
   getRuntimeModelsFilePath: getRuntimeModelsFilePathMock,
   getStateRoot: getStateRootMock,
+  resolveDesktopRootLayout: resolveDesktopRootLayoutMock,
   getDurableSkillsDir: getDurableSkillsDirMock,
   getDurableSessionsDir: getDurableSessionsDirMock,
   getPiAgentRuntimeDir: getPiAgentRuntimeDirMock,
@@ -420,6 +428,31 @@ describe('createRuntimeState', () => {
     const state = createTestRuntimeState();
 
     await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
+      systemPromptSupplement: 'Use concise conversational output.',
+    });
+  });
+
+  it('adds builtin instruction layers separately from extension instruction layers', async () => {
+    buildInstructionPlanMock.mockResolvedValueOnce({
+      layers: [
+        {
+          id: 'persona-soul-doc',
+          content: 'Soul doc instructions.',
+          source: { kind: 'builtin', label: 'Persona soul doc' },
+        },
+        {
+          id: 'extension-style',
+          content: 'Use concise conversational output.',
+          source: { kind: 'extension', label: 'Codex Compatibility', extensionId: 'system-codex-profile' },
+        },
+      ],
+      finalSystemPrompt: '',
+      diagnostics: [],
+    });
+    const state = createTestRuntimeState();
+
+    await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toMatchObject({
+      builtinInstructionSupplement: 'Soul doc instructions.',
       systemPromptSupplement: 'Use concise conversational output.',
     });
   });

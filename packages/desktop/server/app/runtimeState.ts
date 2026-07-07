@@ -67,6 +67,27 @@ function renderExtensionInstructionSupplement(layers: unknown[]): string | undef
   return content || undefined;
 }
 
+/**
+ * Render instruction layers from builtin sources only.
+ * Returns undefined if no builtin layers have content.
+ * Used to include persona soul doc and other first-party instruction layers
+ * in systemPromptSupplement when personaMode is active.
+ */
+export function renderBuiltinInstructionSupplement(layers: unknown[]): string | undefined {
+  const content = layers
+    .flatMap((layer): string[] => {
+      if (!layer || typeof layer !== 'object' || Array.isArray(layer)) return [];
+      const record = layer as Record<string, unknown>;
+      const source = record.source;
+      const isBuiltinSource = Boolean(
+        source && typeof source === 'object' && !Array.isArray(source) && (source as Record<string, unknown>).kind === 'builtin',
+      );
+      return isBuiltinSource && typeof record.content === 'string' && record.content.trim() ? [record.content.trim()] : [];
+    })
+    .join('\n\n');
+  return content || undefined;
+}
+
 function skillRuntimeResourceKey(input: { runtimeScope: string; agentDir: string }): string {
   return `${input.runtimeScope}\n${input.agentDir}`;
 }
@@ -516,6 +537,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
       const [skills, promptTemplates, instructions] = await Promise.all([skillsPromise, promptTemplatesPromise, instructionsPromise]);
       const plansAtMs = performance.now();
       const systemPromptSupplement = renderExtensionInstructionSupplement(instructions.layers);
+      const builtinInstructionSupplement = renderBuiltinInstructionSupplement(instructions.layers);
 
       const value = withResourceOptionsPerf(
         {
@@ -525,6 +547,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
           additionalThemePaths: resolved.themeEntries,
           modelsFilePath,
           ...(systemPromptSupplement ? { systemPromptSupplement } : {}),
+          ...(builtinInstructionSupplement ? { builtinInstructionSupplement } : {}),
         },
         {
           cacheHit: 0,

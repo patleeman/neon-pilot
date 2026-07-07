@@ -100,6 +100,8 @@ export interface LiveSessionLoaderOptions {
   additionalPromptTemplatePaths?: string[];
   additionalThemePaths?: string[];
   systemPromptSupplement?: string;
+  /** Builtin instruction layers (e.g. persona soul doc). Merged into systemPromptSupplement when includePersonaInstructionLayers is true. */
+  builtinInstructionSupplement?: string;
   initialModel?: string | null;
   initialThinkingLevel?: string | null;
   initialServiceTier?: string | null;
@@ -114,6 +116,8 @@ export interface LiveSessionLoaderOptions {
   skillDiscoveryPaths?: string[];
   /** When set, this session is a scoped parallel worker, not the user's main persona. */
   parallelWorker?: boolean;
+  /** When true, builtinInstructionSupplement is merged into the system prompt. */
+  includePersonaInstructionLayers?: boolean;
 }
 
 interface PrewarmedLiveSessionLoaderEntry {
@@ -140,6 +144,8 @@ function buildLiveSessionLoaderCacheKey(cwd: string, options: LiveSessionLoaderO
     additionalPromptTemplatePaths: normalizeLiveSessionLoaderPaths(options.additionalPromptTemplatePaths),
     additionalThemePaths: normalizeLiveSessionLoaderPaths(options.additionalThemePaths),
     systemPromptSupplement: options.systemPromptSupplement?.trim() ?? '',
+    builtinInstructionSupplement: options.builtinInstructionSupplement?.trim() ?? '',
+    includePersonaInstructionLayers: options.includePersonaInstructionLayers ?? false,
     parallelWorker: options.parallelWorker ?? false,
     noSkills: options.noSkills ?? false,
     progressiveDisclosure: options.progressiveDisclosure ?? false,
@@ -149,6 +155,16 @@ function buildLiveSessionLoaderCacheKey(cwd: string, options: LiveSessionLoaderO
 
 function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions = {}): DefaultResourceLoader {
   const agentDir = options.agentDir ?? AGENT_DIR;
+  // Merge builtin instruction supplement into system prompt when persona mode is active.
+  // This allows builtin instruction layers (e.g. persona soul doc) to reach the prompt
+  // instruction layer through the standard instruction-inventory pipeline.
+  const effectiveSupplement =
+    options.includePersonaInstructionLayers && options.builtinInstructionSupplement
+      ? options.systemPromptSupplement
+        ? `${options.systemPromptSupplement}\n\n${options.builtinInstructionSupplement}`
+        : options.builtinInstructionSupplement
+      : options.systemPromptSupplement;
+
   return new DefaultResourceLoader({
     cwd,
     agentDir,
@@ -167,7 +183,7 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
       : buildNeonSystemPrompt({
           cwd,
           agentDir,
-          systemPromptSupplement: options.systemPromptSupplement,
+          systemPromptSupplement: effectiveSupplement,
           parallelWorker: options.parallelWorker,
         }),
     noSkills: options.noSkills,

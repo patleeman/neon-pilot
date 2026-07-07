@@ -142,4 +142,58 @@ describe('instruction inventory', () => {
     );
     expect(plan.diagnostics).toContainEqual({ severity: 'info', code: 'provider-info', message: 'hello' });
   });
+
+  it('includes the persona soul doc instruction layer when desktopRootLayout with soulDoc is provided', async () => {
+    const soulDocCtx = {
+      ...ctx,
+      desktopRootLayout: {
+        root: '/desktop-root',
+        apps: '/desktop-root/apps',
+        agents: '/desktop-root/agents',
+        soulDoc: '/desktop-root/agents/soul.md',
+      },
+    } as never;
+
+    const plan = await buildInstructionPlan(soulDocCtx);
+
+    expect(plan.layers).toContainEqual(
+      expect.objectContaining({
+        id: 'builtin:persona-soul-doc',
+        providerId: 'builtin-soul-doc',
+        title: 'Persona soul doc',
+        source: { kind: 'builtin', label: 'Persona soul doc' },
+        scope: 'runtime',
+        priority: 50,
+        mutable: true,
+        risk: 'normal',
+      }),
+    );
+  });
+
+  it('omits the persona soul doc layer when desktopRootLayout soulDoc is missing', async () => {
+    const plan = await buildInstructionPlan(ctx);
+
+    expect(plan.layers.find((layer) => layer.id === 'builtin:persona-soul-doc')).toBeUndefined();
+  });
+
+  it('omits the persona soul doc layer when the soul doc file is blank', async () => {
+    fs.readFileSync.mockImplementation((path: string) => {
+      if (path.endsWith('soul.md')) return '   \n   ';
+      return `content:${path}`;
+    });
+
+    const soulDocCtx = {
+      ...ctx,
+      desktopRootLayout: {
+        root: '/desktop-root',
+        apps: '/desktop-root/apps',
+        agents: '/desktop-root/agents',
+        soulDoc: '/desktop-root/agents/soul.md',
+      },
+    } as never;
+
+    const plan = await buildInstructionPlan(soulDocCtx);
+
+    expect(plan.layers.find((layer) => layer.id === 'builtin:persona-soul-doc')).toBeUndefined();
+  });
 });

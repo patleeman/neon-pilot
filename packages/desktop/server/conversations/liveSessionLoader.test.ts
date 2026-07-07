@@ -102,6 +102,39 @@ describe('live session loader cache', () => {
     expect(agent.DefaultResourceLoader.instances[0].reload).toHaveBeenCalledOnce();
   });
 
+  it('merges builtin instruction supplements only for persona instruction sessions', async () => {
+    await makeLoader('/repo', {
+      systemPromptSupplement: 'Extension instructions.',
+      builtinInstructionSupplement: 'Persona soul instructions.',
+      includePersonaInstructionLayers: true,
+    });
+
+    expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining('Extension instructions.\n\nPersona soul instructions.'),
+      }),
+    );
+
+    clearPrewarmedLiveSessionLoaders();
+    agent.DefaultResourceLoader.instances.length = 0;
+
+    await makeLoader('/repo', {
+      systemPromptSupplement: 'Extension instructions.',
+      builtinInstructionSupplement: 'Persona soul instructions.',
+    });
+
+    expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining('Extension instructions.'),
+      }),
+    );
+    expect(agent.DefaultResourceLoader.instances[0].options).toEqual(
+      expect.objectContaining({
+        systemPrompt: expect.not.stringContaining('Persona soul instructions.'),
+      }),
+    );
+  });
+
   it('turns AGENTS files and skills into pointers for progressive DS4 sessions', async () => {
     await makeLoader('/repo', {
       agentDir: '/agent-runtime',
