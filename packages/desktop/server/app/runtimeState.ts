@@ -15,7 +15,7 @@ import {
 } from '../extensions/extensionAgentExtensions.js';
 import { listRuntimeExtensionBackendEntries } from '../extensions/extensionRuntimeResources.js';
 import { createManifestToolAgentExtensions, listManifestToolAgentExtensionCacheEntries } from '../extensions/manifestToolAgentExtension.js';
-import { setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
+import { createPersonaMemoryAgentExtension, setRuntimeAgentHookBuilders } from '../extensions/runtimeAgentHooks.js';
 import { readSavedModelPreferences, readSavedModelRef } from '../models/modelPreferences.js';
 import { buildInstructionPlan } from '../prompt-assembly/instructionInventory.js';
 import { buildPromptTemplatePlan, buildPromptTemplatePlanAsync } from '../prompts/promptTemplateInventory.js';
@@ -378,6 +378,7 @@ export function createRuntimeState(options: CreateRuntimeStateOptions): RuntimeS
         serverContext: { getRuntimeScope: getRuntimeScope, getSettingsFile: () => settingsFile, getStateRoot: () => stateRoot },
       }),
 
+      createPersonaMemoryAgentExtension(),
       ...agentExtensions.factories,
     ].map(guardExtensionApi);
     liveSessionExtensionFactoriesCache = { key: cacheKey, value: factories, updatedAtMs: Date.now() };

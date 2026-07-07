@@ -129,8 +129,10 @@ const desktopRootLayout = {
   data: '/desktop-root/data',
   dataApps: '/desktop-root/data/apps',
   dataDocuments: '/desktop-root/data/documents',
+  dataExports: '/desktop-root/data/exports',
   documents: '/desktop-root/documents',
   agents: '/desktop-root/agents',
+  soulDoc: '/desktop-root/agents/soul.md',
   logs: '/desktop-root/logs',
   logsDesktop: '/desktop-root/logs/desktop',
   logsDaemon: '/desktop-root/logs/daemon',
@@ -235,7 +237,7 @@ describe('createRuntimeState', () => {
     const factories = state.buildLiveSessionExtensionFactories();
     // All factories are wrapped by the extension API guard so each
     // element is a function. Verify count and that each delegates correctly.
-    expect(factories).toHaveLength(1);
+    expect(factories).toHaveLength(2);
     factories.forEach((factory) => {
       expect(typeof factory).toBe('function');
     });
@@ -275,13 +277,15 @@ describe('createRuntimeState', () => {
     const logger = createLogger();
     const state = createTestRuntimeState({ logger });
 
-    const [factory] = state.buildLiveSessionExtensionFactories();
+    const factories = state.buildLiveSessionExtensionFactories();
+    const factory = factories[1];
     let activeTools = ['read', 'write', 'edit'];
     const pi = {
       getActiveTools: vi.fn(() => activeTools),
       setActiveTools: vi.fn((tools: string[]) => {
         activeTools = tools;
       }),
+      registerTool: vi.fn(),
       on: vi.fn(),
     };
 

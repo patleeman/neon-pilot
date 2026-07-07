@@ -1,14 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-const { sentinelLayout } = vi.hoisted(() => ({
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { captured, sentinelLayout } = vi.hoisted(() => ({
   sentinelLayout: {
     root: '/mock/neon-pilot-desktop',
     apps: '/mock/neon-pilot-desktop/apps',
     data: '/mock/neon-pilot-desktop/data',
     dataApps: '/mock/neon-pilot-desktop/data/apps',
     dataDocuments: '/mock/neon-pilot-desktop/data/documents',
+    dataExports: '/mock/neon-pilot-desktop/data/exports',
     documents: '/mock/neon-pilot-desktop/documents',
     agents: '/mock/neon-pilot-desktop/agents',
+    soulDoc: '/mock/neon-pilot-desktop/agents/soul.md',
     logs: '/mock/neon-pilot-desktop/logs',
     logsDesktop: '/mock/neon-pilot-desktop/logs/desktop',
     logsDaemon: '/mock/neon-pilot-desktop/logs/daemon',
@@ -28,11 +35,10 @@ const { sentinelLayout } = vi.hoisted(() => ({
     systemSecrets: '/mock/neon-pilot-desktop/system/secrets',
     systemState: '/mock/neon-pilot-desktop/system/state',
   },
-}));
-
-const captured = vi.hoisted(() => ({
-  resourceLayout: undefined as Record<string, unknown> | undefined,
-  assemblyLayout: undefined as Record<string, unknown> | undefined,
+  captured: {
+    resourceLayout: undefined as Record<string, unknown> | undefined,
+    assemblyLayout: undefined as Record<string, unknown> | undefined,
+  },
 }));
 
 vi.mock('@neon-pilot/core', async (importOriginal) => {
@@ -58,9 +64,26 @@ vi.mock('../prompt-assembly/promptAssembly.js', async (importOriginal) => {
   };
 });
 
-import { buildLiveSessionExtensionFactoriesForRuntime, buildLiveSessionResourceOptionsForRuntime } from './runtimeAgentHooks.js';
+import {
+  buildLiveSessionExtensionFactoriesForRuntime,
+  buildLiveSessionResourceOptionsForRuntime,
+  createPersonaMemoryAgentExtension,
+} from './runtimeAgentHooks.js';
+
+const tempDirs: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(tempDirs.splice(0).map((d) => rm(d, { recursive: true, force: true })));
+  sentinelLayout.agents = '/mock/neon-pilot-desktop/agents';
+  sentinelLayout.soulDoc = '/mock/neon-pilot-desktop/agents/soul.md';
+});
 
 describe('runtime agent hooks', () => {
+  beforeEach(() => {
+    captured.resourceLayout = undefined;
+    captured.assemblyLayout = undefined;
+  });
+
   it('builds live-session resources and extension factories before the app runtime registers builders', () => {
     process.env.NEON_PILOT_REPO_ROOT = process.cwd();
 
@@ -79,15 +102,148 @@ describe('runtime agent hooks', () => {
 
     const options = buildLiveSessionResourceOptionsForRuntime();
 
-    // The fallback path should forward the resolved desktop root layout
-    // to both runtime resource resolution and prompt assembly
     expect(captured.resourceLayout).toBe(sentinelLayout);
     expect(captured.assemblyLayout).toBe(sentinelLayout);
-
-    // Verify the result is still coherent
     expect(options.additionalExtensionPaths).toEqual(expect.any(Array));
     expect(options.additionalSkillPaths).toEqual(expect.any(Array));
     expect(options.additionalPromptTemplatePaths).toEqual(expect.any(Array));
     expect(options.additionalThemePaths).toEqual(expect.any(Array));
+  });
+});
+
+describe('createPersonaMemoryAgentExtension', () => {
+  type RegisterToolCall = {
+    name: string;
+    label: string;
+    description: string;
+    parameters: unknown;
+    execute: (...args: unknown[]) => Promise<{ content: Array<{ text: string }>; isError?: boolean }>;
+  };
+
+  let registeredTools: Map<string, RegisterToolCall>;
+
+  beforeEach(() => {
+    registeredTools = new Map();
+    const dir = mkdtempSync(join(tmpdir(), 'hooks-test-'));
+    tempDirs.push(dir);
+    sentinelLayout.agents = dir;
+    sentinelLayout.soulDoc = join(dir, 'soul.md');
+    createPersonaMemoryAgentExtension()({
+      registerTool: (tool: RegisterToolCall) => {
+        registeredTools.set(tool.name, tool);
+      },
+    } as never);
+  });
+
+  function getTool(name: string): RegisterToolCall {
+    const tool = registeredTools.get(name);
+    if (!tool) throw new Error(`Tool "${name}" not registered`);
+    return tool;
+  }
+
+  it('registers all persona memory tools', () => {
+    expect([...registeredTools.keys()].sort()).toEqual([
+      'persona_append_to_memory',
+      'persona_forget',
+      'persona_list_memories',
+      'persona_remember',
+    ]);
+  });
+
+  it('persona_remember writes a memory doc with key/content parameters', async () => {
+    const result = await getTool('persona_remember').execute('call-1', {
+      key: 'test-note',
+      title: 'Test Note',
+      content: 'Hello world.',
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('Test Note');
+    expect(result.content[0]?.text).toContain('test-note');
+  });
+
+  it('persona_remember accepts id/body aliases', async () => {
+    const result = await getTool('persona_remember').execute('call-1', {
+      id: 'alias-note',
+      title: 'Alias Note',
+      body: 'Hello world.',
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('alias-note');
+  });
+
+  it('persona_append_to_memory appends with key/content parameters', async () => {
+    await getTool('persona_remember').execute('call-1', {
+      key: 'journal',
+      title: 'Journal',
+      content: 'Initial.',
+    });
+
+    const result = await getTool('persona_append_to_memory').execute('call-2', {
+      key: 'journal',
+      sectionTitle: 'Update',
+      content: 'New entry.',
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('journal');
+  });
+
+  it('persona_append_to_memory creates a doc when missing', async () => {
+    const result = await getTool('persona_append_to_memory').execute('call-1', {
+      key: 'todo',
+      content: 'Review PR.',
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('todo');
+  });
+
+  it('persona_forget deletes a memory doc', async () => {
+    await getTool('persona_remember').execute('call-1', {
+      key: 'temp-note',
+      title: 'Temp',
+      content: 'Delete me.',
+    });
+
+    const result = await getTool('persona_forget').execute('call-2', { key: 'temp-note' });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('Deleted');
+    expect(result.content[0]?.text).toContain('temp-note');
+  });
+
+  it('persona_list_memories returns stored docs and an empty message', async () => {
+    let result = await getTool('persona_list_memories').execute('call-1', {});
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('No persona memory docs found');
+
+    await getTool('persona_remember').execute('call-2', { key: 'alpha', title: 'Alpha', content: 'A' });
+    await getTool('persona_remember').execute('call-3', { key: 'bravo', title: 'Bravo', content: 'B' });
+
+    result = await getTool('persona_list_memories').execute('call-4', {});
+    expect(result.isError).not.toBe(true);
+    expect(result.content[0]?.text).toContain('alpha');
+    expect(result.content[0]?.text).toContain('bravo');
+  });
+
+  it('returns tool errors for invalid ids and reserved soul doc', async () => {
+    const invalid = await getTool('persona_remember').execute('call-1', {
+      key: 'Bad Id!',
+      content: 'Bad',
+    });
+    const rememberSoul = await getTool('persona_remember').execute('call-2', {
+      key: 'soul',
+      content: 'Nope',
+    });
+    const forgetSoul = await getTool('persona_forget').execute('call-3', { key: 'soul' });
+
+    expect(invalid.isError).toBe(true);
+    expect(invalid.content[0]?.text).toContain('Invalid persona memory doc id');
+    expect(rememberSoul.isError).toBe(true);
+    expect(rememberSoul.content[0]?.text).toContain('Cannot write to reserved doc');
+    expect(forgetSoul.isError).toBe(true);
+    expect(forgetSoul.content[0]?.text).toContain('Cannot delete reserved doc');
   });
 });
