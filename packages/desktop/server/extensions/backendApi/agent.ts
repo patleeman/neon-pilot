@@ -466,7 +466,8 @@ async function createSession(input: ExtensionAgentConversationCreateInput, ctx: 
   const agentCtx = resolveOptionalAgentToolContext(ctx);
   const pi = await dynamicImport<PiModule>(PI_CODING_AGENT_PACKAGE);
   const runtimeDir = await callServerModuleExport<string>(NEON_PILOT_CORE_PACKAGE, 'getPiAgentRuntimeDir');
-  const authStorage = pi.AuthStorage.create(join(runtimeDir, 'auth.json'));
+  const authFilePath = await callServerModuleExport<string>(NEON_PILOT_CORE_PACKAGE, 'getRuntimeAuthFilePath');
+  const authStorage = pi.AuthStorage.create(authFilePath);
   const modelRegistry =
     (agentCtx?.modelRegistry as { getAvailable(): unknown[] } | undefined) ??
     (pi.ModelRegistry.create(authStorage, resolveRuntimeModelsFilePath(ctx) ?? join(runtimeDir, 'models.json')) as {

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { type Api, type Model } from '@earendil-works/pi-ai';
 import { completeSimple } from '@earendil-works/pi-ai/compat';
 import { AuthStorage } from '@earendil-works/pi-coding-agent';
-import { type SqliteDatabase } from '@neon-pilot/core';
+import { getRuntimeAuthFilePath, type SqliteDatabase } from '@neon-pilot/core';
 
 import { createRuntimeModelRegistry } from '../models/modelRegistry.js';
 import { logWarn } from '../shared/logging.js';
@@ -453,7 +453,7 @@ async function generateConversationSummary(meta: SessionMeta): Promise<Conversat
     return buildFallbackRecord(meta, fingerprint, meta.title);
   }
 
-  const auth = AuthStorage.create(join(resolveAgentDir(), 'auth.json'));
+  const auth = AuthStorage.create(getRuntimeAuthFilePath());
   const modelRegistry = createRuntimeModelRegistry(auth);
   const model = resolveSummaryModel(modelRegistry.getAvailable());
   if (!model) {

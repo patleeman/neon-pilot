@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { AuthStorage, SessionManager } from '@earendil-works/pi-coding-agent';
-import { getPiAgentRuntimeDir, getRuntimeConfigRoot, getStateRoot } from '@neon-pilot/core';
+import { getPiAgentRuntimeDir, getRuntimeAuthFilePath, getRuntimeConfigRoot, getStateRoot } from '@neon-pilot/core';
 
 import { readNeonPilotCliControlPlaneRecord } from '../cliControlPlane.js';
 import { appendConversationOffshootMetadata } from '../conversations/conversationService.js';
@@ -197,7 +197,7 @@ export async function main(): Promise<void> {
       getCurrentModelRef: () => args.model ?? readSavedModelRef(settingsFile),
       hasOpenAiImageProvider: () => {
         try {
-          const auth = AuthStorage.create(`${agentDir}/auth.json`);
+          const auth = AuthStorage.create(getRuntimeAuthFilePath());
           return auth.hasAuth('openai') || auth.hasAuth('openai-codex');
         } catch {
           return false;

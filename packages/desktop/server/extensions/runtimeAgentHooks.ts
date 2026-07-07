@@ -1,6 +1,6 @@
 import { AuthStorage, type ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import {
-  getPiAgentRuntimeDir,
+  getRuntimeAuthFilePath,
   getRuntimeConfigRoot,
   getStateRoot,
   resolveDesktopRootLayout,
@@ -57,7 +57,6 @@ export function buildLiveSessionResourceOptionsForRuntime(): LiveSessionResource
 
 function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
   const stateRoot = getStateRoot();
-  const agentDir = getPiAgentRuntimeDir(stateRoot);
   const settingsFile = getRuntimeSettingsFilePath(stateRoot);
   const agentExtensions = createManifestAgentExtensions({
     onError: (message, fields) => console.warn(`[runtime-agent] ${message}`, fields ?? ''),
@@ -70,7 +69,7 @@ function buildFallbackLiveSessionExtensionFactories(): ExtensionFactory[] {
       getCurrentModelRef: () => readSavedModelRef(settingsFile),
       hasOpenAiImageProvider: () => {
         try {
-          const auth = AuthStorage.create(`${agentDir}/auth.json`);
+          const auth = AuthStorage.create(getRuntimeAuthFilePath());
           return auth.hasAuth('openai') || auth.hasAuth('openai-codex');
         } catch {
           return false;

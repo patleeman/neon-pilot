@@ -21,6 +21,7 @@ const serverModuleMocks = vi.hoisted(() => ({
       return undefined;
     }
     if (specifier === '@neon-pilot/core' && exportName === 'getPiAgentRuntimeDir') return '/runtime';
+    if (specifier === '@neon-pilot/core' && exportName === 'getRuntimeAuthFilePath') return '/runtime/auth.json';
     if (specifier === '../../conversations/liveSessions.js' && exportName === 'createSession') {
       if (serverModuleMocks.disableLiveSessionCreate) throw new Error('live sessions unavailable');
       const [cwd, options] = args as [string, unknown];
