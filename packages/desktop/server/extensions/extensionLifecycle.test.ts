@@ -16,6 +16,7 @@ const clearExtensionFailureRecords = vi.fn();
 const stopExtensionServices = vi.fn();
 const unregisterBashProcessWrapper = vi.fn();
 const uninstallExtensionSubscriptions = vi.fn();
+const invalidateAppTopics = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({
   clearExtensionFailureRecords,
@@ -35,6 +36,9 @@ vi.mock('../conversations/processWrappers.js', () => ({
 }));
 vi.mock('./extensionSubscriptions.js', () => ({
   uninstallExtensionSubscriptions,
+}));
+vi.mock('../shared/appEvents.js', () => ({
+  invalidateAppTopics,
 }));
 
 const reloadExtensionBackend = vi.fn().mockResolvedValue({ ok: true, extensionId: 'test', rebuilt: false });
@@ -83,6 +87,7 @@ describe('extensionLifecycle', () => {
     stopExtensionServices.mockReset().mockResolvedValue(undefined);
     unregisterBashProcessWrapper.mockReset();
     uninstallExtensionSubscriptions.mockReset();
+    invalidateAppTopics.mockReset();
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
     execFileSync.mockImplementation((command, args) => {
@@ -120,7 +125,9 @@ describe('extensionLifecycle', () => {
       ok: true,
       extension: { id: 'my-extension', name: 'My Extension' },
       packageRoot: join(runtimeRoot, 'my-extension'),
+      built: true,
     });
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
     const manifest = JSON.parse(readFileSync(join(runtimeRoot, 'my-extension', 'extension.json'), 'utf-8'));
     expect(manifest).toMatchObject({
       id: 'my-extension',
@@ -403,6 +410,41 @@ describe('extensionLifecycle', () => {
     expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name' }, stateRoot)).toThrow('Extension directory already exists');
   });
 
+  it('builds the extension automatically on create so dist artifacts exist immediately', () => {
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'auto-build-ext', name: 'Auto Build' }]);
+    execFileSync.mockClear();
+    const result = createRuntimeExtension({ id: 'auto-build-ext', name: 'Auto Build' }, stateRoot);
+
+    expect(result).toEqual({
+      ok: true,
+      built: true,
+      extension: { id: 'auto-build-ext', name: 'Auto Build' },
+      packageRoot: join(runtimeRoot, 'auto-build-ext'),
+    });
+    expect(execFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/), join(runtimeRoot, 'auto-build-ext')]),
+      expect.objectContaining({ cwd: expect.any(String), stdio: 'pipe' }),
+    );
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
+  });
+
+  it('throws when extension build fails during create, preserving scaffold', () => {
+    listExtensionInstallSummaries.mockReturnValue([{ id: 'create-build-fail', name: 'Create Build Fail' }]);
+    execFileSync.mockImplementationOnce(() => {
+      throw new Error('esbuild create build failed');
+    });
+
+    expect(() => createRuntimeExtension({ id: 'create-build-fail', name: 'Create Build Fail' }, stateRoot)).toThrow(
+      'esbuild create build failed',
+    );
+
+    expect(existsSync(join(runtimeRoot, 'create-build-fail', 'extension.json'))).toBe(true);
+    expect(existsSync(join(runtimeRoot, 'create-build-fail', 'src', 'frontend.tsx'))).toBe(true);
+    expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot, undefined);
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
+  });
+
   it('updates runtime extension name, description, appearance, and source files in place', async () => {
     const packageRoot = join(runtimeRoot, 'my-extension');
     mkdirSync(join(packageRoot, 'src'), { recursive: true });
@@ -457,6 +499,7 @@ describe('extensionLifecycle', () => {
       expect.any(Object),
     );
     expect(reloadExtensionBackend).toHaveBeenCalledWith('my-extension');
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
   });
 
   it('updates only provided fields on a runtime extension', async () => {
@@ -702,6 +745,12 @@ describe('extensionLifecycle', () => {
 
     const created = createRuntimeExtension({ id: extId, name: 'Repairable' }, stateRoot);
     expect(created.packageRoot).toBe(packageRoot);
+    expect(created.built).toBe(true);
+    expect(execFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining([expect.stringMatching(/extension-build\.mjs$/), packageRoot]),
+      expect.objectContaining({ cwd: expect.any(String), stdio: 'pipe' }),
+    );
 
     findExtensionEntry.mockReturnValue({
       manifest: { schemaVersion: 2, id: extId },
@@ -771,6 +820,7 @@ describe('extensionLifecycle', () => {
     expect(imported).toEqual({ ok: true, extension: { id: 'imported-ext' }, packageRoot: join(runtimeRoot, 'imported-ext') });
     expect(findExtensionEntry).toHaveBeenCalledWith('imported-ext', stateRoot, undefined);
     expect(existsSync(join(runtimeRoot, 'imported-ext', 'extension.json'))).toBe(true);
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
   });
 
   it('inspects safe extension bundles without copying them into the runtime extension root', () => {
@@ -929,6 +979,7 @@ describe('extensionLifecycle', () => {
     expect(existsSync(packageRoot)).toBe(false);
     expect(clearExtensionFailureRecords).toHaveBeenCalledWith('cleanup-fails', stateRoot, undefined);
     expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot, undefined);
+    expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
   });
 
   it('clears stale registry state instead of throwing when package root is unavailable', async () => {
