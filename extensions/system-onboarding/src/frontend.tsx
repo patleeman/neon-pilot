@@ -1,4 +1,5 @@
 import type { NeonPilotClient } from '@neon-pilot/extensions';
+import { Button, Notice, SettingsPanel, SettingsRow, TextInput } from '@neon-pilot/extensions/settings';
 import React from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -543,5 +544,92 @@ export function OnboardingBootstrap({ pa }: { pa: NeonPilotClient }) {
       </section>
     </>,
     document.body,
+  );
+}
+
+export function PersonaNameSettingsPanel({ pa }: { pa: NeonPilotClient }) {
+  const [currentName, setCurrentName] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void pa.extension
+      .invoke('personaNameStatus')
+      .then((result: unknown) => {
+        if (cancelled) return;
+        const maybe = result && typeof result === 'object' ? (result as Record<string, unknown>) : {};
+        const name = typeof maybe.name === 'string' ? maybe.name : '';
+        setCurrentName(name || 'Neon Pilot Persona');
+        setEditName(name || '');
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setMessage(error instanceof Error ? error.message : String(error));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pa]);
+
+  async function handleSave() {
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      setMessage('Name must not be empty.');
+      return;
+    }
+    setBusy('Saving...');
+    setMessage(null);
+    setSaved(false);
+    try {
+      await pa.extension.invoke('setPersonaName', { name: trimmed });
+      setCurrentName(trimmed);
+      setEditName(trimmed);
+      setSaved(true);
+      setMessage('Name saved!');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <SettingsPanel title="Persona name" description="Choose the name Neon Pilot uses for your AI assistant." contentClassName="gap-3">
+      <SettingsRow
+        title="Assistant name"
+        description="Stored in your persona soul doc and used when the assistant introduces itself."
+        actionsClassName="min-w-[16rem] max-w-md flex-col items-stretch gap-2 sm:flex-row sm:items-center"
+      >
+        <TextInput
+          id="persona-name-input"
+          type="text"
+          value={editName}
+          onChange={(e) => {
+            setEditName(e.target.value);
+            setSaved(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void handleSave();
+          }}
+          className="min-w-0 flex-1"
+          placeholder="Enter a name for your assistant"
+          disabled={Boolean(busy)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <Button
+          variant="action"
+          tone="accent"
+          onClick={() => void handleSave()}
+          disabled={Boolean(busy) || !editName.trim() || editName.trim() === currentName}
+        >
+          {busy === 'Saving...' ? 'Saving...' : 'Save'}
+        </Button>
+      </SettingsRow>
+      {busy ? <Notice tone="info">{busy}</Notice> : null}
+      {!busy && message ? <Notice tone={saved ? 'success' : 'warning'}>{message}</Notice> : null}
+    </SettingsPanel>
   );
 }

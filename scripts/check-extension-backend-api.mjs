@@ -83,7 +83,8 @@ function hostBackendApiModules() {
         !entry.name.endsWith('.test.ts') &&
         entry.name !== 'index.ts' &&
         entry.name !== 'daemonBridge.ts' &&
-        entry.name !== 'serverModuleResolver.ts',
+        entry.name !== 'serverModuleResolver.ts' &&
+        entry.name !== 'personaName.ts',
     )
     .map((entry) => basename(entry.name, extname(entry.name)))
     .sort();

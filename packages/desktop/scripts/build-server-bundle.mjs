@@ -67,6 +67,8 @@ const backendApiLazyModuleEntries = [
   ['automation/scheduledTaskThreads.js', 'server/automation/scheduledTaskThreads.ts'],
   ['automation/store.js', 'server/automation/store.ts'],
   ['knowledge/memoryDocs.js', 'server/knowledge/memoryDocs.ts'],
+  ['knowledge/personaName.js', 'server/knowledge/personaName.ts'],
+  ['knowledge/personaSoulDoc.js', 'server/knowledge/personaSoulDoc.ts'],
   ['prompts/promptTemplateInventory.js', 'server/prompts/promptTemplateInventory.ts'],
   ['prompt-assembly/promptAssembly.js', 'server/prompt-assembly/promptAssembly.ts'],
   ['prompt-assembly/instructionInventory.js', 'server/prompt-assembly/instructionInventory.ts'],

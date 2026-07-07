@@ -1,6 +1,6 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -937,6 +937,66 @@ describe('extension backend capability dispatcher', () => {
         input: { lastEventId: 'desktop-user-action-test-1' },
       }),
     ).rejects.toThrow('Extension "ext" requires permission desktop:control to use desktop.events.');
+  });
+
+  it('dispatches persona name capability calls through the desktop soul doc', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'neon-pilot-persona-capability-'));
+    const desktopRootLayout = resolveDesktopRootLayout({ root });
+    mkdirSync(dirname(desktopRootLayout.soulDoc), { recursive: true });
+    writeFileSync(desktopRootLayout.soulDoc, '# Neon Pilot Persona\n\nYou are Neon Pilot.\n', 'utf8');
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['persona:readwrite'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ desktopRootLayout });
+
+    try {
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 1,
+            kind: 'capabilityRequest',
+            extensionId: 'ext',
+            capability: 'persona',
+            operation: 'getName',
+            context: { desktopRootLayout },
+          }),
+        ),
+      ).resolves.toEqual({ name: 'Neon Pilot Persona', isDefault: true });
+
+      await expect(
+        Promise.resolve(
+          dispatch({
+            id: 2,
+            kind: 'capabilityRequest',
+            extensionId: 'ext',
+            capability: 'persona',
+            operation: 'setName',
+            input: { name: 'Ada' },
+            context: { desktopRootLayout },
+          }),
+        ),
+      ).resolves.toEqual({ ok: true });
+
+      expect(readFileSync(desktopRootLayout.soulDoc, 'utf8')).toMatch(/^# Ada\n/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('requires persona write permission before setting the persona name', async () => {
+    const desktopRootLayout = resolveDesktopRootLayout({ root: '/desktop-root' });
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['persona:read'] } });
+    const dispatch = createExtensionBackendCapabilityDispatcher({ desktopRootLayout });
+
+    await expect(async () =>
+      dispatch({
+        id: 1,
+        kind: 'capabilityRequest',
+        extensionId: 'ext',
+        capability: 'persona',
+        operation: 'setName',
+        input: { name: 'Ada' },
+        context: { desktopRootLayout },
+      }),
+    ).rejects.toThrow('Extension "ext" requires permission persona:write to use persona.setName.');
   });
 
   it('dispatches extension-scoped git capability calls', async () => {

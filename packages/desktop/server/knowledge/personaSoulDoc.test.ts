@@ -100,3 +100,40 @@ describe('buildPersonaSoulDocContext', () => {
     expect(context).toBe('');
   });
 });
+
+describe('writePersonaSoulDoc', () => {
+  it('writes content to a new soul.md file', async () => {
+    const dir = ensureAgentsDir();
+    const soulPath = join(dir, 'soul.md');
+    const { writePersonaSoulDoc } = await import('./personaSoulDoc.js');
+
+    writePersonaSoulDoc(soulPath, '# Custom Persona\n\nContent.');
+
+    const content = readPersonaSoulDoc(soulPath);
+    expect(content).toBe('# Custom Persona\n\nContent.');
+  });
+
+  it('overwrites existing content', async () => {
+    const dir = ensureAgentsDir();
+    const soulPath = join(dir, 'soul.md');
+    createFile(dir, 'soul.md', '# Original\n\nOld content.');
+    const { writePersonaSoulDoc } = await import('./personaSoulDoc.js');
+
+    writePersonaSoulDoc(soulPath, '# Updated\n\nNew content.');
+
+    const content = readPersonaSoulDoc(soulPath);
+    expect(content).toBe('# Updated\n\nNew content.');
+  });
+
+  it('creates parent directories when they do not exist', async () => {
+    const dir = createTempDir('persona-soul-nested-');
+    const nestedDir = join(dir, 'deep', 'nested');
+    const soulPath = join(nestedDir, 'soul.md');
+    const { writePersonaSoulDoc } = await import('./personaSoulDoc.js');
+
+    writePersonaSoulDoc(soulPath, '# Nested\n\nContent.');
+
+    const content = readPersonaSoulDoc(soulPath);
+    expect(content).toBe('# Nested\n\nContent.');
+  });
+});

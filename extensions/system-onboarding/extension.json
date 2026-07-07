@@ -3,7 +3,7 @@
   "id": "system-onboarding",
   "name": "Onboarding",
   "packageType": "system",
-  "description": "Runs the first-run guided tour over real Neon Pilot app pages.",
+  "description": "Runs the first-run guided tour over real Neon Pilot app pages and provides persona name setup.",
   "version": "0.1.0",
   "frontend": {
     "entry": "dist/frontend.js",
@@ -28,6 +28,22 @@
         "worker": {
           "enabled": true
         }
+      },
+      {
+        "id": "personaNameStatus",
+        "handler": "personaNameStatus",
+        "title": "Persona name setup status",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "setPersonaName",
+        "handler": "setPersonaName",
+        "title": "Set persona name",
+        "worker": {
+          "enabled": true
+        }
       }
     ]
   },
@@ -38,9 +54,37 @@
         "label": "Onboarding bootstrap",
         "component": "OnboardingBootstrap"
       }
+    ],
+    "settingsComponent": {
+      "id": "persona-name",
+      "component": "PersonaNameSettingsPanel",
+      "sectionId": "settings-onboarding",
+      "label": "Persona Name",
+      "description": "Choose a name for your AI assistant (your persona).",
+      "order": 10
+    },
+    "setupItems": [
+      {
+        "id": "persona-name",
+        "title": "Name your assistant",
+        "description": "Choose a name for your AI assistant (your persona).",
+        "capability": "Persona",
+        "severity": "recommended",
+        "statusAction": "personaNameStatus",
+        "actions": [
+          {
+            "id": "set-name",
+            "label": "Set Name",
+            "route": "/settings/apps/system-onboarding",
+            "tone": "primary"
+          }
+        ],
+        "dismissible": true,
+        "order": 5
+      }
     ]
   },
-  "permissions": ["storage:readwrite"],
+  "permissions": ["storage:readwrite", "persona:read", "persona:write"],
   "compatibility": {
     "neonPilot": ">=0.10.0",
     "extensionApi": "^2"

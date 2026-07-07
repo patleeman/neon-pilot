@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ensure, update } from './backend.js';
+import { ensure, personaNameStatus, setPersonaName, update } from './backend.js';
 
 function createCtx(overrides: Record<string, unknown> = {}) {
   const storage = {
@@ -101,5 +101,31 @@ describe('system-onboarding backend', () => {
 
     expect(firstResult).toEqual(secondResult);
     expect(storage.put).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports persona name setup as incomplete for the default persona name', async () => {
+    const ctx = createCtx({
+      persona: {
+        getName: vi.fn().mockResolvedValue({ name: 'Neon Pilot Persona', isDefault: true }),
+      },
+    });
+
+    await expect(personaNameStatus({}, ctx as never)).resolves.toEqual({
+      status: 'needs_setup',
+      name: 'Neon Pilot Persona',
+      detail: 'Your assistant still uses the default name.',
+    });
+  });
+
+  it('sets the persona name through the host persona capability', async () => {
+    const setName = vi.fn().mockResolvedValue({ ok: true });
+    const ctx = createCtx({
+      persona: {
+        setName,
+      },
+    });
+
+    await expect(setPersonaName({ name: 'Ada' }, ctx as never)).resolves.toEqual({ ok: true });
+    expect(setName).toHaveBeenCalledWith('Ada');
   });
 });

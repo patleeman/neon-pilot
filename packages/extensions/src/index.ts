@@ -255,6 +255,9 @@ export type ExtensionPermission =
   | 'knowledge:readwrite'
   | 'mcp:read'
   | 'mcp:write'
+  | 'persona:read'
+  | 'persona:write'
+  | 'persona:readwrite'
   | 'network:read'
   | 'conversations:read'
   | 'conversations:write'
@@ -1781,6 +1784,10 @@ export interface ExtensionBackendContext {
   commands: {
     execute(command: string, args?: unknown): Promise<boolean>;
     list(): Promise<unknown[]>;
+  };
+  persona: {
+    getName(): Promise<{ name: string; isDefault: boolean }>;
+    setName(name: string): Promise<{ ok: true }>;
   };
   notify: {
     toast(message: string, type?: 'info' | 'warning' | 'error'): void;

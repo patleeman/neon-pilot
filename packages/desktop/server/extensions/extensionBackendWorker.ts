@@ -474,6 +474,10 @@ function createWorkerBackendContext(
       clearBadge: () => callHostCapability(extensionId, 'notify', 'clearBadge'),
       isSystemAvailable: () => callHostCapability(extensionId, 'notify', 'isSystemAvailable'),
     },
+    persona: {
+      getName: () => callHostCapability(extensionId, 'persona', 'getName'),
+      setName: (name: string) => callHostCapability(extensionId, 'persona', 'setName', { name }),
+    },
     documents: {
       listCollections: (input: { owner?: string } = {}) => callHostCapability(extensionId, 'documents', 'listCollections', input, options),
       getCollection: (input: { owner: string; collection: string }) =>

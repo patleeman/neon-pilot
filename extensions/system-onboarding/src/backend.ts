@@ -134,3 +134,31 @@ export async function update(input: unknown, ctx: ExtensionBackendContext): Prom
   const state = await writeState(ctx, nextState);
   return { state, shouldStart: false };
 }
+
+export interface PersonaNameStatusResult {
+  status: 'needs_setup' | 'ready';
+  name: string;
+  detail?: string;
+}
+
+export async function personaNameStatus(_input: unknown, ctx: ExtensionBackendContext): Promise<PersonaNameStatusResult> {
+  const { name, isDefault } = await ctx.persona.getName();
+  if (isDefault) {
+    return { status: 'needs_setup', name, detail: 'Your assistant still uses the default name.' };
+  }
+  return { status: 'ready', name, detail: 'Your assistant has a custom name.' };
+}
+
+export interface SetPersonaNameInput {
+  name: string;
+}
+
+export interface SetPersonaNameResult {
+  ok: true;
+}
+
+export async function setPersonaName(input: unknown, ctx: ExtensionBackendContext): Promise<SetPersonaNameResult> {
+  const body = input && typeof input === 'object' ? (input as SetPersonaNameInput) : { name: '' };
+  await ctx.persona.setName(body.name);
+  return { ok: true };
+}

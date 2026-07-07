@@ -42,6 +42,7 @@ import {
   streamAgentMessage,
 } from './backendApi/agent.js';
 import { callDaemonExport } from './backendApi/daemonBridge.js';
+import { readPersonaName, writePersonaName } from './backendApi/personaName.js';
 import { callServerModuleExport } from './backendApi/serverModuleResolver.js';
 import { emitExtensionToolUpdate } from './extensionBackendLiveHandles.js';
 import { resolveExtensionBackendLoadTarget } from './extensionBackendLoadTarget.js';
@@ -817,6 +818,10 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
     if (request.operation === 'runTask') return ['agent:run'];
     if (conversationOperations.includes(request.operation)) return ['agent:conversations'];
     return [];
+  }
+
+  if (request.capability === 'persona') {
+    return permissionForReadWriteOperation('persona:read', 'persona:write', 'persona:readwrite', request.operation, ['setName']);
   }
 
   return [];
@@ -2373,6 +2378,27 @@ async function dispatchAgentCapability(
   throw new Error(`Unsupported agent capability operation: ${request.operation}`);
 }
 
+async function dispatchPersonaCapability(request: ExtensionBackendWorkerCapabilityRequest): Promise<unknown> {
+  const soulDocPath = request.context?.desktopRootLayout?.soulDoc;
+  if (!soulDocPath) {
+    throw new Error('Persona capability requires a desktop root layout with a soul doc path.');
+  }
+
+  if (request.operation === 'getName') {
+    const name = await readPersonaName(soulDocPath);
+    return { name, isDefault: name === 'Neon Pilot Persona' };
+  }
+
+  if (request.operation === 'setName') {
+    const input = normalizeRecordInput(request.input, 'Persona');
+    const newName = requireString(input.name, 'Persona name');
+    await writePersonaName(soulDocPath, newName);
+    return { ok: true };
+  }
+
+  throw new Error(`Unsupported persona capability operation: ${request.operation}`);
+}
+
 async function dispatchBrowserCapability(request: ExtensionBackendWorkerCapabilityRequest): Promise<unknown> {
   const host = getWorkbenchBrowserToolHost();
   if (!host) {
@@ -3235,6 +3261,9 @@ export function createExtensionBackendCapabilityDispatcher(
 
     if (request.capability === 'agent') {
       return dispatchAgentCapability(request, emit);
+    }
+    if (request.capability === 'persona') {
+      return dispatchPersonaCapability(request);
     }
     if (request.capability === 'automations') {
       return dispatchAutomationsCapability(automations, request);

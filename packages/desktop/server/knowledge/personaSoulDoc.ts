@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 /**
  * Read the persona soul doc content.
@@ -15,6 +15,16 @@ export function readPersonaSoulDoc(soulDocPath: string): string {
   } catch {
     return '';
   }
+}
+
+/**
+ * Write content to the persona soul doc file.
+ *
+ * Creates parent directories if they do not exist and overwrites the file.
+ */
+export function writePersonaSoulDoc(soulDocPath: string, content: string): void {
+  mkdirSync(dirname(soulDocPath), { recursive: true });
+  writeFileSync(resolve(soulDocPath), content, { encoding: 'utf-8', mode: 0o600 });
 }
 
 /**
