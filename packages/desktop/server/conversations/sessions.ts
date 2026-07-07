@@ -118,10 +118,7 @@ import { normalizeSessionName } from './sessionNaming.js';
 import { buildConversationOffshootMetadataData, CONVERSATION_OFFSHOOT_METADATA_CUSTOM_TYPE } from './sessionOffshootMetadataEntry.js';
 import { buildParentBacklinkContent, resolveParentBacklinkLabel } from './sessionParentBacklinkEntry.js';
 import { mergeResolvedParentSessionMetadata } from './sessionParentMetadata.js';
-import {
-  resolveSessionsDir as resolveSessionsDirValue,
-  resolveSessionsIndexFile as resolveSessionsIndexFileValue,
-} from './sessionPaths.js';
+import { resolveSessionsIndexFile as resolveSessionsIndexFileValue, resolveSystemSessionsDir } from './sessionPaths.js';
 import {
   formatRelatedConversationPointersText,
   formatRelatedThreadsSummaryText,
@@ -511,7 +508,8 @@ function elapsedMsSince(startedAt: bigint): number {
 
 function resolveSessionsDir(sessionsDirOverride?: string): string {
   if (sessionsDirOverride) return sessionsDirOverride;
-  return resolveSessionsDirValue({ envSessionsDir: process.env.PA_SESSIONS_DIR, defaultSessionsDir: DEFAULT_SESSIONS_DIR });
+  if (process.env.PA_SESSIONS_DIR) return process.env.PA_SESSIONS_DIR;
+  return resolveSystemSessionsDir();
 }
 
 function resolveSessionsIndexFile(sessionsDirOverride?: string): string {
@@ -521,6 +519,26 @@ function resolveSessionsIndexFile(sessionsDirOverride?: string): string {
     envSessionsDir: process.env.PA_SESSIONS_DIR,
     defaultSessionsIndexFile: DEFAULT_SESSIONS_INDEX_FILE,
   });
+}
+
+function shouldScanLegacySessionsDir(sessionsDir: string): boolean {
+  if (process.env.PA_SESSIONS_DIR || sessionsDir === DEFAULT_SESSIONS_DIR) {
+    return false;
+  }
+
+  try {
+    return sessionsDir === resolveSystemSessionsDir();
+  } catch {
+    return false;
+  }
+}
+
+function resolveSessionScanDirs(sessionsDir: string): string[] {
+  if (!shouldScanLegacySessionsDir(sessionsDir)) {
+    return [sessionsDir];
+  }
+
+  return [sessionsDir, DEFAULT_SESSIONS_DIR];
 }
 
 function parseJsonLine(rawLine: string): RawLine | null {
@@ -2215,27 +2233,34 @@ function scanSessionMetas(sessionsDirOverride?: string): SessionMeta[] {
   ensurePersistentIndexLoaded(sessionsDirOverride);
 
   const sessionsDir = resolveSessionsDir(sessionsDirOverride);
-  if (!existsSync(sessionsDir)) {
-    sessionMetaCache.clear();
-    sessionFileById.clear();
-    persistSessionIndex();
-    return [];
-  }
 
   const metas: SessionMeta[] = [];
   const seenFiles = new Set<string>();
   const nextSessionFileById = new Map<string, string>();
 
-  for (const { filePath, cwdSlug } of listSessionFiles(sessionsDir)) {
-    seenFiles.add(filePath);
-
-    const meta = readCachedSessionMeta(filePath, cwdSlug);
-    if (!meta) {
+  for (const scanDir of resolveSessionScanDirs(sessionsDir)) {
+    if (!existsSync(scanDir)) {
       continue;
     }
 
-    metas.push(meta);
-    nextSessionFileById.set(meta.id, filePath);
+    for (const { filePath, cwdSlug } of listSessionFiles(scanDir)) {
+      if (seenFiles.has(filePath)) {
+        continue;
+      }
+      seenFiles.add(filePath);
+
+      const meta = readCachedSessionMeta(filePath, cwdSlug);
+      if (!meta) {
+        continue;
+      }
+
+      if (nextSessionFileById.has(meta.id)) {
+        continue;
+      }
+
+      metas.push(meta);
+      nextSessionFileById.set(meta.id, filePath);
+    }
   }
 
   for (const filePath of sessionMetaCache.keys()) {
