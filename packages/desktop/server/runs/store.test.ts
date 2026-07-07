@@ -380,7 +380,7 @@ describe('durable run store', () => {
       rerunPaths.statusPath,
       createInitialDurableRunStatus({
         runId: 'run-rerun',
-        status: 'interrupted',
+        status: 'running',
         createdAt: '2026-03-12T18:00:00Z',
         activeAttempt: 1,
       }),
@@ -411,6 +411,32 @@ describe('durable run store', () => {
       expect.objectContaining({ runId: 'run-manual', recoveryAction: 'attention' }),
       expect.objectContaining({ runId: 'run-rerun', recoveryAction: 'rerun' }),
     ]);
+  });
+
+  it('does not automatically rerun gracefully interrupted scheduled tasks', () => {
+    const runsRoot = createTempDir('durable-runs-store-interrupted-task-');
+    const paths = resolveDurableRunPaths(runsRoot, 'task-run-interrupted');
+
+    saveDurableRunManifest(
+      paths.manifestPath,
+      createDurableRunManifest({
+        id: 'task-run-interrupted',
+        kind: 'scheduled-task',
+        resumePolicy: 'rerun',
+        createdAt: '2026-03-12T18:00:00Z',
+      }),
+    );
+    saveDurableRunStatus(
+      paths.statusPath,
+      createInitialDurableRunStatus({
+        runId: 'task-run-interrupted',
+        status: 'interrupted',
+        createdAt: '2026-03-12T18:00:00Z',
+        activeAttempt: 1,
+      }),
+    );
+
+    expect(scanDurableRun(runsRoot, 'task-run-interrupted')).toEqual(expect.objectContaining({ recoveryAction: 'none' }));
   });
 
   it('does not mark idle web live sessions as recoverable when they have no pending operation', () => {
@@ -529,7 +555,7 @@ describe('durable run store', () => {
       rerunPaths.statusPath,
       createInitialDurableRunStatus({
         runId: 'rerun-run',
-        status: 'interrupted',
+        status: 'running',
         createdAt: '2026-03-12T18:00:00Z',
         activeAttempt: 1,
       }),
@@ -545,8 +571,7 @@ describe('durable run store', () => {
         invalid: 0,
       },
       statuses: {
-        running: 1,
-        interrupted: 1,
+        running: 2,
       },
     });
   });

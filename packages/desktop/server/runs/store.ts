@@ -371,6 +371,10 @@ function determineRecoveryAction(
     return 'none';
   }
 
+  if (manifest.kind === 'scheduled-task' && status.status === 'interrupted') {
+    return 'none';
+  }
+
   if (manifest.resumePolicy === 'continue') {
     return 'resume';
   }

@@ -472,12 +472,17 @@ export function listConversationSessionsSnapshot(options: { includeLive?: boolea
   const catalogComplete = isConversationCatalogComplete();
   const catalogHasRows = hasConversationCatalogRows();
   const limit = Number.isSafeInteger(options.limit) && typeof options.limit === 'number' && options.limit > 0 ? options.limit : null;
+  const boundedCatalogBootstrapLimit = limit !== null && !catalogHasRows ? limit : null;
   const storedSessions = catalogHasRows
     ? listConversationCatalogSessions({ ...(limit === null ? {} : { limit }) })
-    : listSessions(resolveLayoutSessionsDir());
+    : boundedCatalogBootstrapLimit === null
+      ? listSessions(resolveLayoutSessionsDir())
+      : listSessions(resolveLayoutSessionsDir(), { maxFiles: boundedCatalogBootstrapLimit });
   if (!catalogComplete && !catalogHasRows) {
     upsertConversationCatalogSessions(storedSessions);
-    markConversationCatalogComplete();
+    if (boundedCatalogBootstrapLimit === null) {
+      markConversationCatalogComplete();
+    }
   }
   const jsonl = decorateSessionsWithAttention(
     profile,

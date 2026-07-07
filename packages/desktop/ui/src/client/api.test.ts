@@ -350,6 +350,19 @@ describe('api.activity entries', () => {
     vi.unstubAllGlobals();
   });
 
+  it('loads global activity through the shared api path prefix', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ items: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.activity({ limit: 5, kind: 'execution', active: true })).resolves.toEqual({ items: [] });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/activity?limit=5&kind=execution&active=true', {
+      method: 'GET',
+      cache: 'no-store',
+    });
+  });
+
   it('creates activity entries through the host activity endpoint', async () => {
     const document = { owner: 'activity', collection: 'activity-entries', id: 'activity-1' };
     const fetchMock = vi.fn(async () => jsonResponse({ document }));
@@ -363,6 +376,27 @@ describe('api.activity entries', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
+    });
+  });
+});
+
+describe('api.inbox', () => {
+  beforeEach(resetApiTestGlobals);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('loads inbox messages through the shared api path prefix', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ items: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { api } = await import('./api.js');
+    await expect(api.inbox.list({ unreadOnly: true, limit: 2 })).resolves.toEqual({ items: [] });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/inbox?unreadOnly=1&limit=2', {
+      method: 'GET',
+      cache: 'no-store',
     });
   });
 });

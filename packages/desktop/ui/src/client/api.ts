@@ -1414,7 +1414,7 @@ export const api = {
     if (options?.kind) params.set('kind', options.kind);
     if (options?.active !== undefined) params.set('active', String(options.active));
     const qs = params.toString();
-    return get<GlobalActivityResult>(`/api/activity${qs ? `?${qs}` : ''}`);
+    return get<GlobalActivityResult>(`/activity${qs ? `?${qs}` : ''}`);
   },
 
   // ── Documents store ─────────────────────────────────────────────
@@ -1493,19 +1493,19 @@ export const api = {
       if (options?.limit !== undefined) params.set('limit', String(options.limit));
       if (options?.offset !== undefined) params.set('offset', String(options.offset));
       const qs = params.toString();
-      return get<import('../shared/types').InboxListResult>(`/api/inbox${qs ? `?${qs}` : ''}`);
+      return get<import('../shared/types').InboxListResult>(`/inbox${qs ? `?${qs}` : ''}`);
     },
     get: async (id: string) => {
-      return get<import('../shared/types').DocumentResult>(`/api/inbox/${encodeURIComponent(id)}`);
+      return get<import('../shared/types').DocumentResult>(`/inbox/${encodeURIComponent(id)}`);
     },
     create: async (input: import('../shared/types').InboxCreateInput) => {
-      return post<import('../shared/types').DocumentResult>('/api/inbox', input);
+      return post<import('../shared/types').DocumentResult>('/inbox', input);
     },
     patch: async (id: string, input: import('../shared/types').InboxPatchInput) => {
-      return patch<import('../shared/types').DocumentResult>(`/api/inbox/${encodeURIComponent(id)}`, input);
+      return patch<import('../shared/types').DocumentResult>(`/inbox/${encodeURIComponent(id)}`, input);
     },
     delete: async (id: string) => {
-      return del<{ deleted: boolean }>(`/api/inbox/${encodeURIComponent(id)}`);
+      return del<{ deleted: boolean }>(`/inbox/${encodeURIComponent(id)}`);
     },
   },
 

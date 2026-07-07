@@ -194,7 +194,7 @@ import {
   startLocalhostWebappProxy,
   trustLocalhostWebappProxyCertificate,
 } from '../shared/localhostWebappProxy.js';
-import { logError, logWarn } from '../shared/logging.js';
+import { logError } from '../shared/logging.js';
 import { isSameOriginUnsafeRequestInput } from '../shared/webSecurity.js';
 import { readConversationPlansWorkspace } from '../ui/conversationPlanPreferences.js';
 import { readSavedDefaultCwdPreferences, writeSavedDefaultCwdPreference } from '../ui/defaultCwdPreferences.js';
@@ -937,30 +937,7 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   };
   localLiveSessionCapabilityContext = liveSessionCapabilityContext;
 
-  // Warm the local resource cache synchronously so first chat creation can
-  // reuse materialized runtime resources without queuing a renderer prewarm.
-  try {
-    context.buildLiveSessionResourceOptions();
-  } catch (error) {
-    logWarn('live session resource options prewarm failed', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-  }
   prewarmDesktopModelDefinitions();
-
-  // Extension factory and loader prewarm can do substantial synchronous work
-  // before their first await. Queue it so context construction stays on the
-  // fast path and the work runs before normal user interaction.
-  const liveSessionPrewarmTimer = setTimeout(() => {
-    void prewarmLiveSessionCapability({}, liveSessionCapabilityContext).catch((error) => {
-      logWarn('default live session prewarm failed', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-    });
-  }, 0);
-  liveSessionPrewarmTimer.unref?.();
 
   localProviderDesktopCapabilityContext = {
     getRuntimeScope: context.getRuntimeScope,

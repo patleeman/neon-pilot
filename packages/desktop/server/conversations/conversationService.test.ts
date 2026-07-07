@@ -608,6 +608,29 @@ describe('conversationService', () => {
     expect(markConversationCatalogCompleteMock).not.toHaveBeenCalled();
   });
 
+  it('bounds empty-catalog session scans when callers request a limited snapshot', () => {
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-test-desktop' });
+    hasConversationCatalogRowsMock.mockReturnValue(false);
+    isConversationCatalogCompleteMock.mockReturnValue(false);
+    listSessionsMock.mockReturnValue([
+      {
+        id: 'recent-limited',
+        file: '/sessions/recent-limited.jsonl',
+        timestamp: '2026-04-09T12:00:00.000Z',
+        cwd: '/repo/recent',
+        cwdSlug: '-repo-recent',
+        model: 'gpt-5',
+        title: 'Recent limited',
+        messageCount: 1,
+      },
+    ]);
+
+    expect(listConversationSessionsSnapshot({ limit: 1 }).map((session) => session.id)).toEqual(['recent-limited']);
+    expect(listSessionsMock).toHaveBeenCalledWith(layout.systemSessions, { maxFiles: 1 });
+    expect(upsertConversationCatalogSessionsMock).toHaveBeenCalledWith([expect.objectContaining({ id: 'recent-limited' })]);
+    expect(markConversationCatalogCompleteMock).not.toHaveBeenCalled();
+  });
+
   it('uses catalog rows once the catalog is marked complete', () => {
     hasConversationCatalogRowsMock.mockReturnValue(true);
     isConversationCatalogCompleteMock.mockReturnValue(true);

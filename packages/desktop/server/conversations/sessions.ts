@@ -25,6 +25,7 @@ import {
   readFileSync,
   readSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -310,6 +311,7 @@ export interface SessionMeta {
   model: string;
   title: string; // session display name or derived fallback title
   messageCount: number;
+  messageCountApproximate?: boolean;
   isRunning?: boolean;
   isLive?: boolean;
   lastActivityAt?: string;
@@ -564,19 +566,60 @@ function readFileLinesReverse(filePath: string, visit: (line: string) => boolean
   readFileLinesReverseValue(filePath, visit);
 }
 
-function readFileLinesForward(filePath: string, visit: (line: string) => boolean | void): void {
+interface ForwardLineVisitInfo {
+  truncated?: boolean;
+}
+
+function readFileLinesForward(
+  filePath: string,
+  visit: (line: string, info?: ForwardLineVisitInfo) => boolean | void,
+  options: { maxLineChars?: number } = {},
+): void {
   const fd = openSync(filePath, 'r');
   const buffer = Buffer.alloc(64 * 1024);
   const decoder = new TextDecoder();
+  const maxLineChars =
+    typeof options.maxLineChars === 'number' && Number.isSafeInteger(options.maxLineChars) && options.maxLineChars > 0
+      ? options.maxLineChars
+      : null;
   let pending = '';
+  let droppingLongLine = false;
 
   try {
     let bytesRead: number;
     while ((bytesRead = readSync(fd, buffer, 0, buffer.length, null)) > 0) {
-      pending += decoder.decode(buffer.subarray(0, bytesRead), { stream: true });
+      const decoded = decoder.decode(buffer.subarray(0, bytesRead), { stream: true });
+      if (droppingLongLine) {
+        const newlineIndex = decoded.indexOf('\n');
+        if (newlineIndex === -1) {
+          continue;
+        }
+        droppingLongLine = false;
+        pending = decoded.slice(newlineIndex + 1);
+      } else {
+        pending += decoded;
+      }
 
       let lineStart = 0;
       for (;;) {
+        if (maxLineChars !== null && pending.length - lineStart > maxLineChars) {
+          const newlineIndex = pending.indexOf('\n', lineStart);
+          const truncatedEnd = lineStart + maxLineChars;
+          const line = pending
+            .slice(lineStart, Math.min(newlineIndex === -1 ? truncatedEnd : newlineIndex, truncatedEnd))
+            .replace(/\r$/, '');
+          if (visit(line, { truncated: true }) === false) {
+            return;
+          }
+          if (newlineIndex === -1) {
+            pending = '';
+            droppingLongLine = true;
+            break;
+          }
+          lineStart = newlineIndex + 1;
+          continue;
+        }
+
         const newlineIndex = pending.indexOf('\n', lineStart);
         if (newlineIndex === -1) {
           pending = pending.slice(lineStart);
@@ -646,6 +689,10 @@ function tryReadSessionTailBlocksByFile(
   tailBlocks: number,
   options: { exactCounts?: boolean } = {},
 ): SessionDetail | null {
+  if (meta.messageCountApproximate === true && !options.exactCounts) {
+    return tryReadSessionTailBlocksByFile(filePath, meta, tailBlocks, { ...options, exactCounts: true });
+  }
+
   if (!options.exactCounts) {
     return tryReadApproximateSessionTailBlocksByFile(filePath, meta, tailBlocks);
   }
@@ -1980,6 +2027,25 @@ function resolveSessionIdByFile(filePath: string): string | undefined {
   return resolveSessionIdByFileFromMap({ filePath, sessionFileById, normalizeOptionalPath });
 }
 
+const SESSION_META_MESSAGE_SCAN_LIMIT = 32;
+const SESSION_META_MAX_LINE_CHARS = 256 * 1024;
+
+function decodeJsonStringFragment(value: string): string | null {
+  try {
+    return JSON.parse(`"${value}"`) as string;
+  } catch {
+    return null;
+  }
+}
+
+function extractTitleFromMessageLinePrefix(line: string): string | null {
+  const textMatch = /"text"\s*:\s*"((?:\\.|[^"\\])*)"/.exec(line);
+  const contentMatch = textMatch ? null : /"content"\s*:\s*"((?:\\.|[^"\\])*)"/.exec(line);
+  const encodedText = textMatch?.[1] ?? contentMatch?.[1];
+  const text = encodedText ? decodeJsonStringFragment(encodedText) : null;
+  return text ? extractTitleFromMessage({ role: 'user', content: [{ type: 'text', text }] }) : null;
+}
+
 function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta | null {
   let sessionRecord: RawSessionRecord | null = null;
   let model = 'unknown';
@@ -1987,82 +2053,115 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
   let namedTitle: string | null = null;
   let sawSessionInfo = false;
   let messageCount = 0;
+  let messageCountApproximate = false;
+  let sawTruncatedMetadataLine = false;
   let workspaceMetadata: ConversationWorkspaceMetadata | null = null;
   let offshootMetadata: ConversationOffshootMetadata | null = null;
   let legacyToolWorkspaceMetadata: LegacyToolWorkspaceMetadata | null = null;
 
-  readFileLinesForward(filePath, (rawLine) => {
-    const trimmedLine = rawLine.trim();
-    if (!trimmedLine) {
-      return;
-    }
+  const hasEnoughListMetadata = (): boolean =>
+    sessionRecord !== null &&
+    (sawSessionInfo || fallbackTitle !== null) &&
+    (legacyToolWorkspaceMetadata !== null || sawTruncatedMetadataLine || messageCount >= SESSION_META_MESSAGE_SCAN_LIMIT);
+  const stopMetadataScan = (): false => {
+    messageCountApproximate = true;
+    return false;
+  };
 
-    // Session list rendering is a startup-hot path. Avoid JSON.parse for every
-    // transcript message in large historical profiles; only parse metadata
-    // records and the first title-bearing message.
-    const isMessageLine = trimmedLine.includes('"type":"message"') || trimmedLine.includes('"type": "message"');
-    if (isMessageLine) {
-      messageCount += 1;
-      if (fallbackTitle !== null && legacyToolWorkspaceMetadata) {
+  readFileLinesForward(
+    filePath,
+    (rawLine, info) => {
+      sawTruncatedMetadataLine = sawTruncatedMetadataLine || info?.truncated === true;
+      const trimmedLine = rawLine.trim();
+      if (!trimmedLine) {
+        return;
+      }
+
+      // Session list rendering is a startup-hot path. Avoid JSON.parse for every
+      // transcript message in large historical profiles; only parse metadata
+      // records and the first title-bearing message.
+      const isMessageLine = trimmedLine.includes('"type":"message"') || trimmedLine.includes('"type": "message"');
+      if (isMessageLine) {
+        messageCount += 1;
+        if (hasEnoughListMetadata()) {
+          return stopMetadataScan();
+        }
+        if (fallbackTitle === null) {
+          fallbackTitle = extractTitleFromMessageLinePrefix(trimmedLine);
+        }
+
+        const line = parseJsonLine(trimmedLine);
+        if (!line || line.type !== 'message') {
+          if (hasEnoughListMetadata()) {
+            return stopMetadataScan();
+          }
+          return;
+        }
+        const message = line as RawMessage;
+        legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
+        if (fallbackTitle === null) {
+          fallbackTitle = extractTitleFromMessage(message.message);
+        }
+        if (hasEnoughListMetadata()) {
+          return stopMetadataScan();
+        }
+        return;
+      }
+
+      if (trimmedLine.includes('"type":"custom_message"') || trimmedLine.includes('"type": "custom_message"')) {
+        messageCount += 1;
         return;
       }
 
       const line = parseJsonLine(trimmedLine);
-      if (!line || line.type !== 'message') {
+      if (!line) return;
+
+      if (line.type === 'session') {
+        if (!sessionRecord) {
+          sessionRecord = line as RawSessionRecord;
+        }
         return;
       }
-      const message = line as RawMessage;
-      legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
-      if (fallbackTitle === null) {
-        fallbackTitle = extractTitleFromMessage(message.message);
+
+      if (line.type === 'model_change' && model === 'unknown') {
+        model = (line as RawModelChange).modelId ?? 'unknown';
+        return;
       }
-      return;
-    }
 
-    if (trimmedLine.includes('"type":"custom_message"') || trimmedLine.includes('"type": "custom_message"')) {
-      messageCount += 1;
-      return;
-    }
-
-    const line = parseJsonLine(trimmedLine);
-    if (!line) return;
-
-    if (line.type === 'session') {
-      if (!sessionRecord) {
-        sessionRecord = line as RawSessionRecord;
+      if (line.type === 'session_info') {
+        sawSessionInfo = true;
+        namedTitle = normalizeSessionName((line as RawSessionInfo).name);
+        return;
       }
-      return;
-    }
 
-    if (line.type === 'model_change' && model === 'unknown') {
-      model = (line as RawModelChange).modelId ?? 'unknown';
-      return;
-    }
+      if (line.type === 'compaction' || line.type === 'branch_summary') {
+        messageCount += 1;
+        return;
+      }
 
-    if (line.type === 'session_info') {
-      sawSessionInfo = true;
-      namedTitle = normalizeSessionName((line as RawSessionInfo).name);
-      return;
-    }
+      if (line.type === 'custom') {
+        workspaceMetadata = readConversationWorkspaceMetadata(line as RawCustomEntry) ?? workspaceMetadata;
+        offshootMetadata = readConversationOffshootMetadata(line as RawCustomEntry) ?? offshootMetadata;
+        if (hasEnoughListMetadata()) {
+          return stopMetadataScan();
+        }
+        return;
+      }
 
-    if (line.type === 'compaction' || line.type === 'branch_summary') {
-      messageCount += 1;
-      return;
-    }
-
-    if (line.type === 'custom') {
-      workspaceMetadata = readConversationWorkspaceMetadata(line as RawCustomEntry) ?? workspaceMetadata;
-      offshootMetadata = readConversationOffshootMetadata(line as RawCustomEntry) ?? offshootMetadata;
-      return;
-    }
-
-    if (line.type === 'message') {
-      const message = line as RawMessage;
-      messageCount += 1;
-      legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
-      if (fallbackTitle === null) fallbackTitle = extractTitleFromMessage(message.message);
-    }
-  });
+      if (line.type === 'message') {
+        const message = line as RawMessage;
+        messageCount += 1;
+        legacyToolWorkspaceMetadata = readLegacyToolWorkspaceMetadata(message) ?? legacyToolWorkspaceMetadata;
+        if (fallbackTitle === null)
+          fallbackTitle = extractTitleFromMessage(message.message) ?? extractTitleFromMessageLinePrefix(trimmedLine);
+        if (hasEnoughListMetadata()) {
+          return stopMetadataScan();
+        }
+      }
+      return undefined;
+    },
+    { maxLineChars: SESSION_META_MAX_LINE_CHARS },
+  );
 
   const resolvedSessionRecord = sessionRecord as RawSessionRecord | null;
   if (!resolvedSessionRecord) {
@@ -2107,6 +2206,7 @@ function readSessionMetaFromFile(filePath: string, cwdSlug: string): SessionMeta
     model,
     title: stripOffshootTitlePrefix(rawTitle, offshootKind),
     messageCount,
+    ...(messageCountApproximate ? { messageCountApproximate } : {}),
     ...(parentSessionFile ? { parentSessionFile } : {}),
     ...(resolvedOffshootMetadata?.parentSessionId ? { parentSessionId: resolvedOffshootMetadata.parentSessionId } : {}),
     ...(resolvedOffshootMetadata?.parentMessageId ? { parentMessageId: resolvedOffshootMetadata.parentMessageId } : {}),
@@ -2232,14 +2332,36 @@ function readCachedSessionMeta(filePath: string, cwdSlug: string): SessionMeta |
   return meta;
 }
 
-function scanSessionMetas(sessionsDirOverride?: string): SessionMeta[] {
+interface SessionScanOptions {
+  maxFiles?: number;
+}
+
+function normalizeSessionScanMaxFiles(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
+    return null;
+  }
+  return value;
+}
+
+function getSessionFileMtimeMs(filePath: string): number {
+  try {
+    const stats = statSync(filePath);
+    return Number.isFinite(stats.mtimeMs) ? stats.mtimeMs : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function scanSessionMetas(sessionsDirOverride?: string, options: SessionScanOptions = {}): SessionMeta[] {
   ensurePersistentIndexLoaded(sessionsDirOverride);
 
   const sessionsDir = resolveSessionsDir(sessionsDirOverride);
+  const maxFiles = normalizeSessionScanMaxFiles(options.maxFiles);
 
   const metas: SessionMeta[] = [];
   const seenFiles = new Set<string>();
   const nextSessionFileById = new Map<string, string>();
+  const candidates: Array<{ filePath: string; cwdSlug: string }> = [];
 
   for (const scanDir of resolveSessionScanDirs(sessionsDir)) {
     if (!existsSync(scanDir)) {
@@ -2251,19 +2373,32 @@ function scanSessionMetas(sessionsDirOverride?: string): SessionMeta[] {
         continue;
       }
       seenFiles.add(filePath);
-
-      const meta = readCachedSessionMeta(filePath, cwdSlug);
-      if (!meta) {
-        continue;
-      }
-
-      if (nextSessionFileById.has(meta.id)) {
-        continue;
-      }
-
-      metas.push(meta);
-      nextSessionFileById.set(meta.id, filePath);
+      candidates.push({ filePath, cwdSlug });
     }
+  }
+
+  const boundedCandidates =
+    maxFiles === null
+      ? candidates
+      : [...candidates]
+          .sort((left, right) => {
+            const mtimeDelta = getSessionFileMtimeMs(right.filePath) - getSessionFileMtimeMs(left.filePath);
+            return mtimeDelta !== 0 ? mtimeDelta : right.filePath.localeCompare(left.filePath);
+          })
+          .slice(0, maxFiles);
+
+  for (const { filePath, cwdSlug } of boundedCandidates) {
+    const meta = readCachedSessionMeta(filePath, cwdSlug);
+    if (!meta) {
+      continue;
+    }
+
+    if (nextSessionFileById.has(meta.id)) {
+      continue;
+    }
+
+    metas.push(meta);
+    nextSessionFileById.set(meta.id, filePath);
   }
 
   for (const filePath of sessionMetaCache.keys()) {
@@ -2411,8 +2546,8 @@ export function buildDisplayMessageEntriesFromSessionEntries(entries: SessionEnt
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
-export function listSessions(sessionsDir?: string): SessionMeta[] {
-  return scanSessionMetas(sessionsDir);
+export function listSessions(sessionsDir?: string, options: SessionScanOptions = {}): SessionMeta[] {
+  return scanSessionMetas(sessionsDir, options);
 }
 
 export function readSessionMeta(sessionId: string, sessionsDir?: string): SessionMeta | null {

@@ -1,4 +1,15 @@
-import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
@@ -156,6 +167,89 @@ describe('sessions', () => {
 
     expect(listSessions(layoutSessionsDir).map((session) => session.id)).toEqual(['layout-session']);
     expect(listSessions().map((session) => session.id)).toEqual(['env-session']);
+  });
+
+  it('bounds session scans to the newest files before parsing metadata', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    const oldFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'old-session',
+      title: 'Old session',
+      timestamp: '2026-03-11T12:00:00.000Z',
+      fileName: '2026-03-11T12-00-00-000Z_old-session.jsonl',
+    });
+    const newFile = writeSessionFile({
+      sessionsDir,
+      sessionId: 'new-session',
+      title: 'New session',
+      timestamp: '2026-03-11T13:00:00.000Z',
+      fileName: '2026-03-11T13-00-00-000Z_new-session.jsonl',
+    });
+
+    utimesSync(oldFile, new Date('2026-03-11T12:00:00.000Z'), new Date('2026-03-11T12:00:00.000Z'));
+    utimesSync(newFile, new Date('2026-03-11T13:00:00.000Z'), new Date('2026-03-11T13:00:00.000Z'));
+
+    expect(listSessions(sessionsDir, { maxFiles: 1 }).map((session) => session.id)).toEqual(['new-session']);
+  });
+
+  it('stops scanning large session tails after row metadata is available', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+
+    writeSessionFile({
+      sessionsDir,
+      sessionId: 'large-session',
+      title: 'Large session title',
+      assistantTexts: Array.from({ length: 100 }, (_, index) => `Reply ${index + 1}`),
+    });
+
+    const [session] = listSessions();
+
+    expect(session).toMatchObject({ id: 'large-session', title: 'Large session title' });
+    expect(session?.messageCount).toBeLessThan(101);
+  });
+
+  it('does not buffer an oversized first message line to read session row metadata', () => {
+    const sessionsDir = createTempSessionsDir();
+    configureSessionEnv(sessionsDir);
+    const dir = join(sessionsDir, '--tmp-project--');
+    mkdirSync(dir, { recursive: true });
+
+    const filePath = join(dir, '2026-03-11T12-00-00-000Z_oversized-line.jsonl');
+    writeFileSync(
+      filePath,
+      [
+        JSON.stringify({
+          type: 'session',
+          id: 'oversized-line',
+          timestamp: '2026-03-11T12:00:00.000Z',
+          cwd: '/tmp/project',
+        }),
+        JSON.stringify({ type: 'model_change', modelId: 'test-model' }),
+        JSON.stringify({
+          type: 'message',
+          id: 'oversized-line-user-1',
+          parentId: null,
+          timestamp: '2026-03-11T12:00:00.000Z',
+          message: {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Oversized title' },
+              { type: 'text', text: 'x'.repeat(300_000) },
+            ],
+          },
+        }),
+      ].join('\n') + '\n',
+    );
+
+    expect(listSessions()[0]).toMatchObject({
+      id: 'oversized-line',
+      title: 'Oversized title',
+      messageCount: 1,
+      messageCountApproximate: true,
+    });
   });
 
   it('deletes persisted sessions by id, dedupes input, and reports missing ids', () => {
