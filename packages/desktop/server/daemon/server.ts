@@ -8,6 +8,7 @@ import { type DaemonConfig, loadDaemonConfig, type LogLevel } from '../config.js
 import { ensureDaemonDirectories, resolveDaemonPaths } from '../paths.js';
 import { deliverBackgroundRunCallbackWakeup } from '../runs/background-run-callbacks.js';
 import { surfaceBackgroundRunResultsIfReady } from '../runs/background-run-deferred-resumes.js';
+import { publishBackgroundRunInboxResult } from '../runs/background-run-inbox.js';
 import { buildFollowUpBackgroundRunInput, buildRerunBackgroundRunInput } from '../runs/background-run-replays.js';
 import { resolveBackgroundRunSessionDir } from '../runs/background-run-sessions.js';
 import {
@@ -823,7 +824,7 @@ export class NeonPilotDaemon {
     };
   }
 
-  private async surfaceBackgroundRunResults(triggerRunId: string): Promise<void> {
+  private async surfaceBackgroundRunResults(triggerRunId: string): Promise<boolean> {
     try {
       const result = await surfaceBackgroundRunResultsIfReady({
         runsRoot: this.runsRoot,
@@ -831,15 +832,17 @@ export class NeonPilotDaemon {
       });
 
       if (!result.resultId) {
-        return;
+        return false;
       }
 
       this.log(
         'info',
         `background run results surfaced run=${triggerRunId} result=${result.resultId} surfaced=${result.surfacedRunIds.join(',')}`,
       );
+      return true;
     } catch (error) {
       this.log('warn', `background run result surfacing failed run=${triggerRunId} error=${(error as Error).message}`);
+      return false;
     }
   }
 
@@ -866,7 +869,23 @@ export class NeonPilotDaemon {
       this.log('warn', `background run callback delivery failed run=${triggerRunId} error=${(error as Error).message}`);
     }
 
-    await this.surfaceBackgroundRunResults(triggerRunId);
+    const surfaced = await this.surfaceBackgroundRunResults(triggerRunId);
+    if (surfaced) {
+      return;
+    }
+
+    // For runs without a callback wakeup, write an Inbox result message so
+    // the persona can inspect the outcome through Inbox/Documents.
+    try {
+      await publishBackgroundRunInboxResult({
+        runsRoot: this.runsRoot,
+        runId: triggerRunId,
+        stateRoot: this.paths.stateRoot,
+        desktopRootLayout: this.desktopRootLayout,
+      });
+    } catch (error) {
+      this.log('warn', `background run inbox result failed run=${triggerRunId} error=${(error as Error).message}`);
+    }
   }
 
   private async finalizeBackgroundRunStartFailure(input: {
