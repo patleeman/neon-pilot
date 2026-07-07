@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 
 import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
@@ -760,8 +760,10 @@ export function writeExtensionRegistryConfig(
   layout?: DesktopRootLayout,
 ): void {
   const extensionsRoot = getRuntimeExtensionsRoot(stateRoot, layout);
+  const configPath = getExtensionRegistryConfigPath(stateRoot, layout);
   mkdirSync(extensionsRoot, { recursive: true });
-  writeFileSync(getExtensionRegistryConfigPath(stateRoot, layout), serializeExtensionRegistryConfig(config));
+  mkdirSync(dirname(configPath), { recursive: true });
+  writeFileSync(configPath, serializeExtensionRegistryConfig(config));
   registryReadCache.getStore()?.configs.delete(getExtensionRegistryCacheKey(stateRoot, layout));
 }
 
@@ -982,7 +984,7 @@ export function setExtensionKeybinding(input: {
   const layout = input.layout;
   const config = readExtensionRegistryConfig(stateRoot, layout);
   if (input.command && input.title) {
-    const command = findExtensionCommandRegistration(input.command);
+    const command = findExtensionCommandRegistration(input.command, stateRoot, layout);
     if (!command) {
       throw new Error(`Cannot create keybinding for unknown command: ${input.command}`);
     }
@@ -1570,8 +1572,8 @@ export function readExtensionSchema() {
   };
 }
 
-export function readExtensionRegistrySnapshot(): ExtensionRegistrySnapshot {
-  const extensions = listExtensions();
+export function readExtensionRegistrySnapshot(stateRoot?: string, layout?: DesktopRootLayout): ExtensionRegistrySnapshot {
+  const extensions = listExtensions(stateRoot, layout);
   const surfaces = extensions.flatMap((extension) =>
     (extension.surfaces ?? []).map((surface) => ({ ...surface, extensionId: extension.id, packageType: extension.packageType ?? 'user' })),
   );
@@ -1610,8 +1612,8 @@ export function listExtensionMentionRegistrations(): ExtensionMentionRegistratio
   return listEnabledExtensionEntries().flatMap(buildExtensionMentionRegistrations);
 }
 
-export function listExtensionCommandRegistrations(): ExtensionCommandRegistration[] {
-  return readExtensionRegistrySnapshot().extensions.flatMap((extension) => {
+export function listExtensionCommandRegistrations(stateRoot?: string, layout?: DesktopRootLayout): ExtensionCommandRegistration[] {
+  return readExtensionRegistrySnapshot(stateRoot, layout).extensions.flatMap((extension) => {
     const contributed = buildExtensionContributedCommandRegistrations(extension);
     const autoCommands = buildExtensionAutoCommandRegistrations(extension);
     return [...contributed, ...autoCommands];
@@ -1648,9 +1650,12 @@ export function listExtensionCliCommandRegistrations(): ExtensionCliCommandRegis
   );
 }
 
-export function listExtensionKeybindingRegistrations(stateRoot: string = getStateRoot()): ExtensionKeybindingRegistration[] {
-  const snapshot = readExtensionRegistrySnapshot();
-  const config = readExtensionRegistryConfig(stateRoot);
+export function listExtensionKeybindingRegistrations(
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): ExtensionKeybindingRegistration[] {
+  const snapshot = readExtensionRegistrySnapshot(stateRoot, layout);
+  const config = readExtensionRegistryConfig(stateRoot, layout);
   const disabledKeybindings = new Set(config.disabledKeybindings ?? []);
   const keybindingOverrides = config.keybindingOverrides ?? {};
   const declared = snapshot.extensions.flatMap((extension) =>
@@ -1666,8 +1671,12 @@ export function listExtensionKeybindingRegistrations(stateRoot: string = getStat
   return [...declared, ...custom];
 }
 
-export function findExtensionCommandRegistration(commandId: string): ExtensionCommandRegistration | undefined {
-  return findExtensionCommandRegistrationValue(listExtensionCommandRegistrations(), commandId);
+export function findExtensionCommandRegistration(
+  commandId: string,
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
+): ExtensionCommandRegistration | undefined {
+  return findExtensionCommandRegistrationValue(listExtensionCommandRegistrations(stateRoot, layout), commandId);
 }
 
 export function listExtensionSlashCommandRegistrations(): ExtensionSlashCommandRegistration[] {

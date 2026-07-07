@@ -434,6 +434,8 @@ export interface ExtensionHostSetKeybindingRequest {
   keys?: string[];
   enabled?: boolean;
   reset?: boolean;
+  stateRoot?: string;
+  layout?: DesktopRootLayout;
 }
 
 export interface ExtensionHostSetEnabledRequest {

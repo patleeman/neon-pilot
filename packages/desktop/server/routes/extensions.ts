@@ -1128,6 +1128,7 @@ export function registerExtensionRoutes(
 
   router.patch('/api/extensions/keybindings/:extensionId/:keybindingId', async (req, res) => {
     try {
+      const { stateRoot, layout } = getExtensionLifecycleScope(context);
       await getExtensionHostClient().setKeybinding({
         extensionId: req.params.extensionId,
         keybindingId: req.params.keybindingId,
@@ -1140,6 +1141,8 @@ export function registerExtensionRoutes(
         ...(Array.isArray(req.body?.keys) ? { keys: req.body.keys } : {}),
         ...(typeof req.body?.enabled === 'boolean' ? { enabled: req.body.enabled } : {}),
         ...(typeof req.body?.reset === 'boolean' ? { reset: req.body.reset } : {}),
+        stateRoot,
+        layout,
       });
       res.json({ ok: true });
     } catch (err) {

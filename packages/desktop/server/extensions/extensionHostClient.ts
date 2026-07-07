@@ -556,6 +556,8 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         ...(request.keys !== undefined ? { keys: request.keys } : {}),
         ...(request.enabled !== undefined ? { enabled: request.enabled } : {}),
         ...(request.reset !== undefined ? { reset: request.reset } : {}),
+        ...(request.stateRoot !== undefined ? { stateRoot: request.stateRoot } : {}),
+        ...(request.layout !== undefined ? { layout: request.layout } : {}),
       });
       return { ok: true, keybindingUpdated: true };
     }

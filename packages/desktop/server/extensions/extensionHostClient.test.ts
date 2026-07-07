@@ -578,6 +578,52 @@ describe('extension host client', () => {
     });
   });
 
+  it('forwards stateRoot and layout from request to setExtensionKeybinding', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+
+    await expect(
+      getExtensionHostClient().setKeybinding({
+        extensionId: 'ext',
+        keybindingId: 'open',
+        command: 'ext.open',
+        keys: ['Meta+O'],
+        stateRoot: '/custom/state/root',
+        layout,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(extensionRegistry.setExtensionKeybinding).toHaveBeenCalledWith({
+      extensionId: 'ext',
+      keybindingId: 'open',
+      command: 'ext.open',
+      keys: ['Meta+O'],
+      stateRoot: '/custom/state/root',
+      layout,
+    });
+  });
+
+  it('omits stateRoot and layout from setExtensionKeybinding when request omits them', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+
+    await expect(
+      getExtensionHostClient().setKeybinding({
+        extensionId: 'ext',
+        keybindingId: 'close',
+        reset: true,
+      }),
+    ).resolves.toBeUndefined();
+
+    const lastCallArg = extensionRegistry.setExtensionKeybinding.mock.calls.at(-1)?.[0];
+    expect(lastCallArg).toEqual({
+      extensionId: 'ext',
+      keybindingId: 'close',
+      reset: true,
+    });
+    expect(lastCallArg).not.toHaveProperty('stateRoot');
+    expect(lastCallArg).not.toHaveProperty('layout');
+  });
+
   it('routes model profile resolution through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
     extensionRegistry.resolveExtensionModelProfile.mockReturnValueOnce({ kind: 'resolved', profile: { extensionId: 'ext', id: 'gpt' } });

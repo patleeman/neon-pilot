@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setDefaultExtensionBackendWorkerUrl } from '../extensions/extensionBackendWorkerClient.js';
 import { clearExtensionHostAuditEvents } from '../extensions/extensionHostAudit.js';
 import { createInProcessExtensionHostClient, setExtensionHostClient } from '../extensions/extensionHostClient.js';
+import { listExtensionKeybindingRegistrations, writeExtensionRegistryConfig } from '../extensions/extensionRegistry.js';
 import { createExtensionRequestAbortSignal, readSystemConversationSetTitleMutation, registerExtensionRoutes } from './extensions.js';
 
 const { writeExtensionActivityEntrySafeMock } = vi.hoisted(() => ({
@@ -1015,6 +1016,64 @@ describe('registerExtensionRoutes', () => {
     const keybindingsRes = createResponse();
     await harness.getHandler('/api/extensions/keybindings')({}, keybindingsRes);
     expect(keybindingsRes.json).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          extensionId: 'agent-board',
+          surfaceId: 'command:plan',
+          command: 'agent-board.plan',
+          when: 'board.focused',
+          keys: ['Meta+O'],
+          enabled: true,
+        }),
+      ]),
+    );
+  });
+
+  it('forwards DesktopRootLayout and stateRoot from context to keybinding update', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-layout-keybinding-'));
+    const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-route-layout-keybinding-layout-')) });
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(layout.apps, 'extensions', 'agent-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'agent-board',
+        name: 'Agent Board',
+        enabled: true,
+        contributes: {
+          commands: [{ id: 'plan', title: 'Plan board sprint', action: 'planSprint' }],
+          keybindings: [{ id: 'plan', title: 'Plan board sprint', command: 'agent-board.plan', keys: ['Meta+P'] }],
+        },
+      }),
+    );
+
+    writeExtensionRegistryConfig({ enabledIds: ['agent-board'] }, stateRoot, layout);
+
+    const harness = createHarness({
+      getRuntimeScope: () => 'shared',
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => layout,
+    });
+    const res = createResponse();
+    await harness.patchHandler('/api/extensions/keybindings/:extensionId/:keybindingId')(
+      {
+        params: { extensionId: 'agent-board', keybindingId: 'command:plan' },
+        body: {
+          title: 'Plan board sprint',
+          command: 'agent-board.plan',
+          keys: ['Meta+O'],
+          when: 'board.focused',
+          enabled: true,
+        },
+      },
+      res,
+    );
+
+    expect(res.json).toHaveBeenCalledWith({ ok: true });
+
+    expect(listExtensionKeybindingRegistrations(stateRoot, layout)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           extensionId: 'agent-board',
