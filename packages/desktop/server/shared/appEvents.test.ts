@@ -207,10 +207,12 @@ describe('app event monitor', () => {
     const checkpointsDir = join(layoutRoot, 'pi-agent', 'state', 'conversation-commit-checkpoints', 'assistant');
     const attachmentsDir = join(layoutRoot, 'pi-agent', 'state', 'conversation-attachments', 'assistant');
     const alertsFile = join(layoutRoot, 'pi-agent', 'state', 'alerts', 'assistant.json');
+    const extensionsDir = join(layoutRoot, 'extensions');
     mkdirSync(artifactsDir, { recursive: true });
     mkdirSync(checkpointsDir, { recursive: true });
     mkdirSync(attachmentsDir, { recursive: true });
     mkdirSync(dirname(alertsFile), { recursive: true });
+    mkdirSync(extensionsDir, { recursive: true });
     writeFileSync(alertsFile, '{"version":1,"alerts":{},"updatedAt":"2026-01-01T00:00:00.000Z"}\n', 'utf-8');
 
     const layout = {
@@ -262,6 +264,12 @@ describe('app event monitor', () => {
 
     await waitFor(() => events.some((event) => event.type === 'invalidate' && event.topics.includes('artifacts')));
     expect(events.some((event) => event.type === 'invalidate' && event.topics.includes('artifacts'))).toBe(true);
+
+    // Extensions invalidation also uses the layout-derived extensions root
+    events.length = 0;
+    writeFileSync(join(extensionsDir, 'new-ext.json'), '{"id":"test"}\n', 'utf-8');
+    await waitFor(() => events.some((event) => event.type === 'invalidate' && event.topics.includes('extensions')));
+    expect(events.some((event) => event.type === 'invalidate' && event.topics.includes('extensions'))).toBe(true);
     unsubscribe();
   }, 15_000);
 });

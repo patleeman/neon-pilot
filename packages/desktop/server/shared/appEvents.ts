@@ -428,7 +428,13 @@ function createTopicSources(options: AppEventMonitorOptions, profile: string): T
     ],
     runs: [{ path: runsRoot, kind: 'directory' }],
     executions: [],
-    extensions: [{ path: join(getStateRoot(), 'extensions'), kind: 'directory', eventKinds: ['change', 'rename'] }],
+    extensions: [
+      {
+        path: layout ? join(layout.apps, 'extensions') : join(getStateRoot(), 'extensions'),
+        kind: 'directory',
+        eventKinds: ['change', 'rename'],
+      },
+    ],
     automation: [],
     models: [],
     daemon: [

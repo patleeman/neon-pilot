@@ -249,6 +249,7 @@ function seedBaseFs(): void {
   markFile('/layout-alerts/assistant.json');
   markDirectory('/layout/runtime');
   markFile('/layout/runtime/settings.json');
+  markDirectory('/layout/apps/extensions');
   markFile('/config/profile.json');
 }
 
@@ -547,9 +548,9 @@ describe('appEvents mocked behavior', () => {
       profileConfigFile: '/config/profile.json',
       getRuntimeScope: () => 'assistant',
       getDesktopRootLayout: () =>
-        ({ systemState: '/layout', systemRuntime: '/layout/runtime' }) as Pick<
+        ({ root: '/layout', apps: '/layout/apps', systemState: '/layout', systemRuntime: '/layout/runtime' }) as Pick<
           DesktopRootLayout,
-          'systemState' | 'systemRuntime'
+          'root' | 'apps' | 'systemState' | 'systemRuntime'
         > as DesktopRootLayout,
     });
 
@@ -595,6 +596,10 @@ describe('appEvents mocked behavior', () => {
     expect(getLatestWatch('/layout-commit-checkpoints/assistant', (r) => r.options.recursive)).toBeDefined();
     expect(getLatestWatch('/layout-attachments/assistant', (r) => r.options.recursive)).toBeDefined();
     expect(getLatestWatch('/layout-alerts', (r) => !r.options.recursive)).toBeDefined();
+
+    // Extensions watch uses layout-derived path instead of getStateRoot() fallback
+    const extensionsRecursiveWatch = getLatestWatch('/layout/apps/extensions', (r) => r.options.recursive === true);
+    expect(extensionsRecursiveWatch).toBeDefined();
 
     // Workspace settings watch uses layout-derived path
     expect(getLatestWatch('/layout/runtime', (r) => !r.options.recursive)).toBeDefined();
