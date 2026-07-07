@@ -1,12 +1,37 @@
 import { existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 import type { SqliteDatabase } from './sqlite.js';
 import type { Migration } from './sqlite-migrations.js';
 
 export function resolveObservabilityDbPath(stateRoot?: string): string {
   return join(stateRoot ?? getStateRoot(), 'observability', 'observability.db');
+}
+
+/**
+ * Resolve the observability database directory.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/observability`. Otherwise falls back to
+ * the legacy `<state-root>/observability`.
+ */
+export function getObservabilityDbDir(layout?: DesktopRootLayout): string {
+  if (layout) return layout.systemObservability;
+  return join(getStateRoot(), 'observability');
+}
+
+/**
+ * Resolve the observability database file path.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/observability/observability.db`. Otherwise falls back to
+ * the legacy `<state-root>/observability/observability.db`.
+ */
+export function getObservabilityDbPath(layout?: DesktopRootLayout): string {
+  if (layout) return join(layout.systemObservability, 'observability.db');
+  return resolveObservabilityDbPath();
 }
 
 export function ensureObservabilityDbDir(stateRoot?: string): string {

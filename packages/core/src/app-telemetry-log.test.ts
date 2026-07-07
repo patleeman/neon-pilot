@@ -9,6 +9,8 @@ import {
   type AppTelemetryLogEvent,
   closeAppTelemetryLogs,
   exportAppTelemetryLogBundle,
+  getAppTelemetryExportDir,
+  getAppTelemetryLogDir,
   listAppTelemetryLogFiles,
   readAppTelemetryLogEvents,
   resolveAppTelemetryLogDir,
@@ -162,5 +164,57 @@ describe('app-telemetry-log', () => {
     writeAppTelemetryLogEvent(event(), '/dev/null/not-a-directory');
 
     expect(spy).toHaveBeenCalled();
+  });
+});
+
+describe('app-telemetry-log layout-aware helpers', () => {
+  const testLayout = {
+    root: '/custom/desktop',
+    apps: '/custom/desktop/apps',
+    data: '/custom/desktop/data',
+    dataApps: '/custom/desktop/data/apps',
+    dataDocuments: '/custom/desktop/data/documents',
+    dataExports: '/custom/desktop/data/exports',
+    documents: '/custom/desktop/documents',
+    agents: '/custom/desktop/agents',
+    soulDoc: '/custom/desktop/agents/soul.md',
+    logs: '/custom/desktop/logs',
+    logsDesktop: '/custom/desktop/logs/desktop',
+    logsDaemon: '/custom/desktop/logs/daemon',
+    logsTelemetry: '/custom/desktop/logs/telemetry',
+    system: '/custom/desktop/system',
+    systemAgents: '/custom/desktop/system/agents',
+    systemApps: '/custom/desktop/system/apps',
+    systemCache: '/custom/desktop/system/cache',
+    systemConfig: '/custom/desktop/system/config',
+    systemConversations: '/custom/desktop/system/conversations',
+    systemConversationsIndex: '/custom/desktop/system/conversations/session-meta-index.json',
+    systemSessions: '/custom/desktop/system/conversations/sessions',
+    systemDaemon: '/custom/desktop/system/daemon',
+    systemElectron: '/custom/desktop/system/electron',
+    systemElectronUserData: '/custom/desktop/system/electron/user-data',
+    systemObservability: '/custom/desktop/system/observability',
+    systemRuntime: '/custom/desktop/system/runtime',
+    systemChatWorkspaces: '/custom/desktop/system/runtime/chat-workspaces',
+    systemSecrets: '/custom/desktop/system/secrets',
+    systemState: '/custom/desktop/system/state',
+  };
+
+  it('getAppTelemetryLogDir returns layout.logsTelemetry when layout is provided', () => {
+    expect(getAppTelemetryLogDir(testLayout)).toBe('/custom/desktop/logs/telemetry');
+  });
+
+  it('getAppTelemetryLogDir falls back to stateRoot-based path when no layout is provided', () => {
+    const result = getAppTelemetryLogDir();
+    expect(result).toMatch(/logs\/telemetry$/);
+  });
+
+  it('getAppTelemetryExportDir returns layout.dataExports/telemetry when layout is provided', () => {
+    expect(getAppTelemetryExportDir(testLayout)).toBe('/custom/desktop/data/exports/telemetry');
+  });
+
+  it('getAppTelemetryExportDir falls back to stateRoot-based path when no layout is provided', () => {
+    const result = getAppTelemetryExportDir();
+    expect(result).toMatch(/exports\/telemetry$/);
   });
 });

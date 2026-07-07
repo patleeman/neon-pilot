@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const LOG_DIR = 'telemetry';
@@ -134,6 +135,18 @@ export function readTraceTelemetryLogEvents(input: { since: string; limit?: numb
   }
 
   return events.sort((a, b) => a.ts.localeCompare(b.ts));
+}
+
+/**
+ * Resolve the trace telemetry log directory.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/logs/telemetry`. Otherwise falls back to
+ * the legacy `<state-root>/logs/telemetry`.
+ */
+export function getTraceTelemetryLogDir(layout?: DesktopRootLayout): string {
+  if (layout) return layout.logsTelemetry;
+  return resolveTraceTelemetryLogDir();
 }
 
 export function writeTraceTelemetryLogEvent(event: TraceTelemetryLogEvent, stateRoot?: string): void {

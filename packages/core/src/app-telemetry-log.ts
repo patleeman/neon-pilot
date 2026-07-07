@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import type { DesktopRootLayout } from './runtime/desktop-root.js';
 import { getStateRoot } from './runtime/paths.js';
 
 const LOG_DIR = 'telemetry';
@@ -74,6 +75,30 @@ function resolveRetentionDays(): number {
   if (!raw) return DEFAULT_RETENTION_DAYS;
   const parsed = Number.parseInt(raw, 10);
   return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : DEFAULT_RETENTION_DAYS;
+}
+
+/**
+ * Resolve the app telemetry log directory.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/logs/telemetry`. Otherwise falls back to
+ * the legacy `<state-root>/logs/telemetry`.
+ */
+export function getAppTelemetryLogDir(layout?: DesktopRootLayout): string {
+  if (layout) return layout.logsTelemetry;
+  return resolveAppTelemetryLogDir();
+}
+
+/**
+ * Resolve the app telemetry export directory.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/data/exports/telemetry`. Otherwise falls back to
+ * the legacy `<state-root>/exports/telemetry`.
+ */
+export function getAppTelemetryExportDir(layout?: DesktopRootLayout): string {
+  if (layout) return join(layout.dataExports, 'telemetry');
+  return join(getStateRoot(), 'exports', 'telemetry');
 }
 
 export function closeAppTelemetryLogs(): void {
