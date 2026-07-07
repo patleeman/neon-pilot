@@ -1,3 +1,4 @@
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { describe, expect, it, vi } from 'vitest';
 
 const extensionBackend = vi.hoisted(() => ({
@@ -446,6 +447,7 @@ describe('extension host client', () => {
 
   it('routes extension enablement through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
     extensionServices.startExtensionServices.mockClear();
     extensionServices.startServicesForExtension.mockClear();
     extensionRegistry.findExtensionEntry.mockReturnValueOnce({
@@ -460,13 +462,18 @@ describe('extension host client', () => {
     extensionServices.startServicesForExtension.mockResolvedValueOnce([]);
 
     await expect(
-      getExtensionHostClient().setEnabled({ extensionId: 'ext', enabled: true, serverContextSnapshot: { runtimeScope: 'shared' } }),
+      getExtensionHostClient().setEnabled({
+        extensionId: 'ext',
+        enabled: true,
+        serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/tmp/neon-pilot-state', desktopRootLayout: layout },
+      }),
     ).resolves.toEqual({
       ok: true,
       extension: { id: 'ext', status: 'enabled', enabled: true },
       actionResult: { ok: true, result: { enabled: true } },
     });
-    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('ext', true);
+    expect(extensionRegistry.findExtensionEntry).toHaveBeenCalledWith('ext', '/tmp/neon-pilot-state', layout);
+    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('ext', true, '/tmp/neon-pilot-state', layout);
     expect(extensionSubscriptions.installSubscriptionsForExtension).toHaveBeenCalledWith(
       'ext',
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
@@ -517,7 +524,7 @@ describe('extension host client', () => {
       ok: true,
       extension: { id: 'old-extension', status: 'enabled', enabled: true },
     });
-    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('old-extension', true);
+    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('old-extension', true, expect.any(String), undefined);
   });
 
   it('does not reject enablement for system extensions with stale compatibility metadata', async () => {
@@ -544,7 +551,7 @@ describe('extension host client', () => {
       ok: true,
       extension: { id: 'system-onboarding', status: 'enabled', enabled: true },
     });
-    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('system-onboarding', true);
+    expect(extensionRegistry.setExtensionEnabled).toHaveBeenCalledWith('system-onboarding', true, expect.any(String), undefined);
   });
 
   it('routes keybinding updates through the extension host request envelope', async () => {

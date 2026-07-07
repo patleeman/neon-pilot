@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import { join, resolve as resolvePath, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { getStateRoot } from '@neon-pilot/core';
+
 import { extractMentionIds } from '../knowledge/promptReferences.js';
 import type { ExtensionBackendServerContext } from './extensionBackend.js';
 import { setDefaultExtensionBackendWorkerUrl } from './extensionBackendWorkerClient.js';
@@ -446,9 +448,12 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       return { ok: true, selfTest: await runExtensionSelfTest(request.extensionId) };
     }
     if (request.type === 'setEnabled') {
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout = serverContext?.getDesktopRootLayout?.();
       const { findExtensionEntry, listExtensionInstallSummaries, setExtensionEnabled } = await import('./extensionRegistry.js');
-      const entry = findExtensionEntry(request.extensionId);
-      const summary = listExtensionInstallSummaries().find((extension) => extension.id === request.extensionId);
+      const entry = findExtensionEntry(request.extensionId, stateRoot, layout);
+      const summary = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === request.extensionId);
       if (!entry && summary?.status === 'invalid') {
         return { ok: true, enabledResult: { ok: false, status: 400, error: summary.errors?.[0] ?? 'Extension manifest is invalid.' } };
       }
@@ -466,7 +471,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         };
       }
       if (request.enabled) {
-        const installed = new Set(listExtensionInstallSummaries().map((extension) => extension.id));
+        const installed = new Set(listExtensionInstallSummaries(stateRoot, layout).map((extension) => extension.id));
         const missingDependencies = (entry.manifest.dependsOn ?? [])
           .map(normalizeDependencyId)
           .filter((dependency) => !dependency.optional && !installed.has(dependency.id))
@@ -496,10 +501,9 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
           }
         }
       }
-      const serverContext = await resolveRequestServerContext(request);
       let actionResult: ExtensionHostActionInvokeResult | undefined;
       if (request.enabled) {
-        setExtensionEnabled(entry.manifest.id, true);
+        setExtensionEnabled(entry.manifest.id, true, stateRoot, layout);
         const onEnableAction = entry.manifest.backend?.onEnableAction;
         actionResult = onEnableAction
           ? await invokeExtensionAction(entry.manifest.id, onEnableAction, {}, serverContext, undefined, undefined)
@@ -517,7 +521,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         actionResult = onDisableAction
           ? await invokeExtensionAction(entry.manifest.id, onDisableAction, {}, serverContext, undefined, undefined)
           : undefined;
-        setExtensionEnabled(entry.manifest.id, false);
+        setExtensionEnabled(entry.manifest.id, false, stateRoot, layout);
       }
       if (request.enabled) {
         const [{ installSubscriptionsForExtension }, { startServicesForExtension }] = await Promise.all([
@@ -531,10 +535,9 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
         ok: true,
         enabledResult: {
           ok: true,
-          extension: listExtensionInstallSummaries().find((extension) => extension.id === entry.manifest.id) as unknown as Record<
-            string,
-            unknown
-          >,
+          extension: listExtensionInstallSummaries(stateRoot, layout).find(
+            (extension) => extension.id === entry.manifest.id,
+          ) as unknown as Record<string, unknown>,
           ...(actionResult ? { actionResult } : {}),
         },
       };
