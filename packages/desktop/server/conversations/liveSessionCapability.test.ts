@@ -527,7 +527,7 @@ describe('liveSessionCapability input validation', () => {
     );
   });
 
-  it('queues persona memory context only when explicitly opted in', async () => {
+  it('queues soul doc and persona memory context only when explicitly opted in', async () => {
     isLocalLiveMock.mockReturnValue(true);
     liveRegistry.set('session-persona-memory', {
       cwd: '/repo',
@@ -542,8 +542,9 @@ describe('liveSessionCapability input validation', () => {
       diagnostics: [],
     }));
     const layout = createPersonaMemoryRoot({
+      'soul.md': '# Persona Soul\n\nYou are a coding agent.',
       'preferences.md': '# Preferences\n\nLikes concise implementation notes.',
-      'AGENTS.md': '# Soul\n\nShared instructions are loaded elsewhere.',
+      'AGENTS.md': '# Agents\n\nShared instructions are loaded elsewhere.',
     });
 
     await submitLiveSessionPromptCapability(
@@ -551,6 +552,12 @@ describe('liveSessionCapability input validation', () => {
       { ...createContext(), getDesktopRootLayout: () => layout },
     );
 
+    // Soul doc context appears before persona memory in the single referenced_context block
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'session-persona-memory',
+      'referenced_context',
+      expect.stringContaining('Persona identity:'),
+    );
     expect(queuePromptContextMock).toHaveBeenCalledWith(
       'session-persona-memory',
       'referenced_context',
@@ -561,14 +568,34 @@ describe('liveSessionCapability input validation', () => {
       'referenced_context',
       expect.stringContaining('Likes concise implementation notes.'),
     );
+    // Soul doc content appears under Persona identity:
+    expect(queuePromptContextMock).toHaveBeenCalledWith(
+      'session-persona-memory',
+      'referenced_context',
+      expect.stringContaining('# Persona Soul'),
+    );
+    // AGENTS.md is excluded from both soul doc and persona memory
     expect(queuePromptContextMock).not.toHaveBeenCalledWith(
       'session-persona-memory',
       'referenced_context',
       expect.stringContaining('Shared instructions are loaded elsewhere.'),
     );
+    // Soul doc appears before memory in the single referenced_context block
+    const allCall = queuePromptContextMock.mock.calls.find(
+      (call: unknown[]) => call[0] === 'session-persona-memory' && String(call[2]).includes('Persona identity:'),
+    );
+    expect(allCall).toBeDefined();
+    const content = String(allCall![2]);
+    const soulIndex = content.indexOf('Persona identity:');
+    const memoryIndex = content.indexOf('Persona memory:');
+    expect(soulIndex).toBeGreaterThanOrEqual(0);
+    expect(memoryIndex).toBeGreaterThan(soulIndex);
+    // The soul doc heading should not appear inside the Persona memory: section
+    const memorySection = content.slice(memoryIndex);
+    expect(memorySection).not.toContain('Persona Soul');
   });
 
-  it('does not read persona memory for default capability callers', async () => {
+  it('does not read soul doc or persona memory for default capability callers', async () => {
     isLocalLiveMock.mockReturnValue(true);
     liveRegistry.set('session-worker-default', {
       cwd: '/repo',
@@ -583,6 +610,7 @@ describe('liveSessionCapability input validation', () => {
       diagnostics: [],
     }));
     const layout = createPersonaMemoryRoot({
+      'soul.md': '# Persona Soul\n\nThis should not be loaded for workers.',
       'preferences.md': '# Preferences\n\nThis should not be loaded.',
     });
 

@@ -34,7 +34,7 @@ export function listPersonaMemoryDocs(agentsDir: string): PersonaMemoryDoc[] {
     if (entry.isSymbolicLink()) continue;
     if (entry.name.startsWith('.')) continue;
     if (extname(entry.name) !== '.md') continue;
-    if (entry.name === 'AGENTS.md') continue;
+    if (entry.name === 'AGENTS.md' || entry.name === 'soul.md') continue;
 
     const filePath = join(dir, entry.name);
     const id = basename(entry.name, '.md');

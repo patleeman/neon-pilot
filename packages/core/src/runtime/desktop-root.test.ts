@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { homedir, tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -43,6 +43,7 @@ describe('desktop root layout', () => {
       dataExports: '/Users/example/Agent Desktop/data/exports',
       documents: '/Users/example/Agent Desktop/documents',
       agents: '/Users/example/Agent Desktop/agents',
+      soulDoc: '/Users/example/Agent Desktop/agents/soul.md',
       logs: '/Users/example/Agent Desktop/logs',
       logsDesktop: '/Users/example/Agent Desktop/logs/desktop',
       logsDaemon: '/Users/example/Agent Desktop/logs/daemon',
@@ -113,14 +114,37 @@ describe('desktop root layout', () => {
       expect(existsSync(join(target, 'sub'))).toBe(false);
     });
 
-    it('returns the canonical root path', () => {
+    it('seeds a default soul doc when ensuring the desktop root directory', () => {
       const testRoot = tempDir('neon-pilot-desktop-root-');
 
       const target = join(testRoot, 'nested', 'desktop');
       const result = ensureDesktopRootDir({ root: target });
       expect(result).toBe(target);
 
-      // Verify subdirectories are NOT created (only root)
+      expect(existsSync(join(target, 'agents', 'soul.md'))).toBe(true);
+      const content = readFileSync(join(target, 'agents', 'soul.md'), 'utf-8');
+      expect(content).toContain('# Neon Pilot Persona');
+    });
+
+    it('is idempotent when the soul doc already exists', () => {
+      const testRoot = tempDir('neon-pilot-desktop-root-');
+
+      const target = join(testRoot, 'nested', 'desktop');
+      mkdirSync(join(target, 'agents'), { recursive: true });
+      writeFileSync(join(target, 'agents', 'soul.md'), '# Custom Soul\n\nCustom content.', 'utf-8');
+
+      ensureDesktopRootDir({ root: target });
+
+      const content = readFileSync(join(target, 'agents', 'soul.md'), 'utf-8');
+      expect(content).toBe('# Custom Soul\n\nCustom content.');
+    });
+
+    it('does not create other layout subdirectories beyond agents', () => {
+      const testRoot = tempDir('neon-pilot-desktop-root-');
+
+      const target = join(testRoot, 'nested', 'desktop');
+      ensureDesktopRootDir({ root: target });
+
       expect(existsSync(join(target, 'data'))).toBe(false);
       expect(existsSync(join(target, 'system'))).toBe(false);
       expect(existsSync(join(target, 'logs'))).toBe(false);

@@ -175,6 +175,7 @@ describe('activity layout integration', () => {
       dataExports: join(root, 'data', 'exports'),
       documents: join(root, 'documents'),
       agents: join(root, 'agents'),
+      soulDoc: join(root, 'agents', 'soul.md'),
       logs: join(root, 'logs'),
       logsDesktop: join(root, 'logs', 'desktop'),
       logsDaemon: join(root, 'logs', 'daemon'),

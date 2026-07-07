@@ -38,9 +38,10 @@ describe('listPersonaMemoryDocs', () => {
     expect(docs).toEqual([]);
   });
 
-  it('returns markdown files excluding AGENTS.md', () => {
+  it('returns markdown files excluding AGENTS.md and soul.md', () => {
     const dir = createTempDir('persona-memory-');
     createFile(dir, 'AGENTS.md', '# Soul\n\nSoul instructions.');
+    createFile(dir, 'soul.md', '# Persona Soul\n\nIdentity.');
     createFile(dir, 'preferences.md', '# Preferences\n\nPrefers concise answers.');
     createFile(dir, 'bio.md', '# Biography\n\nWrites Python.');
     createFile(dir, 'notes.md', '# Notes\n\nSome random notes.');
@@ -50,6 +51,7 @@ describe('listPersonaMemoryDocs', () => {
     expect(docs).toHaveLength(3);
     const ids = docs.map((d) => d.id);
     expect(ids).not.toContain('AGENTS');
+    expect(ids).not.toContain('soul');
     expect(ids).toEqual(['bio', 'notes', 'preferences']);
   });
 
@@ -142,9 +144,10 @@ describe('listPersonaMemoryDocs', () => {
     expect(docs.map((d) => d.id)).toEqual(['alpha', 'bravo', 'charlie', 'zebra']);
   });
 
-  it('returns empty array when only AGENTS.md exists', () => {
+  it('returns empty array when only AGENTS.md or soul.md exist', () => {
     const dir = createTempDir('persona-memory-');
     createFile(dir, 'AGENTS.md', '# Soul');
+    createFile(dir, 'soul.md', '# Persona Soul');
 
     const docs = listPersonaMemoryDocs(dir);
 

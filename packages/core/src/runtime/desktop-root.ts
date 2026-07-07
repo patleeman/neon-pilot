@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -13,6 +13,7 @@ export interface DesktopRootLayout {
   dataExports: string;
   documents: string;
   agents: string;
+  soulDoc: string;
   logs: string;
   logsDesktop: string;
   logsDaemon: string;
@@ -76,6 +77,8 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
   const systemConversations = join(system, 'conversations');
   const systemElectron = join(system, 'electron');
 
+  const agents = join(root, 'agents');
+
   return {
     root,
     apps: join(root, 'apps'),
@@ -84,7 +87,8 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
     dataDocuments: join(data, 'documents'),
     dataExports: join(data, 'exports'),
     documents: join(root, 'documents'),
-    agents: join(root, 'agents'),
+    agents,
+    soulDoc: join(agents, 'soul.md'),
     logs,
     logsDesktop: join(logs, 'desktop'),
     logsDaemon: join(logs, 'daemon'),
@@ -106,9 +110,24 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
   };
 }
 
+const DEFAULT_SOUL_DOC_CONTENT = `\
+# Neon Pilot Persona
+
+You are an AI coding assistant working inside the Neon Pilot environment.
+Follow these identity instructions as your behavioral baseline.
+`;
+
 export function ensureDesktopRootDir(options?: DesktopRootOptions): string {
   const root = getDesktopRootDir(options);
   mkdirSync(root, { recursive: true, mode: 0o700 });
+
+  const layout = resolveDesktopRootLayout({ root });
+  mkdirSync(layout.agents, { recursive: true, mode: 0o700 });
+
+  if (!existsSync(layout.soulDoc)) {
+    writeFileSync(layout.soulDoc, DEFAULT_SOUL_DOC_CONTENT, { encoding: 'utf-8', mode: 0o600 });
+  }
+
   return root;
 }
 

@@ -13,6 +13,7 @@ import {
 import { getDocumentsStore } from '../documents/store.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listPersonaMemoryDocs } from '../knowledge/personaMemoryDocs.js';
+import { buildPersonaSoulDocContext } from '../knowledge/personaSoulDoc.js';
 import {
   buildReferencedMemoryDocsContext,
   buildReferencedTasksContext,
@@ -1048,12 +1049,18 @@ async function prepareLiveSessionPrompt(
   ]);
   const attachedConversationContextDocs = readConversationContextDocs(conversationId).filter((doc) => !referencedPaths.has(doc.path));
 
-  const personaMemoryContext = options.includePersonaMemory ? buildPersonaMemoryContext(context.getDesktopRootLayout().agents) : '';
-  const unreadInboxContext = options.includeUnreadInbox
-    ? buildUnreadInboxContext(context.getStateRoot(), context.getDesktopRootLayout())
-    : '';
+  let personaSoulDocContext = '';
+  let personaMemoryContext = '';
+  let unreadInboxContext = '';
+  if (options.includePersonaMemory || options.includeUnreadInbox) {
+    const desktopRootLayout = context.getDesktopRootLayout();
+    personaSoulDocContext = options.includePersonaMemory ? buildPersonaSoulDocContext(desktopRootLayout.soulDoc) : '';
+    personaMemoryContext = options.includePersonaMemory ? buildPersonaMemoryContext(desktopRootLayout.agents) : '';
+    unreadInboxContext = options.includeUnreadInbox ? buildUnreadInboxContext(context.getStateRoot(), desktopRootLayout) : '';
+  }
 
   const queuedContextBlocks = [
+    personaSoulDocContext,
     personaMemoryContext,
     unreadInboxContext,
     attachedConversationContextDocs.length > 0 ? buildAttachedConversationContextDocsContext(attachedConversationContextDocs) : '',
