@@ -5,7 +5,12 @@ import { dirname, join } from 'node:path';
 import { type DesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { ensureConversationsDbFile, resolveConversationsDbFile, resolveConversationsDbFileFromLayout } from './conversationDbPaths.js';
+import {
+  ensureConversationsDbFile,
+  resolveConversationsDbFile,
+  resolveConversationsDbFileFromLayout,
+  setConversationsDbLayout,
+} from './conversationDbPaths.js';
 
 const tempRoots: string[] = [];
 
@@ -14,6 +19,7 @@ function createLayout(): DesktopRootLayout {
   tempRoots.push(root);
   return {
     systemRuntime: join(root, 'system', 'runtime'),
+    systemConversations: join(root, 'system', 'conversations'),
   } as DesktopRootLayout;
 }
 
@@ -24,9 +30,9 @@ describe('conversation db paths', () => {
     }
   });
 
-  it('resolves the conversations database under layout system runtime', () => {
+  it('resolves the conversations database under layout system conversations area', () => {
     const layout = createLayout();
-    const expected = join(layout.systemRuntime, 'conversations.db');
+    const expected = join(layout.systemConversations, 'conversations.db');
 
     expect(resolveConversationsDbFileFromLayout(layout)).toBe(expected);
     expect(resolveConversationsDbFile(layout)).toBe(expected);
@@ -36,7 +42,22 @@ describe('conversation db paths', () => {
     const layout = createLayout();
     const dbFile = ensureConversationsDbFile(layout);
 
-    expect(dbFile).toBe(join(layout.systemRuntime, 'conversations.db'));
+    expect(dbFile).toBe(join(layout.systemConversations, 'conversations.db'));
     expect(existsSync(dirname(dbFile))).toBe(true);
+  });
+
+  it('resolves conversations database from default layout when no explicit layout passed', () => {
+    const layout = createLayout();
+    const expected = join(layout.systemConversations, 'conversations.db');
+
+    try {
+      setConversationsDbLayout(layout);
+      expect(resolveConversationsDbFile()).toBe(expected);
+      const dbFile = ensureConversationsDbFile();
+      expect(dbFile).toBe(expected);
+      expect(existsSync(dirname(dbFile))).toBe(true);
+    } finally {
+      setConversationsDbLayout(undefined);
+    }
   });
 });

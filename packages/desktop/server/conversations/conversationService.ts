@@ -34,6 +34,7 @@ import {
   upsertConversationCatalogSessions,
 } from './conversationCatalog.js';
 import { readConversationContextDocs } from './conversationContextDocs.js';
+import { setConversationsDbLayout } from './conversationDbPaths.js';
 import { readConversationModelPreferenceSnapshot, resolveConversationModelPreferenceState } from './conversationModelPreferences.js';
 import { scheduleConversationSearchIndexing } from './conversationSearchIndex.js';
 import { readConversationTranscriptDetailInWorker } from './conversationTranscriptReadWorkerClient.js';
@@ -102,6 +103,16 @@ export function setConversationServiceContext(input: {
   getRepoRootFn = input.getRepoRoot;
   getSettingsFileFn = input.getSettingsFile ?? (() => getRuntimeSettingsFilePath());
   getDesktopRootLayoutFn = input.getDesktopRootLayout ?? getUninitializedDesktopRootLayout;
+
+  // Plumb the desktop layout into conversation database path resolution so
+  // that catalog, summary, and search index singletons use the layout-derived
+  // systemConversations path instead of the legacy agent runtime dir.
+  try {
+    setConversationsDbLayout(input.getDesktopRootLayout?.());
+  } catch {
+    setConversationsDbLayout(undefined);
+    // Layout not yet available; fall back to legacy path resolution.
+  }
 }
 
 function resolveDaemonRoot(): string {
