@@ -25,6 +25,7 @@ import {
   scanDurableRun,
   scanDurableRunsForRecovery,
 } from '../../runs/store.js';
+import { generateWorkerName } from '../../runs/workerIdentity.js';
 import { invalidateAppTopics, publishAppEvent } from '../../shared/appEvents.js';
 import { upsertAlertAndPublish } from '../alertEvents.js';
 import {
@@ -682,6 +683,13 @@ export function createTasksModule(config: TasksModuleConfig, dependencies: Tasks
           allowedTools: task.allowedTools,
           ...(task.threadConversationId ? { threadConversationId: task.threadConversationId } : {}),
           ...(task.threadSessionFile ? { threadSessionFile: task.threadSessionFile } : {}),
+          metadata: {
+            // Scheduled-task runs execute as a distinct worker identity, not
+            // the user's persona. Stamp these last so the spec payload
+            // cannot accidentally downgrade the role.
+            agentRole: 'worker',
+            workerName: generateWorkerName(`${task.id}|${task.prompt || task.title || task.id}`),
+          },
         },
         source: {
           type: 'scheduled-task',

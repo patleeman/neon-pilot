@@ -10,7 +10,6 @@ import {
   createBackgroundRunId,
   createBackgroundRunRecord,
   finalizeBackgroundRun,
-  generateWorkerName,
   markBackgroundRunCancelling,
   markBackgroundRunInterrupted,
   markBackgroundRunStarted,
@@ -22,6 +21,7 @@ import {
   readDurableRunEvents,
   resolveDurableRunPaths,
 } from './store.js';
+import { generateWorkerName } from './workerIdentity.js';
 
 const tempDirs: string[] = [];
 

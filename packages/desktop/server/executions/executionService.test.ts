@@ -218,6 +218,41 @@ describe('Execution projection', () => {
     expect(projected.title).not.toBe('');
   });
 
+  it('projects scheduled-task runs as worker executions with worker metadata', () => {
+    const scheduledTaskRun = run({
+      runId: 'run-scheduled',
+      manifest: {
+        version: 1,
+        id: 'run-scheduled',
+        kind: 'scheduled-task',
+        resumePolicy: 'rerun',
+        createdAt: '2026-05-15T00:00:00.000Z',
+        spec: {
+          taskId: 'daily-status',
+          title: 'Daily Status Report',
+          scheduleType: 'cron',
+          schedule: 'cron 30 8 * * 1-5',
+          targetType: 'background-agent',
+          metadata: {
+            agentRole: 'worker',
+            workerName: 'Focused Analyst 1a2b',
+          },
+        },
+        source: { type: 'scheduled-task', id: 'daily-status' },
+      },
+    });
+
+    expect(projectExecution(scheduledTaskRun)).toMatchObject({
+      id: 'run-scheduled',
+      kind: 'scheduled-task',
+      visibility: 'system',
+      workerRole: 'worker',
+      workerName: 'Focused Analyst 1a2b',
+      title: 'Focused Analyst 1a2b',
+      taskId: 'daily-status',
+    });
+  });
+
   it('does not allow non-background run metadata to spoof worker identity', () => {
     const conversationRun = run({
       runId: 'run-conversation',

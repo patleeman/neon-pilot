@@ -1312,6 +1312,12 @@ describe('tasks module scheduling', () => {
     expect(loadDurableRunManifest(runPaths.manifestPath)).toMatchObject({
       kind: 'scheduled-task',
       resumePolicy: 'rerun',
+      spec: {
+        metadata: {
+          agentRole: 'worker',
+          workerName: expect.stringMatching(/^[A-Z][a-z]+ [A-Z][a-z]+ [0-9a-f]{4}$/),
+        },
+      },
       source: {
         type: 'scheduled-task',
         id: 'nightly',

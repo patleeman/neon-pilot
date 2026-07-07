@@ -109,13 +109,13 @@ function readMetadata(run: ScannedDurableRun): Record<string, unknown> | undefin
 }
 
 function readWorkerRole(run: ScannedDurableRun): ExecutionWorkerRole | undefined {
-  if (run.manifest?.kind !== 'background-run') return undefined;
+  if (run.manifest?.kind !== 'background-run' && run.manifest?.kind !== 'scheduled-task') return undefined;
   const metadata = readMetadata(run);
   return readString(metadata?.agentRole) === 'worker' ? 'worker' : undefined;
 }
 
 function readWorkerName(run: ScannedDurableRun): string | undefined {
-  if (run.manifest?.kind !== 'background-run') return undefined;
+  if (run.manifest?.kind !== 'background-run' && run.manifest?.kind !== 'scheduled-task') return undefined;
   return readString(readMetadata(run)?.workerName);
 }
 
