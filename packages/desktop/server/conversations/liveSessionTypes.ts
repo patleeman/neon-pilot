@@ -1,4 +1,5 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
+import type { DesktopRootLayout } from '@neon-pilot/core';
 
 import type { WebLiveConversationRunState } from './conversationRuns.js';
 import type { LiveContextUsage } from './liveSessionEvents.js';
@@ -23,6 +24,7 @@ export interface PersistedTokensSnapshot {
 export interface LiveEntry extends LiveSessionPresenceHost, LiveSessionStaleTurnState {
   sessionId: string;
   session: AgentSession;
+  desktopRootLayout?: DesktopRootLayout;
   cwd: string;
   listeners: Set<LiveListener>;
   title: string;

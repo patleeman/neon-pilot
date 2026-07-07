@@ -14,6 +14,7 @@ export {
   getDesktopRootDir,
   getRuntimeAuthFilePath,
   getRuntimeModelsFilePath,
+  getRuntimeProbeDir,
   getRuntimeSessionsIndexFilePath,
   getSkillsRegistryFilePath,
   resolveDesktopAppDataDir,

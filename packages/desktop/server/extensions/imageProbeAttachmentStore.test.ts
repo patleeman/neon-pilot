@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn() }));
+const core = vi.hoisted(() => ({ getPiAgentRuntimeDir: vi.fn(), getRuntimeProbeDir: vi.fn() }));
 
 vi.mock('@neon-pilot/core', () => core);
 
@@ -26,6 +26,7 @@ describe('imageProbeAttachmentStore', () => {
   beforeEach(() => {
     rmSync(runtimeDir, { recursive: true, force: true });
     core.getPiAgentRuntimeDir.mockReturnValue(runtimeDir);
+    core.getRuntimeProbeDir.mockReturnValue(runtimeDir);
     clearImageProbeAttachmentCacheForTests();
   });
 

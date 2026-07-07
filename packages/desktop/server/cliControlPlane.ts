@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { getStateRoot } from '@neon-pilot/core';
+import { type DesktopRootLayout, getStateRoot } from '@neon-pilot/core';
 
 export interface NeonPilotCliControlPlaneRecord {
   version: 1;
@@ -17,8 +17,9 @@ export interface NeonPilotCliControlPlaneRecord {
   };
 }
 
-export function getNeonPilotCliControlPlaneFile(stateRoot: string = getStateRoot()): string {
-  return join(stateRoot, 'desktop', 'cli-control-plane.json');
+export function getNeonPilotCliControlPlaneFile(stateRoot?: string, layout?: DesktopRootLayout): string {
+  const root = stateRoot ?? layout?.systemState ?? getStateRoot();
+  return join(root, 'desktop', 'cli-control-plane.json');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -32,8 +33,8 @@ function readEndpoint(value: unknown): { baseUrl: string; token: string } | unde
   return baseUrl && token ? { baseUrl, token } : undefined;
 }
 
-export function readNeonPilotCliControlPlaneRecord(stateRoot: string = getStateRoot()): NeonPilotCliControlPlaneRecord | null {
-  const filePath = getNeonPilotCliControlPlaneFile(stateRoot);
+export function readNeonPilotCliControlPlaneRecord(stateRoot?: string, layout?: DesktopRootLayout): NeonPilotCliControlPlaneRecord | null {
+  const filePath = getNeonPilotCliControlPlaneFile(stateRoot, layout);
   if (!existsSync(filePath)) return null;
   try {
     const parsed = JSON.parse(readFileSync(filePath, 'utf-8')) as unknown;
@@ -55,9 +56,10 @@ export function readNeonPilotCliControlPlaneRecord(stateRoot: string = getStateR
 
 export function writeNeonPilotCliControlPlaneRecord(
   record: Omit<NeonPilotCliControlPlaneRecord, 'version' | 'updatedAt'>,
-  stateRoot: string = getStateRoot(),
+  stateRoot?: string,
+  layout?: DesktopRootLayout,
 ): string {
-  const filePath = getNeonPilotCliControlPlaneFile(stateRoot);
+  const filePath = getNeonPilotCliControlPlaneFile(stateRoot, layout);
   mkdirSync(dirname(filePath), { recursive: true, mode: 0o700 });
   const payload: NeonPilotCliControlPlaneRecord = {
     version: 1,
@@ -68,6 +70,6 @@ export function writeNeonPilotCliControlPlaneRecord(
   return filePath;
 }
 
-export function removeNeonPilotCliControlPlaneRecord(stateRoot: string = getStateRoot()): void {
-  rmSync(getNeonPilotCliControlPlaneFile(stateRoot), { force: true });
+export function removeNeonPilotCliControlPlaneRecord(stateRoot?: string, layout?: DesktopRootLayout): void {
+  rmSync(getNeonPilotCliControlPlaneFile(stateRoot, layout), { force: true });
 }

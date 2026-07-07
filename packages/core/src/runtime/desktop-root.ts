@@ -114,6 +114,20 @@ export function resolveDesktopRootLayout(options: DesktopRootOptions = {}): Desk
 }
 
 /**
+ * Resolve the runtime probe store directory.
+ *
+ * When a desktop root layout is available, returns the layout-derived path
+ * `<desktop-root>/system/runtime/probes`. Otherwise falls back to
+ * the legacy `<pi-agent-runtime-dir>`.
+ */
+export function getRuntimeProbeDir(layout?: DesktopRootLayout): string {
+  if (layout) {
+    return join(layout.systemRuntime, 'probes');
+  }
+  return getPiAgentRuntimeDir();
+}
+
+/**
  * Resolve the runtime models.json file path.
  *
  * When a desktop root layout is available, returns the layout-derived path

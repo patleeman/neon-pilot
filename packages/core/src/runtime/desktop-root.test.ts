@@ -9,6 +9,7 @@ import {
   getDesktopRootDir,
   getRuntimeAuthFilePath,
   getRuntimeModelsFilePath,
+  getRuntimeProbeDir,
   getRuntimeSessionsIndexFilePath,
   getSkillsRegistryFilePath,
   resolveDesktopAppDataDir,
@@ -82,6 +83,16 @@ describe('desktop root layout', () => {
     writeFileSync(join(configRoot, 'config.json'), JSON.stringify({ desktopRoot: '/configured/root' }));
 
     expect(getDesktopRootDir({ configRoot, root: '/explicit/root' })).toBe('/explicit/root');
+  });
+
+  it('resolves probe dir from desktop root layout', () => {
+    const layout = resolveDesktopRootLayout({ root: '/desktop' });
+    expect(getRuntimeProbeDir(layout)).toBe('/desktop/system/runtime/probes');
+  });
+
+  it('falls back to legacy pi-agent runtime dir for probes when no layout is provided', () => {
+    const result = getRuntimeProbeDir();
+    expect(result).toMatch(/neon-pilot-runtime$/);
   });
 
   it('resolves modelsFilePath from desktop root layout', () => {

@@ -1,4 +1,5 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
+import type { DesktopRootLayout } from '@neon-pilot/core';
 
 import { rememberAudioProbeAttachments, type StoredAudioProbeAttachment } from '../extensions/audioProbeAttachmentStore.js';
 import { rememberDocumentProbeAttachments, type StoredDocumentProbeAttachment } from '../extensions/documentProbeAttachmentStore.js';
@@ -11,6 +12,7 @@ import type { PromptAudioAttachment, PromptDocumentAttachment, PromptImageAttach
 export interface LiveSessionPromptHost {
   sessionId: string;
   session: AgentSession;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 export type LiveSessionPromptBehavior = 'steer' | 'followUp' | undefined;
@@ -236,10 +238,11 @@ export async function runPromptOnLiveEntry<TEntry extends LiveSessionPromptHost>
   const hasDocuments = Boolean(documents && documents.length > 0);
   const shouldUseTextOnlyImageHandling = hasImages && !liveSessionModelAcceptsImages(session.model);
   const preferredVisionModel = shouldUseTextOnlyImageHandling ? getPreferredVisionModel() : '';
-  const storedImages = hasImages && images ? rememberImageProbeAttachments(entry.sessionId, images) : [];
-  const storedVideos = hasVideos && videos ? await rememberVideoProbeAttachments(entry.sessionId, videos) : [];
+  const storedImages = hasImages && images ? rememberImageProbeAttachments(entry.sessionId, images, entry.desktopRootLayout) : [];
+  const storedVideos = hasVideos && videos ? await rememberVideoProbeAttachments(entry.sessionId, videos, entry.desktopRootLayout) : [];
   const storedAudios = hasAudios && audios ? rememberAudioProbeAttachments(entry.sessionId, audios) : [];
-  const storedDocuments = hasDocuments && documents ? rememberDocumentProbeAttachments(entry.sessionId, documents) : [];
+  const storedDocuments =
+    hasDocuments && documents ? rememberDocumentProbeAttachments(entry.sessionId, documents, entry.desktopRootLayout) : [];
   const imagePromptText = shouldUseTextOnlyImageHandling ? appendImageProbeNotice(text, storedImages, preferredVisionModel) : text;
   const videoPromptText = appendVideoProbeNotice(imagePromptText, storedVideos);
   const audioPromptText = appendAudioProbeNotice(videoPromptText, storedAudios);

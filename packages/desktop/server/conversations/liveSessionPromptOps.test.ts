@@ -40,9 +40,12 @@ vi.mock('../ui/settingsPersistence.js', () => ({
 
 import { runPromptOnLiveEntry, submitPromptOnLiveEntry } from './liveSessionPromptOps.js';
 
+const desktopRootLayout = { root: '/desktop-root', systemRuntime: '/desktop-root/system/runtime' };
+
 function createEntry(model: unknown) {
   return {
     sessionId: 'session-1',
+    desktopRootLayout,
     session: {
       model,
       prompt: vi.fn(async () => undefined),
@@ -86,7 +89,7 @@ describe('runPromptOnLiveEntry image probing', () => {
 
     await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, undefined, undefined, undefined, callbacks);
 
-    expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
+    expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images, desktopRootLayout);
     expect(entry.session.prompt).toHaveBeenCalledTimes(1);
     expect(entry.session.prompt).toHaveBeenCalledWith(expect.stringContaining('Use the probe_image tool with explicit imageIds'));
     expect(entry.session.prompt).toHaveBeenCalledWith(expect.stringContaining('img_000000000000: screen.png (image/png)'));
@@ -99,7 +102,7 @@ describe('runPromptOnLiveEntry image probing', () => {
 
     await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, undefined, undefined, undefined, callbacks);
 
-    expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
+    expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images, desktopRootLayout);
     expect(entry.session.prompt).toHaveBeenCalledWith(expect.stringContaining('No preferred vision model is configured'));
   });
 
@@ -109,7 +112,7 @@ describe('runPromptOnLiveEntry image probing', () => {
 
     await runPromptOnLiveEntry(entry, 'What is wrong here?', undefined, images, undefined, undefined, undefined, callbacks);
 
-    expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images);
+    expect(rememberImageProbeAttachmentsMock).toHaveBeenCalledWith('session-1', images, desktopRootLayout);
     expect(entry.session.prompt).toHaveBeenCalledWith('What is wrong here?', { images });
   });
 

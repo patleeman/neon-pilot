@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join } from 'node:path';
 
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getRuntimeProbeDir } from '@neon-pilot/core';
 import type {
   StoredVideoProbeAttachment,
   VideoProbeFrameResult,
@@ -31,6 +31,7 @@ interface RunResult {
 
 interface VideoProbeInvocationContext {
   sessionId?: string;
+  desktopRootLayout?: DesktopRootLayout;
 }
 
 const attachmentsBySession = new Map<string, Map<string, StoredVideoProbeAttachment>>();
@@ -50,16 +51,16 @@ function safeFileName(value: string | undefined, fallback: string): string {
   return cleaned || fallback;
 }
 
-function resolveVideoProbeSessionDir(sessionId: string): string {
-  return join(getPiAgentRuntimeDir(), MEDIA_PROBE_RUNTIME_DIR, safeFileName(sessionId, 'session'));
+function resolveVideoProbeSessionDir(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(getRuntimeProbeDir(layout), MEDIA_PROBE_RUNTIME_DIR, safeFileName(sessionId, 'session'));
 }
 
-function resolveVideoProbeMetadataPath(sessionId: string): string {
-  return join(resolveVideoProbeSessionDir(sessionId), 'metadata.json');
+function resolveVideoProbeMetadataPath(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(resolveVideoProbeSessionDir(sessionId, layout), 'metadata.json');
 }
 
 function resolveLegacyVideoProbeMetadataPath(sessionId: string): string {
-  return join(getPiAgentRuntimeDir(), LEGACY_VIDEO_PROBE_RUNTIME_DIR, safeFileName(sessionId, 'session'), 'metadata.json');
+  return join(getRuntimeProbeDir(), LEGACY_VIDEO_PROBE_RUNTIME_DIR, safeFileName(sessionId, 'session'), 'metadata.json');
 }
 
 function videoIdForFile(path: string, sizeBytes: number, mtimeMs: number): string {
@@ -88,9 +89,9 @@ function normalizeStoredVideo(value: unknown): StoredVideoProbeAttachment | null
   };
 }
 
-function readPersistedVideoProbeAttachments(sessionId: string): Map<string, StoredVideoProbeAttachment> {
-  const metadataPath = existsSync(resolveVideoProbeMetadataPath(sessionId))
-    ? resolveVideoProbeMetadataPath(sessionId)
+function readPersistedVideoProbeAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredVideoProbeAttachment> {
+  const metadataPath = existsSync(resolveVideoProbeMetadataPath(sessionId, layout))
+    ? resolveVideoProbeMetadataPath(sessionId, layout)
     : resolveLegacyVideoProbeMetadataPath(sessionId);
   if (!existsSync(metadataPath)) return new Map();
 
@@ -108,20 +109,24 @@ function readPersistedVideoProbeAttachments(sessionId: string): Map<string, Stor
   }
 }
 
-function writePersistedVideoProbeAttachments(sessionId: string, attachments: Map<string, StoredVideoProbeAttachment>): void {
-  const metadataPath = resolveVideoProbeMetadataPath(sessionId);
+function writePersistedVideoProbeAttachments(
+  sessionId: string,
+  attachments: Map<string, StoredVideoProbeAttachment>,
+  layout?: DesktopRootLayout,
+): void {
+  const metadataPath = resolveVideoProbeMetadataPath(sessionId, layout);
   const document: PersistedVideoProbeAttachmentDocument = {
     version: 1,
     attachments: Array.from(attachments.values()),
   };
-  mkdirSync(resolveVideoProbeSessionDir(sessionId), { recursive: true });
+  mkdirSync(resolveVideoProbeSessionDir(sessionId, layout), { recursive: true });
   writeFileSync(metadataPath, `${JSON.stringify(document, null, 2)}\n`);
 }
 
-function getSessionAttachments(sessionId: string): Map<string, StoredVideoProbeAttachment> {
+function getSessionAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredVideoProbeAttachment> {
   const cached = attachmentsBySession.get(sessionId);
   if (cached) return cached;
-  const persisted = readPersistedVideoProbeAttachments(sessionId);
+  const persisted = readPersistedVideoProbeAttachments(sessionId, layout);
   attachmentsBySession.set(sessionId, persisted);
   return persisted;
 }
@@ -325,8 +330,9 @@ function addSegmentOffset(segment: { text: string; startMs?: number; endMs?: num
 export async function rememberVideoProbeAttachments(
   sessionId: string,
   videos: PromptVideoAttachment[],
+  layout?: DesktopRootLayout,
 ): Promise<StoredVideoProbeAttachment[]> {
-  const sessionAttachments = getSessionAttachments(sessionId);
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   const stored: StoredVideoProbeAttachment[] = [];
 
   for (const video of videos) {
@@ -347,22 +353,26 @@ export async function rememberVideoProbeAttachments(
   }
 
   attachmentsBySession.set(sessionId, sessionAttachments);
-  writePersistedVideoProbeAttachments(sessionId, sessionAttachments);
+  writePersistedVideoProbeAttachments(sessionId, sessionAttachments, layout);
   return stored;
 }
 
-export function getVideoProbeAttachments(sessionId: string): StoredVideoProbeAttachment[] {
-  return Array.from(getSessionAttachments(sessionId).values());
+export function getVideoProbeAttachments(sessionId: string, layout?: DesktopRootLayout): StoredVideoProbeAttachment[] {
+  return Array.from(getSessionAttachments(sessionId, layout).values());
 }
 
-export function getVideoProbeAttachmentsById(sessionId: string, videoIds: string[]): StoredVideoProbeAttachment[] {
-  const sessionAttachments = getSessionAttachments(sessionId);
+export function getVideoProbeAttachmentsById(
+  sessionId: string,
+  videoIds: string[],
+  layout?: DesktopRootLayout,
+): StoredVideoProbeAttachment[] {
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   return videoIds
     .map((id) => sessionAttachments.get(id))
     .filter((attachment): attachment is StoredVideoProbeAttachment => Boolean(attachment));
 }
 
-export function getVideoProbeAttachmentsByIdFromAnySession(videoIds: string[]): StoredVideoProbeAttachment[] {
+export function getVideoProbeAttachmentsByIdFromAnySession(videoIds: string[], layout?: DesktopRootLayout): StoredVideoProbeAttachment[] {
   const found = new Map<string, StoredVideoProbeAttachment>();
   const remaining = new Set(videoIds);
 
@@ -375,8 +385,8 @@ export function getVideoProbeAttachmentsByIdFromAnySession(videoIds: string[]): 
   }
 
   for (const probesDir of [
-    join(getPiAgentRuntimeDir(), MEDIA_PROBE_RUNTIME_DIR),
-    join(getPiAgentRuntimeDir(), LEGACY_VIDEO_PROBE_RUNTIME_DIR),
+    join(getRuntimeProbeDir(layout), MEDIA_PROBE_RUNTIME_DIR),
+    join(getRuntimeProbeDir(), LEGACY_VIDEO_PROBE_RUNTIME_DIR),
   ]) {
     if (remaining.size === 0 || !existsSync(probesDir)) continue;
     for (const entry of readdirSync(probesDir, { withFileTypes: true })) {
@@ -432,6 +442,7 @@ export async function sampleVideoFrames(input: unknown, context?: VideoProbeInvo
             mimeType: frame.mimeType,
             name: `${video.id}-frame-${index + 1}-${(frame.timestampMs / 1000).toFixed(3)}s.${FRAME_FILE_EXTENSION}`,
           })),
+          context.desktopRootLayout,
         )
       : [];
     const frameDetails = frames.map((frame, index) => {

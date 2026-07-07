@@ -473,6 +473,7 @@ function wireSession(id: string, session: AgentSession, cwd: string) {
   const entry: LiveEntry = {
     sessionId: id,
     session,
+    desktopRootLayout: getDesktopRootLayoutFn(),
     cwd,
     listeners: new Set(),
     title: resolveStableSessionTitle(session),

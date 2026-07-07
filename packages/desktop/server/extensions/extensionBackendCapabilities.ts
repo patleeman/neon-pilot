@@ -1677,7 +1677,11 @@ function dispatchImageCapability(image: ExtensionBackendCapabilityImage, request
 function dispatchVideoCapability(video: ExtensionBackendCapabilityVideo, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   const sessionId =
     contextString(request.context?.agentToolContext, 'sessionId') ?? contextString(request.context?.toolContext, 'sessionId');
-  const context = sessionId ? { sessionId } : undefined;
+  const desktopRootLayout = request.context?.desktopRootLayout;
+  const context =
+    sessionId || desktopRootLayout
+      ? { ...(sessionId ? { sessionId } : {}), ...(desktopRootLayout ? { desktopRootLayout } : {}) }
+      : undefined;
   if (request.operation === 'extractFrame') return video.extractFrame(request.input, context);
   if (request.operation === 'sampleFrames') return video.sampleFrames(request.input, context);
   if (request.operation === 'transcribe') return video.transcribe(request.input);

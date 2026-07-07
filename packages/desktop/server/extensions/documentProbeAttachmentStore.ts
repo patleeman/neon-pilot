@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { readFile } from 'node:fs/promises';
 import { basename, extname, isAbsolute, join } from 'node:path';
 
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getRuntimeProbeDir } from '@neon-pilot/core';
 import type { DocumentProbeExtractionResult, StoredDocumentProbeAttachment } from '@neon-pilot/extensions/backend/documents';
 
 import type { PromptDocumentAttachment } from '../conversations/liveSessionQueue.js';
@@ -57,12 +57,12 @@ function safeFileName(value: string | undefined, fallback: string): string {
   return cleaned || fallback;
 }
 
-function resolveDocumentProbeSessionDir(sessionId: string): string {
-  return join(getPiAgentRuntimeDir(), 'document-probes', safeFileName(sessionId, 'session'));
+function resolveDocumentProbeSessionDir(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(getRuntimeProbeDir(layout), 'document-probes', safeFileName(sessionId, 'session'));
 }
 
-function resolveDocumentProbeMetadataPath(sessionId: string): string {
-  return join(resolveDocumentProbeSessionDir(sessionId), 'metadata.json');
+function resolveDocumentProbeMetadataPath(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(resolveDocumentProbeSessionDir(sessionId, layout), 'metadata.json');
 }
 
 function documentIdForFile(path: string, sizeBytes: number, mtimeMs: number): string {
@@ -86,8 +86,8 @@ function normalizeStoredDocument(value: unknown): StoredDocumentProbeAttachment 
   };
 }
 
-function readPersistedDocumentProbeAttachments(sessionId: string): Map<string, StoredDocumentProbeAttachment> {
-  const metadataPath = resolveDocumentProbeMetadataPath(sessionId);
+function readPersistedDocumentProbeAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredDocumentProbeAttachment> {
+  const metadataPath = resolveDocumentProbeMetadataPath(sessionId, layout);
   if (!existsSync(metadataPath)) return new Map();
   try {
     const parsed = JSON.parse(readFileSync(metadataPath, 'utf-8')) as Partial<PersistedDocumentProbeAttachmentDocument>;
@@ -102,17 +102,21 @@ function readPersistedDocumentProbeAttachments(sessionId: string): Map<string, S
   }
 }
 
-function writePersistedDocumentProbeAttachments(sessionId: string, attachments: Map<string, StoredDocumentProbeAttachment>): void {
-  const metadataPath = resolveDocumentProbeMetadataPath(sessionId);
+function writePersistedDocumentProbeAttachments(
+  sessionId: string,
+  attachments: Map<string, StoredDocumentProbeAttachment>,
+  layout?: DesktopRootLayout,
+): void {
+  const metadataPath = resolveDocumentProbeMetadataPath(sessionId, layout);
   const document: PersistedDocumentProbeAttachmentDocument = { version: 1, attachments: Array.from(attachments.values()) };
-  mkdirSync(resolveDocumentProbeSessionDir(sessionId), { recursive: true });
+  mkdirSync(resolveDocumentProbeSessionDir(sessionId, layout), { recursive: true });
   writeFileSync(metadataPath, `${JSON.stringify(document, null, 2)}\n`);
 }
 
-function getSessionAttachments(sessionId: string): Map<string, StoredDocumentProbeAttachment> {
+function getSessionAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredDocumentProbeAttachment> {
   const cached = attachmentsBySession.get(sessionId);
   if (cached) return cached;
-  const persisted = readPersistedDocumentProbeAttachments(sessionId);
+  const persisted = readPersistedDocumentProbeAttachments(sessionId, layout);
   attachmentsBySession.set(sessionId, persisted);
   return persisted;
 }
@@ -228,12 +232,13 @@ function truncateExtractedText(text: string): { text: string; truncated: boolean
 export function rememberDocumentProbeAttachments(
   sessionId: string,
   documents: PromptDocumentAttachment[],
+  layout?: DesktopRootLayout,
 ): StoredDocumentProbeAttachment[] {
   if (documents.length > MAX_DOCUMENT_PROBE_ATTACHMENTS_PER_PROMPT) {
     throw new Error(`Document probing supports at most ${MAX_DOCUMENT_PROBE_ATTACHMENTS_PER_PROMPT} documents per prompt.`);
   }
 
-  const sessionAttachments = getSessionAttachments(sessionId);
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   const stored = documents.map((document, index) => {
     const path = readDocumentPath(document.path);
     const stats = statSync(path);
@@ -249,22 +254,29 @@ export function rememberDocumentProbeAttachments(
     return attachment;
   });
   attachmentsBySession.set(sessionId, sessionAttachments);
-  writePersistedDocumentProbeAttachments(sessionId, sessionAttachments);
+  writePersistedDocumentProbeAttachments(sessionId, sessionAttachments, layout);
   return stored;
 }
 
-export function getDocumentProbeAttachments(sessionId: string): StoredDocumentProbeAttachment[] {
-  return Array.from(getSessionAttachments(sessionId).values());
+export function getDocumentProbeAttachments(sessionId: string, layout?: DesktopRootLayout): StoredDocumentProbeAttachment[] {
+  return Array.from(getSessionAttachments(sessionId, layout).values());
 }
 
-export function getDocumentProbeAttachmentsById(sessionId: string, documentIds: string[]): StoredDocumentProbeAttachment[] {
-  const sessionAttachments = getSessionAttachments(sessionId);
+export function getDocumentProbeAttachmentsById(
+  sessionId: string,
+  documentIds: string[],
+  layout?: DesktopRootLayout,
+): StoredDocumentProbeAttachment[] {
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   return documentIds
     .map((id) => sessionAttachments.get(id))
     .filter((attachment): attachment is StoredDocumentProbeAttachment => Boolean(attachment));
 }
 
-export function getDocumentProbeAttachmentsByIdFromAnySession(documentIds: string[]): StoredDocumentProbeAttachment[] {
+export function getDocumentProbeAttachmentsByIdFromAnySession(
+  documentIds: string[],
+  layout?: DesktopRootLayout,
+): StoredDocumentProbeAttachment[] {
   const found = new Map<string, StoredDocumentProbeAttachment>();
   const remaining = new Set(documentIds);
   for (const [, sessionAttachments] of attachmentsBySession) {
@@ -276,7 +288,7 @@ export function getDocumentProbeAttachmentsByIdFromAnySession(documentIds: strin
     }
   }
   if (remaining.size > 0) {
-    const probesDir = join(getPiAgentRuntimeDir(), 'document-probes');
+    const probesDir = join(getRuntimeProbeDir(layout), 'document-probes');
     if (existsSync(probesDir)) {
       for (const entry of readdirSync(probesDir, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;

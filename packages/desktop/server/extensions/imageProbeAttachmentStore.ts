@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { getPiAgentRuntimeDir } from '@neon-pilot/core';
+import { type DesktopRootLayout, getRuntimeProbeDir } from '@neon-pilot/core';
 
 import type { PromptImageAttachment } from '../conversations/liveSessionQueue.js';
 
@@ -30,12 +30,12 @@ export const MAX_IMAGE_PROBE_IMAGE_BYTES = 8 * 1024 * 1024;
 
 const attachmentsBySession = new Map<string, Map<string, StoredImageProbeAttachment>>();
 
-function resolveImageProbeSessionDir(sessionId: string): string {
-  return join(getPiAgentRuntimeDir(), 'image-probes', safeFileName(sessionId, 'session'));
+function resolveImageProbeSessionDir(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(getRuntimeProbeDir(layout), 'image-probes', safeFileName(sessionId, 'session'));
 }
 
-function resolveImageProbeMetadataPath(sessionId: string): string {
-  return join(resolveImageProbeSessionDir(sessionId), 'metadata.json');
+function resolveImageProbeMetadataPath(sessionId: string, layout?: DesktopRootLayout): string {
+  return join(resolveImageProbeSessionDir(sessionId, layout), 'metadata.json');
 }
 
 function safeFileName(value: string | undefined, fallback: string): string {
@@ -111,8 +111,8 @@ function normalizePersistedAttachment(value: unknown): PersistedImageProbeAttach
   };
 }
 
-function readPersistedImageProbeAttachments(sessionId: string): Map<string, StoredImageProbeAttachment> {
-  const metadataPath = resolveImageProbeMetadataPath(sessionId);
+function readPersistedImageProbeAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredImageProbeAttachment> {
+  const metadataPath = resolveImageProbeMetadataPath(sessionId, layout);
   if (!existsSync(metadataPath)) {
     return new Map();
   }
@@ -140,8 +140,12 @@ function readPersistedImageProbeAttachments(sessionId: string): Map<string, Stor
   }
 }
 
-function writePersistedImageProbeAttachments(sessionId: string, attachments: Map<string, StoredImageProbeAttachment>): void {
-  const metadataPath = resolveImageProbeMetadataPath(sessionId);
+function writePersistedImageProbeAttachments(
+  sessionId: string,
+  attachments: Map<string, StoredImageProbeAttachment>,
+  layout?: DesktopRootLayout,
+): void {
+  const metadataPath = resolveImageProbeMetadataPath(sessionId, layout);
   const document: PersistedImageProbeAttachmentDocument = {
     version: 1,
     attachments: Array.from(attachments.values()).map((attachment) => ({
@@ -152,37 +156,49 @@ function writePersistedImageProbeAttachments(sessionId: string, attachments: Map
       sizeBytes: attachment.sizeBytes,
     })),
   };
-  mkdirSync(resolveImageProbeSessionDir(sessionId), { recursive: true });
+  mkdirSync(resolveImageProbeSessionDir(sessionId, layout), { recursive: true });
   writeFileSync(metadataPath, `${JSON.stringify(document, null, 2)}\n`);
 }
 
-function getSessionAttachments(sessionId: string): Map<string, StoredImageProbeAttachment> {
+function getSessionAttachments(sessionId: string, layout?: DesktopRootLayout): Map<string, StoredImageProbeAttachment> {
   const cached = attachmentsBySession.get(sessionId);
   if (cached) {
     return cached;
   }
-  const persisted = readPersistedImageProbeAttachments(sessionId);
+  const persisted = readPersistedImageProbeAttachments(sessionId, layout);
   attachmentsBySession.set(sessionId, persisted);
   return persisted;
 }
 
-export function rememberImageProbeAttachments(sessionId: string, images: PromptImageAttachment[]): StoredImageProbeAttachment[] {
+export function rememberImageProbeAttachments(
+  sessionId: string,
+  images: PromptImageAttachment[],
+  layout?: DesktopRootLayout,
+): StoredImageProbeAttachment[] {
   if (images.length > MAX_IMAGE_PROBE_ATTACHMENTS_PER_PROMPT) {
     throw new Error(`Image probing supports at most ${MAX_IMAGE_PROBE_ATTACHMENTS_PER_PROMPT} images per prompt.`);
   }
 
-  return rememberImageProbeAttachmentsWithoutPromptLimit(sessionId, images);
+  return rememberImageProbeAttachmentsWithoutPromptLimit(sessionId, images, layout);
 }
 
-export function rememberGeneratedImageProbeAttachments(sessionId: string, images: PromptImageAttachment[]): StoredImageProbeAttachment[] {
-  return rememberImageProbeAttachmentsWithoutPromptLimit(sessionId, images);
+export function rememberGeneratedImageProbeAttachments(
+  sessionId: string,
+  images: PromptImageAttachment[],
+  layout?: DesktopRootLayout,
+): StoredImageProbeAttachment[] {
+  return rememberImageProbeAttachmentsWithoutPromptLimit(sessionId, images, layout);
 }
 
-function rememberImageProbeAttachmentsWithoutPromptLimit(sessionId: string, images: PromptImageAttachment[]): StoredImageProbeAttachment[] {
-  const dir = resolveImageProbeSessionDir(sessionId);
+function rememberImageProbeAttachmentsWithoutPromptLimit(
+  sessionId: string,
+  images: PromptImageAttachment[],
+  layout?: DesktopRootLayout,
+): StoredImageProbeAttachment[] {
+  const dir = resolveImageProbeSessionDir(sessionId, layout);
   mkdirSync(dir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const sessionAttachments = getSessionAttachments(sessionId);
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   const stored = images.map((image, index) => {
     const { id, buffer } = imageIdForData(image.data);
     const detectedMimeType = detectImageMimeType(buffer);
@@ -203,22 +219,26 @@ function rememberImageProbeAttachmentsWithoutPromptLimit(sessionId: string, imag
     return attachment;
   });
   attachmentsBySession.set(sessionId, sessionAttachments);
-  writePersistedImageProbeAttachments(sessionId, sessionAttachments);
+  writePersistedImageProbeAttachments(sessionId, sessionAttachments, layout);
   return stored;
 }
 
-export function getImageProbeAttachments(sessionId: string): StoredImageProbeAttachment[] {
-  return Array.from(getSessionAttachments(sessionId).values());
+export function getImageProbeAttachments(sessionId: string, layout?: DesktopRootLayout): StoredImageProbeAttachment[] {
+  return Array.from(getSessionAttachments(sessionId, layout).values());
 }
 
-export function getImageProbeAttachmentsById(sessionId: string, imageIds: string[]): StoredImageProbeAttachment[] {
-  const sessionAttachments = getSessionAttachments(sessionId);
+export function getImageProbeAttachmentsById(
+  sessionId: string,
+  imageIds: string[],
+  layout?: DesktopRootLayout,
+): StoredImageProbeAttachment[] {
+  const sessionAttachments = getSessionAttachments(sessionId, layout);
   return imageIds
     .map((id) => sessionAttachments.get(id))
     .filter((attachment): attachment is StoredImageProbeAttachment => Boolean(attachment));
 }
 
-export function getImageProbeAttachmentsByIdFromAnySession(imageIds: string[]): StoredImageProbeAttachment[] {
+export function getImageProbeAttachmentsByIdFromAnySession(imageIds: string[], layout?: DesktopRootLayout): StoredImageProbeAttachment[] {
   // Search all known sessions (both cached and on disk) for matching image IDs.
   // This handles session ID changes after conversation archive/re-live.
   const found = new Map<string, StoredImageProbeAttachment>();
@@ -239,7 +259,7 @@ export function getImageProbeAttachmentsByIdFromAnySession(imageIds: string[]): 
   }
 
   // 2. Scan on-disk sessions
-  const probesDir = join(getPiAgentRuntimeDir(), 'image-probes');
+  const probesDir = join(getRuntimeProbeDir(layout), 'image-probes');
   if (existsSync(probesDir)) {
     for (const entry of readdirSync(probesDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
