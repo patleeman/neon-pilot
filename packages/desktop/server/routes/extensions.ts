@@ -1518,7 +1518,10 @@ export function registerExtensionRoutes(
         res.json({ ok: true, id: req.params.id, reloaded: true, message: 'Extension registry caches were invalidated.' });
         return;
       }
-      const result = await getExtensionHostClient().reloadBackend({ extensionId: req.params.id });
+      const result = await getExtensionHostClient().reloadBackend({
+        extensionId: req.params.id,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+      });
       res.json({
         ok: true,
         id: req.params.id,

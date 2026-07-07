@@ -954,7 +954,33 @@ describe('extension host client', () => {
 
     expect(extensionBackend.listExtensionActionTelemetry).toHaveBeenCalledWith('ext');
     expect(extensionBackend.runExtensionSelfTest).toHaveBeenCalledWith('ext');
-    expect(extensionBackend.reloadExtensionBackend).toHaveBeenCalledWith('ext');
+    expect(extensionBackend.reloadExtensionBackend).toHaveBeenCalledWith('ext', undefined);
+  });
+
+  it('threads serverContextSnapshot through to reloadExtensionBackend', async () => {
+    setExtensionHostClient(createInProcessExtensionHostClient());
+    extensionBackend.reloadExtensionBackend.mockResolvedValueOnce({ ok: true, extensionId: 'ext', rebuilt: false });
+
+    const layout = resolveDesktopRootLayout({ root: '/tmp/neon-pilot-layout' });
+    await expect(
+      getExtensionHostClient().reloadBackend({
+        extensionId: 'ext',
+        serverContextSnapshot: { runtimeScope: 'shared', stateRoot: '/tmp/neon-pilot-state', desktopRootLayout: layout },
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      extensionId: 'ext',
+      rebuilt: false,
+    });
+
+    expect(extensionBackend.reloadExtensionBackend).toHaveBeenCalledWith(
+      'ext',
+      expect.objectContaining({
+        getRuntimeScope: expect.any(Function),
+        getStateRoot: expect.any(Function),
+        getDesktopRootLayout: expect.any(Function),
+      }),
+    );
   });
 
   it('routes startup actions through the extension host request envelope', async () => {

@@ -422,6 +422,7 @@ export interface ExtensionHostRunSelfTestRequest {
 export interface ExtensionHostReloadBackendRequest {
   type: 'reloadBackend';
   extensionId: string;
+  serverContextSnapshot?: ExtensionHostServerContextSnapshot;
 }
 
 export interface ExtensionHostSetKeybindingRequest {

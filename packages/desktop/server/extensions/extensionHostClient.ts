@@ -445,7 +445,7 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     }
     if (request.type === 'reloadBackend') {
       const { reloadExtensionBackend } = await import('./extensionBackend.js');
-      return { ok: true, reload: await reloadExtensionBackend(request.extensionId) };
+      return { ok: true, reload: await reloadExtensionBackend(request.extensionId, await resolveRequestServerContext(request)) };
     }
     if (request.type === 'runSelfTest') {
       const { runExtensionSelfTest } = await import('./extensionBackend.js');

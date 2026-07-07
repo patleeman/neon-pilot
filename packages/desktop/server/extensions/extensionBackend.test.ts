@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -4065,6 +4066,66 @@ describe('extension backend action invocation', () => {
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
     );
     expect(extensionServices.startExtensionServices).toHaveBeenCalledOnce();
+  });
+
+  it('passes server context to startExtensionServices during reload', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
+    const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-backend-layout-')) });
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const extensionRoot = join(layout.apps, 'extensions', 'reload-context-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'reload-context-ext',
+        name: 'Reload Context Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'doThing', handler: 'doThing' }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function doThing() { return true; }\n');
+
+    const backendRunner = {
+      loadModule: vi.fn(async () => ({ doThing: vi.fn() })),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(),
+      run: vi.fn(),
+    };
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      run: vi.fn(),
+    };
+    setExtensionBackendRunnerForTests(backendRunner);
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    const serverContext = {
+      getRuntimeScope: () => 'shared',
+      getStateRoot: () => stateRoot,
+      getDesktopRootLayout: () => layout,
+    };
+
+    await expect(reloadExtensionBackend('reload-context-ext', serverContext)).resolves.toEqual({
+      ok: true,
+      extensionId: 'reload-context-ext',
+      rebuilt: false,
+    });
+
+    expect(extensionServices.startExtensionServices).toHaveBeenCalledWith(serverContext);
+    expect(backendRunner.loadModule).toHaveBeenCalledWith(
+      'reload-context-ext',
+      expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+    );
+    expect(existsSync(join(stateRoot, 'extensions', 'reload-context-ext'))).toBe(false);
   });
 });
 

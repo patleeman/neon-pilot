@@ -1559,9 +1559,14 @@ export async function startExtensionStartupActions(
   return results;
 }
 
-export async function reloadExtensionBackend(extensionId: string): Promise<{ ok: true; extensionId: string; rebuilt: boolean }> {
-  invalidateExtensionRegistryReadCaches();
-  const entry = findExtensionEntry(extensionId);
+export async function reloadExtensionBackend(
+  extensionId: string,
+  serverContext?: ExtensionBackendServerContext,
+): Promise<{ ok: true; extensionId: string; rebuilt: boolean }> {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
+  invalidateExtensionRegistryReadCaches(stateRoot, layout);
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
   if (!entry) {
     throw new Error('Extension not found.');
   }
@@ -1582,6 +1587,6 @@ export async function reloadExtensionBackend(extensionId: string): Promise<{ ok:
   await loadCompiledExtensionBackendModule(extensionId, loadTarget);
   clearExtensionHealthError(extensionId);
   clearBuildError(extensionId);
-  await startExtensionServices();
+  await startExtensionServices(serverContext);
   return { ok: true, extensionId, rebuilt: false };
 }
