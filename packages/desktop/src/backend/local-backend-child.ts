@@ -287,33 +287,9 @@ async function main(): Promise<void> {
   const extensionHostToken = process.env.NEON_PILOT_EXTENSION_HOST_TOKEN?.trim();
   await startDaemon();
 
-  // ── Load the API module ────────────────────────────────────────────
-  // loadRawLocalApiModule() imports localApi.js, the full local API handler
-  // module. Keep this readiness signal scoped to the backend process; the
-  // desktop shell warms the backend in the background and does not block its
-  // first paint on this import.
   let localApiReady = false;
   let localApi: LocalApiModule | null = null;
-  try {
-    localApi = await loadRawLocalApiModule();
-    localApi.configureDesktopExtensionHostClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken });
-    await localApi.warmDesktopLocalApiRuntime();
-    installNativeWorkbenchBrowserBridge(localApi);
-    localApiReady = true;
-    localhostWebappProxy = await localApi.startDesktopLocalhostWebappProxy({
-      stateRoot: getStateRoot(),
-      logger: {
-        info: (message, fields) => process.stderr.write(`[desktop-backend] ${message} ${JSON.stringify(fields ?? {})}\n`),
-        warn: (message, fields) => process.stderr.write(`[desktop-backend] ${message} ${JSON.stringify(fields ?? {})}\n`),
-      },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`[desktop-backend] failed to load local API module: ${message}\n`);
-    await stopDaemon();
-    sendParentMessage({ type: 'fatal', error: `Failed to load local API module: ${message}` });
-    process.exit(1);
-  }
+  let handleRealtimeUpgrade: ReturnType<LocalApiModule['createDesktopLocalRealtimeUpgradeHandler']> | undefined;
 
   const server = createServer((request, response) => {
     void (async () => {
@@ -371,25 +347,6 @@ async function main(): Promise<void> {
       }
     })();
   });
-  const handleRealtimeUpgrade = localApi?.createDesktopLocalRealtimeUpgradeHandler({
-    getRuntimeScope: () => SHARED_CHILD_RUNTIME_SCOPE,
-    subscribeLocalApiStreamByUrl: async (url, onEvent) => {
-      if (!localApi) {
-        throw new Error('Local API is unavailable.');
-      }
-      return localApi.subscribeDesktopLocalApiStream(`${url.pathname}${url.search}`, (event) => {
-        if (event.type === 'message') {
-          onEvent({ type: 'message', data: event.data ?? '' });
-        } else if (event.type === 'error') {
-          onEvent({ type: 'error', message: event.message ?? 'Stream failed.' });
-        } else if (event.type === 'open') {
-          onEvent({ type: 'open' });
-        } else if (event.type === 'close') {
-          onEvent({ type: 'close' });
-        }
-      });
-    },
-  });
   server.on('upgrade', (request, socket, head) => {
     if (!isAuthorizedRealtimeUpgrade(request, token)) {
       rejectUpgrade(socket, 401, 'Unauthorized');
@@ -399,7 +356,11 @@ async function main(): Promise<void> {
       rejectUpgrade(socket, 503, 'Service Unavailable');
       return;
     }
-    handleRealtimeUpgrade?.(request, socket as Socket, head);
+    if (!handleRealtimeUpgrade) {
+      rejectUpgrade(socket, 503, 'Service Unavailable');
+      return;
+    }
+    handleRealtimeUpgrade(request, socket as Socket, head);
   });
 
   await new Promise<void>((resolve) => {
@@ -410,9 +371,6 @@ async function main(): Promise<void> {
   if (!address || typeof address === 'string') {
     throw new Error('Backend child did not bind a TCP port.');
   }
-
-  localApi?.setDesktopLocalBackendBaseUrl(`http://127.0.0.1:${String(address.port)}`);
-  sendParentMessage({ type: 'ready', port: address.port, token });
 
   process.on('message', (message) => {
     if (message && typeof message === 'object' && (message as { type?: unknown }).type === 'native-workbench-browser-response') {
@@ -446,6 +404,49 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => {
     void shutdown(server);
   });
+
+  sendParentMessage({ type: 'ready', port: address.port, token });
+
+  try {
+    localApi = await loadRawLocalApiModule();
+    localApi.configureDesktopExtensionHostClient({ baseUrl: extensionHostBaseUrl, token: extensionHostToken });
+    localApi.setDesktopLocalBackendBaseUrl(`http://127.0.0.1:${String(address.port)}`);
+    await localApi.warmDesktopLocalApiRuntime();
+    installNativeWorkbenchBrowserBridge(localApi);
+    handleRealtimeUpgrade = localApi.createDesktopLocalRealtimeUpgradeHandler({
+      getRuntimeScope: () => SHARED_CHILD_RUNTIME_SCOPE,
+      subscribeLocalApiStreamByUrl: async (url, onEvent) => {
+        if (!localApi) {
+          throw new Error('Local API is unavailable.');
+        }
+        return localApi.subscribeDesktopLocalApiStream(`${url.pathname}${url.search}`, (event) => {
+          if (event.type === 'message') {
+            onEvent({ type: 'message', data: event.data ?? '' });
+          } else if (event.type === 'error') {
+            onEvent({ type: 'error', message: event.message ?? 'Stream failed.' });
+          } else if (event.type === 'open') {
+            onEvent({ type: 'open' });
+          } else if (event.type === 'close') {
+            onEvent({ type: 'close' });
+          }
+        });
+      },
+    });
+    localhostWebappProxy = await localApi.startDesktopLocalhostWebappProxy({
+      stateRoot: getStateRoot(),
+      logger: {
+        info: (message, fields) => process.stderr.write(`[desktop-backend] ${message} ${JSON.stringify(fields ?? {})}\n`),
+        warn: (message, fields) => process.stderr.write(`[desktop-backend] ${message} ${JSON.stringify(fields ?? {})}\n`),
+      },
+    });
+    localApiReady = true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`[desktop-backend] failed to load local API module: ${message}\n`);
+    await stopDaemon();
+    sendParentMessage({ type: 'fatal', error: `Failed to load local API module: ${message}` });
+    process.exit(1);
+  }
 }
 
 main().catch((error) => {

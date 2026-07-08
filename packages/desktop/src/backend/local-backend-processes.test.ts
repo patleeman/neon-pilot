@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   bootstrapMocks,
@@ -191,6 +191,13 @@ async function handleNativeRequest(
 describe('LocalBackendProcesses', () => {
   const originalStderrWrite = process.stderr.write;
 
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ daemonHealthy: true, apiReady: true }), { status: 200 })),
+    );
+  });
+
   afterEach(() => {
     vi.useRealTimers();
     process.stderr.write = originalStderrWrite;
@@ -316,6 +323,82 @@ describe('LocalBackendProcesses', () => {
     expect(backend.lastStartPerf?.totalMs).toBeGreaterThanOrEqual(0);
   });
 
+  it('waits for the backend child to report API readiness after it binds a port', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ daemonHealthy: true, apiReady: false }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ daemonHealthy: true, apiReady: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const extensionHost = new FakeChildProcess();
+    const backendChild = new FakeChildProcess();
+    childProcessMocks.spawn
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => extensionHost.emit('message', { type: 'ready', port: 4101, token: 'extension-host-token' }));
+        return extensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => backendChild.emit('message', { type: 'ready', port: 5101, token: 'backend-token' }));
+        return backendChild;
+      });
+
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      baseUrl?: string;
+      token?: string;
+    };
+    const startPromise = backend.ensureStarted();
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(backend.baseUrl).toBe('http://127.0.0.1:5101');
+    expect(fetchMock).toHaveBeenLastCalledWith(new URL('/health', 'http://127.0.0.1:5101'), {
+      method: 'GET',
+      headers: { Authorization: 'Bearer backend-token' },
+    });
+
+    await vi.advanceTimersByTimeAsync(100);
+    await startPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(backend.token).toBe('backend-token');
+  });
+
+  it('rejects backend startup if early port binding is followed by a fatal warmup error', async () => {
+    vi.useFakeTimers();
+    const extensionHost = new FakeChildProcess();
+    const backendChild = new FakeChildProcess();
+    const fetchMock = vi.fn(async () => {
+      backendChild.emit('message', { type: 'fatal', error: 'local API warmup failed' });
+      return new Response(JSON.stringify({ daemonHealthy: true, apiReady: false }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    childProcessMocks.spawn
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => extensionHost.emit('message', { type: 'ready', port: 4101, token: 'extension-host-token' }));
+        return extensionHost;
+      })
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => backendChild.emit('message', { type: 'ready', port: 5101, token: 'backend-token' }));
+        return backendChild;
+      });
+
+    const backend = new LocalBackendProcesses() as LocalBackendProcesses & {
+      baseUrl?: string;
+      token?: string;
+      extensionHostBaseUrl?: string;
+    };
+    const startPromise = backend.ensureStarted();
+    startPromise.catch(() => undefined);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(100);
+
+    await expect(startPromise).rejects.toThrow('local API warmup failed');
+    expect(backendChild.send).toHaveBeenCalledWith({ type: 'shutdown' });
+    expect(extensionHost.send).toHaveBeenCalledWith({ type: 'shutdown' });
+    expect(backend.baseUrl).toBeUndefined();
+    expect(backend.token).toBeUndefined();
+    expect(backend.extensionHostBaseUrl).toBeUndefined();
+  });
+
   it('restarts stale backend runtime when the extension host exits before a conversation message dispatch', async () => {
     const firstExtensionHost = new FakeChildProcess();
     const firstBackend = new FakeChildProcess();
@@ -347,11 +430,12 @@ describe('LocalBackendProcesses', () => {
       token?: string;
       fetch(path: string, init: RequestInit): Promise<Response>;
     };
-    const fetchSpy = vi.spyOn(backend, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+    const fetchSpy = vi.spyOn(backend, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ok: true, apiReady: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
     );
 
     await backend.ensureStarted();

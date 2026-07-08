@@ -24,6 +24,11 @@ interface LocalBackendStatus {
   realtimeUrl?: string;
 }
 
+interface LocalBackendHealthResponse {
+  daemonHealthy?: unknown;
+  apiReady?: unknown;
+}
+
 interface BackendReadyMessage {
   type: 'ready';
   port: number;
@@ -59,6 +64,8 @@ interface ExtensionHostUiConfirmResponseMessage {
 
 const nativeWorkbenchBrowserMethods = new Set(['isActive', 'listTabs', 'snapshot', 'screenshot', 'cdp']);
 const NATIVE_WORKBENCH_BROWSER_SLOW_MS = 1_000;
+const LOCAL_BACKEND_API_READY_POLL_MS = 100;
+const LOCAL_BACKEND_API_READY_TIMEOUT_MS = 120_000;
 
 const DESKTOP_CHILD_ENV_ALLOWLIST = new Set([
   'CI',
@@ -151,6 +158,13 @@ function resolveExtensionHostChildEntry(): string {
 
 function renderBackendChildExit(code: number | null, signal: NodeJS.Signals | null): Error {
   return new Error(`Local backend exited before it was ready (code=${String(code)} signal=${String(signal)})`);
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolveWait) => {
+    const timer = setTimeout(resolveWait, ms);
+    timer.unref?.();
+  });
 }
 
 function buildRealtimeUrl(baseUrl: string | undefined, token: string | undefined): string | undefined {
@@ -1049,6 +1063,7 @@ export class LocalBackendProcesses {
       const assignStartedAt = Date.now();
       this.token = ready.token || token;
       this.baseUrl = `http://127.0.0.1:${String(ready.port)}`;
+      await this.waitForBackendApiReady(backendChild, readyWaitStartedAt);
       this.backendStartedWithExtensionHost = Boolean(this.extensionHostBaseUrl && this.extensionHostToken);
       this.writeCliControlPlaneRecord();
       const assignedAt = Date.now();
@@ -1083,6 +1098,58 @@ export class LocalBackendProcesses {
       }
       await this.stopChild(child);
       throw error;
+    }
+  }
+
+  private async waitForBackendApiReady(child: ChildProcess, startedAt: number): Promise<void> {
+    let startupFailure: Error | undefined;
+    const onMessage = (message: unknown) => {
+      if (isBackendChildMessage(message) && message.type === 'fatal') {
+        startupFailure = new Error(message.error);
+      }
+    };
+    const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+      startupFailure = renderBackendChildExit(code, signal);
+    };
+    const onError = (error: Error) => {
+      startupFailure = error;
+    };
+
+    child.on('message', onMessage);
+    child.once('exit', onExit);
+    child.once('error', onError);
+    try {
+      for (;;) {
+        if (startupFailure) {
+          throw startupFailure;
+        }
+        if (Date.now() - startedAt > LOCAL_BACKEND_API_READY_TIMEOUT_MS) {
+          throw new Error('Local backend did not become API-ready before startup timed out.');
+        }
+
+        try {
+          const response = await this.fetch('/health', { method: 'GET' });
+          if (response.ok) {
+            const body = (await response.json()) as LocalBackendHealthResponse;
+            if (body.apiReady !== false) {
+              return;
+            }
+          }
+        } catch (error) {
+          if (startupFailure) {
+            throw startupFailure;
+          }
+          process.stderr.write(
+            `[desktop-backend] waiting for local API readiness: ${error instanceof Error ? error.message : String(error)}\n`,
+          );
+        }
+
+        await wait(LOCAL_BACKEND_API_READY_POLL_MS);
+      }
+    } finally {
+      child.off('message', onMessage);
+      child.off('exit', onExit);
+      child.off('error', onError);
     }
   }
 
