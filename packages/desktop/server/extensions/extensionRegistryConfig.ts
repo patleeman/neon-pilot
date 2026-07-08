@@ -25,6 +25,7 @@ export interface ExtensionRegistryConfig {
   >;
   quarantined?: Record<string, { reason: string; at: string; failures: number }>;
   revokedPermissions?: Record<string, string[]>;
+  buildErrors?: Record<string, string>;
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -105,6 +106,14 @@ export function normalizeExtensionRegistryConfig(value: unknown): ExtensionRegis
       )
     : {};
 
+  const buildErrors = isRecord(value.buildErrors)
+    ? Object.fromEntries(
+        Object.entries(value.buildErrors).flatMap(([extId, error]) =>
+          typeof extId === 'string' && typeof error === 'string' && error.trim().length > 0 ? [[extId, error]] : [],
+        ),
+      )
+    : {};
+
   return {
     disabledIds,
     enabledIds,
@@ -114,6 +123,7 @@ export function normalizeExtensionRegistryConfig(value: unknown): ExtensionRegis
     commandKeybindings,
     quarantined,
     revokedPermissions,
+    buildErrors,
   };
 }
 
@@ -128,6 +138,7 @@ export function serializeExtensionRegistryConfig(config: ExtensionRegistryConfig
       commandKeybindings: config.commandKeybindings ?? {},
       quarantined: config.quarantined ?? {},
       revokedPermissions: config.revokedPermissions ?? {},
+      buildErrors: config.buildErrors ?? {},
     },
     null,
     2,

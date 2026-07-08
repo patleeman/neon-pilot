@@ -11,6 +11,7 @@ vi.mock('../shared/appEvents.js', () => appEvents);
 import {
   beginExtensionStartupGuard,
   clearExtensionFailureRecordsForOperation,
+  clearPersistedBuildError,
   completeExtensionStartupGuard,
   getExtensionRegistryPaths,
   getRuntimeExtensionsRoot,
@@ -30,6 +31,7 @@ import {
   listExtensionToolRegistrations,
   markExtensionStartupActive,
   parseExtensionManifest,
+  readExtensionRegistryConfig,
   readExtensionRegistrySnapshot,
   readExtensionSchema,
   readRuntimeExtensionEntries,
@@ -37,6 +39,7 @@ import {
   resolveExtensionModelProfile,
   setExtensionEnabled,
   setExtensionKeybinding,
+  setPersistedBuildError,
   withExtensionRegistryReadCache,
 } from './extensionRegistry.js';
 
@@ -861,6 +864,30 @@ describe('extension registry', () => {
       details: 'boom 3',
       severity: 'warning',
     });
+  });
+
+  it('persists build errors in install summaries until a later successful build clears them', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-'));
+    const extensionRoot = join(stateRoot, 'extensions', 'broken-board');
+    mkdirSync(extensionRoot, { recursive: true });
+    writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'broken-board', name: 'Broken Board' }));
+
+    setPersistedBuildError('broken-board', 'esbuild failed', stateRoot);
+
+    expect(readExtensionRegistryConfig(stateRoot).buildErrors).toEqual({ 'broken-board': 'esbuild failed' });
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'broken-board')).toMatchObject({
+      buildError: 'esbuild failed',
+    });
+
+    invalidateExtensionRegistryReadCaches(stateRoot);
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'broken-board')).toMatchObject({
+      buildError: 'esbuild failed',
+    });
+
+    clearPersistedBuildError('broken-board', stateRoot);
+
+    expect(readExtensionRegistryConfig(stateRoot).buildErrors).toEqual({});
+    expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'broken-board')?.buildError).toBeUndefined();
   });
 
   it('records locked extension failures without quarantining core platform surfaces', () => {

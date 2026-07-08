@@ -10,11 +10,13 @@ import { invalidateAppTopics } from '../shared/appEvents.js';
 import type { ExtensionAppearanceAccent, ExtensionAppearanceContribution, ExtensionManifest } from './extensionManifest.js';
 import { validateExtensionId } from './extensionManifestCoreValidation.js';
 import {
+  clearPersistedBuildError,
   findExtensionEntry,
   getRuntimeExtensionsRoot,
   invalidateExtensionRegistryReadCaches,
   listExtensionInstallSummaries,
   parseExtensionManifest,
+  setPersistedBuildError,
 } from './extensionRegistry.js';
 
 export interface ReadRuntimeExtensionSourceResult {
@@ -773,7 +775,13 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
   invalidateExtensionRegistryState(stateRoot, layout);
   const summary = listExtensionInstallSummaries(stateRoot, layout).find((extension) => extension.id === id);
 
-  runRuntimeExtensionBuild(extensionRoot);
+  try {
+    runRuntimeExtensionBuild(extensionRoot);
+    clearPersistedBuildError(id, stateRoot, layout);
+  } catch (err) {
+    setPersistedBuildError(id, err instanceof Error ? err.message : String(err), stateRoot, layout);
+    throw err;
+  }
 
   return { ok: true as const, extension: summary, packageRoot: extensionRoot, built: true as const };
 }
@@ -935,7 +943,13 @@ export async function buildRuntimeExtension(extensionId: string, stateRoot?: str
     throw new Error('Only native extension manifest schemaVersion 2 can be built.');
   }
 
-  runRuntimeExtensionBuild(entry.packageRoot);
+  try {
+    runRuntimeExtensionBuild(entry.packageRoot);
+    clearPersistedBuildError(extensionId, stateRoot, layout);
+  } catch (err) {
+    setPersistedBuildError(extensionId, err instanceof Error ? err.message : String(err), stateRoot, layout);
+    throw err;
+  }
 
   return { ok: true as const, extensionId, built: true };
 }

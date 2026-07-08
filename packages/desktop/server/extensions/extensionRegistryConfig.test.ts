@@ -29,6 +29,11 @@ describe('extensionRegistryConfig', () => {
           fallbackFailures: { reason: 'warn', at: '2026-05-23T00:00:00.000Z', failures: 'bad' },
           ignored: { reason: 'missing at' },
         },
+        buildErrors: {
+          broken: 'esbuild failed',
+          ignored: '',
+          ignoredNonString: 12,
+        },
       }),
     ).toEqual({
       disabledIds: ['a', 'b'],
@@ -54,6 +59,9 @@ describe('extensionRegistryConfig', () => {
       },
       removedDefaultInstalledIds: [],
       revokedPermissions: {},
+      buildErrors: {
+        broken: 'esbuild failed',
+      },
     });
   });
 
@@ -72,6 +80,7 @@ describe('extensionRegistryConfig', () => {
       quarantined: {},
       removedDefaultInstalledIds: [],
       revokedPermissions: {},
+      buildErrors: {},
     });
   });
 

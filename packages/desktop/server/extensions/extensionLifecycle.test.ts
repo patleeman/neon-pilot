@@ -13,13 +13,16 @@ const parseExtensionManifest = vi.fn((manifest) => manifest);
 const readInvalidRuntimeExtensionEntries = vi.fn(() => []);
 const removeExtensionFromRegistry = vi.fn();
 const clearExtensionFailureRecords = vi.fn();
+const clearPersistedBuildError = vi.fn();
 const stopExtensionServices = vi.fn();
 const unregisterBashProcessWrapper = vi.fn();
 const uninstallExtensionSubscriptions = vi.fn();
 const invalidateAppTopics = vi.fn();
+const setPersistedBuildError = vi.fn();
 
 vi.mock('./extensionRegistry.js', () => ({
   clearExtensionFailureRecords,
+  clearPersistedBuildError,
   findExtensionEntry,
   getRuntimeExtensionsRoot,
   invalidateExtensionRegistryReadCaches,
@@ -27,6 +30,7 @@ vi.mock('./extensionRegistry.js', () => ({
   parseExtensionManifest,
   readInvalidRuntimeExtensionEntries,
   removeExtensionFromRegistry,
+  setPersistedBuildError,
 }));
 vi.mock('./extensionServices.js', () => ({
   stopExtensionServices,
@@ -84,10 +88,12 @@ describe('extensionLifecycle', () => {
     readInvalidRuntimeExtensionEntries.mockReset().mockReturnValue([]);
     removeExtensionFromRegistry.mockReset();
     clearExtensionFailureRecords.mockReset();
+    clearPersistedBuildError.mockReset();
     stopExtensionServices.mockReset().mockResolvedValue(undefined);
     unregisterBashProcessWrapper.mockReset();
     uninstallExtensionSubscriptions.mockReset();
     invalidateAppTopics.mockReset();
+    setPersistedBuildError.mockReset();
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
     execFileSync.mockImplementation((command, args) => {
@@ -472,6 +478,8 @@ describe('extensionLifecycle', () => {
     expect(existsSync(join(runtimeRoot, 'create-build-fail', 'src', 'frontend.tsx'))).toBe(true);
     expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot, undefined);
     expect(invalidateAppTopics).toHaveBeenCalledWith('extensions');
+    expect(setPersistedBuildError).toHaveBeenCalledWith('create-build-fail', 'esbuild create build failed', stateRoot, undefined);
+    expect(clearPersistedBuildError).not.toHaveBeenCalledWith('create-build-fail', stateRoot, undefined);
   });
 
   it('updates runtime extension name, description, appearance, and source files in place', async () => {
@@ -763,6 +771,7 @@ describe('extensionLifecycle', () => {
       );
 
       expect(reloadExtensionBackend).not.toHaveBeenCalled();
+      expect(setPersistedBuildError).toHaveBeenCalledWith('build-fails', 'esbuild build failed', stateRoot, undefined);
     });
   });
 
@@ -831,6 +840,7 @@ describe('extensionLifecycle', () => {
     );
     expect(reloadExtensionBackend).toHaveBeenCalledWith(extId);
     expect(invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith(stateRoot, undefined);
+    expect(clearPersistedBuildError).toHaveBeenCalledWith(extId, stateRoot, undefined);
 
     const repaired = readRuntimeExtensionSource(extId, stateRoot);
     expect(repaired.source.backend).toBe(fixedBackend);

@@ -167,6 +167,25 @@ export function clearBuildError(extensionId: string): void {
   buildErrors.delete(extensionId);
 }
 
+export function setPersistedBuildError(
+  extensionId: string,
+  error: string,
+  stateRoot: string = getStateRoot(),
+  layout?: DesktopRootLayout,
+): void {
+  setBuildError(extensionId, error);
+  const config = readExtensionRegistryConfig(stateRoot, layout);
+  writeExtensionRegistryConfig({ ...config, buildErrors: { ...(config.buildErrors ?? {}), [extensionId]: error } }, stateRoot, layout);
+}
+
+export function clearPersistedBuildError(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  clearBuildError(extensionId);
+  const config = readExtensionRegistryConfig(stateRoot, layout);
+  const buildErrors = { ...(config.buildErrors ?? {}) };
+  delete buildErrors[extensionId];
+  writeExtensionRegistryConfig({ ...config, buildErrors }, stateRoot, layout);
+}
+
 export function setExtensionHealthError(extensionId: string, error: string): void {
   healthErrors.set(extensionId, error);
 }
@@ -825,12 +844,18 @@ export function removeExtensionFromRegistry(extensionId: string, stateRoot: stri
   const config = readExtensionRegistryConfig(stateRoot, layout);
   const disabledIds = (config.disabledIds ?? []).filter((id) => id !== extensionId);
   const enabledIds = (config.enabledIds ?? []).filter((id) => id !== extensionId);
+  const buildErrors = { ...(config.buildErrors ?? {}) };
+  delete buildErrors[extensionId];
   const removedDefaultInstalledIds = DEFAULT_INSTALLED_EXTENSION_IDS.includes(extensionId)
     ? [...new Set([...(config.removedDefaultInstalledIds ?? []), extensionId])]
     : (config.removedDefaultInstalledIds ?? []);
   const quarantined = { ...(config.quarantined ?? {}) };
   delete quarantined[extensionId];
-  writeExtensionRegistryConfig({ ...config, disabledIds, enabledIds, removedDefaultInstalledIds, quarantined }, stateRoot, layout);
+  writeExtensionRegistryConfig(
+    { ...config, disabledIds, enabledIds, removedDefaultInstalledIds, quarantined, buildErrors },
+    stateRoot,
+    layout,
+  );
 }
 
 export function recordExtensionFailure(input: {
@@ -1460,7 +1485,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const views = manifest.contributes?.views ?? [];
     const enabled = isExtensionEntryEnabled(entry, config);
     const diagnostics = listExtensionContributionDiagnostics(entry, availableExtensionIds);
-    const buildError = buildErrors.get(manifest.id);
+    const buildError = buildErrors.get(manifest.id) ?? config.buildErrors?.[manifest.id];
     const healthError = healthErrors.get(manifest.id);
     const effectivePackageType = isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot, layout)
       ? 'user'
