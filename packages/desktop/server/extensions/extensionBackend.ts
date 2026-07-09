@@ -823,8 +823,13 @@ function createPrebuiltBackendRequiredError(extensionId: string, entry: { packag
   });
 }
 
-function resolveInstalledExtensionBackendLoadTarget(extensionId: string): ExtensionBackendLoadTarget {
-  const entry = findExtensionEntry(extensionId);
+function resolveInstalledExtensionBackendLoadTarget(
+  extensionId: string,
+  serverContext?: ExtensionBackendServerContext,
+): ExtensionBackendLoadTarget {
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const layout = serverContext?.getDesktopRootLayout?.();
+  const entry = findExtensionEntry(extensionId, stateRoot, layout);
   if (!entry) {
     throw new ExtensionLoadError({
       extensionId,
@@ -1046,7 +1051,7 @@ async function runExtensionBackendActionInWorker(
   signal?: AbortSignal,
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
-  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
+  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId, serverContext);
   if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
     throw new ExtensionLoadError({
       extensionId,
@@ -1082,7 +1087,7 @@ export async function runExtensionBackendExportInWorker(
   toolContext?: ExtensionBackendContext['toolContext'],
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
-  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
+  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId, serverContext);
   if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
     throw new ExtensionLoadError({
       extensionId,
@@ -1118,7 +1123,7 @@ async function runExtensionBackendRouteInWorker(
   serverContext?: ExtensionBackendServerContext,
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
-  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
+  const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId, serverContext);
   if (!(await runner.hasExport(extensionId, loadTarget, exportName))) {
     throw new ExtensionLoadError({
       extensionId,

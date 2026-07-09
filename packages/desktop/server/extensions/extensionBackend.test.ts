@@ -973,6 +973,75 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('resolves worker action backend targets from the desktop root layout', async () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-state-'));
+    const dbRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-layout-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const layout: DesktopRootLayout = resolveDesktopRootLayout(dbRoot);
+    const extensionRoot = join(layout.apps, 'extensions', 'layout-action-ext');
+    mkdirSync(join(extensionRoot, 'dist'), { recursive: true });
+    writeFileSync(
+      join(extensionRoot, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'layout-action-ext',
+        name: 'Layout Action Ext',
+        backend: {
+          entry: 'dist/backend.mjs',
+          actions: [{ id: 'ping', handler: 'ping', worker: { enabled: true } }],
+        },
+      }),
+    );
+    writeFileSync(join(extensionRoot, 'dist', 'backend.mjs'), 'export function ping() { return { ok: true }; }\n');
+    invalidateExtensionRegistryReadCaches(stateRoot, layout);
+
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ ok: true })),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+
+    try {
+      await expect(
+        invokeExtensionAction(
+          'layout-action-ext',
+          'ping',
+          {},
+          {
+            getRuntimeScope: () => 'shared',
+            getRepoRoot: () => '/repo',
+            getStateRoot: () => stateRoot,
+            getDesktopRootLayout: () => layout,
+          },
+        ),
+      ).resolves.toEqual({ ok: true, result: { ok: true } });
+
+      expect(workerRunner.hasExport).toHaveBeenCalledWith(
+        'layout-action-ext',
+        expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+        'ping',
+      );
+      expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+        'layout-action-ext',
+        expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
+        'ping',
+        expect.any(Object),
+        [{}],
+        expect.objectContaining({
+          context: expect.objectContaining({ desktopRootLayout: layout, stateRoot }),
+        }),
+      );
+    } finally {
+      rmSync(dbRoot, { recursive: true, force: true });
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
+  });
+
   it('derives worker tool context from agent tool context when direct tool context is absent', async () => {
     const workerRunner = {
       loadModule: vi.fn(async () => ({})),
