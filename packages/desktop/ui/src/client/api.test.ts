@@ -71,7 +71,19 @@ describe('api.extensions', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const { api } = await import('./api.js');
-    await expect(api.createExtension({ id: 'agent-board', name: 'Agent Board' })).resolves.toEqual({
+    await expect(
+      api.createExtension({
+        id: 'agent-board',
+        name: 'Agent Board',
+        template: 'windowed-app',
+        appearance: {
+          accent: 'apps',
+          aliases: ['tasks', 'board'],
+          singleton: false,
+          window: { defaultWidth: 960, defaultHeight: 720 },
+        },
+      }),
+    ).resolves.toEqual({
       ok: true,
       packageRoot: '/tmp/extensions/agent-board',
     });
@@ -79,7 +91,17 @@ describe('api.extensions', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/extensions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: 'agent-board', name: 'Agent Board' }),
+      body: JSON.stringify({
+        id: 'agent-board',
+        name: 'Agent Board',
+        template: 'windowed-app',
+        appearance: {
+          accent: 'apps',
+          aliases: ['tasks', 'board'],
+          singleton: false,
+          window: { defaultWidth: 960, defaultHeight: 720 },
+        },
+      }),
     });
   });
 

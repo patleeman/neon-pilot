@@ -894,6 +894,57 @@ describe('registerExtensionRoutes', () => {
     );
   });
 
+  it('forwards windowed app template and appearance metadata when creating runtime extensions', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
+    process.env.NEON_PILOT_STATE_ROOT = stateRoot;
+    const harness = createHarness();
+
+    const res = createResponse();
+    harness.postHandler('/api/extensions')(
+      {
+        body: {
+          id: 'agent-board',
+          name: 'Agent Board',
+          template: 'windowed-app',
+          appearance: {
+            accent: 'apps',
+            aliases: ['tasks', 'board'],
+            singleton: false,
+            window: { defaultWidth: 960, defaultHeight: 720 },
+          },
+        },
+      },
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        built: true,
+        ok: true,
+        extension: expect.objectContaining({
+          id: 'agent-board',
+          routes: [{ route: '/ext/agent-board', surfaceId: 'page' }],
+          manifest: expect.objectContaining({
+            contributes: expect.objectContaining({
+              appearance: {
+                accent: 'apps',
+                aliases: ['tasks', 'board'],
+                singleton: false,
+                window: { defaultWidth: 960, defaultHeight: 720 },
+              },
+              widgets: [{ id: 'overview', title: 'Agent Board', component: 'ExtensionWidget', order: 100 }],
+            }),
+          }),
+        }),
+      }),
+    );
+
+    const frontend = readFileSync(join(stateRoot, 'extensions', 'agent-board', 'src', 'frontend.tsx'), 'utf-8');
+    expect(frontend).toContain('<WindowedPageShell layout="standard">');
+    expect(frontend).toContain('export function ExtensionWidget()');
+  });
+
   it('creates runtime extensions under the desktop root layout when provided', () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-legacy-'));
     const layout = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-route-layout-')) });

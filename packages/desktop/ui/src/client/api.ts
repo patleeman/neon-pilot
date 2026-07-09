@@ -366,7 +366,16 @@ export const api = {
     id: string;
     name: string;
     description?: string;
-    template?: 'main-page' | 'route-sidebar' | 'route-right-sidebar' | 'route-shell' | 'right-rail' | 'workbench-detail';
+    template?: 'main-page' | 'windowed-app' | 'route-sidebar' | 'route-right-sidebar' | 'route-shell' | 'right-rail' | 'workbench-detail';
+    appearance?: {
+      accent?: string;
+      aliases?: string[];
+      singleton?: boolean;
+      window?: {
+        defaultWidth?: number;
+        defaultHeight?: number;
+      };
+    };
   }) => extensionPost<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions', input),
   importExtension: async (input: { zipPath: string }) =>
     extensionPost<{ ok: true; extension?: ExtensionInstallSummary; packageRoot: string }>('/extensions/import', input),

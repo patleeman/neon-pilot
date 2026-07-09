@@ -21,6 +21,7 @@ import { createExtensionConversationsCapability } from '../extensions/extensionC
 import { validateExtensionPackage } from '../extensions/extensionDoctor.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { createExtensionHostServerContextSnapshot } from '../extensions/extensionHostServerContext.js';
+import type { CreateRuntimeExtensionInput } from '../extensions/extensionLifecycle.js';
 import {
   buildRuntimeExtension,
   createRuntimeExtension,
@@ -863,7 +864,7 @@ export function registerExtensionRoutes(
   router.post('/api/extensions', (req, res) => {
     try {
       const { stateRoot, layout } = getExtensionLifecycleScope(context);
-      const result = createRuntimeExtension(req.body as { id?: unknown; name?: unknown; description?: unknown }, stateRoot, layout);
+      const result = createRuntimeExtension(req.body as CreateRuntimeExtensionInput, stateRoot, layout);
       if (result?.extension?.id) {
         writeExtensionActivityEntrySafe(
           result.extension.id,
