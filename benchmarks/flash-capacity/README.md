@@ -41,3 +41,8 @@ Use `pnpm run eval:flash-capacity:omp` for the equivalent system OMP run. You ca
 Pi and OMP comparisons use identical task prompts, historical worktrees, setup, time budgets, nudge policy, and hidden grading. Native tool behavior is deliberately not normalized away: the purpose of the comparison is to measure each interface as an implementation delegate, while attributing all model usage and cost reported by that interface to its result.
 
 The result is not a single pass rate. The useful outputs are the reliable ceiling, frontier, break level, accepted implementation volume, Codex rework, nudges, elapsed time, and worker cost. See `rubric.md` for exact definitions.
+
+Recorded reports:
+
+- `REPORT-2026-07-10.md`: direct Pi baseline
+- `REPORT-PI-VS-OMP-2026-07-10.md`: audited system OMP comparison
