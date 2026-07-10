@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Neon Pilot Flash Capacity Task",
+  "type": "object",
+  "required": [
+    "id",
+    "level",
+    "level_name",
+    "title",
+    "time_budget_minutes",
+    "repo",
+    "base_commit",
+    "reference_commit",
+    "prompt",
+    "acceptance_criteria",
+    "agent_validation_expectations",
+    "scoring",
+    "grader",
+    "review"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^flash-l[1-5]-[ab]-[a-z0-9-]+$" },
+    "level": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "level_name": { "enum": ["micro_change", "subsystem_task", "vertical_slice", "roadmap_item", "phase_chunk"] },
+    "title": { "type": "string", "minLength": 1 },
+    "category": { "type": "string" },
+    "time_budget_minutes": { "type": "integer", "minimum": 1 },
+    "repo": { "const": "neon-pilot" },
+    "base_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "reference_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "prompt": { "type": "string", "minLength": 80 },
+    "acceptance_criteria": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+    "agent_validation_expectations": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "scoring": {
+      "type": "object",
+      "required": ["max_nudges", "pass_score", "hard_gates", "weights"],
+      "properties": {
+        "max_nudges": { "const": 1 },
+        "pass_score": { "const": 80 },
+        "hard_gates": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "weights": {
+          "type": "object",
+          "required": ["correctness", "codex_offload", "autonomy", "validation_ownership", "scope_discipline"],
+          "properties": {
+            "correctness": { "const": 40 },
+            "codex_offload": { "const": 25 },
+            "autonomy": { "const": 15 },
+            "validation_ownership": { "const": 10 },
+            "scope_discipline": { "const": 10 }
+          }
+        }
+      }
+    },
+    "grader": {
+      "type": "object",
+      "required": ["reference_diff", "expected_paths", "hidden_validation"],
+      "properties": {
+        "reference_diff": {
+          "type": "object",
+          "required": ["files", "insertions", "deletions"],
+          "properties": {
+            "files": { "type": "integer", "minimum": 1 },
+            "insertions": { "type": "integer", "minimum": 0 },
+            "deletions": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "expected_paths": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "hidden_validation": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": ["commit_exists", "parent_matches", "feasibility", "notes"],
+      "properties": {
+        "commit_exists": { "const": true },
+        "parent_matches": { "const": true },
+        "feasibility": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

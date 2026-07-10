@@ -1,0 +1,38 @@
+{
+  "name": "flash-capacity",
+  "version": 1,
+  "created_at": "2026-07-10",
+  "project": "neon-pilot",
+  "purpose": "Measure the largest coherent implementation scope Flash can complete while retaining positive Codex offload economics.",
+  "task_file": "tasks.jsonl",
+  "schema_file": "schema.json",
+  "rubric_file": "rubric.md",
+  "default_worker": {
+    "interface": "direct_pi",
+    "provider": "opencode-go",
+    "model": "deepseek-v4-flash",
+    "max_nudges": 1,
+    "allow_all_implementation_tools": true,
+    "allow_commit": false,
+    "allow_push": false
+  },
+  "visibility": {
+    "worker": ["prompt", "acceptance_criteria", "agent_validation_expectations", "time_budget_minutes"],
+    "grader_only": ["reference_commit", "grader"]
+  },
+  "levels": [
+    { "level": 1, "name": "micro_change", "tasks": 2, "time_budget_minutes": 15 },
+    { "level": 2, "name": "subsystem_task", "tasks": 2, "time_budget_minutes": 30 },
+    { "level": 3, "name": "vertical_slice", "tasks": 2, "time_budget_minutes": 45 },
+    { "level": 4, "name": "roadmap_item", "tasks": 2, "time_budget_minutes": 75 },
+    { "level": 5, "name": "phase_chunk", "tasks": 2, "time_budget_minutes": 120 }
+  ],
+  "progression": {
+    "run_order": "ascending_level_then_task_id",
+    "run_all_tasks": true,
+    "stop_on_safety_violation": true,
+    "reliable_level": "2_of_2_pass",
+    "frontier_level": "1_of_2_pass",
+    "break_level": "0_of_2_pass_or_safety_violation"
+  }
+}
