@@ -164,7 +164,6 @@ export function NativeExtensionSurfaceHost({
 
   const pa = useMemo(() => createNativeExtensionClient(surface.extensionId), [surface.extensionId]);
   const moduleKey = extensionModuleKey(surface);
-  const shellPresentation = 'windowed';
   const Component = useMemo(() => {
     if (isHostViewComponentReference(surface.component)) return lazyHostViewSurfaceComponent(surface, getExtensionRegistryRevision());
     return lazyExtensionComponent(surface, getExtensionRegistryRevision());
@@ -173,7 +172,6 @@ export function NativeExtensionSurfaceHost({
     () => ({
       extensionId: surface.extensionId,
       surfaceId: surface.id,
-      shellPresentation,
       route: surface.route,
       pathname,
       search,
@@ -182,7 +180,7 @@ export function NativeExtensionSurfaceHost({
       cwd,
       instanceId,
     }),
-    [conversationId, cwd, hash, instanceId, pathname, search, shellPresentation, surface.extensionId, surface.id, surface.route],
+    [conversationId, cwd, hash, instanceId, pathname, search, surface.extensionId, surface.id, surface.route],
   );
 
   const isWindowedMainSurface = surface.location === 'main';
@@ -198,7 +196,6 @@ export function NativeExtensionSurfaceHost({
       data-extension-id={surface.extensionId}
       data-extension-surface-id={surface.id}
       data-route-search={search}
-      data-shell-presentation={shellPresentation}
     >
       <Suspense fallback={<ExtensionSurfaceLoading />}>
         <ExtensionErrorBoundary extensionId={surface.extensionId}>

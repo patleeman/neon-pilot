@@ -47,18 +47,11 @@ vi.mock('./systemExtensionModules', () => ({
     [
       'system-automations',
       async () => ({
-        AutomationsPage: ({
-          pa,
-          context,
-        }: {
-          pa: { automations: { list: () => Promise<unknown> } };
-          context: { shellPresentation?: 'windowed' };
-        }) => {
+        AutomationsPage: ({ pa }: { pa: { automations: { list: () => Promise<unknown> } } }) => {
           React.useEffect(() => {
             void pa.automations.list();
           }, [pa]);
-          const shellLabel = context.shellPresentation === 'windowed' ? 'desktop' : (context.shellPresentation ?? 'unset');
-          return <div>Automations loaded in {shellLabel} shell</div>;
+          return <div>Automations loaded</div>;
         },
       }),
     ],
@@ -151,11 +144,10 @@ describe('NativeExtensionSurfaceHost', () => {
 
     await vi.waitFor(() => expect(container.textContent).toContain('Automations'));
     expect(container.textContent).toContain('Automations loaded');
-    expect(container.textContent).toContain('desktop shell');
     expect(apiMocks.automations.list).toHaveBeenCalled();
   });
 
-  it('passes desktop shell presentation to native extension surfaces', async () => {
+  it('omits shell presentation from native extension surfaces', async () => {
     const surface: NativeExtensionViewSummary = {
       extensionId: 'system-automations',
       id: 'page',
@@ -174,9 +166,9 @@ describe('NativeExtensionSurfaceHost', () => {
       root.render(<NativeExtensionSurfaceHost surface={surface} pathname="/automations" search="" hash="" />);
     });
 
-    await vi.waitFor(() => expect(container.textContent).toContain('desktop shell'));
+    await vi.waitFor(() => expect(container.textContent).toContain('Automations loaded'));
     const host = container.querySelector('[data-extension-surface-id="page"]');
-    expect(host?.getAttribute('data-shell-presentation')).toBe('windowed');
+    expect(host?.hasAttribute('data-shell-presentation')).toBe(false);
     expect(host?.className).toContain('wos-native-extension-surface');
     expect(host?.className).toContain('wos-native-extension-surface--windowed');
     expect(host?.className).toContain('bg-transparent');

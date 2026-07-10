@@ -30,13 +30,7 @@ vi.mock('../hooks/useInvalidateOnTopics', () => ({
 }));
 
 vi.mock('./NativeExtensionSurfaceHost', () => ({
-  NativeExtensionSurfaceHost: ({
-    surface,
-    shellPresentation,
-  }: {
-    surface: { extensionId: string; id: string };
-    shellPresentation?: 'windowed';
-  }) => {
+  NativeExtensionSurfaceHost: ({ surface }: { surface: { extensionId: string; id: string } }) => {
     const [mountedSurfaceId] = useState(surface.id);
     return (
       <div
@@ -44,7 +38,6 @@ vi.mock('./NativeExtensionSurfaceHost', () => ({
         data-extension-id={surface.extensionId}
         data-surface-id={surface.id}
         data-mounted-surface-id={mountedSurfaceId}
-        data-shell-presentation={shellPresentation ?? 'windowed'}
       />
     );
   },
@@ -140,7 +133,7 @@ describe('ExtensionPage', () => {
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
   });
 
-  it('passes desktop shell presentation through to native extension pages', () => {
+  it('omits shell presentation from native extension pages', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: false,
       error: null,
@@ -166,7 +159,7 @@ describe('ExtensionPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('surface-host').getAttribute('data-shell-presentation')).toBe('windowed');
+    expect(screen.getByTestId('surface-host').hasAttribute('data-shell-presentation')).toBe(false);
   });
 
   it('shows visible registry loading chrome by default', () => {
