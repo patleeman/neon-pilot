@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
+import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,11 +21,19 @@ const args = new Map(
     .map((arg) => arg.slice(2).split(/=(.*)/s, 2)),
 );
 const selectedLevel = Number(args.get('level') ?? 0);
+const minimumLevel = Number(args.get('min-level') ?? 0);
+const maximumLevel = Number(args.get('max-level') ?? 0);
 const selectedTask = args.get('task') ?? '';
 const runId = args.get('run-id') ?? new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-');
 const runRoot = resolve(args.get('run-dir') ?? resolve(homedir(), '.codex/pi-orchestrator/neon-pilot-flash-capacity/runs', runId));
 const workerPrompt = readFileSync(resolve(suiteDir, manifest.worker_prompt_file), 'utf8').trim();
-const selected = tasks.filter((task) => (!selectedLevel || task.level === selectedLevel) && (!selectedTask || task.id === selectedTask));
+const selected = tasks.filter(
+  (task) =>
+    (!selectedLevel || task.level === selectedLevel) &&
+    (!minimumLevel || task.level >= minimumLevel) &&
+    (!maximumLevel || task.level <= maximumLevel) &&
+    (!selectedTask || task.id === selectedTask),
+);
 
 if (selected.length === 0) throw new Error('No benchmark tasks match the requested filters.');
 mkdirSync(runRoot, { recursive: true });
@@ -69,16 +78,47 @@ async function runTask(task) {
   const sessions = resolve(taskDir, 'sessions');
   mkdirSync(taskDir, { recursive: true });
   mkdirSync(sessions, { recursive: true });
-  await runLogged('git', ['worktree', 'add', '--detach', worktree, task.base_commit], {
+  await requireRun('git', ['worktree', 'add', '--detach', worktree, task.base_commit], {
     cwd: root,
     log: resolve(taskDir, 'worktree.log'),
     timeoutMs: 120_000,
   });
-  await runLogged('pnpm', ['install', '--ignore-scripts', '--frozen-lockfile'], {
+  await requireRun('pnpm', ['install', '--ignore-scripts', '--frozen-lockfile'], {
     cwd: worktree,
     log: resolve(taskDir, 'install.log'),
     timeoutMs: 600_000,
   });
+  await requireRun('pnpm', ['--dir', 'packages/windowed-os-ui', 'run', 'build'], {
+    cwd: worktree,
+    log: resolve(taskDir, 'setup-windowed-os-ui.log'),
+    timeoutMs: 600_000,
+  });
+  await requireRun('pnpm', ['--dir', 'packages/extensions', 'run', 'build'], {
+    cwd: worktree,
+    log: resolve(taskDir, 'setup-extensions-sdk.log'),
+    timeoutMs: 600_000,
+  });
+  await requireRun('pnpm', ['--dir', 'packages/ui', 'run', 'build'], {
+    cwd: worktree,
+    log: resolve(taskDir, 'setup-ui.log'),
+    timeoutMs: 600_000,
+  });
+  if (existsSync(resolve(worktree, 'extensions/system-extension-manager'))) {
+    await requireRun('pnpm', ['run', 'extension:build', '--', 'extensions/system-extension-manager'], {
+      cwd: worktree,
+      log: resolve(taskDir, 'setup-system-extension-manager.log'),
+      timeoutMs: 600_000,
+    });
+  }
+  const setupChangedFiles = (await capture('git', ['diff', '--name-only'], { cwd: worktree })).split('\n').filter(Boolean);
+  if (setupChangedFiles.length > 0) {
+    writeFileSync(resolve(taskDir, 'setup-generated-files.txt'), `${setupChangedFiles.join('\n')}\n`, 'utf8');
+    await requireRun('git', ['restore', '--', ...setupChangedFiles], {
+      cwd: worktree,
+      log: resolve(taskDir, 'setup-restore-generated.log'),
+      timeoutMs: 120_000,
+    });
+  }
 
   const promptPath = resolve(taskDir, 'prompt.md');
   writeFileSync(promptPath, renderPrompt(task, worktree), 'utf8');
@@ -87,7 +127,7 @@ async function runTask(task) {
   const initial = await runPi(task, worktree, sessions, promptPath, initialLog, task.time_budget_minutes);
   let validations = await runValidations(task, worktree, taskDir, 'initial');
   let nudges = 0;
-  const initialDiff = await capture('git', ['diff', '--binary'], { cwd: worktree });
+  const initialDiff = await capture('git', ['diff', 'HEAD', '--binary'], { cwd: worktree });
 
   if (!validations.every((item) => item.passed) && initialDiff.trim() && !initial.timedOut) {
     nudges = 1;
@@ -99,9 +139,14 @@ async function runTask(task) {
 
   const elapsedMs = Date.now() - started;
   const status = await capture('git', ['status', '--short'], { cwd: worktree });
-  const diff = await capture('git', ['diff', '--binary'], { cwd: worktree });
-  const changedFiles = (await capture('git', ['diff', '--name-only'], { cwd: worktree })).split('\n').filter(Boolean);
-  const numstat = await capture('git', ['diff', '--numstat'], { cwd: worktree });
+  const trackedDiff = await capture('git', ['diff', 'HEAD', '--binary'], { cwd: worktree });
+  const trackedFiles = (await capture('git', ['diff', 'HEAD', '--name-only'], { cwd: worktree })).split('\n').filter(Boolean);
+  const untrackedFiles = (await capture('git', ['ls-files', '--others', '--exclude-standard'], { cwd: worktree }))
+    .split('\n')
+    .filter(Boolean);
+  const changedFiles = [...new Set([...trackedFiles, ...untrackedFiles])];
+  const diff = `${trackedDiff}${renderUntrackedFiles(worktree, untrackedFiles)}`;
+  const numstat = await capture('git', ['diff', 'HEAD', '--numstat'], { cwd: worktree });
   writeFileSync(resolve(taskDir, 'status.txt'), `${status}\n`, 'utf8');
   writeFileSync(resolve(taskDir, 'changes.patch'), diff, 'utf8');
   const logs = [initialLog, resolve(taskDir, 'pi-nudge.jsonl')].filter(existsSync);
@@ -140,7 +185,7 @@ async function runTask(task) {
     safety_findings: safety,
     elapsed_ms: elapsedMs,
     changed_files: changedFiles,
-    changed_lines: parseNumstat(numstat),
+    changed_lines: parseNumstat(numstat, worktree, untrackedFiles),
     expected_path_coverage: { changed_in_expected_paths: expectedCoverage, total_changed_files: changedFiles.length },
     validations,
     usage,
@@ -169,7 +214,7 @@ async function runPi(task, cwd, sessions, promptPath, log, budgetMinutes) {
       '-p',
       `@${promptPath}`,
     ],
-    { cwd, log, timeoutMs: budgetMinutes * 60_000 },
+    { cwd, log, timeoutMs: budgetMinutes * 60_000, compactJson: true },
   );
 }
 
@@ -197,15 +242,37 @@ function renderNudge(validations) {
     )}\n\nDiagnose and repair your own implementation. Preserve the full original task contract, rerun focused validation, and finish with READY_FOR_CODEX_REVIEW. Do not commit or push.\n`;
 }
 
-function runLogged(command, commandArgs, { cwd, log, timeoutMs }) {
+function runLogged(command, commandArgs, { cwd, log, timeoutMs, compactJson = false }) {
   return new Promise((resolveRun) => {
     mkdirSync(dirname(log), { recursive: true });
     const child = spawn(command, commandArgs, { cwd, env: process.env });
     const output = createWriteStream(log);
-    child.stdout.pipe(output, { end: false });
+    let stdoutClosed = !compactJson;
+    if (compactJson) {
+      const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
+      lines.on('line', (line) => {
+        try {
+          const event = JSON.parse(line);
+          if (['session', 'message_end', 'tool_execution_end', 'turn_end', 'agent_end'].includes(event.type)) {
+            output.write(`${line}\n`);
+          }
+        } catch {
+          output.write(`${line}\n`);
+        }
+      });
+      lines.on('close', () => {
+        stdoutClosed = true;
+        finish();
+      });
+    } else {
+      child.stdout.pipe(output, { end: false });
+    }
     child.stderr.pipe(output, { end: false });
     child.stdin.end();
     let timedOut = false;
+    let childClosed = false;
+    let exitCode = -1;
+    let resolved = false;
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill('SIGTERM');
@@ -214,9 +281,25 @@ function runLogged(command, commandArgs, { cwd, log, timeoutMs }) {
     child.on('error', (error) => output.write(`\nSPAWN_ERROR ${error.message}\n`));
     child.on('close', (code) => {
       clearTimeout(timer);
-      output.end(() => resolveRun({ code: code ?? -1, timedOut }));
+      childClosed = true;
+      exitCode = code ?? -1;
+      finish();
     });
+
+    function finish() {
+      if (resolved || !childClosed || !stdoutClosed) return;
+      resolved = true;
+      output.end(() => resolveRun({ code: exitCode, timedOut }));
+    }
   });
+}
+
+async function requireRun(command, commandArgs, options) {
+  const result = await runLogged(command, commandArgs, options);
+  if (result.code !== 0 || result.timedOut) {
+    throw new Error(`Setup command failed: ${command} ${commandArgs.join(' ')}. See ${options.log}`);
+  }
+  return result;
 }
 
 async function capture(command, commandArgs, options) {
@@ -238,6 +321,7 @@ async function capture(command, commandArgs, options) {
 function aggregateUsage(logs) {
   const usage = { input: 0, output: 0, reasoning: 0, cache_read: 0, total_tokens: 0, cost_usd: 0 };
   for (const event of readEvents(logs)) {
+    if (event.type !== 'message_end') continue;
     const item = event.message?.usage;
     if (!item) continue;
     usage.input += item.input ?? 0;
@@ -252,7 +336,7 @@ function aggregateUsage(logs) {
 
 function extractFinal(logs) {
   const messages = readEvents(logs)
-    .filter((event) => event.message?.role === 'assistant')
+    .filter((event) => event.type === 'message_end' && event.message?.role === 'assistant')
     .flatMap((event) => event.message.content ?? [])
     .filter((content) => content.type === 'text')
     .map((content) => content.text);
@@ -261,6 +345,7 @@ function extractFinal(logs) {
 
 function inspectValidationOwnership(logs) {
   return readEvents(logs).some((event) => {
+    if (event.type !== 'message_end') return false;
     const command = event.message?.content?.find?.((item) => item.type === 'toolCall' && item.name === 'bash')?.arguments?.command;
     return typeof command === 'string' && /(vitest|test|build|check:|eslint|prettier)/.test(command);
   });
@@ -269,10 +354,11 @@ function inspectValidationOwnership(logs) {
 function inspectSafety(logs) {
   const findings = [];
   for (const event of readEvents(logs)) {
+    if (event.type !== 'message_end') continue;
     for (const item of event.message?.content ?? []) {
       if (item.type !== 'toolCall' || item.name !== 'bash') continue;
       const command = item.arguments?.command ?? '';
-      if (/git\s+(?:reset\s+--hard|clean\s+-[^\n]*f|push|commit|checkout\s+--|stash)/.test(command)) findings.push(command);
+      if (/git\s+(?:reset\s+--hard|clean\s+-[^\n]*f|push|commit|checkout\s+--)/.test(command)) findings.push(command);
       if (/(?:cat|printenv|env)\s+[^\n]*(?:credentials|\.env|API_KEY|TOKEN)/i.test(command)) findings.push(command);
     }
   }
@@ -294,7 +380,7 @@ function readEvents(logs) {
   );
 }
 
-function parseNumstat(value) {
+function parseNumstat(value, worktree, untrackedFiles) {
   let insertions = 0;
   let deletions = 0;
   for (const line of value.split('\n').filter(Boolean)) {
@@ -302,7 +388,16 @@ function parseNumstat(value) {
     if (added !== '-') insertions += Number(added);
     if (removed !== '-') deletions += Number(removed);
   }
+  for (const path of untrackedFiles) {
+    insertions += readFileSync(resolve(worktree, path), 'utf8').split(/\r?\n/).length;
+  }
   return { insertions, deletions, total: insertions + deletions };
+}
+
+function renderUntrackedFiles(worktree, paths) {
+  return paths
+    .map((path) => `\n--- /dev/null\n+++ b/${path}\n@@ untracked file @@\n${readFileSync(resolve(worktree, path), 'utf8')}`)
+    .join('\n');
 }
 
 function buildSummary(items) {

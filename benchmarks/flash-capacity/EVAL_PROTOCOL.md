@@ -35,7 +35,7 @@ pi --mode json --session-dir <run-dir>/sessions --session-id <task-id> --approve
   -p @<run-dir>/<task-id>.prompt.md > <run-dir>/<task-id>.jsonl
 ```
 
-Do not restrict implementation tools. Redirect the raw JSON stream directly to disk so it does not consume Codex context. Extract only the final response, command failures, usage, elapsed time, and completion markers for orchestration.
+Do not restrict implementation tools. Stream JSON to disk without placing it in Codex context, but discard `message_update` partial snapshots because Pi repeats the growing message in every delta and long tasks can otherwise produce gigabyte-scale logs. Retain completed messages, completed tool results, turn endings, the final response, command failures, usage, elapsed time, and completion markers.
 
 ## Intervention policy
 

@@ -36,6 +36,6 @@ The validator checks schema invariants, level balance, commit existence, parent 
 pnpm run eval:flash-capacity
 ```
 
-Use `-- --level=3`, `-- --task=<task-id>`, or `-- --run-dir=<absolute-path>` to filter or relocate a run. The runner executes two isolated tasks per level in parallel with direct `pi`, `opencode-go/deepseek-v4-flash`, full implementation tools, at most one corrective nudge, and no commits or pushes. It suppresses raw JSON event streams from Codex context and retains them as artifacts for later inspection.
+Use `-- --level=3`, `-- --min-level=2`, `-- --max-level=4`, `-- --task=<task-id>`, or `-- --run-dir=<absolute-path>` to filter or relocate a run. The runner executes two isolated tasks per level in parallel with direct `pi`, `opencode-go/deepseek-v4-flash`, full implementation tools, at most one corrective nudge, and no commits or pushes. It suppresses raw JSON event streams from Codex context and retains them as artifacts for later inspection.
 
 The result is not a single pass rate. The useful outputs are the reliable ceiling, frontier, break level, accepted implementation volume, Codex rework, nudges, elapsed time, and worker cost. See `rubric.md` for exact definitions.
