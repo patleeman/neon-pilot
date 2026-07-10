@@ -23,7 +23,31 @@ proc completion_count {sessions} {
   return $count
 }
 
+proc objective_count {sessions objective} {
+  set count 0
+  set objective_length [string length $objective]
+  if {$objective_length == 0} {
+    return 0
+  }
+  foreach path [glob -nocomplain -directory $sessions *.jsonl] {
+    set handle [open $path r]
+    set content [read $handle]
+    close $handle
+    set offset 0
+    while {1} {
+      set index [string first $objective $content $offset]
+      if {$index < 0} {
+        break
+      }
+      incr count
+      set offset [expr {$index + $objective_length}]
+    }
+  }
+  return $count
+}
+
 set initial_completions [completion_count $sessions]
+set initial_objectives [objective_count $sessions $objective]
 set command [list omp --session-dir $sessions --model $model --auto-approve --approval-mode yolo --max-time $budget_seconds]
 if {$session_id ne ""} {
   lappend command --resume $session_id
@@ -33,8 +57,36 @@ cd $cwd
 log_user 0
 set timeout 1
 spawn -noecho {*}$command
-after 1500
+if {$session_id ne ""} {
+  # Large resumed sessions can spend several seconds restoring TUI state.
+  # Sending the command during that restore silently drops it.
+  after 8000
+} else {
+  after 1500
+}
 send -- "/goal set $objective\r"
+
+# OMP can still be restoring a large session after the initial delay. Confirm
+# that the objective reached durable session state and retry a dropped command
+# before starting the task deadline.
+set acknowledgement_deadline [expr {[clock milliseconds] + 30000}]
+set next_retry [expr {[clock milliseconds] + 8000}]
+while {[objective_count $sessions $objective] <= $initial_objectives} {
+  expect {
+    -re {.+} {}
+    eof { exit 3 }
+    timeout {}
+  }
+  set now [clock milliseconds]
+  if {$now >= $acknowledgement_deadline} {
+    send -- "\003"
+    exit 125
+  }
+  if {$now >= $next_retry} {
+    send -- "/goal set $objective\r"
+    set next_retry [expr {$now + 8000}]
+  }
+}
 
 set deadline [expr {[clock milliseconds] + ($budget_seconds * 1000)}]
 while {1} {

@@ -48,3 +48,4 @@ Recorded reports:
 
 - `REPORT-2026-07-10.md`: direct Pi baseline
 - `REPORT-PI-VS-OMP-2026-07-10.md`: audited system OMP comparison
+- `REPORT-OMP-GOAL-2026-07-10.md`: audited OMP Goal Mode comparison
