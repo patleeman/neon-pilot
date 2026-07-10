@@ -23,7 +23,7 @@ vi.mock('./systemExtensionModules', () => ({
       'system-context-panel',
       async () => ({
         ContextPanel: ({ settingsContext }: { settingsContext: { shellPresentation?: string } }) => (
-          <div>{`shell:${settingsContext.shellPresentation}`}</div>
+          <div>{`shell:${settingsContext.shellPresentation ?? 'unset'}`}</div>
         ),
       }),
     ],
@@ -51,10 +51,9 @@ describe('SettingsPanelHost', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('passes shell presentation to extension settings components', async () => {
+  it('does not forward shell presentation to extension settings components', async () => {
     render(
       <SettingsPanelHost
-        shellPresentation="windowed"
         registration={{
           extensionId: 'system-context-panel',
           id: 'context-panel',
@@ -65,7 +64,7 @@ describe('SettingsPanelHost', () => {
       />,
     );
 
-    expect(await screen.findByText('shell:windowed')).toBeTruthy();
+    expect(await screen.findByText('shell:unset')).toBeTruthy();
   });
 
   it('shows a visible error when a declared settings component export is missing', async () => {

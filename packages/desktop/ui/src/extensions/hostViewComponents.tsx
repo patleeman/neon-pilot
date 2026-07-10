@@ -15,7 +15,6 @@ export interface ExtensionHostViewComponentProps {
   context: {
     extensionId: string;
     surfaceId: string;
-    shellPresentation?: 'windowed';
     route?: string | null;
     pathname: string;
     search: string;
