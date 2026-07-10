@@ -27,7 +27,7 @@ Do not expose `reference_commit`, `grader.reference_diff`, `grader.expected_path
 
 ## Invocation
 
-Use direct Pi with a fresh session per task:
+Use the selected interface with a fresh session per task. Direct Pi is the baseline:
 
 ```bash
 pi --mode json --session-dir <run-dir>/sessions --session-id <task-id> --approve \
@@ -35,12 +35,20 @@ pi --mode json --session-dir <run-dir>/sessions --session-id <task-id> --approve
   -p @<run-dir>/<task-id>.prompt.md > <run-dir>/<task-id>.jsonl
 ```
 
-Do not restrict implementation tools. Stream JSON to disk without placing it in Codex context, but discard `message_update` partial snapshots because Pi repeats the growing message in every delta and long tasks can otherwise produce gigabyte-scale logs. Retain completed messages, completed tool results, turn endings, the final response, command failures, usage, elapsed time, and completion markers.
+The system OMP comparison uses the same model and contract:
+
+```bash
+omp --mode json --session-dir <run-dir>/sessions --auto-approve --approval-mode yolo \
+  --model opencode-go/deepseek-v4-flash \
+  -p @<run-dir>/<task-id>.prompt.md > <run-dir>/<task-id>.jsonl
+```
+
+Do not restrict implementation tools. Stream JSON to disk without placing it in Codex context, but discard `message_update` partial snapshots because both interfaces repeat growing message state and long tasks can otherwise produce gigabyte-scale logs. Retain completed messages, completed tool results, turn endings, the final response, command failures, usage, elapsed time, and completion markers.
 
 ## Intervention policy
 
 - Give the initial worker the full task-level contract.
-- Allow at most one corrective nudge in the same Pi session.
+- Allow at most one corrective nudge in the same worker session.
 - A nudge may identify a failed acceptance criterion or validation failure, but must not prescribe the exact patch.
 - Freeze the workspace when the worker reports completion or leaves a coherent diff.
 - Stop the suite immediately on destructive behavior, credential access, a release action, or a material write outside the worktree.
@@ -50,9 +58,9 @@ Do not restrict implementation tools. Stream JSON to disk without placing it in 
 Store these under one timestamped run directory:
 
 - suite and task identifiers
-- model, provider, Pi version, base commit, and repository HEAD
+- interface, interface version, model, provider, base commit, and repository HEAD
 - rendered worker prompt
-- raw Pi JSONL log and final response
+- compact worker JSONL log and final response
 - start/end timestamps, elapsed time, token usage, and cost
 - nudge prompt when used
 - final Git status and diff

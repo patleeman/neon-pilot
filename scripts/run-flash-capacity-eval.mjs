@@ -24,8 +24,13 @@ const selectedLevel = Number(args.get('level') ?? 0);
 const minimumLevel = Number(args.get('min-level') ?? 0);
 const maximumLevel = Number(args.get('max-level') ?? 0);
 const selectedTask = args.get('task') ?? '';
+const workerInterface = args.get('interface') ?? manifest.default_worker.interface.replace('direct_', '');
+if (!['pi', 'omp'].includes(workerInterface)) throw new Error(`Unsupported worker interface: ${workerInterface}`);
 const runId = args.get('run-id') ?? new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-');
-const runRoot = resolve(args.get('run-dir') ?? resolve(homedir(), '.codex/pi-orchestrator/neon-pilot-flash-capacity/runs', runId));
+const defaultRunCollection = workerInterface === 'pi' ? 'runs' : 'omp-runs';
+const runRoot = resolve(
+  args.get('run-dir') ?? resolve(homedir(), '.codex/pi-orchestrator/neon-pilot-flash-capacity', defaultRunCollection, runId),
+);
 const workerPrompt = readFileSync(resolve(suiteDir, manifest.worker_prompt_file), 'utf8').trim();
 const selected = tasks.filter(
   (task) =>
@@ -41,7 +46,8 @@ writeJson(resolve(runRoot, 'run.json'), {
   run_id: runId,
   started_at: new Date().toISOString(),
   repo_head: await capture('git', ['rev-parse', 'HEAD'], { cwd: root }),
-  pi_version: await capture('pi', ['--version'], { cwd: root }),
+  worker_interface: workerInterface,
+  worker_version: await capture(workerInterface, ['--version'], { cwd: root }),
   provider: manifest.default_worker.provider,
   model: manifest.default_worker.model,
   tasks: selected.map((task) => task.id),
@@ -123,8 +129,8 @@ async function runTask(task) {
   const promptPath = resolve(taskDir, 'prompt.md');
   writeFileSync(promptPath, renderPrompt(task, worktree), 'utf8');
   const started = Date.now();
-  const initialLog = resolve(taskDir, 'pi-initial.jsonl');
-  const initial = await runPi(task, worktree, sessions, promptPath, initialLog, task.time_budget_minutes);
+  const initialLog = resolve(taskDir, `${workerInterface}-initial.jsonl`);
+  const initial = await runWorker(task, worktree, sessions, promptPath, initialLog, task.time_budget_minutes);
   let validations = await runValidations(task, worktree, taskDir, 'initial');
   let nudges = 0;
   const initialDiff = await capture('git', ['diff', 'HEAD', '--binary'], { cwd: worktree });
@@ -133,7 +139,15 @@ async function runTask(task) {
     nudges = 1;
     const nudgePath = resolve(taskDir, 'nudge.md');
     writeFileSync(nudgePath, renderNudge(validations), 'utf8');
-    await runPi(task, worktree, sessions, nudgePath, resolve(taskDir, 'pi-nudge.jsonl'), Math.min(20, task.time_budget_minutes));
+    await runWorker(
+      task,
+      worktree,
+      sessions,
+      nudgePath,
+      resolve(taskDir, `${workerInterface}-nudge.jsonl`),
+      Math.min(20, task.time_budget_minutes),
+      readSessionId(initialLog),
+    );
     validations = await runValidations(task, worktree, taskDir, 'final');
   }
 
@@ -149,7 +163,7 @@ async function runTask(task) {
   const numstat = await capture('git', ['diff', 'HEAD', '--numstat'], { cwd: worktree });
   writeFileSync(resolve(taskDir, 'status.txt'), `${status}\n`, 'utf8');
   writeFileSync(resolve(taskDir, 'changes.patch'), diff, 'utf8');
-  const logs = [initialLog, resolve(taskDir, 'pi-nudge.jsonl')].filter(existsSync);
+  const logs = [initialLog, resolve(taskDir, `${workerInterface}-nudge.jsonl`)].filter(existsSync);
   const usage = aggregateUsage(logs);
   const safety = inspectSafety(logs);
   const validationPassed = validations.every((item) => item.passed);
@@ -196,6 +210,11 @@ async function runTask(task) {
   return result;
 }
 
+async function runWorker(task, cwd, sessions, promptPath, log, budgetMinutes, sessionId = '') {
+  if (workerInterface === 'omp') return runOmp(cwd, sessions, promptPath, log, budgetMinutes, sessionId);
+  return runPi(task, cwd, sessions, promptPath, log, budgetMinutes);
+}
+
 async function runPi(task, cwd, sessions, promptPath, log, budgetMinutes) {
   return runLogged(
     'pi',
@@ -216,6 +235,25 @@ async function runPi(task, cwd, sessions, promptPath, log, budgetMinutes) {
     ],
     { cwd, log, timeoutMs: budgetMinutes * 60_000, compactJson: true },
   );
+}
+
+async function runOmp(cwd, sessions, promptPath, log, budgetMinutes, sessionId) {
+  const commandArgs = [
+    '--mode',
+    'json',
+    '--session-dir',
+    sessions,
+    '--model',
+    `${manifest.default_worker.provider}/${manifest.default_worker.model}`,
+    '--auto-approve',
+    '--approval-mode',
+    'yolo',
+    '--max-time',
+    String(budgetMinutes * 60),
+  ];
+  if (sessionId) commandArgs.push('--resume', sessionId);
+  commandArgs.push('-p', `@${promptPath}`);
+  return runLogged('omp', commandArgs, { cwd, log, timeoutMs: budgetMinutes * 60_000, compactJson: true });
 }
 
 async function runValidations(task, cwd, taskDir, phase) {
@@ -378,6 +416,10 @@ function readEvents(logs) {
         }
       }),
   );
+}
+
+function readSessionId(log) {
+  return readEvents([log]).find((event) => event.type === 'session')?.id ?? '';
 }
 
 function parseNumstat(value, worktree, untrackedFiles) {
