@@ -7,6 +7,7 @@
   "task_file": "tasks.jsonl",
   "schema_file": "schema.json",
   "rubric_file": "rubric.md",
+  "worker_prompt_file": "worker-prompt.md",
   "default_worker": {
     "interface": "direct_pi",
     "provider": "opencode-go",

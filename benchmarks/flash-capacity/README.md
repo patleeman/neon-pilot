@@ -30,8 +30,12 @@ pnpm run eval:flash-capacity:validate
 
 The validator checks schema invariants, level balance, commit existence, parent relationships, reference diff statistics, hidden path existence, and prompt leakage. It does not run Flash.
 
-## Intended use
+## Run the benchmark
 
-A future runner should execute all ten tasks in detached worktrees with direct `pi`, `opencode-go/deepseek-v4-flash`, full implementation tools, at most one corrective nudge, and no commits or pushes. It should suppress raw JSON event streams from Codex context and retain them as artifacts for later inspection.
+```bash
+pnpm run eval:flash-capacity
+```
+
+Use `-- --level=3`, `-- --task=<task-id>`, or `-- --run-dir=<absolute-path>` to filter or relocate a run. The runner executes two isolated tasks per level in parallel with direct `pi`, `opencode-go/deepseek-v4-flash`, full implementation tools, at most one corrective nudge, and no commits or pushes. It suppresses raw JSON event streams from Codex context and retains them as artifacts for later inspection.
 
 The result is not a single pass rate. The useful outputs are the reliable ceiling, frontier, break level, accepted implementation volume, Codex rework, nudges, elapsed time, and worker cost. See `rubric.md` for exact definitions.
