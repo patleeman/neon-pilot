@@ -38,6 +38,8 @@ pnpm run eval:flash-capacity
 
 Use `pnpm run eval:flash-capacity:omp` for the equivalent system OMP run. You can also pass `-- --interface=pi|omp`, `-- --level=3`, `-- --min-level=2`, `-- --max-level=4`, `-- --task=<task-id>`, or `-- --run-dir=<absolute-path>` to choose an interface, filter, or relocate a run. The runner executes two isolated tasks per level in parallel with `opencode-go/deepseek-v4-flash`, each interface's full native implementation tools, at most one corrective nudge, and no commits or pushes. It suppresses partial JSON event streams from Codex context and retains compact completed events as artifacts for later inspection.
 
+Use `pnpm run eval:flash-capacity:omp-goal` to run the OMP variant with its built-in Goal Mode. The runner activates a durable goal in OMP's real TUI/session runtime, waits for OMP's persisted `goal-completed` event, and grades the resulting worktree with the same hidden checks. If a repair nudge is needed, it resumes the same OMP session with one bounded repair goal.
+
 Pi and OMP comparisons use identical task prompts, historical worktrees, setup, time budgets, nudge policy, and hidden grading. Native tool behavior is deliberately not normalized away: the purpose of the comparison is to measure each interface as an implementation delegate, while attributing all model usage and cost reported by that interface to its result.
 
 The result is not a single pass rate. The useful outputs are the reliable ceiling, frontier, break level, accepted implementation volume, Codex rework, nudges, elapsed time, and worker cost. See `rubric.md` for exact definitions.

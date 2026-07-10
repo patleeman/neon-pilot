@@ -1,0 +1,67 @@
+#!/usr/bin/expect -f
+
+if {$argc < 5} {
+  puts stderr "usage: run-omp-goal-session.exp <cwd> <sessions> <objective> <budget-seconds> <model> ?session-id?"
+  exit 64
+}
+
+set cwd [lindex $argv 0]
+set sessions [lindex $argv 1]
+set objective [lindex $argv 2]
+set budget_seconds [lindex $argv 3]
+set model [lindex $argv 4]
+set session_id [expr {$argc >= 6 ? [lindex $argv 5] : ""}]
+
+proc completion_count {sessions} {
+  set count 0
+  foreach path [glob -nocomplain -directory $sessions *.jsonl] {
+    set handle [open $path r]
+    set content [read $handle]
+    close $handle
+    incr count [regexp -all {"customType":"goal-completed"} $content]
+  }
+  return $count
+}
+
+set initial_completions [completion_count $sessions]
+set command [list omp --session-dir $sessions --model $model --auto-approve --approval-mode yolo --max-time $budget_seconds]
+if {$session_id ne ""} {
+  lappend command --resume $session_id
+}
+
+cd $cwd
+log_user 0
+set timeout 1
+spawn -noecho {*}$command
+after 1500
+send -- "/goal set $objective\r"
+
+set deadline [expr {[clock milliseconds] + ($budget_seconds * 1000)}]
+while {1} {
+  expect {
+    -re {.+} {}
+    eof { exit 3 }
+    timeout {}
+  }
+
+  if {[completion_count $sessions] > $initial_completions} {
+    send -- "\004"
+    set timeout 3
+    expect {
+      eof { exit 0 }
+      timeout {
+        send -- "\003"
+        after 250
+        send -- "\003"
+        exit 0
+      }
+    }
+  }
+
+  if {[clock milliseconds] >= $deadline} {
+    send -- "\003"
+    after 250
+    send -- "\003"
+    exit 124
+  }
+}

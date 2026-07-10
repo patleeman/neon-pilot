@@ -43,6 +43,8 @@ omp --mode json --session-dir <run-dir>/sessions --auto-approve --approval-mode 
   -p @<run-dir>/<task-id>.prompt.md > <run-dir>/<task-id>.jsonl
 ```
 
+The OMP Goal Mode variant starts an interactive OMP session, activates `/goal set` with an objective pointing to the same rendered prompt file, and waits for the session's durable `goal-completed` event. Goal Mode may autonomously continue across model turns, but it retains the same outer task time budget and one post-grading repair limit.
+
 Do not restrict implementation tools. Stream JSON to disk without placing it in Codex context, but discard `message_update` partial snapshots because both interfaces repeat growing message state and long tasks can otherwise produce gigabyte-scale logs. Retain completed messages, completed tool results, turn endings, the final response, command failures, usage, elapsed time, and completion markers.
 
 ## Intervention policy

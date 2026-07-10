@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -26,8 +26,9 @@ const maximumLevel = Number(args.get('max-level') ?? 0);
 const selectedTask = args.get('task') ?? '';
 const workerInterface = args.get('interface') ?? manifest.default_worker.interface.replace('direct_', '');
 if (!['pi', 'omp'].includes(workerInterface)) throw new Error(`Unsupported worker interface: ${workerInterface}`);
+const goalMode = workerInterface === 'omp' && ['1', 'true'].includes(args.get('goal-mode') ?? '');
 const runId = args.get('run-id') ?? new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-');
-const defaultRunCollection = workerInterface === 'pi' ? 'runs' : 'omp-runs';
+const defaultRunCollection = workerInterface === 'pi' ? 'runs' : goalMode ? 'omp-goal-runs' : 'omp-runs';
 const runRoot = resolve(
   args.get('run-dir') ?? resolve(homedir(), '.codex/pi-orchestrator/neon-pilot-flash-capacity', defaultRunCollection, runId),
 );
@@ -47,6 +48,7 @@ writeJson(resolve(runRoot, 'run.json'), {
   started_at: new Date().toISOString(),
   repo_head: await capture('git', ['rev-parse', 'HEAD'], { cwd: root }),
   worker_interface: workerInterface,
+  goal_mode: goalMode,
   worker_version: await capture(workerInterface, ['--version'], { cwd: root }),
   provider: manifest.default_worker.provider,
   model: manifest.default_worker.model,
@@ -211,8 +213,37 @@ async function runTask(task) {
 }
 
 async function runWorker(task, cwd, sessions, promptPath, log, budgetMinutes, sessionId = '') {
+  if (goalMode) return runOmpGoal(cwd, sessions, promptPath, log, budgetMinutes, sessionId);
   if (workerInterface === 'omp') return runOmp(cwd, sessions, promptPath, log, budgetMinutes, sessionId);
   return runPi(task, cwd, sessions, promptPath, log, budgetMinutes);
+}
+
+async function runOmpGoal(cwd, sessions, promptPath, log, budgetMinutes, sessionId) {
+  const existingSessionFile = sessionId ? findOmpSessionFile(sessions, sessionId) : '';
+  const initialSize = existingSessionFile ? statSync(existingSessionFile).size : 0;
+  const objective = sessionId
+    ? `Read ${promptPath} and repair every failure described there while preserving the original task in this session. Do not complete the goal until the repair is implemented and validated.`
+    : `Read ${promptPath} and complete every requirement in it end to end. Treat that file as the authoritative task contract. Do not complete the goal until the implementation and validation are ready for Codex review.`;
+  const tuiLog = log.replace(/\.jsonl$/, '.tui.log');
+  const result = await runLogged(
+    '/usr/bin/expect',
+    [
+      resolve(root, 'scripts/run-omp-goal-session.exp'),
+      cwd,
+      sessions,
+      objective,
+      String(budgetMinutes * 60),
+      `${manifest.default_worker.provider}/${manifest.default_worker.model}`,
+      ...(sessionId ? [sessionId] : []),
+    ],
+    { cwd, log: tuiLog, timeoutMs: budgetMinutes * 60_000 + 30_000 },
+  );
+  const sessionFile = findOmpSessionFile(sessions, sessionId);
+  if (sessionFile) {
+    const content = readFileSync(sessionFile);
+    writeFileSync(log, content.subarray(Math.min(initialSize, content.length)));
+  }
+  return { ...result, timedOut: result.timedOut || result.code === 124 };
 }
 
 async function runPi(task, cwd, sessions, promptPath, log, budgetMinutes) {
@@ -410,12 +441,21 @@ function readEvents(logs) {
       .filter(Boolean)
       .flatMap((line) => {
         try {
-          return [JSON.parse(line)];
+          const event = JSON.parse(line);
+          return [event.type === 'message' ? { ...event, type: 'message_end' } : event];
         } catch {
           return [];
         }
       }),
   );
+}
+
+function findOmpSessionFile(sessions, sessionId = '') {
+  if (!existsSync(sessions)) return '';
+  const files = readdirSync(sessions)
+    .filter((name) => name.endsWith('.jsonl') && (!sessionId || name.includes(sessionId)))
+    .map((name) => resolve(sessions, name));
+  return files.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? '';
 }
 
 function readSessionId(log) {

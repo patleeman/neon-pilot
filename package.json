@@ -87,6 +87,7 @@
     "bench:agent": "node scripts/neon-pilot-agent-benchmark.mjs",
     "eval:flash-capacity": "node scripts/run-flash-capacity-eval.mjs",
     "eval:flash-capacity:omp": "node scripts/run-flash-capacity-eval.mjs --interface=omp",
+    "eval:flash-capacity:omp-goal": "node scripts/run-flash-capacity-eval.mjs --interface=omp --goal-mode=true",
     "eval:flash-capacity:validate": "node scripts/validate-flash-capacity-evals.mjs",
     "test:dictation": "vitest run extensions/system-local-dictation/src/backend.test.ts extensions/system-local-dictation/src/capture.test.ts extensions/system-local-dictation/src/frontend.test.tsx extensions/system-local-dictation/src/types.test.ts packages/desktop/server/transcription/localWhisperProvider.test.ts packages/desktop/server/transcription/audioConversion.test.ts packages/desktop/ui/src/components/conversation/ConversationComposerInputControls.test.tsx"
   },
