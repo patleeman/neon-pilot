@@ -691,13 +691,16 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
       };
     }
     if (request.type === 'registryMaintenance') {
+      const serverContext = await resolveRequestServerContext(request);
+      const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+      const layout: DesktopRootLayout | undefined = serverContext?.getDesktopRootLayout?.();
       const { clearBuildError, invalidateExtensionRegistryReadCaches, setBuildError } = await import('./extensionRegistry.js');
       if (request.operation === 'invalidateReadCaches') {
-        invalidateExtensionRegistryReadCaches();
+        invalidateExtensionRegistryReadCaches(stateRoot, layout);
       } else if (request.operation === 'clearBuildError') {
-        clearBuildError(request.extensionId);
+        clearBuildError(request.extensionId, stateRoot, layout);
       } else {
-        setBuildError(request.extensionId, request.error);
+        setBuildError(request.extensionId, request.error, stateRoot, layout);
       }
       return { ok: true, registryMaintained: true };
     }

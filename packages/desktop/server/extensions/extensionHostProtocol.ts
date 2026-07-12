@@ -147,17 +147,20 @@ export type ExtensionHostRegistryMaintenanceRequest =
   | {
       type: 'registryMaintenance';
       operation: 'invalidateReadCaches';
+      serverContextSnapshot?: ExtensionHostServerContextSnapshot;
     }
   | {
       type: 'registryMaintenance';
       operation: 'clearBuildError';
       extensionId: string;
+      serverContextSnapshot?: ExtensionHostServerContextSnapshot;
     }
   | {
       type: 'registryMaintenance';
       operation: 'setBuildError';
       extensionId: string;
       error: string;
+      serverContextSnapshot?: ExtensionHostServerContextSnapshot;
     };
 
 export interface ExtensionHostServiceOperationResult {

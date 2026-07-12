@@ -3,9 +3,11 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
+import type { MachineConfigDocument } from '@neon-pilot/core';
 import { _electron as electron, type ElectronApplication, expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 
 interface LaunchOptions {
+  desktopRoot?: string;
   initialRoute?: string;
   electronArgs?: string[];
   stateRoot?: string;
@@ -15,6 +17,7 @@ interface LaunchOptions {
 
 interface TestApp {
   app: ElectronApplication;
+  desktopRoot: string;
   page: Page;
   tempRoot: string;
   stateRoot: string;
@@ -82,7 +85,12 @@ export async function launchTestApp(options: LaunchOptions): Promise<TestApp> {
   const initialRoute = normalizeInitialRoute(options.initialRoute);
   const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-e2e-'));
   const stateRoot = options.stateRoot ?? join(tempRoot, 'state');
+  const desktopRoot = options.desktopRoot ?? join(tempRoot, 'desktop-root');
   await options.prepareState?.(stateRoot);
+  const configRoot = join(stateRoot, 'config');
+  const machineConfig = { desktopRoot } satisfies MachineConfigDocument;
+  mkdirSync(configRoot, { recursive: true });
+  writeFileSync(join(configRoot, 'config.json'), `${JSON.stringify(machineConfig, null, 2)}\n`, { mode: 0o600 });
   const electronExecutable = require('electron') as string;
   const logs: string[] = [];
   const app = await electron.launch({
@@ -98,6 +106,7 @@ export async function launchTestApp(options: LaunchOptions): Promise<TestApp> {
 
   return {
     app,
+    desktopRoot,
     page,
     tempRoot,
     stateRoot,

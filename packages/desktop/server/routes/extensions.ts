@@ -160,6 +160,21 @@ async function syncSystemConversationToolMutation(input: {
   }
 }
 
+async function syncExtensionManagerRegistryMutation(input: {
+  extensionId: string;
+  actionId: string;
+  body: unknown;
+  result: unknown;
+  context?: ExtensionRouteContext;
+}): Promise<void> {
+  if (input.extensionId !== 'system-extension-manager' || input.actionId !== 'manageExtension') return;
+  if (!input.body || typeof input.body !== 'object' || Array.isArray(input.body)) return;
+  const action = (input.body as Record<string, unknown>).action;
+  if (!['create', 'update', 'delete', 'reload', 'reloadExtensions'].includes(typeof action === 'string' ? action : '')) return;
+  if (!input.result || typeof input.result !== 'object' || (input.result as { ok?: unknown }).ok !== true) return;
+  await publishExtensionRegistryChanged(input.context);
+}
+
 function normalizeHostHeader(value: string | undefined): string {
   const host = (value ?? '').trim().toLowerCase();
   if (!host) return '';
@@ -1357,6 +1372,13 @@ export function registerExtensionRoutes(
         result,
         context,
       });
+      await syncExtensionManagerRegistryMutation({
+        extensionId: req.params.id,
+        actionId: req.params.actionId,
+        body: req.body,
+        result,
+        context,
+      });
       res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -1445,7 +1467,10 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/reload', async (_req, res) => {
     try {
-      await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
+      await getExtensionHostClient().registryMaintenance({
+        operation: 'invalidateReadCaches',
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+      });
       await publishExtensionRegistryChanged(context);
       res.json({ ok: true, reloaded: true, message: 'Extension registry caches were invalidated; reopen contributed routes if needed.' });
     } catch (err) {
@@ -1457,12 +1482,21 @@ export function registerExtensionRoutes(
     try {
       const { stateRoot, layout } = getExtensionLifecycleScope(context);
       const result = await buildRuntimeExtension(req.params.id, stateRoot, layout);
-      await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
+      await getExtensionHostClient().registryMaintenance({
+        operation: 'clearBuildError',
+        extensionId: req.params.id,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+      });
       await publishExtensionRegistryChanged(context);
       res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      await getExtensionHostClient().registryMaintenance({ operation: 'setBuildError', extensionId: req.params.id, error: message });
+      await getExtensionHostClient().registryMaintenance({
+        operation: 'setBuildError',
+        extensionId: req.params.id,
+        error: message,
+        serverContextSnapshot: createExtensionHostServerContextSnapshot(context),
+      });
       await publishExtensionRegistryChanged(context);
       const status = /not found/i.test(message)
         ? 404
@@ -1507,8 +1541,13 @@ export function registerExtensionRoutes(
 
   router.post('/api/extensions/:id/reload', async (req, res) => {
     try {
-      await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' });
-      await getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: req.params.id });
+      const serverContextSnapshot = createExtensionHostServerContextSnapshot(context);
+      await getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches', serverContextSnapshot });
+      await getExtensionHostClient().registryMaintenance({
+        operation: 'clearBuildError',
+        extensionId: req.params.id,
+        serverContextSnapshot,
+      });
       const summary = await readExtensionInstallSummaryFromHost(req.params.id, context);
       if (!summary) {
         res.status(404).json({ error: 'Extension not found.' });

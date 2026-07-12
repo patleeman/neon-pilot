@@ -2985,6 +2985,29 @@ describe('extension backend capability dispatcher', () => {
     });
   });
 
+  it('dispatches extension registry invalidation with extensions:write permission', async () => {
+    findExtensionEntry.mockReturnValue({ manifest: { permissions: ['extensions:write'] } });
+    const runtime = {
+      refreshSkillMcpConfig: vi.fn(),
+      invalidateExtensionRegistry: vi.fn(async () => ({ ok: true })),
+    };
+    const dispatch = createExtensionBackendCapabilityDispatcher({ runtime });
+
+    await expect(
+      Promise.resolve(
+        dispatch({
+          id: 1,
+          kind: 'capabilityRequest',
+          extensionId: 'system-extension-manager',
+          capability: 'runtime',
+          operation: 'invalidateExtensionRegistry',
+        }),
+      ),
+    ).resolves.toEqual({ ok: true });
+
+    expect(runtime.invalidateExtensionRegistry).toHaveBeenCalledOnce();
+  });
+
   it('denies host-owned runtime refresh capability calls without mcp:write permission', async () => {
     findExtensionEntry.mockReturnValue({ manifest: { permissions: [] } });
     const runtime = { refreshSkillMcpConfig: vi.fn() };

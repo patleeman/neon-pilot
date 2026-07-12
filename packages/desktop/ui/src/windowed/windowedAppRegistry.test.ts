@@ -188,6 +188,29 @@ describe('windowed app registry', () => {
     expect(apps.some((app) => app.title === 'Board details')).toBe(false);
   });
 
+  it('projects agent-created user apps at their /ext/{id} route into Start', () => {
+    const apps = buildWindowedAppRegistry(
+      registry([
+        {
+          id: 'agent-created-app',
+          name: 'Agent Created App',
+          packageType: 'user',
+          enabled: true,
+          contributes: {
+            nav: [{ id: 'agent-created-app', label: 'Agent Created App', route: '/ext/agent-created-app' }],
+            appearance: { aliases: ['created app'], window: { defaultWidth: 920, defaultHeight: 640 } },
+          },
+        },
+      ]),
+    );
+
+    expect(apps.find((app) => app.title === 'Agent Created App')).toMatchObject({
+      route: '/ext/agent-created-app',
+      aliases: ['created app'],
+      window: { allowMultiple: false, singleton: true, defaultWidth: 920, defaultHeight: 640 },
+    });
+  });
+
   it('uses product-safe accents for dynamic app package titles', () => {
     expect(accentForTitle('Drawing Board')).toBe('drawing');
     expect(accentForTitle('Sketches')).toBe('drawing');

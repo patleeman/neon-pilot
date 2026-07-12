@@ -980,5 +980,5 @@
       }
     ]
   },
-  "permissions": ["extensions:read", "extensions:write", "shell:execute"]
+  "permissions": ["extensions:read", "extensions:write", "ui:invalidate", "shell:execute"]
 }

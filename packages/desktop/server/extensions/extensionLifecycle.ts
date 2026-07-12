@@ -869,7 +869,13 @@ export async function updateRuntimeExtension(
   if (shouldBuild) {
     await buildRuntimeExtension(id, stateRoot, layout);
     const { reloadExtensionBackend } = await import('./extensionBackend.js');
-    await reloadExtensionBackend(id);
+    if (layout)
+      await reloadExtensionBackend(id, {
+        getRuntimeScope: () => 'shared',
+        getStateRoot: () => stateRoot,
+        getDesktopRootLayout: () => layout,
+      });
+    else await reloadExtensionBackend(id);
   }
 
   return { ok: true as const, extension: summary, packageRoot, ...(shouldBuild ? { built: true as const } : {}) };
@@ -948,6 +954,7 @@ export async function buildRuntimeExtension(extensionId: string, stateRoot?: str
     clearPersistedBuildError(extensionId, stateRoot, layout);
   } catch (err) {
     setPersistedBuildError(extensionId, err instanceof Error ? err.message : String(err), stateRoot, layout);
+    invalidateExtensionRegistryState(stateRoot ?? getStateRoot(), layout);
     throw err;
   }
 

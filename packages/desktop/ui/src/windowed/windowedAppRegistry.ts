@@ -104,7 +104,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
 
       const navItems = (extension.contributes?.nav ?? []).flatMap((item): WindowedAppRegistration[] => {
         if (!item.route || seenRoutes.has(item.route) || seenTitles.has(item.label)) return [];
-        if (!isTopLevelRoute(item.route)) return [];
+        if (!isLaunchableAppRoute(item.route, extension.packageType)) return [];
         const app = createAppPackageWindowedAppRegistration({
           packageId: extension.id,
           id: item.id,
@@ -119,7 +119,7 @@ export function buildWindowedAppRegistry(extensionRegistry: ExtensionRegistrySta
       });
 
       const mainViewItems = (extension.contributes?.views ?? []).flatMap((view): WindowedAppRegistration[] => {
-        if (view.location !== 'main' || !view.route || !isTopLevelRoute(view.route)) return [];
+        if (view.location !== 'main' || !view.route || !isLaunchableAppRoute(view.route, extension.packageType)) return [];
         if (seenRoutes.has(view.route) || seenTitles.has(view.title)) return [];
         const app = createAppPackageWindowedAppRegistration({
           packageId: extension.id,
@@ -223,8 +223,10 @@ function routePathname(route: string): string {
   }
 }
 
-function isTopLevelRoute(route: string): boolean {
+function isLaunchableAppRoute(route: string, packageType?: string): boolean {
   const pathname = routePathname(route).replace(/\/+$/, '');
   if (!pathname || pathname === '/') return false;
-  return pathname.split('/').filter(Boolean).length === 1;
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length === 1) return true;
+  return packageType === 'user' && segments.length === 2 && segments[0] === 'ext';
 }

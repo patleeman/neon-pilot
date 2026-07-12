@@ -1501,6 +1501,10 @@ export interface ExtensionBackendContext {
   runtime: {
     getLiveSessionResourceOptions(): unknown;
     getRepoRoot(): string;
+    /** Returns the host-owned desktop root layout when this runtime has one. */
+    getDesktopRootLayout?(): unknown;
+    /** Invalidates extension registry state and notifies active app surfaces. */
+    invalidateExtensionRegistry?(): Promise<unknown>;
     refreshSkillMcpConfig(): Promise<unknown>;
   };
   storage: {

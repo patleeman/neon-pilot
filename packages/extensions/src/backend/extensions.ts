@@ -21,6 +21,11 @@ export interface RuntimeExtensionResult {
   [key: string]: unknown;
 }
 
+/** Host-owned layout context for runtime extension lifecycle operations. */
+export interface RuntimeExtensionOperationContext {
+  desktopRootLayout?: unknown;
+}
+
 export interface ExtensionInstallSummary {
   [key: string]: unknown;
 }
@@ -78,15 +83,21 @@ export interface ImportedMarketplacePackageExtensionResult extends MarketplacePa
   };
 }
 
-export async function buildRuntimeExtension(_extensionId: string): Promise<RuntimeExtensionResult> {
+export async function buildRuntimeExtension(
+  _extensionId: string,
+  _context?: RuntimeExtensionOperationContext,
+): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function createRuntimeExtension(_options: RuntimeExtensionCreateOptions): Promise<RuntimeExtensionResult> {
+export async function createRuntimeExtension(
+  _options: RuntimeExtensionCreateOptions,
+  _context?: RuntimeExtensionOperationContext,
+): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function listExtensionInstallSummaries(): Promise<ExtensionInstallSummary[]> {
+export async function listExtensionInstallSummaries(_context?: RuntimeExtensionOperationContext): Promise<ExtensionInstallSummary[]> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
@@ -107,33 +118,50 @@ export async function installMarketplacePackageAsExtension(_options: {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function reloadExtensionBackend(_extensionId: string): Promise<RuntimeExtensionResult> {
+export async function reloadExtensionBackend(
+  _extensionId: string,
+  _context?: RuntimeExtensionOperationContext,
+): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
 export async function runExtensionSelfTest(
   _extensionId: string,
+  _context?: RuntimeExtensionOperationContext,
 ): Promise<{ ok: boolean; extensionId: string; checks: Array<{ name: string; ok: boolean; error?: string }> }> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function invalidateExtensionRegistryReadCaches(): Promise<{ ok: true }> {
+export async function invalidateExtensionRegistryReadCaches(_context?: RuntimeExtensionOperationContext): Promise<{ ok: true }> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function readRuntimeExtensionSource(_extensionId: string): Promise<RuntimeExtensionResult> {
+export async function readRuntimeExtensionSource(
+  _extensionId: string,
+  _context?: RuntimeExtensionOperationContext,
+): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function updateRuntimeExtension(_extensionId: string, _input: RuntimeExtensionUpdateOptions): Promise<RuntimeExtensionResult> {
+export async function updateRuntimeExtension(
+  _extensionId: string,
+  _input: RuntimeExtensionUpdateOptions,
+  _context?: RuntimeExtensionOperationContext,
+): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function snapshotRuntimeExtension(_extensionId: string): Promise<RuntimeExtensionResult> {
+export async function snapshotRuntimeExtension(
+  _extensionId: string,
+  _context?: RuntimeExtensionOperationContext,
+): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 
-export async function deleteRuntimeExtension(_extensionId: string): Promise<RuntimeExtensionResult> {
+export async function deleteRuntimeExtension(
+  _extensionId: string,
+  _context?: RuntimeExtensionOperationContext,
+): Promise<RuntimeExtensionResult> {
   throw new Error('@neon-pilot/extensions/backend/extensions must be resolved by the Neon Pilot host runtime.');
 }
 

@@ -293,6 +293,11 @@ function createWorkerBackendContext(
     runtime: {
       getRepoRoot: () => repoRoot,
       getLiveSessionResourceOptions: () => liveSessionResourceOptions,
+      getDesktopRootLayout: () => options.desktopRootLayout,
+      invalidateExtensionRegistry: () =>
+        callHostCapability(extensionId, 'runtime', 'invalidateExtensionRegistry', {
+          ...(options.desktopRootLayout ? { desktopRootLayout: options.desktopRootLayout } : {}),
+        }),
       refreshSkillMcpConfig: () =>
         callHostCapability(extensionId, 'runtime', 'refreshSkillMcpConfig', {
           runtimeScope,

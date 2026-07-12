@@ -2,29 +2,29 @@ import { createHash } from 'node:crypto';
 import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 
-import type { ExtensionDoctorReport } from '@neon-pilot/extensions/backend/extensions';
+import type { ExtensionDoctorReport, RuntimeExtensionOperationContext } from '@neon-pilot/extensions/backend/extensions';
 
 import { importServerExtensionModule } from './serverModuleResolver.js';
 import { importServerModule } from './serverModuleResolver.js';
 
 interface ExtensionLifecycleModule {
-  buildRuntimeExtension(extensionId: string): unknown;
-  createRuntimeExtension(options: RuntimeExtensionCreateOptions): unknown;
-  readRuntimeExtensionSource(extensionId: string): unknown;
-  updateRuntimeExtension(extensionId: string, input: RuntimeExtensionUpdateOptions): unknown;
-  snapshotRuntimeExtension(extensionId: string): unknown;
-  deleteRuntimeExtension(extensionId: string): unknown;
+  buildRuntimeExtension(extensionId: string, stateRoot?: string, layout?: unknown): unknown;
+  createRuntimeExtension(options: RuntimeExtensionCreateOptions, stateRoot?: string, layout?: unknown): unknown;
+  readRuntimeExtensionSource(extensionId: string, stateRoot?: string, layout?: unknown): unknown;
+  updateRuntimeExtension(extensionId: string, input: RuntimeExtensionUpdateOptions, stateRoot?: string, layout?: unknown): unknown;
+  snapshotRuntimeExtension(extensionId: string, stateRoot?: string, layout?: unknown): unknown;
+  deleteRuntimeExtension(extensionId: string, stateRoot?: string, layout?: unknown): unknown;
 }
 
 interface ExtensionBackendModule {
-  reloadExtensionBackend(extensionId: string): unknown;
-  runExtensionSelfTest(extensionId: string): unknown;
+  reloadExtensionBackend(extensionId: string, context?: { getDesktopRootLayout?: () => unknown }): unknown;
+  runExtensionSelfTest(extensionId: string, context?: { getDesktopRootLayout?: () => unknown }): unknown;
 }
 
 interface ExtensionRegistryModule {
   getRuntimeExtensionsRoot(): string;
-  invalidateExtensionRegistryReadCaches(): void;
-  listExtensionInstallSummaries(): unknown;
+  invalidateExtensionRegistryReadCaches(stateRoot?: string, layout?: unknown): void;
+  listExtensionInstallSummaries(stateRoot?: string, layout?: unknown): unknown;
 }
 
 interface ExtensionCatalogModule {
@@ -37,6 +37,7 @@ interface ExtensionCatalogModule {
 
 interface CoreModule {
   installPackageSource(input: { source: string; target: 'local'; sourceBaseDir?: string }): MarketplacePackageInstallResult;
+  resolveDesktopRootLayout(): { root: string; [key: string]: unknown };
 }
 
 interface MarketplacePackageInstallResult {
@@ -98,49 +99,77 @@ async function importCore(): Promise<CoreModule> {
   return importServerModule<CoreModule>('@neon-pilot/core');
 }
 
-export async function buildRuntimeExtension(extensionId: string) {
-  const module = await importExtensionLifecycle();
-  return module.buildRuntimeExtension(extensionId);
+async function operationLayout(context?: RuntimeExtensionOperationContext): Promise<unknown> {
+  if (!context?.desktopRootLayout) return undefined;
+  const supplied = context.desktopRootLayout as { root?: unknown };
+  const canonical = (await importCore()).resolveDesktopRootLayout();
+  if (typeof supplied.root !== 'string' || resolve(supplied.root) !== resolve(canonical.root)) {
+    throw new Error('Runtime extension operation context does not match the host desktop root.');
+  }
+  return canonical;
 }
 
-export async function createRuntimeExtension(options: RuntimeExtensionCreateOptions) {
-  const module = await importExtensionLifecycle();
-  return module.createRuntimeExtension(options);
+function backendServerContext(layout: unknown): { getDesktopRootLayout?: () => unknown } | undefined {
+  return layout ? { getDesktopRootLayout: () => layout } : undefined;
 }
 
-export async function readRuntimeExtensionSource(extensionId: string) {
+export async function buildRuntimeExtension(extensionId: string, context?: RuntimeExtensionOperationContext) {
   const module = await importExtensionLifecycle();
-  return module.readRuntimeExtensionSource(extensionId);
+  const layout = await operationLayout(context);
+  return layout ? module.buildRuntimeExtension(extensionId, undefined, layout) : module.buildRuntimeExtension(extensionId);
 }
 
-export async function updateRuntimeExtension(extensionId: string, input: RuntimeExtensionUpdateOptions) {
+export async function createRuntimeExtension(options: RuntimeExtensionCreateOptions, context?: RuntimeExtensionOperationContext) {
   const module = await importExtensionLifecycle();
-  return module.updateRuntimeExtension(extensionId, input);
+  const layout = await operationLayout(context);
+  return layout ? module.createRuntimeExtension(options, undefined, layout) : module.createRuntimeExtension(options);
 }
 
-export async function snapshotRuntimeExtension(extensionId: string) {
+export async function readRuntimeExtensionSource(extensionId: string, context?: RuntimeExtensionOperationContext) {
   const module = await importExtensionLifecycle();
-  return module.snapshotRuntimeExtension(extensionId);
+  const layout = await operationLayout(context);
+  return layout ? module.readRuntimeExtensionSource(extensionId, undefined, layout) : module.readRuntimeExtensionSource(extensionId);
 }
 
-export async function deleteRuntimeExtension(extensionId: string) {
+export async function updateRuntimeExtension(
+  extensionId: string,
+  input: RuntimeExtensionUpdateOptions,
+  context?: RuntimeExtensionOperationContext,
+) {
   const module = await importExtensionLifecycle();
-  return module.deleteRuntimeExtension(extensionId);
+  const layout = await operationLayout(context);
+  return layout ? module.updateRuntimeExtension(extensionId, input, undefined, layout) : module.updateRuntimeExtension(extensionId, input);
 }
 
-export async function reloadExtensionBackend(extensionId: string) {
+export async function snapshotRuntimeExtension(extensionId: string, context?: RuntimeExtensionOperationContext) {
+  const module = await importExtensionLifecycle();
+  const layout = await operationLayout(context);
+  return layout ? module.snapshotRuntimeExtension(extensionId, undefined, layout) : module.snapshotRuntimeExtension(extensionId);
+}
+
+export async function deleteRuntimeExtension(extensionId: string, context?: RuntimeExtensionOperationContext) {
+  const module = await importExtensionLifecycle();
+  const layout = await operationLayout(context);
+  return layout ? module.deleteRuntimeExtension(extensionId, undefined, layout) : module.deleteRuntimeExtension(extensionId);
+}
+
+export async function reloadExtensionBackend(extensionId: string, context?: RuntimeExtensionOperationContext) {
   const module = await importExtensionBackend();
-  return module.reloadExtensionBackend(extensionId);
+  const serverContext = backendServerContext(await operationLayout(context));
+  return serverContext ? module.reloadExtensionBackend(extensionId, serverContext) : module.reloadExtensionBackend(extensionId);
 }
 
-export async function runExtensionSelfTest(extensionId: string) {
+export async function runExtensionSelfTest(extensionId: string, context?: RuntimeExtensionOperationContext) {
   const module = await importExtensionBackend();
-  return module.runExtensionSelfTest(extensionId);
+  const serverContext = backendServerContext(await operationLayout(context));
+  return serverContext ? module.runExtensionSelfTest(extensionId, serverContext) : module.runExtensionSelfTest(extensionId);
 }
 
-export async function invalidateExtensionRegistryReadCaches() {
+export async function invalidateExtensionRegistryReadCaches(context?: RuntimeExtensionOperationContext) {
   const module = await importExtensionRegistry();
-  module.invalidateExtensionRegistryReadCaches();
+  const layout = await operationLayout(context);
+  if (layout) module.invalidateExtensionRegistryReadCaches(undefined, layout);
+  else module.invalidateExtensionRegistryReadCaches();
   return { ok: true as const };
 }
 
@@ -149,9 +178,10 @@ export async function validateExtensionPackage(options: ValidateExtensionPackage
   return module.validateExtensionPackage(options);
 }
 
-export async function listExtensionInstallSummaries() {
+export async function listExtensionInstallSummaries(context?: RuntimeExtensionOperationContext) {
   const module = await importExtensionRegistry();
-  return module.listExtensionInstallSummaries();
+  const layout = await operationLayout(context);
+  return layout ? module.listExtensionInstallSummaries(undefined, layout) : module.listExtensionInstallSummaries();
 }
 
 export async function installMarketplacePackageSource(input: { source?: unknown; target?: unknown; sourceBaseDir?: unknown }) {

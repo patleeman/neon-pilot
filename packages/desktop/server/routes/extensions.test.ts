@@ -1489,6 +1489,43 @@ describe('registerExtensionRoutes', () => {
     expect(publishDesktopAppEvent).toHaveBeenCalledWith({ type: 'invalidate', topics: ['extensions'] });
   });
 
+  it('publishes desktop registry invalidation after successful App Manager lifecycle actions', async () => {
+    const publishDesktopAppEvent = vi.fn(async () => ({ ok: true as const }));
+    setExtensionHostClient({
+      readRegistryPresentation: vi.fn(async () => ({
+        snapshot: {
+          extensions: [
+            {
+              id: 'system-extension-manager',
+              backend: { entry: 'dist/backend.mjs', actions: [{ id: 'manageExtension', handler: 'manageExtension' }] },
+            },
+          ],
+        },
+        installSummaries: [
+          {
+            id: 'system-extension-manager',
+            status: 'enabled',
+            manifest: {
+              id: 'system-extension-manager',
+              backend: { entry: 'dist/backend.mjs', actions: [{ id: 'manageExtension', handler: 'manageExtension' }] },
+            },
+          },
+        ],
+      })),
+      invokeAction: vi.fn(async () => ({ ok: true, result: { ok: true, extension: { id: 'agent-created-app' } } })),
+    } as never);
+    const harness = createHarness({ getRuntimeScope: () => 'shared', publishDesktopAppEvent });
+    const res = createResponse();
+
+    await harness.postHandler('/api/extensions/:id/actions/:actionId')(
+      { params: { id: 'system-extension-manager', actionId: 'manageExtension' }, body: { action: 'create', id: 'agent-created-app' } },
+      res,
+    );
+
+    expect(res.json).toHaveBeenCalledWith({ ok: true, result: { ok: true, extension: { id: 'agent-created-app' } } });
+    expect(publishDesktopAppEvent).toHaveBeenCalledWith({ type: 'invalidate', topics: ['extensions'] });
+  });
+
   it('reloads prebuilt runtime extension backends without rebuilding in packaged desktop mode', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

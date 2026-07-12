@@ -41,8 +41,8 @@ import {
 } from './extensionPermissions.js';
 import { ExtensionProcessTerminationBlockedError } from './extensionProcessGuard.js';
 import {
-  clearBuildError,
   clearExtensionHealthError,
+  clearPersistedBuildError,
   findExtensionCommandRegistration,
   findExtensionEntry,
   invalidateExtensionRegistryReadCaches,
@@ -110,6 +110,8 @@ export interface ExtensionBackendContext {
   runtime: {
     getLiveSessionResourceOptions(): LiveSessionResourceOptions;
     getRepoRoot(): string;
+    getDesktopRootLayout(): DesktopRootLayout | undefined;
+    invalidateExtensionRegistry(): Promise<unknown>;
     refreshSkillMcpConfig(): Promise<unknown>;
   };
   storage: {
@@ -511,6 +513,13 @@ export function createBackendContext(
     runtime: {
       getLiveSessionResourceOptions: liveSessionResourceOptions,
       getRepoRoot: () => serverContext?.getRepoRoot?.() ?? process.cwd(),
+      getDesktopRootLayout: () => desktopRootLayout,
+      invalidateExtensionRegistry: () => {
+        assertExtensionPermission(extensionId, 'extensions:write', 'runtime.invalidateExtensionRegistry');
+        invalidateExtensionRegistryReadCaches(stateRoot, desktopRootLayout);
+        invalidateAppTopics('extensions');
+        return Promise.resolve({ ok: true });
+      },
       refreshSkillMcpConfig: () => {
         assertExtensionPermission(extensionId, 'mcp:write', 'runtime.refreshSkillMcpConfig');
         return refreshHostSkillMcpConfig({
@@ -1626,7 +1635,7 @@ export async function reloadExtensionBackend(
   clearWorkerImportBackend(extensionId);
   await loadCompiledExtensionBackendModule(extensionId, loadTarget);
   clearExtensionHealthError(extensionId);
-  clearBuildError(extensionId);
+  clearPersistedBuildError(extensionId, serverContext?.getStateRoot?.() ?? getStateRoot(), serverContext?.getDesktopRootLayout?.());
   await startExtensionServices(serverContext);
   return { ok: true, extensionId, rebuilt: false };
 }

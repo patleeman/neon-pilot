@@ -28,6 +28,8 @@ function createBackendContext(): ExtensionBackendContext {
   return {
     runtimeDir: '/runtime',
     runtimeSettingsFilePath: '/runtime/settings.json',
+    runtime: { getDesktopRootLayout: vi.fn(() => ({ root: '/desktop-root' })), invalidateExtensionRegistry: vi.fn() },
+    ui: { invalidate: vi.fn() },
     extensions: { setEnabled: vi.fn(), setPermissionGranted: vi.fn() },
   } as unknown as ExtensionBackendContext;
 }
@@ -49,6 +51,7 @@ describe('system-extension-manager backend', () => {
   });
 
   it('passes direct create action appearance metadata to runtime extension creation', async () => {
+    const ctx = createBackendContext();
     const result = await mod.createExtension(
       {
         id: 'styled-app',
@@ -62,22 +65,27 @@ describe('system-extension-manager backend', () => {
           window: { defaultWidth: 800, defaultHeight: 600 },
         },
       },
-      createBackendContext(),
+      ctx,
     );
 
     expect(result).toMatchObject({ ok: true, extensionId: 'created-app' });
-    expect(extensionBackendApi.createRuntimeExtension).toHaveBeenCalledWith({
-      id: 'styled-app',
-      name: 'Styled App',
-      description: 'A styled app.',
-      template: 'route-shell',
-      appearance: {
-        accent: 'drawing',
-        aliases: ['whiteboard', 'sketchpad'],
-        singleton: false,
-        window: { defaultWidth: 800, defaultHeight: 600 },
+    expect(extensionBackendApi.createRuntimeExtension).toHaveBeenCalledWith(
+      {
+        id: 'styled-app',
+        name: 'Styled App',
+        description: 'A styled app.',
+        template: 'route-shell',
+        appearance: {
+          accent: 'drawing',
+          aliases: ['whiteboard', 'sketchpad'],
+          singleton: false,
+          window: { defaultWidth: 800, defaultHeight: 600 },
+        },
       },
-    });
+      { desktopRootLayout: { root: '/desktop-root' } },
+    );
+    expect(ctx.runtime.invalidateExtensionRegistry).toHaveBeenCalledOnce();
+    expect(ctx.ui.invalidate).toHaveBeenCalledWith('extensions');
   });
 
   it('normalizes CLI create appearance flags for app registry metadata', async () => {
@@ -101,18 +109,21 @@ describe('system-extension-manager backend', () => {
       createBackendContext(),
     );
 
-    expect(extensionBackendApi.createRuntimeExtension).toHaveBeenCalledWith({
-      id: 'kanban-board',
-      name: 'Kanban Board',
-      description: 'Personal project board',
-      template: 'main-page',
-      appearance: {
-        accent: 'apps',
-        aliases: ['kanban', 'projects'],
-        singleton: false,
-        window: { defaultWidth: 960, defaultHeight: 720 },
+    expect(extensionBackendApi.createRuntimeExtension).toHaveBeenCalledWith(
+      {
+        id: 'kanban-board',
+        name: 'Kanban Board',
+        description: 'Personal project board',
+        template: 'main-page',
+        appearance: {
+          accent: 'apps',
+          aliases: ['kanban', 'projects'],
+          singleton: false,
+          window: { defaultWidth: 960, defaultHeight: 720 },
+        },
       },
-    });
+      { desktopRootLayout: { root: '/desktop-root' } },
+    );
   });
 
   it('uses app-package copy for smoke check results while preserving extension ids', async () => {
@@ -230,12 +241,16 @@ describe('system-extension-manager backend', () => {
     );
 
     expect(result).toMatchObject({ ok: true, extension: { id: 'my-app', name: 'Updated App' } });
-    expect(extensionBackendApi.updateRuntimeExtension).toHaveBeenCalledWith('my-app', {
-      name: 'Updated App',
-      description: 'A new description',
-      appearance: undefined,
-      source: undefined,
-    });
+    expect(extensionBackendApi.updateRuntimeExtension).toHaveBeenCalledWith(
+      'my-app',
+      {
+        name: 'Updated App',
+        description: 'A new description',
+        appearance: undefined,
+        source: undefined,
+      },
+      { desktopRootLayout: { root: '/desktop-root' } },
+    );
   });
 
   it('rejects readSource manageExtension action without extension id', async () => {
@@ -258,7 +273,7 @@ describe('system-extension-manager backend', () => {
       manifest: { id: 'my-app' },
       source: { frontend: '// frontend code', backend: '// backend code' },
     });
-    expect(extensionBackendApi.readRuntimeExtensionSource).toHaveBeenCalledWith('my-app');
+    expect(extensionBackendApi.readRuntimeExtensionSource).toHaveBeenCalledWith('my-app', { desktopRootLayout: { root: '/desktop-root' } });
   });
 
   it('reads source through the direct readExtensionSource handler', async () => {
@@ -276,7 +291,9 @@ describe('system-extension-manager backend', () => {
       manifest: { id: 'direct-app' },
       source: { frontend: '// a' },
     });
-    expect(extensionBackendApi.readRuntimeExtensionSource).toHaveBeenCalledWith('direct-app');
+    expect(extensionBackendApi.readRuntimeExtensionSource).toHaveBeenCalledWith('direct-app', {
+      desktopRootLayout: { root: '/desktop-root' },
+    });
   });
 
   it('forwards source code changes through the update action', async () => {
@@ -300,6 +317,7 @@ describe('system-extension-manager backend', () => {
       expect.objectContaining({
         source: { frontend: '// new frontend', backend: '// new backend' },
       }),
+      { desktopRootLayout: { root: '/desktop-root' } },
     );
   });
 });

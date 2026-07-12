@@ -159,12 +159,16 @@ import { SYSTEM_EXTENSION_ENTRIES } from './systemExtensions.js';
 const buildErrors = new Map<string, string>();
 const healthErrors = new Map<string, string>();
 
-export function setBuildError(extensionId: string, error: string): void {
-  buildErrors.set(extensionId, error);
+function buildErrorCacheKey(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): string {
+  return `${getExtensionRegistryCacheKey(stateRoot, layout)}\0${extensionId}`;
 }
 
-export function clearBuildError(extensionId: string): void {
-  buildErrors.delete(extensionId);
+export function setBuildError(extensionId: string, error: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  buildErrors.set(buildErrorCacheKey(extensionId, stateRoot, layout), error);
+}
+
+export function clearBuildError(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
+  buildErrors.delete(buildErrorCacheKey(extensionId, stateRoot, layout));
 }
 
 export function setPersistedBuildError(
@@ -173,13 +177,13 @@ export function setPersistedBuildError(
   stateRoot: string = getStateRoot(),
   layout?: DesktopRootLayout,
 ): void {
-  setBuildError(extensionId, error);
+  setBuildError(extensionId, error, stateRoot, layout);
   const config = readExtensionRegistryConfig(stateRoot, layout);
   writeExtensionRegistryConfig({ ...config, buildErrors: { ...(config.buildErrors ?? {}), [extensionId]: error } }, stateRoot, layout);
 }
 
 export function clearPersistedBuildError(extensionId: string, stateRoot: string = getStateRoot(), layout?: DesktopRootLayout): void {
-  clearBuildError(extensionId);
+  clearBuildError(extensionId, stateRoot, layout);
   const config = readExtensionRegistryConfig(stateRoot, layout);
   const buildErrors = { ...(config.buildErrors ?? {}) };
   delete buildErrors[extensionId];
@@ -1485,7 +1489,7 @@ export function listExtensionInstallSummaries(stateRoot: string = getStateRoot()
     const views = manifest.contributes?.views ?? [];
     const enabled = isExtensionEntryEnabled(entry, config);
     const diagnostics = listExtensionContributionDiagnostics(entry, availableExtensionIds);
-    const buildError = buildErrors.get(manifest.id) ?? config.buildErrors?.[manifest.id];
+    const buildError = buildErrors.get(buildErrorCacheKey(manifest.id, stateRoot, layout)) ?? config.buildErrors?.[manifest.id];
     const healthError = healthErrors.get(manifest.id);
     const effectivePackageType = isRuntimeInstalledPackageRoot(entry.packageRoot, stateRoot, layout)
       ? 'user'

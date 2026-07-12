@@ -118,6 +118,15 @@ describe('desktop-config', () => {
     });
   });
 
+  it('creates the configured desktop config directory when it differs from the state directory', () => {
+    const desktopStateDir = join(dir, 'system', 'state');
+    const desktopConfigFile = join(dir, 'system', 'config', 'config.json');
+    mocks.resolveDesktopRuntimePaths.mockReturnValue({ desktopConfigFile, desktopStateDir });
+
+    expect(loadDesktopConfig()).toMatchObject({ version: 2, openWindowOnLaunch: true });
+    expect(JSON.parse(readFileSync(desktopConfigFile, 'utf-8'))).toMatchObject({ version: 2, openWindowOnLaunch: true });
+  });
+
   it('persists partial keyboard shortcut updates without resetting the rest', () => {
     updateDesktopAppPreferences({
       keyboardShortcuts: {

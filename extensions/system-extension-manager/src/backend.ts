@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
+import type { RuntimeExtensionOperationContext } from '@neon-pilot/extensions/backend/extensions';
 import {
   createRuntimeExtension,
   deleteRuntimeExtension,
@@ -34,8 +35,26 @@ interface SettingsRecord {
   [key: string]: unknown;
 }
 
-export async function listExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
-  return { ok: true, extensions: await listExtensionInstallSummaries() };
+function runtimeExtensionOperationContext(ctx: ExtensionBackendContext): RuntimeExtensionOperationContext {
+  const desktopRootLayout = ctx.runtime?.getDesktopRootLayout?.();
+  return desktopRootLayout ? { desktopRootLayout } : {};
+}
+
+async function refreshExtensionRegistry(ctx: ExtensionBackendContext): Promise<void> {
+  await ctx.runtime?.invalidateExtensionRegistry?.();
+  await ctx.ui?.invalidate?.('extensions');
+}
+
+async function refreshExtensionRegistryAfterFailure(ctx: ExtensionBackendContext): Promise<void> {
+  try {
+    await refreshExtensionRegistry(ctx);
+  } catch {
+    // Preserve the lifecycle failure that prompted the refresh attempt.
+  }
+}
+
+export async function listExtensions(_input: unknown, ctx: ExtensionBackendContext) {
+  return { ok: true, extensions: await listExtensionInstallSummaries(runtimeExtensionOperationContext(ctx)) };
 }
 
 export async function listHostViewComponents(_input: unknown, _ctx: ExtensionBackendContext) {
@@ -61,19 +80,28 @@ export async function installExtensionFromUrl(input: unknown, _ctx: ExtensionBac
   return { ok: true, ...result };
 }
 
-export async function createExtension(input: unknown, _ctx: ExtensionBackendContext) {
+export async function createExtension(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
-  const result = await createRuntimeExtension({
-    id: body.id,
-    name: body.name,
-    description: body.description,
-    template: body.template,
-    appearance: body.appearance,
-  });
-  return { ok: true, ...result };
+  try {
+    const result = await createRuntimeExtension(
+      {
+        id: body.id,
+        name: body.name,
+        description: body.description,
+        template: body.template,
+        appearance: body.appearance,
+      },
+      runtimeExtensionOperationContext(ctx),
+    );
+    await refreshExtensionRegistry(ctx);
+    return { ok: true, ...result };
+  } catch (error) {
+    await refreshExtensionRegistryAfterFailure(ctx);
+    throw error;
+  }
 }
 
-export async function updateExtension(input: unknown, _ctx: ExtensionBackendContext) {
+export async function updateExtension(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
   const extensionId = requireExtensionId(body as ExtensionIdInput);
   const source: { frontend?: unknown; backend?: unknown } = {};
@@ -96,35 +124,48 @@ export async function updateExtension(input: unknown, _ctx: ExtensionBackendCont
 
   const autoBuild = typeof body.autoBuild === 'boolean' ? body.autoBuild : undefined;
 
-  const result = await updateRuntimeExtension(extensionId, {
-    name: body.name,
-    description: body.description,
-    appearance: body.appearance,
-    source: Object.keys(source).length > 0 ? source : undefined,
-    autoBuild,
-  });
+  try {
+    const result = await updateRuntimeExtension(
+      extensionId,
+      {
+        name: body.name,
+        description: body.description,
+        appearance: body.appearance,
+        source: Object.keys(source).length > 0 ? source : undefined,
+        autoBuild,
+      },
+      runtimeExtensionOperationContext(ctx),
+    );
+    await refreshExtensionRegistry(ctx);
+    return { ok: true, ...result };
+  } catch (error) {
+    await refreshExtensionRegistryAfterFailure(ctx);
+    throw error;
+  }
+}
+
+export async function snapshotExtension(input: ExtensionIdInput, ctx: ExtensionBackendContext) {
+  const extensionId = requireExtensionId(input);
+  return { ok: true, ...((await snapshotRuntimeExtension(extensionId, runtimeExtensionOperationContext(ctx))) as object) };
+}
+
+export async function deleteExtension(input: ExtensionIdInput, ctx: ExtensionBackendContext) {
+  const extensionId = requireExtensionId(input);
+  const result = await deleteRuntimeExtension(extensionId, runtimeExtensionOperationContext(ctx));
+  await refreshExtensionRegistry(ctx);
+  return result;
+}
+
+export async function reloadExtension(input: ExtensionIdInput, ctx: ExtensionBackendContext) {
+  const extensionId = requireExtensionId(input);
+  const result = await reloadExtensionBackend(extensionId, runtimeExtensionOperationContext(ctx));
+  await refreshExtensionRegistry(ctx);
   return { ok: true, ...result };
 }
 
-export async function snapshotExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
+export async function smokeExtension(input: ExtensionIdInput, ctx: ExtensionBackendContext) {
   const extensionId = requireExtensionId(input);
-  return { ok: true, ...((await snapshotRuntimeExtension(extensionId)) as object) };
-}
-
-export async function deleteExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
-  const extensionId = requireExtensionId(input);
-  return deleteRuntimeExtension(extensionId);
-}
-
-export async function reloadExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
-  const extensionId = requireExtensionId(input);
-  const result = await reloadExtensionBackend(extensionId);
-  return { ok: true, ...result };
-}
-
-export async function smokeExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
-  const extensionId = requireExtensionId(input);
-  const selfTest = await runExtensionSelfTest(extensionId);
+  const selfTest = await runExtensionSelfTest(extensionId, runtimeExtensionOperationContext(ctx));
   return {
     ok: selfTest.ok,
     extensionId,
@@ -140,10 +181,10 @@ export async function validateExtension(input: unknown, _ctx: ExtensionBackendCo
   return validateExtensionPackage({ extensionId, packageRoot });
 }
 
-export async function readExtensionSource(input: unknown, _ctx: ExtensionBackendContext) {
+export async function readExtensionSource(input: unknown, ctx: ExtensionBackendContext) {
   const body = asRecord(input);
   const extensionId = requireExtensionId(body as ExtensionIdInput);
-  return { ok: true, ...((await readRuntimeExtensionSource(extensionId)) as object) };
+  return { ok: true, ...((await readRuntimeExtensionSource(extensionId, runtimeExtensionOperationContext(ctx))) as object) };
 }
 
 export async function readSearchPaths(_input: unknown, ctx: ExtensionBackendContext) {
@@ -177,8 +218,9 @@ export async function updateExtensionSources(input: unknown, ctx: ExtensionBacke
   return writeExtensionCatalogSources({ runtimeDir: ctx.runtimeDir, runtimeSettingsFilePath: ctx.runtimeSettingsFilePath, sources });
 }
 
-export async function reloadExtensions(_input: unknown, _ctx: ExtensionBackendContext) {
-  await invalidateExtensionRegistryReadCaches();
+export async function reloadExtensions(_input: unknown, ctx: ExtensionBackendContext) {
+  await invalidateExtensionRegistryReadCaches(runtimeExtensionOperationContext(ctx));
+  await refreshExtensionRegistry(ctx);
   return { ok: true, reloaded: true, message: 'App package registry caches were invalidated; reopen app pages if needed.' };
 }
 

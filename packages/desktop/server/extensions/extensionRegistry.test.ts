@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resolveDesktopRootLayout } from '@neon-pilot/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const appEvents = vi.hoisted(() => ({ invalidateAppTopics: vi.fn(), publishAppEvent: vi.fn() }));
@@ -888,6 +889,32 @@ describe('extension registry', () => {
 
     expect(readExtensionRegistryConfig(stateRoot).buildErrors).toEqual({});
     expect(listExtensionInstallSummaries(stateRoot).find((extension) => extension.id === 'broken-board')?.buildError).toBeUndefined();
+  });
+
+  it('isolates transient and persisted build errors between desktop roots with the same extension id', () => {
+    const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-registry-state-'));
+    const layoutA = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-registry-layout-a-')) });
+    const layoutB = resolveDesktopRootLayout({ root: mkdtempSync(join(tmpdir(), 'pa-ext-registry-layout-b-')) });
+
+    for (const layout of [layoutA, layoutB]) {
+      const extensionRoot = join(layout.apps, 'extensions', 'shared-board');
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(join(extensionRoot, 'extension.json'), JSON.stringify({ schemaVersion: 2, id: 'shared-board', name: 'Shared Board' }));
+    }
+
+    setPersistedBuildError('shared-board', 'layout A failed', stateRoot, layoutA);
+
+    expect(listExtensionInstallSummaries(stateRoot, layoutA).find((extension) => extension.id === 'shared-board')).toMatchObject({
+      buildError: 'layout A failed',
+    });
+    expect(
+      listExtensionInstallSummaries(stateRoot, layoutB).find((extension) => extension.id === 'shared-board')?.buildError,
+    ).toBeUndefined();
+
+    clearPersistedBuildError('shared-board', stateRoot, layoutB);
+    expect(listExtensionInstallSummaries(stateRoot, layoutA).find((extension) => extension.id === 'shared-board')).toMatchObject({
+      buildError: 'layout A failed',
+    });
   });
 
   it('records locked extension failures without quarantining core platform surfaces', () => {

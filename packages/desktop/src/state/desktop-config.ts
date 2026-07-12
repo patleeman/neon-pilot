@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 import { resolveNeonPilotRuntimeChannel } from '@neon-pilot/core';
 
@@ -122,6 +123,7 @@ export function loadDesktopConfig(): DesktopConfig {
 function saveDesktopConfig(config: DesktopConfig): void {
   const { desktopConfigFile, desktopStateDir } = resolveDesktopRuntimePaths();
   mkdirSync(desktopStateDir, { recursive: true, mode: 0o700 });
+  mkdirSync(dirname(desktopConfigFile), { recursive: true, mode: 0o700 });
   const normalized = normalizeDesktopConfig(config);
   writeFileSync(desktopConfigFile, `${JSON.stringify(normalized, null, 2)}\n`, 'utf-8');
   cacheDesktopConfig(desktopConfigFile, normalized);

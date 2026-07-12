@@ -21,7 +21,13 @@ import {
 import { resolveExtensionBackendLoadTarget, resolvePrebuiltSystemExtensionBackend } from './extensionBackendLoadTarget.js';
 import { setExtensionBackendRunnerForTests } from './extensionBackendRunner.js';
 import { closeExtensionDatabaseManagersForTests } from './extensionDatabase.js';
-import { invalidateExtensionRegistryReadCaches, isExtensionEnabled, setExtensionEnabled } from './extensionRegistry.js';
+import {
+  invalidateExtensionRegistryReadCaches,
+  isExtensionEnabled,
+  readExtensionRegistryConfig,
+  setExtensionEnabled,
+  setPersistedBuildError,
+} from './extensionRegistry.js';
 import { closeExtensionStateDbs } from './extensionStorage.js';
 
 const TEST_EXTENSION_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../extensions/system-auto-mode');
@@ -4244,6 +4250,7 @@ describe('extension backend action invocation', () => {
       getStateRoot: () => stateRoot,
       getDesktopRootLayout: () => layout,
     };
+    setPersistedBuildError('reload-context-ext', 'previous build failed', stateRoot, layout);
 
     await expect(reloadExtensionBackend('reload-context-ext', serverContext)).resolves.toEqual({
       ok: true,
@@ -4257,6 +4264,7 @@ describe('extension backend action invocation', () => {
       expect.objectContaining({ path: join(extensionRoot, 'dist', 'backend.mjs') }),
     );
     expect(existsSync(join(stateRoot, 'extensions', 'reload-context-ext'))).toBe(false);
+    expect(readExtensionRegistryConfig(stateRoot, layout).buildErrors).toEqual({});
   });
 });
 

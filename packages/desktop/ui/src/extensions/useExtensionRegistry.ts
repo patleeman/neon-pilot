@@ -111,9 +111,11 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
 
   useEffect(() => {
     let cancelled = false;
+    let loadGeneration = 0;
     let loadTimer: ReturnType<typeof window.setTimeout> | null = null;
 
     const load = () => {
+      const generation = ++loadGeneration;
       setState((previous) => ({ ...previous, loading: true, error: null }));
 
       if (!canLoadExtensionRegistry()) {
@@ -128,7 +130,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
       initialExtensionRegistryLoad = null;
       loadPromise
         .then((nextState) => {
-          if (cancelled) return;
+          if (cancelled || generation !== loadGeneration) return;
           initialExtensionRegistryState = null;
           setState(nextState);
           notifyExtensionRegistryChanged({ source: EXTENSION_REGISTRY_LOADER_EVENT_SOURCE });
@@ -136,7 +138,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
           if (canLoadExtensionRegistry()) {
             void fetchExtensionRegistryState()
               .then((fullState) => {
-                if (cancelled) return;
+                if (cancelled || generation !== loadGeneration) return;
                 setState(fullState);
                 notifyExtensionRegistryChanged({ source: EXTENSION_REGISTRY_LOADER_EVENT_SOURCE });
               })
@@ -144,7 +146,7 @@ function useExtensionRegistryLoader(): ExtensionRegistryState {
           }
         })
         .catch((error: Error) => {
-          if (cancelled) return;
+          if (cancelled || generation !== loadGeneration) return;
           setState({
             ...EMPTY_EXTENSION_REGISTRY_STATE,
             error: error.message,

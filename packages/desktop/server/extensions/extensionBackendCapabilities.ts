@@ -60,6 +60,7 @@ import { assertExtensionAnyPermission, setExtensionPermissionGranted } from './e
 import {
   findExtensionCommandRegistration,
   findExtensionEntry,
+  invalidateExtensionRegistryReadCaches,
   listEnabledExtensionEntries,
   listExtensionAssemblyProviderRegistrations,
   listExtensionCommandRegistrations,
@@ -104,6 +105,7 @@ interface ExtensionBackendCapabilityGit {
 
 interface ExtensionBackendCapabilityRuntime {
   refreshSkillMcpConfig(input: ExtensionRuntimeRefreshSkillMcpConfigInput): Promise<unknown> | unknown;
+  invalidateExtensionRegistry(input?: { desktopRootLayout?: DesktopRootLayout }): Promise<unknown> | unknown;
 }
 
 interface ExtensionBackendCapabilitySettings {
@@ -802,7 +804,9 @@ function extensionBackendCapabilityPermissions(request: ExtensionBackendWorkerCa
   }
 
   if (request.capability === 'runtime') {
-    return request.operation === 'refreshSkillMcpConfig' ? ['mcp:write'] : [];
+    if (request.operation === 'refreshSkillMcpConfig') return ['mcp:write'];
+    if (request.operation === 'invalidateExtensionRegistry') return ['extensions:write'];
+    return [];
   }
 
   if (request.capability === 'agent') {
@@ -1949,9 +1953,22 @@ function normalizeRuntimeRefreshSkillMcpConfigInput(input: unknown): ExtensionRu
   };
 }
 
+function normalizeRuntimeExtensionRegistryInvalidationInput(input: unknown): { desktopRootLayout?: DesktopRootLayout } {
+  if (input === undefined) return {};
+  const record = normalizeRecordInput(input, 'Runtime extension registry invalidation');
+  if (record.desktopRootLayout === undefined) return {};
+  if (!record.desktopRootLayout || typeof record.desktopRootLayout !== 'object' || Array.isArray(record.desktopRootLayout)) {
+    throw new Error('Runtime desktop root layout must be an object.');
+  }
+  return { desktopRootLayout: record.desktopRootLayout as DesktopRootLayout };
+}
+
 function dispatchRuntimeCapability(runtime: ExtensionBackendCapabilityRuntime, request: ExtensionBackendWorkerCapabilityRequest): unknown {
   if (request.operation === 'refreshSkillMcpConfig') {
     return runtime.refreshSkillMcpConfig(normalizeRuntimeRefreshSkillMcpConfigInput(request.input));
+  }
+  if (request.operation === 'invalidateExtensionRegistry') {
+    return runtime.invalidateExtensionRegistry(normalizeRuntimeExtensionRegistryInvalidationInput(request.input));
   }
   throw new Error(`Unsupported runtime capability operation: ${request.operation}`);
 }
@@ -3187,6 +3204,11 @@ export function createExtensionBackendCapabilityDispatcher(
   };
   const runtime = options.runtime ?? {
     refreshSkillMcpConfig: refreshHostSkillMcpConfig,
+    invalidateExtensionRegistry: (input) => {
+      invalidateExtensionRegistryReadCaches(stateRoot, input?.desktopRootLayout ?? desktopRootLayout);
+      invalidateAppTopics('extensions');
+      return { ok: true };
+    },
   };
   const secrets = options.secrets ?? { get: (extensionId: string, secretId: string) => resolveSecret(extensionId, secretId) };
   const settings = options.settings ?? {

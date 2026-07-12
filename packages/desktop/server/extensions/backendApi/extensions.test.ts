@@ -35,6 +35,7 @@ describe('backendApi/extensions', () => {
     });
     resolverMocks.importServerModule.mockResolvedValue({
       installPackageSource: resolverMocks.installPackageSource,
+      resolveDesktopRootLayout: () => ({ root: '/desktop-root' }),
     });
   });
 
@@ -55,6 +56,28 @@ describe('backendApi/extensions', () => {
     expect(lifecycle.buildRuntimeExtension).toHaveBeenCalledWith('ext-1');
     expect(lifecycle.createRuntimeExtension).toHaveBeenCalledWith({ id: 'ext-1' });
     expect(lifecycle.snapshotRuntimeExtension).toHaveBeenCalledWith('ext-1');
+  });
+
+  it('threads a supplied desktop layout through runtime extension lifecycle operations', async () => {
+    const api = await import('./extensions.js');
+    const lifecycle = { createRuntimeExtension: vi.fn().mockResolvedValue({ id: 'runtime-extension' }) };
+    resolverMocks.importServerExtensionModule.mockResolvedValue(lifecycle);
+    const layout = { root: '/desktop-root' };
+
+    await api.createRuntimeExtension({ id: 'ext-1' }, { desktopRootLayout: layout });
+
+    expect(lifecycle.createRuntimeExtension).toHaveBeenCalledWith({ id: 'ext-1' }, undefined, layout);
+  });
+
+  it('rejects a caller-supplied desktop layout that does not match the host root', async () => {
+    const api = await import('./extensions.js');
+    const lifecycle = { createRuntimeExtension: vi.fn() };
+    resolverMocks.importServerExtensionModule.mockResolvedValue(lifecycle);
+
+    await expect(
+      api.createRuntimeExtension({ id: 'ext-1' }, { desktopRootLayout: { root: '/forged-root', apps: '/outside' } }),
+    ).rejects.toThrow('does not match the host desktop root');
+    expect(lifecycle.createRuntimeExtension).not.toHaveBeenCalled();
   });
 
   it('routes backend reloads, package validation, and install summaries to owning modules', async () => {

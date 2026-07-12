@@ -44,6 +44,7 @@ import {
 import { api } from '../client/api';
 import { getDesktopBridge } from '../desktop/desktopBridge';
 import { createDesktopAwareEventSource } from '../desktop/desktopEventSource';
+import { notifyExtensionRegistryChanged } from '../extensions/extensionRegistryEvents';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
@@ -2814,7 +2815,8 @@ export function WindowedLayout() {
         startOpen={launcherOpen}
         onToggleStart={() => {
           suspendWindowedBrowserViews();
-          setLauncherOpen((open) => !open);
+          if (!launcherOpen) notifyExtensionRegistryChanged({ source: 'windowed-launcher' });
+          setLauncherOpen(!launcherOpen);
         }}
         onOpenGroupMenu={() => suspendWindowedBrowserViews()}
         groups={chatTaskGroups}

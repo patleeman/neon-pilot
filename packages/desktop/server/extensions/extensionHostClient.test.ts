@@ -945,18 +945,27 @@ describe('extension host client', () => {
 
   it('routes registry maintenance through the extension host request envelope', async () => {
     setExtensionHostClient(createInProcessExtensionHostClient());
+    const layout = resolveDesktopRootLayout({ root: '/desktop-root' });
+    const serverContextSnapshot = { runtimeScope: 'shared', stateRoot: '/layout-state', desktopRootLayout: layout };
 
-    await expect(getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches' })).resolves.toBeUndefined();
     await expect(
-      getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: 'ext' }),
+      getExtensionHostClient().registryMaintenance({ operation: 'invalidateReadCaches', serverContextSnapshot }),
     ).resolves.toBeUndefined();
     await expect(
-      getExtensionHostClient().registryMaintenance({ operation: 'setBuildError', extensionId: 'ext', error: 'Build failed' }),
+      getExtensionHostClient().registryMaintenance({ operation: 'clearBuildError', extensionId: 'ext', serverContextSnapshot }),
+    ).resolves.toBeUndefined();
+    await expect(
+      getExtensionHostClient().registryMaintenance({
+        operation: 'setBuildError',
+        extensionId: 'ext',
+        error: 'Build failed',
+        serverContextSnapshot,
+      }),
     ).resolves.toBeUndefined();
 
-    expect(extensionRegistry.invalidateExtensionRegistryReadCaches).toHaveBeenCalled();
-    expect(extensionRegistry.clearBuildError).toHaveBeenCalledWith('ext');
-    expect(extensionRegistry.setBuildError).toHaveBeenCalledWith('ext', 'Build failed');
+    expect(extensionRegistry.invalidateExtensionRegistryReadCaches).toHaveBeenCalledWith('/layout-state', layout);
+    expect(extensionRegistry.clearBuildError).toHaveBeenCalledWith('ext', '/layout-state', layout);
+    expect(extensionRegistry.setBuildError).toHaveBeenCalledWith('ext', 'Build failed', '/layout-state', layout);
   });
 
   it('routes startup guard lifecycle through the extension host request envelope', async () => {
