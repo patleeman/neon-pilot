@@ -5,6 +5,7 @@
 - Prefer correct, complete implementations over compatibility shims or narrow safe cuts.
 - If a feature needs a shared boundary — process execution, security policy, persistence, routing, extension APIs — implement the boundary and wire first-class call sites through it.
 - Build product/workflow UX in extensions unless the work is core runtime, security, persistence, extension-host infrastructure, app-shell plumbing, routing, install/update plumbing, or shared UI primitives.
+- Treat Neon Pilot as an application platform, not a fixed chat/sidebar harness. Built-in and extension applications should own the main window below the host top bar; avoid adding permanent left/right sidebar dependencies as default navigation. Use the host top bar and unified Command-K surface for global app navigation, with applications registering their own searchable destinations/actions there when appropriate.
 - If the extension API is missing a capability, add the smallest general-purpose API surface to core instead of hardcoding a one-off feature.
 - Extension runtime code must not import `@neon-pilot/core`, `@neon-pilot/desktop`, `packages/desktop/*`, or `packages/core/*` directly. Route host access through `@neon-pilot/extensions` and narrow `@neon-pilot/extensions/backend/*` subpaths.
 - Host backend API modules in `packages/desktop/server/extensions/backendApi/*` are boundary shims. Keep them small, typed from public extension contracts, and lazy-load host/core implementation through `serverModuleResolver`; do not statically re-export core or desktop internals.
